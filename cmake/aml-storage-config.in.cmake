@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+if(aml_storage_FOUND)
+    return()
+endif()
+
+add_library(aml_storage SHARED IMPORTED GLOBAL)
+set_target_properties(aml_storage PROPERTIES
+    IMPORTED_LOCATION ${PACKAGE_PREFIX_DIR}/@LIB_INSTALL_DIR@/@AML_STORAGE_LIB_NAME@
+    INTERFACE_INCLUDE_DIRECTORIES ${PACKAGE_PREFIX_DIR}/@INCLUDE_INSTALL_DIR@/
+)

@@ -1,0 +1,163 @@
+use std::sync::Arc;
+use std::os::raw::c_char;
+use std::ffi::CStr;
+
+use crate::{Block, Indexes, IndexValue, Error, aml_data_storage_t};
+
+use super::indexes::{aml_indexes_t, aml_indexes_kind};
+
+use super::{catch_unwind, aml_status_t};
+
+/// Opaque type representing a `Block`.
+#[allow(non_camel_case_types)]
+pub struct aml_block_t(Block);
+
+impl std::ops::Deref for aml_block_t {
+    type Target = Block;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for aml_block_t {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl aml_block_t {
+    pub(super) fn block(self) -> Block {
+        self.0
+    }
+}
+
+#[no_mangle]
+pub unsafe extern fn aml_block(
+    data: aml_data_storage_t,
+    samples: aml_indexes_t,
+    symmetric: aml_indexes_t,
+    features: aml_indexes_t,
+) -> *mut aml_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        let samples = Indexes::try_from(samples)?;
+        let symmetric = Indexes::try_from(symmetric)?;
+        let features = Indexes::try_from(features)?;
+
+        let block = Block::new(data, samples, Arc::new(symmetric), Arc::new(features));
+        let boxed = Box::new(aml_block_t(block));
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+#[no_mangle]
+pub unsafe extern fn aml_block_free(
+    block: *mut aml_block_t,
+) -> aml_status_t {
+    catch_unwind(|| {
+        if !block.is_null() {
+            std::mem::drop(Box::from_raw(block));
+        }
+
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub unsafe extern fn aml_block_indexes(
+    block: *const aml_block_t,
+    values_gradients: *const c_char,
+    kind: aml_indexes_kind,
+    indexes: *mut aml_indexes_t,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(block, values_gradients, indexes);
+
+        let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
+        let basic_block = match values_gradients {
+            "values" => &(*block).values,
+            gradients => {
+                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", gradients
+                )))?
+            }
+        };
+
+        let rust_indexes = match kind {
+            aml_indexes_kind::AML_INDEXES_SAMPLES => basic_block.samples(),
+            aml_indexes_kind::AML_INDEXES_SYMMETRIC => basic_block.symmetric(),
+            aml_indexes_kind::AML_INDEXES_FEATURES => basic_block.features(),
+        };
+
+        (*indexes).size = rust_indexes.size();
+        (*indexes).count = rust_indexes.count();
+
+        if rust_indexes.count() == 0 || rust_indexes.size() == 0 {
+            (*indexes).values = std::ptr::null();
+        } else {
+            (*indexes).values = (&rust_indexes[0][0] as *const IndexValue).cast();
+        }
+
+        if rust_indexes.size() == 0 {
+            (*indexes).names = std::ptr::null();
+        } else {
+            (*indexes).names = rust_indexes.c_names().as_ptr().cast();
+        }
+
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub unsafe extern fn aml_block_data(
+    block: *const aml_block_t,
+    values_gradients: *const c_char,
+    data: *mut *const aml_data_storage_t,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(block, values_gradients, data);
+
+        let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
+        let basic_block = match values_gradients {
+            "values" => &(*block).values,
+            gradients => {
+                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", gradients
+                )))?
+            }
+        };
+
+        *data = &basic_block.data as *const _;
+        // TODO: do we need `(*data).destroy = None` here ?
+
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub unsafe extern fn aml_block_add_gradient(
+    block: *mut aml_block_t,
+    name: *const c_char,
+    samples: aml_indexes_t,
+    gradient: aml_data_storage_t,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(block, name);
+        let name = CStr::from_ptr(name).to_str().unwrap();
+        let samples = Indexes::try_from(samples)?;
+        (*block).add_gradient(name, samples, gradient)?;
+        Ok(())
+    })
+}

@@ -1,0 +1,4 @@
+This directory contains fake headers used to allow pycparser to parse the code
+without having to deal with all the complexity of actual stdlib implementations
+
+See https://eli.thegreenplace.net/2015/on-parsing-c-type-declarations-and-fake-headers for more information

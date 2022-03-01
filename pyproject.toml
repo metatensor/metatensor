@@ -1,0 +1,29 @@
+[build-system]
+requires = [
+    "setuptools >=44",
+    "wheel >=0.36",
+    "cmake",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+
+[testenv]
+# skip install to avoid rebuilding the world, do the install with setup.py
+# instead of pip below
+skip_install = True
+passenv =
+    AML_BUILD_TYPE
+    RUSTUP_HOME
+    CARGO*
+
+deps =
+    discover
+    numpy
+
+commands =
+    python setup.py --quiet install
+    discover -p "*.py" -s tests/python
+"""
