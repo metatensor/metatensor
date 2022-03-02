@@ -7,8 +7,8 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 
 
-mod indexes;
-pub use self::indexes::{IndexValue, Indexes, IndexesBuilder};
+mod labels;
+pub use self::labels::{LabelValue, Labels, LabelsBuilder};
 
 mod data;
 pub use self::data::{aml_data_storage_t, DataOrigin, aml_data_origin_t};

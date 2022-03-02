@@ -35,22 +35,22 @@
 #define AML_INTERNAL_ERROR 255
 
 /**
- * The different kinds of indexes that can exist on a `aml_descriptor_t`
+ * The different kinds of labels that can exist on a `aml_descriptor_t`
  */
-typedef enum aml_indexes_kind {
+typedef enum aml_label_kind {
   /**
-   * The samples index, describing different samples in the representation
+   * The sample labels, describing different samples in the representation
    */
-  AML_INDEXES_SAMPLES = 0,
+  AML_SAMPLE_LABELS = 0,
   /**
    * TODO
    */
-  AML_INDEXES_SYMMETRIC = 1,
+  AML_SYMMETRIC_LABELS = 1,
   /**
-   * The feature index, describing the features of the representation
+   * The feature labels, describing the features of the representation
    */
-  AML_INDEXES_FEATURES = 2,
-} aml_indexes_kind;
+  AML_FEATURE_LABELS = 2,
+} aml_label_kind;
 
 /**
  * Opaque type representing a `Block`.
@@ -77,20 +77,20 @@ typedef struct aml_data_storage_t {
    * first parameter to all function pointers below.
    */
   void *data;
-  aml_status_t (*origin)(const void *this, aml_data_origin_t *origin);
-  aml_status_t (*set_from_other)(const void *this, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other, uint64_t other_sample);
-  aml_status_t (*reshape)(const void *this, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
-  aml_status_t (*create)(const void *this, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_data_storage_t *data_storage);
-  void (*destroy)(void *this);
+  aml_status_t (*origin)(const void *data, aml_data_origin_t *origin);
+  aml_status_t (*set_from_other)(const void *data, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other, uint64_t other_sample);
+  aml_status_t (*reshape)(const void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
+  aml_status_t (*create)(const void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_data_storage_t *data_storage);
+  void (*destroy)(void *data);
 } aml_data_storage_t;
 
 /**
- * Indexes representing metadata associated with either samples or features in
+ * Labels representing metadata associated with either samples or features in
  * a given descriptor.
  */
-typedef struct aml_indexes_t {
+typedef struct aml_labels_t {
   /**
-   * Names of the variables composing this set of indexes. There are `size`
+   * Names of the variables composing this set of labels. There are `size`
    * elements in this array, each being a NULL terminated string.
    */
   const char *const *names;
@@ -102,14 +102,14 @@ typedef struct aml_indexes_t {
    */
   const int32_t *values;
   /**
-   * Number of variables/size of a single entry in the set of indexes
+   * Number of variables/size of a single entry in the set of labels
    */
   uintptr_t size;
   /**
-   * Number entries in the set of indexes
+   * Number entries in the set of labels
    */
   uintptr_t count;
-} aml_indexes_t;
+} aml_labels_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,16 +127,16 @@ aml_status_t aml_register_data_origin(const char *name, aml_data_origin_t *handl
 aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_t buffer_size);
 
 struct aml_block_t *aml_block(struct aml_data_storage_t data,
-                              struct aml_indexes_t samples,
-                              struct aml_indexes_t symmetric,
-                              struct aml_indexes_t features);
+                              struct aml_labels_t samples,
+                              struct aml_labels_t symmetric,
+                              struct aml_labels_t features);
 
 aml_status_t aml_block_free(struct aml_block_t *block);
 
-aml_status_t aml_block_indexes(const struct aml_block_t *block,
-                               const char *values_gradients,
-                               enum aml_indexes_kind kind,
-                               struct aml_indexes_t *indexes);
+aml_status_t aml_block_labels(const struct aml_block_t *block,
+                              const char *values_gradients,
+                              enum aml_label_kind kind,
+                              struct aml_labels_t *labels);
 
 aml_status_t aml_block_data(const struct aml_block_t *block,
                             const char *values_gradients,
@@ -144,17 +144,17 @@ aml_status_t aml_block_data(const struct aml_block_t *block,
 
 aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     const char *name,
-                                    struct aml_indexes_t samples,
+                                    struct aml_labels_t samples,
                                     struct aml_data_storage_t gradient);
 
-struct aml_descriptor_t *aml_descriptor(struct aml_indexes_t sparse_indexes,
+struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse_labels,
                                         struct aml_block_t **blocks,
                                         uint64_t blocks_count);
 
 aml_status_t aml_descriptor_free(struct aml_descriptor_t *descriptor);
 
-aml_status_t aml_descriptor_sparse_indexes(const struct aml_descriptor_t *descriptor,
-                                           struct aml_indexes_t *indexes);
+aml_status_t aml_descriptor_sparse_labels(const struct aml_descriptor_t *descriptor,
+                                          struct aml_labels_t *labels);
 
 aml_status_t aml_descriptor_block_by_id(const struct aml_descriptor_t *descriptor,
                                         const struct aml_block_t **block,
@@ -162,7 +162,7 @@ aml_status_t aml_descriptor_block_by_id(const struct aml_descriptor_t *descripto
 
 aml_status_t aml_descriptor_block_selection(const struct aml_descriptor_t *descriptor,
                                             const struct aml_block_t **block,
-                                            struct aml_indexes_t selection);
+                                            struct aml_labels_t selection);
 
 aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descriptor,
                                                const char *const *variables,

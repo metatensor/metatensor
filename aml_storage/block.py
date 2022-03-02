@@ -1,16 +1,16 @@
-from ._c_lib import _get_library
-from ._c_api import aml_indexes_kind, aml_indexes_t, aml_data_storage_t
-
 import ctypes
 
+from ._c_lib import _get_library
+from ._c_api import aml_label_kind, aml_labels_t, aml_data_storage_t
+
 from .status import _check_pointer
-from .indexes import Indexes
+from .labels import Labels
 
 from .data import AmlData, aml_data_to_array
 
 
 class Block:
-    def __init__(self, data, samples: Indexes, symmetric: Indexes, features: Indexes):
+    def __init__(self, data, samples: Labels, symmetric: Labels, features: Labels):
         self._lib = _get_library()
 
         # keep a reference to the data in the block to prevent GC
@@ -19,9 +19,9 @@ class Block:
 
         self._ptr = self._lib.aml_block(
             self._data._storage,
-            samples._as_aml_indexes_t(),
-            symmetric._as_aml_indexes_t(),
-            features._as_aml_indexes_t(),
+            samples._as_aml_labels_t(),
+            symmetric._as_aml_labels_t(),
+            features._as_aml_labels_t(),
         )
         _check_pointer(self._ptr)
         self._owning = True
@@ -42,26 +42,26 @@ class Block:
             if self._owning:
                 self._lib.aml_block_free(self._ptr)
 
-    def _indexes(self, name, kind):
-        result = aml_indexes_t()
+    def _labels(self, name, kind):
+        result = aml_labels_t()
 
-        self._lib.aml_block_indexes(self._ptr, name.encode("utf8"), kind.value, result)
+        self._lib.aml_block_labels(self._ptr, name.encode("utf8"), kind.value, result)
 
-        # TODO: keep a reference to the `block` in the Indexes array to ensure
+        # TODO: keep a reference to the `block` in the Labels array to ensure
         # it is not removed by GC
-        return Indexes._from_aml_indexes_t(result)
+        return Labels._from_aml_labels_t(result)
 
     @property
     def samples(self):
-        return self._indexes("values", aml_indexes_kind.AML_INDEXES_SAMPLES)
+        return self._labels("values", aml_label_kind.AML_SAMPLE_LABELS)
 
     @property
     def symmetric(self):
-        return self._indexes("values", aml_indexes_kind.AML_INDEXES_SYMMETRIC)
+        return self._labels("values", aml_label_kind.AML_SYMMETRIC_LABELS)
 
     @property
     def features(self):
-        return self._indexes("values", aml_indexes_kind.AML_INDEXES_FEATURES)
+        return self._labels("values", aml_label_kind.AML_FEATURE_LABELS)
 
     @property
     def values(self):
@@ -70,7 +70,7 @@ class Block:
     def gradient(self, name):
         assert name != "values"
         data = self._get_array(name)
-        samples = self._indexes(name, aml_indexes_kind.AML_INDEXES_SAMPLES)
+        samples = self._labels(name, aml_label_kind.AML_SAMPLE_LABELS)
         return samples, data
 
     def add_gradient(self, name, samples, gradient):
@@ -80,7 +80,7 @@ class Block:
         self._lib.aml_block_add_gradient(
             self._ptr,
             name.encode("utf8"),
-            samples._as_aml_indexes_t(),
+            samples._as_aml_labels_t(),
             gradient._storage,
         )
 

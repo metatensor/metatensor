@@ -68,10 +68,13 @@ pub struct aml_data_storage_t {
     /// first parameter to all function pointers below.
     data: *mut c_void,
 
-    origin: Option<unsafe extern fn(this: *const c_void, origin: *mut aml_data_origin_t) -> aml_status_t>,
+    origin: Option<unsafe extern fn(
+        data: *const c_void,
+        origin: *mut aml_data_origin_t
+    ) -> aml_status_t>,
 
     set_from_other: Option<unsafe extern fn(
-        this: *const c_void,
+        data: *const c_void,
         sample: u64,
         feature_start: u64,
         feature_end: u64,
@@ -80,21 +83,21 @@ pub struct aml_data_storage_t {
     ) -> aml_status_t>,
 
     reshape: Option<unsafe extern fn(
-        this: *const c_void,
+        data: *const c_void,
         n_samples: u64,
         n_symmetric: u64,
         n_features: u64,
     ) -> aml_status_t>,
 
     create: Option<unsafe extern fn(
-        this: *const c_void,
+        data: *const c_void,
         n_samples: u64,
         n_symmetric: u64,
         n_features: u64,
         data_storage: *mut aml_data_storage_t,
     ) -> aml_status_t>,
 
-    destroy: Option<unsafe extern fn(this: *mut c_void)>,
+    destroy: Option<unsafe extern fn(data: *mut c_void)>,
 }
 
 impl Drop for aml_data_storage_t {

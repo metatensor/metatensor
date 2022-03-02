@@ -4,15 +4,15 @@ import ctypes
 import numpy as np
 
 from ._c_lib import _get_library
-from ._c_api import aml_block_t, aml_indexes_t
+from ._c_api import aml_block_t, aml_labels_t
 
 from .status import _check_pointer
-from .indexes import Indexes, _is_namedtuple
+from .labels import Labels, _is_namedtuple
 from .block import Block
 
 
 class Descriptor:
-    def __init__(self, sparse_indexes: Indexes, blocks: List[Block]):
+    def __init__(self, sparse: Labels, blocks: List[Block]):
         self._lib = _get_library()
 
         blocks_array_t = ctypes.POINTER(aml_block_t) * len(blocks)
@@ -27,7 +27,7 @@ class Descriptor:
         self._blocks = blocks
 
         self._ptr = self._lib.aml_descriptor(
-            sparse_indexes._as_aml_indexes_t(), blocks_array, len(blocks)
+            sparse._as_aml_labels_t(), blocks_array, len(blocks)
         )
 
         _check_pointer(self._ptr)
@@ -37,19 +37,19 @@ class Descriptor:
             self._lib.aml_descriptor_free(self._ptr)
 
     def __iter__(self):
-        sparse = self.sparse_indexes
+        sparse = self.sparse
         for i, sparse in enumerate(sparse):
             yield sparse, self._get_block_by_id(i)
 
     @property
-    def sparse_indexes(self):
-        result = aml_indexes_t()
+    def sparse(self):
+        result = aml_labels_t()
 
-        self._lib.aml_descriptor_sparse_indexes(self._ptr, result)
+        self._lib.aml_descriptor_sparse_labels(self._ptr, result)
 
-        # TODO: keep a reference to the `descriptor` in the Indexes array to
+        # TODO: keep a reference to the `descriptor` in the Labels array to
         # ensure it is not removed by GC
-        return Indexes._from_aml_indexes_t(result)
+        return Labels._from_aml_labels_t(result)
 
     def block(self, *args, **kwargs):
         if args:
@@ -59,10 +59,10 @@ class Descriptor:
             arg = args[0]
             if isinstance(arg, int):
                 return self._get_block_by_id(arg)
-            elif isinstance(arg, Indexes):
+            elif isinstance(arg, Labels):
                 return self._block_selection(arg)
             elif isinstance(arg, np.void):
-                # single entry from an Indexes array
+                # single entry from an Labels array
                 return self.block(
                     **{name: arg[i] for i, name in enumerate(arg.dtype.names)}
                 )
@@ -73,7 +73,7 @@ class Descriptor:
                     f"got unexpected object in `Descriptor.block`: {type(arg)}"
                 )
 
-        selection = Indexes(
+        selection = Labels(
             kwargs.keys(),
             np.array(list(kwargs.values()), dtype=np.int32).reshape(1, -1),
         )
@@ -89,13 +89,13 @@ class Descriptor:
         # is not removed by GC
         return Block._from_non_owning_ptr(block)
 
-    def _block_selection(self, selection: Indexes):
+    def _block_selection(self, selection: Labels):
         block = ctypes.POINTER(aml_block_t)()
 
         self._lib.aml_descriptor_block_selection(
             self._ptr,
             block,
-            selection._as_aml_indexes_t(),
+            selection._as_aml_labels_t(),
         )
 
         # TODO: keep a reference to the `descriptor` in the block to ensure it

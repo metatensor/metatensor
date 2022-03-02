@@ -27,10 +27,10 @@ aml_status_t = ctypes.c_int32
 aml_data_origin_t = ctypes.c_uint64
 
 
-class aml_indexes_kind(enum.Enum):
-    AML_INDEXES_SAMPLES = 0
-    AML_INDEXES_SYMMETRIC = 1
-    AML_INDEXES_FEATURES = 2
+class aml_label_kind(enum.Enum):
+    AML_SAMPLE_LABELS = 0
+    AML_SYMMETRIC_LABELS = 1
+    AML_FEATURE_LABELS = 2
 
 
 class aml_block_t(ctypes.Structure):
@@ -43,6 +43,7 @@ class aml_descriptor_t(ctypes.Structure):
 
 class aml_data_storage_t(ctypes.Structure):
     pass
+
 aml_data_storage_t._fields_ = [
     ("data", ctypes.c_void_p),
     ("origin", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(aml_data_origin_t))),
@@ -53,9 +54,10 @@ aml_data_storage_t._fields_ = [
 ]
 
 
-class aml_indexes_t(ctypes.Structure):
+class aml_labels_t(ctypes.Structure):
     pass
-aml_indexes_t._fields_ = [
+
+aml_labels_t._fields_ = [
     ("names", POINTER(ctypes.c_char_p)),
     ("values", POINTER(ctypes.c_int32)),
     ("size", c_uintptr_t),
@@ -86,9 +88,9 @@ def setup_functions(lib):
 
     lib.aml_block.argtypes = [
         aml_data_storage_t,
-        aml_indexes_t,
-        aml_indexes_t,
-        aml_indexes_t
+        aml_labels_t,
+        aml_labels_t,
+        aml_labels_t
     ]
     lib.aml_block.restype = POINTER(aml_block_t)
 
@@ -97,13 +99,13 @@ def setup_functions(lib):
     ]
     lib.aml_block_free.restype = _check_status
 
-    lib.aml_block_indexes.argtypes = [
+    lib.aml_block_labels.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
         ctypes.c_int,
-        POINTER(aml_indexes_t)
+        POINTER(aml_labels_t)
     ]
-    lib.aml_block_indexes.restype = _check_status
+    lib.aml_block_labels.restype = _check_status
 
     lib.aml_block_data.argtypes = [
         POINTER(aml_block_t),
@@ -115,13 +117,13 @@ def setup_functions(lib):
     lib.aml_block_add_gradient.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
-        aml_indexes_t,
+        aml_labels_t,
         aml_data_storage_t
     ]
     lib.aml_block_add_gradient.restype = _check_status
 
     lib.aml_descriptor.argtypes = [
-        aml_indexes_t,
+        aml_labels_t,
         POINTER(POINTER(aml_block_t)),
         ctypes.c_uint64
     ]
@@ -132,11 +134,11 @@ def setup_functions(lib):
     ]
     lib.aml_descriptor_free.restype = _check_status
 
-    lib.aml_descriptor_sparse_indexes.argtypes = [
+    lib.aml_descriptor_sparse_labels.argtypes = [
         POINTER(aml_descriptor_t),
-        POINTER(aml_indexes_t)
+        POINTER(aml_labels_t)
     ]
-    lib.aml_descriptor_sparse_indexes.restype = _check_status
+    lib.aml_descriptor_sparse_labels.restype = _check_status
 
     lib.aml_descriptor_block_by_id.argtypes = [
         POINTER(aml_descriptor_t),
@@ -148,7 +150,7 @@ def setup_functions(lib):
     lib.aml_descriptor_block_selection.argtypes = [
         POINTER(aml_descriptor_t),
         POINTER(POINTER(aml_block_t)),
-        aml_indexes_t
+        aml_labels_t
     ]
     lib.aml_descriptor_block_selection.restype = _check_status
 

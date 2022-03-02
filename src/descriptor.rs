@@ -3,25 +3,25 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::{Block, IndexesBuilder};
-use crate::{Indexes, Error, IndexValue};
+use crate::{Block, Error};
+use crate::{Labels, LabelsBuilder, LabelValue};
 
 pub struct Descriptor {
-    sparse_indexes: Indexes,
+    sparse: Labels,
     blocks: Vec<Block>,
 }
 
 impl Descriptor {
-    pub fn new(sparse_indexes: Indexes, blocks: Vec<Block>) -> Result<Descriptor, Error> {
-        if blocks.len() != sparse_indexes.count() {
+    pub fn new(sparse: Labels, blocks: Vec<Block>) -> Result<Descriptor, Error> {
+        if blocks.len() != sparse.count() {
             return Err(Error::InvalidParameter(format!(
-                "TODO: error message, expected {}, got {}", sparse_indexes.count(), blocks.len()
+                "TODO: error message, expected {}, got {}", sparse.count(), blocks.len()
             )))
         }
 
         if !blocks.is_empty() {
             // make sure all blocks have the same kind of samples, symmetric &
-            // features indexes
+            // features labels
             let samples_names = blocks[0].values.samples().names();
             let symmetric_names = blocks[0].values.symmetric().names();
             let features_names = blocks[0].values.features().names();
@@ -29,7 +29,7 @@ impl Descriptor {
             for block in &blocks {
                 if block.values.samples().names() != samples_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same samples indexes names, got [{}] and [{}]",
+                        "all blocks must have the same samples labels names, got [{}] and [{}]",
                         block.values.samples().names().join(", "),
                         samples_names.join(", "),
                     )));
@@ -37,7 +37,7 @@ impl Descriptor {
 
                 if block.values.symmetric().names() != symmetric_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same symmetric indexes names, got [{}] and [{}]",
+                        "all blocks must have the same symmetric labels names, got [{}] and [{}]",
                         block.values.symmetric().names().join(", "),
                         symmetric_names.join(", "),
                     )));
@@ -45,7 +45,7 @@ impl Descriptor {
 
                 if block.values.features().names() != features_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same features indexes names, got [{}] and [{}]",
+                        "all blocks must have the same features labels names, got [{}] and [{}]",
                         block.values.features().names().join(", "),
                         features_names.join(", "),
                     )));
@@ -56,7 +56,7 @@ impl Descriptor {
         }
 
         Ok(Descriptor {
-            sparse_indexes,
+            sparse,
             blocks,
         })
     }
@@ -69,25 +69,25 @@ impl Descriptor {
         &mut self.blocks
     }
 
-    pub fn sparse_indexes(&self) -> &Indexes {
-        &self.sparse_indexes
+    pub fn sparse(&self) -> &Labels {
+        &self.sparse
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=(&[IndexValue], &Block)> + '_ {
-        self.sparse_indexes.iter().zip(&self.blocks)
+    pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
+        self.sparse.iter().zip(&self.blocks)
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=(&[IndexValue], &mut Block)> + '_ {
-        self.sparse_indexes.iter().zip(&mut self.blocks)
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=(&[LabelValue], &mut Block)> + '_ {
+        self.sparse.iter().zip(&mut self.blocks)
     }
 
-    pub fn blocks_matching(&self, selection: &Indexes) -> Result<Vec<&Block>, Error> {
+    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&Block>, Error> {
         let matching = self.find_matching_blocks(selection)?;
 
         return Ok(matching.into_iter().map(|i| &self.blocks[i]).collect());
     }
 
-    pub fn blocks_matching_mut(&mut self, selection: &Indexes) -> Result<Vec<&mut Block>, Error> {
+    pub fn blocks_matching_mut(&mut self, selection: &Labels) -> Result<Vec<&mut Block>, Error> {
         let _matching = self.find_matching_blocks(selection)?;
 
         // TODO: needs unsafe to tell compiler we are only giving out exclusive references
@@ -95,7 +95,7 @@ impl Descriptor {
         todo!()
     }
 
-    pub fn block(&self, selection: &Indexes) -> Result<&Block, Error> {
+    pub fn block(&self, selection: &Labels) -> Result<&Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
             return Err(Error::InvalidParameter("TODO: too many matching blocks".into()));
@@ -103,7 +103,7 @@ impl Descriptor {
         return Ok(&self.blocks[matching[0]]);
     }
 
-    pub fn block_mut(&mut self, selection: &Indexes) -> Result<&mut Block, Error> {
+    pub fn block_mut(&mut self, selection: &Labels) -> Result<&mut Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
             return Err(Error::InvalidParameter("TODO: too many matching blocks".into()));
@@ -112,20 +112,20 @@ impl Descriptor {
         return Ok(&mut self.blocks[matching[0]]);
     }
 
-    fn find_matching_blocks(&self, selection: &Indexes) -> Result<Vec<usize>, Error> {
+    fn find_matching_blocks(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
         if selection.size() == 0 {
             return Ok((0..self.blocks().len()).collect());
         }
         if selection.count() != 1 {
             return Err(Error::InvalidParameter(format!(
-                "block selection indexes must contain a single row, got {}",
+                "block selection labels must contain a single row, got {}",
                 selection.count()
             )));
         }
 
         let mut variables = Vec::new();
         'outer: for requested in selection.names() {
-            for (i, &name) in self.sparse_indexes.names().iter().enumerate() {
+            for (i, &name) in self.sparse.names().iter().enumerate() {
                 if requested == name {
                     variables.push(i);
                     continue 'outer;
@@ -133,7 +133,7 @@ impl Descriptor {
             }
 
             return Err(Error::InvalidParameter(format!(
-                "'{}' is not part of the sparse indexes for this descriptor",
+                "'{}' is not part of the sparse labels for this descriptor",
                 requested
             )));
         }
@@ -141,10 +141,10 @@ impl Descriptor {
         let mut matching = Vec::new();
         let selection = selection.iter().next().expect("empty selection");
 
-        for (block_i, indexes) in self.sparse_indexes.iter().enumerate() {
+        for (block_i, labels) in self.sparse.iter().enumerate() {
             let mut selected = true;
             for (&requested_i, &value) in variables.iter().zip(selection) {
-                if indexes[requested_i] != value {
+                if labels[requested_i] != value {
                     selected = false;
                     break;
                 }
@@ -165,7 +165,7 @@ impl Descriptor {
             return Ok(());
         }
 
-        let (new_sparse, new_features) = self.split_sparse_index(variables);
+        let (new_sparse, new_features) = self.split_sparse_label(variables);
 
         let mut new_blocks = Vec::new();
         if new_sparse.count() == 1 {
@@ -179,7 +179,7 @@ impl Descriptor {
             new_blocks.push(block);
         } else {
             for entry in new_sparse.iter() {
-                let mut selection = IndexesBuilder::new(new_sparse.names());
+                let mut selection = LabelsBuilder::new(new_sparse.names());
                 selection.add(entry.to_vec());
 
                 let matching = self.find_matching_blocks(&selection.finish())?;
@@ -188,19 +188,19 @@ impl Descriptor {
         }
 
 
-        self.sparse_indexes = new_sparse;
+        self.sparse = new_sparse;
         self.blocks = new_blocks;
 
         return Ok(());
     }
 
-    fn split_sparse_index(&self, variables: &[&str]) -> (Indexes, Vec<Vec<IndexValue>>) {
+    fn split_sparse_label(&self, variables: &[&str]) -> (Labels, Vec<Vec<LabelValue>>) {
         let mut remaining = Vec::new();
         let mut remaining_i = Vec::new();
         let mut variables_i = Vec::new();
 
-        let sparse_indexes_names = self.sparse_indexes.names();
-        'outer: for (i, &name) in sparse_indexes_names.iter().enumerate() {
+        let sparse_names = self.sparse.names();
+        'outer: for (i, &name) in sparse_names.iter().enumerate() {
             for &variable in variables {
                 if variable == name {
                     variables_i.push(i);
@@ -211,53 +211,53 @@ impl Descriptor {
             remaining_i.push(i);
         }
 
-        // split_indexes contains the values taken by the variables in the
-        // sparse indexes
-        let mut split_indexes = IndexSet::new();
+        // split_labels contains the values taken by the variables in the
+        // sparse labels
+        let mut split_labels = IndexSet::new();
         let mut new_sparse = IndexSet::new();
-        for entry in self.sparse_indexes.iter() {
-            let mut index = Vec::new();
+        for entry in self.sparse.iter() {
+            let mut label = Vec::new();
             for &i in &variables_i {
-                index.push(entry[i]);
+                label.push(entry[i]);
             }
-            split_indexes.insert(index);
+            split_labels.insert(label);
 
             if !remaining_i.is_empty() {
-                let mut index = Vec::new();
+                let mut label = Vec::new();
                 for &i in &remaining_i {
-                    index.push(entry[i]);
+                    label.push(entry[i]);
                 }
-                new_sparse.insert(index);
+                new_sparse.insert(label);
             }
         }
 
         let new_sparse = if new_sparse.is_empty() {
-            Indexes::single()
+            Labels::single()
         } else {
-            let mut new_sparse_builder = IndexesBuilder::new(remaining);
+            let mut new_sparse_builder = LabelsBuilder::new(remaining);
             for entry in new_sparse {
                 new_sparse_builder.add(entry);
             }
             new_sparse_builder.finish()
         };
 
-        return (new_sparse, split_indexes.into_iter().collect());
+        return (new_sparse, split_labels.into_iter().collect());
     }
 
     fn merge_blocks_along_features(&self,
         block_idx: &[usize],
         feature_names: &[&str],
-        feature_values: &[Vec<IndexValue>],
+        feature_values: &[Vec<LabelValue>],
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
         let first_block = &self.blocks[block_idx[0]];
-        let first_symmetric_index = first_block.values.symmetric();
+        let first_symmetric_label = first_block.values.symmetric();
         for &id in block_idx {
-            if self.blocks[id].values.symmetric() != first_symmetric_index {
+            if self.blocks[id].values.symmetric() != first_symmetric_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse index to features if the blocks have \
-                    different symmetric indexes, call symmetric_to_features first".into()
+                    "can not move sparse label to features if the blocks have \
+                    different symmetric labels, call symmetric_to_features first".into()
                 ))
             }
 
@@ -270,10 +270,10 @@ impl Descriptor {
             .chain(first_block.values.features().names().iter())
             .copied()
             .collect();
-        let mut new_features = IndexesBuilder::new(new_feature_names);
+        let mut new_features = LabelsBuilder::new(new_feature_names);
         let mut old_feature_sizes = Vec::new();
 
-        let mut new_samples = IndexesBuilder::new(first_block.values.samples().names());
+        let mut new_samples = LabelsBuilder::new(first_block.values.samples().names());
 
         for (&id, new_feature) in block_idx.iter().zip(feature_values) {
             let block = &self.blocks[id];
@@ -342,7 +342,7 @@ impl Descriptor {
             let mut features_names = block.values.symmetric().names();
             features_names.extend_from_slice(&block.values.features().names());
 
-            let mut new_features = IndexesBuilder::new(features_names);
+            let mut new_features = LabelsBuilder::new(features_names);
             for symmetric in block.values.symmetric().iter() {
                 for feature in block.values.features().iter() {
                     let mut new_feature = symmetric.to_vec();
@@ -361,7 +361,7 @@ impl Descriptor {
             new_blocks.push(Block::new(
                 data,
                 block.values.samples,
-                Arc::new(Indexes::single()),
+                Arc::new(Labels::single()),
                 Arc::new(new_features),
             ));
         }
@@ -378,7 +378,7 @@ impl Descriptor {
             return Ok(());
         }
 
-        let (new_sparse, new_samples) = self.split_sparse_index(variables);
+        let (new_sparse, new_samples) = self.split_sparse_label(variables);
 
         let mut new_blocks = Vec::new();
         if new_sparse.count() == 1 {
@@ -392,7 +392,7 @@ impl Descriptor {
             new_blocks.push(block);
         } else {
             for entry in new_sparse.iter() {
-                let mut selection = IndexesBuilder::new(new_sparse.names());
+                let mut selection = LabelsBuilder::new(new_sparse.names());
                 selection.add(entry.to_vec());
 
                 let matching = self.find_matching_blocks(&selection.finish())?;
@@ -401,7 +401,7 @@ impl Descriptor {
         }
 
 
-        self.sparse_indexes = new_sparse;
+        self.sparse = new_sparse;
         self.blocks = new_blocks;
 
         return Ok(());
@@ -410,25 +410,25 @@ impl Descriptor {
     fn merge_blocks_along_samples(&self,
         block_idx: &[usize],
         samples_names: &[&str],
-        samples_values: &[Vec<IndexValue>]
+        samples_values: &[Vec<LabelValue>]
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
         let first_block = &self.blocks[block_idx[0]];
-        let first_symmetric_index = first_block.values.symmetric();
-        let first_features_index = first_block.values.features();
+        let first_symmetric_label = first_block.values.symmetric();
+        let first_features_label = first_block.values.features();
         for &id in block_idx {
-            if self.blocks[id].values.symmetric() != first_symmetric_index {
+            if self.blocks[id].values.symmetric() != first_symmetric_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse index to samples if the blocks have \
-                    different symmetric indexes, call symmetric_to_features first".into()
+                    "can not move sparse label to samples if the blocks have \
+                    different symmetric labels, call symmetric_to_features first".into()
                 ))
             }
 
-            if self.blocks[id].values.features() != first_features_index {
+            if self.blocks[id].values.features() != first_features_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse index to samples if the blocks have \
-                    different feature indexes".into() // TODO: this might be possible
+                    "can not move sparse label to samples if the blocks have \
+                    different feature labels".into() // TODO: this might be possible
                 ))
             }
 
@@ -453,7 +453,7 @@ impl Descriptor {
             .chain(samples_names)
             .copied()
             .collect();
-        let mut new_samples_builder = IndexesBuilder::new(new_samples_names);
+        let mut new_samples_builder = LabelsBuilder::new(new_samples_names);
         for sample in new_samples {
             new_samples_builder.add(sample);
         }

@@ -100,7 +100,7 @@ def parse(file):
 def c_type_name(name):
     if name.startswith("aml_"):
         # enums are represented as int
-        if name == "aml_indexes_kind":
+        if name == "aml_label_kind":
             return "ctypes.c_int"
         else:
             return name
@@ -198,7 +198,7 @@ def generate_structs(file, structs):
         if len(struct.members) == 0:
             continue
 
-        file.write(f"{struct.name}._fields_ = [\n")
+        file.write(f"\n{struct.name}._fields_ = [\n")
         for name, type in struct.members.items():
             file.write(f'    ("{name}", {type_to_ctypes(type, True)}),\n')
         file.write("]\n")

@@ -3,10 +3,10 @@ from typing import List
 import numpy as np
 import ctypes
 
-from ._c_api import aml_indexes_t
+from ._c_api import aml_labels_t
 
 
-class Indexes(np.ndarray):
+class Labels(np.ndarray):
     """
     This is a small wrapper around a 2D ``numpy.ndarray`` that adds a ``names``
     attribute containing the names of the columns.
@@ -14,7 +14,7 @@ class Indexes(np.ndarray):
     .. py:attribute:: name
         :type: Tuple[str]
 
-        name of each column in this indexes array
+        name of each column in this labels array
     """
 
     def __new__(cls, names: List[str], values: np.ndarray):
@@ -41,7 +41,7 @@ class Indexes(np.ndarray):
             values = values.view(dtype=dtype).reshape((values.shape[0],))
 
             if len(np.unique(values)) != len(values):
-                raise ValueError("values in Indexes must be unique")
+                raise ValueError("values in Labels must be unique")
 
         obj = values.view(cls)
 
@@ -54,52 +54,50 @@ class Indexes(np.ndarray):
     @staticmethod
     def empty(names):
         assert len(names) > 0
-        return Indexes(
+        return Labels(
             names=names, values=np.empty(shape=(0, len(names)), dtype=np.int32)
         )
 
     @staticmethod
     def single():
-        return Indexes(
+        return Labels(
             names=["single_entry"], values=np.zeros(shape=(1, 1), dtype=np.int32)
         )
 
     def as_namedtuples(self):
-        named_tuple_class = namedtuple("IndexTuple", self.names)
+        named_tuple_class = namedtuple("LabelTuple", self.names)
         named_tuple_class.as_dict = named_tuple_class._asdict
 
         for entry in self:
             yield named_tuple_class(*entry)
 
-    def _as_aml_indexes_t(self):
-        aml_indexes = aml_indexes_t()
+    def _as_aml_labels_t(self):
+        aml_labels = aml_labels_t()
 
         names = ctypes.ARRAY(ctypes.c_char_p, len(self.names))()
         for i, n in enumerate(self.names):
             names[i] = n.encode("utf8")
 
-        # keep names alive?
+        aml_labels.names = names
+        aml_labels.size = len(names)
+        aml_labels.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+        aml_labels.count = self.shape[0]
 
-        aml_indexes.names = names
-        aml_indexes.size = len(names)
-        aml_indexes.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-        aml_indexes.count = self.shape[0]
-
-        return aml_indexes
+        return aml_labels
 
     @staticmethod
-    def _from_aml_indexes_t(indexes):
+    def _from_aml_labels_t(labels):
         names = []
-        for i in range(indexes.size):
-            names.append(indexes.names[i].decode("utf8"))
+        for i in range(labels.size):
+            names.append(labels.names[i].decode("utf8"))
 
-        if indexes.count != 0:
-            shape = (indexes.count, indexes.size)
-            values = _ptr_to_ndarray(ptr=indexes.values, shape=shape, dtype=np.int32)
+        if labels.count != 0:
+            shape = (labels.count, labels.size)
+            values = _ptr_to_ndarray(ptr=labels.values, shape=shape, dtype=np.int32)
             values.flags.writeable = False
-            return Indexes(names, values)
+            return Labels(names, values)
         else:
-            return Indexes.empty(names)
+            return Labels.empty(names)
 
 
 def _is_namedtuple(x):

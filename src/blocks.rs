@@ -1,35 +1,35 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use crate::{Indexes, Error, aml_data_storage_t};
+use crate::{Labels, Error, aml_data_storage_t};
 
 pub struct BasicBlock {
     pub data: aml_data_storage_t,
-    pub(crate) samples: Indexes,
-    pub(crate) symmetric: Arc<Indexes>,
-    pub(crate) features: Arc<Indexes>,
+    pub(crate) samples: Labels,
+    pub(crate) symmetric: Arc<Labels>,
+    pub(crate) features: Arc<Labels>,
 }
 
 impl BasicBlock {
     pub fn new(
         data: aml_data_storage_t,
-        samples: Indexes,
-        symmetric: Arc<Indexes>,
-        features: Arc<Indexes>,
+        samples: Labels,
+        symmetric: Arc<Labels>,
+        features: Arc<Labels>,
     ) -> BasicBlock {
         // TODO: checks on size
         return BasicBlock { data, samples, symmetric, features };
     }
 
-    pub fn samples(&self) -> &Indexes {
+    pub fn samples(&self) -> &Labels {
         &self.samples
     }
 
-    pub fn symmetric(&self) -> &Arc<Indexes> {
+    pub fn symmetric(&self) -> &Arc<Labels> {
         &self.symmetric
     }
 
-    pub fn features(&self) -> &Arc<Indexes> {
+    pub fn features(&self) -> &Arc<Labels> {
         &self.features
     }
 }
@@ -42,9 +42,9 @@ pub struct Block {
 impl Block {
     pub fn new(
         data: aml_data_storage_t,
-        samples: Indexes,
-        symmetric: Arc<Indexes>,
-        features: Arc<Indexes>,
+        samples: Labels,
+        symmetric: Arc<Labels>,
+        features: Arc<Labels>,
     ) -> Block {
         Block {
             values: BasicBlock::new(data, samples, symmetric, features),
@@ -56,7 +56,7 @@ impl Block {
         !self.gradients.is_empty()
     }
 
-    pub fn add_gradient(&mut self, name: &str, samples: Indexes, gradient: aml_data_storage_t) -> Result<(), Error> {
+    pub fn add_gradient(&mut self, name: &str, samples: Labels, gradient: aml_data_storage_t) -> Result<(), Error> {
         if self.gradients.contains_key(name) {
             return Err(Error::InvalidParameter(format!(
                 "gradient with respect to '{}' already exists for this block", name
@@ -72,7 +72,7 @@ impl Block {
 
         if samples.names()[0] != "sample" {
             return Err(Error::InvalidParameter(
-                "first variable in the samples Indexes must be 'samples'".into()
+                "first variable in the samples Labels must be 'samples'".into()
             ))
         }
 

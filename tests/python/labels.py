@@ -1,17 +1,17 @@
 import unittest
 
 import numpy as np
-from aml_storage import Indexes
+from aml_storage import Labels
 
 
-class TestIndexes(unittest.TestCase):
+class TestLabels(unittest.TestCase):
     def test_names(self):
-        indexes = Indexes(
+        labels = Labels(
             names=["a", "b"],
             values=np.array([[0, 0]], dtype=np.int32),
         )
 
-        self.assertEqual(indexes.names, ("a", "b"))
+        self.assertEqual(labels.names, ("a", "b"))
 
 
 if __name__ == "__main__":

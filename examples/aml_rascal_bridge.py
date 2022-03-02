@@ -6,9 +6,7 @@ import torch
 import ase
 from rascal.representations import SphericalExpansion
 
-from aml_storage import Indexes
-from aml_storage import Block
-from aml_storage import Descriptor
+from aml_storage import Labels, Block, Descriptor
 
 
 class RascalSphericalExpansion:
@@ -33,7 +31,7 @@ class RascalSphericalExpansion:
         grad_info = manager.get_gradients_info()
 
         # Step 2: move data around to follow the storage convention
-        sparse_indexes = Indexes(
+        sparse = Labels(
             names=["spherical_harmonics_l", "center_species", "neighbor_species"],
             values=np.array(
                 [
@@ -46,7 +44,7 @@ class RascalSphericalExpansion:
             ),
         )
 
-        features = Indexes(
+        features = Labels(
             names=["n"],
             values=np.array([[n] for n in range(hypers["max_radial"])], dtype=np.int32),
         )
@@ -71,19 +69,17 @@ class RascalSphericalExpansion:
                 global_to_per_structure_atom_id.append(i)
 
         blocks = []
-        for sparse_i, (l, center_species, neighbor_species) in enumerate(
-            sparse_indexes
-        ):
+        for sparse_i, (l, center_species, neighbor_species) in enumerate(sparse):
             neighbor_species_i = global_species.index(neighbor_species)
             center_species_mask = np.where(info[:, 2] == center_species)[0]
             block_data = data[center_species_mask, neighbor_species_i, :, lm_slices[l]]
             block_data = block_data.swapaxes(1, 2)
 
-            samples = Indexes(
+            samples = Labels(
                 names=["structure", "center"],
                 values=np.copy(info[center_species_mask, :2]).astype(np.int32),
             )
-            symmetric = Indexes(
+            symmetric = Labels(
                 names=["spherical_harmonics_m"],
                 values=np.array([[m] for m in range(-l, l + 1)], dtype=np.int32),
             )
@@ -123,7 +119,7 @@ class RascalSphericalExpansion:
 
                 if len(gradient_samples) != 0:
                     block_gradients = np.concatenate(block_gradients)
-                    gradient_samples = Indexes(
+                    gradient_samples = Labels(
                         names=["sample", "atom", "spatial"],
                         values=np.vstack(gradient_samples).astype(np.int32),
                     )
@@ -131,13 +127,13 @@ class RascalSphericalExpansion:
                     block_gradients = np.zeros(
                         (0, symmetric.shape[0], features.shape[0])
                     )
-                    gradient_samples = Indexes(
+                    gradient_samples = Labels(
                         names=["sample", "atom", "spatial"],
                         values=np.zeros((0, 3), dtype=np.int32),
                     )
 
             # reset atom index (librascal uses a global atom index)
-            samples = Indexes(
+            samples = Labels(
                 names=["structure", "center"],
                 values=np.array(
                     [
@@ -160,7 +156,7 @@ class RascalSphericalExpansion:
 
             blocks.append(block)
 
-        return Descriptor(sparse_indexes, blocks)
+        return Descriptor(sparse, blocks)
 
 
 class SphericalExpansionAutograd(torch.autograd.Function):
@@ -260,7 +256,7 @@ class RascalSphericalExpansionTorch:
         info = np.vstack(all_info)
 
         # Step 2: move data around to follow the storage convention
-        sparse_indexes = Indexes(
+        sparse = Labels(
             names=["spherical_harmonics_l", "center_species", "neighbor_species"],
             values=np.array(
                 [
@@ -273,7 +269,7 @@ class RascalSphericalExpansionTorch:
             ),
         )
 
-        features = Indexes(
+        features = Labels(
             names=["n"],
             values=np.array([[n] for n in range(hypers["max_radial"])], dtype=np.int32),
         )
@@ -290,19 +286,17 @@ class RascalSphericalExpansionTorch:
         )
 
         blocks = []
-        for sparse_i, (l, center_species, neighbor_species) in enumerate(
-            sparse_indexes
-        ):
+        for sparse_i, (l, center_species, neighbor_species) in enumerate(sparse):
             neighbor_species_i = global_species.index(neighbor_species)
             center_species_mask = np.where(info[:, 2] == center_species)[0]
             block_data = data[center_species_mask, neighbor_species_i, :, lm_slices[l]]
             block_data = block_data.swapaxes(1, 2)
 
-            samples = Indexes(
+            samples = Labels(
                 names=["structure", "center"],
                 values=np.copy(info[center_species_mask, :2]).astype(np.int32),
             )
-            symmetric = Indexes(
+            symmetric = Labels(
                 names=["spherical_harmonics_m"],
                 values=np.array([[m] for m in range(-l, l + 1)], dtype=np.int32),
             )
@@ -316,4 +310,4 @@ class RascalSphericalExpansionTorch:
                 )
             )
 
-        return Descriptor(sparse_indexes, blocks)
+        return Descriptor(sparse, blocks)

@@ -1,9 +1,9 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
-use crate::{Descriptor, Indexes, IndexValue, Block};
+use crate::{Descriptor, Labels, LabelValue, Block};
 
-use super::indexes::aml_indexes_t;
+use super::labels::aml_labels_t;
 use super::blocks::aml_block_t;
 use super::status::{aml_status_t, catch_unwind};
 
@@ -27,14 +27,14 @@ impl std::ops::DerefMut for aml_descriptor_t {
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
 pub unsafe extern fn aml_descriptor(
-    sparse_indexes: aml_indexes_t,
+    sparse_labels: aml_labels_t,
     blocks: *mut *mut aml_block_t,
     blocks_count: u64,
 ) -> *mut aml_descriptor_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let sparse_indexes = Indexes::try_from(sparse_indexes)?;
+        let sparse_labels = Labels::try_from(sparse_labels)?;
 
         // TODO: check for uniqueness of the pointers: we don't want to move out
         // the same value twice
@@ -46,7 +46,7 @@ pub unsafe extern fn aml_descriptor(
             return block;
         }).collect();
 
-        let descriptor = Descriptor::new(sparse_indexes, blocks_vec)?;
+        let descriptor = Descriptor::new(sparse_labels, blocks_vec)?;
         let boxed = Box::new(aml_descriptor_t(descriptor));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -77,28 +77,28 @@ pub unsafe extern fn aml_descriptor_free(
 }
 
 #[no_mangle]
-pub unsafe extern fn aml_descriptor_sparse_indexes(
+pub unsafe extern fn aml_descriptor_sparse_labels(
     descriptor: *const aml_descriptor_t,
-    indexes: *mut aml_indexes_t,
+    labels: *mut aml_labels_t,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(descriptor, indexes);
+        check_pointers!(descriptor, labels);
 
-        let rust_indexes = (*descriptor).sparse_indexes();
+        let rust_labels = (*descriptor).sparse();
 
-        (*indexes).size = rust_indexes.size();
-        (*indexes).count = rust_indexes.count();
+        (*labels).size = rust_labels.size();
+        (*labels).count = rust_labels.count();
 
-        if rust_indexes.count() == 0 || rust_indexes.size() == 0 {
-            (*indexes).values = std::ptr::null();
+        if rust_labels.count() == 0 || rust_labels.size() == 0 {
+            (*labels).values = std::ptr::null();
         } else {
-            (*indexes).values = (&rust_indexes[0][0] as *const IndexValue).cast();
+            (*labels).values = (&rust_labels[0][0] as *const LabelValue).cast();
         }
 
-        if rust_indexes.size() == 0 {
-            (*indexes).names = std::ptr::null();
+        if rust_labels.size() == 0 {
+            (*labels).names = std::ptr::null();
         } else {
-            (*indexes).names = rust_indexes.c_names().as_ptr().cast();
+            (*labels).names = rust_labels.c_names().as_ptr().cast();
         }
         Ok(())
     })
@@ -125,12 +125,12 @@ pub unsafe extern fn aml_descriptor_block_by_id(
 pub unsafe extern fn aml_descriptor_block_selection(
     descriptor: *const aml_descriptor_t,
     block: *mut *const aml_block_t,
-    selection: aml_indexes_t,
+    selection: aml_labels_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(descriptor, block);
 
-        let selection = Indexes::try_from(selection)?;
+        let selection = Labels::try_from(selection)?;
         let rust_block = (*descriptor).block(&selection)?;
         (*block) = (rust_block as *const Block).cast();
 

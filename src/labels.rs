@@ -8,6 +8,7 @@ use std::hash::BuildHasherDefault;
 
 use twox_hash::XxHash64;
 
+// TODO: why is this needed?
 #[repr(transparent)]
 pub struct ConstCString(*const std::os::raw::c_char);
 
@@ -60,48 +61,49 @@ unsafe impl Sync for ConstCString {}
 
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct IndexValue(i32);
+#[repr(transparent)]
+pub struct LabelValue(i32);
 
-impl std::fmt::Debug for IndexValue {
+impl std::fmt::Debug for LabelValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl std::fmt::Display for IndexValue {
+impl std::fmt::Display for LabelValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl From<u32> for IndexValue {
-    fn from(value: u32) -> IndexValue {
+impl From<u32> for LabelValue {
+    fn from(value: u32) -> LabelValue {
         assert!(value < i32::MAX as u32);
-        IndexValue(value as i32)
+        LabelValue(value as i32)
     }
 }
 
-impl From<i32> for IndexValue {
-    fn from(value: i32) -> IndexValue {
-        IndexValue(value)
+impl From<i32> for LabelValue {
+    fn from(value: i32) -> LabelValue {
+        LabelValue(value)
     }
 }
 
-impl From<usize> for IndexValue {
-    fn from(value: usize) -> IndexValue {
+impl From<usize> for LabelValue {
+    fn from(value: usize) -> LabelValue {
         assert!(value < i32::MAX as usize);
-        IndexValue(value as i32)
+        LabelValue(value as i32)
     }
 }
 
-impl From<isize> for IndexValue {
-    fn from(value: isize) -> IndexValue {
+impl From<isize> for LabelValue {
+    fn from(value: isize) -> LabelValue {
         assert!(value < i32::MAX as isize && value > i32::MIN as isize);
-        IndexValue(value as i32)
+        LabelValue(value as i32)
     }
 }
 
-impl IndexValue {
+impl LabelValue {
     #[allow(clippy::cast_sign_loss)]
     pub fn usize(self) -> usize {
         debug_assert!(self.0 >= 0);
@@ -117,41 +119,41 @@ impl IndexValue {
     }
 }
 
-pub struct IndexesBuilder {
-    /// Names of the indexes
+pub struct LabelsBuilder {
+    /// Names of the labels
     names: Vec<String>,
-    /// Values of the indexes, as a linearized 2D array in row-major order
-    values: Vec<IndexValue>,
-    positions: HashMap<Vec<IndexValue>, usize, BuildHasherDefault<XxHash64>>,
+    /// Values of the labels, as a linearized 2D array in row-major order
+    values: Vec<LabelValue>,
+    positions: HashMap<Vec<LabelValue>, usize, BuildHasherDefault<XxHash64>>,
 }
 
-impl IndexesBuilder {
-    /// Create a new empty `IndexesBuilder` with the given `names`
-    pub fn new(names: Vec<&str>) -> IndexesBuilder {
+impl LabelsBuilder {
+    /// Create a new empty `LabelsBuilder` with the given `names`
+    pub fn new(names: Vec<&str>) -> LabelsBuilder {
         for name in &names {
-            assert!(is_valid_index_name(name), "all indexes names must be valid identifiers, '{}' is not", name);
+            assert!(is_valid_label_name(name), "all labels names must be valid identifiers, '{}' is not", name);
         }
 
         let n_unique_names = names.iter().collect::<BTreeSet<_>>().len();
-        assert!(n_unique_names == names.len(), "invalid indexes: the same name is used multiple times");
+        assert!(n_unique_names == names.len(), "invalid labels: the same name is used multiple times");
 
-        IndexesBuilder {
+        LabelsBuilder {
             names: names.into_iter().map(|s| s.into()).collect(),
             values: Vec::new(),
             positions: Default::default(),
         }
     }
 
-    /// Get the number of indexes in a single value
+    /// Get the number of labels in a single value
     pub fn size(&self) -> usize {
         self.names.len()
     }
 
-    /// Add a single entry with the given `values` for this set of indexes
-    pub fn add(&mut self, values: Vec<IndexValue>) {
+    /// Add a single entry with the given `values` for this set of labels
+    pub fn add(&mut self, values: Vec<LabelValue>) {
         assert_eq!(
             self.size(), values.len(),
-            "wrong size for added index: got {}, but expected {}", values.len(), self.size()
+            "wrong size for added label: got {}, but expected {}", values.len(), self.size()
         );
 
         self.values.extend(&values);
@@ -161,7 +163,7 @@ impl IndexesBuilder {
             Entry::Occupied(entry) => {
                 let values_display = entry.key().iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 panic!(
-                    "can not have the same index value multiple time: [{}] is already present at position {}",
+                    "can not have the same label value multiple time: [{}] is already present at position {}",
                     values_display, entry.get()
                 );
             },
@@ -171,14 +173,14 @@ impl IndexesBuilder {
         }
     }
 
-    pub fn contains(&self, values: &[IndexValue]) -> bool {
+    pub fn contains(&self, values: &[LabelValue]) -> bool {
         self.positions.contains_key(values)
     }
 
-    pub fn finish(self) -> Indexes {
+    pub fn finish(self) -> Labels {
         if self.names.is_empty() {
             assert!(self.values.is_empty());
-            return Indexes {
+            return Labels {
                 names: Vec::new(),
                 values: Vec::new(),
                 positions: Default::default(),
@@ -189,7 +191,7 @@ impl IndexesBuilder {
             .map(|s| ConstCString::new(CString::new(s).expect("invalid C string")))
             .collect::<Vec<_>>();
 
-        return Indexes {
+        return Labels {
             names: names,
             values: self.values,
             positions: self.positions,
@@ -197,9 +199,9 @@ impl IndexesBuilder {
     }
 }
 
-/// Check if the given name is a valid index variable name, to be used as a
-/// column name in `Indexes`.
-pub fn is_valid_index_name(name: &str) -> bool {
+/// Check if the given name is a valid identifier, to be used as a
+/// column name in `Labels`.
+pub fn is_valid_label_name(name: &str) -> bool {
     if name.is_empty() {
         return false;
     }
@@ -218,22 +220,22 @@ pub fn is_valid_index_name(name: &str) -> bool {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct Indexes {
-    /// Names of the indexes, stored as const C strings for easier integration
+pub struct Labels {
+    /// Names of the labels, stored as const C strings for easier integration
     /// with the C API
     names: Vec<ConstCString>,
-    /// Values of the indexes, as a linearized 2D array in row-major order
-    values: Vec<IndexValue>,
-    /// Store the position of all the known indexes, for faster access later.
+    /// Values of the labels, as a linearized 2D array in row-major order
+    values: Vec<LabelValue>,
+    /// Store the position of all the known labels, for faster access later.
     /// This uses `XxHash64` instead of the default hasher in std since
     /// `XxHash64` is much faster and we don't need the cryptographic strength
     /// hash from std.
-    positions: HashMap<Vec<IndexValue>, usize, BuildHasherDefault<XxHash64>>,
+    positions: HashMap<Vec<LabelValue>, usize, BuildHasherDefault<XxHash64>>,
 }
 
-impl std::fmt::Debug for Indexes {
+impl std::fmt::Debug for Labels {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Indexes{{")?;
+        writeln!(f, "Labels{{")?;
         writeln!(f, "    {}", self.names().join(", "))?;
 
         let widths = self.names().iter().map(|s| s.len()).collect::<Vec<_>>();
@@ -250,30 +252,30 @@ impl std::fmt::Debug for Indexes {
     }
 }
 
-impl Indexes {
-    pub fn single() -> Indexes {
-        let mut builder = IndexesBuilder::new(vec!["single_entry"]);
-        builder.add(vec![IndexValue::from(0)]);
+impl Labels {
+    pub fn single() -> Labels {
+        let mut builder = LabelsBuilder::new(vec!["single_entry"]);
+        builder.add(vec![LabelValue::from(0)]);
 
         return builder.finish();
     }
 
-    /// Get the number of indexes in a single value
+    /// Get the number of labels in a single value
     pub fn size(&self) -> usize {
         self.names.len()
     }
 
-    /// Names of the indexes
+    /// Names of the labels
     pub fn names(&self) -> Vec<&str> {
         self.names.iter().map(|s| s.as_str()).collect()
     }
 
-    /// Names of the indexes as C-compatible (null terminated) strings
+    /// Names of the labels as C-compatible (null terminated) strings
     pub fn c_names(&self) -> &[ConstCString] {
         &self.names
     }
 
-    /// How many entries of indexes do we have
+    /// How many entries of labels do we have
     pub fn count(&self) -> usize {
         return self.values.len() / self.size();
     }
@@ -286,14 +288,14 @@ impl Indexes {
         };
     }
 
-    /// Check whether the given `value` is part of this set of indexes
-    pub fn contains(&self, value: &[IndexValue]) -> bool {
+    /// Check whether the given `value` is part of this set of labels
+    pub fn contains(&self, value: &[LabelValue]) -> bool {
         self.position(value).is_some()
     }
 
-    /// Get the position of the given value on this set of indexes, or None.
-    pub fn position(&self, value: &[IndexValue]) -> Option<usize> {
-        assert!(value.len() == self.size(), "invalid size of index in Indexes::position");
+    /// Get the position of the given value on this set of labels, or None.
+    pub fn position(&self, value: &[LabelValue]) -> Option<usize> {
+        assert!(value.len() == self.size(), "invalid size of index in Labels::position");
 
         self.positions.get(value).copied()
     }
@@ -301,11 +303,11 @@ impl Indexes {
 
 pub struct Iter<'a> {
     size: usize,
-    values: &'a [IndexValue],
+    values: &'a [LabelValue],
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = &'a[IndexValue];
+    type Item = &'a[LabelValue];
     fn next(&mut self) -> Option<Self::Item> {
         if self.values.is_empty() {
             return None
@@ -323,17 +325,17 @@ impl<'a> ExactSizeIterator for Iter<'a> {
     }
 }
 
-impl<'a> IntoIterator for &'a Indexes {
+impl<'a> IntoIterator for &'a Labels {
     type IntoIter = Iter<'a>;
-    type Item = &'a [IndexValue];
+    type Item = &'a [LabelValue];
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl std::ops::Index<usize> for Indexes {
-    type Output = [IndexValue];
-    fn index(&self, i: usize) -> &[IndexValue] {
+impl std::ops::Index<usize> for Labels {
+    type Output = [LabelValue];
+    fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
         &self.values[start..stop]

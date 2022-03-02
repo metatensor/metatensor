@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
-use crate::{Block, Indexes, IndexValue, Error, aml_data_storage_t};
+use crate::{Block, Labels, LabelValue, Error, aml_data_storage_t};
 
-use super::indexes::{aml_indexes_t, aml_indexes_kind};
+use super::labels::{aml_labels_t, aml_label_kind};
 
 use super::{catch_unwind, aml_status_t};
 
@@ -34,16 +34,16 @@ impl aml_block_t {
 #[no_mangle]
 pub unsafe extern fn aml_block(
     data: aml_data_storage_t,
-    samples: aml_indexes_t,
-    symmetric: aml_indexes_t,
-    features: aml_indexes_t,
+    samples: aml_labels_t,
+    symmetric: aml_labels_t,
+    features: aml_labels_t,
 ) -> *mut aml_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let samples = Indexes::try_from(samples)?;
-        let symmetric = Indexes::try_from(symmetric)?;
-        let features = Indexes::try_from(features)?;
+        let samples = Labels::try_from(samples)?;
+        let symmetric = Labels::try_from(symmetric)?;
+        let features = Labels::try_from(features)?;
 
         let block = Block::new(data, samples, Arc::new(symmetric), Arc::new(features));
         let boxed = Box::new(aml_block_t(block));
@@ -76,14 +76,14 @@ pub unsafe extern fn aml_block_free(
 }
 
 #[no_mangle]
-pub unsafe extern fn aml_block_indexes(
+pub unsafe extern fn aml_block_labels(
     block: *const aml_block_t,
     values_gradients: *const c_char,
-    kind: aml_indexes_kind,
-    indexes: *mut aml_indexes_t,
+    kind: aml_label_kind,
+    labels: *mut aml_labels_t,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(block, values_gradients, indexes);
+        check_pointers!(block, values_gradients, labels);
 
         let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
         let basic_block = match values_gradients {
@@ -95,25 +95,25 @@ pub unsafe extern fn aml_block_indexes(
             }
         };
 
-        let rust_indexes = match kind {
-            aml_indexes_kind::AML_INDEXES_SAMPLES => basic_block.samples(),
-            aml_indexes_kind::AML_INDEXES_SYMMETRIC => basic_block.symmetric(),
-            aml_indexes_kind::AML_INDEXES_FEATURES => basic_block.features(),
+        let rust_labels = match kind {
+            aml_label_kind::AML_SAMPLE_LABELS => basic_block.samples(),
+            aml_label_kind::AML_SYMMETRIC_LABELS => basic_block.symmetric(),
+            aml_label_kind::AML_FEATURE_LABELS => basic_block.features(),
         };
 
-        (*indexes).size = rust_indexes.size();
-        (*indexes).count = rust_indexes.count();
+        (*labels).size = rust_labels.size();
+        (*labels).count = rust_labels.count();
 
-        if rust_indexes.count() == 0 || rust_indexes.size() == 0 {
-            (*indexes).values = std::ptr::null();
+        if rust_labels.count() == 0 || rust_labels.size() == 0 {
+            (*labels).values = std::ptr::null();
         } else {
-            (*indexes).values = (&rust_indexes[0][0] as *const IndexValue).cast();
+            (*labels).values = (&rust_labels[0][0] as *const LabelValue).cast();
         }
 
-        if rust_indexes.size() == 0 {
-            (*indexes).names = std::ptr::null();
+        if rust_labels.size() == 0 {
+            (*labels).names = std::ptr::null();
         } else {
-            (*indexes).names = rust_indexes.c_names().as_ptr().cast();
+            (*labels).names = rust_labels.c_names().as_ptr().cast();
         }
 
         Ok(())
@@ -150,13 +150,13 @@ pub unsafe extern fn aml_block_data(
 pub unsafe extern fn aml_block_add_gradient(
     block: *mut aml_block_t,
     name: *const c_char,
-    samples: aml_indexes_t,
+    samples: aml_labels_t,
     gradient: aml_data_storage_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(block, name);
         let name = CStr::from_ptr(name).to_str().unwrap();
-        let samples = Indexes::try_from(samples)?;
+        let samples = Labels::try_from(samples)?;
         (*block).add_gradient(name, samples, gradient)?;
         Ok(())
     })
