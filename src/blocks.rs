@@ -10,15 +10,50 @@ pub struct BasicBlock {
     pub(crate) features: Arc<Labels>,
 }
 
+fn check_data_label_shape(
+    context: &str,
+    data: &aml_data_storage_t,
+    samples: &Labels,
+    symmetric: &Labels,
+    features: &Labels,
+) -> Result<(), Error> {
+    let (n_samples, n_symmetric, n_features) = data.shape();
+    if n_samples != samples.count() {
+        return Err(Error::InvalidParameter(format!(
+            "{}: the array shape along axis 0 is {} but we have {} sample labels",
+            context, n_samples, samples.count()
+        )));
+    }
+
+    if n_symmetric != symmetric.count() {
+        return Err(Error::InvalidParameter(format!(
+            "{}: the array shape along axis 1 is {} but we have {} symmetric labels",
+            context, n_symmetric, symmetric.count()
+        )));
+    }
+
+    if n_features != features.count() {
+        return Err(Error::InvalidParameter(format!(
+            "{}: the array shape along axis 2 is {} but we have {} features labels",
+            context, n_features, features.count()
+        )));
+    }
+
+    Ok(())
+}
+
 impl BasicBlock {
     pub fn new(
         data: aml_data_storage_t,
         samples: Labels,
         symmetric: Arc<Labels>,
         features: Arc<Labels>,
-    ) -> BasicBlock {
-        // TODO: checks on size
-        return BasicBlock { data, samples, symmetric, features };
+    ) -> Result<BasicBlock, Error> {
+        check_data_label_shape(
+            "data and labels don't match", &data, &samples, &symmetric, &features
+        )?;
+
+        return Ok(BasicBlock { data, samples, symmetric, features });
     }
 
     pub fn samples(&self) -> &Labels {
@@ -45,11 +80,11 @@ impl Block {
         samples: Labels,
         symmetric: Arc<Labels>,
         features: Arc<Labels>,
-    ) -> Block {
-        Block {
-            values: BasicBlock::new(data, samples, symmetric, features),
+    ) -> Result<Block, Error> {
+        Ok(Block {
+            values: BasicBlock::new(data, samples, symmetric, features)?,
             gradients: HashMap::new(),
-        }
+        })
     }
 
     pub fn has_gradients(&self) -> bool {
@@ -72,20 +107,22 @@ impl Block {
 
         if samples.names()[0] != "sample" {
             return Err(Error::InvalidParameter(
-                "first variable in the samples Labels must be 'samples'".into()
+                "first variable in the gradients samples labels must be 'samples'".into()
             ))
         }
 
-        // TODO: check shape for symmetric & features
+        let symmetric = Arc::clone(self.values.symmetric());
+        let features = Arc::clone(self.values.features());
+        check_data_label_shape(
+            "gradient data and labels don't match", &gradient, &samples, &symmetric, &features
+        )?;
 
-        let gradient = BasicBlock::new(
-            gradient,
+        self.gradients.insert(name.into(), BasicBlock {
+            data: gradient,
             samples,
-            Arc::clone(self.values.symmetric()),
-            Arc::clone(self.values.features())
-        );
-
-        self.gradients.insert(name.into(), gradient);
+            symmetric,
+            features
+        });
 
         return Ok(())
     }

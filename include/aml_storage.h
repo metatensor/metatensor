@@ -78,8 +78,9 @@ typedef struct aml_data_storage_t {
    */
   void *data;
   aml_status_t (*origin)(const void *data, aml_data_origin_t *origin);
-  aml_status_t (*set_from_other)(const void *data, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other, uint64_t other_sample);
-  aml_status_t (*reshape)(const void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
+  aml_status_t (*set_from_other)(void *data, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other, uint64_t other_sample);
+  aml_status_t (*shape)(const void *data, uint64_t *n_samples, uint64_t *n_symmetric, uint64_t *n_features);
+  aml_status_t (*reshape)(void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
   aml_status_t (*create)(const void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_data_storage_t *data_storage);
   void (*destroy)(void *data);
 } aml_data_storage_t;

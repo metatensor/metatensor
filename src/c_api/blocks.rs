@@ -45,7 +45,7 @@ pub unsafe extern fn aml_block(
         let symmetric = Labels::try_from(symmetric)?;
         let features = Labels::try_from(features)?;
 
-        let block = Block::new(data, samples, Arc::new(symmetric), Arc::new(features));
+        let block = Block::new(data, samples, Arc::new(symmetric), Arc::new(features))?;
         let boxed = Box::new(aml_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just

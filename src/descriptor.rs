@@ -15,7 +15,8 @@ impl Descriptor {
     pub fn new(sparse: Labels, blocks: Vec<Block>) -> Result<Descriptor, Error> {
         if blocks.len() != sparse.count() {
             return Err(Error::InvalidParameter(format!(
-                "TODO: error message, expected {}, got {}", sparse.count(), blocks.len()
+                "expected {} blocks to create a descriptor, got {}",
+                sparse.count(), blocks.len()
             )))
         }
 
@@ -98,15 +99,36 @@ impl Descriptor {
     pub fn block(&self, selection: &Labels) -> Result<&Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
-            return Err(Error::InvalidParameter("TODO: too many matching blocks".into()));
+            let selection_str = selection.names()
+                .iter().zip(&selection[0])
+                .map(|(name, value)| format!("{} = {}", name, value))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+
+            return Err(Error::InvalidParameter(format!(
+                "{} blocks matched the selection ({}), expected only one",
+                matching.len(), selection_str
+            )));
         }
+
         return Ok(&self.blocks[matching[0]]);
     }
 
     pub fn block_mut(&mut self, selection: &Labels) -> Result<&mut Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
-            return Err(Error::InvalidParameter("TODO: too many matching blocks".into()));
+            let selection_str = selection.names()
+                .iter().zip(&selection[0])
+                .map(|(name, value)| format!("{} = {}", name, value))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+
+            return Err(Error::InvalidParameter(format!(
+                "{} blocks matched the selection ({}), expected only one",
+                matching.len(), selection_str
+            )));
         }
 
         return Ok(&mut self.blocks[matching[0]]);
@@ -116,6 +138,7 @@ impl Descriptor {
         if selection.size() == 0 {
             return Ok((0..self.blocks().len()).collect());
         }
+
         if selection.count() != 1 {
             return Err(Error::InvalidParameter(format!(
                 "block selection labels must contain a single row, got {}",
@@ -324,7 +347,7 @@ impl Descriptor {
             }
         }
 
-        return Ok(Block::new(new_data, new_samples, new_symmetric, new_features));
+        return Block::new(new_data, new_samples, new_symmetric, new_features);
     }
 
     // TODO: variables?
@@ -363,7 +386,7 @@ impl Descriptor {
                 block.values.samples,
                 Arc::new(Labels::single()),
                 Arc::new(new_features),
-            ));
+            )?);
         }
 
         self.blocks = new_blocks;
@@ -488,6 +511,6 @@ impl Descriptor {
             }
         }
 
-        return Ok(Block::new(new_data, new_samples, new_symmetric, new_features));
+        return Block::new(new_data, new_samples, new_symmetric, new_features);
     }
 }

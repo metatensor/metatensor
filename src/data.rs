@@ -63,6 +63,7 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
 // }
 
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct aml_data_storage_t {
     /// User-provided data should be stored here, it will be passed as the
     /// first parameter to all function pointers below.
@@ -74,7 +75,7 @@ pub struct aml_data_storage_t {
     ) -> aml_status_t>,
 
     set_from_other: Option<unsafe extern fn(
-        data: *const c_void,
+        data: *mut c_void,
         sample: u64,
         feature_start: u64,
         feature_end: u64,
@@ -82,8 +83,15 @@ pub struct aml_data_storage_t {
         other_sample: u64
     ) -> aml_status_t>,
 
-    reshape: Option<unsafe extern fn(
+    shape: Option<unsafe extern fn(
         data: *const c_void,
+        n_samples: *mut u64,
+        n_symmetric: *mut u64,
+        n_features: *mut u64,
+    ) -> aml_status_t>,
+
+    reshape: Option<unsafe extern fn(
+        data: *mut c_void,
         n_samples: u64,
         n_symmetric: u64,
         n_features: u64,
@@ -118,6 +126,7 @@ impl aml_data_storage_t {
             data: std::ptr::null_mut(),
             origin: None,
             set_from_other: None,
+            shape: None,
             reshape: None,
             create: None,
             destroy: None,
@@ -154,6 +163,28 @@ impl aml_data_storage_t {
         assert!(status.is_success(), "aml_data_storage_t.set_from_other failed");
     }
 
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn shape(&self) -> (usize, usize, usize) {
+        let function = self.shape.expect("aml_data_storage_t.shape function is NULL");
+
+        let mut n_samples = 0;
+        let mut n_symmetric = 0;
+        let mut n_features = 0;
+
+        let status = unsafe {
+            function(
+                self.data,
+                &mut n_samples,
+                &mut n_symmetric,
+                &mut n_features,
+            )
+        };
+
+        assert!(status.is_success(), "aml_data_storage_t.shape failed");
+
+        return (n_samples as usize, n_symmetric as usize, n_features as usize);
+    }
+
     pub fn reshape(&mut self, shape: (usize, usize, usize)) {
         let function = self.reshape.expect("aml_data_storage_t.reshape function is NULL");
 
@@ -169,7 +200,7 @@ impl aml_data_storage_t {
         assert!(status.is_success(), "aml_data_storage_t.reshape failed");
     }
 
-
+    #[must_use]
     pub fn create(&self, shape: (usize, usize, usize)) -> aml_data_storage_t {
         let function = self.create.expect("aml_data_storage_t.create function is NULL");
 

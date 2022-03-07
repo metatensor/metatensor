@@ -6,6 +6,9 @@
 #![allow(clippy::unreadable_literal, clippy::option_if_let_else, clippy::module_name_repetitions)]
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 
+// introduced in rustc 1.60
+#![allow(clippy::borrow_as_ptr)]
+
 
 mod labels;
 pub use self::labels::{LabelValue, Labels, LabelsBuilder};
