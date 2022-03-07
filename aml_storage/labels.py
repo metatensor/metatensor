@@ -60,9 +60,7 @@ class Labels(np.ndarray):
 
     @staticmethod
     def single():
-        return Labels(
-            names=["single_entry"], values=np.zeros(shape=(1, 1), dtype=np.int32)
-        )
+        return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
 
     def as_namedtuples(self):
         named_tuple_class = namedtuple("LabelTuple", self.names)

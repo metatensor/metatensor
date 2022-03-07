@@ -3,7 +3,7 @@ import ctypes
 
 
 from ._c_lib import _get_library
-from ._c_api import aml_data_storage_t, aml_data_origin_t
+from ._c_api import aml_array_t, aml_data_origin_t
 
 from .utils import _call_with_growing_buffer, catch_exceptions
 
@@ -59,9 +59,9 @@ def _torch_origin():
 def aml_data_to_array(data):
     origin = _data_origin(data[0]).value
     if origin == _NUMPY_STORAGE_ORIGIN:
-        return _object_from_ptr(data[0].data).array
+        return _object_from_ptr(data[0].ptr).array
     elif origin == _TORCH_STORAGE_ORIGIN:
-        return _object_from_ptr(data[0].data).array
+        return _object_from_ptr(data[0].ptr).array
     else:
         raise ValueError(
             f"unable to handle data coming from '{_data_origin_name(origin)}'"
@@ -70,7 +70,7 @@ def aml_data_to_array(data):
 
 def _data_origin(data):
     origin = aml_data_origin_t()
-    data.origin(data.data, origin)
+    data.origin(data.ptr, origin)
     return origin
 
 
@@ -93,10 +93,10 @@ class AmlData:
         else:
             raise ValueError(f"unknown array type: {type(array)}")
 
-        self._storage = aml_data_storage_t()
+        self._storage = aml_array_t()
 
-        # `aml_data_storage.data` is a pointer to this PyObject
-        self._storage.data = ctypes.cast(
+        # `aml_data_storage.ptr` is a pointer to the PyObject `self`
+        self._storage.ptr = ctypes.cast(
             ctypes.pointer(ctypes.py_object(self)), ctypes.c_void_p
         )
 
@@ -107,13 +107,13 @@ class AmlData:
         # use storage.XXX.__class__ to get the right type for all functions
         self._storage.origin = self._storage.origin.__class__(aml_storage_origin)
 
-        self._storage.set_from_other = self._storage.set_from_other.__class__(
-            _aml_storage_set_from_other
-        )
-
+        self._storage.shape = self._storage.shape.__class__(_aml_storage_shape)
         self._storage.reshape = self._storage.reshape.__class__(_aml_storage_reshape)
+
         self._storage.create = self._storage.create.__class__(_aml_storage_create)
         self._storage.destroy = self._storage.destroy.__class__(_aml_storage_destroy)
+
+        self._storage.set_from = self._storage.set_from.__class__(_aml_storage_set_from)
 
 
 def _object_from_ptr(ptr):
@@ -122,12 +122,14 @@ def _object_from_ptr(ptr):
 
 
 @catch_exceptions
-def _aml_storage_set_from_other(
-    this, sample, feature_start, feature_stop, other, other_sample
-):
-    other = _object_from_ptr(other).array
-    output = _object_from_ptr(this).array
-    output[sample, :, feature_start:feature_stop] = other[other_sample, :, :]
+def _aml_storage_shape(this, n_samples, n_symmetric, n_features):
+    storage = _object_from_ptr(this)
+
+    shape = storage.array.shape
+
+    n_samples[0] = ctypes.c_uint64(shape[0])
+    n_symmetric[0] = ctypes.c_uint64(shape[1])
+    n_features[0] = ctypes.c_uint64(shape[2])
 
 
 @catch_exceptions
@@ -158,3 +160,12 @@ def _aml_storage_create(this, n_samples, n_symmetric, n_features, data_storage):
 def _aml_storage_destroy(this):
     storage = _object_from_ptr(this)
     storage.array = None
+
+
+@catch_exceptions
+def _aml_storage_set_from(
+    this, sample, feature_start, feature_stop, other, other_sample
+):
+    other = _object_from_ptr(other).array
+    output = _object_from_ptr(this).array
+    output[sample, :, feature_start:feature_stop] = other[other_sample, :, :]

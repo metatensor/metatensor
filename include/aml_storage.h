@@ -69,21 +69,66 @@ typedef struct aml_descriptor_t aml_descriptor_t;
  */
 typedef int32_t aml_status_t;
 
+/**
+ * A single 64-bit integer representing a data origin (numpy ndarray, rust
+ * ndarray, torch tensor, fortran array, ...).
+ */
 typedef uint64_t aml_data_origin_t;
 
-typedef struct aml_data_storage_t {
+/**
+ * `aml_array_t` manages 3D arrays the be used as data in a block/descriptor.
+ * The array itself if opaque to this library and can come from multiple
+ * sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
+ * or torch. The data does not have to live on CPU, or even on the same machine
+ * where this code is executed.
+ *
+ * This struct contains a C-compatible manual implementation of a virtual table
+ * (vtable, i.e. trait in Rust, pure virtual class in C++); allowing
+ * manipulation of the array in an opaque way.
+ */
+typedef struct aml_array_t {
   /**
    * User-provided data should be stored here, it will be passed as the
    * first parameter to all function pointers below.
    */
-  void *data;
-  aml_status_t (*origin)(const void *data, aml_data_origin_t *origin);
-  aml_status_t (*set_from_other)(void *data, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other, uint64_t other_sample);
-  aml_status_t (*shape)(const void *data, uint64_t *n_samples, uint64_t *n_symmetric, uint64_t *n_features);
-  aml_status_t (*reshape)(void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
-  aml_status_t (*create)(const void *data, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_data_storage_t *data_storage);
-  void (*destroy)(void *data);
-} aml_data_storage_t;
+  void *ptr;
+  /**
+   * This function needs to store the "data origin" for this array in
+   * `origin`. Users of `aml_array_t` should register a single data
+   * origin with `register_data_origin`, and use it for all compatible
+   * arrays.
+   */
+  aml_status_t (*origin)(const void *array, aml_data_origin_t *origin);
+  /**
+   * Get the shape of the array managed by this `aml_array_t`
+   */
+  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_symmetric, uint64_t *n_features);
+  /**
+   * Change the shape of the array managed by this `aml_array_t` to
+   * `(n_samples, n_symmetric, n_features)`
+   */
+  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
+  /**
+   * Create a new array with the same options as the current one (data type,
+   * data location, etc.) and the requested `(n_samples, n_symmetric,
+   * n_features)` shape; and store it in `new_array`.
+   */
+  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_array_t *new_array);
+  /**
+   * Set entries in this array taking data from the `other_array`. This array
+   * is guaranteed to be created by calling `aml_array_t::create` with one of
+   * the arrays in the same block or descriptor as this `array`.
+   *
+   * This function should copy data from `other_array[other_sample, :, :]` to
+   * `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
+   */
+  aml_status_t (*set_from)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
+  /**
+   * Remove this array & free the associated memory. This function can be
+   * set to `NULL` is there is no memory management to do.
+   */
+  void (*destroy)(void *array);
+} aml_array_t;
 
 /**
  * Labels representing metadata associated with either samples or features in
@@ -127,7 +172,7 @@ aml_status_t aml_register_data_origin(const char *name, aml_data_origin_t *handl
 
 aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_t buffer_size);
 
-struct aml_block_t *aml_block(struct aml_data_storage_t data,
+struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
                               struct aml_labels_t symmetric,
                               struct aml_labels_t features);
@@ -141,12 +186,12 @@ aml_status_t aml_block_labels(const struct aml_block_t *block,
 
 aml_status_t aml_block_data(const struct aml_block_t *block,
                             const char *values_gradients,
-                            const struct aml_data_storage_t **data);
+                            const struct aml_array_t **data);
 
 aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     const char *name,
                                     struct aml_labels_t samples,
-                                    struct aml_data_storage_t gradient);
+                                    struct aml_array_t gradient);
 
 struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse_labels,
                                         struct aml_block_t **blocks,

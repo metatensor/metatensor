@@ -40,7 +40,13 @@ def _check_status(status):
 
 def _check_pointer(pointer):
     if not pointer:
-        raise AmlError(last_error())
+        global LAST_EXCEPTION
+        if LAST_EXCEPTION is not None:
+            e = LAST_EXCEPTION
+            LAST_EXCEPTION = None
+            raise AmlError(last_error()) from e
+        else:
+            raise AmlError(last_error())
 
 
 def last_error():

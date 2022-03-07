@@ -284,7 +284,7 @@ impl Descriptor {
                 ))
             }
 
-            if self.blocks[id].has_gradients() {
+            if !self.blocks[id].gradients_list().is_empty() {
                 unimplemented!("sparse_to_features with gradients is not implemented yet")
             }
         }
@@ -338,7 +338,7 @@ impl Descriptor {
         for (block, feature_range) in block_idx.iter().map(|&block_id| &self.blocks[block_id]).zip(feature_ranges) {
             for (sample_i, sample) in block.values.samples().iter().enumerate() {
                 let new_sample_i = new_samples.position(sample).expect("missing entry in merged samples");
-                new_data.set_from_other(
+                new_data.set_from(
                     new_sample_i,
                     feature_range.clone(),
                     &block.values.data,
@@ -353,7 +353,7 @@ impl Descriptor {
     // TODO: variables?
     pub fn symmetric_to_features(&mut self) -> Result<(), Error> {
         for block in &self.blocks {
-            if block.has_gradients() {
+            if !block.gradients_list().is_empty() {
                 unimplemented!("symmetric_to_features with gradients is not implemented yet")
             }
         }
@@ -455,7 +455,7 @@ impl Descriptor {
                 ))
             }
 
-            if self.blocks[id].has_gradients() {
+            if !self.blocks[id].gradients_list().is_empty() {
                 unimplemented!("sparse_to_features with gradients is not implemented yet")
             }
         }
@@ -502,7 +502,7 @@ impl Descriptor {
                 new_sample.extend_from_slice(new_sample_values);
 
                 let new_sample_i = new_samples.position(&new_sample).expect("missing entry in merged samples");
-                new_data.set_from_other(
+                new_data.set_from(
                     new_sample_i,
                     feature_range.clone(),
                     &block.values.data,

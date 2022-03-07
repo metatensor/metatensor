@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
-use crate::{Block, Labels, LabelValue, Error, aml_data_storage_t};
+use crate::{Block, Labels, LabelValue, Error, aml_array_t};
 
 use super::labels::{aml_labels_t, aml_label_kind};
 
@@ -33,7 +33,7 @@ impl aml_block_t {
 
 #[no_mangle]
 pub unsafe extern fn aml_block(
-    data: aml_data_storage_t,
+    data: aml_array_t,
     samples: aml_labels_t,
     symmetric: aml_labels_t,
     features: aml_labels_t,
@@ -124,7 +124,7 @@ pub unsafe extern fn aml_block_labels(
 pub unsafe extern fn aml_block_data(
     block: *const aml_block_t,
     values_gradients: *const c_char,
-    data: *mut *const aml_data_storage_t,
+    data: *mut *const aml_array_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(block, values_gradients, data);
@@ -151,7 +151,7 @@ pub unsafe extern fn aml_block_add_gradient(
     block: *mut aml_block_t,
     name: *const c_char,
     samples: aml_labels_t,
-    gradient: aml_data_storage_t,
+    gradient: aml_array_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(block, name);

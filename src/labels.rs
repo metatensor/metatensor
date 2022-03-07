@@ -8,15 +8,19 @@ use std::hash::BuildHasherDefault;
 
 use twox_hash::XxHash64;
 
-// TODO: why is this needed?
+/// An analog to `std::ffi::CString` that is immutable & can be shared between
+/// traits safely. This is used to store the columns names in a set of `Labels`
+/// in a C-compatible way.
 #[repr(transparent)]
 pub struct ConstCString(*const std::os::raw::c_char);
 
 impl ConstCString {
+    /// Create a new `ConstCString` containing the same data as the given `str`.
     pub fn new(str: CString) -> ConstCString {
         ConstCString(CString::into_raw(str))
     }
 
+    /// Get the content of this `ConstCString` as a `Cstr` reference
     pub fn as_c_str(&self) -> &CStr {
         // SAFETY: `CStr::from_ptr` is OK since we created this pointer with
         // `CString::into_raw`, which fulfils all the requirements of
@@ -26,6 +30,8 @@ impl ConstCString {
         }
     }
 
+    /// Get the content of this `ConstCString` as a `str` reference, panicking
+    /// if this `ConstCString` contains invalid UTF8.
     pub fn as_str(&self) -> &str {
         return self.as_c_str().to_str().expect("invalid UTF8");
     }
@@ -59,7 +65,8 @@ impl Clone for ConstCString {
 // threads causes no issue
 unsafe impl Sync for ConstCString {}
 
-
+/// A single value inside a label. This is represented as a 32-bit signed
+/// integer, with a couple of helper function to get its value as usize/isize.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct LabelValue(i32);
@@ -104,25 +111,28 @@ impl From<isize> for LabelValue {
 }
 
 impl LabelValue {
+    /// Get the integer value of this `LabelValue` as a usize
     #[allow(clippy::cast_sign_loss)]
     pub fn usize(self) -> usize {
         debug_assert!(self.0 >= 0);
         self.0 as usize
     }
 
+    /// Get the integer value of this `LabelValue` as an isize
     pub fn isize(self) -> isize {
         self.0 as isize
     }
 
+    /// Get the integer value of this `LabelValue` as an i32
     pub fn i32(self) -> i32 {
         self.0 as i32
     }
 }
 
+/// Builder for `Labels`
 pub struct LabelsBuilder {
-    /// Names of the labels
+    // cf `Labels` for the documentation of the fields
     names: Vec<String>,
-    /// Values of the labels, as a linearized 2D array in row-major order
     values: Vec<LabelValue>,
     positions: HashMap<Vec<LabelValue>, usize, BuildHasherDefault<XxHash64>>,
 }
@@ -149,17 +159,21 @@ impl LabelsBuilder {
         self.names.len()
     }
 
-    /// Add a single entry with the given `values` for this set of labels
-    pub fn add(&mut self, values: Vec<LabelValue>) {
+    /// Add a single `label` to this set of labels.
+    ///
+    /// This function will panic when attempting to ad the same `label` more
+    /// than once.
+    pub fn add(&mut self, label: Vec<LabelValue>) {
         assert_eq!(
-            self.size(), values.len(),
-            "wrong size for added label: got {}, but expected {}", values.len(), self.size()
+            self.size(), label.len(),
+            "wrong size for added label: got {}, but expected {}",
+            label.len(), self.size()
         );
 
-        self.values.extend(&values);
+        self.values.extend(&label);
 
         let new_position = self.positions.len();
-        match self.positions.entry(values) {
+        match self.positions.entry(label) {
             Entry::Occupied(entry) => {
                 let values_display = entry.key().iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 panic!(
@@ -173,10 +187,12 @@ impl LabelsBuilder {
         }
     }
 
-    pub fn contains(&self, values: &[LabelValue]) -> bool {
-        self.positions.contains_key(values)
+    /// Check if this `LabelBuilder` already contains the given `label`
+    pub fn contains(&self, label: &[LabelValue]) -> bool {
+        self.positions.contains_key(label)
     }
 
+    /// Finish building the `Labels`
     pub fn finish(self) -> Labels {
         if self.names.is_empty() {
             assert!(self.values.is_empty());
@@ -219,6 +235,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
     return true;
 }
 
+/// TODO
 #[derive(Clone, PartialEq)]
 pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
@@ -253,33 +270,37 @@ impl std::fmt::Debug for Labels {
 }
 
 impl Labels {
+    /// Create a set of `Labels` containing a single entry, to be used when
+    /// there is no relevant information to store.
     pub fn single() -> Labels {
-        let mut builder = LabelsBuilder::new(vec!["single_entry"]);
+        let mut builder = LabelsBuilder::new(vec!["_"]);
         builder.add(vec![LabelValue::from(0)]);
 
         return builder.finish();
     }
 
-    /// Get the number of labels in a single value
+    /// Get the number of entries/named values in a single label
     pub fn size(&self) -> usize {
         self.names.len()
     }
 
-    /// Names of the labels
+    /// Get the names of the entries/columns in this set of labels
     pub fn names(&self) -> Vec<&str> {
         self.names.iter().map(|s| s.as_str()).collect()
     }
 
-    /// Names of the labels as C-compatible (null terminated) strings
+    /// Get the names of the entries/columns in this set of labels as
+    /// C-compatible (null terminated) strings
     pub fn c_names(&self) -> &[ConstCString] {
         &self.names
     }
 
-    /// How many entries of labels do we have
+    /// Get the total number of entries in this set of labels
     pub fn count(&self) -> usize {
         return self.values.len() / self.size();
     }
 
+    /// Iterate over the rows in this set of labels
     pub fn iter(&self) -> Iter {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
@@ -288,12 +309,13 @@ impl Labels {
         };
     }
 
-    /// Check whether the given `value` is part of this set of labels
-    pub fn contains(&self, value: &[LabelValue]) -> bool {
-        self.position(value).is_some()
+    /// Check whether the given `label` is part of this set of labels
+    pub fn contains(&self, label: &[LabelValue]) -> bool {
+        self.positions.contains_key(label)
     }
 
-    /// Get the position of the given value on this set of labels, or None.
+    /// Get the position (i.e. row index) of the given label in the full labels
+    /// array, or None.
     pub fn position(&self, value: &[LabelValue]) -> Option<usize> {
         assert!(value.len() == self.size(), "invalid size of index in Labels::position");
 
@@ -301,6 +323,7 @@ impl Labels {
     }
 }
 
+/// An iterator over `Labels`
 pub struct Iter<'a> {
     size: usize,
     values: &'a [LabelValue],
@@ -339,5 +362,73 @@ impl std::ops::Index<usize> for Labels {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
         &self.values[start..stop]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn indexes() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(vec![LabelValue::from(2), LabelValue::from(3)]);
+        builder.add(vec![LabelValue::from(1), LabelValue::from(243)]);
+        builder.add(vec![LabelValue::from(-4), LabelValue::from(-2413)]);
+
+        let idx = builder.finish();
+        assert_eq!(idx.names(), &["foo", "bar"]);
+        assert_eq!(idx.size(), 2);
+        assert_eq!(idx.count(), 3);
+
+        assert_eq!(idx[0], [LabelValue::from(2), LabelValue::from(3)]);
+        assert_eq!(idx[1], [LabelValue::from(1), LabelValue::from(243)]);
+        assert_eq!(idx[2], [LabelValue::from(-4), LabelValue::from(-2413)]);
+    }
+
+    #[test]
+    fn indexes_iter() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(vec![LabelValue::from(2_usize), LabelValue::from(3)]);
+        builder.add(vec![LabelValue::from(1_usize), LabelValue::from(2)]);
+        builder.add(vec![LabelValue::from(4_usize), LabelValue::from(3)]);
+
+        let idx = builder.finish();
+        let mut iter = idx.iter();
+        assert_eq!(iter.len(), 3);
+
+        assert_eq!(iter.next().unwrap(), &[LabelValue::from(2_usize), LabelValue::from(3)]);
+        assert_eq!(iter.next().unwrap(), &[LabelValue::from(1_usize), LabelValue::from(2)]);
+        assert_eq!(iter.next().unwrap(), &[LabelValue::from(4_usize), LabelValue::from(3)]);
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "all labels names must be valid identifiers, \'33 bar\' is not")]
+    fn invalid_index_name() {
+        LabelsBuilder::new(vec!["foo", "33 bar"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid labels: the same name is used multiple times")]
+    fn duplicated_index_name() {
+        LabelsBuilder::new(vec!["foo", "bar", "foo"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "can not have the same label value multiple time: [0, 1] is already present at position 0")]
+    fn duplicated_index_value() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(vec![LabelValue::from(0_usize), LabelValue::from(1)]);
+        builder.add(vec![LabelValue::from(0_usize), LabelValue::from(1)]);
+        builder.finish();
+    }
+
+    #[test]
+    fn single_label() {
+        let labels = Labels::single();
+        assert_eq!(labels.names(), &["_"]);
+        assert_eq!(labels.size(), 1);
+        assert_eq!(labels.count(), 1);
     }
 }

@@ -1,7 +1,7 @@
 import ctypes
 
 from ._c_lib import _get_library
-from ._c_api import aml_label_kind, aml_labels_t, aml_data_storage_t
+from ._c_api import aml_label_kind, aml_labels_t, aml_array_t
 
 from .status import _check_pointer
 from .labels import Labels
@@ -85,6 +85,6 @@ class Block:
         )
 
     def _get_array(self, name):
-        data = ctypes.POINTER(aml_data_storage_t)()
+        data = ctypes.POINTER(aml_array_t)()
         self._lib.aml_block_data(self._ptr, name.encode("utf8"), data)
         return aml_data_to_array(data)
