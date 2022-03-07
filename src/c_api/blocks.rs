@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::os::raw::c_char;
 use std::ffi::CStr;
+use std::convert::TryFrom;
 
 use crate::{Block, Labels, LabelValue, Error, aml_array_t};
 
