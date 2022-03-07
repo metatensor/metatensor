@@ -1,5 +1,6 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
+use std::convert::TryFrom;
 
 use crate::{Descriptor, Labels, LabelValue, Block};
 
