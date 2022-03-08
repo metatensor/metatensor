@@ -19,7 +19,3 @@ ndarray = {version = "0.15", optional = true}
 [build-dependencies]
 cbindgen = "0.20"
 glob = "0.3"
-
-[features]
-# TODO: should this be enabled by default?
-default = ["ndarray"]

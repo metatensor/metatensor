@@ -18,25 +18,29 @@ jobs:
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
+            # test without ndarray feature
           - os: ubuntu-18.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: release
-            cargo-build-flags: --release
+            cargo-build-flags: --release --features=ndarray
           - os: ubuntu-18.04
             rust-version: 1.53
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
+            cargo-build-flags: --features=ndarray
           # check the build on a stock Ubuntu 18.04, including cmake 3.10
           - os: ubuntu-18.04
             rust-version: from Ubuntu
             container: ubuntu:18.04
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
+            cargo-build-flags: --features=ndarray
           - os: macos-10.15
             rust-version: stable
             rust-target: x86_64-apple-darwin
             build-type: debug
+            cargo-build-flags: --features=ndarray
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:18.04'
