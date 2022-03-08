@@ -123,6 +123,23 @@ pub struct aml_array_t {
     destroy: Option<unsafe extern fn(array: *mut c_void)>,
 }
 
+impl std::fmt::Debug for aml_array_t {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut origin = None;
+        let mut shape = None;
+        if !self.ptr.is_null() {
+            origin = Some(get_data_origin(self.origin()));
+            shape = Some(self.shape());
+        }
+
+        f.debug_struct("aml_array_t")
+            .field("ptr", &self.ptr)
+            .field("origin", &origin)
+            .field("shape", &shape)
+            .finish()
+    }
+}
+
 impl Drop for aml_array_t {
     fn drop(&mut self) {
         if let Some(function) = self.destroy {
@@ -483,8 +500,63 @@ impl DataStorage for ndarray::Array3<f64> {
 /******************************************************************************/
 
 #[cfg(test)]
+pub use self::tests::TestArray;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    static DUMMY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
+        register_data_origin("dummy test data".into())
+    });
+
+    /// An implementation of the `DataStorage` trait without any data. This only
+    /// tracks the shape of the array.
+    pub struct TestArray {
+        shape: (usize, usize, usize),
+    }
+
+    impl TestArray {
+        pub fn new(shape: (usize, usize, usize)) -> TestArray {
+            TestArray { shape }
+        }
+    }
+
+    impl DataStorage for TestArray {
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
+
+        fn origin(&self) -> crate::DataOrigin {
+            *DUMMY_DATA_ORIGIN
+        }
+
+        fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage> {
+            Box::new(TestArray { shape: shape })
+        }
+
+        fn shape(&self) -> (usize, usize, usize) {
+            self.shape
+        }
+
+        fn reshape(&mut self, shape: (usize, usize, usize)) {
+            self.shape = shape;
+        }
+
+        fn set_from(
+            &mut self,
+            _sample: usize,
+            _features: std::ops::Range<usize>,
+            _other: &dyn DataStorage,
+            _sample_other: usize
+        ) {
+            unimplemented!()
+        }
+    }
 
     #[test]
     fn data_origin() {
@@ -495,8 +567,19 @@ mod tests {
         assert_eq!(get_data_origin(origin), "test origin");
     }
 
+    #[test]
+    fn debug() {
+        let data = aml_array_t::new(Box::new(TestArray::new((3, 4, 5))));
+
+        let debug_format = format!("{:?}", data);
+        assert_eq!(debug_format, format!(
+            "aml_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some((3, 4, 5)) }}",
+            data.ptr
+        ));
+    }
+
     #[cfg(feature = "ndarray")]
-    mod ndarray_tests {
+    mod ndarray {
         use ndarray::{Array3, array};
 
         use crate::{aml_array_t, get_data_origin};

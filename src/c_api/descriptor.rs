@@ -157,7 +157,7 @@ pub unsafe extern fn aml_descriptor_sparse_to_features(
             rust_variables.push(variable);
         }
 
-        (*descriptor).sparse_to_features(&rust_variables)?;
+        (*descriptor).sparse_to_features(rust_variables)?;
 
         Ok(())
     })
@@ -195,7 +195,7 @@ pub unsafe extern fn aml_descriptor_sparse_to_samples(
             rust_variables.push(variable);
         }
 
-        (*descriptor).sparse_to_samples(&rust_variables)?;
+        (*descriptor).sparse_to_samples(rust_variables)?;
 
         Ok(())
     })

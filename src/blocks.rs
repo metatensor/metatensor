@@ -7,6 +7,7 @@ use crate::{Labels, Error, aml_array_t, get_data_origin};
 /// array, and three sets of labels (one for each dimension). The sample labels
 /// are specific to this block, but symmetric & feature labels can be shared
 /// between blocks, or between values & gradients.
+#[derive(Debug)]
 pub struct BasicBlock {
     pub data: aml_array_t,
     pub(crate) samples: Labels,
@@ -79,6 +80,7 @@ impl BasicBlock {
 
 /// A single block in a descriptor, containing both values & optionally
 /// gradients of these values w.r.t. any relevant quantity.
+#[derive(Debug)]
 pub struct Block {
     pub values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
@@ -165,90 +167,45 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use once_cell::sync::Lazy;
-    use crate::data::{DataStorage, register_data_origin, DataOrigin};
     use crate::{LabelValue, LabelsBuilder};
+    use crate::data::TestArray;
 
     use super::*;
-
-    static DUMMY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
-        register_data_origin("dummy test data".into())
-    });
-
-    struct DummyArray {
-        shape: (usize, usize, usize),
-    }
-
-    impl DataStorage for DummyArray {
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
-
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-            self
-        }
-
-        fn origin(&self) -> crate::DataOrigin {
-            *DUMMY_DATA_ORIGIN
-        }
-
-        fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage> {
-            Box::new(DummyArray { shape: shape })
-        }
-
-        fn shape(&self) -> (usize, usize, usize) {
-            self.shape
-        }
-
-        fn reshape(&mut self, shape: (usize, usize, usize)) {
-            self.shape = shape;
-        }
-
-        fn set_from(
-            &mut self,
-            _sample: usize,
-            _features: std::ops::Range<usize>,
-            _other: &dyn DataStorage,
-            _sample_other: usize
-        ) {
-            unimplemented!()
-        }
-    }
 
     #[test]
     fn gradients() {
         let mut samples = LabelsBuilder::new(vec!["a", "b"]);
-        samples.add(vec![LabelValue::from(0_i32), LabelValue::from(0_i32)]);
-        samples.add(vec![LabelValue::from(0_i32), LabelValue::from(1_i32)]);
-        samples.add(vec![LabelValue::from(0_i32), LabelValue::from(2_i32)]);
-        samples.add(vec![LabelValue::from(3_i32), LabelValue::from(2_i32)]);
+        samples.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+        samples.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+        samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
+        samples.add(vec![LabelValue::new(3), LabelValue::new(2)]);
 
         let mut symmetric = LabelsBuilder::new(vec!["c", "d"]);
-        symmetric.add(vec![LabelValue::from(-1_i32), LabelValue::from(-4_i32)]);
-        symmetric.add(vec![LabelValue::from(-2_i32), LabelValue::from(-5_i32)]);
-        symmetric.add(vec![LabelValue::from(-3_i32), LabelValue::from(-6_i32)]);
+        symmetric.add(vec![LabelValue::new(-1), LabelValue::new(-4)]);
+        symmetric.add(vec![LabelValue::new(-2), LabelValue::new(-5)]);
+        symmetric.add(vec![LabelValue::new(-3), LabelValue::new(-6)]);
         let symmetric = Arc::new(symmetric.finish());
 
         let mut features = LabelsBuilder::new(vec!["f"]);
-        features.add(vec![LabelValue::from(0_i32)]);
-        features.add(vec![LabelValue::from(1_i32)]);
-        features.add(vec![LabelValue::from(2_i32)]);
-        features.add(vec![LabelValue::from(3_i32)]);
-        features.add(vec![LabelValue::from(4_i32)]);
-        features.add(vec![LabelValue::from(5_i32)]);
-        features.add(vec![LabelValue::from(6_i32)]);
+        features.add(vec![LabelValue::new(0)]);
+        features.add(vec![LabelValue::new(1)]);
+        features.add(vec![LabelValue::new(2)]);
+        features.add(vec![LabelValue::new(3)]);
+        features.add(vec![LabelValue::new(4)]);
+        features.add(vec![LabelValue::new(5)]);
+        features.add(vec![LabelValue::new(6)]);
         let features = Arc::new(features.finish());
 
-        let data = aml_array_t::new(Box::new(DummyArray { shape: (4, 3, 7) }));
+        let data = aml_array_t::new(Box::new(TestArray::new((4, 3, 7))));
 
         let mut block = Block::new(data, samples.finish(), symmetric, features).unwrap();
         assert!(block.gradients_list().is_empty());
 
-        let gradient = aml_array_t::new(Box::new(DummyArray { shape: (3, 3, 7) }));
+        let gradient = aml_array_t::new(Box::new(TestArray::new((3, 3, 7))));
         let mut gradient_samples = LabelsBuilder::new(vec!["sample", "bar"]);
-        gradient_samples.add(vec![LabelValue::from(0_i32), LabelValue::from(0_i32)]);
-        gradient_samples.add(vec![LabelValue::from(1_i32), LabelValue::from(1_i32)]);
-        gradient_samples.add(vec![LabelValue::from(3_i32), LabelValue::from(-2_i32)]);
+        gradient_samples.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+        gradient_samples.add(vec![LabelValue::new(1), LabelValue::new(1)]);
+        gradient_samples.add(vec![LabelValue::new(3), LabelValue::new(-2)]);
 
         block.add_gradient("foo", gradient_samples.finish(), gradient).unwrap();
 

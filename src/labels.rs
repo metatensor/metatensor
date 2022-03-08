@@ -111,6 +111,11 @@ impl From<isize> for LabelValue {
 }
 
 impl LabelValue {
+    /// Create a `LabelValue` with the given `value`
+    pub fn new(value: i32) -> LabelValue {
+        LabelValue(value)
+    }
+
     /// Get the integer value of this `LabelValue` as a usize
     #[allow(clippy::cast_sign_loss)]
     pub fn usize(self) -> usize {
@@ -274,7 +279,7 @@ impl Labels {
     /// there is no relevant information to store.
     pub fn single() -> Labels {
         let mut builder = LabelsBuilder::new(vec!["_"]);
-        builder.add(vec![LabelValue::from(0)]);
+        builder.add(vec![LabelValue::new(0)]);
 
         return builder.finish();
     }
@@ -372,34 +377,34 @@ mod tests {
     #[test]
     fn indexes() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(vec![LabelValue::from(2), LabelValue::from(3)]);
-        builder.add(vec![LabelValue::from(1), LabelValue::from(243)]);
-        builder.add(vec![LabelValue::from(-4), LabelValue::from(-2413)]);
+        builder.add(vec![LabelValue::new(2), LabelValue::new(3)]);
+        builder.add(vec![LabelValue::new(1), LabelValue::new(243)]);
+        builder.add(vec![LabelValue::new(-4), LabelValue::new(-2413)]);
 
         let idx = builder.finish();
         assert_eq!(idx.names(), &["foo", "bar"]);
         assert_eq!(idx.size(), 2);
         assert_eq!(idx.count(), 3);
 
-        assert_eq!(idx[0], [LabelValue::from(2), LabelValue::from(3)]);
-        assert_eq!(idx[1], [LabelValue::from(1), LabelValue::from(243)]);
-        assert_eq!(idx[2], [LabelValue::from(-4), LabelValue::from(-2413)]);
+        assert_eq!(idx[0], [LabelValue::new(2), LabelValue::new(3)]);
+        assert_eq!(idx[1], [LabelValue::new(1), LabelValue::new(243)]);
+        assert_eq!(idx[2], [LabelValue::new(-4), LabelValue::new(-2413)]);
     }
 
     #[test]
     fn indexes_iter() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(vec![LabelValue::from(2_usize), LabelValue::from(3)]);
-        builder.add(vec![LabelValue::from(1_usize), LabelValue::from(2)]);
-        builder.add(vec![LabelValue::from(4_usize), LabelValue::from(3)]);
+        builder.add(vec![LabelValue::new(2), LabelValue::new(3)]);
+        builder.add(vec![LabelValue::new(1), LabelValue::new(2)]);
+        builder.add(vec![LabelValue::new(4), LabelValue::new(3)]);
 
         let idx = builder.finish();
         let mut iter = idx.iter();
         assert_eq!(iter.len(), 3);
 
-        assert_eq!(iter.next().unwrap(), &[LabelValue::from(2_usize), LabelValue::from(3)]);
-        assert_eq!(iter.next().unwrap(), &[LabelValue::from(1_usize), LabelValue::from(2)]);
-        assert_eq!(iter.next().unwrap(), &[LabelValue::from(4_usize), LabelValue::from(3)]);
+        assert_eq!(iter.next().unwrap(), &[LabelValue::new(2), LabelValue::new(3)]);
+        assert_eq!(iter.next().unwrap(), &[LabelValue::new(1), LabelValue::new(2)]);
+        assert_eq!(iter.next().unwrap(), &[LabelValue::new(4), LabelValue::new(3)]);
         assert_eq!(iter.next(), None);
     }
 
@@ -419,8 +424,8 @@ mod tests {
     #[should_panic(expected = "can not have the same label value multiple time: [0, 1] is already present at position 0")]
     fn duplicated_index_value() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(vec![LabelValue::from(0_usize), LabelValue::from(1)]);
-        builder.add(vec![LabelValue::from(0_usize), LabelValue::from(1)]);
+        builder.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+        builder.add(vec![LabelValue::new(0), LabelValue::new(1)]);
         builder.finish();
     }
 
