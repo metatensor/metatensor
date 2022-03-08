@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
 use indexmap::IndexSet;
@@ -29,6 +29,14 @@ impl Descriptor {
             let symmetric_names = blocks[0].values.symmetric().names();
             let features_names = blocks[0].values.features().names();
 
+            let gradients_sample_names = blocks[0].gradients_list().iter()
+                .map(|&name| {
+                    let gradient = blocks[0].get_gradient(name).expect("missing gradient");
+                    (name, gradient.samples().names())
+                })
+                .collect::<HashMap<_, _>>();
+
+
             for block in &blocks {
                 if block.values.samples().names() != samples_names {
                     return Err(Error::InvalidParameter(format!(
@@ -54,7 +62,35 @@ impl Descriptor {
                     )));
                 }
 
-                // TODO: gradients validation
+                let gradients_list = block.gradients_list();
+                if gradients_list.len() != gradients_sample_names.len() {
+                    return Err(Error::InvalidParameter(
+                        "all blocks must contains the same set of gradients".into(),
+                    ));
+                }
+
+                for gradient_name in gradients_list {
+                    let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+
+                    match gradients_sample_names.get(gradient_name) {
+                        None => {
+                            return Err(Error::InvalidParameter(format!(
+                                "missing gradient with respect to {} in one of the blocks",
+                                gradient_name
+                            )));
+                        },
+                        Some(gradients_sample_names) => {
+                            if &gradient.samples().names() != gradients_sample_names {
+                                return Err(Error::InvalidParameter(format!(
+                                    "all blocks must have the same sample labels names, got [{}] and [{}] for gradients with respect to {}",
+                                    gradient.samples().names().join(", "),
+                                    gradients_sample_names.join(", "),
+                                    gradient_name,
+                                )));
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -64,40 +100,72 @@ impl Descriptor {
         })
     }
 
+    /// Get the list of blocks in this `Descriptor`
     pub fn blocks(&self) -> &[Block] {
         &self.blocks
     }
 
+    /// Get mutable access to the list of blocks in this `Descriptor`
     pub fn blocks_mut(&mut self) -> &mut [Block] {
+        // TODO: this allow the user to add gradients to only a subset of blocks
         &mut self.blocks
     }
 
+    /// Get the sparse labels associated with this descriptor
     pub fn sparse(&self) -> &Labels {
         &self.sparse
     }
 
+    /// Get an iterator over the label + associated block
     pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
         self.sparse.iter().zip(&self.blocks)
     }
 
+    /// Get an iterator over the label + associated block as a mutable reference
     pub fn iter_mut(&mut self) -> impl Iterator<Item=(&[LabelValue], &mut Block)> + '_ {
         self.sparse.iter().zip(&mut self.blocks)
     }
 
+    /// Get the list of blocks matching the given selection. The selection must
+    /// contains a single entry, defining the requested values of the sparse
+    /// labels. The selection can contain only a subset of the variables defined
+    /// in the sparse labels, in which case there can be multiple matching
+    /// blocks.
     pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&Block>, Error> {
         let matching = self.find_matching_blocks(selection)?;
 
         return Ok(matching.into_iter().map(|i| &self.blocks[i]).collect());
     }
 
-    pub fn blocks_matching_mut(&mut self, selection: &Labels) -> Result<Vec<&mut Block>, Error> {
-        let _matching = self.find_matching_blocks(selection)?;
+    /// Get the list of blocks matching the given selection as mutable
+    /// references.
+    ///
+    /// This function behaves similarly to `blocks_matching`, see the
+    /// corresponding documentation.
+    pub fn blocks_matching_mut<'a>(&'a mut self, selection: &Labels) -> Result<Vec<&'a mut Block>, Error> {
+        let matching = self.find_matching_blocks(selection)?;
 
-        // TODO: needs unsafe to tell compiler we are only giving out exclusive references
-        // return matching.into_iter().map(|i| &'a mut self.blocks[i]).collect();
-        todo!()
+        // ensure that the matching indexes are unique
+        debug_assert!(matching.iter().collect::<BTreeSet<_>>().len() == matching.len());
+
+        let mut result = Vec::new();
+        let blocks_ptr = self.blocks.as_mut_ptr();
+        for i in matching {
+            // SAFETY: we checked above that the indexes in matching are unique,
+            // ensuring we only give out exclusive references.
+            unsafe {
+                result.push(&mut *blocks_ptr.add(i));
+            }
+        }
+
+        return Ok(result);
     }
 
+    /// Get a reference to the block matching the given selection.
+    ///
+    /// The selection behaves similarly to `blocks_matching`, with the exception
+    /// that this function returns an error if there is more than one matching
+    /// block.
     pub fn block(&self, selection: &Labels) -> Result<&Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
@@ -117,6 +185,11 @@ impl Descriptor {
         return Ok(&self.blocks[matching[0]]);
     }
 
+    /// Get a mutable reference to the block matching the given selection.
+    ///
+    /// The selection behaves similarly to `blocks_matching`, with the exception
+    /// that this function returns an error if there is more than one matching
+    /// block.
     pub fn block_mut(&mut self, selection: &Labels) -> Result<&mut Block, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
@@ -136,6 +209,9 @@ impl Descriptor {
         return Ok(&mut self.blocks[matching[0]]);
     }
 
+    /// Actual implementation of `blocks_matching` and related functions, this
+    /// function finds the matching blocks & return their index in the
+    /// `self.blocks` vector.
     fn find_matching_blocks(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
         if selection.size() == 0 {
             return Ok((0..self.blocks().len()).collect());
@@ -241,7 +317,8 @@ impl Descriptor {
             }
         }
 
-        // TODO: check for unicity in variables
+        // TODO: use Labels instead of Vec<&str> for variables to ensure
+        // uniqueness of variables names & pass 'requested' values around
 
         let mut remaining = Vec::new();
         let mut remaining_i = Vec::new();
@@ -296,7 +373,8 @@ impl Descriptor {
     }
 
     /// Merge the blocks with the given `block_idx` along the feature axis.
-    /// TODO
+    /// TODO: oc
+    #[allow(clippy::too_many_lines)]
     fn merge_blocks_along_features(&self,
         block_idx: &[usize],
         new_features: &Labels,
@@ -312,10 +390,6 @@ impl Descriptor {
                     different symmetric labels, call symmetric_to_features first".into()
                 ))
             }
-
-            if !self.blocks[id].gradients_list().is_empty() {
-                unimplemented!("sparse_to_features with gradients is not implemented yet")
-            }
         }
 
         let new_feature_names = new_features.names().iter()
@@ -325,12 +399,12 @@ impl Descriptor {
         let mut new_features_builder = LabelsBuilder::new(new_feature_names);
         let mut old_feature_sizes = Vec::new();
 
+        let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
+
         // we need to collect the new samples in a BTree set to ensure they stay
         // lexicographically ordered
         let mut new_samples = BTreeSet::new();
-        for (&id, new_feature) in block_idx.iter().zip(new_features) {
-            let block = &self.blocks[id];
-
+        for (block, new_feature) in blocks_to_merge.iter().zip(new_features) {
             for sample in block.values.samples().iter() {
                 new_samples.insert(sample.to_vec());
             }
@@ -350,6 +424,19 @@ impl Descriptor {
         }
         let new_samples = new_samples_builder.finish();
 
+        // Vec<Vec<usize>> mapping from old values sample index (per block) to
+        // the new sample index
+        let mut samples_mapping = Vec::new();
+        for block in &blocks_to_merge {
+            let mut sample_mapping_for_block = Vec::new();
+            for sample in block.values.samples().iter() {
+                let new_sample_i = new_samples.position(sample).expect("missing entry in merged samples");
+                sample_mapping_for_block.push(new_sample_i);
+            }
+
+            samples_mapping.push(sample_mapping_for_block);
+        }
+
         let new_symmetric = Arc::clone(first_block.values.symmetric());
         let new_features = Arc::new(new_features_builder.finish());
 
@@ -368,9 +455,9 @@ impl Descriptor {
         );
         let mut new_data = first_block.values.data.create(new_shape);
 
-        for (block, feature_range) in block_idx.iter().map(|&block_id| &self.blocks[block_id]).zip(feature_ranges) {
-            for (sample_i, sample) in block.values.samples().iter().enumerate() {
-                let new_sample_i = new_samples.position(sample).expect("missing entry in merged samples");
+        for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
+            for sample_i in 0..block.values.samples().count() {
+                let new_sample_i = samples_mapping[block_i][sample_i];
                 new_data.set_from(
                     new_sample_i,
                     feature_range.clone(),
@@ -380,7 +467,64 @@ impl Descriptor {
             }
         }
 
-        return Block::new(new_data, new_samples, new_symmetric, new_features);
+        let mut new_block = Block::new(new_data, new_samples, new_symmetric, new_features).expect("constructed an invalid block");
+
+        // now collect & merge the different gradients
+        for gradient_name in first_block.gradients_list() {
+            let mut new_gradient_samples = BTreeSet::new();
+            let mut new_gradient_samples_names = None;
+            for (block_i, block) in blocks_to_merge.iter().enumerate() {
+                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+
+                if new_gradient_samples_names.is_none() {
+                    new_gradient_samples_names = Some(gradient.samples().names());
+                }
+
+                for grad_sample in gradient.samples().iter() {
+                    // translate from the old sample id in gradients to the new ones
+                    let mut grad_sample = grad_sample.to_vec();
+                    let old_sample_i = grad_sample[0].usize();
+                    grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
+
+                    new_gradient_samples.insert(grad_sample);
+                }
+            }
+
+            let mut new_gradient_samples_builder = LabelsBuilder::new(new_gradient_samples_names.expect("missing gradient samples names"));
+            for sample in new_gradient_samples {
+                new_gradient_samples_builder.add(sample);
+            }
+            let new_gradient_samples = new_gradient_samples_builder.finish();
+
+
+            let new_shape = (
+                new_gradient_samples.count(), new_shape.1, new_shape.2
+            );
+
+            let mut new_gradient = first_block.values.data.create(new_shape);
+
+            for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
+                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+                for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
+                    // translate from the old sample id in gradients to the new ones
+                    let mut grad_sample = grad_sample.to_vec();
+                    let old_sample_i = grad_sample[0].usize();
+                    grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
+
+                    let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
+                    new_gradient.set_from(
+                        new_sample_i,
+                        feature_range.clone(),
+                        &gradient.data,
+                        sample_i
+                    );
+                }
+            }
+
+            new_block.add_gradient(gradient_name, new_gradient_samples, new_gradient).expect("created invalid gradients");
+        }
+
+        return Ok(new_block);
     }
 
     // TODO: variables?
@@ -488,7 +632,7 @@ impl Descriptor {
             }
 
             if !self.blocks[id].gradients_list().is_empty() {
-                unimplemented!("sparse_to_features with gradients is not implemented yet")
+                unimplemented!("sparse_to_samples with gradients is not implemented yet")
             }
         }
 
@@ -697,17 +841,30 @@ mod tests {
             features_1.add(vec![LabelValue::new(0)]);
             let features_1 = Arc::new(features_1.finish());
 
-            let block_1 = Block::new(
+            let mut block_1 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((3, 1, 1), 1.0))),
                 samples_1,
                 Arc::clone(&symmetric_1),
                 Arc::clone(&features_1),
             ).unwrap();
 
+            let mut gradient_samples_1 = LabelsBuilder::new(vec!["sample", "parameter"]);
+            gradient_samples_1.add(vec![LabelValue::new(0), LabelValue::new(-2)]);
+            gradient_samples_1.add(vec![LabelValue::new(2), LabelValue::new(3)]);
+            let gradient_samples_1 = gradient_samples_1.finish();
+
+            block_1.add_gradient(
+                "parameter",
+                gradient_samples_1,
+                aml_array_t::new(Box::new(Array3::from_elem((2, 1, 1), 11.0)))
+            ).unwrap();
+
+            /******************************************************************/
+
             let mut samples_2 = LabelsBuilder::new(vec!["sample"]);
+            samples_2.add(vec![LabelValue::new(0)]);
             samples_2.add(vec![LabelValue::new(1)]);
             samples_2.add(vec![LabelValue::new(3)]);
-            samples_2.add(vec![LabelValue::new(5)]);
             let samples_2 = samples_2.finish();
 
             // different feature size
@@ -717,12 +874,26 @@ mod tests {
             features_2.add(vec![LabelValue::new(5)]);
             let features_2 = Arc::new(features_2.finish());
 
-            let block_2 = Block::new(
+            let mut block_2 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((3, 1, 3), 2.0))),
                 samples_2,
                 symmetric_1,
                 features_2,
             ).unwrap();
+
+            let mut gradient_samples_2 = LabelsBuilder::new(vec!["sample", "parameter"]);
+            gradient_samples_2.add(vec![LabelValue::new(0), LabelValue::new(-2)]);
+            gradient_samples_2.add(vec![LabelValue::new(0), LabelValue::new(3)]);
+            gradient_samples_2.add(vec![LabelValue::new(2), LabelValue::new(-2)]);
+            let gradient_samples_2 = gradient_samples_2.finish();
+
+            block_2.add_gradient(
+                "parameter",
+                gradient_samples_2,
+                aml_array_t::new(Box::new(Array3::from_elem((3, 1, 3), 12.0)))
+            ).unwrap();
+
+            /******************************************************************/
 
             let mut samples_3 = LabelsBuilder::new(vec!["sample"]);
             samples_3.add(vec![LabelValue::new(0)]);
@@ -738,12 +909,24 @@ mod tests {
             symmetric_2.add(vec![LabelValue::new(2)]);
             let symmetric_2 = Arc::new(symmetric_2.finish());
 
-            let block_3 = Block::new(
+            let mut block_3 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((4, 3, 1), 3.0))),
                 samples_3,
                 symmetric_2,
                 features_1,
             ).unwrap();
+
+            let mut gradient_samples_3 = LabelsBuilder::new(vec!["sample", "parameter"]);
+            gradient_samples_3.add(vec![LabelValue::new(1), LabelValue::new(-2)]);
+            let gradient_samples_3 = gradient_samples_3.finish();
+
+            block_3.add_gradient(
+                "parameter",
+                gradient_samples_3,
+                aml_array_t::new(Box::new(Array3::from_elem((1, 3, 1), 13.0)))
+            ).unwrap();
+
+            /******************************************************************/
 
             let mut sparse = LabelsBuilder::new(vec!["sparse_1", "sparse_2"]);
             sparse.add(vec![LabelValue::new(0), LabelValue::new(0)]);
@@ -769,14 +952,12 @@ mod tests {
             // The new first block contains the old first two blocks merged
             let block_1 = &descriptor.blocks()[0];
             assert_eq!(block_1.values.samples().names(), ["sample"]);
-            assert_eq!(block_1.values.samples().count(), 6);
-            // TODO: should re-order the samples?
+            assert_eq!(block_1.values.samples().count(), 5);
             assert_eq!(block_1.values.samples()[0], [LabelValue::new(0)]);
             assert_eq!(block_1.values.samples()[1], [LabelValue::new(1)]);
             assert_eq!(block_1.values.samples()[2], [LabelValue::new(2)]);
             assert_eq!(block_1.values.samples()[3], [LabelValue::new(3)]);
             assert_eq!(block_1.values.samples()[4], [LabelValue::new(4)]);
-            assert_eq!(block_1.values.samples()[5], [LabelValue::new(5)]);
 
             assert_eq!(block_1.values.symmetric().names(), ["symmetric"]);
             assert_eq!(block_1.values.symmetric().count(), 1);
@@ -790,12 +971,26 @@ mod tests {
             assert_eq!(block_1.values.features()[3], [LabelValue::new(1), LabelValue::new(5)]);
 
             assert_eq!(block_1.values.data.as_array(), array![
-                [[1.0, 0.0, 0.0, 0.0]],
+                [[1.0, 2.0, 2.0, 2.0]],
                 [[0.0, 2.0, 2.0, 2.0]],
                 [[1.0, 0.0, 0.0, 0.0]],
                 [[0.0, 2.0, 2.0, 2.0]],
                 [[1.0, 0.0, 0.0, 0.0]],
-                [[0.0, 2.0, 2.0, 2.0]]
+            ]);
+
+            let gradient_1 = block_1.get_gradient("parameter").unwrap();
+            assert_eq!(gradient_1.samples().names(), ["sample", "parameter"]);
+            assert_eq!(gradient_1.samples().count(), 4);
+            assert_eq!(gradient_1.samples()[0], [LabelValue::new(0), LabelValue::new(-2)]);
+            assert_eq!(gradient_1.samples()[1], [LabelValue::new(0), LabelValue::new(3)]);
+            assert_eq!(gradient_1.samples()[2], [LabelValue::new(3), LabelValue::new(-2)]);
+            assert_eq!(gradient_1.samples()[3], [LabelValue::new(4), LabelValue::new(3)]);
+
+            assert_eq!(gradient_1.data.as_array(), array![
+                [[11.0, 12.0, 12.0, 12.0]],
+                [[0.0, 12.0, 12.0, 12.0]],
+                [[0.0, 12.0, 12.0, 12.0]],
+                [[11.0, 0.0, 0.0, 0.0]],
             ]);
 
             // The new second block contains the old third block
