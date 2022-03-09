@@ -377,7 +377,7 @@ impl Descriptor {
     #[allow(clippy::too_many_lines)]
     fn merge_blocks_along_features(&self,
         block_idx: &[usize],
-        new_features: &Labels,
+        new_feature_labels: &Labels,
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
@@ -392,7 +392,7 @@ impl Descriptor {
             }
         }
 
-        let new_feature_names = new_features.names().iter()
+        let new_feature_names = new_feature_labels.names().iter()
             .chain(first_block.values.features().names().iter())
             .copied()
             .collect();
@@ -404,7 +404,7 @@ impl Descriptor {
         // we need to collect the new samples in a BTree set to ensure they stay
         // lexicographically ordered
         let mut new_samples = BTreeSet::new();
-        for (block, new_feature) in blocks_to_merge.iter().zip(new_features) {
+        for (block, new_feature) in blocks_to_merge.iter().zip(new_feature_labels) {
             for sample in block.values.samples().iter() {
                 new_samples.insert(sample.to_vec());
             }
@@ -609,7 +609,7 @@ impl Descriptor {
 
     fn merge_blocks_along_samples(&self,
         block_idx: &[usize],
-        new_samples: &Labels,
+        new_sample_labels: &Labels,
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
@@ -639,21 +639,30 @@ impl Descriptor {
         // we need to collect the new samples in a BTree set to ensure they stay
         // lexicographically ordered
         let mut new_samples_set = BTreeSet::new();
-        for (&id, new_sample_values) in block_idx.iter().zip(new_samples) {
+        for (&id, new_sample_label) in block_idx.iter().zip(new_sample_labels) {
             let block = &self.blocks[id];
 
             for old_sample in block.values.samples().iter() {
                 let mut sample = old_sample.to_vec();
-                sample.extend_from_slice(new_sample_values);
+                sample.extend_from_slice(new_sample_label);
                 new_samples_set.insert(sample);
             }
         }
 
+        let new_samples_names = first_block.values.samples().names().iter().copied()
+            .chain(new_sample_labels.names())
+            .collect();
+
+        let mut new_samples_builder = LabelsBuilder::new(new_samples_names);
+        for sample in new_samples_set {
+            new_samples_builder.add(sample);
+        }
+        let new_samples = new_samples_builder.finish();
         let new_symmetric = Arc::clone(first_block.values.symmetric());
         let new_features = Arc::clone(first_block.values.features());
 
         let new_shape = (
-            new_samples_set.len(),
+            new_samples.count(),
             new_symmetric.count(),
             new_features.count(),
         );
@@ -661,7 +670,7 @@ impl Descriptor {
 
         let feature_range = 0..new_features.count();
 
-        for (&id, new_sample_values) in block_idx.iter().zip(new_samples) {
+        for (&id, new_sample_values) in block_idx.iter().zip(new_sample_labels) {
             let block = &self.blocks[id];
 
             for (old_sample_i, old_sample) in block.values.samples().iter().enumerate() {
@@ -677,15 +686,6 @@ impl Descriptor {
                 );
             }
         }
-
-        let new_samples_names = first_block.values.samples().names().iter().copied()
-            .chain(new_samples.names())
-            .collect();
-        let mut new_samples_builder = LabelsBuilder::new(new_samples_names);
-        for sample in new_samples_set {
-            new_samples_builder.add(sample);
-        }
-        let new_samples = new_samples_builder.finish();
 
         return Block::new(new_data, new_samples, new_symmetric, new_features);
     }
