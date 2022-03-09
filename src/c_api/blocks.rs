@@ -162,3 +162,18 @@ pub unsafe extern fn aml_block_add_gradient(
         Ok(())
     })
 }
+
+
+#[no_mangle]
+pub unsafe extern fn aml_block_has_gradient(
+    block: *mut aml_block_t,
+    name: *const c_char,
+    has_gradient: *mut bool,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(block, name, has_gradient);
+        let name = CStr::from_ptr(name).to_str().unwrap();
+        *has_gradient = (*block).has_gradient(name);
+        Ok(())
+    })
+}

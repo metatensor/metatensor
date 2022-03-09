@@ -84,6 +84,11 @@ class Block:
             gradient._storage,
         )
 
+    def has_gradient(self, name):
+        result = ctypes.c_bool()
+        self._lib.aml_block_has_gradient(self._ptr, name.encode("utf8"), result)
+        return result.value
+
     def _get_array(self, name):
         data = ctypes.POINTER(aml_array_t)()
         self._lib.aml_block_data(self._ptr, name.encode("utf8"), data)

@@ -193,6 +193,10 @@ aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     struct aml_labels_t samples,
                                     struct aml_array_t gradient);
 
+aml_status_t aml_block_has_gradient(struct aml_block_t *block,
+                                    const char *name,
+                                    bool *has_gradient);
+
 struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse_labels,
                                         struct aml_block_t **blocks,
                                         uint64_t blocks_count);

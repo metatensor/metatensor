@@ -103,7 +103,7 @@ impl Block {
     }
 
     /// Check if this block contains gradients w.r.t. the `name` parameter
-    pub fn has_gradients(&self, name: &str) -> bool {
+    pub fn has_gradient(&self, name: &str) -> bool {
         self.gradients.contains_key(name)
     }
 
@@ -210,7 +210,7 @@ mod tests {
         block.add_gradient("foo", gradient_samples.finish(), gradient).unwrap();
 
         assert_eq!(block.gradients_list(), ["foo"]);
-        assert!(block.has_gradients("foo"));
+        assert!(block.has_gradient("foo"));
 
         assert!(block.get_gradient("bar").is_none());
         let basic_block = block.get_gradient("foo").unwrap();
