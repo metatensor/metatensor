@@ -6,10 +6,20 @@ use indexmap::IndexSet;
 use crate::{Block, Error};
 use crate::{Labels, LabelsBuilder, LabelValue};
 
+/// A descriptor is the main user-facing struct of this library, and can store
+/// any kind of data used in atomistic machine learning.
+///
+/// A descriptor contains a list of `Block`s, each one associated with a label
+/// -- called sparse labels.
+///
+/// A descriptor provides functions to move some of these sparse labels to the
+/// samples or features labels of the blocks, moving from a sparse
+/// representation of the data to a dense one.
 #[derive(Debug)]
 pub struct Descriptor {
     sparse: Labels,
     blocks: Vec<Block>,
+    // TODO: arbitrary descriptor level metadata? e.g. using `HashMap<String, String>`
 }
 
 impl Descriptor {
@@ -259,7 +269,8 @@ impl Descriptor {
         return Ok(matching);
     }
 
-    /// Move the given variables from the sparse labels to the feature labels.
+    /// Move the given variables from the sparse labels to the feature labels of
+    /// the blocks.
     ///
     /// The current blocks will be merged together according to the sparse
     /// labels remaining after removing `variables`. The resulting merged blocks
@@ -372,19 +383,21 @@ impl Descriptor {
         return Ok((new_sparse, variables_builder.finish()));
     }
 
-    /// Merge the blocks with the given `block_idx` along the feature axis.
-    /// TODO: oc
-    #[allow(clippy::too_many_lines)]
+    /// Merge the blocks with the given `block_idx` along the feature axis. The
+    /// new feature names & values to add to the feature axis are passed in
+    /// `new_feature_labels`.
     fn merge_blocks_along_features(&self,
         block_idx: &[usize],
         new_feature_labels: &Labels,
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
+        let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
+
         let first_block = &self.blocks[block_idx[0]];
         let first_symmetric_label = first_block.values.symmetric();
-        for &id in block_idx {
-            if self.blocks[id].values.symmetric() != first_symmetric_label {
+        for block in &blocks_to_merge {
+            if block.values.symmetric() != first_symmetric_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to features if the blocks have \
                     different symmetric labels, call symmetric_to_features first".into()
@@ -399,14 +412,12 @@ impl Descriptor {
         let mut new_features_builder = LabelsBuilder::new(new_feature_names);
         let mut old_feature_sizes = Vec::new();
 
-        let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
-
         // we need to collect the new samples in a BTree set to ensure they stay
         // lexicographically ordered
-        let mut new_samples = BTreeSet::new();
+        let mut merged_samples = BTreeSet::new();
         for (block, new_feature) in blocks_to_merge.iter().zip(new_feature_labels) {
             for sample in block.values.samples().iter() {
-                new_samples.insert(sample.to_vec());
+                merged_samples.insert(sample.to_vec());
             }
 
             let old_features = block.values.features();
@@ -418,27 +429,33 @@ impl Descriptor {
             }
         }
 
-        let mut new_samples_builder = LabelsBuilder::new(first_block.values.samples().names());
-        for sample in new_samples {
-            new_samples_builder.add(sample);
+        let mut merged_samples_builder = LabelsBuilder::new(first_block.values.samples().names());
+        for sample in merged_samples {
+            merged_samples_builder.add(sample);
         }
-        let new_samples = new_samples_builder.finish();
+        let merged_samples = merged_samples_builder.finish();
 
         // Vec<Vec<usize>> mapping from old values sample index (per block) to
         // the new sample index
         let mut samples_mapping = Vec::new();
         for block in &blocks_to_merge {
-            let mut sample_mapping_for_block = Vec::new();
+            let mut mapping_for_block = Vec::new();
             for sample in block.values.samples().iter() {
-                let new_sample_i = new_samples.position(sample).expect("missing entry in merged samples");
-                sample_mapping_for_block.push(new_sample_i);
+                let new_sample_i = merged_samples.position(sample).expect("missing entry in merged samples");
+                mapping_for_block.push(new_sample_i);
             }
-
-            samples_mapping.push(sample_mapping_for_block);
+            samples_mapping.push(mapping_for_block);
         }
 
         let new_symmetric = Arc::clone(first_block.values.symmetric());
         let new_features = Arc::new(new_features_builder.finish());
+
+        let new_shape = (
+            merged_samples.count(),
+            new_symmetric.count(),
+            new_features.count(),
+        );
+        let mut new_data = first_block.values.data.create(new_shape);
 
         let mut feature_ranges = Vec::new();
         let mut start = 0;
@@ -447,13 +464,6 @@ impl Descriptor {
             feature_ranges.push(start..stop);
             start = stop;
         }
-
-        let new_shape = (
-            new_samples.count(),
-            new_symmetric.count(),
-            new_features.count(),
-        );
-        let mut new_data = first_block.values.data.create(new_shape);
 
         for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
             for sample_i in 0..block.values.samples().count() {
@@ -467,41 +477,17 @@ impl Descriptor {
             }
         }
 
-        let mut new_block = Block::new(new_data, new_samples, new_symmetric, new_features).expect("constructed an invalid block");
+        let mut new_block = Block::new(new_data, merged_samples, new_symmetric, new_features).expect("constructed an invalid block");
 
         // now collect & merge the different gradients
         for gradient_name in first_block.gradients_list() {
-            let mut new_gradient_samples = BTreeSet::new();
-            let mut new_gradient_samples_names = None;
-            for (block_i, block) in blocks_to_merge.iter().enumerate() {
-                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
-
-                if new_gradient_samples_names.is_none() {
-                    new_gradient_samples_names = Some(gradient.samples().names());
-                }
-
-                for grad_sample in gradient.samples().iter() {
-                    // translate from the old sample id in gradients to the new ones
-                    let mut grad_sample = grad_sample.to_vec();
-                    let old_sample_i = grad_sample[0].usize();
-                    grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
-
-                    new_gradient_samples.insert(grad_sample);
-                }
-            }
-
-            let mut new_gradient_samples_builder = LabelsBuilder::new(new_gradient_samples_names.expect("missing gradient samples names"));
-            for sample in new_gradient_samples {
-                new_gradient_samples_builder.add(sample);
-            }
-            let new_gradient_samples = new_gradient_samples_builder.finish();
-
-
-            let new_shape = (
-                new_gradient_samples.count(), new_shape.1, new_shape.2
+            let new_gradient_samples = merge_gradient_samples(
+                &blocks_to_merge, gradient_name, &samples_mapping
             );
 
-            let mut new_gradient = first_block.values.data.create(new_shape);
+            let mut new_gradient = first_block.values.data.create((
+                new_gradient_samples.count(), new_shape.1, new_shape.2
+            ));
 
             for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
                 let gradient = block.get_gradient(gradient_name).expect("missing gradient");
@@ -571,9 +557,20 @@ impl Descriptor {
         Ok(())
     }
 
-    // TODO: requested values
-    // TODO: moving only values?
+    /// Move the given variables from the sparse labels to the sample labels of
+    /// the blocks.
+    ///
+    /// The current blocks will be merged together according to the sparse
+    /// labels remaining after removing `variables`. The resulting merged blocks
+    /// will have `variables` as the last sample variables, preceded by the
+    /// current samples.
+    ///
+    /// Currently, this function only works if all merged block have the same
+    /// feature labels.
     pub fn sparse_to_samples(&mut self, variables: Vec<&str>) -> Result<(), Error> {
+        // TODO: requested values
+        // TODO: sparse_to_samples_no_gradients?
+
         if variables.is_empty() {
             return Ok(());
         }
@@ -607,6 +604,9 @@ impl Descriptor {
         return Ok(());
     }
 
+    /// Merge the blocks with the given `block_idx` along the sample axis. The
+    /// new sample names & values to add to the sample axis are passed in
+    /// `new_sample_labels`.
     fn merge_blocks_along_samples(&self,
         block_idx: &[usize],
         new_sample_labels: &Labels,
@@ -616,36 +616,32 @@ impl Descriptor {
         let first_block = &self.blocks[block_idx[0]];
         let first_symmetric_label = first_block.values.symmetric();
         let first_features_label = first_block.values.features();
-        for &id in block_idx {
-            if self.blocks[id].values.symmetric() != first_symmetric_label {
+
+        let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
+        for block in &blocks_to_merge {
+            if block.values.symmetric() != first_symmetric_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to samples if the blocks have \
                     different symmetric labels, call symmetric_to_features first".into()
                 ))
             }
 
-            if self.blocks[id].values.features() != first_features_label {
+            if block.values.features() != first_features_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to samples if the blocks have \
                     different feature labels".into() // TODO: this might be possible
                 ))
             }
-
-            if !self.blocks[id].gradients_list().is_empty() {
-                unimplemented!("sparse_to_samples with gradients is not implemented yet")
-            }
         }
 
         // we need to collect the new samples in a BTree set to ensure they stay
         // lexicographically ordered
-        let mut new_samples_set = BTreeSet::new();
-        for (&id, new_sample_label) in block_idx.iter().zip(new_sample_labels) {
-            let block = &self.blocks[id];
-
+        let mut merged_samples = BTreeSet::new();
+        for (block, new_sample_label) in blocks_to_merge.iter().zip(new_sample_labels) {
             for old_sample in block.values.samples().iter() {
                 let mut sample = old_sample.to_vec();
                 sample.extend_from_slice(new_sample_label);
-                new_samples_set.insert(sample);
+                merged_samples.insert(sample);
             }
         }
 
@@ -653,42 +649,110 @@ impl Descriptor {
             .chain(new_sample_labels.names())
             .collect();
 
-        let mut new_samples_builder = LabelsBuilder::new(new_samples_names);
-        for sample in new_samples_set {
-            new_samples_builder.add(sample);
+        let mut merged_samples_builder = LabelsBuilder::new(new_samples_names);
+        for sample in merged_samples {
+            merged_samples_builder.add(sample);
         }
-        let new_samples = new_samples_builder.finish();
+        let merged_samples = merged_samples_builder.finish();
         let new_symmetric = Arc::clone(first_block.values.symmetric());
         let new_features = Arc::clone(first_block.values.features());
 
         let new_shape = (
-            new_samples.count(),
+            merged_samples.count(),
             new_symmetric.count(),
             new_features.count(),
         );
         let mut new_data = first_block.values.data.create(new_shape);
 
+        let mut samples_mapping = Vec::new();
+        for (block, new_sample_label) in blocks_to_merge.iter().zip(new_sample_labels) {
+            let mut mapping_for_block = Vec::new();
+            for sample in block.values.samples().iter() {
+                let mut new_sample = sample.to_vec();
+                new_sample.extend_from_slice(new_sample_label);
+
+                let new_sample_i = merged_samples.position(&new_sample).expect("missing entry in merged samples");
+                mapping_for_block.push(new_sample_i);
+            }
+            samples_mapping.push(mapping_for_block);
+        }
+
         let feature_range = 0..new_features.count();
 
-        for (&id, new_sample_values) in block_idx.iter().zip(new_sample_labels) {
-            let block = &self.blocks[id];
+        for (block_i, block) in blocks_to_merge.iter().enumerate() {
+            for sample_i in 0..block.values.samples().count() {
 
-            for (old_sample_i, old_sample) in block.values.samples().iter().enumerate() {
-                let mut new_sample = old_sample.to_vec();
-                new_sample.extend_from_slice(new_sample_values);
-
-                let new_sample_i = new_samples.position(&new_sample).expect("missing entry in merged samples");
                 new_data.set_from(
-                    new_sample_i,
+                    samples_mapping[block_i][sample_i],
                     feature_range.clone(),
                     &block.values.data,
-                    old_sample_i
+                    sample_i
                 );
             }
         }
 
-        return Block::new(new_data, new_samples, new_symmetric, new_features);
+        let mut new_block = Block::new(new_data, merged_samples, new_symmetric, new_features).expect("invalid block");
+
+        // now collect & merge the different gradients
+        for gradient_name in first_block.gradients_list() {
+            let new_gradient_samples = merge_gradient_samples(
+                &blocks_to_merge, gradient_name, &samples_mapping
+            );
+
+            let mut new_gradient = first_block.values.data.create((
+                new_gradient_samples.count(), new_shape.1, new_shape.2
+            ));
+
+            for (block_i, block) in blocks_to_merge.iter().enumerate() {
+                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+                for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
+                    // translate from the old sample id in gradients to the new ones
+                    let mut grad_sample = grad_sample.to_vec();
+                    let old_sample_i = grad_sample[0].usize();
+                    grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
+
+                    let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
+                    new_gradient.set_from(
+                        new_sample_i,
+                        feature_range.clone(),
+                        &gradient.data,
+                        sample_i
+                    );
+                }
+            }
+
+            new_block.add_gradient(gradient_name, new_gradient_samples, new_gradient).expect("created invalid gradients");
+        }
+
+        return Ok(new_block);
     }
+}
+
+fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec<usize>]) -> Labels {
+    let mut new_gradient_samples = BTreeSet::new();
+    let mut new_gradient_samples_names = None;
+    for (block_i, block) in blocks.iter().enumerate() {
+        let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+
+        if new_gradient_samples_names.is_none() {
+            new_gradient_samples_names = Some(gradient.samples().names());
+        }
+
+        for grad_sample in gradient.samples().iter() {
+            // translate from the old sample id in gradients to the new ones
+            let mut grad_sample = grad_sample.to_vec();
+            let old_sample_i = grad_sample[0].usize();
+            grad_sample[0] = LabelValue::from(mapping[block_i][old_sample_i]);
+
+            new_gradient_samples.insert(grad_sample);
+        }
+    }
+
+    let mut new_gradient_samples_builder = LabelsBuilder::new(new_gradient_samples_names.expect("missing gradient samples names"));
+    for sample in new_gradient_samples {
+        new_gradient_samples_builder.add(sample);
+    }
+    return new_gradient_samples_builder.finish();
 }
 
 #[cfg(test)]
@@ -826,6 +890,7 @@ mod tests {
         use super::*;
         use ndarray::{array, Array3};
 
+        #[allow(clippy::too_many_lines)]
         fn example_descriptor() -> Descriptor {
             let mut samples_1 = LabelsBuilder::new(vec!["sample"]);
             samples_1.add(vec![LabelValue::new(0)]);
@@ -912,8 +977,8 @@ mod tests {
             let mut block_3 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((4, 3, 1), 3.0))),
                 samples_3,
-                symmetric_2,
-                features_1,
+                Arc::clone(&symmetric_2),
+                Arc::clone(&features_1),
             ).unwrap();
 
             let mut gradient_samples_3 = LabelsBuilder::new(vec!["sample", "parameter"]);
@@ -928,13 +993,41 @@ mod tests {
 
             /******************************************************************/
 
+            let mut samples_4 = LabelsBuilder::new(vec!["sample"]);
+            samples_4.add(vec![LabelValue::new(0)]);
+            samples_4.add(vec![LabelValue::new(1)]);
+            samples_4.add(vec![LabelValue::new(2)]);
+            samples_4.add(vec![LabelValue::new(5)]);
+            let samples_4 = samples_4.finish();
+
+            let mut block_4 = Block::new(
+                aml_array_t::new(Box::new(Array3::from_elem((4, 3, 1), 4.0))),
+                samples_4,
+                symmetric_2,
+                features_1,
+            ).unwrap();
+
+            let mut gradient_samples_4 = LabelsBuilder::new(vec!["sample", "parameter"]);
+            gradient_samples_4.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+            gradient_samples_4.add(vec![LabelValue::new(3), LabelValue::new(3)]);
+            let gradient_samples_4 = gradient_samples_4.finish();
+
+            block_4.add_gradient(
+                "parameter",
+                gradient_samples_4,
+                aml_array_t::new(Box::new(Array3::from_elem((2, 3, 1), 14.0)))
+            ).unwrap();
+
+            /******************************************************************/
+
             let mut sparse = LabelsBuilder::new(vec!["sparse_1", "sparse_2"]);
             sparse.add(vec![LabelValue::new(0), LabelValue::new(0)]);
             sparse.add(vec![LabelValue::new(1), LabelValue::new(0)]);
-            sparse.add(vec![LabelValue::new(1), LabelValue::new(2)]);
+            sparse.add(vec![LabelValue::new(2), LabelValue::new(2)]);
+            sparse.add(vec![LabelValue::new(2), LabelValue::new(3)]);
             let sparse = sparse.finish();
 
-            return Descriptor::new(sparse, vec![block_1, block_2, block_3]).unwrap();
+            return Descriptor::new(sparse, vec![block_1, block_2, block_3, block_4]).unwrap();
         }
 
         #[test]
@@ -942,12 +1035,13 @@ mod tests {
             let mut descriptor = example_descriptor();
             descriptor.sparse_to_features(vec!["sparse_1"]).unwrap();
 
-            assert_eq!(descriptor.sparse().count(), 2);
+            assert_eq!(descriptor.sparse().count(), 3);
             assert_eq!(descriptor.sparse().names(), ["sparse_2"]);
             assert_eq!(descriptor.sparse()[0], [LabelValue::new(0)]);
             assert_eq!(descriptor.sparse()[1], [LabelValue::new(2)]);
+            assert_eq!(descriptor.sparse()[2], [LabelValue::new(3)]);
 
-            assert_eq!(descriptor.blocks().len(), 2);
+            assert_eq!(descriptor.blocks().len(), 3);
 
             // The new first block contains the old first two blocks merged
             let block_1 = &descriptor.blocks()[0];
@@ -1002,11 +1096,92 @@ mod tests {
                 [[3.0], [3.0], [3.0]],
                 [[3.0], [3.0], [3.0]],
             ]);
+
+            // The new third block contains the old second block
+            let block_3 = &descriptor.blocks()[2];
+            assert_eq!(block_3.values.data.shape(), (4, 3, 1));
+            assert_eq!(block_3.values.data.as_array(), array![
+                [[4.0], [4.0], [4.0]],
+                [[4.0], [4.0], [4.0]],
+                [[4.0], [4.0], [4.0]],
+                [[4.0], [4.0], [4.0]],
+            ]);
         }
 
         #[test]
         fn sparse_to_samples() {
-            // TODO
+            let mut descriptor = example_descriptor();
+            descriptor.sparse_to_samples(vec!["sparse_2"]).unwrap();
+
+            assert_eq!(descriptor.sparse().count(), 3);
+            assert_eq!(descriptor.sparse().names(), ["sparse_1"]);
+            assert_eq!(descriptor.sparse()[0], [LabelValue::new(0)]);
+            assert_eq!(descriptor.sparse()[1], [LabelValue::new(1)]);
+            assert_eq!(descriptor.sparse()[2], [LabelValue::new(2)]);
+
+            assert_eq!(descriptor.blocks().len(), 3);
+
+            // The first two blocks are not modified
+            let block_1 = &descriptor.blocks()[0];
+            assert_eq!(block_1.values.data.shape(), (3, 1, 1));
+            assert_eq!(block_1.values.data.as_array(), array![
+                [[1.0]], [[1.0]], [[1.0]]
+            ]);
+
+            let block_2 = &descriptor.blocks()[1];
+            assert_eq!(block_2.values.data.shape(), (3, 1, 3));
+            assert_eq!(block_2.values.data.as_array(), array![
+                [[2.0, 2.0, 2.0]],
+                [[2.0, 2.0, 2.0]],
+                [[2.0, 2.0, 2.0]],
+            ]);
+
+            // The new third block contains the old third and fourth blocks merged
+            let block_3 = &descriptor.blocks()[2];
+            assert_eq!(block_3.values.samples().names(), ["sample", "sparse_2"]);
+            assert_eq!(block_3.values.samples().count(), 8);
+            assert_eq!(block_3.values.samples()[0], [LabelValue::new(0), LabelValue::new(0)]);
+            assert_eq!(block_3.values.samples()[1], [LabelValue::new(0), LabelValue::new(2)]);
+            assert_eq!(block_3.values.samples()[2], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(block_3.values.samples()[3], [LabelValue::new(2), LabelValue::new(2)]);
+            assert_eq!(block_3.values.samples()[4], [LabelValue::new(3), LabelValue::new(0)]);
+            assert_eq!(block_3.values.samples()[5], [LabelValue::new(5), LabelValue::new(2)]);
+            assert_eq!(block_3.values.samples()[6], [LabelValue::new(6), LabelValue::new(0)]);
+            assert_eq!(block_3.values.samples()[7], [LabelValue::new(8), LabelValue::new(0)]);
+
+            assert_eq!(block_3.values.symmetric().names(), ["symmetric"]);
+            assert_eq!(block_3.values.symmetric().count(), 3);
+            assert_eq!(block_3.values.symmetric()[0], [LabelValue::new(0)]);
+            assert_eq!(block_3.values.symmetric()[1], [LabelValue::new(1)]);
+            assert_eq!(block_3.values.symmetric()[2], [LabelValue::new(2)]);
+
+            assert_eq!(block_3.values.features().names(), ["features"]);
+            assert_eq!(block_3.values.features().count(), 1);
+            assert_eq!(block_3.values.features()[0], [LabelValue::new(0)]);
+
+            assert_eq!(block_3.values.data.as_array(), array![
+                [[3.0], [3.0], [3.0]],
+                [[4.0], [4.0], [4.0]],
+                [[4.0], [4.0], [4.0]],
+                [[4.0], [4.0], [4.0]],
+                [[3.0], [3.0], [3.0]],
+                [[4.0], [4.0], [4.0]],
+                [[3.0], [3.0], [3.0]],
+                [[3.0], [3.0], [3.0]],
+            ]);
+
+            let gradient_3 = block_3.get_gradient("parameter").unwrap();
+            assert_eq!(gradient_3.samples().names(), ["sample", "parameter"]);
+            assert_eq!(gradient_3.samples().count(), 3);
+            assert_eq!(gradient_3.samples()[0], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(gradient_3.samples()[1], [LabelValue::new(4), LabelValue::new(-2)]);
+            assert_eq!(gradient_3.samples()[2], [LabelValue::new(5), LabelValue::new(3)]);
+
+            assert_eq!(gradient_3.data.as_array(), array![
+                [[14.0], [14.0], [14.0]],
+                [[13.0], [13.0], [13.0]],
+                [[14.0], [14.0], [14.0]],
+            ]);
         }
 
         #[test]

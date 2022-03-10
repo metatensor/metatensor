@@ -134,7 +134,7 @@ impl LabelValue {
     }
 }
 
-/// Builder for `Labels`
+/// Builder for `Labels`, this should be used to construct `Labels`.
 pub struct LabelsBuilder {
     // cf `Labels` for the documentation of the fields
     names: Vec<String>,
@@ -240,7 +240,14 @@ pub fn is_valid_label_name(name: &str) -> bool {
     return true;
 }
 
-/// TODO
+/// A set of labels used to carry metadata associated with a descriptor.
+///
+/// This is similar to a list of named tuples, but stored as a 2D array of shape
+/// `(labels.count(), labels.size())`, with a set names associated with the
+/// columns of this array. Each row/entry in this array is unique, and they are
+/// often (but not always) sorted in  lexicographic order.
+///
+/// The main way to construct a new set of labels is to use a `LabelsBuilder`.
 #[derive(Clone, PartialEq)]
 pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
