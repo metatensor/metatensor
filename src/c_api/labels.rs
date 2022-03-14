@@ -7,11 +7,12 @@ use crate::{LabelValue, Labels, LabelsBuilder, Error};
 #[allow(non_camel_case_types)]
 /// The different kinds of labels that can exist on a `aml_descriptor_t`
 pub enum aml_label_kind {
-    /// The sample labels, describing different samples in the representation
+    /// The sample labels, describing different samples in the data
     AML_SAMPLE_LABELS = 0,
-    /// TODO
-    AML_SYMMETRIC_LABELS = 1,
-    /// The feature labels, describing the features of the representation
+    /// The component labels, describing the components of vectorial or
+    /// tensorial elements of the data
+    AML_COMPONENTS_LABELS = 1,
+    /// The feature labels, describing the features of the data
     AML_FEATURE_LABELS = 2,
 }
 

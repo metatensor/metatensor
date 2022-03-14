@@ -115,8 +115,8 @@ class Descriptor:
             self._ptr, c_variables, c_variables._length_
         )
 
-    def symmetric_to_features(self):
-        self._lib.aml_descriptor_symmetric_to_features(self._ptr)
+    def components_to_features(self):
+        self._lib.aml_descriptor_components_to_features(self._ptr)
 
 
 def _list_str_to_array_c_char(strings: Union[str, List[str]]):

@@ -1,8 +1,9 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
 use std::convert::TryFrom;
+use std::collections::BTreeSet;
 
-use crate::{Descriptor, Labels, LabelValue, Block};
+use crate::{Descriptor, Labels, LabelValue, Block, Error};
 
 use super::labels::aml_labels_t;
 use super::blocks::aml_block_t;
@@ -37,9 +38,15 @@ pub unsafe extern fn aml_descriptor(
     let status = catch_unwind(move || {
         let sparse_labels = Labels::try_from(sparse_labels)?;
 
-        // TODO: check for uniqueness of the pointers: we don't want to move out
-        // the same value twice
         let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count as usize);
+        // check for uniqueness of the pointers: we don't want to move out
+        // the same value twice
+        if blocks_slice.iter().collect::<BTreeSet<_>>().len() != blocks_slice.len() {
+            return Err(Error::InvalidParameter(
+                "got the same block more than once when constructing a descriptor".into()
+            ));
+        }
+
         let blocks_vec = blocks_slice.iter_mut().map(|ptr| {
             // move out of the blocks pointers
             let block = Box::from_raw(*ptr).block();
@@ -165,13 +172,13 @@ pub unsafe extern fn aml_descriptor_sparse_to_features(
 
 
 #[no_mangle]
-pub unsafe extern fn aml_descriptor_symmetric_to_features(
+pub unsafe extern fn aml_descriptor_components_to_features(
     descriptor: *mut aml_descriptor_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(descriptor);
 
-        (*descriptor).symmetric_to_features()?;
+        (*descriptor).components_to_features()?;
 
         Ok(())
     })

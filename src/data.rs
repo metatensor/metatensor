@@ -79,26 +79,26 @@ pub struct aml_array_t {
     shape: Option<unsafe extern fn(
         array: *const c_void,
         n_samples: *mut u64,
-        n_symmetric: *mut u64,
+        n_components: *mut u64,
         n_features: *mut u64,
     ) -> aml_status_t>,
 
     /// Change the shape of the array managed by this `aml_array_t` to
-    /// `(n_samples, n_symmetric, n_features)`
+    /// `(n_samples, n_components, n_features)`
     reshape: Option<unsafe extern fn(
         array: *mut c_void,
         n_samples: u64,
-        n_symmetric: u64,
+        n_components: u64,
         n_features: u64,
     ) -> aml_status_t>,
 
     /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `(n_samples, n_symmetric,
+    /// data location, etc.) and the requested `(n_samples, n_components,
     /// n_features)` shape; and store it in `new_array`.
     create: Option<unsafe extern fn(
         array: *const c_void,
         n_samples: u64,
-        n_symmetric: u64,
+        n_components: u64,
         n_features: u64,
         new_array: *mut aml_array_t,
     ) -> aml_status_t>,
@@ -120,7 +120,7 @@ pub struct aml_array_t {
 
     /// Remove this array & free the associated memory. This function can be
     /// set to `NULL` is there is no memory management to do.
-    destroy: Option<unsafe extern fn(array: *mut c_void)>,
+    pub (crate) destroy: Option<unsafe extern fn(array: *mut c_void)>,
 }
 
 impl std::fmt::Debug for aml_array_t {
@@ -200,21 +200,21 @@ impl aml_array_t {
         let function = self.shape.expect("aml_array_t.shape function is NULL");
 
         let mut n_samples = 0;
-        let mut n_symmetric = 0;
+        let mut n_components = 0;
         let mut n_features = 0;
 
         let status = unsafe {
             function(
                 self.ptr,
                 &mut n_samples,
-                &mut n_symmetric,
+                &mut n_components,
                 &mut n_features,
             )
         };
 
         assert!(status.is_success(), "aml_array_t.shape failed");
 
-        return (n_samples as usize, n_symmetric as usize, n_features as usize);
+        return (n_samples as usize, n_components as usize, n_features as usize);
     }
 
     /// Set the shape of this array to the given new `shape`
@@ -340,16 +340,16 @@ unsafe extern fn rust_data_origin(
 unsafe extern fn rust_data_shape(
     data: *const c_void,
     n_samples: *mut u64,
-    n_symmetric: *mut u64,
+    n_components: *mut u64,
     n_features: *mut u64,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(data, n_samples, n_symmetric, n_features);
+        check_pointers!(data, n_samples, n_components, n_features);
         let data = data.cast::<Box<dyn DataStorage>>();
         let shape = (*data).shape();
 
         *n_samples = shape.0 as u64;
-        *n_symmetric = shape.1 as u64;
+        *n_components = shape.1 as u64;
         *n_features = shape.2 as u64;
 
         Ok(())
@@ -361,7 +361,7 @@ unsafe extern fn rust_data_shape(
 unsafe extern fn rust_data_reshape(
     data: *mut c_void,
     n_samples: u64,
-    n_symmetric: u64,
+    n_components: u64,
     n_features: u64,
 ) -> aml_status_t {
     catch_unwind(|| {
@@ -370,7 +370,7 @@ unsafe extern fn rust_data_reshape(
 
         let shape = (
             n_samples as usize,
-            n_symmetric as usize,
+            n_components as usize,
             n_features as usize,
         );
 
@@ -385,7 +385,7 @@ unsafe extern fn rust_data_reshape(
 unsafe extern fn rust_data_create(
     data: *const c_void,
     n_samples: u64,
-    n_symmetric: u64,
+    n_components: u64,
     n_features: u64,
     data_storage: *mut aml_array_t,
 ) -> aml_status_t {
@@ -395,7 +395,7 @@ unsafe extern fn rust_data_create(
 
         let shape = (
             n_samples as usize,
-            n_symmetric as usize,
+            n_components as usize,
             n_features as usize,
         );
 

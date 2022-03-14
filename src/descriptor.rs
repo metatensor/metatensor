@@ -33,10 +33,10 @@ impl Descriptor {
         }
 
         if !blocks.is_empty() {
-            // make sure all blocks have the same kind of samples, symmetric &
+            // make sure all blocks have the same kind of samples, components &
             // features labels
             let samples_names = blocks[0].values.samples().names();
-            let symmetric_names = blocks[0].values.symmetric().names();
+            let components_names = blocks[0].values.components().names();
             let features_names = blocks[0].values.features().names();
 
             let gradients_sample_names = blocks[0].gradients_list().iter()
@@ -56,11 +56,11 @@ impl Descriptor {
                     )));
                 }
 
-                if block.values.symmetric().names() != symmetric_names {
+                if block.values.components().names() != components_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same symmetric labels names, got [{}] and [{}]",
-                        block.values.symmetric().names().join(", "),
-                        symmetric_names.join(", "),
+                        "all blocks must have the same components labels names, got [{}] and [{}]",
+                        block.values.components().names().join(", "),
+                        components_names.join(", "),
                     )));
                 }
 
@@ -395,12 +395,12 @@ impl Descriptor {
         let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
 
         let first_block = &self.blocks[block_idx[0]];
-        let first_symmetric_label = first_block.values.symmetric();
+        let first_components_label = first_block.values.components();
         for block in &blocks_to_merge {
-            if block.values.symmetric() != first_symmetric_label {
+            if block.values.components() != first_components_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to features if the blocks have \
-                    different symmetric labels, call symmetric_to_features first".into()
+                    different components labels, call components_to_features first".into()
                 ))
             }
         }
@@ -447,12 +447,12 @@ impl Descriptor {
             samples_mapping.push(mapping_for_block);
         }
 
-        let new_symmetric = Arc::clone(first_block.values.symmetric());
+        let new_components = Arc::clone(first_block.values.components());
         let new_features = Arc::new(new_features_builder.finish());
 
         let new_shape = (
             merged_samples.count(),
-            new_symmetric.count(),
+            new_components.count(),
             new_features.count(),
         );
         let mut new_data = first_block.values.data.create(new_shape);
@@ -477,7 +477,7 @@ impl Descriptor {
             }
         }
 
-        let mut new_block = Block::new(new_data, merged_samples, new_symmetric, new_features).expect("constructed an invalid block");
+        let mut new_block = Block::new(new_data, merged_samples, new_components, new_features).expect("constructed an invalid block");
 
         // now collect & merge the different gradients
         for gradient_name in first_block.gradients_list() {
@@ -514,10 +514,10 @@ impl Descriptor {
     }
 
     // TODO: variables?
-    pub fn symmetric_to_features(&mut self) -> Result<(), Error> {
+    pub fn components_to_features(&mut self) -> Result<(), Error> {
         for block in &self.blocks {
             if !block.gradients_list().is_empty() {
-                unimplemented!("symmetric_to_features with gradients is not implemented yet")
+                unimplemented!("components_to_features with gradients is not implemented yet")
             }
         }
 
@@ -525,13 +525,13 @@ impl Descriptor {
         let mut new_blocks = Vec::new();
 
         for block in old_blocks {
-            let mut features_names = block.values.symmetric().names();
+            let mut features_names = block.values.components().names();
             features_names.extend_from_slice(&block.values.features().names());
 
             let mut new_features = LabelsBuilder::new(features_names);
-            for symmetric in block.values.symmetric().iter() {
+            for components in block.values.components().iter() {
                 for feature in block.values.features().iter() {
-                    let mut new_feature = symmetric.to_vec();
+                    let mut new_feature = components.to_vec();
                     new_feature.extend_from_slice(feature);
 
                     new_features.add(new_feature);
@@ -614,15 +614,15 @@ impl Descriptor {
         assert!(!block_idx.is_empty());
 
         let first_block = &self.blocks[block_idx[0]];
-        let first_symmetric_label = first_block.values.symmetric();
+        let first_components_label = first_block.values.components();
         let first_features_label = first_block.values.features();
 
         let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
         for block in &blocks_to_merge {
-            if block.values.symmetric() != first_symmetric_label {
+            if block.values.components() != first_components_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to samples if the blocks have \
-                    different symmetric labels, call symmetric_to_features first".into()
+                    different components labels, call components_to_features first".into()
                 ))
             }
 
@@ -654,12 +654,12 @@ impl Descriptor {
             merged_samples_builder.add(sample);
         }
         let merged_samples = merged_samples_builder.finish();
-        let new_symmetric = Arc::clone(first_block.values.symmetric());
+        let new_components = Arc::clone(first_block.values.components());
         let new_features = Arc::clone(first_block.values.features());
 
         let new_shape = (
             merged_samples.count(),
-            new_symmetric.count(),
+            new_components.count(),
             new_features.count(),
         );
         let mut new_data = first_block.values.data.create(new_shape);
@@ -691,7 +691,7 @@ impl Descriptor {
             }
         }
 
-        let mut new_block = Block::new(new_data, merged_samples, new_symmetric, new_features).expect("invalid block");
+        let mut new_block = Block::new(new_data, merged_samples, new_components, new_features).expect("invalid block");
 
         // now collect & merge the different gradients
         for gradient_name in first_block.gradients_list() {
@@ -778,9 +778,9 @@ mod tests {
         samples_2.add(vec![LabelValue::new(-23)]);
         let samples_2 = samples_2.finish();
 
-        let mut symmetric = LabelsBuilder::new(vec!["symmetric"]);
-        symmetric.add(vec![LabelValue::new(0)]);
-        let symmetric = Arc::new(symmetric.finish());
+        let mut components = LabelsBuilder::new(vec!["components"]);
+        components.add(vec![LabelValue::new(0)]);
+        let components = Arc::new(components.finish());
 
         let mut features = LabelsBuilder::new(vec!["features"]);
         features.add(vec![LabelValue::new(0)]);
@@ -789,14 +789,14 @@ mod tests {
         let block_1 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
             samples_1.clone(),
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
             samples_2.clone(),
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
@@ -812,14 +812,14 @@ mod tests {
         let block_1 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
             samples_1.clone(),
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
             wrong_samples,
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
@@ -831,29 +831,29 @@ mod tests {
         );
 
         /**********************************************************************/
-        let mut wrong_symmetric = LabelsBuilder::new(vec!["something_else"]);
-        wrong_symmetric.add(vec![LabelValue::new(3)]);
-        let wrong_symmetric = wrong_symmetric.finish();
+        let mut wrong_components = LabelsBuilder::new(vec!["something_else"]);
+        wrong_components.add(vec![LabelValue::new(3)]);
+        let wrong_components = wrong_components.finish();
 
         let block_1 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
             samples_1.clone(),
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
             samples_2.clone(),
-            Arc::new(wrong_symmetric),
+            Arc::new(wrong_components),
             Arc::clone(&features),
         ).unwrap();
 
         let error = Descriptor::new(sparse.clone(), vec![block_1, block_2]).unwrap_err();
         assert_eq!(
             error.to_string(),
-            "invalid parameter: all blocks must have the same symmetric labels \
-            names, got [something_else] and [symmetric]"
+            "invalid parameter: all blocks must have the same components labels \
+            names, got [something_else] and [components]"
         );
 
         /**********************************************************************/
@@ -864,14 +864,14 @@ mod tests {
         let block_1 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
             samples_1,
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
             aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
             samples_2,
-            Arc::clone(&symmetric),
+            Arc::clone(&components),
             Arc::new(wrong_features),
         ).unwrap();
 
@@ -898,9 +898,9 @@ mod tests {
             samples_1.add(vec![LabelValue::new(4)]);
             let samples_1 = samples_1.finish();
 
-            let mut symmetric_1 = LabelsBuilder::new(vec!["symmetric"]);
-            symmetric_1.add(vec![LabelValue::new(0)]);
-            let symmetric_1 = Arc::new(symmetric_1.finish());
+            let mut components_1 = LabelsBuilder::new(vec!["components"]);
+            components_1.add(vec![LabelValue::new(0)]);
+            let components_1 = Arc::new(components_1.finish());
 
             let mut features_1 = LabelsBuilder::new(vec!["features"]);
             features_1.add(vec![LabelValue::new(0)]);
@@ -909,7 +909,7 @@ mod tests {
             let mut block_1 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((3, 1, 1), 1.0))),
                 samples_1,
-                Arc::clone(&symmetric_1),
+                Arc::clone(&components_1),
                 Arc::clone(&features_1),
             ).unwrap();
 
@@ -942,7 +942,7 @@ mod tests {
             let mut block_2 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((3, 1, 3), 2.0))),
                 samples_2,
-                symmetric_1,
+                components_1,
                 features_2,
             ).unwrap();
 
@@ -967,17 +967,17 @@ mod tests {
             samples_3.add(vec![LabelValue::new(8)]);
             let samples_3 = samples_3.finish();
 
-            // different symmetric size
-            let mut symmetric_2 = LabelsBuilder::new(vec!["symmetric"]);
-            symmetric_2.add(vec![LabelValue::new(0)]);
-            symmetric_2.add(vec![LabelValue::new(1)]);
-            symmetric_2.add(vec![LabelValue::new(2)]);
-            let symmetric_2 = Arc::new(symmetric_2.finish());
+            // different components size
+            let mut components_2 = LabelsBuilder::new(vec!["components"]);
+            components_2.add(vec![LabelValue::new(0)]);
+            components_2.add(vec![LabelValue::new(1)]);
+            components_2.add(vec![LabelValue::new(2)]);
+            let components_2 = Arc::new(components_2.finish());
 
             let mut block_3 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((4, 3, 1), 3.0))),
                 samples_3,
-                Arc::clone(&symmetric_2),
+                Arc::clone(&components_2),
                 Arc::clone(&features_1),
             ).unwrap();
 
@@ -1003,7 +1003,7 @@ mod tests {
             let mut block_4 = Block::new(
                 aml_array_t::new(Box::new(Array3::from_elem((4, 3, 1), 4.0))),
                 samples_4,
-                symmetric_2,
+                components_2,
                 features_1,
             ).unwrap();
 
@@ -1053,9 +1053,9 @@ mod tests {
             assert_eq!(block_1.values.samples()[3], [LabelValue::new(3)]);
             assert_eq!(block_1.values.samples()[4], [LabelValue::new(4)]);
 
-            assert_eq!(block_1.values.symmetric().names(), ["symmetric"]);
-            assert_eq!(block_1.values.symmetric().count(), 1);
-            assert_eq!(block_1.values.symmetric()[0], [LabelValue::new(0)]);
+            assert_eq!(block_1.values.components().names(), ["components"]);
+            assert_eq!(block_1.values.components().count(), 1);
+            assert_eq!(block_1.values.components()[0], [LabelValue::new(0)]);
 
             assert_eq!(block_1.values.features().names(), ["sparse_1", "features"]);
             assert_eq!(block_1.values.features().count(), 4);
@@ -1149,11 +1149,11 @@ mod tests {
             assert_eq!(block_3.values.samples()[6], [LabelValue::new(6), LabelValue::new(0)]);
             assert_eq!(block_3.values.samples()[7], [LabelValue::new(8), LabelValue::new(0)]);
 
-            assert_eq!(block_3.values.symmetric().names(), ["symmetric"]);
-            assert_eq!(block_3.values.symmetric().count(), 3);
-            assert_eq!(block_3.values.symmetric()[0], [LabelValue::new(0)]);
-            assert_eq!(block_3.values.symmetric()[1], [LabelValue::new(1)]);
-            assert_eq!(block_3.values.symmetric()[2], [LabelValue::new(2)]);
+            assert_eq!(block_3.values.components().names(), ["components"]);
+            assert_eq!(block_3.values.components().count(), 3);
+            assert_eq!(block_3.values.components()[0], [LabelValue::new(0)]);
+            assert_eq!(block_3.values.components()[1], [LabelValue::new(1)]);
+            assert_eq!(block_3.values.components()[2], [LabelValue::new(2)]);
 
             assert_eq!(block_3.values.features().names(), ["features"]);
             assert_eq!(block_3.values.features().count(), 1);
@@ -1185,7 +1185,7 @@ mod tests {
         }
 
         #[test]
-        fn symmetric_to_features() {
+        fn components_to_features() {
             // TODO
         }
     }

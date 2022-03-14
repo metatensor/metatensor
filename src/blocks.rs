@@ -5,13 +5,13 @@ use crate::{Labels, Error, aml_array_t, get_data_origin};
 
 /// Basic building block for descriptor. A single basic block contains a 3
 /// array, and three sets of labels (one for each dimension). The sample labels
-/// are specific to this block, but symmetric & feature labels can be shared
+/// are specific to this block, but components & feature labels can be shared
 /// between blocks, or between values & gradients.
 #[derive(Debug)]
 pub struct BasicBlock {
     pub data: aml_array_t,
     pub(crate) samples: Labels,
-    pub(crate) symmetric: Arc<Labels>,
+    pub(crate) components: Arc<Labels>,
     pub(crate) features: Arc<Labels>,
 }
 
@@ -19,10 +19,10 @@ fn check_data_label_shape(
     context: &str,
     data: &aml_array_t,
     samples: &Labels,
-    symmetric: &Labels,
+    components: &Labels,
     features: &Labels,
 ) -> Result<(), Error> {
-    let (n_samples, n_symmetric, n_features) = data.shape();
+    let (n_samples, n_components, n_features) = data.shape();
     if n_samples != samples.count() {
         return Err(Error::InvalidParameter(format!(
             "{}: the array shape along axis 0 is {} but we have {} sample labels",
@@ -30,10 +30,10 @@ fn check_data_label_shape(
         )));
     }
 
-    if n_symmetric != symmetric.count() {
+    if n_components != components.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 1 is {} but we have {} symmetric labels",
-            context, n_symmetric, symmetric.count()
+            "{}: the array shape along axis 1 is {} but we have {} components labels",
+            context, n_components, components.count()
         )));
     }
 
@@ -52,14 +52,14 @@ impl BasicBlock {
     pub fn new(
         data: aml_array_t,
         samples: Labels,
-        symmetric: Arc<Labels>,
+        components: Arc<Labels>,
         features: Arc<Labels>,
     ) -> Result<BasicBlock, Error> {
         check_data_label_shape(
-            "data and labels don't match", &data, &samples, &symmetric, &features
+            "data and labels don't match", &data, &samples, &components, &features
         )?;
 
-        return Ok(BasicBlock { data, samples, symmetric, features });
+        return Ok(BasicBlock { data, samples, components, features });
     }
 
     /// Get the sample labels in this basic block
@@ -67,9 +67,9 @@ impl BasicBlock {
         &self.samples
     }
 
-    /// Get the symmetric labels in this basic block
-    pub fn symmetric(&self) -> &Arc<Labels> {
-        &self.symmetric
+    /// Get the components labels in this basic block
+    pub fn components(&self) -> &Arc<Labels> {
+        &self.components
     }
 
     /// Get the feature labels in this basic block
@@ -88,16 +88,16 @@ pub struct Block {
 
 impl Block {
     /// Create a new `Block` containing the given data, described by the
-    /// `samples`, `symmetric`, and `features` labels. The block is initialized
+    /// `samples`, `components`, and `features` labels. The block is initialized
     /// without any gradients.
     pub fn new(
         data: aml_array_t,
         samples: Labels,
-        symmetric: Arc<Labels>,
+        components: Arc<Labels>,
         features: Arc<Labels>,
     ) -> Result<Block, Error> {
         Ok(Block {
-            values: BasicBlock::new(data, samples, symmetric, features)?,
+            values: BasicBlock::new(data, samples, components, features)?,
             gradients: HashMap::new(),
         })
     }
@@ -113,7 +113,7 @@ impl Block {
     }
 
     /// Add a gradient to this block with the given name, samples and gradient
-    /// array. The symmetric and feature labels are assumed to match the ones of
+    /// array. The components and feature labels are assumed to match the ones of
     /// the values in this block.
     pub fn add_gradient(&mut self, name: &str, samples: Labels, gradient: aml_array_t) -> Result<(), Error> {
         if self.gradients.contains_key(name) {
@@ -143,16 +143,16 @@ impl Block {
             ))
         }
 
-        let symmetric = Arc::clone(self.values.symmetric());
+        let components = Arc::clone(self.values.components());
         let features = Arc::clone(self.values.features());
         check_data_label_shape(
-            "gradient data and labels don't match", &gradient, &samples, &symmetric, &features
+            "gradient data and labels don't match", &gradient, &samples, &components, &features
         )?;
 
         self.gradients.insert(name.into(), BasicBlock {
             data: gradient,
             samples,
-            symmetric,
+            components,
             features
         });
 
@@ -180,11 +180,11 @@ mod tests {
         samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
         samples.add(vec![LabelValue::new(3), LabelValue::new(2)]);
 
-        let mut symmetric = LabelsBuilder::new(vec!["c", "d"]);
-        symmetric.add(vec![LabelValue::new(-1), LabelValue::new(-4)]);
-        symmetric.add(vec![LabelValue::new(-2), LabelValue::new(-5)]);
-        symmetric.add(vec![LabelValue::new(-3), LabelValue::new(-6)]);
-        let symmetric = Arc::new(symmetric.finish());
+        let mut components = LabelsBuilder::new(vec!["c", "d"]);
+        components.add(vec![LabelValue::new(-1), LabelValue::new(-4)]);
+        components.add(vec![LabelValue::new(-2), LabelValue::new(-5)]);
+        components.add(vec![LabelValue::new(-3), LabelValue::new(-6)]);
+        let components = Arc::new(components.finish());
 
         let mut features = LabelsBuilder::new(vec!["f"]);
         features.add(vec![LabelValue::new(0)]);
@@ -198,7 +198,7 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new((4, 3, 7))));
 
-        let mut block = Block::new(data, samples.finish(), symmetric, features).unwrap();
+        let mut block = Block::new(data, samples.finish(), components, features).unwrap();
         assert!(block.gradients_list().is_empty());
 
         let gradient = aml_array_t::new(Box::new(TestArray::new((3, 3, 7))));
@@ -216,7 +216,7 @@ mod tests {
         let basic_block = block.get_gradient("foo").unwrap();
 
         assert_eq!(basic_block.samples().names(), ["sample", "bar"]);
-        assert_eq!(basic_block.symmetric().names(), ["c", "d"]);
+        assert_eq!(basic_block.components().names(), ["c", "d"]);
         assert_eq!(basic_block.features().names(), ["f"]);
     }
 }

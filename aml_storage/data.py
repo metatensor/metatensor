@@ -122,27 +122,27 @@ def _object_from_ptr(ptr):
 
 
 @catch_exceptions
-def _aml_storage_shape(this, n_samples, n_symmetric, n_features):
+def _aml_storage_shape(this, n_samples, n_components, n_features):
     storage = _object_from_ptr(this)
 
     shape = storage.array.shape
 
     n_samples[0] = ctypes.c_uint64(shape[0])
-    n_symmetric[0] = ctypes.c_uint64(shape[1])
+    n_components[0] = ctypes.c_uint64(shape[1])
     n_features[0] = ctypes.c_uint64(shape[2])
 
 
 @catch_exceptions
-def _aml_storage_reshape(this, n_samples, n_symmetric, n_features):
+def _aml_storage_reshape(this, n_samples, n_components, n_features):
     storage = _object_from_ptr(this)
-    storage.array = storage.array.reshape((n_samples, n_symmetric, n_features))
+    storage.array = storage.array.reshape((n_samples, n_components, n_features))
 
 
 @catch_exceptions
-def _aml_storage_create(this, n_samples, n_symmetric, n_features, data_storage):
+def _aml_storage_create(this, n_samples, n_components, n_features, data_storage):
     storage = _object_from_ptr(this)
 
-    shape = (n_samples, n_symmetric, n_features)
+    shape = (n_samples, n_components, n_features)
     dtype = storage.array.dtype
 
     if _is_numpy_array(storage.array):
