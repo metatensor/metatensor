@@ -36,17 +36,17 @@ impl aml_block_t {
 pub unsafe extern fn aml_block(
     data: aml_array_t,
     samples: aml_labels_t,
-    symmetric: aml_labels_t,
+    components: aml_labels_t,
     features: aml_labels_t,
 ) -> *mut aml_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         let samples = Labels::try_from(samples)?;
-        let symmetric = Labels::try_from(symmetric)?;
+        let components = Labels::try_from(components)?;
         let features = Labels::try_from(features)?;
 
-        let block = Block::new(data, samples, Arc::new(symmetric), Arc::new(features))?;
+        let block = Block::new(data, samples, Arc::new(components), Arc::new(features))?;
         let boxed = Box::new(aml_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -98,7 +98,7 @@ pub unsafe extern fn aml_block_labels(
 
         let rust_labels = match kind {
             aml_label_kind::AML_SAMPLE_LABELS => basic_block.samples(),
-            aml_label_kind::AML_SYMMETRIC_LABELS => basic_block.symmetric(),
+            aml_label_kind::AML_COMPONENTS_LABELS => basic_block.components(),
             aml_label_kind::AML_FEATURE_LABELS => basic_block.features(),
         };
 
@@ -141,7 +141,6 @@ pub unsafe extern fn aml_block_data(
         };
 
         *data = &basic_block.data as *const _;
-        // TODO: do we need `(*data).destroy = None` here ?
 
         Ok(())
     })

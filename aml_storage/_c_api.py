@@ -29,7 +29,7 @@ aml_data_origin_t = ctypes.c_uint64
 
 class aml_label_kind(enum.Enum):
     AML_SAMPLE_LABELS = 0
-    AML_SYMMETRIC_LABELS = 1
+    AML_COMPONENTS_LABELS = 1
     AML_FEATURE_LABELS = 2
 
 
@@ -169,10 +169,10 @@ def setup_functions(lib):
     ]
     lib.aml_descriptor_sparse_to_features.restype = _check_status
 
-    lib.aml_descriptor_symmetric_to_features.argtypes = [
+    lib.aml_descriptor_components_to_features.argtypes = [
         POINTER(aml_descriptor_t)
     ]
-    lib.aml_descriptor_symmetric_to_features.restype = _check_status
+    lib.aml_descriptor_components_to_features.restype = _check_status
 
     lib.aml_descriptor_sparse_to_samples.argtypes = [
         POINTER(aml_descriptor_t),

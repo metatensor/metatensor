@@ -10,7 +10,7 @@ from .data import AmlData, aml_data_to_array
 
 
 class Block:
-    def __init__(self, data, samples: Labels, symmetric: Labels, features: Labels):
+    def __init__(self, data, samples: Labels, components: Labels, features: Labels):
         self._lib = _get_library()
 
         # keep a reference to the data in the block to prevent GC
@@ -20,7 +20,7 @@ class Block:
         self._ptr = self._lib.aml_block(
             self._data._storage,
             samples._as_aml_labels_t(),
-            symmetric._as_aml_labels_t(),
+            components._as_aml_labels_t(),
             features._as_aml_labels_t(),
         )
         _check_pointer(self._ptr)
@@ -56,8 +56,8 @@ class Block:
         return self._labels("values", aml_label_kind.AML_SAMPLE_LABELS)
 
     @property
-    def symmetric(self):
-        return self._labels("values", aml_label_kind.AML_SYMMETRIC_LABELS)
+    def components(self):
+        return self._labels("values", aml_label_kind.AML_COMPONENTS_LABELS)
 
     @property
     def features(self):

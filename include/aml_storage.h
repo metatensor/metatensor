@@ -39,15 +39,16 @@
  */
 typedef enum aml_label_kind {
   /**
-   * The sample labels, describing different samples in the representation
+   * The sample labels, describing different samples in the data
    */
   AML_SAMPLE_LABELS = 0,
   /**
-   * TODO
+   * The component labels, describing the components of vectorial or
+   * tensorial elements of the data
    */
-  AML_SYMMETRIC_LABELS = 1,
+  AML_COMPONENTS_LABELS = 1,
   /**
-   * The feature labels, describing the features of the representation
+   * The feature labels, describing the features of the data
    */
   AML_FEATURE_LABELS = 2,
 } aml_label_kind;
@@ -102,18 +103,18 @@ typedef struct aml_array_t {
   /**
    * Get the shape of the array managed by this `aml_array_t`
    */
-  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_symmetric, uint64_t *n_features);
+  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_components, uint64_t *n_features);
   /**
    * Change the shape of the array managed by this `aml_array_t` to
-   * `(n_samples, n_symmetric, n_features)`
+   * `(n_samples, n_components, n_features)`
    */
-  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features);
+  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features);
   /**
    * Create a new array with the same options as the current one (data type,
-   * data location, etc.) and the requested `(n_samples, n_symmetric,
+   * data location, etc.) and the requested `(n_samples, n_components,
    * n_features)` shape; and store it in `new_array`.
    */
-  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_symmetric, uint64_t n_features, struct aml_array_t *new_array);
+  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features, struct aml_array_t *new_array);
   /**
    * Set entries in this array taking data from the `other_array`. This array
    * is guaranteed to be created by calling `aml_array_t::create` with one of
@@ -174,7 +175,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
 
 struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
-                              struct aml_labels_t symmetric,
+                              struct aml_labels_t components,
                               struct aml_labels_t features);
 
 aml_status_t aml_block_free(struct aml_block_t *block);
@@ -218,7 +219,7 @@ aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descript
                                                const char *const *variables,
                                                uint64_t variables_count);
 
-aml_status_t aml_descriptor_symmetric_to_features(struct aml_descriptor_t *descriptor);
+aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor);
 
 aml_status_t aml_descriptor_sparse_to_samples(struct aml_descriptor_t *descriptor,
                                               const char *const *variables,
