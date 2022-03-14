@@ -11,6 +11,8 @@
 
 
 mod labels;
+use c_api::aml_status_t;
+
 pub use self::labels::{LabelValue, Labels, LabelsBuilder};
 
 mod data;
@@ -23,13 +25,23 @@ pub use self::blocks::{BasicBlock, Block};
 mod descriptor;
 pub use self::descriptor::Descriptor;
 
+#[doc(hidden)]
 pub mod c_api;
 
 
+/// The possible sources of error in aml-storage
 #[derive(Debug)]
 pub enum Error {
+    /// A function got an invalid parameter
     InvalidParameter(String),
+    /// A buffer passed to a C API function does not have the right size
     BufferSize(String),
+    /// External error, coming from a function used as a callback in `aml_array_t`
+    External {
+        status: aml_status_t,
+        context: String,
+    },
+    /// Any other internal error, usually these are internal bugs.
     Internal(String),
 }
 
@@ -38,6 +50,7 @@ impl std::fmt::Display for Error {
         match self {
             Error::InvalidParameter(e) => write!(f, "invalid parameter: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
+            Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
             Error::Internal(e) => write!(f, "internal error: {}", e),
         }
     }
@@ -46,7 +59,10 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::InvalidParameter(_) | Error::Internal(_) | Error::BufferSize(_) => None
+            Error::InvalidParameter(_) |
+            Error::Internal(_) |
+            Error::BufferSize(_) |
+            Error::External {..} => None
         }
     }
 }

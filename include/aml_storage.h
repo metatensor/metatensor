@@ -66,7 +66,10 @@ typedef struct aml_descriptor_t aml_descriptor_t;
 /**
  * Status type returned by all functions in the C API.
  *
- * The value 0 (`AML_SUCCESS`) is used to indicate successful operations.
+ * The value 0 (`AML_SUCCESS`) is used to indicate successful operations,
+ * positive values are used by this library to indicate errors, while negative
+ * values are reserved for users of this library to indicate their own errors
+ * in callbacks.
  */
 typedef int32_t aml_status_t;
 

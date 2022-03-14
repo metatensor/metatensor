@@ -23,8 +23,8 @@ class Block:
             components._as_aml_labels_t(),
             features._as_aml_labels_t(),
         )
-        _check_pointer(self._ptr)
         self._owning = True
+        _check_pointer(self._ptr)
 
     @staticmethod
     def _from_non_owning_ptr(ptr):
@@ -38,7 +38,7 @@ class Block:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr"):
+        if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_owning"):
             if self._owning:
                 self._lib.aml_block_free(self._ptr)
 
