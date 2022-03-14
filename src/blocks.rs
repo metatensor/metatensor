@@ -22,7 +22,7 @@ fn check_data_label_shape(
     components: &Labels,
     features: &Labels,
 ) -> Result<(), Error> {
-    let (n_samples, n_components, n_features) = data.shape();
+    let (n_samples, n_components, n_features) = data.shape()?;
     if n_samples != samples.count() {
         return Err(Error::InvalidParameter(format!(
             "{}: the array shape along axis 0 is {} but we have {} sample labels",
@@ -122,11 +122,11 @@ impl Block {
             )))
         }
 
-        if gradient.origin() != self.values.data.origin() {
+        if gradient.origin()? != self.values.data.origin()? {
             return Err(Error::InvalidParameter(format!(
                 "the gradient array has a different origin ('{}') than the value array ('{}')",
-                get_data_origin(gradient.origin()),
-                get_data_origin(self.values.data.origin()),
+                get_data_origin(gradient.origin()?),
+                get_data_origin(self.values.data.origin()?),
             )))
         }
 

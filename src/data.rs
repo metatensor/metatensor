@@ -4,7 +4,8 @@ use std::ops::Range;
 
 use once_cell::sync::Lazy;
 
-use crate::{c_api::{aml_status_t, catch_unwind}, check_pointers};
+use crate::c_api::{aml_status_t, catch_unwind};
+use crate::{Error, check_pointers};
 
 /// A single 64-bit integer representing a data origin (numpy ndarray, rust
 /// ndarray, torch tensor, fortran array, ...).
@@ -128,8 +129,8 @@ impl std::fmt::Debug for aml_array_t {
         let mut origin = None;
         let mut shape = None;
         if !self.ptr.is_null() {
-            origin = Some(get_data_origin(self.origin()));
-            shape = Some(self.shape());
+            origin = self.origin().ok().map(get_data_origin);
+            shape = self.shape().ok();
         }
 
         f.debug_struct("aml_array_t")
@@ -181,7 +182,7 @@ impl aml_array_t {
     }
 
     /// Get the origin of this array
-    pub fn origin(&self) -> aml_data_origin_t {
+    pub fn origin(&self) -> Result<aml_data_origin_t, Error> {
         let function = self.origin.expect("aml_array_t.origin function is NULL");
 
         let mut origin = aml_data_origin_t(0);
@@ -189,14 +190,18 @@ impl aml_array_t {
             function(self.ptr, &mut origin)
         };
 
-        assert!(status.is_success(), "aml_array_t.origin failed");
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.origin failed".into()
+            });
+        }
 
-        return origin;
+        return Ok(origin);
     }
 
     /// Get the shape of this array
     #[allow(clippy::cast_possible_truncation)]
-    pub fn shape(&self) -> (usize, usize, usize) {
+    pub fn shape(&self) -> Result<(usize, usize, usize), Error> {
         let function = self.shape.expect("aml_array_t.shape function is NULL");
 
         let mut n_samples = 0;
@@ -212,13 +217,17 @@ impl aml_array_t {
             )
         };
 
-        assert!(status.is_success(), "aml_array_t.shape failed");
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.shape failed".into()
+            });
+        }
 
-        return (n_samples as usize, n_components as usize, n_features as usize);
+        return Ok((n_samples as usize, n_components as usize, n_features as usize));
     }
 
     /// Set the shape of this array to the given new `shape`
-    pub fn reshape(&mut self, shape: (usize, usize, usize)) {
+    pub fn reshape(&mut self, shape: (usize, usize, usize)) -> Result<(), Error> {
         let function = self.reshape.expect("aml_array_t.reshape function is NULL");
 
         let status = unsafe {
@@ -230,12 +239,17 @@ impl aml_array_t {
             )
         };
 
-        assert!(status.is_success(), "aml_array_t.reshape failed");
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.reshape failed".into()
+            });
+        }
+
+        return Ok(());
     }
 
     /// Create a new array with the same settings as this one and the given `shape`
-    #[must_use]
-    pub fn create(&self, shape: (usize, usize, usize)) -> aml_array_t {
+    pub fn create(&self, shape: (usize, usize, usize)) -> Result<aml_array_t, Error> {
         let function = self.create.expect("aml_array_t.create function is NULL");
 
         let mut data_storage = aml_array_t::null();
@@ -249,9 +263,13 @@ impl aml_array_t {
             )
         };
 
-        assert!(status.is_success(), "aml_array_t.create failed");
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.create failed".into()
+            });
+        }
 
-        return data_storage;
+        return Ok(data_storage);
     }
 
     /// Set entries in this array taking data from the `other` array. This array
@@ -260,7 +278,13 @@ impl aml_array_t {
     ///
     /// This function will copy data from `other_array[other_sample, :, :]` to
     /// `array[sample, :, feature_start:feature_end]`.
-    pub fn set_from(&mut self, sample: usize, features: std::ops::Range<usize>, other: &aml_array_t, other_sample: usize) {
+    pub fn set_from(
+        &mut self,
+        sample: usize,
+        features: std::ops::Range<usize>,
+        other: &aml_array_t,
+        other_sample: usize
+    ) -> Result<(), Error> {
         let function = self.set_from.expect("aml_array_t.set_from function is NULL");
 
         let status = unsafe {
@@ -274,14 +298,23 @@ impl aml_array_t {
             )
         };
 
-        assert!(status.is_success(), "aml_array_t.set_from failed");
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.set_from failed".into()
+            });
+        }
+
+        return Ok(());
     }
 
     /// Get the data in this `aml_array_t` as a `ndarray::Array3`. This function
     /// will panic if the data in this `aml_array_t` is not a `ndarray::Array3`.
     #[cfg(feature = "ndarray")]
     pub fn as_array(&self) -> &ndarray::Array3<f64> {
-        assert_eq!(self.origin(), *NDARRAY_DATA_ORIGIN, "this array was not create by rust ndarray");
+        assert_eq!(
+            self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
+            "this array was not create by rust ndarray"
+        );
 
         let array = self.ptr.cast::<Box<dyn DataStorage>>();
         unsafe {
@@ -291,7 +324,10 @@ impl aml_array_t {
 
     #[cfg(feature = "ndarray")]
     pub fn as_array_mut(&mut self) -> &mut ndarray::Array3<f64> {
-        assert_eq!(self.origin(), *NDARRAY_DATA_ORIGIN, "this array was not create by rust ndarray");
+        assert_eq!(
+            self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
+            "this array was not create by rust ndarray"
+        );
 
         let array = self.ptr.cast::<Box<dyn DataStorage>>();
         unsafe {
@@ -588,9 +624,9 @@ mod tests {
         fn shape() {
             let mut data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
 
-            assert_eq!(data.shape(), (3, 4, 2));
-            data.reshape((1, 12, 2));
-            assert_eq!(data.shape(), (1, 12, 2));
+            assert_eq!(data.shape().unwrap(), (3, 4, 2));
+            data.reshape((1, 12, 2)).unwrap();
+            assert_eq!(data.shape().unwrap(), (1, 12, 2));
             assert_eq!(data.as_array(), Array3::from_elem((1, 12, 2), 1.0));
         }
 
@@ -598,12 +634,12 @@ mod tests {
         fn create() {
             let data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
 
-            assert_eq!(get_data_origin(data.origin()), "rust.ndarray");
+            assert_eq!(get_data_origin(data.origin().unwrap()), "rust.ndarray");
             assert_eq!(data.as_array(), Array3::from_elem((3, 4, 2), 1.0));
 
-            let other = data.create((1, 12, 2));
-            assert_eq!(other.shape(), (1, 12, 2));
-            assert_eq!(get_data_origin(other.origin()), "rust.ndarray");
+            let other = data.create((1, 12, 2)).unwrap();
+            assert_eq!(other.shape().unwrap(), (1, 12, 2));
+            assert_eq!(get_data_origin(other.origin().unwrap()), "rust.ndarray");
             assert_eq!(other.as_array(), Array3::from_elem((1, 12, 2), 0.0));
         }
 
@@ -611,10 +647,10 @@ mod tests {
         fn set_from() {
             let data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
 
-            let mut other = data.create((1, 4, 6));
+            let mut other = data.create((1, 4, 6)).unwrap();
             assert_eq!(other.as_array(), Array3::from_elem((1, 4, 6), 0.0));
 
-            other.set_from(0, 2..4, &data, 1);
+            other.set_from(0, 2..4, &data, 1).unwrap();
             assert_eq!(other.as_array(), array![[
                 [0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 1.0, 0.0, 0.0],

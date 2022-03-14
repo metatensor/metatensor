@@ -126,12 +126,12 @@ impl Descriptor {
         &self.sparse
     }
 
-    /// Get an iterator over the label + associated block
+    /// Get an iterator over the labels and associated block
     pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
         self.sparse.iter().zip(&self.blocks)
     }
 
-    /// Get an iterator over the label + associated block as a mutable reference
+    /// Get an iterator over the labels and associated block as a mutable reference
     pub fn iter_mut(&mut self) -> impl Iterator<Item=(&[LabelValue], &mut Block)> + '_ {
         self.sparse.iter().zip(&mut self.blocks)
     }
@@ -455,7 +455,7 @@ impl Descriptor {
             new_components.count(),
             new_features.count(),
         );
-        let mut new_data = first_block.values.data.create(new_shape);
+        let mut new_data = first_block.values.data.create(new_shape)?;
 
         let mut feature_ranges = Vec::new();
         let mut start = 0;
@@ -473,7 +473,7 @@ impl Descriptor {
                     feature_range.clone(),
                     &block.values.data,
                     sample_i
-                );
+                )?;
             }
         }
 
@@ -487,7 +487,7 @@ impl Descriptor {
 
             let mut new_gradient = first_block.values.data.create((
                 new_gradient_samples.count(), new_shape.1, new_shape.2
-            ));
+            ))?;
 
             for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
                 let gradient = block.get_gradient(gradient_name).expect("missing gradient");
@@ -503,7 +503,7 @@ impl Descriptor {
                         feature_range.clone(),
                         &gradient.data,
                         sample_i
-                    );
+                    )?;
                 }
             }
 
@@ -542,7 +542,7 @@ impl Descriptor {
             let new_shape = (block.values.samples().count(), 1, new_features.count());
 
             let mut data = block.values.data;
-            data.reshape(new_shape);
+            data.reshape(new_shape)?;
 
             new_blocks.push(Block::new(
                 data,
@@ -662,7 +662,7 @@ impl Descriptor {
             new_components.count(),
             new_features.count(),
         );
-        let mut new_data = first_block.values.data.create(new_shape);
+        let mut new_data = first_block.values.data.create(new_shape)?;
 
         let mut samples_mapping = Vec::new();
         for (block, new_sample_label) in blocks_to_merge.iter().zip(new_sample_labels) {
@@ -687,7 +687,7 @@ impl Descriptor {
                     feature_range.clone(),
                     &block.values.data,
                     sample_i
-                );
+                )?;
             }
         }
 
@@ -701,7 +701,7 @@ impl Descriptor {
 
             let mut new_gradient = first_block.values.data.create((
                 new_gradient_samples.count(), new_shape.1, new_shape.2
-            ));
+            ))?;
 
             for (block_i, block) in blocks_to_merge.iter().enumerate() {
                 let gradient = block.get_gradient(gradient_name).expect("missing gradient");
@@ -717,7 +717,7 @@ impl Descriptor {
                         feature_range.clone(),
                         &gradient.data,
                         sample_i
-                    );
+                    )?;
                 }
             }
 
@@ -1089,7 +1089,7 @@ mod tests {
 
             // The new second block contains the old third block
             let block_2 = &descriptor.blocks()[1];
-            assert_eq!(block_2.values.data.shape(), (4, 3, 1));
+            assert_eq!(block_2.values.data.shape().unwrap(), (4, 3, 1));
             assert_eq!(block_2.values.data.as_array(), array![
                 [[3.0], [3.0], [3.0]],
                 [[3.0], [3.0], [3.0]],
@@ -1099,7 +1099,7 @@ mod tests {
 
             // The new third block contains the old second block
             let block_3 = &descriptor.blocks()[2];
-            assert_eq!(block_3.values.data.shape(), (4, 3, 1));
+            assert_eq!(block_3.values.data.shape().unwrap(), (4, 3, 1));
             assert_eq!(block_3.values.data.as_array(), array![
                 [[4.0], [4.0], [4.0]],
                 [[4.0], [4.0], [4.0]],
@@ -1123,13 +1123,13 @@ mod tests {
 
             // The first two blocks are not modified
             let block_1 = &descriptor.blocks()[0];
-            assert_eq!(block_1.values.data.shape(), (3, 1, 1));
+            assert_eq!(block_1.values.data.shape().unwrap(), (3, 1, 1));
             assert_eq!(block_1.values.data.as_array(), array![
                 [[1.0]], [[1.0]], [[1.0]]
             ]);
 
             let block_2 = &descriptor.blocks()[1];
-            assert_eq!(block_2.values.data.shape(), (3, 1, 3));
+            assert_eq!(block_2.values.data.shape().unwrap(), (3, 1, 3));
             assert_eq!(block_2.values.data.as_array(), array![
                 [[2.0, 2.0, 2.0]],
                 [[2.0, 2.0, 2.0]],

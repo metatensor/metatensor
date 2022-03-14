@@ -15,7 +15,10 @@ thread_local! {
 
 /// Status type returned by all functions in the C API.
 ///
-/// The value 0 (`AML_SUCCESS`) is used to indicate successful operations.
+/// The value 0 (`AML_SUCCESS`) is used to indicate successful operations,
+/// positive values are used by this library to indicate errors, while negative
+/// values are reserved for users of this library to indicate their own errors
+/// in callbacks.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -52,6 +55,7 @@ impl From<Error> for aml_status_t {
         match error {
             Error::InvalidParameter(_) => aml_status_t(AML_INVALID_PARAMETER_ERROR),
             Error::BufferSize(_) => aml_status_t(AML_BUFFER_SIZE_ERROR),
+            Error::External {status, .. } => status,
             Error::Internal(_) => aml_status_t(AML_INTERNAL_ERROR),
         }
     }
@@ -69,6 +73,7 @@ pub fn catch_unwind<F>(function: F) -> aml_status_t where F: FnOnce() -> Result<
 
 /// Check that pointers (used as C API function parameters) are not null.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! check_pointers {
     ($pointer: ident) => {
         if $pointer.is_null() {
