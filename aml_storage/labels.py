@@ -17,7 +17,7 @@ class Labels(np.ndarray):
         name of each column in this labels array
     """
 
-    def __new__(cls, names: List[str], values: np.ndarray):
+    def __new__(cls, names: List[str], values: np.ndarray, parent=None):
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 
@@ -45,7 +45,18 @@ class Labels(np.ndarray):
 
         obj = values.view(cls)
 
+        # keep a reference to the parent object (if any) to prevent it from
+        # beeing garbage-collected when the Labels are a view inside memory
+        # owned by the parent
+        obj._parent = parent
+
         return obj
+
+    def __array_finalize__(self, obj):
+        if hasattr(obj, "_parent"):
+            self._parent = obj._parent
+        else:
+            self._parent = None
 
     @property
     def names(self):
@@ -84,7 +95,7 @@ class Labels(np.ndarray):
         return aml_labels
 
     @staticmethod
-    def _from_aml_labels_t(labels):
+    def _from_aml_labels_t(labels, parent):
         names = []
         for i in range(labels.size):
             names.append(labels.names[i].decode("utf8"))
@@ -93,7 +104,7 @@ class Labels(np.ndarray):
             shape = (labels.count, labels.size)
             values = _ptr_to_ndarray(ptr=labels.values, shape=shape, dtype=np.int32)
             values.flags.writeable = False
-            return Labels(names, values)
+            return Labels(names, values, parent=parent)
         else:
             return Labels.empty(names)
 

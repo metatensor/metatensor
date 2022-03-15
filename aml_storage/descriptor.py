@@ -44,12 +44,8 @@ class Descriptor:
     @property
     def sparse(self):
         result = aml_labels_t()
-
         self._lib.aml_descriptor_sparse_labels(self._ptr, result)
-
-        # TODO: keep a reference to the `descriptor` in the Labels array to
-        # ensure it is not removed by GC
-        return Labels._from_aml_labels_t(result)
+        return Labels._from_aml_labels_t(result, parent=self)
 
     def block(self, *args, **kwargs):
         if args:
@@ -85,9 +81,7 @@ class Descriptor:
 
         self._lib.aml_descriptor_block_by_id(self._ptr, block, id)
 
-        # TODO: keep a reference to the `descriptor` in the block to ensure it
-        # is not removed by GC
-        return Block._from_non_owning_ptr(block)
+        return Block._from_non_owning_ptr(block, parent=self)
 
     def _block_selection(self, selection: Labels):
         block = ctypes.POINTER(aml_block_t)()
@@ -98,9 +92,7 @@ class Descriptor:
             selection._as_aml_labels_t(),
         )
 
-        # TODO: keep a reference to the `descriptor` in the block to ensure it
-        # is not removed by GC
-        return Block._from_non_owning_ptr(block)
+        return Block._from_non_owning_ptr(block, parent=self)
 
     def sparse_to_features(self, variables: Union[str, List[str]]):
         c_variables = _list_str_to_array_c_char(variables)
