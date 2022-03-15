@@ -24,10 +24,11 @@ class Block:
             features._as_aml_labels_t(),
         )
         self._owning = True
+        self._parent = None
         _check_pointer(self._ptr)
 
     @staticmethod
-    def _from_non_owning_ptr(ptr):
+    def _from_non_owning_ptr(ptr, parent):
         _check_pointer(ptr)
         obj = Block.__new__(Block)
         obj._lib = _get_library()
@@ -35,6 +36,9 @@ class Block:
         obj._owning = False
         obj._data = None
         obj._gradients = []
+        # keep a reference to the parent object (a Descriptor) to prevent it
+        # from beeing garbage-collected & removing this block
+        obj._parent = parent
         return obj
 
     def __del__(self):
@@ -44,12 +48,8 @@ class Block:
 
     def _labels(self, name, kind):
         result = aml_labels_t()
-
         self._lib.aml_block_labels(self._ptr, name.encode("utf8"), kind.value, result)
-
-        # TODO: keep a reference to the `block` in the Labels array to ensure
-        # it is not removed by GC
-        return Labels._from_aml_labels_t(result)
+        return Labels._from_aml_labels_t(result, parent=self)
 
     @property
     def samples(self):
