@@ -1,5 +1,6 @@
 import numpy as np
 import ctypes
+from typing import Union, NewType
 
 
 from ._c_lib import _get_library
@@ -17,6 +18,29 @@ except ImportError:
 
 _NUMPY_STORAGE_ORIGIN = None
 _TORCH_STORAGE_ORIGIN = None
+
+if HAS_TORCH:
+    # This NewType is only used for typechecking and documentation purposes
+    Array = NewType("Array", Union[np.ndarray, torch.Tensor])
+    """
+    An ``Array`` contains the actual data stored in a
+    :py:class:`aml_storage.Block`. This data is manipulated by ``aml_storage``
+    in a completely opaque way: this library does not know what's inside the
+    arrays appart from a small set of constrains:
+
+    - array contains numeric data;
+    - they are stored as row-major, 3-dimensional arrays of shape ``(samples,
+      components, features)``;
+    - it is possible to create new arrays and move data from one array to
+      another.
+
+    The actual type of an ``Array`` depends on how the
+    :py:class:`aml_storage.Block` was created. Currently, numpy ``ndarray`` and
+    torch ``Tensor`` are supported.
+    """
+
+else:
+    Array = NewType("Array", np.ndarray)
 
 
 def _is_numpy_array(array):
@@ -58,9 +82,7 @@ def _torch_origin():
 
 def aml_data_to_array(data):
     origin = _data_origin(data[0]).value
-    if origin == _NUMPY_STORAGE_ORIGIN:
-        return _object_from_ptr(data[0].ptr).array
-    elif origin == _TORCH_STORAGE_ORIGIN:
+    if origin in [_NUMPY_STORAGE_ORIGIN, _TORCH_STORAGE_ORIGIN]:
         return _object_from_ptr(data[0].ptr).array
     else:
         raise ValueError(
@@ -83,6 +105,9 @@ def _data_origin_name(origin):
 
 
 class AmlData:
+    """
+    Small wrapper making Python arrays compatible with ``aml_array_t``.
+    """
     def __init__(self, array):
         self.array = array
         self._children = []

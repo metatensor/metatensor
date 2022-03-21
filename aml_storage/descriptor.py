@@ -12,13 +12,37 @@ from .block import Block
 
 
 class Descriptor:
+    """
+    A descriptor is the main user-facing class of this library, and can store
+    any kind of data used in atomistic machine learning.
+
+    A descriptor contains a list of :py:class:`Block`, each one associated with
+    a label --- called sparse labels. Users can access the blocks either one by
+    one with the :py:func:`Descriptor.block` function, or by iterating over the
+    descriptor itself:
+
+    .. code-block:: python
+
+        for label, block in descriptor:
+            ...
+
+    A descriptor provides functions to move some of these sparse labels to the
+    samples or features labels of the blocks, moving from a sparse
+    representation of the data to a dense one.
+    """
+
     def __init__(self, sparse: Labels, blocks: List[Block]):
+        """
+        :param sparse: sparse labels associated with each block
+        :param blocks: set of blocks containing the actual data
+        """
         self._lib = _get_library()
 
         blocks_array_t = ctypes.POINTER(aml_block_t) * len(blocks)
         blocks_array = blocks_array_t(*[block._ptr for block in blocks])
 
         # all blocks are moved into the descriptor, assign NULL to `block._ptr`
+        # to prevent accessing the blocks from Python/double free
         for block in blocks:
             block._ptr = ctypes.POINTER(aml_block_t)()
 
@@ -42,12 +66,43 @@ class Descriptor:
             yield sparse, self._get_block_by_id(i)
 
     @property
-    def sparse(self):
+    def sparse(self) -> Labels:
+        """
+        The set of sparse :py:class:`Labels` labeling the blocks in this
+        descriptor
+        """
         result = aml_labels_t()
         self._lib.aml_descriptor_sparse_labels(self._ptr, result)
         return Labels._from_aml_labels_t(result, parent=self)
 
-    def block(self, *args, **kwargs):
+    def block(self, *args, **kwargs) -> Block:
+        """
+        Get a single block in this descriptor, matching the selection made with
+        positional and keyword arguments.
+
+        There are a couple of different ways to call this function:
+
+        .. code-block:: python
+
+            # with a numeric index, this gives a block by its position
+            block = descriptor.block(3)
+            # this block corresponds to descriptor.sparse[3]
+
+            # with a sparse index entry
+            block = descriptor.block(descriptor.sparse[3])
+
+            # with keyword arguments selecting the block
+            block = descriptor.block(sparse=-3, symmetric=4)
+            # this assumes `descriptor.sparse.names == ("sparse", "symmetric")`
+
+            # with Labels containing a single entry
+            labels = Labels(
+                names=["sparse", "symmetric"],
+                values=np.array([[-3, 4]], dtype=np.int32)
+            )
+            block = descriptor.block(labels)
+        """
+
         if args:
             if len(args) > 1:
                 raise ValueError("only one non-keyword argument is supported")
@@ -76,42 +131,69 @@ class Descriptor:
 
         return self._block_selection(selection)
 
-    def _get_block_by_id(self, id):
+    def _get_block_by_id(self, id) -> Block:
         block = ctypes.POINTER(aml_block_t)()
-
         self._lib.aml_descriptor_block_by_id(self._ptr, block, id)
-
         return Block._from_non_owning_ptr(block, parent=self)
 
-    def _block_selection(self, selection: Labels):
+    def _block_selection(self, selection: Labels) -> Block:
         block = ctypes.POINTER(aml_block_t)()
-
         self._lib.aml_descriptor_block_selection(
             self._ptr,
             block,
             selection._as_aml_labels_t(),
         )
-
         return Block._from_non_owning_ptr(block, parent=self)
 
     def sparse_to_features(self, variables: Union[str, List[str]]):
-        c_variables = _list_str_to_array_c_char(variables)
+        """
+        Move the given variables from the sparse labels to the feature labels of
+        the blocks.
+
+        The current blocks will be merged together according to the sparse
+        labels remaining after removing ``variables``. The resulting merged
+        blocks will have ``variables`` as the first feature variables, followed
+        by the current features. The new sample labels will contains all of the
+        merged blocks sample labels, re-ordered to keep them lexicographically
+        sorted.
+
+        :param variables: name of the sparse variables to move to the features
+        """
+        c_variables = _list_or_str_to_array_c_char(variables)
         self._lib.aml_descriptor_sparse_to_features(
             self._ptr, c_variables, c_variables._length_
         )
 
     def sparse_to_samples(self, variables: Union[str, List[str]]):
-        c_variables = _list_str_to_array_c_char(variables)
+        """
+        Move the given variables from the sparse labels to the sample labels of
+        the blocks.
+
+        The current blocks will be merged together according to the sparse
+        labels remaining after removing ``variables``. The resulting merged
+        blocks will have ``variables`` as the last sample variables, preceded by
+        the current samples.
+
+        Currently, this function only works if all merged block have the same
+        feature labels.
+
+        :param variables: name of the sparse variables to move to the samples
+        """
+        c_variables = _list_or_str_to_array_c_char(variables)
 
         self._lib.aml_descriptor_sparse_to_samples(
             self._ptr, c_variables, c_variables._length_
         )
 
     def components_to_features(self):
+        """
+        Move all component labels in each block to the feature labels and
+        reshape the data accordingly.
+        """
         self._lib.aml_descriptor_components_to_features(self._ptr)
 
 
-def _list_str_to_array_c_char(strings: Union[str, List[str]]):
+def _list_or_str_to_array_c_char(strings: Union[str, List[str]]):
     if isinstance(strings, str):
         strings = [strings]
 

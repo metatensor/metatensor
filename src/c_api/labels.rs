@@ -5,7 +5,7 @@ use crate::{LabelValue, Labels, LabelsBuilder, Error};
 
 #[repr(C)]
 #[allow(non_camel_case_types)]
-/// The different kinds of labels that can exist on a `aml_descriptor_t`
+/// The different kinds of labels that can exist on a `aml_block_t`
 pub enum aml_label_kind {
     /// The sample labels, describing different samples in the data
     AML_SAMPLE_LABELS = 0,
@@ -16,12 +16,17 @@ pub enum aml_label_kind {
     AML_FEATURE_LABELS = 2,
 }
 
-/// Labels representing metadata associated with either samples or features in
-/// a given descriptor.
+/// A set of labels used to carry metadata associated with a descriptor.
+///
+/// This is similar to a list of `n_entries` named tuples, but stored as a 2D
+/// array of shape `(n_entries, n_variables)`, with a set of names associated
+/// with the columns of this array (often called *variables*). Each row/entry in
+/// this array is unique, and they are often (but not always) sorted in
+/// lexicographic order.
 #[repr(C)]
 pub struct aml_labels_t {
     /// Names of the variables composing this set of labels. There are `size`
-    /// elements in this array, each being a NULL terminated string.
+    /// elements in this array, each being a NULL terminated UTF-8 string.
     pub names: *const *const c_char,
     /// Pointer to the first element of a 2D row-major array of 32-bit signed
     /// integer containing the values taken by the different variables in
