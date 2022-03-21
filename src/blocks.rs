@@ -3,10 +3,10 @@ use std::collections::HashMap;
 
 use crate::{Labels, Error, aml_array_t, get_data_origin};
 
-/// Basic building block for descriptor. A single basic block contains a 3
-/// array, and three sets of labels (one for each dimension). The sample labels
-/// are specific to this block, but components & feature labels can be shared
-/// between blocks, or between values & gradients.
+/// Basic building block for descriptor. A single basic block contains a
+/// 3-dimensional array, and three sets of labels (one for each dimension). The
+/// sample labels are specific to this block, but components & feature labels
+/// can be shared between blocks, or between values & gradients.
 #[derive(Debug)]
 pub struct BasicBlock {
     pub data: aml_array_t,

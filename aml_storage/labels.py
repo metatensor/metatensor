@@ -8,16 +8,41 @@ from ._c_api import aml_labels_t
 
 class Labels(np.ndarray):
     """
-    This is a small wrapper around a 2D ``numpy.ndarray`` that adds a ``names``
-    attribute containing the names of the columns.
+    A set of labels used to carry metadata associated with a descriptor.
 
-    .. py:attribute:: name
-        :type: Tuple[str]
+    This is similar to a list of ``n_entries`` named tuples, but stored as a 2D
+    array of shape ``(n_entries, n_variables)``, with a set of names associated
+    with the columns of this array (often called *variables*). Each row/entry in
+    this array is unique, and they are often (but not always) sorted in
+    lexicographic order.
 
-        name of each column in this labels array
+    In Python, :py:class:`Labels` are implemented as a wrapper around a 2D
+    ``numpy.ndarray`` with a custom ``dtype`` allowing direct access to the
+    different columns:
+
+    .. code-block:: python
+
+        labels = Labels(
+            names=["structure", "atom", "center_species"]
+            values=...
+        )
+
+        # access all values in a column by name
+        structures = labels["structures"]
+
+        # multiple columns at once
+        data = labels[["structures", "center_species"]]
+
+        # we can still use all the usual numpy operations
+        unique_structures = np.unique(labels["structures"])
     """
 
-    def __new__(cls, names: List[str], values: np.ndarray, parent=None):
+    def __new__(cls, names: List[str], values: np.ndarray):
+        """
+        :param names: names of the variables in the new labels
+        :param values: values of the variables, this needs to be a 2D array of
+            ``np.int32`` values
+        """
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 
@@ -48,7 +73,7 @@ class Labels(np.ndarray):
         # keep a reference to the parent object (if any) to prevent it from
         # beeing garbage-collected when the Labels are a view inside memory
         # owned by the parent
-        obj._parent = parent
+        obj._parent = None
 
         return obj
 
@@ -59,21 +84,38 @@ class Labels(np.ndarray):
             self._parent = None
 
     @property
-    def names(self):
+    def names(self) -> List[str]:
+        """Names of the columns/variables used for these labels"""
         return self.dtype.names or []
 
     @staticmethod
-    def empty(names):
-        assert len(names) > 0
-        return Labels(
-            names=names, values=np.empty(shape=(0, len(names)), dtype=np.int32)
-        )
-
-    @staticmethod
-    def single():
+    def single() -> "Labels":
+        """
+        Get the labels to use when there is no relevant metadata and only one
+        entry in the corresponding dimension (i.e. scalar component labels, or
+        sparse label when a descriptor contains a single block).
+        """
         return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
 
     def as_namedtuples(self):
+        """
+        Iterator over the entries in these Labels as namedtuple instances.
+
+        .. code-block:: python
+
+            labels = Labels(
+                names=["structure", "atom", "center_species"],
+                values=np.array([[0, 2, 4]], dtype=np.int32),
+            )
+
+            for label in labels.as_namedtuples():
+                print(label)
+                print(label.as_dict())
+
+            # outputs
+            # LabelTuple(structure=0, atom=2, center_species=4)
+            # {'structure': 0, 'atom': 2, 'center_species': 4}
+        """
         named_tuple_class = namedtuple("LabelTuple", self.names)
         named_tuple_class.as_dict = named_tuple_class._asdict
 
@@ -81,6 +123,7 @@ class Labels(np.ndarray):
             yield named_tuple_class(*entry)
 
     def _as_aml_labels_t(self):
+        """transform these labels into aml_labels_t"""
         aml_labels = aml_labels_t()
 
         names = ctypes.ARRAY(ctypes.c_char_p, len(self.names))()
@@ -96,6 +139,11 @@ class Labels(np.ndarray):
 
     @staticmethod
     def _from_aml_labels_t(labels, parent):
+        """
+        Convert an aml_labels_t into a Labels instance. The Labels is only a
+        view inside the aml_labels_t memory, so one can use the parent parameter
+        to ensure a parent object is kept alive for as long as the Labels live.
+        """
         names = []
         for i in range(labels.size):
             names.append(labels.names[i].decode("utf8"))
@@ -104,9 +152,13 @@ class Labels(np.ndarray):
             shape = (labels.count, labels.size)
             values = _ptr_to_ndarray(ptr=labels.values, shape=shape, dtype=np.int32)
             values.flags.writeable = False
-            return Labels(names, values, parent=parent)
+            labels = Labels(names, values)
+            labels._parent = parent
         else:
-            return Labels.empty(names)
+            return Labels(
+                names=names,
+                values=np.empty(shape=(0, len(names)), dtype=np.int32),
+            )
 
 
 def _is_namedtuple(x):

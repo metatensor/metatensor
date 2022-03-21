@@ -35,7 +35,7 @@
 #define AML_INTERNAL_ERROR 255
 
 /**
- * The different kinds of labels that can exist on a `aml_descriptor_t`
+ * The different kinds of labels that can exist on a `aml_block_t`
  */
 typedef enum aml_label_kind {
   /**
@@ -54,7 +54,12 @@ typedef enum aml_label_kind {
 } aml_label_kind;
 
 /**
- * Opaque type representing a `Block`.
+ * Basic building block for descriptor. A single block contains a 3-dimensional
+ * `aml_array_t`, and three sets of `aml_labels_t` (one for each dimension).
+ *
+ * A block can also contain gradients of the values with respect to a variety
+ * of parameters. In this case, each gradient has a separate set of samples,
+ * but share the same components and feature labels as the values.
  */
 typedef struct aml_block_t aml_block_t;
 
@@ -115,7 +120,8 @@ typedef struct aml_array_t {
   /**
    * Create a new array with the same options as the current one (data type,
    * data location, etc.) and the requested `(n_samples, n_components,
-   * n_features)` shape; and store it in `new_array`.
+   * n_features)` shape; and store it in `new_array`. The new array should be
+   * filled with zeros.
    */
   aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features, struct aml_array_t *new_array);
   /**
@@ -128,20 +134,25 @@ typedef struct aml_array_t {
    */
   aml_status_t (*set_from)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
   /**
-   * Remove this array & free the associated memory. This function can be
+   * Remove this array and free the associated memory. This function can be
    * set to `NULL` is there is no memory management to do.
    */
   void (*destroy)(void *array);
 } aml_array_t;
 
 /**
- * Labels representing metadata associated with either samples or features in
- * a given descriptor.
+ * A set of labels used to carry metadata associated with a descriptor.
+ *
+ * This is similar to a list of `n_entries` named tuples, but stored as a 2D
+ * array of shape `(n_entries, n_variables)`, with a set of names associated
+ * with the columns of this array (often called *variables*). Each row/entry in
+ * this array is unique, and they are often (but not always) sorted in
+ * lexicographic order.
  */
 typedef struct aml_labels_t {
   /**
    * Names of the variables composing this set of labels. There are `size`
-   * elements in this array, each being a NULL terminated string.
+   * elements in this array, each being a NULL terminated UTF-8 string.
    */
   const char *const *names;
   /**
@@ -172,58 +183,306 @@ extern "C" {
  */
 const char *aml_last_error(void);
 
-aml_status_t aml_register_data_origin(const char *name, aml_data_origin_t *handle);
+/**
+ * Register a new data origin with the given `name`. Calling this function
+ * multiple times with the same name will give the same `aml_data_origin_t`.
+ *
+ * @param name name of the data origin as an UTF-8 encoded NULL-terminated string
+ * @param origin pointer to an `aml_data_origin_t` where the origin will be stored
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
+aml_status_t aml_register_data_origin(const char *name, aml_data_origin_t *origin);
 
+/**
+ * Get the name used to register a given data `origin` in the given `buffer`
+ *
+ * @param origin pre-registered data origin
+ * @param buffer buffer to be filled with the data origin name. The origin name
+ *               will be written  as an UTF-8 encoded, NULL-terminated string
+ * @param buffer_size size of the buffer
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_t buffer_size);
 
+/**
+ * Create a new `aml_block_t` with the given `data` and `samples`, `components`
+ * and `features` labels.
+ *
+ * The memory allocated by this function and the blocks should be released
+ * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+ *
+ * @param data array handle containing the data for this block. The block takes
+ *             ownership of the array, and will release it with
+ *             `array.destroy(array.ptr)` when it no longer needs it.
+ * @param samples sample labels corresponding to the first dimension of the data
+ * @param components component labels corresponding to the second dimension of the data
+ * @param features feature labels corresponding to the third dimension of the data
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `aml_last_error()`
+ *          to get the error message.
+ */
 struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
                               struct aml_labels_t components,
                               struct aml_labels_t features);
 
+/**
+ * Free the memory associated with a `block` previously created with
+ * `aml_block`.
+ *
+ * If `block` is `NULL`, this function does nothing.
+ *
+ * @param block pointer to an existing block, or `NULL`
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_block_free(struct aml_block_t *block);
 
+/**
+ * Get the set of labels of the requested `kind` from this `block`.
+ *
+ * The `values_gradients` parameter controls whether this function looks up
+ * labels for `"values"` or one of the gradients in this block.
+ *
+ * The resulting `labels.values` points inside memory owned by the block, and
+ * as such is only valid until the block is destroyed with `aml_block_free`, or
+ * the containing descriptor is modified with one of the
+ * `aml_descriptor_sparse_to_xxx` function.
+ *
+ * @param block pointer to an existing block
+ * @param values_gradients either `"values"` or the name of gradients to lookup
+ * @param kind the kind of labels requested
+ * @param labels pointer to an empty `aml_labels_t` that will be set to the
+ *               requested labels
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_block_labels(const struct aml_block_t *block,
                               const char *values_gradients,
                               enum aml_label_kind kind,
                               struct aml_labels_t *labels);
 
+/**
+ * Get the array handle for either values or one of the gradient in this `block`.
+ *
+ * The `values_gradients` parameter controls whether this function looks up
+ * labels for `"values"` or one of the gradients in this block.
+ *
+ * @param block pointer to an existing block
+ * @param values_gradients either `"values"` or the name of gradients to lookup
+ * @param data pointer to an empty `aml_array_t` that will be set to the
+ *             requested array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_block_data(const struct aml_block_t *block,
                             const char *values_gradients,
                             const struct aml_array_t **data);
 
+/**
+ * Add a new gradient to this `block` with the given `name`.
+ *
+ * @param block pointer to an existing block
+ * @param name name of the gradient as a NULL-terminated UTF-8 string. This is
+ *             usually the parameter used when taking derivatives (e.g.
+ *             `"positions"`, `"cell"`, etc.)
+ * @param samples sample labels for the gradient array. The components and
+ *                feature labels are supposed to match the values in this block
+ * @param gradient array containing the gradient data. The block takes
+ *                 ownership of the array, and will release it with
+ *                 `array.destroy(array.ptr)` when it no longer needs it.
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     const char *name,
                                     struct aml_labels_t samples,
                                     struct aml_array_t gradient);
 
+/**
+ * Check if this `block` contains gradient with the given `name`.
+ *
+ * @param block pointer to an existing block
+ * @param name name of the gradient as a NULL-terminated UTF-8 string
+ * @param has_gradient pointer to bool that will be set to `true` if this block
+ *                     contains the requested gradients, and `false` otherwise
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_block_has_gradient(struct aml_block_t *block,
                                     const char *name,
                                     bool *has_gradient);
 
-struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse_labels,
+/**
+ * Create a new `aml_descriptor_t` with the given `sparse` labels and `blocks`.
+ * `blocks_count` must be set to the number of entries in the blocks array.
+ *
+ * The new descriptor takes ownership of the blocks, which should not be
+ * released separately.
+ *
+ * The memory allocated by this function and the blocks should be released
+ * using `aml_descriptor_free`.
+ *
+ * @param sparse sparse labels associated with each block
+ * @param blocks pointer to the first element of an array of blocks
+ * @param blocks_count number of elements in the `blocks` array
+ *
+ * @returns A pointer to the newly allocated descriptor, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `aml_last_error()`
+ *          to get the error message.
+ */
+struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse,
                                         struct aml_block_t **blocks,
                                         uint64_t blocks_count);
 
+/**
+ * Free the memory associated with a `descriptor` previously created with
+ * `aml_descriptor`.
+ *
+ * If `descriptor` is `NULL`, this function does nothing.
+ *
+ * @param descriptor pointer to an existing descriptor, or `NULL`
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_free(struct aml_descriptor_t *descriptor);
 
+/**
+ * Get the sparse `labels` for the given `descriptor`. After a sucessful call
+ * to this function, `labels.values` contains a pointer to memory inside the
+ * `descriptor` which is invalidated when the descriptor is freed with
+ * `aml_descriptor_free` or the set of sparse labels is modified by calling one
+ * of the `aml_descriptor_sparse_to_XXX` function.
+ *
+ * @param descriptor pointer to an existing descriptor
+ * @param labels pointer to be filled with the sparse labels of the descriptor
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_sparse_labels(const struct aml_descriptor_t *descriptor,
                                           struct aml_labels_t *labels);
 
+/**
+ * Get a pointer to the `index`-th block in this descriptor.
+ *
+ * The block memory is still managed by the descriptor, this block should not
+ * be freed. The block is invalidated when the descriptor is freed with
+ * `aml_descriptor_free` or the set of sparse labels is modified by calling one
+ * of the `aml_descriptor_sparse_to_XXX` function.
+ *
+ * @param descriptor pointer to an existing descriptor
+ * @param block pointer to be filled with a block
+ * @param index index of the block to get
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_block_by_id(const struct aml_descriptor_t *descriptor,
                                         const struct aml_block_t **block,
-                                        uint64_t id);
+                                        uint64_t index);
 
+/**
+ * Get a pointer to the `block` in this `descriptor` corresponding to the given
+ * `selection`. The `selection` should have the same names/variables as the
+ * sparse labels for this descriptor, and only one entry, describing the
+ * requested block.
+ *
+ * The block memory is still managed by the descriptor, this block should not
+ * be freed. The block is invalidated when the descriptor is freed with
+ * `aml_descriptor_free` or the set of sparse labels is modified by calling one
+ * of the `aml_descriptor_sparse_to_XXX` function.
+ *
+ * @param descriptor pointer to an existing descriptor
+ * @param block pointer to be filled with a block
+ * @param selection labels with a single entry describing which block is requested
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_block_selection(const struct aml_descriptor_t *descriptor,
                                             const struct aml_block_t **block,
                                             struct aml_labels_t selection);
 
+/**
+ * Move the given variables from the sparse labels to the feature labels of the
+ * blocks.
+ *
+ * The current blocks will be merged together according to the sparse labels
+ * remaining after removing `variables`. The resulting merged blocks will have
+ * `variables` as the first feature variables, followed by the current
+ * features. The new sample labels will contains all of the merged blocks
+ * sample labels, re-ordered to keep them lexicographically sorted.
+ *
+ * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * encoded as UTF-8.
+ *
+ * @param descriptor pointer to an existing descriptor
+ * @param variables name of the sparse variables to move to the features
+ * @param variables_count number of entries in the `variables` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descriptor,
                                                const char *const *variables,
                                                uint64_t variables_count);
 
+/**
+ * Move all component labels in each block of this `descriptor` to the feature
+ * labels and reshape the data accordingly.
+ *
+ * @param descriptor pointer to an existing descriptor
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor);
 
+/**
+ * Move the given variables from the sparse labels to the sample labels of the
+ * blocks.
+ *
+ * The current blocks will be merged together according to the sparse
+ * labels remaining after removing `variables`. The resulting merged
+ * blocks will have `variables` as the last sample variables, preceded by
+ * the current samples.
+ *
+ * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * encoded as UTF-8.
+ *
+ * @param descriptor pointer to an existing descriptor
+ * @param variables name of the sparse variables to move to the samples
+ * @param variables_count number of entries in the `variables` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
 aml_status_t aml_descriptor_sparse_to_samples(struct aml_descriptor_t *descriptor,
                                               const char *const *variables,
                                               uint64_t variables_count);

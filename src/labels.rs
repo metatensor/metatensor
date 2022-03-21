@@ -243,7 +243,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
 /// A set of labels used to carry metadata associated with a descriptor.
 ///
 /// This is similar to a list of named tuples, but stored as a 2D array of shape
-/// `(labels.count(), labels.size())`, with a set names associated with the
+/// `(labels.count(), labels.size())`, with a of set names associated with the
 /// columns of this array. Each row/entry in this array is unique, and they are
 /// often (but not always) sorted in  lexicographic order.
 ///

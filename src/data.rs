@@ -95,7 +95,8 @@ pub struct aml_array_t {
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `(n_samples, n_components,
-    /// n_features)` shape; and store it in `new_array`.
+    /// n_features)` shape; and store it in `new_array`. The new array should be
+    /// filled with zeros.
     create: Option<unsafe extern fn(
         array: *const c_void,
         n_samples: u64,
@@ -119,9 +120,9 @@ pub struct aml_array_t {
         other_sample: u64
     ) -> aml_status_t>,
 
-    /// Remove this array & free the associated memory. This function can be
+    /// Remove this array and free the associated memory. This function can be
     /// set to `NULL` is there is no memory management to do.
-    pub (crate) destroy: Option<unsafe extern fn(array: *mut c_void)>,
+    destroy: Option<unsafe extern fn(array: *mut c_void)>,
 }
 
 impl std::fmt::Debug for aml_array_t {

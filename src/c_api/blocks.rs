@@ -9,7 +9,12 @@ use super::labels::{aml_labels_t, aml_label_kind};
 
 use super::{catch_unwind, aml_status_t};
 
-/// Opaque type representing a `Block`.
+/// Basic building block for descriptor. A single block contains a 3-dimensional
+/// `aml_array_t`, and three sets of `aml_labels_t` (one for each dimension).
+///
+/// A block can also contain gradients of the values with respect to a variety
+/// of parameters. In this case, each gradient has a separate set of samples,
+/// but share the same components and feature labels as the values.
 #[allow(non_camel_case_types)]
 pub struct aml_block_t(Block);
 
@@ -32,6 +37,23 @@ impl aml_block_t {
     }
 }
 
+
+/// Create a new `aml_block_t` with the given `data` and `samples`, `components`
+/// and `features` labels.
+///
+/// The memory allocated by this function and the blocks should be released
+/// using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+///
+/// @param data array handle containing the data for this block. The block takes
+///             ownership of the array, and will release it with
+///             `array.destroy(array.ptr)` when it no longer needs it.
+/// @param samples sample labels corresponding to the first dimension of the data
+/// @param components component labels corresponding to the second dimension of the data
+/// @param features feature labels corresponding to the third dimension of the data
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error. In case of error, you can use `aml_last_error()`
+///          to get the error message.
 #[no_mangle]
 pub unsafe extern fn aml_block(
     data: aml_array_t,
@@ -63,6 +85,17 @@ pub unsafe extern fn aml_block(
     return result;
 }
 
+
+/// Free the memory associated with a `block` previously created with
+/// `aml_block`.
+///
+/// If `block` is `NULL`, this function does nothing.
+///
+/// @param block pointer to an existing block, or `NULL`
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
 #[no_mangle]
 pub unsafe extern fn aml_block_free(
     block: *mut aml_block_t,
@@ -76,6 +109,27 @@ pub unsafe extern fn aml_block_free(
     })
 }
 
+
+#[allow(clippy::doc_markdown)]
+/// Get the set of labels of the requested `kind` from this `block`.
+///
+/// The `values_gradients` parameter controls whether this function looks up
+/// labels for `"values"` or one of the gradients in this block.
+///
+/// The resulting `labels.values` points inside memory owned by the block, and
+/// as such is only valid until the block is destroyed with `aml_block_free`, or
+/// the containing descriptor is modified with one of the
+/// `aml_descriptor_sparse_to_xxx` function.
+///
+/// @param block pointer to an existing block
+/// @param values_gradients either `"values"` or the name of gradients to lookup
+/// @param kind the kind of labels requested
+/// @param labels pointer to an empty `aml_labels_t` that will be set to the
+///               requested labels
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
 #[no_mangle]
 pub unsafe extern fn aml_block_labels(
     block: *const aml_block_t,
@@ -121,6 +175,21 @@ pub unsafe extern fn aml_block_labels(
     })
 }
 
+
+#[allow(clippy::doc_markdown)]
+/// Get the array handle for either values or one of the gradient in this `block`.
+///
+/// The `values_gradients` parameter controls whether this function looks up
+/// labels for `"values"` or one of the gradients in this block.
+///
+/// @param block pointer to an existing block
+/// @param values_gradients either `"values"` or the name of gradients to lookup
+/// @param data pointer to an empty `aml_array_t` that will be set to the
+///             requested array
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
 #[no_mangle]
 pub unsafe extern fn aml_block_data(
     block: *const aml_block_t,
@@ -146,6 +215,22 @@ pub unsafe extern fn aml_block_data(
     })
 }
 
+
+/// Add a new gradient to this `block` with the given `name`.
+///
+/// @param block pointer to an existing block
+/// @param name name of the gradient as a NULL-terminated UTF-8 string. This is
+///             usually the parameter used when taking derivatives (e.g.
+///             `"positions"`, `"cell"`, etc.)
+/// @param samples sample labels for the gradient array. The components and
+///                feature labels are supposed to match the values in this block
+/// @param gradient array containing the gradient data. The block takes
+///                 ownership of the array, and will release it with
+///                 `array.destroy(array.ptr)` when it no longer needs it.
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
 #[no_mangle]
 pub unsafe extern fn aml_block_add_gradient(
     block: *mut aml_block_t,
@@ -163,6 +248,17 @@ pub unsafe extern fn aml_block_add_gradient(
 }
 
 
+#[allow(clippy::doc_markdown)]
+/// Check if this `block` contains gradient with the given `name`.
+///
+/// @param block pointer to an existing block
+/// @param name name of the gradient as a NULL-terminated UTF-8 string
+/// @param has_gradient pointer to bool that will be set to `true` if this block
+///                     contains the requested gradients, and `false` otherwise
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
 #[no_mangle]
 pub unsafe extern fn aml_block_has_gradient(
     block: *mut aml_block_t,
