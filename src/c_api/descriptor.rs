@@ -1,9 +1,9 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::collections::BTreeSet;
 
-use crate::{Descriptor, Labels, LabelValue, Block, Error};
+use crate::{Descriptor, Labels, Block, Error};
 
 use super::labels::aml_labels_t;
 use super::blocks::aml_block_t;
@@ -134,22 +134,7 @@ pub unsafe extern fn aml_descriptor_sparse_labels(
     catch_unwind(|| {
         check_pointers!(descriptor, labels);
 
-        let rust_labels = (*descriptor).sparse();
-
-        (*labels).size = rust_labels.size();
-        (*labels).count = rust_labels.count();
-
-        if rust_labels.count() == 0 || rust_labels.size() == 0 {
-            (*labels).values = std::ptr::null();
-        } else {
-            (*labels).values = (&rust_labels[0][0] as *const LabelValue).cast();
-        }
-
-        if rust_labels.size() == 0 {
-            (*labels).names = std::ptr::null();
-        } else {
-            (*labels).names = rust_labels.c_names().as_ptr().cast();
-        }
+        *labels = (*descriptor).sparse().try_into()?;
         Ok(())
     })
 }

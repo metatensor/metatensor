@@ -79,6 +79,42 @@ typedef struct aml_descriptor_t aml_descriptor_t;
 typedef int32_t aml_status_t;
 
 /**
+ * A set of labels used to carry metadata associated with a descriptor.
+ *
+ * This is similar to a list of `n_entries` named tuples, but stored as a 2D
+ * array of shape `(n_entries, n_variables)`, with a set of names associated
+ * with the columns of this array (often called *variables*). Each row/entry in
+ * this array is unique, and they are often (but not always) sorted in
+ * lexicographic order.
+ */
+typedef struct aml_labels_t {
+  /**
+   * internal: pointer to the rust `Labels` struct if any, null otherwise
+   */
+  const void *labels_ptr;
+  /**
+   * Names of the variables composing this set of labels. There are `size`
+   * elements in this array, each being a NULL terminated UTF-8 string.
+   */
+  const char *const *names;
+  /**
+   * Pointer to the first element of a 2D row-major array of 32-bit signed
+   * integer containing the values taken by the different variables in
+   * `names`. Each row has `size` elements, and there are `count` rows in
+   * total.
+   */
+  const int32_t *values;
+  /**
+   * Number of variables/size of a single entry in the set of labels
+   */
+  uintptr_t size;
+  /**
+   * Number entries in the set of labels
+   */
+  uintptr_t count;
+} aml_labels_t;
+
+/**
  * A single 64-bit integer representing a data origin (numpy ndarray, rust
  * ndarray, torch tensor, fortran array, ...).
  */
@@ -140,38 +176,6 @@ typedef struct aml_array_t {
   void (*destroy)(void *array);
 } aml_array_t;
 
-/**
- * A set of labels used to carry metadata associated with a descriptor.
- *
- * This is similar to a list of `n_entries` named tuples, but stored as a 2D
- * array of shape `(n_entries, n_variables)`, with a set of names associated
- * with the columns of this array (often called *variables*). Each row/entry in
- * this array is unique, and they are often (but not always) sorted in
- * lexicographic order.
- */
-typedef struct aml_labels_t {
-  /**
-   * Names of the variables composing this set of labels. There are `size`
-   * elements in this array, each being a NULL terminated UTF-8 string.
-   */
-  const char *const *names;
-  /**
-   * Pointer to the first element of a 2D row-major array of 32-bit signed
-   * integer containing the values taken by the different variables in
-   * `names`. Each row has `size` elements, and there are `count` rows in
-   * total.
-   */
-  const int32_t *values;
-  /**
-   * Number of variables/size of a single entry in the set of labels
-   */
-  uintptr_t size;
-  /**
-   * Number entries in the set of labels
-   */
-  uintptr_t count;
-} aml_labels_t;
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -182,6 +186,26 @@ extern "C" {
  * @returns the last error message, as a NULL-terminated string
  */
 const char *aml_last_error(void);
+
+/**
+ * Get the position of the entry defined by the `values` array in the given set
+ * of `labels`. This operation is only available if the labels correspond to a
+ * set of Rust Labels (i.e. `labels.labels_ptr` is not NULL).
+ *
+ * @param labels set of labels coming from an `aml_block_t` or an `aml_descriptor_t`
+ * @param values array containing the label to lookup
+ * @param count size of the values array
+ * @param result position of the values in the labels or -1 if the values
+ *               were not found
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
+aml_status_t aml_labels_position(struct aml_labels_t labels,
+                                 const int32_t *values,
+                                 uint64_t count,
+                                 int64_t *result);
 
 /**
  * Register a new data origin with the given `name`. Calling this function

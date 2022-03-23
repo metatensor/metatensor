@@ -21,7 +21,13 @@ class Block:
     but share the same components and feature labels as the values.
     """
 
-    def __init__(self, values: Array, samples: Labels, components: Labels, features: Labels):
+    def __init__(
+        self,
+        values: Array,
+        samples: Labels,
+        components: Labels,
+        features: Labels,
+    ):
         """
         :param values: array containing the data for this block
         :param samples: labels describing the samples (first dimension of the

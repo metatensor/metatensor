@@ -1,9 +1,10 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Optional
 import numpy as np
 import ctypes
 
 from ._c_api import aml_labels_t
+from ._c_lib import _get_library
 
 
 class Labels(np.ndarray):
@@ -23,21 +24,37 @@ class Labels(np.ndarray):
     .. code-block:: python
 
         labels = Labels(
-            names=["structure", "atom", "center_species"]
-            values=...
+            names=["structure", "atom", "center_species"] values=...
         )
 
-        # access all values in a column by name
-        structures = labels["structures"]
+        # access all values in a column by name structures =
+        labels["structures"]
 
-        # multiple columns at once
-        data = labels[["structures", "center_species"]]
+        # multiple columns at once data = labels[["structures",
+        "center_species"]]
 
-        # we can still use all the usual numpy operations
-        unique_structures = np.unique(labels["structures"])
+        # we can still use all the usual numpy operations unique_structures =
+        np.unique(labels["structures"])
+
+    One can also check for the presence of a given entry in Labels, but only if
+    the Labels come from a :py:class:`Block` or a :py:class:`Descriptor`.
+
+    .. code-block:: python
+
+        # create a Block in some way
+
+        samples = block.samples
+
+        position = samples.position((1, 3))
+        # either None if the sample is not there or the
+        # position in the samples of (1, 3)
+
+        # this also works with __contains__
+        if (1, 3) in samples:
+            ...
     """
 
-    def __new__(cls, names: List[str], values: np.ndarray):
+    def __new__(cls, names: List[str], values: np.ndarray, **kwargs):
         """
         :param names: names of the variables in the new labels
         :param values: values of the variables, this needs to be a 2D array of
@@ -65,23 +82,33 @@ class Labels(np.ndarray):
         if values.shape[1] != 0:
             values = values.view(dtype=dtype).reshape((values.shape[0],))
 
-            if len(np.unique(values)) != len(values):
-                raise ValueError("values in Labels must be unique")
+            if "_aml_labels" not in kwargs:
+                # check that the values are unique in the labels, we assume
+                # that's the case if we get an `aml_labels` parameter
+                if len(np.unique(values)) != len(values):
+                    raise ValueError("values in Labels must be unique")
 
         obj = values.view(cls)
 
         # keep a reference to the parent object (if any) to prevent it from
         # beeing garbage-collected when the Labels are a view inside memory
-        # owned by the parent
-        obj._parent = None
+        # owned by the parent.
+        obj._parent = kwargs.get("_parent", None)
+
+        # keep the aml_labels_t object around if we have one, it will be used to
+        # implement `position` and `__contains__`
+        obj._aml_labels = kwargs.get("_aml_labels", None)
 
         return obj
 
     def __array_finalize__(self, obj):
-        if hasattr(obj, "_parent"):
-            self._parent = obj._parent
-        else:
-            self._parent = None
+        # keep the parent around when creating sub-views of this array
+        self._parent = getattr(object, "_parent", None)
+
+        # do not keep the aml_labels around, since one could be taking only a
+        # subset of the variables (`samples[["structure", "center"]]`) and this
+        # would break `position` and `__contains__`
+        self._aml_labels = None
 
     @property
     def names(self) -> List[str]:
@@ -130,6 +157,7 @@ class Labels(np.ndarray):
         for i, n in enumerate(self.names):
             names[i] = n.encode("utf8")
 
+        aml_labels.labels_ptr = None
         aml_labels.names = names
         aml_labels.size = len(names)
         aml_labels.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
@@ -138,28 +166,62 @@ class Labels(np.ndarray):
         return aml_labels
 
     @staticmethod
-    def _from_aml_labels_t(labels, parent):
+    def _from_aml_labels_t(aml_labels, parent):
         """
         Convert an aml_labels_t into a Labels instance. The Labels is only a
         view inside the aml_labels_t memory, so one can use the parent parameter
         to ensure a parent object is kept alive for as long as the Labels live.
         """
         names = []
-        for i in range(labels.size):
-            names.append(labels.names[i].decode("utf8"))
+        for i in range(aml_labels.size):
+            names.append(aml_labels.names[i].decode("utf8"))
 
-        if labels.count != 0:
-            shape = (labels.count, labels.size)
-            values = _ptr_to_ndarray(ptr=labels.values, shape=shape, dtype=np.int32)
+        if aml_labels.count != 0:
+            shape = (aml_labels.count, aml_labels.size)
+            values = _ptr_to_ndarray(ptr=aml_labels.values, shape=shape, dtype=np.int32)
             values.flags.writeable = False
-            labels = Labels(names, values)
-            labels._parent = parent
-            return labels
+            return Labels(names, values, _aml_labels=aml_labels, _parent=parent)
         else:
             return Labels(
                 names=names,
                 values=np.empty(shape=(0, len(names)), dtype=np.int32),
             )
+
+    def position(self, label) -> Optional[int]:
+        """
+        Get the position of the given ``label`` entry in this set of labels.
+
+        This is only available if the labels comes from a :py:class:`Block` or a
+        :py:class:`Descriptor`. If you need it for standalone labels, please let
+        us know!
+        """
+        if self._aml_labels is not None:
+            lib = _get_library()
+
+            result = ctypes.c_int64()
+            values = ctypes.ARRAY(ctypes.c_int32, len(label))()
+            for i, v in enumerate(label):
+                values[i] = ctypes.c_int32(v)
+
+            lib.aml_labels_position(
+                self._aml_labels,
+                values,
+                len(label),
+                result,
+            )
+
+            if result.value >= 0:
+                return result.value
+            else:
+                return None
+        else:
+            raise Exception(
+                "can not lookup the position of an entry in standalone Labels,"
+                "move them to a block or descriptor first"
+            )
+
+    def __contains__(self, label):
+        return self.position(label) is not None
 
 
 def _is_namedtuple(x):

@@ -1,7 +1,8 @@
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_void};
 use std::ffi::CStr;
 
 use crate::{LabelValue, Labels, LabelsBuilder, Error};
+use super::status::{aml_status_t, catch_unwind};
 
 #[repr(C)]
 #[allow(non_camel_case_types)]
@@ -25,6 +26,9 @@ pub enum aml_label_kind {
 /// lexicographic order.
 #[repr(C)]
 pub struct aml_labels_t {
+    /// internal: pointer to the rust `Labels` struct if any, null otherwise
+    pub labels_ptr: *const c_void,
+
     /// Names of the variables composing this set of labels. There are `size`
     /// elements in this array, each being a NULL terminated UTF-8 string.
     pub names: *const *const c_char,
@@ -68,4 +72,72 @@ impl std::convert::TryFrom<aml_labels_t> for Labels {
 
         return Ok(builder.finish());
     }
+}
+
+
+impl std::convert::TryFrom<&Labels> for aml_labels_t {
+    type Error = Error;
+
+    fn try_from(rust_labels: &Labels) -> Result<aml_labels_t, Self::Error> {
+        let size = rust_labels.size();
+        let count = rust_labels.count();
+
+        let values = if rust_labels.count() == 0 || rust_labels.size() == 0 {
+            std::ptr::null()
+        } else {
+            (&rust_labels[0][0] as *const LabelValue).cast()
+        };
+
+        let names = if rust_labels.size() == 0 {
+            std::ptr::null()
+        } else {
+            rust_labels.c_names().as_ptr().cast()
+        };
+
+        // this is a bit sketchy & rely on the fact that the containing
+        // `aml_block_t` or `aml_descriptor_t` has a fixed address since it is
+        // boxed. This also valid only for as long as the block/descriptor is
+        // not modified.
+        // TODO: could we use Pin/Pin projection here?
+        let labels_ptr = (rust_labels as *const Labels).cast();
+
+        Ok(aml_labels_t {
+            labels_ptr, names, values, size, count
+        })
+    }
+}
+
+
+#[allow(clippy::cast_possible_truncation)]
+/// Get the position of the entry defined by the `values` array in the given set
+/// of `labels`. This operation is only available if the labels correspond to a
+/// set of Rust Labels (i.e. `labels.labels_ptr` is not NULL).
+///
+/// @param labels set of labels coming from an `aml_block_t` or an `aml_descriptor_t`
+/// @param values array containing the label to lookup
+/// @param count size of the values array
+/// @param result position of the values in the labels or -1 if the values
+///               were not found
+///
+/// @returns The status code of this operation. If the status is not
+///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn aml_labels_position(
+    labels: aml_labels_t,
+    values: *const i32,
+    count: u64,
+    result: *mut i64
+) -> aml_status_t {
+    catch_unwind(|| {
+        if labels.labels_ptr.is_null() {
+            return Err(Error::InvalidParameter("TODO".into()))
+        }
+
+        let labels = labels.labels_ptr.cast::<Labels>();
+        let label = std::slice::from_raw_parts(values.cast(), count as usize);
+        *result = (*labels).position(label).map_or(-1, |p| p as i64);
+
+        Ok(())
+    })
 }
