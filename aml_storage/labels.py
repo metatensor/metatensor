@@ -154,6 +154,7 @@ class Labels(np.ndarray):
             values.flags.writeable = False
             labels = Labels(names, values)
             labels._parent = parent
+            return labels
         else:
             return Labels(
                 names=names,

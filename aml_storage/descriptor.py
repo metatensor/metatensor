@@ -56,6 +56,16 @@ class Descriptor:
 
         _check_pointer(self._ptr)
 
+        first_block = self.block(0)
+        self.sample_names: List[str] = first_block.samples.names
+        """Names of the sample labels for all blocks in this descriptor"""
+
+        self.component_names: List[str] = first_block.components.names
+        """Names of the component labels for all blocks in this descriptor"""
+
+        self.feature_names: List[str] = first_block.features.names
+        """Names of the feature labels for all blocks in this descriptor"""
+
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr"):
             self._lib.aml_descriptor_free(self._ptr)
