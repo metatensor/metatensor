@@ -108,6 +108,7 @@ class AmlData:
     """
     Small wrapper making Python arrays compatible with ``aml_array_t``.
     """
+
     def __init__(self, array):
         self.array = array
         self._children = []

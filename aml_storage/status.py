@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Optional
+
 from ._c_api import AML_SUCCESS
 from ._c_lib import _get_library
 
@@ -11,11 +13,11 @@ class AmlError(Exception):
     def __init__(self, message, status=None):
         super(Exception, self).__init__(message)
 
-        self.message = message
-        """``str``, error message for this exception"""
+        self.message: str = message
+        """error message for this exception"""
 
-        self.status = status
-        """``Optional[int]``, status code for this exception"""
+        self.status: Optional[int] = status
+        """status code for this exception"""
 
 
 LAST_EXCEPTION = None

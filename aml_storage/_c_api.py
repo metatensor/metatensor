@@ -41,6 +41,18 @@ class aml_descriptor_t(ctypes.Structure):
     pass
 
 
+class aml_labels_t(ctypes.Structure):
+    pass
+
+aml_labels_t._fields_ = [
+    ("labels_ptr", ctypes.c_void_p),
+    ("names", POINTER(ctypes.c_char_p)),
+    ("values", POINTER(ctypes.c_int32)),
+    ("size", c_uintptr_t),
+    ("count", c_uintptr_t),
+]
+
+
 class aml_array_t(ctypes.Structure):
     pass
 
@@ -55,17 +67,6 @@ aml_array_t._fields_ = [
 ]
 
 
-class aml_labels_t(ctypes.Structure):
-    pass
-
-aml_labels_t._fields_ = [
-    ("names", POINTER(ctypes.c_char_p)),
-    ("values", POINTER(ctypes.c_int32)),
-    ("size", c_uintptr_t),
-    ("count", c_uintptr_t),
-]
-
-
 def setup_functions(lib):
     from .status import _check_status
 
@@ -73,6 +74,14 @@ def setup_functions(lib):
         
     ]
     lib.aml_last_error.restype = ctypes.c_char_p
+
+    lib.aml_labels_position.argtypes = [
+        aml_labels_t,
+        POINTER(ctypes.c_int32),
+        ctypes.c_uint64,
+        POINTER(ctypes.c_int64)
+    ]
+    lib.aml_labels_position.restype = _check_status
 
     lib.aml_register_data_origin.argtypes = [
         ctypes.c_char_p,

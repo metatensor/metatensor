@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use std::os::raw::c_char;
 use std::ffi::CStr;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
-use crate::{Block, Labels, LabelValue, Error, aml_array_t};
+use crate::{Block, Labels, Error, aml_array_t};
 
 use super::labels::{aml_labels_t, aml_label_kind};
 
@@ -156,20 +156,7 @@ pub unsafe extern fn aml_block_labels(
             aml_label_kind::AML_FEATURE_LABELS => basic_block.features(),
         };
 
-        (*labels).size = rust_labels.size();
-        (*labels).count = rust_labels.count();
-
-        if rust_labels.count() == 0 || rust_labels.size() == 0 {
-            (*labels).values = std::ptr::null();
-        } else {
-            (*labels).values = (&rust_labels[0][0] as *const LabelValue).cast();
-        }
-
-        if rust_labels.size() == 0 {
-            (*labels).names = std::ptr::null();
-        } else {
-            (*labels).names = rust_labels.c_names().as_ptr().cast();
-        }
+        *labels = rust_labels.try_into()?;
 
         Ok(())
     })
