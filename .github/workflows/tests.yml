@@ -70,7 +70,7 @@ jobs:
       - name: install tests dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox
+          python -m pip install tox black flake8
 
       - name: rust tests
         run: cargo test --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
