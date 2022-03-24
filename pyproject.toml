@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 legacy_tox_ini = """
 [tox]
 
-[testenv]
+[testenv:tests]
 # skip install to avoid rebuilding the world, do the install with setup.py
 # instead of pip below
 skip_install = True
@@ -26,4 +26,19 @@ deps =
 commands =
     python setup.py --quiet install
     discover -p "*.py" -s tests/python
+
+[testenv:lint]
+skip_install = True
+passenv =
+    AML_BUILD_TYPE
+    RUSTUP_HOME
+    CARGO*
+
+deps =
+    black
+    flake8
+
+commands =
+    black --check aml_storage --extend-exclude aml_storage/_c_api.py
+    flake8 --max-line-length 88 aml_storage
 """
