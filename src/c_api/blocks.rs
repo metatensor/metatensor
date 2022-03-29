@@ -234,28 +234,34 @@ pub unsafe extern fn aml_block_add_gradient(
     })
 }
 
-
-#[allow(clippy::doc_markdown)]
-/// Check if this `block` contains gradient with the given `name`.
+/// Get a list of all gradients defined in this `block` in the `parameters` array.
 ///
 /// @param block pointer to an existing block
-/// @param name name of the gradient as a NULL-terminated UTF-8 string
-/// @param has_gradient pointer to bool that will be set to `true` if this block
-///                     contains the requested gradients, and `false` otherwise
+/// @param parameter will be set to the first element of an array of
+///                  NULL-terminated UTF-8 strings containing all the parameters
+///                  for which a gradient exists
+/// @param count will be set to the number of elements in `parameters`
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_has_gradient(
+pub unsafe extern fn aml_block_gradients_list(
     block: *mut aml_block_t,
-    name: *const c_char,
-    has_gradient: *mut bool,
+    parameters: *mut *const *const c_char,
+    count: *mut u64
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(block, name, has_gradient);
-        let name = CStr::from_ptr(name).to_str().unwrap();
-        *has_gradient = (*block).has_gradient(name);
+        check_pointers!(block, parameters, count);
+
+        let list = (*block).gradients_list_c();
+        (*count) = list.len() as u64;
+
+        (*parameters) = if list.is_empty() {
+            std::ptr::null()
+        } else {
+            list.as_ptr().cast()
+        };
         Ok(())
     })
 }

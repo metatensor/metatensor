@@ -37,6 +37,8 @@ class TestBlocks(unittest.TestCase):
         self.assertTrue(block.has_gradient("parameter"))
         self.assertFalse(block.has_gradient("something else"))
 
+        self.assertEqual(block.gradients_list(), ["parameter"])
+
         samples, gradients = block.gradient("parameter")
 
         self.assertEqual(samples.names, ("sample", "parameter"))

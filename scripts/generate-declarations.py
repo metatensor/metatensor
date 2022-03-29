@@ -151,6 +151,10 @@ def type_to_ctypes(type, ndpointer=False):
                     return f"POINTER(ndpointer({name}, flags='C_CONTIGUOUS'))"
                 else:
                     return f"POINTER(POINTER({name}))"
+            elif isinstance(type.type.type, c_ast.PtrDecl):
+                assert isinstance(type.type.type.type, c_ast.TypeDecl)
+                assert _typedecl_name(type.type.type.type) == "char"
+                return "POINTER(POINTER(ctypes.c_char_p))"
 
         elif isinstance(type.type, c_ast.TypeDecl):
             name = _typedecl_name(type.type)
