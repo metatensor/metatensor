@@ -339,20 +339,21 @@ aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     struct aml_array_t gradient);
 
 /**
- * Check if this `block` contains gradient with the given `name`.
+ * Get a list of all gradients defined in this `block` in the `parameters` array.
  *
  * @param block pointer to an existing block
- * @param name name of the gradient as a NULL-terminated UTF-8 string
- * @param has_gradient pointer to bool that will be set to `true` if this block
- *                     contains the requested gradients, and `false` otherwise
+ * @param parameter will be set to the first element of an array of
+ *                  NULL-terminated UTF-8 strings containing all the parameters
+ *                  for which a gradient exists
+ * @param count will be set to the number of elements in `parameters`
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_block_has_gradient(struct aml_block_t *block,
-                                    const char *name,
-                                    bool *has_gradient);
+aml_status_t aml_block_gradients_list(struct aml_block_t *block,
+                                      const char *const **parameters,
+                                      uint64_t *count);
 
 /**
  * Create a new `aml_descriptor_t` with the given `sparse` labels and `blocks`.

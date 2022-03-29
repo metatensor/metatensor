@@ -132,12 +132,12 @@ def setup_functions(lib):
     ]
     lib.aml_block_add_gradient.restype = _check_status
 
-    lib.aml_block_has_gradient.argtypes = [
+    lib.aml_block_gradients_list.argtypes = [
         POINTER(aml_block_t),
-        ctypes.c_char_p,
-        POINTER(ctypes.c_bool)
+        POINTER(POINTER(ctypes.c_char_p)),
+        POINTER(ctypes.c_uint64)
     ]
-    lib.aml_block_has_gradient.restype = _check_status
+    lib.aml_block_gradients_list.restype = _check_status
 
     lib.aml_descriptor.argtypes = [
         aml_labels_t,

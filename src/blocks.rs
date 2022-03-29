@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use std::ffi::CString;
 use std::collections::HashMap;
 
+use crate::utils::ConstCString;
 use crate::{Labels, Error, aml_array_t, get_data_origin};
 
 /// Basic building block for descriptor. A single basic block contains a
@@ -84,6 +86,8 @@ impl BasicBlock {
 pub struct Block {
     pub values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
+    // all the keys from `self.gradients`, as C-compatible strings
+    gradient_parameters: Vec<ConstCString>,
 }
 
 impl Block {
@@ -99,6 +103,7 @@ impl Block {
         Ok(Block {
             values: BasicBlock::new(data, samples, components, features)?,
             gradients: HashMap::new(),
+            gradient_parameters: Vec::new(),
         })
     }
 
@@ -109,16 +114,21 @@ impl Block {
 
     /// Get the list of gradients in this block.
     pub fn gradients_list(&self) -> Vec<&str> {
-        self.gradients.keys().map(|s| &**s).collect()
+        self.gradient_parameters.iter().map(|s| s.as_str()).collect()
+    }
+
+    /// Get the list of gradients in this block for the C API
+    pub fn gradients_list_c(&self) -> &[ConstCString] {
+        &self.gradient_parameters
     }
 
     /// Add a gradient to this block with the given name, samples and gradient
     /// array. The components and feature labels are assumed to match the ones of
     /// the values in this block.
-    pub fn add_gradient(&mut self, name: &str, samples: Labels, gradient: aml_array_t) -> Result<(), Error> {
-        if self.gradients.contains_key(name) {
+    pub fn add_gradient(&mut self, parameter: &str, samples: Labels, gradient: aml_array_t) -> Result<(), Error> {
+        if self.gradients.contains_key(parameter) {
             return Err(Error::InvalidParameter(format!(
-                "gradient with respect to '{}' already exists for this block", name
+                "gradient with respect to '{}' already exists for this block", parameter
             )))
         }
 
@@ -131,7 +141,7 @@ impl Block {
         }
 
         // this is used as a special marker in the C API
-        if name == "values" {
+        if parameter == "values" {
             return Err(Error::InvalidParameter(
                 "can not store gradient with respect to 'values'".into()
             ))
@@ -149,19 +159,22 @@ impl Block {
             "gradient data and labels don't match", &gradient, &samples, &components, &features
         )?;
 
-        self.gradients.insert(name.into(), BasicBlock {
+        self.gradients.insert(parameter.into(), BasicBlock {
             data: gradient,
             samples,
             components,
             features
         });
 
+        let parameter = ConstCString::new(CString::new(parameter.to_owned()).expect("invalid C string"));
+        self.gradient_parameters.push(parameter);
+
         return Ok(())
     }
 
-    /// Get the gradients w.r.t. `name` in this block or None.
-    pub fn get_gradient(&self, name: &str) -> Option<&BasicBlock> {
-        self.gradients.get(name)
+    /// Get the gradients w.r.t. `parameter` in this block or None.
+    pub fn get_gradient(&self, parameter: &str) -> Option<&BasicBlock> {
+        self.gradients.get(parameter)
     }
 }
 

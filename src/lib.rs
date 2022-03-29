@@ -10,9 +10,8 @@
 #![allow(clippy::borrow_as_ptr)]
 
 
+mod utils;
 mod labels;
-use c_api::aml_status_t;
-
 pub use self::labels::{LabelValue, Labels, LabelsBuilder};
 
 mod data;
@@ -27,6 +26,7 @@ pub use self::descriptor::Descriptor;
 
 #[doc(hidden)]
 pub mod c_api;
+use c_api::aml_status_t;
 
 
 /// The possible sources of error in aml-storage
