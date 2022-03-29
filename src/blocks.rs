@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use std::ffi::CString;
 use std::collections::HashMap;
 
+use crate::utils::ConstCString;
 use crate::{Labels, Error, aml_array_t, get_data_origin};
 
 /// Basic building block for descriptor. A single basic block contains a
@@ -84,6 +86,8 @@ impl BasicBlock {
 pub struct Block {
     pub values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
+    // all the keys from `self.gradients`, as C-compatible strings
+    gradients_names: Vec<ConstCString>,
 }
 
 impl Block {
@@ -99,6 +103,7 @@ impl Block {
         Ok(Block {
             values: BasicBlock::new(data, samples, components, features)?,
             gradients: HashMap::new(),
+            gradients_names: Vec::new(),
         })
     }
 
@@ -109,7 +114,12 @@ impl Block {
 
     /// Get the list of gradients in this block.
     pub fn gradients_list(&self) -> Vec<&str> {
-        self.gradients.keys().map(|s| &**s).collect()
+        self.gradients_names.iter().map(|s| s.as_str()).collect()
+    }
+
+    /// Get the list of gradients in this block for the C API
+    pub fn gradients_list_c(&self) -> &[ConstCString] {
+        &self.gradients_names
     }
 
     /// Add a gradient to this block with the given name, samples and gradient
@@ -155,6 +165,9 @@ impl Block {
             components,
             features
         });
+
+        let name = ConstCString::new(CString::new(name.to_owned()).expect("invalid C string"));
+        self.gradients_names.push(name);
 
         return Ok(())
     }

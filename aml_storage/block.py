@@ -1,5 +1,5 @@
 import ctypes
-from typing import Tuple
+from typing import Tuple, List
 
 from ._c_lib import _get_library
 from ._c_api import aml_label_kind, aml_labels_t, aml_array_t
@@ -148,6 +148,18 @@ class Block:
             gradient._storage,
         )
 
+    def gradients_list(self) -> List[str]:
+        """ """
+        parameters = ctypes.POINTER(ctypes.c_char_p)()
+        count = ctypes.c_uint64()
+        self._lib.aml_block_gradients_list(self._ptr, parameters, count)
+
+        result = []
+        for i in range(count.value):
+            result.append(parameters[i].decode("utf8"))
+
+        return result
+
     def has_gradient(self, parameter: str) -> bool:
         """Check if this block contains gradient information with respect to the
         given ``parameter``.
@@ -155,9 +167,7 @@ class Block:
         :param parameter: check for gradients with respect to this ``parameter``
             (e.g. ``positions``, ``cell``, ...)
         """
-        result = ctypes.c_bool()
-        self._lib.aml_block_has_gradient(self._ptr, parameter.encode("utf8"), result)
-        return result.value
+        return parameter in self.gradients_list()
 
     def _get_array(self, name: str) -> Array:
         data = ctypes.POINTER(aml_array_t)()
