@@ -30,7 +30,7 @@ aml_data_origin_t = ctypes.c_uint64
 class aml_label_kind(enum.Enum):
     AML_SAMPLE_LABELS = 0
     AML_COMPONENTS_LABELS = 1
-    AML_FEATURE_LABELS = 2
+    AML_PROPERTY_LABELS = 2
 
 
 class aml_block_t(ctypes.Structure):
@@ -171,17 +171,17 @@ def setup_functions(lib):
     ]
     lib.aml_descriptor_block_selection.restype = _check_status
 
-    lib.aml_descriptor_sparse_to_features.argtypes = [
+    lib.aml_descriptor_sparse_to_properties.argtypes = [
         POINTER(aml_descriptor_t),
         POINTER(ctypes.c_char_p),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor_sparse_to_features.restype = _check_status
+    lib.aml_descriptor_sparse_to_properties.restype = _check_status
 
-    lib.aml_descriptor_components_to_features.argtypes = [
+    lib.aml_descriptor_components_to_properties.argtypes = [
         POINTER(aml_descriptor_t)
     ]
-    lib.aml_descriptor_components_to_features.restype = _check_status
+    lib.aml_descriptor_components_to_properties.restype = _check_status
 
     lib.aml_descriptor_sparse_to_samples.argtypes = [
         POINTER(aml_descriptor_t),

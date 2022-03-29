@@ -30,7 +30,7 @@ if HAS_TORCH:
 
     - array contains numeric data;
     - they are stored as row-major, 3-dimensional arrays of shape ``(samples,
-      components, features)``;
+      components, properties)``;
     - it is possible to create new arrays and move data from one array to
       another.
 
@@ -148,27 +148,27 @@ def _object_from_ptr(ptr):
 
 
 @catch_exceptions
-def _aml_storage_shape(this, n_samples, n_components, n_features):
+def _aml_storage_shape(this, n_samples, n_components, n_properties):
     storage = _object_from_ptr(this)
 
     shape = storage.array.shape
 
     n_samples[0] = ctypes.c_uint64(shape[0])
     n_components[0] = ctypes.c_uint64(shape[1])
-    n_features[0] = ctypes.c_uint64(shape[2])
+    n_properties[0] = ctypes.c_uint64(shape[2])
 
 
 @catch_exceptions
-def _aml_storage_reshape(this, n_samples, n_components, n_features):
+def _aml_storage_reshape(this, n_samples, n_components, n_properties):
     storage = _object_from_ptr(this)
-    storage.array = storage.array.reshape((n_samples, n_components, n_features))
+    storage.array = storage.array.reshape((n_samples, n_components, n_properties))
 
 
 @catch_exceptions
-def _aml_storage_create(this, n_samples, n_components, n_features, data_storage):
+def _aml_storage_create(this, n_samples, n_components, n_properties, data_storage):
     storage = _object_from_ptr(this)
 
-    shape = (n_samples, n_components, n_features)
+    shape = (n_samples, n_components, n_properties)
     dtype = storage.array.dtype
 
     if _is_numpy_array(storage.array):
@@ -190,8 +190,8 @@ def _aml_storage_destroy(this):
 
 @catch_exceptions
 def _aml_storage_set_from(
-    this, sample, feature_start, feature_stop, other, other_sample
+    this, sample, property_start, property_stop, other, other_sample
 ):
     other = _object_from_ptr(other).array
     output = _object_from_ptr(this).array
-    output[sample, :, feature_start:feature_stop] = other[other_sample, :, :]
+    output[sample, :, property_start:property_stop] = other[other_sample, :, :]

@@ -13,8 +13,8 @@ pub enum aml_label_kind {
     /// The component labels, describing the components of vectorial or
     /// tensorial elements of the data
     AML_COMPONENTS_LABELS = 1,
-    /// The feature labels, describing the features of the data
-    AML_FEATURE_LABELS = 2,
+    /// The property labels, describing the columns/properties in the data
+    AML_PROPERTY_LABELS = 2,
 }
 
 /// A set of labels used to carry metadata associated with a descriptor.

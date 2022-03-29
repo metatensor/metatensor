@@ -14,7 +14,7 @@ use super::{catch_unwind, aml_status_t};
 ///
 /// A block can also contain gradients of the values with respect to a variety
 /// of parameters. In this case, each gradient has a separate set of samples,
-/// but share the same components and feature labels as the values.
+/// but share the same components and property labels as the values.
 #[allow(non_camel_case_types)]
 pub struct aml_block_t(Block);
 
@@ -39,7 +39,7 @@ impl aml_block_t {
 
 
 /// Create a new `aml_block_t` with the given `data` and `samples`, `components`
-/// and `features` labels.
+/// and `properties` labels.
 ///
 /// The memory allocated by this function and the blocks should be released
 /// using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
@@ -49,7 +49,7 @@ impl aml_block_t {
 ///             `array.destroy(array.ptr)` when it no longer needs it.
 /// @param samples sample labels corresponding to the first dimension of the data
 /// @param components component labels corresponding to the second dimension of the data
-/// @param features feature labels corresponding to the third dimension of the data
+/// @param properties property labels corresponding to the third dimension of the data
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `aml_last_error()`
@@ -59,16 +59,16 @@ pub unsafe extern fn aml_block(
     data: aml_array_t,
     samples: aml_labels_t,
     components: aml_labels_t,
-    features: aml_labels_t,
+    properties: aml_labels_t,
 ) -> *mut aml_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         let samples = Labels::try_from(samples)?;
         let components = Labels::try_from(components)?;
-        let features = Labels::try_from(features)?;
+        let properties = Labels::try_from(properties)?;
 
-        let block = Block::new(data, samples, Arc::new(components), Arc::new(features))?;
+        let block = Block::new(data, samples, Arc::new(components), Arc::new(properties))?;
         let boxed = Box::new(aml_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -153,7 +153,7 @@ pub unsafe extern fn aml_block_labels(
         let rust_labels = match kind {
             aml_label_kind::AML_SAMPLE_LABELS => basic_block.samples(),
             aml_label_kind::AML_COMPONENTS_LABELS => basic_block.components(),
-            aml_label_kind::AML_FEATURE_LABELS => basic_block.features(),
+            aml_label_kind::AML_PROPERTY_LABELS => basic_block.properties(),
         };
 
         *labels = rust_labels.try_into()?;
@@ -210,7 +210,7 @@ pub unsafe extern fn aml_block_data(
 ///             usually the parameter used when taking derivatives (e.g.
 ///             `"positions"`, `"cell"`, etc.)
 /// @param samples sample labels for the gradient array. The components and
-///                feature labels are supposed to match the values in this block
+///                property labels are supposed to match the values in this block
 /// @param gradient array containing the gradient data. The block takes
 ///                 ownership of the array, and will release it with
 ///                 `array.destroy(array.ptr)` when it no longer needs it.

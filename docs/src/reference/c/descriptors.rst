@@ -10,8 +10,8 @@ The following functions operate on :c:type:`aml_descriptor_t`:
 - :c:func:`aml_descriptor_sparse_labels`: get the sparse :c:struct:`aml_labels_t` associated with a descriptor
 - :c:func:`aml_descriptor_block_by_id`: get a :c:struct:`aml_block_t` in this descriptor from its index
 - :c:func:`aml_descriptor_block_selection`: get a :c:struct:`aml_block_t` in this descriptor from its label
-- :c:func:`aml_descriptor_sparse_to_features`: move entries from sparse labels to features labels
-- :c:func:`aml_descriptor_components_to_features`: move entries from component labels to features labels
+- :c:func:`aml_descriptor_sparse_to_properties`: move entries from sparse labels to properties labels
+- :c:func:`aml_descriptor_components_to_properties`: move entries from component labels to properties labels
 - :c:func:`aml_descriptor_sparse_to_samples`: move entries from sparse labels to sample labels
 
 ---------------------------------------------------------------------
@@ -26,9 +26,9 @@ The following functions operate on :c:type:`aml_descriptor_t`:
 
 .. doxygenfunction:: aml_descriptor_block_selection
 
-.. doxygenfunction:: aml_descriptor_sparse_to_features
+.. doxygenfunction:: aml_descriptor_sparse_to_properties
 
-.. doxygenfunction:: aml_descriptor_components_to_features
+.. doxygenfunction:: aml_descriptor_components_to_properties
 
 .. doxygenfunction:: aml_descriptor_sparse_to_samples
 

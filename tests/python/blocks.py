@@ -12,7 +12,7 @@ class TestBlocks(unittest.TestCase):
             values=np.full((3, 1, 1), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=Labels(["components"], np.array([[-2]], dtype=np.int32)),
-            features=Labels(["features"], np.array([[5]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5]], dtype=np.int32)),
         )
 
         self.assertTrue(np.all(block.values == np.full((3, 1, 1), -1.0)))
@@ -27,9 +27,9 @@ class TestBlocks(unittest.TestCase):
         self.assertEqual(len(block.components), 1)
         self.assertEqual(tuple(block.components[0]), (-2,))
 
-        self.assertEqual(block.features.names, ("features",))
-        self.assertEqual(len(block.features), 1)
-        self.assertEqual(tuple(block.features[0]), (5,))
+        self.assertEqual(block.properties.names, ("properties",))
+        self.assertEqual(len(block.properties), 1)
+        self.assertEqual(tuple(block.properties[0]), (5,))
 
     def test_gradients(self):
         block = test_descriptor().block(0)

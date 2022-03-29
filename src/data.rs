@@ -81,27 +81,27 @@ pub struct aml_array_t {
         array: *const c_void,
         n_samples: *mut u64,
         n_components: *mut u64,
-        n_features: *mut u64,
+        n_properties: *mut u64,
     ) -> aml_status_t>,
 
     /// Change the shape of the array managed by this `aml_array_t` to
-    /// `(n_samples, n_components, n_features)`
+    /// `(n_samples, n_components, n_properties)`
     reshape: Option<unsafe extern fn(
         array: *mut c_void,
         n_samples: u64,
         n_components: u64,
-        n_features: u64,
+        n_properties: u64,
     ) -> aml_status_t>,
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `(n_samples, n_components,
-    /// n_features)` shape; and store it in `new_array`. The new array should be
+    /// n_properties)` shape; and store it in `new_array`. The new array should be
     /// filled with zeros.
     create: Option<unsafe extern fn(
         array: *const c_void,
         n_samples: u64,
         n_components: u64,
-        n_features: u64,
+        n_properties: u64,
         new_array: *mut aml_array_t,
     ) -> aml_status_t>,
 
@@ -110,12 +110,12 @@ pub struct aml_array_t {
     /// the arrays in the same block or descriptor as this `array`.
     ///
     /// This function should copy data from `other_array[other_sample, :, :]` to
-    /// `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
+    /// `array[sample, :, property_start:property_end]`. All indexes are 0-based.
     set_from: Option<unsafe extern fn(
         array: *mut c_void,
         sample: u64,
-        feature_start: u64,
-        feature_end: u64,
+        property_start: u64,
+        property_end: u64,
         other_array: *const c_void,
         other_sample: u64
     ) -> aml_status_t>,
@@ -207,14 +207,14 @@ impl aml_array_t {
 
         let mut n_samples = 0;
         let mut n_components = 0;
-        let mut n_features = 0;
+        let mut n_properties = 0;
 
         let status = unsafe {
             function(
                 self.ptr,
                 &mut n_samples,
                 &mut n_components,
-                &mut n_features,
+                &mut n_properties,
             )
         };
 
@@ -224,7 +224,7 @@ impl aml_array_t {
             });
         }
 
-        return Ok((n_samples as usize, n_components as usize, n_features as usize));
+        return Ok((n_samples as usize, n_components as usize, n_properties as usize));
     }
 
     /// Set the shape of this array to the given new `shape`
@@ -278,11 +278,11 @@ impl aml_array_t {
     /// other arrays in the same block or descriptor.
     ///
     /// This function will copy data from `other_array[other_sample, :, :]` to
-    /// `array[sample, :, feature_start:feature_end]`.
+    /// `array[sample, :, property_start:property_end]`.
     pub fn set_from(
         &mut self,
         sample: usize,
-        features: std::ops::Range<usize>,
+        properties: std::ops::Range<usize>,
         other: &aml_array_t,
         other_sample: usize
     ) -> Result<(), Error> {
@@ -292,8 +292,8 @@ impl aml_array_t {
             function(
                 self.ptr,
                 sample as u64,
-                features.start as u64,
-                features.end as u64,
+                properties.start as u64,
+                properties.end as u64,
                 other.ptr,
                 other_sample as u64,
             )
@@ -310,7 +310,7 @@ impl aml_array_t {
 
     /// Get the data in this `aml_array_t` as a `ndarray::Array3`. This function
     /// will panic if the data in this `aml_array_t` is not a `ndarray::Array3`.
-    #[cfg(feature = "ndarray")]
+    #[cfg(property = "ndarray")]
     pub fn as_array(&self) -> &ndarray::Array3<f64> {
         assert_eq!(
             self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
@@ -323,7 +323,7 @@ impl aml_array_t {
         }
     }
 
-    #[cfg(feature = "ndarray")]
+    #[cfg(property = "ndarray")]
     pub fn as_array_mut(&mut self) -> &mut ndarray::Array3<f64> {
         assert_eq!(
             self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
@@ -353,7 +353,7 @@ pub trait DataStorage: std::any::Any{
     fn set_from(
         &mut self,
         sample: usize,
-        features: Range<usize>,
+        properties: Range<usize>,
         other: &dyn DataStorage,
         sample_other: usize
     );
@@ -378,16 +378,16 @@ unsafe extern fn rust_data_shape(
     data: *const c_void,
     n_samples: *mut u64,
     n_components: *mut u64,
-    n_features: *mut u64,
+    n_properties: *mut u64,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(data, n_samples, n_components, n_features);
+        check_pointers!(data, n_samples, n_components, n_properties);
         let data = data.cast::<Box<dyn DataStorage>>();
         let shape = (*data).shape();
 
         *n_samples = shape.0 as u64;
         *n_components = shape.1 as u64;
-        *n_features = shape.2 as u64;
+        *n_properties = shape.2 as u64;
 
         Ok(())
     })
@@ -399,7 +399,7 @@ unsafe extern fn rust_data_reshape(
     data: *mut c_void,
     n_samples: u64,
     n_components: u64,
-    n_features: u64,
+    n_properties: u64,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(data);
@@ -408,7 +408,7 @@ unsafe extern fn rust_data_reshape(
         let shape = (
             n_samples as usize,
             n_components as usize,
-            n_features as usize,
+            n_properties as usize,
         );
 
         (*data).reshape(shape);
@@ -423,7 +423,7 @@ unsafe extern fn rust_data_create(
     data: *const c_void,
     n_samples: u64,
     n_components: u64,
-    n_features: u64,
+    n_properties: u64,
     data_storage: *mut aml_array_t,
 ) -> aml_status_t {
     catch_unwind(|| {
@@ -433,7 +433,7 @@ unsafe extern fn rust_data_create(
         let shape = (
             n_samples as usize,
             n_components as usize,
-            n_features as usize,
+            n_properties as usize,
         );
 
         let new_data = (*data).create(shape);
@@ -460,8 +460,8 @@ unsafe extern fn rust_data_destroy(
 unsafe extern fn rust_data_set_from(
     data: *mut c_void,
     sample: u64,
-    feature_start: u64,
-    feature_end: u64,
+    property_start: u64,
+    property_end: u64,
     other: *const c_void,
     other_sample: u64
 ) -> aml_status_t {
@@ -472,7 +472,7 @@ unsafe extern fn rust_data_set_from(
 
         (*data).set_from(
             sample as usize,
-            feature_start as usize .. feature_end as usize,
+            property_start as usize .. property_end as usize,
             &**other,
             other_sample as usize,
         );
@@ -483,13 +483,13 @@ unsafe extern fn rust_data_set_from(
 
 /******************************************************************************/
 
-#[cfg(feature = "ndarray")]
+#[cfg(property = "ndarray")]
 static NDARRAY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
     register_data_origin("rust.ndarray".into())
 });
 
 
-#[cfg(feature = "ndarray")]
+#[cfg(property = "ndarray")]
 impl DataStorage for ndarray::Array3<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -521,7 +521,7 @@ impl DataStorage for ndarray::Array3<f64> {
     fn set_from(
         &mut self,
         sample: usize,
-        features: Range<usize>,
+        properties: Range<usize>,
         other: &dyn DataStorage,
         sample_other: usize
     ) {
@@ -530,7 +530,7 @@ impl DataStorage for ndarray::Array3<f64> {
         let other = other.as_any().downcast_ref::<ndarray::Array3<f64>>().expect("other must be a ndarray");
 
         let value = other.slice(s![sample_other, .., ..]);
-        self.slice_mut(s![sample, .., features]).assign(&value);
+        self.slice_mut(s![sample, .., properties]).assign(&value);
     }
 }
 
@@ -587,7 +587,7 @@ mod tests {
         fn set_from(
             &mut self,
             _sample: usize,
-            _features: std::ops::Range<usize>,
+            _properties: std::ops::Range<usize>,
             _other: &dyn DataStorage,
             _sample_other: usize
         ) {
@@ -615,7 +615,7 @@ mod tests {
         ));
     }
 
-    #[cfg(feature = "ndarray")]
+    #[cfg(property = "ndarray")]
     mod ndarray {
         use ndarray::{Array3, array};
 

@@ -206,20 +206,20 @@ pub unsafe extern fn aml_descriptor_block_selection(
 }
 
 #[allow(clippy::doc_markdown)]
-/// Move the given variables from the sparse labels to the feature labels of the
+/// Move the given variables from the sparse labels to the property labels of the
 /// blocks.
 ///
 /// The current blocks will be merged together according to the sparse labels
 /// remaining after removing `variables`. The resulting merged blocks will have
-/// `variables` as the first feature variables, followed by the current
-/// features. The new sample labels will contains all of the merged blocks
+/// `variables` as the first property variables, followed by the current
+/// properties. The new sample labels will contains all of the merged blocks
 /// sample labels, re-ordered to keep them lexicographically sorted.
 ///
 /// `variables` must be an array of `variables_count` NULL-terminated strings,
 /// encoded as UTF-8.
 ///
 /// @param descriptor pointer to an existing descriptor
-/// @param variables name of the sparse variables to move to the features
+/// @param variables name of the sparse variables to move to the properties
 /// @param variables_count number of entries in the `variables` array
 ///
 /// @returns The status code of this operation. If the status is not
@@ -227,7 +227,7 @@ pub unsafe extern fn aml_descriptor_block_selection(
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_descriptor_sparse_to_features(
+pub unsafe extern fn aml_descriptor_sparse_to_properties(
     descriptor: *mut aml_descriptor_t,
     variables: *const *const c_char,
     variables_count: u64,
@@ -242,14 +242,14 @@ pub unsafe extern fn aml_descriptor_sparse_to_features(
             rust_variables.push(variable);
         }
 
-        (*descriptor).sparse_to_features(rust_variables)?;
+        (*descriptor).sparse_to_properties(rust_variables)?;
 
         Ok(())
     })
 }
 
 
-/// Move all component labels in each block of this `descriptor` to the feature
+/// Move all component labels in each block of this `descriptor` to the property
 /// labels and reshape the data accordingly.
 ///
 /// @param descriptor pointer to an existing descriptor
@@ -258,13 +258,13 @@ pub unsafe extern fn aml_descriptor_sparse_to_features(
 ///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_descriptor_components_to_features(
+pub unsafe extern fn aml_descriptor_components_to_properties(
     descriptor: *mut aml_descriptor_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(descriptor);
 
-        (*descriptor).components_to_features()?;
+        (*descriptor).components_to_properties()?;
 
         Ok(())
     })

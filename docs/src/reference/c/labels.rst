@@ -12,7 +12,7 @@ Labels
 .. - :c:func:`rascal_descriptor_values`: get the values out of the descriptor
 .. - :c:func:`rascal_descriptor_gradients`: get the gradients out of the descriptor
 .. - :c:func:`rascal_descriptor_indexes`: get the values of one of the indexes of the descriptor
-.. - :c:func:`rascal_descriptor_densify`: move some indexes variables from samples to features
+.. - :c:func:`rascal_descriptor_densify`: move some indexes variables from samples to properties
 .. - :c:func:`rascal_descriptor_densify_values`: advanced version of ``rascal_descriptor_densify``
 
 .. ---------------------------------------------------------------------

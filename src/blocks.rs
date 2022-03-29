@@ -7,14 +7,14 @@ use crate::{Labels, Error, aml_array_t, get_data_origin};
 
 /// Basic building block for descriptor. A single basic block contains a
 /// 3-dimensional array, and three sets of labels (one for each dimension). The
-/// sample labels are specific to this block, but components & feature labels
+/// sample labels are specific to this block, but components & property labels
 /// can be shared between blocks, or between values & gradients.
 #[derive(Debug)]
 pub struct BasicBlock {
     pub data: aml_array_t,
     pub(crate) samples: Labels,
     pub(crate) components: Arc<Labels>,
-    pub(crate) features: Arc<Labels>,
+    pub(crate) properties: Arc<Labels>,
 }
 
 fn check_data_label_shape(
@@ -22,9 +22,9 @@ fn check_data_label_shape(
     data: &aml_array_t,
     samples: &Labels,
     components: &Labels,
-    features: &Labels,
+    properties: &Labels,
 ) -> Result<(), Error> {
-    let (n_samples, n_components, n_features) = data.shape()?;
+    let (n_samples, n_components, n_properties) = data.shape()?;
     if n_samples != samples.count() {
         return Err(Error::InvalidParameter(format!(
             "{}: the array shape along axis 0 is {} but we have {} sample labels",
@@ -39,10 +39,10 @@ fn check_data_label_shape(
         )));
     }
 
-    if n_features != features.count() {
+    if n_properties != properties.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 2 is {} but we have {} features labels",
-            context, n_features, features.count()
+            "{}: the array shape along axis 2 is {} but we have {} properties labels",
+            context, n_properties, properties.count()
         )));
     }
 
@@ -55,13 +55,13 @@ impl BasicBlock {
         data: aml_array_t,
         samples: Labels,
         components: Arc<Labels>,
-        features: Arc<Labels>,
+        properties: Arc<Labels>,
     ) -> Result<BasicBlock, Error> {
         check_data_label_shape(
-            "data and labels don't match", &data, &samples, &components, &features
+            "data and labels don't match", &data, &samples, &components, &properties
         )?;
 
-        return Ok(BasicBlock { data, samples, components, features });
+        return Ok(BasicBlock { data, samples, components, properties });
     }
 
     /// Get the sample labels in this basic block
@@ -74,9 +74,9 @@ impl BasicBlock {
         &self.components
     }
 
-    /// Get the feature labels in this basic block
-    pub fn features(&self) -> &Arc<Labels> {
-        &self.features
+    /// Get the property labels in this basic block
+    pub fn properties(&self) -> &Arc<Labels> {
+        &self.properties
     }
 }
 
@@ -92,16 +92,16 @@ pub struct Block {
 
 impl Block {
     /// Create a new `Block` containing the given data, described by the
-    /// `samples`, `components`, and `features` labels. The block is initialized
+    /// `samples`, `components`, and `properties` labels. The block is initialized
     /// without any gradients.
     pub fn new(
         data: aml_array_t,
         samples: Labels,
         components: Arc<Labels>,
-        features: Arc<Labels>,
+        properties: Arc<Labels>,
     ) -> Result<Block, Error> {
         Ok(Block {
-            values: BasicBlock::new(data, samples, components, features)?,
+            values: BasicBlock::new(data, samples, components, properties)?,
             gradients: HashMap::new(),
             gradients_names: Vec::new(),
         })
@@ -123,7 +123,7 @@ impl Block {
     }
 
     /// Add a gradient to this block with the given name, samples and gradient
-    /// array. The components and feature labels are assumed to match the ones of
+    /// array. The components and property labels are assumed to match the ones of
     /// the values in this block.
     pub fn add_gradient(&mut self, name: &str, samples: Labels, gradient: aml_array_t) -> Result<(), Error> {
         if self.gradients.contains_key(name) {
@@ -154,16 +154,16 @@ impl Block {
         }
 
         let components = Arc::clone(self.values.components());
-        let features = Arc::clone(self.values.features());
+        let properties = Arc::clone(self.values.properties());
         check_data_label_shape(
-            "gradient data and labels don't match", &gradient, &samples, &components, &features
+            "gradient data and labels don't match", &gradient, &samples, &components, &properties
         )?;
 
         self.gradients.insert(name.into(), BasicBlock {
             data: gradient,
             samples,
             components,
-            features
+            properties
         });
 
         let name = ConstCString::new(CString::new(name.to_owned()).expect("invalid C string"));
@@ -199,19 +199,19 @@ mod tests {
         components.add(vec![LabelValue::new(-3), LabelValue::new(-6)]);
         let components = Arc::new(components.finish());
 
-        let mut features = LabelsBuilder::new(vec!["f"]);
-        features.add(vec![LabelValue::new(0)]);
-        features.add(vec![LabelValue::new(1)]);
-        features.add(vec![LabelValue::new(2)]);
-        features.add(vec![LabelValue::new(3)]);
-        features.add(vec![LabelValue::new(4)]);
-        features.add(vec![LabelValue::new(5)]);
-        features.add(vec![LabelValue::new(6)]);
-        let features = Arc::new(features.finish());
+        let mut properties = LabelsBuilder::new(vec!["f"]);
+        properties.add(vec![LabelValue::new(0)]);
+        properties.add(vec![LabelValue::new(1)]);
+        properties.add(vec![LabelValue::new(2)]);
+        properties.add(vec![LabelValue::new(3)]);
+        properties.add(vec![LabelValue::new(4)]);
+        properties.add(vec![LabelValue::new(5)]);
+        properties.add(vec![LabelValue::new(6)]);
+        let properties = Arc::new(properties.finish());
 
         let data = aml_array_t::new(Box::new(TestArray::new((4, 3, 7))));
 
-        let mut block = Block::new(data, samples.finish(), components, features).unwrap();
+        let mut block = Block::new(data, samples.finish(), components, properties).unwrap();
         assert!(block.gradients_list().is_empty());
 
         let gradient = aml_array_t::new(Box::new(TestArray::new((3, 3, 7))));
@@ -230,6 +230,6 @@ mod tests {
 
         assert_eq!(basic_block.samples().names(), ["sample", "bar"]);
         assert_eq!(basic_block.components().names(), ["c", "d"]);
-        assert_eq!(basic_block.features().names(), ["f"]);
+        assert_eq!(basic_block.properties().names(), ["f"]);
     }
 }

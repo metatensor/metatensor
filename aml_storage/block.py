@@ -18,7 +18,7 @@ class Block:
 
     A block can also contain gradients of the values with respect to a variety
     of parameters. In this case, each gradient has a separate set of samples,
-    but share the same components and feature labels as the values.
+    but share the same components and property labels as the values.
     """
 
     def __init__(
@@ -26,7 +26,7 @@ class Block:
         values: Array,
         samples: Labels,
         components: Labels,
-        features: Labels,
+        properties: Labels,
     ):
         """
         :param values: array containing the data for this block
@@ -35,7 +35,7 @@ class Block:
         :param components: labels describing the components (second dimension of
             the array). This is set to :py:func:`Labels.single` when dealing
             with scalar/invariant values.
-        :param features: labels describing the samples (third dimension of the
+        :param properties: labels describing the samples (third dimension of the
             array)
         """
         self._lib = _get_library()
@@ -48,7 +48,7 @@ class Block:
             self._values._storage,
             samples._as_aml_labels_t(),
             components._as_aml_labels_t(),
-            features._as_aml_labels_t(),
+            properties._as_aml_labels_t(),
         )
         self._owning = True
         self._parent = None
@@ -99,19 +99,19 @@ class Block:
         return self._labels("values", aml_label_kind.AML_COMPONENTS_LABELS)
 
     @property
-    def features(self) -> Labels:
+    def properties(self) -> Labels:
         """
-        Access the feature :py:class:`Labels` for this block. The entries in
+        Access the property :py:class:`Labels` for this block. The entries in
         these labels describe the third dimension of the ``values`` array, and
         any additional gradient stored in this block.
         """
-        return self._labels("values", aml_label_kind.AML_FEATURE_LABELS)
+        return self._labels("values", aml_label_kind.AML_PROPERTY_LABELS)
 
     @property
     def values(self) -> Array:
         """
         Access the values for this block. Values are stored as a 3-dimensional
-        array of shape ``(samples, components, features)``.
+        array of shape ``(samples, components, properties)``.
 
         The array type depends on how the block was created. Currently, numpy
         ``ndarray`` and torch ``Tensor`` are supported.
@@ -135,8 +135,8 @@ class Block:
             ``positions``, ``cell``, ...)
         :param gradient_samples: labels describing the gradient samples
         :param gradient: the gradient array, of shape ``(gradient_samples,
-            components, features)``, where the components and features labels
-            are the same as the values components and features labels.
+            components, properties)``, where the components and properties labels
+            are the same as the values components and properties labels.
         """
         gradient = AmlData(gradient)
         self._gradients.append(gradient)

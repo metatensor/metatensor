@@ -48,9 +48,9 @@ typedef enum aml_label_kind {
    */
   AML_COMPONENTS_LABELS = 1,
   /**
-   * The feature labels, describing the features of the data
+   * The property labels, describing the columns/properties in the data
    */
-  AML_FEATURE_LABELS = 2,
+  AML_PROPERTY_LABELS = 2,
 } aml_label_kind;
 
 /**
@@ -59,7 +59,7 @@ typedef enum aml_label_kind {
  *
  * A block can also contain gradients of the values with respect to a variety
  * of parameters. In this case, each gradient has a separate set of samples,
- * but share the same components and feature labels as the values.
+ * but share the same components and property labels as the values.
  */
 typedef struct aml_block_t aml_block_t;
 
@@ -147,28 +147,28 @@ typedef struct aml_array_t {
   /**
    * Get the shape of the array managed by this `aml_array_t`
    */
-  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_components, uint64_t *n_features);
+  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_components, uint64_t *n_properties);
   /**
    * Change the shape of the array managed by this `aml_array_t` to
-   * `(n_samples, n_components, n_features)`
+   * `(n_samples, n_components, n_properties)`
    */
-  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features);
+  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_properties);
   /**
    * Create a new array with the same options as the current one (data type,
    * data location, etc.) and the requested `(n_samples, n_components,
-   * n_features)` shape; and store it in `new_array`. The new array should be
+   * n_properties)` shape; and store it in `new_array`. The new array should be
    * filled with zeros.
    */
-  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features, struct aml_array_t *new_array);
+  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_properties, struct aml_array_t *new_array);
   /**
    * Set entries in this array taking data from the `other_array`. This array
    * is guaranteed to be created by calling `aml_array_t::create` with one of
    * the arrays in the same block or descriptor as this `array`.
    *
    * This function should copy data from `other_array[other_sample, :, :]` to
-   * `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
+   * `array[sample, :, property_start:property_end]`. All indexes are 0-based.
    */
-  aml_status_t (*set_from)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
+  aml_status_t (*set_from)(void *array, uint64_t sample, uint64_t property_start, uint64_t property_end, const void *other_array, uint64_t other_sample);
   /**
    * Remove this array and free the associated memory. This function can be
    * set to `NULL` is there is no memory management to do.
@@ -236,7 +236,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
 
 /**
  * Create a new `aml_block_t` with the given `data` and `samples`, `components`
- * and `features` labels.
+ * and `properties` labels.
  *
  * The memory allocated by this function and the blocks should be released
  * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
@@ -246,7 +246,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
  *             `array.destroy(array.ptr)` when it no longer needs it.
  * @param samples sample labels corresponding to the first dimension of the data
  * @param components component labels corresponding to the second dimension of the data
- * @param features feature labels corresponding to the third dimension of the data
+ * @param properties property labels corresponding to the third dimension of the data
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `aml_last_error()`
@@ -255,7 +255,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
 struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
                               struct aml_labels_t components,
-                              struct aml_labels_t features);
+                              struct aml_labels_t properties);
 
 /**
  * Free the memory associated with a `block` previously created with
@@ -324,7 +324,7 @@ aml_status_t aml_block_data(const struct aml_block_t *block,
  *             usually the parameter used when taking derivatives (e.g.
  *             `"positions"`, `"cell"`, etc.)
  * @param samples sample labels for the gradient array. The components and
- *                feature labels are supposed to match the values in this block
+ *                property labels are supposed to match the values in this block
  * @param gradient array containing the gradient data. The block takes
  *                 ownership of the array, and will release it with
  *                 `array.destroy(array.ptr)` when it no longer needs it.
@@ -452,32 +452,32 @@ aml_status_t aml_descriptor_block_selection(const struct aml_descriptor_t *descr
                                             struct aml_labels_t selection);
 
 /**
- * Move the given variables from the sparse labels to the feature labels of the
+ * Move the given variables from the sparse labels to the property labels of the
  * blocks.
  *
  * The current blocks will be merged together according to the sparse labels
  * remaining after removing `variables`. The resulting merged blocks will have
- * `variables` as the first feature variables, followed by the current
- * features. The new sample labels will contains all of the merged blocks
+ * `variables` as the first property variables, followed by the current
+ * properties. The new sample labels will contains all of the merged blocks
  * sample labels, re-ordered to keep them lexicographically sorted.
  *
  * `variables` must be an array of `variables_count` NULL-terminated strings,
  * encoded as UTF-8.
  *
  * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the features
+ * @param variables name of the sparse variables to move to the properties
  * @param variables_count number of entries in the `variables` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descriptor,
-                                               const char *const *variables,
-                                               uint64_t variables_count);
+aml_status_t aml_descriptor_sparse_to_properties(struct aml_descriptor_t *descriptor,
+                                                 const char *const *variables,
+                                                 uint64_t variables_count);
 
 /**
- * Move all component labels in each block of this `descriptor` to the feature
+ * Move all component labels in each block of this `descriptor` to the property
  * labels and reshape the data accordingly.
  *
  * @param descriptor pointer to an existing descriptor
@@ -486,7 +486,7 @@ aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descript
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor);
+aml_status_t aml_descriptor_components_to_properties(struct aml_descriptor_t *descriptor);
 
 /**
  * Move the given variables from the sparse labels to the sample labels of the
