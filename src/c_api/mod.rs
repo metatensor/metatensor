@@ -1,3 +1,4 @@
+#![allow(clippy::doc_markdown)]
 
 #[macro_use]
 mod status;

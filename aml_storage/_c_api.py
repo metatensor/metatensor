@@ -62,7 +62,8 @@ aml_array_t._fields_ = [
     ("shape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64))),
     ("reshape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64)),
     ("create", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, POINTER(aml_array_t))),
-    ("set_from", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
+    ("move_sample", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
+    ("move_component", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
 ]
 
@@ -179,7 +180,9 @@ def setup_functions(lib):
     lib.aml_descriptor_sparse_to_features.restype = _check_status
 
     lib.aml_descriptor_components_to_features.argtypes = [
-        POINTER(aml_descriptor_t)
+        POINTER(aml_descriptor_t),
+        POINTER(ctypes.c_char_p),
+        ctypes.c_uint64
     ]
     lib.aml_descriptor_components_to_features.restype = _check_status
 

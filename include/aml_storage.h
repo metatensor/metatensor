@@ -168,7 +168,17 @@ typedef struct aml_array_t {
    * This function should copy data from `other_array[other_sample, :, :]` to
    * `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
    */
-  aml_status_t (*set_from)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
+  aml_status_t (*move_sample)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
+  /**
+   * Set entries in this array taking data from the `other_array`. This array
+   * is guaranteed to be created by calling `aml_array_t::create` with one of
+   * the arrays in the same block or descriptor as this `array`.
+   *
+   * This function should copy data from `other_array[:, other_component, :]`
+   * to `array[:, component, feature_start:feature_end]`. All indexes are
+   * 0-based.
+   */
+  aml_status_t (*move_component)(void *array, uint64_t component, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_component);
   /**
    * Remove this array and free the associated memory. This function can be
    * set to `NULL` is there is no memory management to do.
@@ -477,16 +487,23 @@ aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descript
                                                uint64_t variables_count);
 
 /**
- * Move all component labels in each block of this `descriptor` to the feature
- * labels and reshape the data accordingly.
+ * Move the given variables from the component labels to the feature labels for
+ * each block in this descriptor.
+ *
+ * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * encoded as UTF-8.
  *
  * @param descriptor pointer to an existing descriptor
+ * @param variables name of the sparse variables to move to the features
+ * @param variables_count number of entries in the `variables` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor);
+aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor,
+                                                   const char *const *variables,
+                                                   uint64_t variables_count);
 
 /**
  * Move the given variables from the sparse labels to the sample labels of the
