@@ -27,7 +27,6 @@ impl std::ops::DerefMut for aml_descriptor_t {
 }
 
 
-#[allow(clippy::doc_markdown)]
 /// Create a new `aml_descriptor_t` with the given `sparse` labels and `blocks`.
 /// `blocks_count` must be set to the number of entries in the blocks array.
 ///
@@ -205,7 +204,7 @@ pub unsafe extern fn aml_descriptor_block_selection(
     })
 }
 
-#[allow(clippy::doc_markdown)]
+
 /// Move the given variables from the sparse labels to the feature labels of the
 /// blocks.
 ///
@@ -242,36 +241,49 @@ pub unsafe extern fn aml_descriptor_sparse_to_features(
             rust_variables.push(variable);
         }
 
-        (*descriptor).sparse_to_features(rust_variables)?;
+        (*descriptor).sparse_to_features(&rust_variables)?;
 
         Ok(())
     })
 }
 
 
-/// Move all component labels in each block of this `descriptor` to the feature
-/// labels and reshape the data accordingly.
+/// Move the given variables from the component labels to the feature labels for
+/// each block in this descriptor.
+///
+/// `variables` must be an array of `variables_count` NULL-terminated strings,
+/// encoded as UTF-8.
 ///
 /// @param descriptor pointer to an existing descriptor
+/// @param variables name of the sparse variables to move to the features
+/// @param variables_count number of entries in the `variables` array
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
 ///          error message.
 #[no_mangle]
+#[allow(clippy::cast_possible_truncation)]
 pub unsafe extern fn aml_descriptor_components_to_features(
     descriptor: *mut aml_descriptor_t,
+    variables: *const *const c_char,
+    variables_count: u64,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(descriptor);
+        check_pointers!(descriptor, variables);
 
-        (*descriptor).components_to_features()?;
+        let mut rust_variables = Vec::new();
+        for &variable in std::slice::from_raw_parts(variables, variables_count as usize) {
+            check_pointers!(variable);
+            let variable = CStr::from_ptr(variable).to_str().expect("invalid utf8");
+            rust_variables.push(variable);
+        }
+
+        (*descriptor).components_to_features(&rust_variables)?;
 
         Ok(())
     })
 }
 
-
-#[allow(clippy::doc_markdown)]
 /// Move the given variables from the sparse labels to the sample labels of the
 /// blocks.
 ///
@@ -307,7 +319,7 @@ pub unsafe extern fn aml_descriptor_sparse_to_samples(
             rust_variables.push(variable);
         }
 
-        (*descriptor).sparse_to_samples(rust_variables)?;
+        (*descriptor).sparse_to_samples(&rust_variables)?;
 
         Ok(())
     })

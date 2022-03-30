@@ -110,7 +110,6 @@ pub unsafe extern fn aml_block_free(
 }
 
 
-#[allow(clippy::doc_markdown)]
 /// Get the set of labels of the requested `kind` from this `block`.
 ///
 /// The `values_gradients` parameter controls whether this function looks up
@@ -163,7 +162,6 @@ pub unsafe extern fn aml_block_labels(
 }
 
 
-#[allow(clippy::doc_markdown)]
 /// Get the array handle for either values or one of the gradient in this `block`.
 ///
 /// The `values_gradients` parameter controls whether this function looks up

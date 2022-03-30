@@ -1,8 +1,6 @@
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
-use indexmap::IndexSet;
-
 use crate::{Block, Error};
 use crate::{Labels, LabelsBuilder, LabelValue};
 
@@ -218,7 +216,7 @@ impl Descriptor {
     /// will have `variables` as the first feature variables, followed by the
     /// current features. The new sample labels will contains all of the merged
     /// blocks sample labels, re-ordered to keep them lexicographically sorted.
-    pub fn sparse_to_features(&mut self, variables: Vec<&str>) -> Result<(), Error> {
+    pub fn sparse_to_features(&mut self, variables: &[&str]) -> Result<(), Error> {
         // TODO: requested values
         // TODO: sparse_to_features_no_gradients?
 
@@ -226,7 +224,7 @@ impl Descriptor {
             return Ok(());
         }
 
-        let (new_sparse, new_features) = self.split_sparse_label(variables)?;
+        let (new_sparse, new_features) = self.sparse.split(variables)?;
 
         let mut new_blocks = Vec::new();
         if new_sparse.count() == 1 {
@@ -253,75 +251,6 @@ impl Descriptor {
         self.blocks = new_blocks;
 
         return Ok(());
-    }
-
-    /// Split the current sparse labels into a new set of sparse label without
-    /// the `variables`; and Labels containing the values taken by `variables`
-    /// in the current sparse labels
-    fn split_sparse_label(&self, variables: Vec<&str>) -> Result<(Labels, Labels), Error> {
-        let sparse_names = self.sparse.names();
-        for variable in &variables {
-            if !sparse_names.contains(variable) {
-                return Err(Error::InvalidParameter(format!(
-                    "'{}' is not part of the sparse labels for this descriptor",
-                    variable
-                )));
-            }
-        }
-
-        // TODO: use Labels instead of Vec<&str> for variables to ensure
-        // uniqueness of variables names & pass 'requested' values around
-
-        let mut remaining = Vec::new();
-        let mut remaining_i = Vec::new();
-        let mut variables_i = Vec::new();
-
-        'outer: for (i, &name) in sparse_names.iter().enumerate() {
-            for &variable in &variables {
-                if variable == name {
-                    variables_i.push(i);
-                    continue 'outer;
-                }
-            }
-            remaining.push(name);
-            remaining_i.push(i);
-        }
-
-        let mut variables_values = IndexSet::new();
-        let mut new_sparse = IndexSet::new();
-        for entry in self.sparse.iter() {
-            let mut label = Vec::new();
-            for &i in &variables_i {
-                label.push(entry[i]);
-            }
-            variables_values.insert(label);
-
-            if !remaining_i.is_empty() {
-                let mut label = Vec::new();
-                for &i in &remaining_i {
-                    label.push(entry[i]);
-                }
-                new_sparse.insert(label);
-            }
-        }
-
-        let new_sparse = if new_sparse.is_empty() {
-            Labels::single()
-        } else {
-            let mut new_sparse_builder = LabelsBuilder::new(remaining);
-            for entry in new_sparse {
-                new_sparse_builder.add(entry);
-            }
-            new_sparse_builder.finish()
-        };
-
-        assert!(!variables_values.is_empty());
-        let mut variables_builder = LabelsBuilder::new(variables);
-        for entry in variables_values {
-            variables_builder.add(entry);
-        }
-
-        return Ok((new_sparse, variables_builder.finish()));
     }
 
     /// Merge the blocks with the given `block_idx` along the feature axis. The
@@ -409,7 +338,7 @@ impl Descriptor {
         for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
             for sample_i in 0..block.values.samples().count() {
                 let new_sample_i = samples_mapping[block_i][sample_i];
-                new_data.set_from(
+                new_data.move_sample(
                     new_sample_i,
                     feature_range.clone(),
                     &block.values.data,
@@ -439,7 +368,7 @@ impl Descriptor {
                     grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
 
                     let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                    new_gradient.set_from(
+                    new_gradient.move_sample(
                         new_sample_i,
                         feature_range.clone(),
                         &gradient.data,
@@ -454,46 +383,17 @@ impl Descriptor {
         return Ok(new_block);
     }
 
-    // TODO: variables?
-    pub fn components_to_features(&mut self) -> Result<(), Error> {
-        for block in &self.blocks {
-            if !block.gradients_list().is_empty() {
-                unimplemented!("components_to_features with gradients is not implemented yet")
-            }
+    /// Move the given variables from the component labels to the feature labels
+    /// for each block in this descriptor.
+    pub fn components_to_features(&mut self, variables: &[&str]) -> Result<(), Error> {
+        // TODO: requested values
+        if variables.is_empty() {
+            return Ok(());
         }
 
-        let old_blocks = std::mem::take(&mut self.blocks);
-        let mut new_blocks = Vec::new();
-
-        for block in old_blocks {
-            let mut features_names = block.values.components().names();
-            features_names.extend_from_slice(&block.values.features().names());
-
-            let mut new_features = LabelsBuilder::new(features_names);
-            for components in block.values.components().iter() {
-                for feature in block.values.features().iter() {
-                    let mut new_feature = components.to_vec();
-                    new_feature.extend_from_slice(feature);
-
-                    new_features.add(new_feature);
-                }
-            }
-            let new_features = new_features.finish();
-
-            let new_shape = (block.values.samples().count(), 1, new_features.count());
-
-            let mut data = block.values.data;
-            data.reshape(new_shape)?;
-
-            new_blocks.push(Block::new(
-                data,
-                block.values.samples,
-                Arc::new(Labels::single()),
-                Arc::new(new_features),
-            )?);
+        for block in &mut self.blocks {
+            block.components_to_features(variables)?;
         }
-
-        self.blocks = new_blocks;
 
         Ok(())
     }
@@ -508,7 +408,7 @@ impl Descriptor {
     ///
     /// Currently, this function only works if all merged block have the same
     /// feature labels.
-    pub fn sparse_to_samples(&mut self, variables: Vec<&str>) -> Result<(), Error> {
+    pub fn sparse_to_samples(&mut self, variables: &[&str]) -> Result<(), Error> {
         // TODO: requested values
         // TODO: sparse_to_samples_no_gradients?
 
@@ -516,7 +416,7 @@ impl Descriptor {
             return Ok(());
         }
 
-        let (new_sparse, new_samples) = self.split_sparse_label(variables)?;
+        let (new_sparse, new_samples) = self.sparse.split(variables)?;
 
         let mut new_blocks = Vec::new();
         if new_sparse.count() == 1 {
@@ -623,7 +523,7 @@ impl Descriptor {
         for (block_i, block) in blocks_to_merge.iter().enumerate() {
             for sample_i in 0..block.values.samples().count() {
 
-                new_data.set_from(
+                new_data.move_sample(
                     samples_mapping[block_i][sample_i],
                     feature_range.clone(),
                     &block.values.data,
@@ -653,7 +553,7 @@ impl Descriptor {
                     grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
 
                     let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                    new_gradient.set_from(
+                    new_gradient.move_sample(
                         new_sample_i,
                         feature_range.clone(),
                         &gradient.data,
@@ -695,6 +595,7 @@ fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec
     }
     return new_gradient_samples_builder.finish();
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -974,7 +875,7 @@ mod tests {
         #[test]
         fn sparse_to_features() {
             let mut descriptor = example_descriptor();
-            descriptor.sparse_to_features(vec!["sparse_1"]).unwrap();
+            descriptor.sparse_to_features(&["sparse_1"]).unwrap();
 
             assert_eq!(descriptor.sparse().count(), 3);
             assert_eq!(descriptor.sparse().names(), ["sparse_2"]);
@@ -1052,7 +953,7 @@ mod tests {
         #[test]
         fn sparse_to_samples() {
             let mut descriptor = example_descriptor();
-            descriptor.sparse_to_samples(vec!["sparse_2"]).unwrap();
+            descriptor.sparse_to_samples(&["sparse_2"]).unwrap();
 
             assert_eq!(descriptor.sparse().count(), 3);
             assert_eq!(descriptor.sparse().names(), ["sparse_1"]);
@@ -1123,11 +1024,6 @@ mod tests {
                 [[13.0], [13.0], [13.0]],
                 [[14.0], [14.0], [14.0]],
             ]);
-        }
-
-        #[test]
-        fn components_to_features() {
-            // TODO
         }
     }
 }

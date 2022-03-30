@@ -139,7 +139,12 @@ class AmlData:
         self._storage.create = self._storage.create.__class__(_aml_storage_create)
         self._storage.destroy = self._storage.destroy.__class__(_aml_storage_destroy)
 
-        self._storage.set_from = self._storage.set_from.__class__(_aml_storage_set_from)
+        self._storage.move_sample = self._storage.move_sample.__class__(
+            _aml_storage_move_sample
+        )
+        self._storage.move_component = self._storage.move_component.__class__(
+            _aml_storage_move_component
+        )
 
 
 def _object_from_ptr(ptr):
@@ -189,9 +194,18 @@ def _aml_storage_destroy(this):
 
 
 @catch_exceptions
-def _aml_storage_set_from(
+def _aml_storage_move_sample(
     this, sample, feature_start, feature_stop, other, other_sample
 ):
     other = _object_from_ptr(other).array
     output = _object_from_ptr(this).array
     output[sample, :, feature_start:feature_stop] = other[other_sample, :, :]
+
+
+@catch_exceptions
+def _aml_storage_move_component(
+    this, component, feature_start, feature_stop, other, other_component
+):
+    other = _object_from_ptr(other).array
+    output = _object_from_ptr(this).array
+    output[:, component, feature_start:feature_stop] = other[:, other_component, :]

@@ -195,12 +195,18 @@ class Descriptor:
             self._ptr, c_variables, c_variables._length_
         )
 
-    def components_to_features(self):
+    def components_to_features(self, variables: Union[str, List[str]]):
         """
-        Move all component labels in each block to the feature labels and
-        reshape the data accordingly.
+        Move the given variables from the component labels to the feature labels
+        for each block.
+
+        :param variables: name of the component variables to move to the features
         """
-        self._lib.aml_descriptor_components_to_features(self._ptr)
+        c_variables = _list_or_str_to_array_c_char(variables)
+
+        self._lib.aml_descriptor_components_to_features(
+            self._ptr, c_variables, c_variables._length_
+        )
 
 
 def _list_or_str_to_array_c_char(strings: Union[str, List[str]]):

@@ -32,7 +32,6 @@ pub unsafe extern fn aml_register_data_origin(
 }
 
 
-#[allow(clippy::doc_markdown)]
 /// Get the name used to register a given data `origin` in the given `buffer`
 ///
 /// @param origin pre-registered data origin
