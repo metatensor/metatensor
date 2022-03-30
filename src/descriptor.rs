@@ -115,12 +115,6 @@ impl Descriptor {
         &self.blocks
     }
 
-    /// Get mutable access to the list of blocks in this `Descriptor`
-    pub fn blocks_mut(&mut self) -> &mut [Block] {
-        // TODO: this allow the user to add gradients to only a subset of blocks
-        &mut self.blocks
-    }
-
     /// Get the sparse labels associated with this descriptor
     pub fn sparse(&self) -> &Labels {
         &self.sparse
@@ -129,11 +123,6 @@ impl Descriptor {
     /// Get an iterator over the labels and associated block
     pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
         self.sparse.iter().zip(&self.blocks)
-    }
-
-    /// Get an iterator over the labels and associated block as a mutable reference
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=(&[LabelValue], &mut Block)> + '_ {
-        self.sparse.iter().zip(&mut self.blocks)
     }
 
     /// Get the list of blocks matching the given selection. The selection must
@@ -145,30 +134,6 @@ impl Descriptor {
         let matching = self.find_matching_blocks(selection)?;
 
         return Ok(matching.into_iter().map(|i| &self.blocks[i]).collect());
-    }
-
-    /// Get the list of blocks matching the given selection as mutable
-    /// references.
-    ///
-    /// This function behaves similarly to `blocks_matching`, see the
-    /// corresponding documentation.
-    pub fn blocks_matching_mut<'a>(&'a mut self, selection: &Labels) -> Result<Vec<&'a mut Block>, Error> {
-        let matching = self.find_matching_blocks(selection)?;
-
-        // ensure that the matching indexes are unique
-        debug_assert!(matching.iter().collect::<BTreeSet<_>>().len() == matching.len());
-
-        let mut result = Vec::new();
-        let blocks_ptr = self.blocks.as_mut_ptr();
-        for i in matching {
-            // SAFETY: we checked above that the indexes in matching are unique,
-            // ensuring we only give out exclusive references.
-            unsafe {
-                result.push(&mut *blocks_ptr.add(i));
-            }
-        }
-
-        return Ok(result);
     }
 
     /// Get a reference to the block matching the given selection.
@@ -193,30 +158,6 @@ impl Descriptor {
         }
 
         return Ok(&self.blocks[matching[0]]);
-    }
-
-    /// Get a mutable reference to the block matching the given selection.
-    ///
-    /// The selection behaves similarly to `blocks_matching`, with the exception
-    /// that this function returns an error if there is more than one matching
-    /// block.
-    pub fn block_mut(&mut self, selection: &Labels) -> Result<&mut Block, Error> {
-        let matching = self.find_matching_blocks(selection)?;
-        if matching.len() != 1 {
-            let selection_str = selection.names()
-                .iter().zip(&selection[0])
-                .map(|(name, value)| format!("{} = {}", name, value))
-                .collect::<Vec<_>>()
-                .join(", ");
-
-
-            return Err(Error::InvalidParameter(format!(
-                "{} blocks matched the selection ({}), expected only one",
-                matching.len(), selection_str
-            )));
-        }
-
-        return Ok(&mut self.blocks[matching[0]]);
     }
 
     /// Actual implementation of `blocks_matching` and related functions, this
