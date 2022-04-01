@@ -1,5 +1,5 @@
 import ctypes
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 from ._c_lib import _get_library
 from ._c_api import aml_label_kind, aml_labels_t, aml_array_t
@@ -128,7 +128,13 @@ class Block:
         samples = self._labels(parameter, aml_label_kind.AML_SAMPLE_LABELS)
         return samples, data
 
-    def add_gradient(self, parameter: str, gradient_samples: Labels, gradient: Array):
+    def add_gradient(
+        self,
+        parameter: str,
+        gradient: Array,
+        samples: Labels,
+        components: Optional[Labels] = None,
+    ):
         """Add a set of gradients with respect to ``parameters`` in this block.
 
         :param parameter: add gradients with respect to this ``parameter`` (e.g.
@@ -144,8 +150,9 @@ class Block:
         self._lib.aml_block_add_gradient(
             self._ptr,
             parameter.encode("utf8"),
-            gradient_samples._as_aml_labels_t(),
             gradient._storage,
+            samples._as_aml_labels_t(),
+            components._as_aml_labels_t() if components is not None else components,
         )
 
     def gradients_list(self) -> List[str]:

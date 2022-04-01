@@ -128,8 +128,9 @@ def setup_functions(lib):
     lib.aml_block_add_gradient.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
+        aml_array_t,
         aml_labels_t,
-        aml_array_t
+        POINTER(aml_labels_t)
     ]
     lib.aml_block_add_gradient.restype = _check_status
 

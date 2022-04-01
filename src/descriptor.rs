@@ -37,13 +37,11 @@ impl Descriptor {
             let components_names = blocks[0].values.components().names();
             let features_names = blocks[0].values.features().names();
 
-            let gradients_sample_names = blocks[0].gradients_list().iter()
-                .map(|&name| {
-                    let gradient = blocks[0].get_gradient(name).expect("missing gradient");
-                    (name, gradient.samples().names())
+            let first_block_gradients = blocks[0].gradients().iter()
+                .map(|(k, gradient)| {
+                    (&**k, (gradient.samples().names(), gradient.components().names()))
                 })
                 .collect::<HashMap<_, _>>();
-
 
             for block in &blocks {
                 if block.values.samples().names() != samples_names {
@@ -70,33 +68,37 @@ impl Descriptor {
                     )));
                 }
 
-                let gradients_list = block.gradients_list();
-                if gradients_list.len() != gradients_sample_names.len() {
+                if block.gradients().len() != first_block_gradients.len() {
                     return Err(Error::InvalidParameter(
                         "all blocks must contains the same set of gradients".into(),
                     ));
                 }
 
-                for gradient_name in gradients_list {
-                    let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+                for (parameter, gradient) in block.gradients() {
+                    let (gradient_sample_names, components_names) = first_block_gradients.get(&**parameter)
+                        .ok_or_else(|| Error::InvalidParameter(format!(
+                            "missing gradient with respect to {} in one of the blocks",
+                            parameter
+                        )))?;
 
-                    match gradients_sample_names.get(gradient_name) {
-                        None => {
-                            return Err(Error::InvalidParameter(format!(
-                                "missing gradient with respect to {} in one of the blocks",
-                                gradient_name
-                            )));
-                        },
-                        Some(gradients_sample_names) => {
-                            if &gradient.samples().names() != gradients_sample_names {
-                                return Err(Error::InvalidParameter(format!(
-                                    "all blocks must have the same sample labels names, got [{}] and [{}] for gradients with respect to {}",
-                                    gradient.samples().names().join(", "),
-                                    gradients_sample_names.join(", "),
-                                    gradient_name,
-                                )));
-                            }
-                        }
+                    if &gradient.samples().names() != gradient_sample_names {
+                        return Err(Error::InvalidParameter(format!(
+                            "all blocks must have the same sample labels names, \
+                            got [{}] and [{}] for gradients with respect to {}",
+                            gradient.samples().names().join(", "),
+                            gradient_sample_names.join(", "),
+                            parameter,
+                        )));
+                    }
+
+                    if &gradient.components().names() != components_names {
+                        return Err(Error::InvalidParameter(format!(
+                            "all blocks must have the same component labels names, \
+                            got [{}] and [{}] for gradients with respect to {}",
+                            gradient.components().names().join(", "),
+                            components_names.join(", "),
+                            parameter,
+                        )));
                     }
                 }
             }
@@ -263,17 +265,9 @@ impl Descriptor {
         assert!(!block_idx.is_empty());
 
         let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
+        check_all_block_have_same_component_labels(&blocks_to_merge)?;
 
-        let first_block = &self.blocks[block_idx[0]];
-        let first_components_label = first_block.values.components();
-        for block in &blocks_to_merge {
-            if block.values.components() != first_components_label {
-                return Err(Error::InvalidParameter(
-                    "can not move sparse label to features if the blocks have \
-                    different components labels, call components_to_features first".into()
-                ))
-            }
-        }
+        let first_block = blocks_to_merge[0];
 
         let new_feature_names = new_feature_labels.names().iter()
             .chain(first_block.values.features().names().iter())
@@ -350,17 +344,20 @@ impl Descriptor {
         let mut new_block = Block::new(new_data, merged_samples, new_components, new_features).expect("constructed an invalid block");
 
         // now collect & merge the different gradients
-        for gradient_name in first_block.gradients_list() {
+        for (parameter, first_block_gradient) in first_block.gradients() {
             let new_gradient_samples = merge_gradient_samples(
-                &blocks_to_merge, gradient_name, &samples_mapping
+                &blocks_to_merge, parameter, &samples_mapping
             );
 
+            let first_block_components = first_block_gradient.components();
             let mut new_gradient = first_block.values.data.create((
-                new_gradient_samples.count(), new_shape.1, new_shape.2
+                new_gradient_samples.count(),
+                first_block_components.count(),
+                new_shape.2
             ))?;
 
             for ((block_i, block), feature_range) in blocks_to_merge.iter().enumerate().zip(&feature_ranges) {
-                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+                let gradient = block.gradients().get(parameter).expect("missing gradient");
                 for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
                     // translate from the old sample id in gradients to the new ones
                     let mut grad_sample = grad_sample.to_vec();
@@ -377,7 +374,12 @@ impl Descriptor {
                 }
             }
 
-            new_block.add_gradient(gradient_name, new_gradient_samples, new_gradient).expect("created invalid gradients");
+            new_block.add_gradient(
+                parameter,
+                new_gradient,
+                new_gradient_samples,
+                Arc::clone(first_block_components),
+            ).expect("created invalid gradients");
         }
 
         return Ok(new_block);
@@ -454,19 +456,12 @@ impl Descriptor {
     ) -> Result<Block, Error> {
         assert!(!block_idx.is_empty());
 
-        let first_block = &self.blocks[block_idx[0]];
-        let first_components_label = first_block.values.components();
-        let first_features_label = first_block.values.features();
-
         let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
-        for block in &blocks_to_merge {
-            if block.values.components() != first_components_label {
-                return Err(Error::InvalidParameter(
-                    "can not move sparse label to samples if the blocks have \
-                    different components labels, call components_to_features first".into()
-                ))
-            }
+        check_all_block_have_same_component_labels(&blocks_to_merge)?;
 
+        let first_block = blocks_to_merge[0];
+        let first_features_label = first_block.values.features();
+        for block in &blocks_to_merge {
             if block.values.features() != first_features_label {
                 return Err(Error::InvalidParameter(
                     "can not move sparse label to samples if the blocks have \
@@ -535,17 +530,21 @@ impl Descriptor {
         let mut new_block = Block::new(new_data, merged_samples, new_components, new_features).expect("invalid block");
 
         // now collect & merge the different gradients
-        for gradient_name in first_block.gradients_list() {
+        for (parameter, first_block_gradient) in first_block.gradients() {
             let new_gradient_samples = merge_gradient_samples(
-                &blocks_to_merge, gradient_name, &samples_mapping
+                &blocks_to_merge, parameter, &samples_mapping
             );
 
+            let first_block_components = first_block_gradient.components();
             let mut new_gradient = first_block.values.data.create((
-                new_gradient_samples.count(), new_shape.1, new_shape.2
+                new_gradient_samples.count(),
+                first_block_components.count(),
+                new_shape.2
             ))?;
 
             for (block_i, block) in blocks_to_merge.iter().enumerate() {
-                let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+                let gradient = block.gradients().get(parameter).expect("missing gradient");
+
                 for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
                     // translate from the old sample id in gradients to the new ones
                     let mut grad_sample = grad_sample.to_vec();
@@ -562,7 +561,12 @@ impl Descriptor {
                 }
             }
 
-            new_block.add_gradient(gradient_name, new_gradient_samples, new_gradient).expect("created invalid gradients");
+            new_block.add_gradient(
+                parameter,
+                new_gradient,
+                new_gradient_samples,
+                Arc::clone(first_block_components),
+            ).expect("created invalid gradients");
         }
 
         return Ok(new_block);
@@ -573,7 +577,7 @@ fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
     for (block_i, block) in blocks.iter().enumerate() {
-        let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+        let gradient = block.gradients().get(gradient_name).expect("missing gradient");
 
         if new_gradient_samples_names.is_none() {
             new_gradient_samples_names = Some(gradient.samples().names());
@@ -594,6 +598,35 @@ fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec
         new_gradient_samples_builder.add(sample);
     }
     return new_gradient_samples_builder.finish();
+}
+
+fn check_all_block_have_same_component_labels(blocks: &[&Block]) -> Result<(), Error> {
+    let mut first_block_components = blocks[0].gradients()
+        .iter()
+        .map(|(k, gradient)| (&**k, &**gradient.components()))
+        .collect::<HashMap<_, _>>();
+    first_block_components.insert("values", blocks[0].values.components());
+
+    for block in blocks {
+        if &**block.values.components() != first_block_components["values"] {
+            return Err(Error::InvalidParameter(
+                "can not move sparse label to features if the blocks have \
+                different components labels, call components_to_features first".into()
+            ));
+        }
+
+        for (parameter, gradient) in block.gradients() {
+            if &**gradient.components() != first_block_components[&**parameter] {
+                return Err(Error::InvalidParameter(format!(
+                    "can not move sparse label to features if the gradients \
+                    with respect to '{}' have different components labels, \
+                    call components_to_features first", parameter
+                )));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 
@@ -629,14 +662,14 @@ mod tests {
         let features = Arc::new(features.finish());
 
         let block_1 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
+            TestArray::new((1, 1, 1)),
             samples_1.clone(),
             Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
+            TestArray::new((2, 1, 1)),
             samples_2.clone(),
             Arc::clone(&components),
             Arc::clone(&features),
@@ -652,14 +685,14 @@ mod tests {
         let wrong_samples = wrong_samples.finish();
 
         let block_1 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
+            TestArray::new((1, 1, 1)),
             samples_1.clone(),
             Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
+            TestArray::new((2, 1, 1)),
             wrong_samples,
             Arc::clone(&components),
             Arc::clone(&features),
@@ -678,14 +711,14 @@ mod tests {
         let wrong_components = wrong_components.finish();
 
         let block_1 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
+            TestArray::new((1, 1, 1)),
             samples_1.clone(),
             Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
+            TestArray::new((2, 1, 1)),
             samples_2.clone(),
             Arc::new(wrong_components),
             Arc::clone(&features),
@@ -704,14 +737,14 @@ mod tests {
         let wrong_features = wrong_features.finish();
 
         let block_1 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((1, 1, 1)))),
+            TestArray::new((1, 1, 1)),
             samples_1,
             Arc::clone(&components),
             Arc::clone(&features),
         ).unwrap();
 
         let block_2 = Block::new(
-            aml_array_t::new(Box::new(TestArray::new((2, 1, 1)))),
+            TestArray::new((2, 1, 1)),
             samples_2,
             Arc::clone(&components),
             Arc::new(wrong_features),
@@ -762,8 +795,22 @@ mod tests {
 
             block_1.add_gradient(
                 "parameter",
+                aml_array_t::new(Box::new(Array3::from_elem((2, 1, 1), 11.0))),
+                gradient_samples_1.clone(),
+                None,
+            ).unwrap();
+
+            let mut gradient_components_1 = LabelsBuilder::new(vec!["extra", "components"]);
+            gradient_components_1.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+            gradient_components_1.add(vec![LabelValue::new(1), LabelValue::new(0)]);
+            gradient_components_1.add(vec![LabelValue::new(2), LabelValue::new(0)]);
+            let gradient_components_1 = Arc::new(gradient_components_1.finish());
+
+            block_1.add_gradient(
+                "with_components",
+                aml_array_t::new(Box::new(Array3::from_elem((2, 3, 1), 100.0))),
                 gradient_samples_1,
-                aml_array_t::new(Box::new(Array3::from_elem((2, 1, 1), 11.0)))
+                Arc::clone(&gradient_components_1),
             ).unwrap();
 
             /******************************************************************/
@@ -796,8 +843,16 @@ mod tests {
 
             block_2.add_gradient(
                 "parameter",
+                aml_array_t::new(Box::new(Array3::from_elem((3, 1, 3), 12.0))),
+                gradient_samples_2.clone(),
+                None,
+            ).unwrap();
+
+            block_2.add_gradient(
+                "with_components",
+                aml_array_t::new(Box::new(Array3::from_elem((3, 3, 3), 200.0))),
                 gradient_samples_2,
-                aml_array_t::new(Box::new(Array3::from_elem((3, 1, 3), 12.0)))
+                gradient_components_1,
             ).unwrap();
 
             /******************************************************************/
@@ -829,8 +884,28 @@ mod tests {
 
             block_3.add_gradient(
                 "parameter",
+                aml_array_t::new(Box::new(Array3::from_elem((1, 3, 1), 13.0))),
+                gradient_samples_3.clone(),
+                None,
+            ).unwrap();
+
+            let mut gradient_components_3 = LabelsBuilder::new(vec!["extra", "components"]);
+            gradient_components_3.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+            gradient_components_3.add(vec![LabelValue::new(1), LabelValue::new(0)]);
+            gradient_components_3.add(vec![LabelValue::new(2), LabelValue::new(0)]);
+            gradient_components_3.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+            gradient_components_3.add(vec![LabelValue::new(1), LabelValue::new(1)]);
+            gradient_components_3.add(vec![LabelValue::new(2), LabelValue::new(1)]);
+            gradient_components_3.add(vec![LabelValue::new(0), LabelValue::new(2)]);
+            gradient_components_3.add(vec![LabelValue::new(1), LabelValue::new(2)]);
+            gradient_components_3.add(vec![LabelValue::new(2), LabelValue::new(2)]);
+            let gradient_components_3 = Arc::new(gradient_components_3.finish());
+
+            block_3.add_gradient(
+                "with_components",
+                aml_array_t::new(Box::new(Array3::from_elem((1, 9, 1), 300.0))),
                 gradient_samples_3,
-                aml_array_t::new(Box::new(Array3::from_elem((1, 3, 1), 13.0)))
+                Arc::clone(&gradient_components_3),
             ).unwrap();
 
             /******************************************************************/
@@ -856,8 +931,16 @@ mod tests {
 
             block_4.add_gradient(
                 "parameter",
+                aml_array_t::new(Box::new(Array3::from_elem((2, 3, 1), 14.0))),
+                gradient_samples_4.clone(),
+                None,
+            ).unwrap();
+
+            block_4.add_gradient(
+                "with_components",
+                aml_array_t::new(Box::new(Array3::from_elem((2, 9, 1), 400.0))),
                 gradient_samples_4,
-                aml_array_t::new(Box::new(Array3::from_elem((2, 3, 1), 14.0)))
+                gradient_components_3,
             ).unwrap();
 
             /******************************************************************/
@@ -914,7 +997,7 @@ mod tests {
                 [[1.0, 0.0, 0.0, 0.0]],
             ]);
 
-            let gradient_1 = block_1.get_gradient("parameter").unwrap();
+            let gradient_1 = block_1.gradients().get("parameter").unwrap();
             assert_eq!(gradient_1.samples().names(), ["sample", "parameter"]);
             assert_eq!(gradient_1.samples().count(), 4);
             assert_eq!(gradient_1.samples()[0], [LabelValue::new(0), LabelValue::new(-2)]);
@@ -927,6 +1010,14 @@ mod tests {
                 [[0.0, 12.0, 12.0, 12.0]],
                 [[0.0, 12.0, 12.0, 12.0]],
                 [[11.0, 0.0, 0.0, 0.0]],
+            ]);
+
+            let gradient_1 = block_1.gradients().get("with_components").unwrap();
+            assert_eq!(gradient_1.data.as_array(), array![
+                [[100.0, 200.0, 200.0, 200.0], [100.0, 200.0, 200.0, 200.0], [100.0, 200.0, 200.0, 200.0]],
+                [[0.0, 200.0, 200.0, 200.0], [0.0, 200.0, 200.0, 200.0], [0.0, 200.0, 200.0, 200.0]],
+                [[0.0, 200.0, 200.0, 200.0], [0.0, 200.0, 200.0, 200.0], [0.0, 200.0, 200.0, 200.0]],
+                [[100.0, 0.0, 0.0, 0.0], [100.0, 0.0, 0.0, 0.0], [100.0, 0.0, 0.0, 0.0]],
             ]);
 
             // The new second block contains the old third block
@@ -1012,7 +1103,7 @@ mod tests {
                 [[3.0], [3.0], [3.0]],
             ]);
 
-            let gradient_3 = block_3.get_gradient("parameter").unwrap();
+            let gradient_3 = block_3.gradients().get("parameter").unwrap();
             assert_eq!(gradient_3.samples().names(), ["sample", "parameter"]);
             assert_eq!(gradient_3.samples().count(), 3);
             assert_eq!(gradient_3.samples()[0], [LabelValue::new(1), LabelValue::new(1)]);
@@ -1023,6 +1114,13 @@ mod tests {
                 [[14.0], [14.0], [14.0]],
                 [[13.0], [13.0], [13.0]],
                 [[14.0], [14.0], [14.0]],
+            ]);
+
+            let gradient_3 = block_3.gradients().get("with_components").unwrap();
+            assert_eq!(gradient_3.data.as_array(), array![
+                [[400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0]],
+                [[300.0], [300.0], [300.0], [300.0], [300.0], [300.0], [300.0], [300.0], [300.0]],
+                [[400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0], [400.0]],
             ]);
         }
     }

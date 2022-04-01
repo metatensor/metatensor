@@ -64,9 +64,9 @@ pub unsafe extern fn aml_block(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let samples = Labels::try_from(samples)?;
-        let components = Labels::try_from(components)?;
-        let features = Labels::try_from(features)?;
+        let samples = Labels::try_from(&samples)?;
+        let components = Labels::try_from(&components)?;
+        let features = Labels::try_from(&features)?;
 
         let block = Block::new(data, samples, Arc::new(components), Arc::new(features))?;
         let boxed = Box::new(aml_block_t(block));
@@ -143,7 +143,7 @@ pub unsafe extern fn aml_block_labels(
         let basic_block = match values_gradients {
             "values" => &(*block).values,
             gradients => {
-                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
+                (*block).gradients().get(gradients).ok_or_else(|| Error::InvalidParameter(format!(
                     "can not find gradients with respect to '{}' in this block", gradients
                 )))?
             }
@@ -188,7 +188,7 @@ pub unsafe extern fn aml_block_data(
         let basic_block = match values_gradients {
             "values" => &(*block).values,
             gradients => {
-                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
+                (*block).gradients().get(gradients).ok_or_else(|| Error::InvalidParameter(format!(
                     "can not find gradients with respect to '{}' in this block", gradients
                 )))?
             }
@@ -220,14 +220,22 @@ pub unsafe extern fn aml_block_data(
 pub unsafe extern fn aml_block_add_gradient(
     block: *mut aml_block_t,
     name: *const c_char,
+    data: aml_array_t,
     samples: aml_labels_t,
-    gradient: aml_array_t,
+    components: *const aml_labels_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(block, name);
+
         let name = CStr::from_ptr(name).to_str().unwrap();
-        let samples = Labels::try_from(samples)?;
-        (*block).add_gradient(name, samples, gradient)?;
+        let samples = Labels::try_from(&samples)?;
+        let components = if components.is_null() {
+            None
+        } else {
+            Some(Arc::new(Labels::try_from(&*components)?))
+        };
+
+        (*block).add_gradient(name, data, samples, components)?;
         Ok(())
     })
 }

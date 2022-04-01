@@ -43,10 +43,10 @@ pub struct aml_labels_t {
     pub count: usize,
 }
 
-impl std::convert::TryFrom<aml_labels_t> for Labels {
+impl std::convert::TryFrom<&aml_labels_t> for Labels {
     type Error = Error;
 
-    fn try_from(labels: aml_labels_t) -> Result<Labels, Self::Error> {
+    fn try_from(labels: &aml_labels_t) -> Result<Labels, Self::Error> {
         if labels.names.is_null() || labels.values.is_null() {
             todo!()
         }

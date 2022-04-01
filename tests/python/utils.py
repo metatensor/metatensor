@@ -22,10 +22,20 @@ def test_descriptor():
 
     block_1.add_gradient(
         "parameter",
-        gradient_samples=Labels(
+        gradient=np.full((2, 1, 1), 11.0),
+        samples=Labels(
             ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ),
-        gradient=np.full((2, 1, 1), 11.0),
+    )
+    block_1.add_gradient(
+        "with_component",
+        gradient=np.full((2, 3, 1), 111.0),
+        samples=Labels(
+            ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ),
+        components=Labels(
+            ["extra", "components"], np.array([[0, 0], [1, 0], [2, 0]], dtype=np.int32)
+        ),
     )
 
     block_2 = Block(
@@ -36,11 +46,22 @@ def test_descriptor():
     )
     block_2.add_gradient(
         "parameter",
-        gradient_samples=Labels(
+        gradient=np.full((3, 1, 3), 12.0),
+        samples=Labels(
             ["sample", "parameter"],
             np.array([[0, -2], [0, 3], [2, -2]], dtype=np.int32),
         ),
-        gradient=np.full((3, 1, 3), 12.0),
+    )
+    block_2.add_gradient(
+        "with_component",
+        gradient=np.full((3, 3, 3), 222.0),
+        samples=Labels(
+            ["sample", "parameter"],
+            np.array([[0, -2], [0, 3], [2, -2]], dtype=np.int32),
+        ),
+        components=Labels(
+            ["extra", "components"], np.array([[0, 0], [1, 0], [2, 0]], dtype=np.int32)
+        ),
     )
 
     block_3 = Block(
@@ -51,11 +72,23 @@ def test_descriptor():
     )
     block_3.add_gradient(
         "parameter",
-        gradient_samples=Labels(
+        gradient=np.full((1, 3, 1), 13.0),
+        samples=Labels(
             ["sample", "parameter"],
             np.array([[1, -2]], dtype=np.int32),
         ),
-        gradient=np.full((1, 3, 1), 13.0),
+    )
+    block_3.add_gradient(
+        "with_component",
+        gradient=np.full((1, 9, 1), 333.0),
+        samples=Labels(
+            ["sample", "parameter"],
+            np.array([[1, -2]], dtype=np.int32),
+        ),
+        components=Labels(
+            ["extra", "components"],
+            np.array([[i, j] for i in range(3) for j in range(3)], dtype=np.int32),
+        ),
     )
 
     block_4 = Block(
@@ -66,11 +99,23 @@ def test_descriptor():
     )
     block_4.add_gradient(
         "parameter",
-        gradient_samples=Labels(
+        gradient=np.full((2, 3, 1), 14.0),
+        samples=Labels(
             ["sample", "parameter"],
             np.array([[0, 1], [3, 3]], dtype=np.int32),
         ),
-        gradient=np.full((2, 3, 1), 14.0),
+    )
+    block_4.add_gradient(
+        "with_component",
+        gradient=np.full((2, 9, 1), 444.0),
+        samples=Labels(
+            ["sample", "parameter"],
+            np.array([[0, 1], [3, 3]], dtype=np.int32),
+        ),
+        components=Labels(
+            ["extra", "components"],
+            np.array([[i, j] for i in range(3) for j in range(3)], dtype=np.int32),
+        ),
     )
 
     return Descriptor(sparse, [block_1, block_2, block_3, block_4])

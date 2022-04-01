@@ -656,8 +656,9 @@ mod tests {
     }
 
     impl TestArray {
-        pub fn new(shape: (usize, usize, usize)) -> TestArray {
-            TestArray { shape }
+        #[allow(clippy::new_ret_no_self)]
+        pub fn new(shape: (usize, usize, usize)) -> aml_array_t {
+            aml_array_t::new(Box::new(TestArray { shape }))
         }
     }
 
@@ -718,7 +719,7 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data = aml_array_t::new(Box::new(TestArray::new((3, 4, 5))));
+        let data = TestArray::new((3, 4, 5));
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(

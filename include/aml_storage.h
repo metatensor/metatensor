@@ -345,8 +345,9 @@ aml_status_t aml_block_data(const struct aml_block_t *block,
  */
 aml_status_t aml_block_add_gradient(struct aml_block_t *block,
                                     const char *name,
+                                    struct aml_array_t data,
                                     struct aml_labels_t samples,
-                                    struct aml_array_t gradient);
+                                    const struct aml_labels_t *components);
 
 /**
  * Get a list of all gradients defined in this `block` in the `parameters` array.
