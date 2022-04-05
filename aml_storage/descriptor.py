@@ -44,6 +44,12 @@ class Descriptor:
         # all blocks are moved into the descriptor, assign NULL to `block._ptr`
         # to prevent accessing the blocks from Python/double free
         for block in blocks:
+            if not block._owning:
+                raise ValueError(
+                    "can not use blocks from another descriptor in a new descriptor, "
+                    "use Block.copy() to make a copy of each block"
+                )
+
             block._ptr = ctypes.POINTER(aml_block_t)()
 
         # keep a reference to the blocks in the descriptor in case they contain
@@ -144,7 +150,7 @@ class Descriptor:
     def _get_block_by_id(self, id) -> Block:
         block = ctypes.POINTER(aml_block_t)()
         self._lib.aml_descriptor_block_by_id(self._ptr, block, id)
-        return Block._from_non_owning_ptr(block, parent=self)
+        return Block._from_ptr(block, parent=self, owning=False)
 
     def _block_selection(self, selection: Labels) -> Block:
         block = ctypes.POINTER(aml_block_t)()
@@ -153,7 +159,7 @@ class Descriptor:
             block,
             selection._as_aml_labels_t(),
         )
-        return Block._from_non_owning_ptr(block, parent=self)
+        return Block._from_ptr(block, parent=self, owning=False)
 
     def sparse_to_features(self, variables: Union[str, List[str]]):
         """

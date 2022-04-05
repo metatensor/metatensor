@@ -109,6 +109,41 @@ pub unsafe extern fn aml_block_free(
     })
 }
 
+/// Make a copy of an `aml_block_t`.
+///
+/// The memory allocated by this function and the blocks should be released
+/// using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+///
+/// @param block existing block to copy
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error. In case of error, you can use `aml_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern fn aml_block_copy(
+    block: *const aml_block_t,
+) -> *mut aml_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers!(block);
+        let new_block = (*block).clone();
+        let boxed = Box::new(aml_block_t(new_block));
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
 
 /// Get the set of labels of the requested `kind` from this `block`.
 ///
@@ -179,7 +214,7 @@ pub unsafe extern fn aml_block_labels(
 pub unsafe extern fn aml_block_data(
     block: *const aml_block_t,
     values_gradients: *const c_char,
-    data: *mut *const aml_array_t,
+    data: *mut aml_array_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(block, values_gradients, data);
@@ -194,7 +229,7 @@ pub unsafe extern fn aml_block_data(
             }
         };
 
-        *data = &basic_block.data as *const _;
+        *data = basic_block.data.raw_copy();
 
         Ok(())
     })

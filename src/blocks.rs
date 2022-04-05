@@ -11,7 +11,7 @@ use crate::Error;
 /// 3-dimensional array, and three sets of labels (one for each dimension). The
 /// sample labels are specific to this block, but components & feature labels
 /// can be shared between blocks, or between values & gradients.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub data: aml_array_t,
     pub(crate) samples: Labels,
@@ -160,7 +160,7 @@ impl BasicBlock {
 
 /// A single block in a descriptor, containing both values & optionally
 /// gradients of these values w.r.t. any relevant quantity.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     pub values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
