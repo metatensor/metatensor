@@ -370,9 +370,9 @@ aml_status_t aml_block_add_gradient(struct aml_block_t *block,
  * Get a list of all gradients defined in this `block` in the `parameters` array.
  *
  * @param block pointer to an existing block
- * @param parameter will be set to the first element of an array of
- *                  NULL-terminated UTF-8 strings containing all the parameters
- *                  for which a gradient exists
+ * @param parameters will be set to the first element of an array of
+ *                   NULL-terminated UTF-8 strings containing all the
+ *                   parameters for which a gradient exists in the block
  * @param count will be set to the number of elements in `parameters`
  *
  * @returns The status code of this operation. If the status is not
