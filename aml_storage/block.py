@@ -1,3 +1,5 @@
+import gc
+import copy
 import ctypes
 from typing import Tuple, List
 
@@ -7,7 +9,7 @@ from ._c_api import aml_label_kind, aml_labels_t, aml_array_t
 from .status import _check_pointer
 from .labels import Labels
 
-from .data import AmlData, aml_data_to_array, Array
+from .data import AmlData, Array, aml_array_t_to_python_object
 
 
 class Block:
@@ -55,13 +57,16 @@ class Block:
         _check_pointer(self._ptr)
 
     @staticmethod
-    def _from_non_owning_ptr(ptr, parent):
-        """create a block not owning its data (i.e. a block inside a Descriptor)"""
+    def _from_ptr(ptr, parent, owning):
+        """
+        create a block from a pointer, either owning its data (new block as a
+        copy of an existing one) or not (block inside a Descriptor)
+        """
         _check_pointer(ptr)
         obj = Block.__new__(Block)
         obj._lib = _get_library()
         obj._ptr = ptr
-        obj._owning = False
+        obj._owning = owning
         obj._values = None
         obj._gradients = []
         # keep a reference to the parent object (usually a Descriptor) to
@@ -73,6 +78,43 @@ class Block:
         if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_owning"):
             if self._owning:
                 self._lib.aml_block_free(self._ptr)
+
+    def __deepcopy__(self, _memodict={}):
+        # Temporarily disable garbage collection to ensure the temporary AmlData
+        # instance created in _aml_storage_copy will still be available below
+        if gc.isenabled():
+            gc.disable()
+            reset_gc = True
+        else:
+            reset_gc = False
+
+        new_ptr = self._lib.aml_block_copy(self._ptr)
+        copy = Block._from_ptr(new_ptr, parent=None, owning=True)
+
+        # Keep references to the arrays in this block if the arrays were
+        # allocated by Python
+        try:
+            copy._values = aml_array_t_to_python_object(copy._get_raw_array("values"))
+        except ValueError:
+            # the array was not allocated by Python
+            copy._values = None
+
+        for parameter in self.gradients_list():
+            try:
+                copy._gradients.append(
+                    aml_array_t_to_python_object(copy._get_raw_array(parameter))
+                )
+            except ValueError:
+                pass
+
+        if reset_gc:
+            gc.enable()
+
+        return copy
+
+    def copy(self) -> "Block":
+        """Get a deep copy of this block"""
+        return copy.deepcopy(self)
 
     def _labels(self, name: str, kind) -> Labels:
         """Get the labels of the given ``kind`` for the ``name`` array in this
@@ -170,6 +212,9 @@ class Block:
         return parameter in self.gradients_list()
 
     def _get_array(self, name: str) -> Array:
-        data = ctypes.POINTER(aml_array_t)()
+        return aml_array_t_to_python_object(self._get_raw_array(name)).array
+
+    def _get_raw_array(self, name: str) -> aml_array_t:
+        data = aml_array_t()
         self._lib.aml_block_data(self._ptr, name.encode("utf8"), data)
-        return aml_data_to_array(data)
+        return data

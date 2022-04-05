@@ -161,6 +161,10 @@ typedef struct aml_array_t {
    */
   aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features, struct aml_array_t *new_array);
   /**
+   * Make a copy of this `array` and return the new array in `new_array`
+   */
+  aml_status_t (*copy)(const void *array, struct aml_array_t *new_array);
+  /**
    * Set entries in this array taking data from the `other_array`. This array
    * is guaranteed to be created by calling `aml_array_t::create` with one of
    * the arrays in the same block or descriptor as this `array`.
@@ -282,6 +286,20 @@ struct aml_block_t *aml_block(struct aml_array_t data,
 aml_status_t aml_block_free(struct aml_block_t *block);
 
 /**
+ * Make a copy of an `aml_block_t`.
+ *
+ * The memory allocated by this function and the blocks should be released
+ * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+ *
+ * @param block existing block to copy
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `aml_last_error()`
+ *          to get the error message.
+ */
+struct aml_block_t *aml_block_copy(const struct aml_block_t *block);
+
+/**
  * Get the set of labels of the requested `kind` from this `block`.
  *
  * The `values_gradients` parameter controls whether this function looks up
@@ -324,7 +342,7 @@ aml_status_t aml_block_labels(const struct aml_block_t *block,
  */
 aml_status_t aml_block_data(const struct aml_block_t *block,
                             const char *values_gradients,
-                            const struct aml_array_t **data);
+                            struct aml_array_t *data);
 
 /**
  * Add a new gradient to this `block` with the given `name`.

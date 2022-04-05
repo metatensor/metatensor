@@ -65,7 +65,7 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
 pub struct aml_array_t {
     /// User-provided data should be stored here, it will be passed as the
     /// first parameter to all function pointers below.
-    ptr: *mut c_void,
+    pub ptr: *mut c_void,
 
     /// This function needs to store the "data origin" for this array in
     /// `origin`. Users of `aml_array_t` should register a single data
@@ -102,6 +102,12 @@ pub struct aml_array_t {
         n_samples: u64,
         n_components: u64,
         n_features: u64,
+        new_array: *mut aml_array_t,
+    ) -> aml_status_t>,
+
+    /// Make a copy of this `array` and return the new array in `new_array`
+    copy: Option<unsafe extern fn(
+        array: *const c_void,
         new_array: *mut aml_array_t,
     ) -> aml_status_t>,
 
@@ -166,6 +172,19 @@ impl Drop for aml_array_t {
     }
 }
 
+impl Clone for aml_array_t {
+    fn clone(&self) -> aml_array_t {
+        if let Some(function) = self.copy {
+            let mut new_array = aml_array_t::null();
+            let status  = unsafe { function(self.ptr, &mut new_array) };
+            assert!(status.is_success(), "calling aml_array_t.copy failed");
+            return new_array;
+        } else {
+            panic!("function aml_array_t.copy is not set")
+        }
+    }
+}
+
 impl aml_array_t {
     /// Create an `aml_array_t` from a Rust implementation of the `DataStorage`
     /// trait.
@@ -180,9 +199,27 @@ impl aml_array_t {
             shape: Some(rust_data_shape),
             reshape: Some(rust_data_reshape),
             create: Some(rust_data_create),
+            copy: Some(rust_data_copy),
             destroy: Some(rust_data_destroy),
             move_sample: Some(rust_data_move_sample),
             move_component: Some(rust_data_move_component),
+        }
+    }
+
+    /// make a raw (member by member) copy of the array. Contrary to
+    /// `aml_array_t::clone`, the returned array refers to the same
+    /// `aml_array_t` instance, and as such should not be freed.
+    pub(crate) fn raw_copy(&self) -> aml_array_t {
+        aml_array_t {
+            ptr: self.ptr,
+            origin: self.origin,
+            shape: self.shape,
+            reshape: self.reshape,
+            create: self.create,
+            copy: self.copy,
+            destroy: None,
+            move_sample: self.move_sample,
+            move_component: self.move_component,
         }
     }
 
@@ -194,6 +231,7 @@ impl aml_array_t {
             shape: None,
             reshape: None,
             create: None,
+            copy: None,
             destroy: None,
             move_sample: None,
             move_component: None,
@@ -400,6 +438,8 @@ pub trait DataStorage: std::any::Any{
 
     fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage>;
 
+    fn copy(&self) -> Box<dyn DataStorage>;
+
     fn shape(&self) -> (usize, usize, usize);
     fn reshape(&mut self, shape: (usize, usize, usize));
 
@@ -505,6 +545,21 @@ unsafe extern fn rust_data_create(
     })
 }
 
+
+/// Implementation of `aml_array_t.copy` using `Box<dyn DataStorage>`
+unsafe extern fn rust_data_copy(
+    data: *const c_void,
+    data_storage: *mut aml_array_t,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(data, data_storage);
+        let data = data.cast::<Box<dyn DataStorage>>();
+        *data_storage = aml_array_t::new((*data).copy());
+
+        Ok(())
+    })
+}
+
 /// Implementation of `aml_array_t.destroy` for `Box<dyn DataStorage>`
 unsafe extern fn rust_data_destroy(
     data: *mut c_void,
@@ -594,6 +649,10 @@ impl DataStorage for ndarray::Array3<f64> {
         return Box::new(ndarray::Array3::from_elem(shape, 0.0));
     }
 
+    fn copy(&self) -> Box<dyn DataStorage> {
+        return Box::new(self.clone());
+    }
+
     fn shape(&self) -> (usize, usize, usize) {
         let shape = self.shape();
         return (shape[0], shape[1], shape[2]);
@@ -676,6 +735,10 @@ mod tests {
 
         fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage> {
             Box::new(TestArray { shape: shape })
+        }
+
+        fn copy(&self) -> Box<dyn DataStorage> {
+            Box::new(TestArray { shape: self.shape })
         }
 
         fn shape(&self) -> (usize, usize, usize) {

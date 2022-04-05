@@ -48,6 +48,22 @@ class TestBlocks(unittest.TestCase):
 
         self.assertTrue(np.all(gradients == np.full((2, 1, 1), 11.0)))
 
+    def test_copy(self):
+        block = test_descriptor().block(0)
+        copy = block.copy()
+        block_values_id = id(block.values)
+
+        del block
+
+        self.assertNotEqual(id(copy.values), block_values_id)
+
+        self.assertTrue(np.all(copy.values == np.full((3, 1, 1), 1.0)))
+        self.assertEqual(copy.samples.names, ("samples",))
+        self.assertEqual(len(copy.samples), 3)
+        self.assertEqual(tuple(copy.samples[0]), (0,))
+        self.assertEqual(tuple(copy.samples[1]), (2,))
+        self.assertEqual(tuple(copy.samples[2]), (4,))
+
 
 if __name__ == "__main__":
     unittest.main()

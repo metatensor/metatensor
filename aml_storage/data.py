@@ -80,10 +80,10 @@ def _torch_origin():
     return _TORCH_STORAGE_ORIGIN
 
 
-def aml_data_to_array(data):
-    origin = _data_origin(data[0]).value
+def aml_array_t_to_python_object(data):
+    origin = _data_origin(data).value
     if origin in [_NUMPY_STORAGE_ORIGIN, _TORCH_STORAGE_ORIGIN]:
-        return _object_from_ptr(data[0].ptr).array
+        return _object_from_ptr(data.ptr)
     else:
         raise ValueError(
             f"unable to handle data coming from '{_data_origin_name(origin)}'"
@@ -137,6 +137,7 @@ class AmlData:
         self._storage.reshape = self._storage.reshape.__class__(_aml_storage_reshape)
 
         self._storage.create = self._storage.create.__class__(_aml_storage_create)
+        self._storage.copy = self._storage.copy.__class__(_aml_storage_copy)
         self._storage.destroy = self._storage.destroy.__class__(_aml_storage_destroy)
 
         self._storage.move_sample = self._storage.move_sample.__class__(
@@ -184,6 +185,19 @@ def _aml_storage_create(this, n_samples, n_components, n_features, data_storage)
     array = AmlData(array)
     storage._children.append(array)
 
+    data_storage[0] = array._storage
+
+
+@catch_exceptions
+def _aml_storage_copy(this, data_storage):
+    storage = _object_from_ptr(this)
+
+    if _is_numpy_array(storage.array):
+        array = storage.array.copy()
+    elif _is_torch_array(storage.array):
+        array = storage.array.clone()
+
+    array = AmlData(array)
     data_storage[0] = array._storage
 
 

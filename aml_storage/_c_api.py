@@ -62,6 +62,7 @@ aml_array_t._fields_ = [
     ("shape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64))),
     ("reshape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64)),
     ("create", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, POINTER(aml_array_t))),
+    ("copy", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(aml_array_t))),
     ("move_sample", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
     ("move_component", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
@@ -110,6 +111,11 @@ def setup_functions(lib):
     ]
     lib.aml_block_free.restype = _check_status
 
+    lib.aml_block_copy.argtypes = [
+        POINTER(aml_block_t)
+    ]
+    lib.aml_block_copy.restype = POINTER(aml_block_t)
+
     lib.aml_block_labels.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
@@ -121,7 +127,7 @@ def setup_functions(lib):
     lib.aml_block_data.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
-        POINTER(POINTER(aml_array_t))
+        POINTER(aml_array_t)
     ]
     lib.aml_block_data.restype = _check_status
 
