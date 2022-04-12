@@ -9,6 +9,6 @@ pub use self::status::{AML_BUFFER_SIZE_ERROR, AML_INTERNAL_ERROR};
 pub mod labels;
 pub mod data;
 pub mod blocks;
-pub mod descriptor;
+pub mod tensor;
 
 mod utils;

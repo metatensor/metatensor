@@ -9,12 +9,12 @@ use super::labels::aml_labels_t;
 
 use super::{catch_unwind, aml_status_t};
 
-/// Basic building block for descriptor. A single block contains a 3-dimensional
-/// `aml_array_t`, and three sets of `aml_labels_t` (one for each dimension).
+/// Basic building block for tensor map. A single block contains a n-dimensional
+/// `aml_array_t`, and n sets of `aml_labels_t` (one for each dimension).
 ///
 /// A block can also contain gradients of the values with respect to a variety
-/// of parameters. In this case, each gradient has a separate set of samples,
-/// but share the same components and property labels as the values.
+/// of parameters. In this case, each gradient has a separate set of sample
+/// and component labels but share the property labels with the values.
 #[allow(non_camel_case_types)]
 pub struct aml_block_t(Block);
 
@@ -42,7 +42,7 @@ impl aml_block_t {
 /// and `properties` labels.
 ///
 /// The memory allocated by this function and the blocks should be released
-/// using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+/// using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
 ///
 /// @param data array handle containing the data for this block. The block takes
 ///             ownership of the array, and will release it with
@@ -121,7 +121,7 @@ pub unsafe extern fn aml_block_free(
 /// Make a copy of an `aml_block_t`.
 ///
 /// The memory allocated by this function and the blocks should be released
-/// using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+/// using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
 ///
 /// @param block existing block to copy
 ///
@@ -161,8 +161,8 @@ pub unsafe extern fn aml_block_copy(
 ///
 /// The resulting `labels.values` points inside memory owned by the block, and
 /// as such is only valid until the block is destroyed with `aml_block_free`, or
-/// the containing descriptor is modified with one of the
-/// `aml_descriptor_sparse_to_xxx` function.
+/// the containing tensor map is modified with one of the
+/// `aml_tensormap_keys_to_xxx` function.
 ///
 /// @param block pointer to an existing block
 /// @param values_gradients either `"values"` or the name of gradients to lookup

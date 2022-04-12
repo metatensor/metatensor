@@ -21,8 +21,8 @@ pub use self::data::{register_data_origin, get_data_origin};
 mod blocks;
 pub use self::blocks::{BasicBlock, Block};
 
-mod descriptor;
-pub use self::descriptor::Descriptor;
+mod tensor;
+pub use self::tensor::TensorMap;
 
 #[doc(hidden)]
 pub mod c_api;

@@ -14,11 +14,11 @@ from .data import AmlData, Array, aml_array_to_python_object
 
 class Block:
     """
-    Basic building block for descriptor. A single block contains a n-dimensional
-    :py:class:`aml_storage.data.Array`, and n sets of :py:class:`Labels` (one
-    for each dimension). The first dimension is the *samples* dimension, the
-    last dimension is the *properties* dimension, and any intermediary dimension
-    is called a *component* dimension.
+    Basic building block for a tensor map. A single block contains a
+    n-dimensional :py:class:`aml_storage.data.Array`, and n sets of
+    :py:class:`Labels` (one for each dimension). The first dimension is the
+    *samples* dimension, the last dimension is the *properties* dimension, and
+    any intermediary dimension is called a *component* dimension.
 
     Samples should be used to describe *what* we are representing, while
     properties should contain information about *how* we are representing it.
@@ -72,7 +72,7 @@ class Block:
     def _from_ptr(ptr, parent, owning):
         """
         create a block from a pointer, either owning its data (new block as a
-        copy of an existing one) or not (block inside a Descriptor)
+        copy of an existing one) or not (block inside a :py:class:`TensorMap`)
         """
         _check_pointer(ptr)
         obj = Block.__new__(Block)
@@ -81,7 +81,7 @@ class Block:
         obj._owning = owning
         obj._values = None
         obj._gradients = []
-        # keep a reference to the parent object (usually a Descriptor) to
+        # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from beeing garbage-collected & removing this block
         obj._parent = parent
         return obj

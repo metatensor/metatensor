@@ -1,18 +1,13 @@
 import numpy as np
 
-from aml_storage import Labels, Block, Descriptor
+from aml_storage import Labels, Block, TensorMap
 
 
-def test_descriptor():
+def test_tensor_map():
     """
-    Create a dummy descriptor to be used in tests. This is the same one as the
-    descriptor used in `descriptors.rs` tests.
+    Create a dummy tensor map to be used in tests. This is the same one as the
+    tensor map used in `tensor.rs` tests.
     """
-    sparse = Labels(
-        names=["sparse_1", "sparse_2"],
-        values=np.array([[0, 0], [1, 0], [2, 2], [2, 3]], dtype=np.int32),
-    )
-
     block_1 = Block(
         values=np.full((3, 1, 1), 1.0),
         samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
@@ -78,4 +73,9 @@ def test_descriptor():
 
     # TODO: different number of components?
 
-    return Descriptor(sparse, [block_1, block_2, block_3, block_4])
+    keys = Labels(
+        names=["key_1", "key_2"],
+        values=np.array([[0, 0], [1, 0], [2, 2], [2, 3]], dtype=np.int32),
+    )
+
+    return TensorMap(keys, [block_1, block_2, block_3, block_4])

@@ -7,10 +7,8 @@ use std::collections::hash_map::Entry;
 use std::hash::BuildHasherDefault;
 
 use twox_hash::XxHash64;
-use indexmap::IndexSet;
 
 use crate::utils::ConstCString;
-use crate::Error;
 
 /// A single value inside a label. This is represented as a 32-bit signed
 /// integer, with a couple of helper function to get its value as usize/isize.
@@ -187,7 +185,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
     return true;
 }
 
-/// A set of labels used to carry metadata associated with a descriptor.
+/// A set of labels used to carry metadata associated with a tensor map.
 ///
 /// This is similar to a list of named tuples, but stored as a 2D array of shape
 /// `(labels.count(), labels.size())`, with a of set names associated with the
@@ -279,75 +277,6 @@ impl Labels {
         assert!(value.len() == self.size(), "invalid size of index in Labels::position");
 
         self.positions.get(value).copied()
-    }
-
-    /// Split the given `labels` into a new set of label without the `variables`;
-    /// and Labels containing the values taken by `variables` in the current sparse
-    /// labels
-    pub fn split(&self, variables: &[&str]) -> Result<(Labels, Labels), Error> {
-        let names = self.names();
-        for variable in variables {
-            if !names.contains(variable) {
-                return Err(Error::InvalidParameter(format!(
-                    "'{}' is not part of the sparse labels for this descriptor",
-                    variable
-                )));
-            }
-        }
-
-        // TODO: use Labels instead of Vec<&str> for variables to ensure
-        // uniqueness of variables names & pass 'requested' values around
-
-        let mut remaining = Vec::new();
-        let mut remaining_i = Vec::new();
-        let mut extracted_i = Vec::new();
-
-        'outer: for (i, &name) in names.iter().enumerate() {
-            for &variable in variables {
-                if variable == name {
-                    extracted_i.push(i);
-                    continue 'outer;
-                }
-            }
-            remaining.push(name);
-            remaining_i.push(i);
-        }
-
-        let mut extracted_labels = IndexSet::new();
-        let mut remaining_labels = IndexSet::new();
-        for entry in self.iter() {
-            let mut label = Vec::new();
-            for &i in &extracted_i {
-                label.push(entry[i]);
-            }
-            extracted_labels.insert(label);
-
-            if !remaining_i.is_empty() {
-                let mut label = Vec::new();
-                for &i in &remaining_i {
-                    label.push(entry[i]);
-                }
-                remaining_labels.insert(label);
-            }
-        }
-
-        let remaining_labels = if remaining_labels.is_empty() {
-            Labels::single()
-        } else {
-            let mut remaining_labels_builder = LabelsBuilder::new(remaining);
-            for entry in remaining_labels {
-                remaining_labels_builder.add(entry);
-            }
-            remaining_labels_builder.finish()
-        };
-
-        assert!(!extracted_labels.is_empty());
-        let mut extracted_labels_builder = LabelsBuilder::new(variables.to_vec());
-        for entry in extracted_labels {
-            extracted_labels_builder.add(entry);
-        }
-
-        return Ok((remaining_labels, extracted_labels_builder.finish()));
     }
 }
 
