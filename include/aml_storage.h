@@ -35,25 +35,6 @@
 #define AML_INTERNAL_ERROR 255
 
 /**
- * The different kinds of labels that can exist on a `aml_block_t`
- */
-typedef enum aml_label_kind {
-  /**
-   * The sample labels, describing different samples in the data
-   */
-  AML_SAMPLE_LABELS = 0,
-  /**
-   * The component labels, describing the components of vectorial or
-   * tensorial elements of the data
-   */
-  AML_COMPONENTS_LABELS = 1,
-  /**
-   * The feature labels, describing the features of the data
-   */
-  AML_FEATURE_LABELS = 2,
-} aml_label_kind;
-
-/**
  * Basic building block for descriptor. A single block contains a 3-dimensional
  * `aml_array_t`, and three sets of `aml_labels_t` (one for each dimension).
  *
@@ -81,11 +62,10 @@ typedef int32_t aml_status_t;
 /**
  * A set of labels used to carry metadata associated with a descriptor.
  *
- * This is similar to a list of `n_entries` named tuples, but stored as a 2D
- * array of shape `(n_entries, n_variables)`, with a set of names associated
- * with the columns of this array (often called *variables*). Each row/entry in
- * this array is unique, and they are often (but not always) sorted in
- * lexicographic order.
+ * This is similar to a list of `count` named tuples, but stored as a 2D array
+ * of shape `(count, size)`, with a set of names associated with the columns of
+ * this array (often called *variables*). Each row/entry in this array is
+ * unique, and they are often (but not always) sorted in lexicographic order.
  */
 typedef struct aml_labels_t {
   /**
@@ -145,49 +125,48 @@ typedef struct aml_array_t {
    */
   aml_status_t (*origin)(const void *array, aml_data_origin_t *origin);
   /**
-   * Get the shape of the array managed by this `aml_array_t`
+   * Get the shape of the array managed by this `aml_array_t` in the `*shape`
+   * pointer, and the number of dimension (size of the `*shape` array) in
+   * `*shape_count`.
    */
-  aml_status_t (*shape)(const void *array, uint64_t *n_samples, uint64_t *n_components, uint64_t *n_features);
+  aml_status_t (*shape)(const void *array, const uintptr_t **shape, uintptr_t *shape_count);
   /**
-   * Change the shape of the array managed by this `aml_array_t` to
-   * `(n_samples, n_components, n_features)`
+   * Change the shape of the array managed by this `aml_array_t` to the given
+   * `shape`. `shape_count` must contain the number of elements in the
+   * `shape` array
    */
-  aml_status_t (*reshape)(void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features);
+  aml_status_t (*reshape)(void *array, const uintptr_t *shape, uintptr_t shape_count);
+  /**
+   * Swap the axes `axis_1` and `axis_2` in this `array`.
+   */
+  aml_status_t (*swap_axes)(void *array, uintptr_t axis_1, uintptr_t axis_2);
   /**
    * Create a new array with the same options as the current one (data type,
-   * data location, etc.) and the requested `(n_samples, n_components,
-   * n_features)` shape; and store it in `new_array`. The new array should be
-   * filled with zeros.
+   * data location, etc.) and the requested `shape`; and store it in
+   * `new_array`. The number of elements in the `shape` array should be given
+   * in `shape_count`.
+   *
+   * The new array should be filled with zeros.
    */
-  aml_status_t (*create)(const void *array, uint64_t n_samples, uint64_t n_components, uint64_t n_features, struct aml_array_t *new_array);
+  aml_status_t (*create)(const void *array, const uintptr_t *shape, uintptr_t shape_count, struct aml_array_t *new_array);
   /**
    * Make a copy of this `array` and return the new array in `new_array`
    */
   aml_status_t (*copy)(const void *array, struct aml_array_t *new_array);
   /**
-   * Set entries in this array taking data from the `other_array`. This array
-   * is guaranteed to be created by calling `aml_array_t::create` with one of
-   * the arrays in the same block or descriptor as this `array`.
-   *
-   * This function should copy data from `other_array[other_sample, :, :]` to
-   * `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
-   */
-  aml_status_t (*move_sample)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
-  /**
-   * Set entries in this array taking data from the `other_array`. This array
-   * is guaranteed to be created by calling `aml_array_t::create` with one of
-   * the arrays in the same block or descriptor as this `array`.
-   *
-   * This function should copy data from `other_array[:, other_component, :]`
-   * to `array[:, component, feature_start:feature_end]`. All indexes are
-   * 0-based.
-   */
-  aml_status_t (*move_component)(void *array, uint64_t component, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_component);
-  /**
    * Remove this array and free the associated memory. This function can be
    * set to `NULL` is there is no memory management to do.
    */
   void (*destroy)(void *array);
+  /**
+   * Set entries in this array taking data from the `other_array`. This array
+   * is guaranteed to be created by calling `aml_array_t::create` with one of
+   * the arrays in the same block or descriptor as this `array`.
+   *
+   * This function should copy data from `other_array[other_sample, ..., :]` to
+   * `array[sample, ..., feature_start:feature_end]`. All indexes are 0-based.
+   */
+  aml_status_t (*move_sample)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
 } aml_array_t;
 
 #ifdef __cplusplus
@@ -259,8 +238,10 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
  *             ownership of the array, and will release it with
  *             `array.destroy(array.ptr)` when it no longer needs it.
  * @param samples sample labels corresponding to the first dimension of the data
- * @param components component labels corresponding to the second dimension of the data
- * @param features feature labels corresponding to the third dimension of the data
+ * @param components array of component labels corresponding to intermediary
+ *                   dimensions of the data
+ * @param components_count number of entries in the `components` array
+ * @param features feature labels corresponding to the last dimension of the data
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `aml_last_error()`
@@ -268,7 +249,8 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
  */
 struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
-                              struct aml_labels_t components,
+                              const struct aml_labels_t *components,
+                              uintptr_t components_count,
                               struct aml_labels_t features);
 
 /**
@@ -312,7 +294,7 @@ struct aml_block_t *aml_block_copy(const struct aml_block_t *block);
  *
  * @param block pointer to an existing block
  * @param values_gradients either `"values"` or the name of gradients to lookup
- * @param kind the kind of labels requested
+ * @param axis axis/dimension of the data array for which you need the labels
  * @param labels pointer to an empty `aml_labels_t` that will be set to the
  *               requested labels
  *
@@ -322,7 +304,7 @@ struct aml_block_t *aml_block_copy(const struct aml_block_t *block);
  */
 aml_status_t aml_block_labels(const struct aml_block_t *block,
                               const char *values_gradients,
-                              enum aml_label_kind kind,
+                              uintptr_t axis,
                               struct aml_labels_t *labels);
 
 /**
@@ -348,23 +330,28 @@ aml_status_t aml_block_data(const struct aml_block_t *block,
  * Add a new gradient to this `block` with the given `name`.
  *
  * @param block pointer to an existing block
- * @param name name of the gradient as a NULL-terminated UTF-8 string. This is
- *             usually the parameter used when taking derivatives (e.g.
- *             `"positions"`, `"cell"`, etc.)
- * @param samples sample labels for the gradient array. The components and
- *                feature labels are supposed to match the values in this block
- * @param gradient array containing the gradient data. The block takes
+ * @param data array containing the gradient data. The block takes
  *                 ownership of the array, and will release it with
  *                 `array.destroy(array.ptr)` when it no longer needs it.
+ * @param parameter name of the gradient as a NULL-terminated UTF-8 string.
+ *                  This is usually the parameter used when taking derivatives
+ *                  (e.g. `"positions"`, `"cell"`, etc.)
+ * @param samples sample labels for the gradient array. The components and
+ *                feature labels are supposed to match the values in this block
+ * @param components array of component labels corresponding to intermediary
+ *                   dimensions of the data
+ * @param components_count number of entries in the `components` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
 aml_status_t aml_block_add_gradient(struct aml_block_t *block,
-                                    const char *name,
+                                    const char *parameter,
+                                    struct aml_array_t data,
                                     struct aml_labels_t samples,
-                                    struct aml_array_t gradient);
+                                    const struct aml_labels_t *components,
+                                    uintptr_t components_count);
 
 /**
  * Get a list of all gradients defined in this `block` in the `parameters` array.

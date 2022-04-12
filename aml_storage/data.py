@@ -4,7 +4,7 @@ from typing import Union, NewType
 
 
 from ._c_lib import _get_library
-from ._c_api import aml_array_t, aml_data_origin_t
+from ._c_api import aml_array_t, aml_data_origin_t, c_uintptr_t
 
 from .utils import _call_with_growing_buffer, catch_exceptions
 
@@ -29,8 +29,7 @@ if HAS_TORCH:
     arrays appart from a small set of constrains:
 
     - array contains numeric data;
-    - they are stored as row-major, 3-dimensional arrays of shape ``(samples,
-      components, features)``;
+    - they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
     - it is possible to create new arrays and move data from one array to
       another.
 
@@ -80,23 +79,23 @@ def _torch_origin():
     return _TORCH_STORAGE_ORIGIN
 
 
-def aml_array_t_to_python_object(data):
-    origin = _data_origin(data).value
+def aml_array_to_python_object(data):
+    origin = data_origin(data)
     if origin in [_NUMPY_STORAGE_ORIGIN, _TORCH_STORAGE_ORIGIN]:
         return _object_from_ptr(data.ptr)
     else:
         raise ValueError(
-            f"unable to handle data coming from '{_data_origin_name(origin)}'"
+            f"unable to handle data coming from '{data_origin_name(origin)}'"
         )
 
 
-def _data_origin(data):
+def data_origin(aml_array):
     origin = aml_data_origin_t()
-    data.origin(data.ptr, origin)
-    return origin
+    aml_array.origin(aml_array.ptr, origin)
+    return origin.value
 
 
-def _data_origin_name(origin):
+def data_origin_name(origin):
     lib = _get_library()
 
     return _call_with_growing_buffer(
@@ -111,6 +110,8 @@ class AmlData:
 
     def __init__(self, array):
         self.array = array
+        self._shape = ctypes.ARRAY(c_uintptr_t, len(array.shape))(*array.shape)
+
         self._children = []
         if _is_numpy_array(array):
             array_origin = _numpy_origin()
@@ -119,10 +120,10 @@ class AmlData:
         else:
             raise ValueError(f"unknown array type: {type(array)}")
 
-        self._storage = aml_array_t()
+        self.aml_array = aml_array_t()
 
-        # `aml_data_storage.ptr` is a pointer to the PyObject `self`
-        self._storage.ptr = ctypes.cast(
+        # `aml_data.aml_array.ptr` is a pointer to the PyObject `self`
+        self.aml_array.ptr = ctypes.cast(
             ctypes.pointer(ctypes.py_object(self)), ctypes.c_void_p
         )
 
@@ -131,20 +132,20 @@ class AmlData:
             origin[0] = array_origin
 
         # use storage.XXX.__class__ to get the right type for all functions
-        self._storage.origin = self._storage.origin.__class__(aml_storage_origin)
+        self.aml_array.origin = self.aml_array.origin.__class__(aml_storage_origin)
 
-        self._storage.shape = self._storage.shape.__class__(_aml_storage_shape)
-        self._storage.reshape = self._storage.reshape.__class__(_aml_storage_reshape)
-
-        self._storage.create = self._storage.create.__class__(_aml_storage_create)
-        self._storage.copy = self._storage.copy.__class__(_aml_storage_copy)
-        self._storage.destroy = self._storage.destroy.__class__(_aml_storage_destroy)
-
-        self._storage.move_sample = self._storage.move_sample.__class__(
-            _aml_storage_move_sample
+        self.aml_array.shape = self.aml_array.shape.__class__(_aml_storage_shape)
+        self.aml_array.reshape = self.aml_array.reshape.__class__(_aml_storage_reshape)
+        self.aml_array.swap_axes = self.aml_array.swap_axes.__class__(
+            _aml_storage_swap_axes
         )
-        self._storage.move_component = self._storage.move_component.__class__(
-            _aml_storage_move_component
+
+        self.aml_array.create = self.aml_array.create.__class__(_aml_storage_create)
+        self.aml_array.copy = self.aml_array.copy.__class__(_aml_storage_copy)
+        self.aml_array.destroy = self.aml_array.destroy.__class__(_aml_storage_destroy)
+
+        self.aml_array.move_sample = self.aml_array.move_sample.__class__(
+            _aml_storage_move_sample
         )
 
 
@@ -154,27 +155,41 @@ def _object_from_ptr(ptr):
 
 
 @catch_exceptions
-def _aml_storage_shape(this, n_samples, n_components, n_features):
+def _aml_storage_shape(this, shape_ptr, shape_count):
     storage = _object_from_ptr(this)
+
+    shape_ptr[0] = storage._shape
+    shape_count[0] = len(storage._shape)
+
+
+@catch_exceptions
+def _aml_storage_reshape(this, shape_ptr, shape_count):
+    storage = _object_from_ptr(this)
+
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
+
+    storage.array = storage.array.reshape(shape)
+    storage._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
+
+
+@catch_exceptions
+def _aml_storage_swap_axes(this, axis_1, axis_2):
+    storage = _object_from_ptr(this)
+    storage.array = storage.array.swapaxes(axis_1, axis_2)
 
     shape = storage.array.shape
-
-    n_samples[0] = ctypes.c_uint64(shape[0])
-    n_components[0] = ctypes.c_uint64(shape[1])
-    n_features[0] = ctypes.c_uint64(shape[2])
+    storage._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
 
 
 @catch_exceptions
-def _aml_storage_reshape(this, n_samples, n_components, n_features):
-    storage = _object_from_ptr(this)
-    storage.array = storage.array.reshape((n_samples, n_components, n_features))
-
-
-@catch_exceptions
-def _aml_storage_create(this, n_samples, n_components, n_features, data_storage):
+def _aml_storage_create(this, shape_ptr, shape_count, data_storage):
     storage = _object_from_ptr(this)
 
-    shape = (n_samples, n_components, n_features)
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
     dtype = storage.array.dtype
 
     if _is_numpy_array(storage.array):
@@ -185,7 +200,7 @@ def _aml_storage_create(this, n_samples, n_components, n_features, data_storage)
     array = AmlData(array)
     storage._children.append(array)
 
-    data_storage[0] = array._storage
+    data_storage[0] = array.aml_array
 
 
 @catch_exceptions
@@ -198,7 +213,7 @@ def _aml_storage_copy(this, data_storage):
         array = storage.array.clone()
 
     array = AmlData(array)
-    data_storage[0] = array._storage
+    data_storage[0] = array.aml_array
 
 
 @catch_exceptions
@@ -213,13 +228,4 @@ def _aml_storage_move_sample(
 ):
     other = _object_from_ptr(other).array
     output = _object_from_ptr(this).array
-    output[sample, :, feature_start:feature_stop] = other[other_sample, :, :]
-
-
-@catch_exceptions
-def _aml_storage_move_component(
-    this, component, feature_start, feature_stop, other, other_component
-):
-    other = _object_from_ptr(other).array
-    output = _object_from_ptr(this).array
-    output[:, component, feature_start:feature_stop] = other[:, other_component, :]
+    output[sample, ..., feature_start:feature_stop] = other[other_sample, ..., :]

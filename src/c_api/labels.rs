@@ -4,26 +4,12 @@ use std::ffi::CStr;
 use crate::{LabelValue, Labels, LabelsBuilder, Error};
 use super::status::{aml_status_t, catch_unwind};
 
-#[repr(C)]
-#[allow(non_camel_case_types)]
-/// The different kinds of labels that can exist on a `aml_block_t`
-pub enum aml_label_kind {
-    /// The sample labels, describing different samples in the data
-    AML_SAMPLE_LABELS = 0,
-    /// The component labels, describing the components of vectorial or
-    /// tensorial elements of the data
-    AML_COMPONENTS_LABELS = 1,
-    /// The feature labels, describing the features of the data
-    AML_FEATURE_LABELS = 2,
-}
-
 /// A set of labels used to carry metadata associated with a descriptor.
 ///
-/// This is similar to a list of `n_entries` named tuples, but stored as a 2D
-/// array of shape `(n_entries, n_variables)`, with a set of names associated
-/// with the columns of this array (often called *variables*). Each row/entry in
-/// this array is unique, and they are often (but not always) sorted in
-/// lexicographic order.
+/// This is similar to a list of `count` named tuples, but stored as a 2D array
+/// of shape `(count, size)`, with a set of names associated with the columns of
+/// this array (often called *variables*). Each row/entry in this array is
+/// unique, and they are often (but not always) sorted in lexicographic order.
 #[repr(C)]
 pub struct aml_labels_t {
     /// internal: pointer to the rust `Labels` struct if any, null otherwise
@@ -43,10 +29,10 @@ pub struct aml_labels_t {
     pub count: usize,
 }
 
-impl std::convert::TryFrom<aml_labels_t> for Labels {
+impl std::convert::TryFrom<&aml_labels_t> for Labels {
     type Error = Error;
 
-    fn try_from(labels: aml_labels_t) -> Result<Labels, Self::Error> {
+    fn try_from(labels: &aml_labels_t) -> Result<Labels, Self::Error> {
         if labels.names.is_null() || labels.values.is_null() {
             todo!()
         }
@@ -131,7 +117,9 @@ pub unsafe extern fn aml_labels_position(
 ) -> aml_status_t {
     catch_unwind(|| {
         if labels.labels_ptr.is_null() {
-            return Err(Error::InvalidParameter("TODO".into()))
+            return Err(Error::InvalidParameter(
+                "these labels do not support calling aml_labels_position".into()
+            ))
         }
 
         let labels = labels.labels_ptr.cast::<Labels>();

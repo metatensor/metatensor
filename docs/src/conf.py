@@ -55,7 +55,6 @@ needs_sphinx = "4.0.0"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    # "sphinx_autodoc_typehints",
     "breathe",
 ]
 

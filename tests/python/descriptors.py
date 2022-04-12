@@ -18,7 +18,7 @@ class TestDescriptors(unittest.TestCase):
         descriptor = test_descriptor()
 
         self.assertEqual(descriptor.sample_names, ("samples",))
-        self.assertEqual(descriptor.component_names, ("components",))
+        self.assertEqual(descriptor.component_names, [("components",)])
         self.assertEqual(descriptor.feature_names, ("features",))
 
     def test_get_block(self):

@@ -76,32 +76,41 @@ pub struct aml_array_t {
         origin: *mut aml_data_origin_t
     ) -> aml_status_t>,
 
-    /// Get the shape of the array managed by this `aml_array_t`
+    /// Get the shape of the array managed by this `aml_array_t` in the `*shape`
+    /// pointer, and the number of dimension (size of the `*shape` array) in
+    /// `*shape_count`.
     shape: Option<unsafe extern fn(
         array: *const c_void,
-        n_samples: *mut u64,
-        n_components: *mut u64,
-        n_features: *mut u64,
+        shape: *mut *const usize,
+        shape_count: *mut usize,
     ) -> aml_status_t>,
 
-    /// Change the shape of the array managed by this `aml_array_t` to
-    /// `(n_samples, n_components, n_features)`
+    /// Change the shape of the array managed by this `aml_array_t` to the given
+    /// `shape`. `shape_count` must contain the number of elements in the
+    /// `shape` array
     reshape: Option<unsafe extern fn(
         array: *mut c_void,
-        n_samples: u64,
-        n_components: u64,
-        n_features: u64,
+        shape: *const usize,
+        shape_count: usize,
+    ) -> aml_status_t>,
+
+    /// Swap the axes `axis_1` and `axis_2` in this `array`.
+    swap_axes: Option<unsafe extern fn(
+        array: *mut c_void,
+        axis_1: usize,
+        axis_2: usize,
     ) -> aml_status_t>,
 
     /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `(n_samples, n_components,
-    /// n_features)` shape; and store it in `new_array`. The new array should be
-    /// filled with zeros.
+    /// data location, etc.) and the requested `shape`; and store it in
+    /// `new_array`. The number of elements in the `shape` array should be given
+    /// in `shape_count`.
+    ///
+    /// The new array should be filled with zeros.
     create: Option<unsafe extern fn(
         array: *const c_void,
-        n_samples: u64,
-        n_components: u64,
-        n_features: u64,
+        shape: *const usize,
+        shape_count: usize,
         new_array: *mut aml_array_t,
     ) -> aml_status_t>,
 
@@ -111,12 +120,16 @@ pub struct aml_array_t {
         new_array: *mut aml_array_t,
     ) -> aml_status_t>,
 
+    /// Remove this array and free the associated memory. This function can be
+    /// set to `NULL` is there is no memory management to do.
+    destroy: Option<unsafe extern fn(array: *mut c_void)>,
+
     /// Set entries in this array taking data from the `other_array`. This array
     /// is guaranteed to be created by calling `aml_array_t::create` with one of
     /// the arrays in the same block or descriptor as this `array`.
     ///
-    /// This function should copy data from `other_array[other_sample, :, :]` to
-    /// `array[sample, :, feature_start:feature_end]`. All indexes are 0-based.
+    /// This function should copy data from `other_array[other_sample, ..., :]` to
+    /// `array[sample, ..., feature_start:feature_end]`. All indexes are 0-based.
     move_sample: Option<unsafe extern fn(
         array: *mut c_void,
         sample: u64,
@@ -125,26 +138,6 @@ pub struct aml_array_t {
         other_array: *const c_void,
         other_sample: u64
     ) -> aml_status_t>,
-
-    /// Set entries in this array taking data from the `other_array`. This array
-    /// is guaranteed to be created by calling `aml_array_t::create` with one of
-    /// the arrays in the same block or descriptor as this `array`.
-    ///
-    /// This function should copy data from `other_array[:, other_component, :]`
-    /// to `array[:, component, feature_start:feature_end]`. All indexes are
-    /// 0-based.
-    move_component: Option<unsafe extern fn(
-        array: *mut c_void,
-        component: u64,
-        feature_start: u64,
-        feature_end: u64,
-        other_array: *const c_void,
-        other_component: u64
-    ) -> aml_status_t>,
-
-    /// Remove this array and free the associated memory. This function can be
-    /// set to `NULL` is there is no memory management to do.
-    destroy: Option<unsafe extern fn(array: *mut c_void)>,
 }
 
 impl std::fmt::Debug for aml_array_t {
@@ -198,11 +191,11 @@ impl aml_array_t {
             origin: Some(rust_data_origin),
             shape: Some(rust_data_shape),
             reshape: Some(rust_data_reshape),
+            swap_axes: Some(rust_data_swap_axes),
             create: Some(rust_data_create),
             copy: Some(rust_data_copy),
             destroy: Some(rust_data_destroy),
             move_sample: Some(rust_data_move_sample),
-            move_component: Some(rust_data_move_component),
         }
     }
 
@@ -215,11 +208,11 @@ impl aml_array_t {
             origin: self.origin,
             shape: self.shape,
             reshape: self.reshape,
+            swap_axes: self.swap_axes,
             create: self.create,
             copy: self.copy,
             destroy: None,
             move_sample: self.move_sample,
-            move_component: self.move_component,
         }
     }
 
@@ -230,11 +223,11 @@ impl aml_array_t {
             origin: None,
             shape: None,
             reshape: None,
+            swap_axes: None,
             create: None,
             copy: None,
             destroy: None,
             move_sample: None,
-            move_component: None,
         }
     }
 
@@ -258,19 +251,17 @@ impl aml_array_t {
 
     /// Get the shape of this array
     #[allow(clippy::cast_possible_truncation)]
-    pub fn shape(&self) -> Result<(usize, usize, usize), Error> {
+    pub fn shape(&self) -> Result<&[usize], Error> {
         let function = self.shape.expect("aml_array_t.shape function is NULL");
 
-        let mut n_samples = 0;
-        let mut n_components = 0;
-        let mut n_features = 0;
+        let mut shape = std::ptr::null();
+        let mut shape_count: usize = 0;
 
         let status = unsafe {
             function(
                 self.ptr,
-                &mut n_samples,
-                &mut n_components,
-                &mut n_features,
+                &mut shape,
+                &mut shape_count,
             )
         };
 
@@ -280,19 +271,22 @@ impl aml_array_t {
             });
         }
 
-        return Ok((n_samples as usize, n_components as usize, n_features as usize));
+        let shape = unsafe {
+            std::slice::from_raw_parts(shape, shape_count)
+        };
+
+        return Ok(shape);
     }
 
     /// Set the shape of this array to the given new `shape`
-    pub fn reshape(&mut self, shape: (usize, usize, usize)) -> Result<(), Error> {
+    pub fn reshape(&mut self, shape: &[usize]) -> Result<(), Error> {
         let function = self.reshape.expect("aml_array_t.reshape function is NULL");
 
         let status = unsafe {
             function(
                 self.ptr,
-                shape.0 as u64,
-                shape.1 as u64,
-                shape.2 as u64,
+                shape.as_ptr(),
+                shape.len(),
             )
         };
 
@@ -305,17 +299,37 @@ impl aml_array_t {
         return Ok(());
     }
 
+    /// Swap the axes `axis_1` and `axis_2` in the dimensions of this array.
+    pub fn swap_axes(&mut self, axis_1: usize, axis_2: usize) -> Result<(), Error> {
+        let function = self.swap_axes.expect("aml_array_t.swap_axes function is NULL");
+
+        let status = unsafe {
+            function(
+                self.ptr,
+                axis_1,
+                axis_2,
+            )
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling aml_array_t.swap_axes failed".into()
+            });
+        }
+
+        return Ok(());
+    }
+
     /// Create a new array with the same settings as this one and the given `shape`
-    pub fn create(&self, shape: (usize, usize, usize)) -> Result<aml_array_t, Error> {
+    pub fn create(&self, shape: &[usize]) -> Result<aml_array_t, Error> {
         let function = self.create.expect("aml_array_t.create function is NULL");
 
         let mut data_storage = aml_array_t::null();
         let status = unsafe {
             function(
                 self.ptr,
-                shape.0 as u64,
-                shape.1 as u64,
-                shape.2 as u64,
+                shape.as_ptr(),
+                shape.len(),
                 &mut data_storage
             )
         };
@@ -333,8 +347,8 @@ impl aml_array_t {
     /// MUST have been created by calling `aml_array_t.create()` with one of the
     /// other arrays in the same block or descriptor.
     ///
-    /// This function will copy data from `other_array[other_sample, :, :]` to
-    /// `array[sample, :, feature_start:feature_end]`.
+    /// This function will copy data from `other_array[other_sample, ..., :]` to
+    /// `array[sample, ..., feature_start:feature_end]`.
     pub fn move_sample(
         &mut self,
         sample: usize,
@@ -364,45 +378,10 @@ impl aml_array_t {
         return Ok(());
     }
 
-    /// Set entries in this array taking data from the `other` array. This array
-    /// MUST have been created by calling `aml_array_t.create()` with one of the
-    /// other arrays in the same block or descriptor.
-    ///
-    /// This function will copy data from `other_array[:, other_component, :]`
-    /// to `array[:, component, feature_start:feature_end]`.
-    pub fn move_component(
-        &mut self,
-        component: usize,
-        features: std::ops::Range<usize>,
-        other: &aml_array_t,
-        other_component: usize
-    ) -> Result<(), Error> {
-        let function = self.move_component.expect("aml_array_t.move_component function is NULL");
-
-        let status = unsafe {
-            function(
-                self.ptr,
-                component as u64,
-                features.start as u64,
-                features.end as u64,
-                other.ptr,
-                other_component as u64,
-            )
-        };
-
-        if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling aml_array_t.move_component failed".into()
-            });
-        }
-
-        return Ok(());
-    }
-
-    /// Get the data in this `aml_array_t` as a `ndarray::Array3`. This function
-    /// will panic if the data in this `aml_array_t` is not a `ndarray::Array3`.
+    /// Get the data in this `aml_array_t` as a `ndarray::ArrayD`. This function
+    /// will panic if the data in this `aml_array_t` is not a `ndarray::ArrayD`.
     #[cfg(feature = "ndarray")]
-    pub fn as_array(&self) -> &ndarray::Array3<f64> {
+    pub fn as_array(&self) -> &ndarray::ArrayD<f64> {
         assert_eq!(
             self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
             "this array was not create by rust ndarray"
@@ -436,12 +415,13 @@ pub trait DataStorage: std::any::Any{
 
     fn origin(&self) -> DataOrigin;
 
-    fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage>;
+    fn create(&self, shape: &[usize]) -> Box<dyn DataStorage>;
 
     fn copy(&self) -> Box<dyn DataStorage>;
 
-    fn shape(&self) -> (usize, usize, usize);
-    fn reshape(&mut self, shape: (usize, usize, usize));
+    fn shape(&self) -> &[usize];
+    fn reshape(&mut self, shape: &[usize]);
+    fn swap_axes(&mut self, axis_1: usize, axis_2: usize);
 
     fn move_sample(
         &mut self,
@@ -449,14 +429,6 @@ pub trait DataStorage: std::any::Any{
         features: Range<usize>,
         other: &dyn DataStorage,
         sample_other: usize
-    );
-
-    fn move_component(
-        &mut self,
-        component: usize,
-        features: Range<usize>,
-        other: &dyn DataStorage,
-        component_other: usize
     );
 }
 
@@ -477,18 +449,16 @@ unsafe extern fn rust_data_origin(
 /// Implementation of `aml_array_t.shape` using `Box<dyn DataStorage>`
 unsafe extern fn rust_data_shape(
     data: *const c_void,
-    n_samples: *mut u64,
-    n_components: *mut u64,
-    n_features: *mut u64,
+    shape: *mut *const usize,
+    shape_count: *mut usize,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(data, n_samples, n_components, n_features);
+        check_pointers!(data, shape, shape_count);
         let data = data.cast::<Box<dyn DataStorage>>();
-        let shape = (*data).shape();
+        let rust_shape = (*data).shape();
 
-        *n_samples = shape.0 as u64;
-        *n_components = shape.1 as u64;
-        *n_features = shape.2 as u64;
+        *shape = rust_shape.as_ptr();
+        *shape_count = rust_shape.len();
 
         Ok(())
     })
@@ -498,22 +468,29 @@ unsafe extern fn rust_data_shape(
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_reshape(
     data: *mut c_void,
-    n_samples: u64,
-    n_components: u64,
-    n_features: u64,
+    shape: *const usize,
+    shape_count: usize,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(data);
         let data = data.cast::<Box<dyn DataStorage>>();
-
-        let shape = (
-            n_samples as usize,
-            n_components as usize,
-            n_features as usize,
-        );
-
+        let shape = std::slice::from_raw_parts(shape, shape_count);
         (*data).reshape(shape);
+        Ok(())
+    })
+}
 
+/// Implementation of `aml_array_t.swap_axes` using `Box<dyn DataStorage>`
+#[allow(clippy::cast_possible_truncation)]
+unsafe extern fn rust_data_swap_axes(
+    data: *mut c_void,
+    axis_1: usize,
+    axis_2: usize,
+) -> aml_status_t {
+    catch_unwind(|| {
+        check_pointers!(data);
+        let data = data.cast::<Box<dyn DataStorage>>();
+        (*data).swap_axes(axis_1, axis_2);
         Ok(())
     })
 }
@@ -522,21 +499,15 @@ unsafe extern fn rust_data_reshape(
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_create(
     data: *const c_void,
-    n_samples: u64,
-    n_components: u64,
-    n_features: u64,
+    shape: *const usize,
+    shape_count: usize,
     data_storage: *mut aml_array_t,
 ) -> aml_status_t {
     catch_unwind(|| {
         check_pointers!(data, data_storage);
         let data = data.cast::<Box<dyn DataStorage>>();
 
-        let shape = (
-            n_samples as usize,
-            n_components as usize,
-            n_features as usize,
-        );
-
+        let shape = std::slice::from_raw_parts(shape, shape_count);
         let new_data = (*data).create(shape);
 
         *data_storage = aml_array_t::new(new_data);
@@ -597,32 +568,6 @@ unsafe extern fn rust_data_move_sample(
     })
 }
 
-/// Implementation of `aml_array_t.move_component` using `Box<dyn DataStorage>`
-#[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_move_component(
-    data: *mut c_void,
-    component: u64,
-    feature_start: u64,
-    feature_end: u64,
-    other: *const c_void,
-    other_component: u64
-) -> aml_status_t {
-    catch_unwind(|| {
-        check_pointers!(data, other);
-        let data = data.cast::<Box<dyn DataStorage>>();
-        let other = other.cast::<Box<dyn DataStorage>>();
-
-        (*data).move_component(
-            component as usize,
-            feature_start as usize .. feature_end as usize,
-            &**other,
-            other_component as usize,
-        );
-
-        Ok(())
-    })
-}
-
 /******************************************************************************/
 
 #[cfg(feature = "ndarray")]
@@ -632,7 +577,7 @@ static NDARRAY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
 
 
 #[cfg(feature = "ndarray")]
-impl DataStorage for ndarray::Array3<f64> {
+impl DataStorage for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -645,23 +590,26 @@ impl DataStorage for ndarray::Array3<f64> {
         return *NDARRAY_DATA_ORIGIN;
     }
 
-    fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage> {
-        return Box::new(ndarray::Array3::from_elem(shape, 0.0));
+    fn create(&self, shape: &[usize]) -> Box<dyn DataStorage> {
+        return Box::new(ndarray::Array::from_elem(shape, 0.0));
     }
 
     fn copy(&self) -> Box<dyn DataStorage> {
         return Box::new(self.clone());
     }
 
-    fn shape(&self) -> (usize, usize, usize) {
-        let shape = self.shape();
-        return (shape[0], shape[1], shape[2]);
+    fn shape(&self) -> &[usize] {
+        return self.shape();
     }
 
-    fn reshape(&mut self, shape: (usize, usize, usize)) {
+    fn reshape(&mut self, shape: &[usize]) {
         let mut array = std::mem::take(self);
-        array = array.into_shape(shape).expect("invalid shape");
+        array = array.to_shape(shape).expect("invalid shape").to_owned();
         std::mem::swap(self, &mut array);
+    }
+
+    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
+        self.swap_axes(axis_1, axis_2);
     }
 
     fn move_sample(
@@ -671,27 +619,17 @@ impl DataStorage for ndarray::Array3<f64> {
         other: &dyn DataStorage,
         sample_other: usize
     ) {
-        use ndarray::s;
+        use ndarray::{Axis, Slice};
 
-        let other = other.as_any().downcast_ref::<ndarray::Array3<f64>>().expect("other must be a ndarray");
+        let other = other.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("other must be a ndarray");
+        let value = other.index_axis(Axis(0), sample_other);
 
-        let value = other.slice(s![sample_other, .., ..]);
-        self.slice_mut(s![sample, .., features]).assign(&value);
-    }
+        // -2 since we also remove one axis with `index_axis_mut`
+        let feature_axis = self.shape().len() - 2;
+        let mut output = self.index_axis_mut(Axis(0), sample);
+        let mut output = output.slice_axis_mut(Axis(feature_axis), Slice::from(features));
 
-    fn move_component(
-        &mut self,
-        component: usize,
-        features: Range<usize>,
-        other: &dyn DataStorage,
-        component_other: usize
-    ) {
-        use ndarray::s;
-
-        let other = other.as_any().downcast_ref::<ndarray::Array3<f64>>().expect("other must be a ndarray");
-
-        let value = other.slice(s![.., component_other, ..]);
-        self.slice_mut(s![.., component, features]).assign(&value);
+        output.assign(&value);
     }
 }
 
@@ -711,11 +649,11 @@ mod tests {
     /// An implementation of the `DataStorage` trait without any data. This only
     /// tracks the shape of the array.
     pub struct TestArray {
-        shape: (usize, usize, usize),
+        shape: Vec<usize>,
     }
 
     impl TestArray {
-        pub fn new(shape: (usize, usize, usize)) -> TestArray {
+        pub fn new(shape: Vec<usize>) -> TestArray {
             TestArray { shape }
         }
     }
@@ -733,33 +671,27 @@ mod tests {
             *DUMMY_DATA_ORIGIN
         }
 
-        fn create(&self, shape: (usize, usize, usize)) -> Box<dyn DataStorage> {
-            Box::new(TestArray { shape: shape })
+        fn create(&self, shape: &[usize]) -> Box<dyn DataStorage> {
+            Box::new(TestArray { shape: shape.to_vec() })
         }
 
         fn copy(&self) -> Box<dyn DataStorage> {
-            Box::new(TestArray { shape: self.shape })
+            Box::new(TestArray { shape: self.shape.clone() })
         }
 
-        fn shape(&self) -> (usize, usize, usize) {
-            self.shape
+        fn shape(&self) -> &[usize] {
+            &self.shape
         }
 
-        fn reshape(&mut self, shape: (usize, usize, usize)) {
-            self.shape = shape;
+        fn reshape(&mut self, shape: &[usize]) {
+            self.shape = shape.to_vec();
+        }
+
+        fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
+            self.shape.swap(axis_1, axis_2);
         }
 
         fn move_sample(
-            &mut self,
-            _sample: usize,
-            _features: std::ops::Range<usize>,
-            _other: &dyn DataStorage,
-            _sample_other: usize
-        ) {
-            unimplemented!()
-        }
-
-        fn move_component(
             &mut self,
             _sample: usize,
             _features: std::ops::Range<usize>,
@@ -781,58 +713,62 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data = aml_array_t::new(Box::new(TestArray::new((3, 4, 5))));
+        let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 5])));
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
-            "aml_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some((3, 4, 5)) }}",
+            "aml_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some([3, 4, 5]) }}",
             data.ptr
         ));
     }
 
     #[cfg(feature = "ndarray")]
     mod ndarray {
-        use ndarray::{Array3, array};
+        use ndarray::ArrayD;
 
         use crate::{aml_array_t, get_data_origin};
 
         #[test]
         fn shape() {
-            let mut data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
+            let mut data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0)));
 
-            assert_eq!(data.shape().unwrap(), (3, 4, 2));
-            data.reshape((1, 12, 2)).unwrap();
-            assert_eq!(data.shape().unwrap(), (1, 12, 2));
-            assert_eq!(data.as_array(), Array3::from_elem((1, 12, 2), 1.0));
+            assert_eq!(data.shape().unwrap(), [3, 4, 2]);
+            data.reshape(&[12, 2]).unwrap();
+            assert_eq!(data.shape().unwrap(), [12, 2]);
+            assert_eq!(data.as_array(), ArrayD::from_elem(vec![12, 2], 1.0));
+
+            data.swap_axes(0, 1).unwrap();
+            assert_eq!(data.shape().unwrap(), [2, 12]);
         }
 
         #[test]
         fn create() {
-            let data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
+            let data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 2], 1.0)));
 
             assert_eq!(get_data_origin(data.origin().unwrap()), "rust.ndarray");
-            assert_eq!(data.as_array(), Array3::from_elem((3, 4, 2), 1.0));
+            assert_eq!(data.as_array(), ArrayD::from_elem(vec![4, 2], 1.0));
 
-            let other = data.create((1, 12, 2)).unwrap();
-            assert_eq!(other.shape().unwrap(), (1, 12, 2));
+            let other = data.create(&[5, 3, 7, 12]).unwrap();
+            assert_eq!(other.shape().unwrap(), [5, 3, 7, 12]);
             assert_eq!(get_data_origin(other.origin().unwrap()), "rust.ndarray");
-            assert_eq!(other.as_array(), Array3::from_elem((1, 12, 2), 0.0));
+            assert_eq!(other.as_array(), ArrayD::from_elem(vec![5, 3, 7, 12], 0.0));
         }
 
         #[test]
-        fn set_from() {
-            let data = aml_array_t::new(Box::new(Array3::from_elem((3, 4, 2), 1.0)));
+        fn move_sample() {
+            let data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)));
 
-            let mut other = data.create((1, 4, 6)).unwrap();
-            assert_eq!(other.as_array(), Array3::from_elem((1, 4, 6), 0.0));
+            let mut other = data.create(&[1, 2, 2, 8]).unwrap();
+            assert_eq!(other.as_array(), ArrayD::from_elem(vec![1, 2, 2, 8], 0.0));
 
-            other.move_sample(0, 2..4, &data, 1).unwrap();
-            assert_eq!(other.as_array(), array![[
-                [0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 1.0, 0.0, 0.0]
-            ]]);
+            other.move_sample(0, 2..6, &data, 1).unwrap();
+            let expected = ArrayD::from_shape_vec(vec![1, 2, 2, 8], vec![
+                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
+            ]).unwrap();
+            assert_eq!(other.as_array(), expected);
         }
     }
 }

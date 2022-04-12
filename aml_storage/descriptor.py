@@ -66,7 +66,9 @@ class Descriptor:
         self.sample_names: List[str] = first_block.samples.names
         """Names of the sample labels for all blocks in this descriptor"""
 
-        self.component_names: List[str] = first_block.components.names
+        self.component_names: List[List[str]] = [
+            c.names for c in first_block.components
+        ]
         """Names of the component labels for all blocks in this descriptor"""
 
         self.feature_names: List[str] = first_block.features.names

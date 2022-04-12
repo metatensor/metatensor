@@ -53,7 +53,7 @@ pub unsafe extern fn aml_descriptor(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let sparse = Labels::try_from(sparse)?;
+        let sparse = Labels::try_from(&sparse)?;
 
         let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count as usize);
         // check for uniqueness of the pointers: we don't want to move out
@@ -196,7 +196,7 @@ pub unsafe extern fn aml_descriptor_block_selection(
     catch_unwind(|| {
         check_pointers!(descriptor, block);
 
-        let selection = Labels::try_from(selection)?;
+        let selection = Labels::try_from(&selection)?;
         let rust_block = (*descriptor).block(&selection)?;
         (*block) = (rust_block as *const Block).cast();
 
