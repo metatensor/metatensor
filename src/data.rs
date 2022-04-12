@@ -129,12 +129,12 @@ pub struct aml_array_t {
     /// the arrays in the same block or descriptor as this `array`.
     ///
     /// This function should copy data from `other_array[other_sample, ..., :]` to
-    /// `array[sample, ..., feature_start:feature_end]`. All indexes are 0-based.
+    /// `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
     move_sample: Option<unsafe extern fn(
         array: *mut c_void,
         sample: u64,
-        feature_start: u64,
-        feature_end: u64,
+        property_start: u64,
+        property_end: u64,
         other_array: *const c_void,
         other_sample: u64
     ) -> aml_status_t>,
@@ -348,11 +348,11 @@ impl aml_array_t {
     /// other arrays in the same block or descriptor.
     ///
     /// This function will copy data from `other_array[other_sample, ..., :]` to
-    /// `array[sample, ..., feature_start:feature_end]`.
+    /// `array[sample, ..., property_start:property_end]`.
     pub fn move_sample(
         &mut self,
         sample: usize,
-        features: std::ops::Range<usize>,
+        properties: std::ops::Range<usize>,
         other: &aml_array_t,
         other_sample: usize
     ) -> Result<(), Error> {
@@ -362,8 +362,8 @@ impl aml_array_t {
             function(
                 self.ptr,
                 sample as u64,
-                features.start as u64,
-                features.end as u64,
+                properties.start as u64,
+                properties.end as u64,
                 other.ptr,
                 other_sample as u64,
             )
@@ -426,7 +426,7 @@ pub trait DataStorage: std::any::Any{
     fn move_sample(
         &mut self,
         sample: usize,
-        features: Range<usize>,
+        properties: Range<usize>,
         other: &dyn DataStorage,
         sample_other: usize
     );
@@ -547,8 +547,8 @@ unsafe extern fn rust_data_destroy(
 unsafe extern fn rust_data_move_sample(
     data: *mut c_void,
     sample: u64,
-    feature_start: u64,
-    feature_end: u64,
+    property_start: u64,
+    property_end: u64,
     other: *const c_void,
     other_sample: u64
 ) -> aml_status_t {
@@ -559,7 +559,7 @@ unsafe extern fn rust_data_move_sample(
 
         (*data).move_sample(
             sample as usize,
-            feature_start as usize .. feature_end as usize,
+            property_start as usize .. property_end as usize,
             &**other,
             other_sample as usize,
         );
@@ -615,7 +615,7 @@ impl DataStorage for ndarray::ArrayD<f64> {
     fn move_sample(
         &mut self,
         sample: usize,
-        features: Range<usize>,
+        properties: Range<usize>,
         other: &dyn DataStorage,
         sample_other: usize
     ) {
@@ -625,9 +625,9 @@ impl DataStorage for ndarray::ArrayD<f64> {
         let value = other.index_axis(Axis(0), sample_other);
 
         // -2 since we also remove one axis with `index_axis_mut`
-        let feature_axis = self.shape().len() - 2;
+        let property_axis = self.shape().len() - 2;
         let mut output = self.index_axis_mut(Axis(0), sample);
-        let mut output = output.slice_axis_mut(Axis(feature_axis), Slice::from(features));
+        let mut output = output.slice_axis_mut(Axis(property_axis), Slice::from(properties));
 
         output.assign(&value);
     }
@@ -694,7 +694,7 @@ mod tests {
         fn move_sample(
             &mut self,
             _sample: usize,
-            _features: std::ops::Range<usize>,
+            _properties: std::ops::Range<usize>,
             _other: &dyn DataStorage,
             _sample_other: usize
         ) {

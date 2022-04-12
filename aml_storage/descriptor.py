@@ -27,7 +27,7 @@ class Descriptor:
             ...
 
     A descriptor provides functions to move some of these sparse labels to the
-    samples or features labels of the blocks, moving from a sparse
+    samples or properties labels of the blocks, moving from a sparse
     representation of the data to a dense one.
     """
 
@@ -71,8 +71,8 @@ class Descriptor:
         ]
         """Names of the component labels for all blocks in this descriptor"""
 
-        self.feature_names: List[str] = first_block.features.names
-        """Names of the feature labels for all blocks in this descriptor"""
+        self.property_names: List[str] = first_block.properties.names
+        """Names of the property labels for all blocks in this descriptor"""
 
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr"):
@@ -163,22 +163,22 @@ class Descriptor:
         )
         return Block._from_ptr(block, parent=self, owning=False)
 
-    def sparse_to_features(self, variables: Union[str, List[str]]):
+    def sparse_to_properties(self, variables: Union[str, List[str]]):
         """
-        Move the given variables from the sparse labels to the feature labels of
+        Move the given variables from the sparse labels to the property labels of
         the blocks.
 
         The current blocks will be merged together according to the sparse
         labels remaining after removing ``variables``. The resulting merged
-        blocks will have ``variables`` as the first feature variables, followed
-        by the current features. The new sample labels will contains all of the
+        blocks will have ``variables`` as the first property variables, followed
+        by the current properties. The new sample labels will contains all of the
         merged blocks sample labels, re-ordered to keep them lexicographically
         sorted.
 
-        :param variables: name of the sparse variables to move to the features
+        :param variables: name of the sparse variables to move to the properties
         """
         c_variables = _list_or_str_to_array_c_char(variables)
-        self._lib.aml_descriptor_sparse_to_features(
+        self._lib.aml_descriptor_sparse_to_properties(
             self._ptr, c_variables, c_variables._length_
         )
 
@@ -193,7 +193,7 @@ class Descriptor:
         the current samples.
 
         Currently, this function only works if all merged block have the same
-        feature labels.
+        property labels.
 
         :param variables: name of the sparse variables to move to the samples
         """
@@ -203,16 +203,16 @@ class Descriptor:
             self._ptr, c_variables, c_variables._length_
         )
 
-    def components_to_features(self, variables: Union[str, List[str]]):
+    def components_to_properties(self, variables: Union[str, List[str]]):
         """
-        Move the given variables from the component labels to the feature labels
+        Move the given variables from the component labels to the property labels
         for each block.
 
-        :param variables: name of the component variables to move to the features
+        :param variables: name of the component variables to move to the properties
         """
         c_variables = _list_or_str_to_array_c_char(variables)
 
-        self._lib.aml_descriptor_components_to_features(
+        self._lib.aml_descriptor_components_to_properties(
             self._ptr, c_variables, c_variables._length_
         )
 

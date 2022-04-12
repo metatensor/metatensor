@@ -40,7 +40,7 @@
  *
  * A block can also contain gradients of the values with respect to a variety
  * of parameters. In this case, each gradient has a separate set of samples,
- * but share the same components and feature labels as the values.
+ * but share the same components and property labels as the values.
  */
 typedef struct aml_block_t aml_block_t;
 
@@ -164,9 +164,9 @@ typedef struct aml_array_t {
    * the arrays in the same block or descriptor as this `array`.
    *
    * This function should copy data from `other_array[other_sample, ..., :]` to
-   * `array[sample, ..., feature_start:feature_end]`. All indexes are 0-based.
+   * `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
    */
-  aml_status_t (*move_sample)(void *array, uint64_t sample, uint64_t feature_start, uint64_t feature_end, const void *other_array, uint64_t other_sample);
+  aml_status_t (*move_sample)(void *array, uint64_t sample, uint64_t property_start, uint64_t property_end, const void *other_array, uint64_t other_sample);
 } aml_array_t;
 
 #ifdef __cplusplus
@@ -229,7 +229,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
 
 /**
  * Create a new `aml_block_t` with the given `data` and `samples`, `components`
- * and `features` labels.
+ * and `properties` labels.
  *
  * The memory allocated by this function and the blocks should be released
  * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
@@ -241,7 +241,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
  * @param components array of component labels corresponding to intermediary
  *                   dimensions of the data
  * @param components_count number of entries in the `components` array
- * @param features feature labels corresponding to the last dimension of the data
+ * @param properties property labels corresponding to the last dimension of the data
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `aml_last_error()`
@@ -251,7 +251,7 @@ struct aml_block_t *aml_block(struct aml_array_t data,
                               struct aml_labels_t samples,
                               const struct aml_labels_t *components,
                               uintptr_t components_count,
-                              struct aml_labels_t features);
+                              struct aml_labels_t properties);
 
 /**
  * Free the memory associated with a `block` previously created with
@@ -337,7 +337,7 @@ aml_status_t aml_block_data(const struct aml_block_t *block,
  *                  This is usually the parameter used when taking derivatives
  *                  (e.g. `"positions"`, `"cell"`, etc.)
  * @param samples sample labels for the gradient array. The components and
- *                feature labels are supposed to match the values in this block
+ *                property labels are supposed to match the values in this block
  * @param components array of component labels corresponding to intermediary
  *                   dimensions of the data
  * @param components_count number of entries in the `components` array
@@ -467,48 +467,48 @@ aml_status_t aml_descriptor_block_selection(const struct aml_descriptor_t *descr
                                             struct aml_labels_t selection);
 
 /**
- * Move the given variables from the sparse labels to the feature labels of the
+ * Move the given variables from the sparse labels to the property labels of the
  * blocks.
  *
  * The current blocks will be merged together according to the sparse labels
  * remaining after removing `variables`. The resulting merged blocks will have
- * `variables` as the first feature variables, followed by the current
- * features. The new sample labels will contains all of the merged blocks
+ * `variables` as the first property variables, followed by the current
+ * properties. The new sample labels will contains all of the merged blocks
  * sample labels, re-ordered to keep them lexicographically sorted.
  *
  * `variables` must be an array of `variables_count` NULL-terminated strings,
  * encoded as UTF-8.
  *
  * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the features
+ * @param variables name of the sparse variables to move to the properties
  * @param variables_count number of entries in the `variables` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_sparse_to_features(struct aml_descriptor_t *descriptor,
-                                               const char *const *variables,
-                                               uint64_t variables_count);
+aml_status_t aml_descriptor_sparse_to_properties(struct aml_descriptor_t *descriptor,
+                                                 const char *const *variables,
+                                                 uint64_t variables_count);
 
 /**
- * Move the given variables from the component labels to the feature labels for
+ * Move the given variables from the component labels to the property labels for
  * each block in this descriptor.
  *
  * `variables` must be an array of `variables_count` NULL-terminated strings,
  * encoded as UTF-8.
  *
  * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the features
+ * @param variables name of the sparse variables to move to the properties
  * @param variables_count number of entries in the `variables` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_components_to_features(struct aml_descriptor_t *descriptor,
-                                                   const char *const *variables,
-                                                   uint64_t variables_count);
+aml_status_t aml_descriptor_components_to_properties(struct aml_descriptor_t *descriptor,
+                                                     const char *const *variables,
+                                                     uint64_t variables_count);
 
 /**
  * Move the given variables from the sparse labels to the sample labels of the

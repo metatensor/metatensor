@@ -91,7 +91,7 @@ class TestAmlDataMixin:
                     [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
                     [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
                 ],
-                # second sample changed for features 3:7
+                # second sample changed for properties 3:7
                 [
                     [4.0, 4.0, 4.0, 2.0, 2.0, 2.0, 2.0, 4.0],
                     [4.0, 4.0, 4.0, 2.0, 2.0, 2.0, 2.0, 4.0],
