@@ -11,7 +11,7 @@ class TestBlocks(unittest.TestCase):
             values=np.full((3, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[],
-            features=Labels(["features"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
 
         self.assertTrue(np.all(block.values == np.full((3, 2), -1.0)))
@@ -24,10 +24,10 @@ class TestBlocks(unittest.TestCase):
 
         self.assertEqual(len(block.components), 0)
 
-        self.assertEqual(block.features.names, ("features",))
-        self.assertEqual(len(block.features), 2)
-        self.assertEqual(tuple(block.features[0]), (5,))
-        self.assertEqual(tuple(block.features[1]), (3,))
+        self.assertEqual(block.properties.names, ("properties",))
+        self.assertEqual(len(block.properties), 2)
+        self.assertEqual(tuple(block.properties[0]), (5,))
+        self.assertEqual(tuple(block.properties[1]), (3,))
 
     def test_block_with_components(self):
         block = Block(
@@ -37,7 +37,7 @@ class TestBlocks(unittest.TestCase):
                 Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
                 Labels(["component_2"], np.array([[-4], [1]], dtype=np.int32)),
             ],
-            features=Labels(["features"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
 
         self.assertTrue(np.all(block.values == np.full((3, 3, 2, 2), -1.0)))
@@ -62,10 +62,10 @@ class TestBlocks(unittest.TestCase):
         self.assertEqual(tuple(component_2[0]), (-4,))
         self.assertEqual(tuple(component_2[1]), (1,))
 
-        self.assertEqual(block.features.names, ("features",))
-        self.assertEqual(len(block.features), 2)
-        self.assertEqual(tuple(block.features[0]), (5,))
-        self.assertEqual(tuple(block.features[1]), (3,))
+        self.assertEqual(block.properties.names, ("properties",))
+        self.assertEqual(len(block.properties), 2)
+        self.assertEqual(tuple(block.properties[0]), (5,))
+        self.assertEqual(tuple(block.properties[1]), (3,))
 
     def test_gradients(self):
         block = Block(
@@ -75,7 +75,7 @@ class TestBlocks(unittest.TestCase):
                 Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
                 Labels(["component_2"], np.array([[-4], [1]], dtype=np.int32)),
             ],
-            features=Labels(["features"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
 
         block.add_gradient(
@@ -111,7 +111,7 @@ class TestBlocks(unittest.TestCase):
             components=[
                 Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
             ],
-            features=Labels(["features"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
         copy = block.copy()
         block_values_id = id(block.values)

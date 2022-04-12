@@ -19,7 +19,7 @@ class TestDescriptors(unittest.TestCase):
 
         self.assertEqual(descriptor.sample_names, ("samples",))
         self.assertEqual(descriptor.component_names, [("components",)])
-        self.assertEqual(descriptor.feature_names, ("features",))
+        self.assertEqual(descriptor.property_names, ("properties",))
 
     def test_get_block(self):
         descriptor = test_descriptor()
@@ -51,13 +51,13 @@ class TestDescriptors(unittest.TestCase):
             self.assertEqual(tuple(sparse), expected_sparse)
             self.assertTrue(np.all(block.values == expected_values))
 
-    def test_sparse_to_features(self):
+    def test_sparse_to_properties(self):
         pass
 
     def test_sparse_to_samples(self):
         pass
 
-    def test_components_to_features(self):
+    def test_components_to_properties(self):
         pass
 
 

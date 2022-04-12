@@ -17,17 +17,17 @@ class Block:
     Basic building block for descriptor. A single block contains a n-dimensional
     :py:class:`aml_storage.data.Array`, and n sets of :py:class:`Labels` (one
     for each dimension). The first dimension is the *samples* dimension, the
-    last dimension is the *features* dimension, and any intermediary dimension
+    last dimension is the *properties* dimension, and any intermediary dimension
     is called a *component* dimension.
 
     Samples should be used to describe *what* we are representing, while
-    features should contain information about *how* we are representing it.
+    properties should contain information about *how* we are representing it.
     Finally, components should be used to describe vectorial or tensorial
     components of the data.
 
     A block can also contain gradients of the values with respect to a variety
     of parameters. In this case, each gradient has a separate set of samples,
-    and possibly components but share the same feature labels as the values.
+    and possibly components but share the same property labels as the values.
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class Block:
         values: Array,
         samples: Labels,
         components: List[Labels],
-        features: Labels,
+        properties: Labels,
     ):
         """
         :param values: array containing the data for this block
@@ -44,7 +44,7 @@ class Block:
         :param components: labels describing the components (second dimension of
             the array). This is set to :py:func:`Labels.single` when dealing
             with scalar/invariant values.
-        :param features: labels describing the samples (third dimension of the
+        :param properties: labels describing the samples (third dimension of the
             array)
         """
         self._lib = _get_library()
@@ -62,7 +62,7 @@ class Block:
             samples._as_aml_labels_t(),
             components_array,
             len(components_array),
-            features._as_aml_labels_t(),
+            properties._as_aml_labels_t(),
         )
         self._owning = True
         self._parent = None
@@ -162,15 +162,15 @@ class Block:
         return result
 
     @property
-    def features(self) -> Labels:
+    def properties(self) -> Labels:
         """
-        Access the feature :py:class:`Labels` for this block. The entries in
+        Access the property :py:class:`Labels` for this block. The entries in
         these labels describe the last dimension of the ``values`` array. The
-        features are guaranteed to be the same for values and gradients in the
+        properties are guaranteed to be the same for values and gradients in the
         same block.
         """
-        feature_axis = len(self.values.shape) - 1
-        return self._labels(feature_axis)
+        property_axis = len(self.values.shape) - 1
+        return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
         result = aml_labels_t()
@@ -201,8 +201,8 @@ class Block:
         """Add a set of gradients with respect to ``parameters`` in this block.
 
         :param data: the gradient array, of shape ``(gradient_samples,
-            components, features)``, where the components and features labels
-            are the same as the values components and features labels.
+            components, properties)``, where the components and properties labels
+            are the same as the values components and properties labels.
         :param parameter: add gradients with respect to this ``parameter`` (e.g.
             ``positions``, ``cell``, ...)
         :param samples: labels describing the gradient samples
@@ -299,15 +299,15 @@ class Gradient:
         return result
 
     @property
-    def features(self) -> Labels:
+    def properties(self) -> Labels:
         """
-        Access the feature :py:class:`Labels` for this gradient. The entries in
+        Access the property :py:class:`Labels` for this gradient. The entries in
         these labels describe the last dimension of the ``data`` array. The
-        features are guaranteed to be the same for values and gradients in the
+        properties are guaranteed to be the same for values and gradients in the
         same block.
         """
-        feature_axis = len(self.data.shape) - 1
-        return self._labels(feature_axis)
+        property_axis = len(self.data.shape) - 1
+        return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
         result = aml_labels_t()

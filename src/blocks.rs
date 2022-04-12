@@ -9,14 +9,14 @@ use crate::Error;
 
 /// Basic building block for descriptor. A single basic block contains a
 /// 3-dimensional array, and three sets of labels (one for each dimension). The
-/// sample labels are specific to this block, but components & feature labels
+/// sample labels are specific to this block, but component & property labels
 /// can be shared between blocks, or between values & gradients.
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub data: aml_array_t,
     pub(crate) samples: Labels,
     pub(crate) components: Vec<Arc<Labels>>,
-    pub(crate) features: Arc<Labels>,
+    pub(crate) properties: Arc<Labels>,
 }
 
 fn check_data_and_labels(
@@ -24,7 +24,7 @@ fn check_data_and_labels(
     data: &aml_array_t,
     samples: &Labels,
     components: &[Arc<Labels>],
-    features: &Labels,
+    properties: &Labels,
 ) -> Result<(), Error> {
     let shape = data.shape()?;
 
@@ -63,10 +63,10 @@ fn check_data_and_labels(
         dimension += 1;
     }
 
-    if shape[dimension] != features.count() {
+    if shape[dimension] != properties.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis {} is {} but we have {} features labels",
-            context, dimension, shape[dimension], features.count()
+            "{}: the array shape along axis {} is {} but we have {} properties labels",
+            context, dimension, shape[dimension], properties.count()
         )));
     }
 
@@ -91,15 +91,14 @@ impl BasicBlock {
         data: aml_array_t,
         samples: Labels,
         components: Vec<Arc<Labels>>,
-        features: Arc<Labels>,
+        properties: Arc<Labels>,
     ) -> Result<BasicBlock, Error> {
         check_data_and_labels(
-            "data and labels don't match", &data, &samples, &components, &features
+            "data and labels don't match", &data, &samples, &components, &properties
         )?;
 
         check_component_labels(&components)?;
-
-        return Ok(BasicBlock { data, samples, components, features });
+        return Ok(BasicBlock { data, samples, components, properties });
     }
 
     /// Get the sample labels in this basic block
@@ -112,12 +111,12 @@ impl BasicBlock {
         &self.components
     }
 
-    /// Get the feature labels in this basic block
-    pub fn features(&self) -> &Arc<Labels> {
-        &self.features
+    /// Get the property labels in this basic block
+    pub fn properties(&self) -> &Arc<Labels> {
+        &self.properties
     }
 
-    fn components_to_features(&mut self, variables: &[&str]) -> Result<(), Error> {
+    fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
         debug_assert!(!variables.is_empty());
 
         let mut component_axis = None;
@@ -134,31 +133,31 @@ impl BasicBlock {
 
         let moved_component = self.components.remove(component_axis);
 
-        // construct the new feature with old features and the components
-        let old_features = &self.features;
-        let new_feature_names = moved_component.names().iter()
-            .chain(old_features.names().iter())
+        // construct the new property with old properties and the components
+        let old_properties = &self.properties;
+        let new_property_names = moved_component.names().iter()
+            .chain(old_properties.names().iter())
             .copied()
             .collect();
-        let mut new_features_builder = LabelsBuilder::new(new_feature_names);
-        for new_feature in moved_component.iter() {
-            for old_feature in old_features.iter() {
-                let mut feature = new_feature.to_vec();
-                feature.extend_from_slice(old_feature);
-                new_features_builder.add(feature);
+        let mut new_properties_builder = LabelsBuilder::new(new_property_names);
+        for new_property in moved_component.iter() {
+            for old_property in old_properties.iter() {
+                let mut property = new_property.to_vec();
+                property.extend_from_slice(old_property);
+                new_properties_builder.add(property);
             }
         }
-        let new_features = new_features_builder.finish();
+        let new_properties = new_properties_builder.finish();
 
         let mut new_shape = self.data.shape()?.to_vec();
-        let features_axis = new_shape.len() - 1;
-        new_shape[features_axis] = new_features.count();
+        let properties_axis = new_shape.len() - 1;
+        new_shape[properties_axis] = new_properties.count();
         new_shape.remove(component_axis + 1);
 
-        self.data.swap_axes(component_axis + 1, features_axis - 1)?;
+        self.data.swap_axes(component_axis + 1, properties_axis - 1)?;
         self.data.reshape(&new_shape)?;
 
-        self.features = Arc::new(new_features);
+        self.properties = Arc::new(new_properties);
 
         Ok(())
     }
@@ -176,16 +175,16 @@ pub struct Block {
 
 impl Block {
     /// Create a new `Block` containing the given data, described by the
-    /// `samples`, `components`, and `features` labels. The block is initialized
+    /// `samples`, `components`, and `properties` labels. The block is initialized
     /// without any gradients.
     pub fn new(
         data: aml_array_t,
         samples: Labels,
         components: Vec<Arc<Labels>>,
-        features: Arc<Labels>,
+        properties: Arc<Labels>,
     ) -> Result<Block, Error> {
         Ok(Block {
-            values: BasicBlock::new(data, samples, components, features)?,
+            values: BasicBlock::new(data, samples, components, properties)?,
             gradients: HashMap::new(),
             gradient_parameters: Vec::new(),
         })
@@ -204,7 +203,7 @@ impl Block {
     /// Add a gradient with respect to `parameter` to this block.
     ///
     /// The gradient `data` is given as an array, and the samples and components
-    /// labels must be provided. The feature labels are assumed to match the
+    /// labels must be provided. The property labels are assumed to match the
     /// ones of the values in this block.
     ///
     /// The components labels must contain at least the same entries as the
@@ -264,16 +263,16 @@ impl Block {
                 }
             }
 
-        let features = Arc::clone(self.values.features());
+        let properties = Arc::clone(self.values.properties());
         check_data_and_labels(
-            "gradient data and labels don't match", &data, &samples, &components, &features
+            "gradient data and labels don't match", &data, &samples, &components, &properties
         )?;
 
         self.gradients.insert(parameter.into(), BasicBlock {
             data,
             samples,
             components,
-            features
+            properties
         });
 
         let parameter = ConstCString::new(CString::new(parameter.to_owned()).expect("invalid C string"));
@@ -287,14 +286,14 @@ impl Block {
         self.gradients.get(parameter)
     }
 
-    pub(crate) fn components_to_features(&mut self, variables: &[&str]) -> Result<(), Error> {
+    pub(crate) fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
         if variables.is_empty() {
             return Ok(());
         }
 
-        self.values.components_to_features(variables)?;
+        self.values.components_to_properties(variables)?;
         for gradient in self.gradients.values_mut() {
-            gradient.components_to_features(variables)?;
+            gradient.components_to_properties(variables)?;
         }
 
         Ok(())
@@ -319,13 +318,13 @@ mod tests {
     #[test]
     fn no_components() {
         let samples = example_labels("samples", 4);
-        let features = Arc::new(example_labels("features", 7));
+        let properties = Arc::new(example_labels("properties", 7));
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 7])));
-        let result = Block::new(data, samples.clone(), Vec::new(), features.clone());
+        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 7])));
-        let result = Block::new(data, samples.clone(), Vec::new(), features.clone());
+        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
@@ -333,15 +332,15 @@ mod tests {
         );
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 9])));
-        let result = Block::new(data, samples.clone(), Vec::new(), features.clone());
+        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 1 is 9 but we have 7 features labels"
+            along axis 1 is 9 but we have 7 properties labels"
         );
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 1, 7])));
-        let result = Block::new(data, samples, Vec::new(), features);
+        let result = Block::new(data, samples, Vec::new(), properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has \
@@ -355,20 +354,20 @@ mod tests {
         let component_2 = Arc::new(example_labels("component_2", 3));
 
         let samples = example_labels("samples", 3);
-        let features = Arc::new(example_labels("features", 2));
+        let properties = Arc::new(example_labels("properties", 2));
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 2])));
         let components = vec![Arc::clone(&component_1)];
-        let result = Block::new(data, samples.clone(), components, features.clone());
+        let result = Block::new(data, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 3, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, features.clone());
+        let result = Block::new(data, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, features.clone());
+        let result = Block::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has 3 \
@@ -377,7 +376,7 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, features.clone());
+        let result = Block::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
@@ -386,7 +385,7 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_1)];
-        let result = Block::new(data, samples.clone(), components, features.clone());
+        let result = Block::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: some of the \
@@ -397,7 +396,7 @@ mod tests {
         let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
         components.add(vec![LabelValue::from(0), LabelValue::from(1)]);
 
-        let result = Block::new(data, samples, vec![Arc::new(components.finish())], features);
+        let result = Block::new(data, samples, vec![Arc::new(components.finish())], properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: component labels must have a single variable, \
@@ -411,9 +410,9 @@ mod tests {
         #[test]
         fn values_without_components() {
             let samples = example_labels("samples", 4);
-            let features = Arc::new(example_labels("features", 7));
+            let properties = Arc::new(example_labels("properties", 7));
             let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 7])));
-            let mut block = Block::new(data, samples, vec![], features).unwrap();
+            let mut block = Block::new(data, samples, vec![], properties).unwrap();
             assert!(block.gradients().is_empty());
 
             let gradient = aml_array_t::new(Box::new(TestArray::new(vec![3, 7])));
@@ -435,13 +434,13 @@ mod tests {
             let basic_block = block.gradients().get("foo").unwrap();
             assert_eq!(basic_block.samples().names(), ["sample", "foo"]);
             assert!(basic_block.components().is_empty());
-            assert_eq!(basic_block.features().names(), ["features"]);
+            assert_eq!(basic_block.properties().names(), ["properties"]);
 
             let basic_block = block.gradients().get("component").unwrap();
             assert_eq!(basic_block.samples().names(), ["sample"]);
             assert_eq!(basic_block.components().len(), 1);
             assert_eq!(basic_block.components()[0].names(), ["component"]);
-            assert_eq!(basic_block.features().names(), ["features"]);
+            assert_eq!(basic_block.properties().names(), ["properties"]);
 
             assert!(block.gradients().get("baz").is_none());
         }
@@ -450,9 +449,9 @@ mod tests {
         fn values_with_components() {
             let samples = example_labels("samples", 4);
             let component = Arc::new(example_labels("component", 5));
-            let features = Arc::new(example_labels("features", 7));
+            let properties = Arc::new(example_labels("properties", 7));
             let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 5, 7])));
-            let mut block = Block::new(data, samples, vec![component.clone()], features).unwrap();
+            let mut block = Block::new(data, samples, vec![component.clone()], properties).unwrap();
 
             let gradient = aml_array_t::new(Box::new(TestArray::new(vec![3, 5, 7])));
             let gradient_samples = example_labels("sample", 3);
@@ -477,7 +476,7 @@ mod tests {
     }
 
     #[cfg(feature = "ndarray")]
-    mod components_to_features {
+    mod components_to_properties {
         use super::*;
         use ndarray::ArrayD;
 
@@ -487,7 +486,7 @@ mod tests {
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 3], 1.0))),
                 example_labels("samples", 3),
                 vec![Arc::new(example_labels("components", 2))],
-                Arc::new(example_labels("features", 3)),
+                Arc::new(example_labels("properties", 3)),
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
@@ -504,7 +503,7 @@ mod tests {
 
             /******************************************************************/
 
-            block.components_to_features(&["components"]).unwrap();
+            block.components_to_properties(&["components"]).unwrap();
 
             assert_eq!(block.values.samples().names(), ["samples"]);
             assert_eq!(block.values.samples().count(), 3);
@@ -514,14 +513,14 @@ mod tests {
 
             assert_eq!(block.values.components().len(), 0);
 
-            assert_eq!(block.values.features().names(), ["components", "features"]);
-            assert_eq!(block.values.features().count(), 6);
-            assert_eq!(block.values.features()[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.features()[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.features()[2], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(block.values.features()[3], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.features()[4], [LabelValue::new(1), LabelValue::new(1)]);
-            assert_eq!(block.values.features()[5], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(block.values.properties().names(), ["components", "properties"]);
+            assert_eq!(block.values.properties().count(), 6);
+            assert_eq!(block.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
+            assert_eq!(block.values.properties()[1], [LabelValue::new(0), LabelValue::new(1)]);
+            assert_eq!(block.values.properties()[2], [LabelValue::new(0), LabelValue::new(2)]);
+            assert_eq!(block.values.properties()[3], [LabelValue::new(1), LabelValue::new(0)]);
+            assert_eq!(block.values.properties()[4], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(block.values.properties()[5], [LabelValue::new(1), LabelValue::new(2)]);
 
             assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![3, 6], 1.0));
 
@@ -549,7 +548,7 @@ mod tests {
                 aml_array_t::new(Box::new(data)),
                 example_labels("samples", 2),
                 components.clone(),
-                Arc::new(example_labels("features", 2)),
+                Arc::new(example_labels("properties", 2)),
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
@@ -567,7 +566,7 @@ mod tests {
 
             /******************************************************************/
 
-            block.components_to_features(&["component_1"]).unwrap();
+            block.components_to_properties(&["component_1"]).unwrap();
 
             assert_eq!(block.values.samples().names(), ["samples"]);
             assert_eq!(block.values.samples().count(), 2);
@@ -581,12 +580,12 @@ mod tests {
             assert_eq!(block.values.components()[0][1], [LabelValue::new(1)]);
             assert_eq!(block.values.components()[0][2], [LabelValue::new(2)]);
 
-            assert_eq!(block.values.features().names(), ["component_1", "features"]);
-            assert_eq!(block.values.features().count(), 4);
-            assert_eq!(block.values.features()[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.features()[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.features()[2], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.features()[3], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(block.values.properties().names(), ["component_1", "properties"]);
+            assert_eq!(block.values.properties().count(), 4);
+            assert_eq!(block.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
+            assert_eq!(block.values.properties()[1], [LabelValue::new(0), LabelValue::new(1)]);
+            assert_eq!(block.values.properties()[2], [LabelValue::new(1), LabelValue::new(0)]);
+            assert_eq!(block.values.properties()[3], [LabelValue::new(1), LabelValue::new(1)]);
 
             let expected = ArrayD::from_shape_vec(vec![2, 3, 4], vec![
                 1.0, 1.0, 4.0, 4.0, 2.0, 2.0, 5.0, 5.0, 3.0, 3.0, 6.0, 6.0,

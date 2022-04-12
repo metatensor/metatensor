@@ -17,7 +17,7 @@ def test_descriptor():
         values=np.full((3, 1, 1), 1.0),
         samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        features=Labels(["features"], np.array([[0]], dtype=np.int32)),
+        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
     block_1.add_gradient(
         "parameter",
@@ -32,7 +32,7 @@ def test_descriptor():
         values=np.full((3, 1, 3), 2.0),
         samples=Labels(["samples"], np.array([[0], [1], [3]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        features=Labels(["features"], np.array([[3], [4], [5]], dtype=np.int32)),
+        properties=Labels(["properties"], np.array([[3], [4], [5]], dtype=np.int32)),
     )
     block_2.add_gradient(
         "parameter",
@@ -48,7 +48,7 @@ def test_descriptor():
         values=np.full((4, 3, 1), 3.0),
         samples=Labels(["samples"], np.array([[0], [3], [6], [8]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
-        features=Labels(["features"], np.array([[0]], dtype=np.int32)),
+        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
     block_3.add_gradient(
         "parameter",
@@ -64,7 +64,7 @@ def test_descriptor():
         values=np.full((4, 3, 1), 4.0),
         samples=Labels(["samples"], np.array([[0], [1], [2], [5]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
-        features=Labels(["features"], np.array([[0]], dtype=np.int32)),
+        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
     block_4.add_gradient(
         "parameter",

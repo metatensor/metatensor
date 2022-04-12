@@ -224,8 +224,8 @@ def _aml_storage_destroy(this):
 
 @catch_exceptions
 def _aml_storage_move_sample(
-    this, sample, feature_start, feature_stop, other, other_sample
+    this, sample, property_start, property_stop, other, other_sample
 ):
     other = _object_from_ptr(other).array
     output = _object_from_ptr(this).array
-    output[sample, ..., feature_start:feature_stop] = other[other_sample, ..., :]
+    output[sample, ..., property_start:property_stop] = other[other_sample, ..., :]
