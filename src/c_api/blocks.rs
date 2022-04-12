@@ -5,7 +5,7 @@ use std::convert::{TryFrom, TryInto};
 
 use crate::{Block, Labels, Error, aml_array_t};
 
-use super::labels::{aml_labels_t, aml_label_kind};
+use super::labels::aml_labels_t;
 
 use super::{catch_unwind, aml_status_t};
 
@@ -48,8 +48,10 @@ impl aml_block_t {
 ///             ownership of the array, and will release it with
 ///             `array.destroy(array.ptr)` when it no longer needs it.
 /// @param samples sample labels corresponding to the first dimension of the data
-/// @param components component labels corresponding to the second dimension of the data
-/// @param features feature labels corresponding to the third dimension of the data
+/// @param components array of component labels corresponding to intermediary
+///                   dimensions of the data
+/// @param components_count number of entries in the `components` array
+/// @param features feature labels corresponding to the last dimension of the data
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `aml_last_error()`
@@ -58,17 +60,24 @@ impl aml_block_t {
 pub unsafe extern fn aml_block(
     data: aml_array_t,
     samples: aml_labels_t,
-    components: aml_labels_t,
+    components: *const aml_labels_t,
+    components_count: usize,
     features: aml_labels_t,
 ) -> *mut aml_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let samples = Labels::try_from(samples)?;
-        let components = Labels::try_from(components)?;
-        let features = Labels::try_from(features)?;
+        let samples = Labels::try_from(&samples)?;
 
-        let block = Block::new(data, samples, Arc::new(components), Arc::new(features))?;
+        let mut rust_components = Vec::new();
+        for component in std::slice::from_raw_parts(components, components_count) {
+            let component = Labels::try_from(component)?;
+            rust_components.push(Arc::new(component));
+        }
+
+        let features = Labels::try_from(&features)?;
+
+        let block = Block::new(data, samples, rust_components, Arc::new(features))?;
         let boxed = Box::new(aml_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -157,7 +166,7 @@ pub unsafe extern fn aml_block_copy(
 ///
 /// @param block pointer to an existing block
 /// @param values_gradients either `"values"` or the name of gradients to lookup
-/// @param kind the kind of labels requested
+/// @param axis axis/dimension of the data array for which you need the labels
 /// @param labels pointer to an empty `aml_labels_t` that will be set to the
 ///               requested labels
 ///
@@ -168,7 +177,7 @@ pub unsafe extern fn aml_block_copy(
 pub unsafe extern fn aml_block_labels(
     block: *const aml_block_t,
     values_gradients: *const c_char,
-    kind: aml_label_kind,
+    axis: usize,
     labels: *mut aml_labels_t,
 ) -> aml_status_t {
     catch_unwind(|| {
@@ -184,10 +193,21 @@ pub unsafe extern fn aml_block_labels(
             }
         };
 
-        let rust_labels = match kind {
-            aml_label_kind::AML_SAMPLE_LABELS => basic_block.samples(),
-            aml_label_kind::AML_COMPONENTS_LABELS => basic_block.components(),
-            aml_label_kind::AML_FEATURE_LABELS => basic_block.features(),
+        let n_components = basic_block.components().len();
+
+        let rust_labels = if axis == 0 {
+            basic_block.samples()
+        } else if axis - 1 < n_components {
+            // component labels
+            &*basic_block.components()[axis - 1]
+        } else if axis == n_components + 1 {
+            // feature labels
+            &*basic_block.features()
+        } else {
+            return Err(Error::InvalidParameter(format!(
+                "tried to get the labels for axis {}, but we only have {} axes for this block",
+                axis, basic_block.components().len() + 2
+            )));
         };
 
         *labels = rust_labels.try_into()?;
@@ -239,14 +259,17 @@ pub unsafe extern fn aml_block_data(
 /// Add a new gradient to this `block` with the given `name`.
 ///
 /// @param block pointer to an existing block
-/// @param name name of the gradient as a NULL-terminated UTF-8 string. This is
-///             usually the parameter used when taking derivatives (e.g.
-///             `"positions"`, `"cell"`, etc.)
-/// @param samples sample labels for the gradient array. The components and
-///                feature labels are supposed to match the values in this block
-/// @param gradient array containing the gradient data. The block takes
+/// @param data array containing the gradient data. The block takes
 ///                 ownership of the array, and will release it with
 ///                 `array.destroy(array.ptr)` when it no longer needs it.
+/// @param parameter name of the gradient as a NULL-terminated UTF-8 string.
+///                  This is usually the parameter used when taking derivatives
+///                  (e.g. `"positions"`, `"cell"`, etc.)
+/// @param samples sample labels for the gradient array. The components and
+///                feature labels are supposed to match the values in this block
+/// @param components array of component labels corresponding to intermediary
+///                   dimensions of the data
+/// @param components_count number of entries in the `components` array
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
@@ -254,15 +277,24 @@ pub unsafe extern fn aml_block_data(
 #[no_mangle]
 pub unsafe extern fn aml_block_add_gradient(
     block: *mut aml_block_t,
-    name: *const c_char,
+    parameter: *const c_char,
+    data: aml_array_t,
     samples: aml_labels_t,
-    gradient: aml_array_t,
+    components: *const aml_labels_t,
+    components_count: usize,
 ) -> aml_status_t {
     catch_unwind(|| {
-        check_pointers!(block, name);
-        let name = CStr::from_ptr(name).to_str().unwrap();
-        let samples = Labels::try_from(samples)?;
-        (*block).add_gradient(name, samples, gradient)?;
+        check_pointers!(block, parameter);
+        let parameter = CStr::from_ptr(parameter).to_str().unwrap();
+        let samples = Labels::try_from(&samples)?;
+
+        let mut rust_components = Vec::new();
+        for component in std::slice::from_raw_parts(components, components_count) {
+            let component = Labels::try_from(component)?;
+            rust_components.push(Arc::new(component));
+        }
+
+        (*block).add_gradient(parameter, data, samples, rust_components)?;
         Ok(())
     })
 }
@@ -287,7 +319,7 @@ pub unsafe extern fn aml_block_gradients_list(
     catch_unwind(|| {
         check_pointers!(block, parameters, count);
 
-        let list = (*block).gradients_list_c();
+        let list = (*block).gradient_parameters_c();
         (*count) = list.len() as u64;
 
         (*parameters) = if list.is_empty() {

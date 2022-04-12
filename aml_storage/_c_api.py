@@ -9,7 +9,6 @@ import platform
 
 import ctypes
 from ctypes import POINTER, CFUNCTYPE
-from numpy.ctypeslib import ndpointer
 
 arch = platform.architecture()[0]
 if arch == "32bit":
@@ -25,12 +24,6 @@ AML_INTERNAL_ERROR = 255
 
 aml_status_t = ctypes.c_int32
 aml_data_origin_t = ctypes.c_uint64
-
-
-class aml_label_kind(enum.Enum):
-    AML_SAMPLE_LABELS = 0
-    AML_COMPONENTS_LABELS = 1
-    AML_FEATURE_LABELS = 2
 
 
 class aml_block_t(ctypes.Structure):
@@ -59,13 +52,13 @@ class aml_array_t(ctypes.Structure):
 aml_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(aml_data_origin_t))),
-    ("shape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64), POINTER(ctypes.c_uint64))),
-    ("reshape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64)),
-    ("create", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, POINTER(aml_array_t))),
+    ("shape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
+    ("reshape", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
+    ("swap_axes", CFUNCTYPE(aml_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
+    ("create", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, POINTER(aml_array_t))),
     ("copy", CFUNCTYPE(aml_status_t, ctypes.c_void_p, POINTER(aml_array_t))),
-    ("move_sample", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
-    ("move_component", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
+    ("move_sample", CFUNCTYPE(aml_status_t, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_uint64)),
 ]
 
 
@@ -101,7 +94,8 @@ def setup_functions(lib):
     lib.aml_block.argtypes = [
         aml_array_t,
         aml_labels_t,
-        aml_labels_t,
+        POINTER(aml_labels_t),
+        c_uintptr_t,
         aml_labels_t
     ]
     lib.aml_block.restype = POINTER(aml_block_t)
@@ -119,7 +113,7 @@ def setup_functions(lib):
     lib.aml_block_labels.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
-        ctypes.c_int,
+        c_uintptr_t,
         POINTER(aml_labels_t)
     ]
     lib.aml_block_labels.restype = _check_status
@@ -134,8 +128,10 @@ def setup_functions(lib):
     lib.aml_block_add_gradient.argtypes = [
         POINTER(aml_block_t),
         ctypes.c_char_p,
+        aml_array_t,
         aml_labels_t,
-        aml_array_t
+        POINTER(aml_labels_t),
+        c_uintptr_t
     ]
     lib.aml_block_add_gradient.restype = _check_status
 

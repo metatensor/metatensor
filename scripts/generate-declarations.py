@@ -131,14 +131,14 @@ def _typedecl_name(type):
         return type.type.names[0]
 
 
-def funcdecl_to_ctypes(type, ndpointer=False):
-    restype = type_to_ctypes(type.type, ndpointer)
-    args = [type_to_ctypes(t.type, ndpointer) for t in type.args.params]
+def funcdecl_to_ctypes(type):
+    restype = type_to_ctypes(type.type)
+    args = [type_to_ctypes(t.type) for t in type.args.params]
 
     return f'CFUNCTYPE({restype}, {", ".join(args)})'
 
 
-def type_to_ctypes(type, ndpointer=False):
+def type_to_ctypes(type):
     if isinstance(type, c_ast.PtrDecl):
         if isinstance(type.type, c_ast.PtrDecl):
             if isinstance(type.type.type, c_ast.TypeDecl):
@@ -147,10 +147,7 @@ def type_to_ctypes(type, ndpointer=False):
                     return "POINTER(ctypes.c_char_p)"
 
                 name = c_type_name(name)
-                if ndpointer:
-                    return f"POINTER(ndpointer({name}, flags='C_CONTIGUOUS'))"
-                else:
-                    return f"POINTER(POINTER({name}))"
+                return f"POINTER(POINTER({name}))"
             elif isinstance(type.type.type, c_ast.PtrDecl):
                 assert isinstance(type.type.type.type, c_ast.TypeDecl)
                 assert _typedecl_name(type.type.type.type) == "char"
@@ -166,7 +163,7 @@ def type_to_ctypes(type, ndpointer=False):
                 return f"POINTER({c_type_name(name)})"
 
         elif isinstance(type.type, c_ast.FuncDecl):
-            return funcdecl_to_ctypes(type.type, ndpointer)
+            return funcdecl_to_ctypes(type.type)
 
     else:
         # not a pointer
@@ -182,7 +179,7 @@ def type_to_ctypes(type, ndpointer=False):
 
             return f"{type_to_ctypes(type.type)} * {size}"
         elif isinstance(type, c_ast.FuncDecl):
-            return funcdecl_to_ctypes(type, ndpointer)
+            return funcdecl_to_ctypes(type)
 
     raise Exception("Unknown type")
 
@@ -204,7 +201,7 @@ def generate_structs(file, structs):
 
         file.write(f"\n{struct.name}._fields_ = [\n")
         for name, type in struct.members.items():
-            file.write(f'    ("{name}", {type_to_ctypes(type, True)}),\n')
+            file.write(f'    ("{name}", {type_to_ctypes(type)}),\n')
         file.write("]\n")
 
 
@@ -246,7 +243,6 @@ import platform
 
 import ctypes
 from ctypes import POINTER, CFUNCTYPE
-from numpy.ctypeslib import ndpointer
 
 arch = platform.architecture()[0]
 if arch == "32bit":

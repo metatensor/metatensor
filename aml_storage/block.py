@@ -1,33 +1,40 @@
 import gc
 import copy
 import ctypes
-from typing import Tuple, List
+from typing import List, Tuple, Generator
 
 from ._c_lib import _get_library
-from ._c_api import aml_label_kind, aml_labels_t, aml_array_t
+from ._c_api import aml_labels_t, aml_array_t
 
 from .status import _check_pointer
 from .labels import Labels
 
-from .data import AmlData, Array, aml_array_t_to_python_object
+from .data import AmlData, Array, aml_array_to_python_object
 
 
 class Block:
     """
-    Basic building block for descriptor. A single block contains a 3-dimensional
-    :py:class:`aml_storage.data.Array`, and three sets of :py:class:`Labels`
-    (one for each dimension).
+    Basic building block for descriptor. A single block contains a n-dimensional
+    :py:class:`aml_storage.data.Array`, and n sets of :py:class:`Labels` (one
+    for each dimension). The first dimension is the *samples* dimension, the
+    last dimension is the *features* dimension, and any intermediary dimension
+    is called a *component* dimension.
+
+    Samples should be used to describe *what* we are representing, while
+    features should contain information about *how* we are representing it.
+    Finally, components should be used to describe vectorial or tensorial
+    components of the data.
 
     A block can also contain gradients of the values with respect to a variety
     of parameters. In this case, each gradient has a separate set of samples,
-    but share the same components and feature labels as the values.
+    and possibly components but share the same feature labels as the values.
     """
 
     def __init__(
         self,
         values: Array,
         samples: Labels,
-        components: Labels,
+        components: List[Labels],
         features: Labels,
     ):
         """
@@ -46,10 +53,15 @@ class Block:
         self._values = AmlData(values)
         self._gradients = []
 
+        components_array = ctypes.ARRAY(aml_labels_t, len(components))()
+        for i, component in enumerate(components):
+            components_array[i] = component._as_aml_labels_t()
+
         self._ptr = self._lib.aml_block(
-            self._values._storage,
+            self._values.aml_array,
             samples._as_aml_labels_t(),
-            components._as_aml_labels_t(),
+            components_array,
+            len(components_array),
             features._as_aml_labels_t(),
         )
         self._owning = True
@@ -94,16 +106,16 @@ class Block:
         # Keep references to the arrays in this block if the arrays were
         # allocated by Python
         try:
-            copy._values = aml_array_t_to_python_object(copy._get_raw_array("values"))
+            raw_array = _get_raw_array(self._lib, copy._ptr, "values")
+            copy._values = aml_array_to_python_object(raw_array)
         except ValueError:
             # the array was not allocated by Python
             copy._values = None
 
         for parameter in self.gradients_list():
             try:
-                copy._gradients.append(
-                    aml_array_t_to_python_object(copy._get_raw_array(parameter))
-                )
+                raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
+                copy._gradients.append(aml_array_to_python_object(raw_array))
             except ValueError:
                 pass
 
@@ -116,12 +128,16 @@ class Block:
         """Get a deep copy of this block"""
         return copy.deepcopy(self)
 
-    def _labels(self, name: str, kind) -> Labels:
-        """Get the labels of the given ``kind`` for the ``name`` array in this
-        block"""
-        result = aml_labels_t()
-        self._lib.aml_block_labels(self._ptr, name.encode("utf8"), kind.value, result)
-        return Labels._from_aml_labels_t(result, parent=self)
+    @property
+    def values(self) -> Array:
+        """
+        Access the values for this block. The array type depends on how the
+        block was created. Currently, numpy ``ndarray`` and torch ``Tensor`` are
+        supported.
+        """
+
+        raw_array = _get_raw_array(self._lib, self._ptr, "values")
+        return aml_array_to_python_object(raw_array).array
 
     @property
     def samples(self) -> Labels:
@@ -129,69 +145,87 @@ class Block:
         Access the sample :py:class:`Labels` for this block. The entries in
         these labels describe the first dimension of the ``values`` array.
         """
-        return self._labels("values", aml_label_kind.AML_SAMPLE_LABELS)
+        return self._labels(0)
 
     @property
-    def components(self) -> Labels:
+    def components(self) -> List[Labels]:
         """
         Access the component :py:class:`Labels` for this block. The entries in
-        these labels describe the second dimension of the ``values`` array, and
-        any additional gradient stored in this block.
+        these labels describe intermediate dimensions of the ``values`` array.
         """
-        return self._labels("values", aml_label_kind.AML_COMPONENTS_LABELS)
+        n_components = len(self.values.shape) - 2
+
+        result = []
+        for axis in range(n_components):
+            result.append(self._labels(axis + 1))
+
+        return result
 
     @property
     def features(self) -> Labels:
         """
         Access the feature :py:class:`Labels` for this block. The entries in
-        these labels describe the third dimension of the ``values`` array, and
-        any additional gradient stored in this block.
+        these labels describe the last dimension of the ``values`` array. The
+        features are guaranteed to be the same for values and gradients in the
+        same block.
         """
-        return self._labels("values", aml_label_kind.AML_FEATURE_LABELS)
+        feature_axis = len(self.values.shape) - 1
+        return self._labels(feature_axis)
 
-    @property
-    def values(self) -> Array:
-        """
-        Access the values for this block. Values are stored as a 3-dimensional
-        array of shape ``(samples, components, features)``.
+    def _labels(self, axis) -> Labels:
+        result = aml_labels_t()
+        self._lib.aml_block_labels(self._ptr, "values".encode("utf8"), axis, result)
+        return Labels._from_aml_labels_t(result, parent=self)
 
-        The array type depends on how the block was created. Currently, numpy
-        ``ndarray`` and torch ``Tensor`` are supported.
-        """
-        return self._get_array("values")
-
-    def gradient(self, parameter: str) -> Tuple[Labels, Array]:
+    def gradient(self, parameter: str) -> "Gradient":
         """
         Get the gradient of the ``values`` in this block with respect to
-        ``parameter``, as well as the corresponding gradient samples.
-        """
-        assert parameter != "values"
-        data = self._get_array(parameter)
-        samples = self._labels(parameter, aml_label_kind.AML_SAMPLE_LABELS)
-        return samples, data
+        the given ``parameter``.
 
-    def add_gradient(self, parameter: str, gradient_samples: Labels, gradient: Array):
+        :param parameter: check for gradients with respect to this ``parameter``
+            (e.g. ``positions``, ``cell``, ...)
+        """
+        if not self.has_gradient(parameter):
+            raise ValueError(
+                f"this block does not contain gradient with respect to {parameter}"
+            )
+        return Gradient(self, parameter)
+
+    def add_gradient(
+        self,
+        parameter: str,
+        data: Array,
+        samples: Labels,
+        components: List[Labels],
+    ):
         """Add a set of gradients with respect to ``parameters`` in this block.
 
-        :param parameter: add gradients with respect to this ``parameter`` (e.g.
-            ``positions``, ``cell``, ...)
-        :param gradient_samples: labels describing the gradient samples
-        :param gradient: the gradient array, of shape ``(gradient_samples,
+        :param data: the gradient array, of shape ``(gradient_samples,
             components, features)``, where the components and features labels
             are the same as the values components and features labels.
+        :param parameter: add gradients with respect to this ``parameter`` (e.g.
+            ``positions``, ``cell``, ...)
+        :param samples: labels describing the gradient samples
+        :param components: labels describing the gradient components
         """
-        gradient = AmlData(gradient)
-        self._gradients.append(gradient)
+        data = AmlData(data)
+        self._gradients.append(data)
+
+        components_array = ctypes.ARRAY(aml_labels_t, len(components))()
+        for i, component in enumerate(components):
+            components_array[i] = component._as_aml_labels_t()
 
         self._lib.aml_block_add_gradient(
             self._ptr,
             parameter.encode("utf8"),
-            gradient_samples._as_aml_labels_t(),
-            gradient._storage,
+            data.aml_array,
+            samples._as_aml_labels_t(),
+            components_array,
+            len(components_array),
         )
 
     def gradients_list(self) -> List[str]:
-        """ """
+        """Get a list of all gradients defined in this block"""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = ctypes.c_uint64()
         self._lib.aml_block_gradients_list(self._ptr, parameters, count)
@@ -211,10 +245,79 @@ class Block:
         """
         return parameter in self.gradients_list()
 
-    def _get_array(self, name: str) -> Array:
-        return aml_array_t_to_python_object(self._get_raw_array(name)).array
+    def gradients(self) -> Generator[Tuple[str, "Gradient"], None, None]:
+        """
+        Get an iterator over all gradients defined in this block
+        """
+        for parameter in self.gradients_list():
+            yield (parameter, self.gradient(parameter))
 
-    def _get_raw_array(self, name: str) -> aml_array_t:
-        data = aml_array_t()
-        self._lib.aml_block_data(self._ptr, name.encode("utf8"), data)
-        return data
+
+class Gradient:
+    """
+    Proxy class allowing to access the information associated with a gradient
+    inside a block.
+    """
+
+    def __init__(self, block: Block, name: str):
+        self._lib = _get_library()
+
+        self._block = block
+        self._name = name
+
+    @property
+    def data(self) -> Array:
+        """
+        Access the data for this gradient. The array type depends on how the
+        block was created. Currently, numpy ``ndarray`` and torch ``Tensor`` are
+        supported.
+        """
+
+        raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
+        return aml_array_to_python_object(raw_array).array
+
+    @property
+    def samples(self) -> Labels:
+        """
+        Access the sample :py:class:`Labels` for this gradient. The entries in
+        these labels describe the first dimension of the ``data`` array.
+        """
+        return self._labels(0)
+
+    @property
+    def components(self) -> List[Labels]:
+        """
+        Access the component :py:class:`Labels` for this gradient. The entries
+        in these labels describe intermediate dimensions of the ``data`` array.
+        """
+        n_components = len(self.data.shape) - 2
+
+        result = []
+        for axis in range(n_components):
+            result.append(self._labels(axis + 1))
+
+        return result
+
+    @property
+    def features(self) -> Labels:
+        """
+        Access the feature :py:class:`Labels` for this gradient. The entries in
+        these labels describe the last dimension of the ``data`` array. The
+        features are guaranteed to be the same for values and gradients in the
+        same block.
+        """
+        feature_axis = len(self.data.shape) - 1
+        return self._labels(feature_axis)
+
+    def _labels(self, axis) -> Labels:
+        result = aml_labels_t()
+        self._lib.aml_block_labels(
+            self._block._ptr, self._name.encode("utf8"), axis, result
+        )
+        return Labels._from_aml_labels_t(result, parent=self._block)
+
+
+def _get_raw_array(lib, block_ptr, name) -> aml_array_t:
+    data = aml_array_t()
+    lib.aml_block_data(block_ptr, name.encode("utf8"), data)
+    return data

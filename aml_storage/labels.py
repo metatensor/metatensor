@@ -119,8 +119,8 @@ class Labels(np.ndarray):
     def single() -> "Labels":
         """
         Get the labels to use when there is no relevant metadata and only one
-        entry in the corresponding dimension (i.e. scalar component labels, or
-        sparse label when a descriptor contains a single block).
+        entry in the corresponding dimension (e.g. sparse label when a
+        descriptor contains a single block).
         """
         return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
 

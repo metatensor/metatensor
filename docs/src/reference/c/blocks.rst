@@ -25,7 +25,3 @@ The following functions operate on :c:type:`aml_block_t`:
 .. doxygenfunction:: aml_block_add_gradient
 
 .. doxygenfunction:: aml_block_gradients_list
-
----------------------------------------------------------------------
-
-.. doxygenenum:: aml_label_kind
