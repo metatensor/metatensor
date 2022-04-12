@@ -9,7 +9,7 @@ from ._c_lib import _get_library
 
 class Labels(np.ndarray):
     """
-    A set of labels used to carry metadata associated with a descriptor.
+    A set of labels used to carry metadata associated with a tensor map.
 
     This is similar to a list of ``n_entries`` named tuples, but stored as a 2D
     array of shape ``(n_entries, n_variables)``, with a set of names associated
@@ -37,7 +37,7 @@ class Labels(np.ndarray):
         np.unique(labels["structures"])
 
     One can also check for the presence of a given entry in Labels, but only if
-    the Labels come from a :py:class:`Block` or a :py:class:`Descriptor`.
+    the Labels come from a :py:class:`Block` or a :py:class:`TensorMap`.
 
     .. code-block:: python
 
@@ -119,8 +119,8 @@ class Labels(np.ndarray):
     def single() -> "Labels":
         """
         Get the labels to use when there is no relevant metadata and only one
-        entry in the corresponding dimension (e.g. sparse label when a
-        descriptor contains a single block).
+        entry in the corresponding dimension (e.g. keys when a tensor map
+        contains a single block).
         """
         return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
 
@@ -192,7 +192,7 @@ class Labels(np.ndarray):
         Get the position of the given ``label`` entry in this set of labels.
 
         This is only available if the labels comes from a :py:class:`Block` or a
-        :py:class:`Descriptor`. If you need it for standalone labels, please let
+        :py:class:`TensorMap`. If you need it for standalone labels, please let
         us know!
         """
         if self._aml_labels is not None:
@@ -217,7 +217,7 @@ class Labels(np.ndarray):
         else:
             raise Exception(
                 "can not lookup the position of an entry in standalone Labels,"
-                "move them to a block or descriptor first"
+                "move them to a block or tensor map first"
             )
 
     def __contains__(self, label):

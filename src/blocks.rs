@@ -7,8 +7,8 @@ use crate::{Labels, LabelsBuilder};
 use crate::{aml_array_t, get_data_origin};
 use crate::Error;
 
-/// Basic building block for descriptor. A single basic block contains a
-/// 3-dimensional array, and three sets of labels (one for each dimension). The
+/// Basic building block for `TensorMap`. A single basic block contains a
+/// n-dimensional array, and n sets of labels (one for each dimension). The
 /// sample labels are specific to this block, but component & property labels
 /// can be shared between blocks, or between values & gradients.
 #[derive(Debug, Clone)]
@@ -163,7 +163,7 @@ impl BasicBlock {
     }
 }
 
-/// A single block in a descriptor, containing both values & optionally
+/// A single block in a `TensorMap`, containing both values & optionally
 /// gradients of these values w.r.t. any relevant quantity.
 #[derive(Debug, Clone)]
 pub struct Block {

@@ -11,7 +11,7 @@ provided in ``aml_storage`` can be grouped in four main groups:
 .. toctree::
     :maxdepth: 1
 
-    descriptors
+    tensor
     labels
     blocks
     misc

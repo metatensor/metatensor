@@ -4,7 +4,7 @@ use std::ffi::CStr;
 use crate::{LabelValue, Labels, LabelsBuilder, Error};
 use super::status::{aml_status_t, catch_unwind};
 
-/// A set of labels used to carry metadata associated with a descriptor.
+/// A set of labels used to carry metadata associated with a tensor map.
 ///
 /// This is similar to a list of `count` named tuples, but stored as a 2D array
 /// of shape `(count, size)`, with a set of names associated with the columns of
@@ -81,8 +81,8 @@ impl std::convert::TryFrom<&Labels> for aml_labels_t {
         };
 
         // this is a bit sketchy & rely on the fact that the containing
-        // `aml_block_t` or `aml_descriptor_t` has a fixed address since it is
-        // boxed. This also valid only for as long as the block/descriptor is
+        // `aml_block_t` or `aml_tensormap_t` has a fixed address since it is
+        // boxed. This also valid only for as long as the block/tensor map is
         // not modified.
         // TODO: could we use Pin/Pin projection here?
         let labels_ptr = (rust_labels as *const Labels).cast();
@@ -99,7 +99,7 @@ impl std::convert::TryFrom<&Labels> for aml_labels_t {
 /// of `labels`. This operation is only available if the labels correspond to a
 /// set of Rust Labels (i.e. `labels.labels_ptr` is not NULL).
 ///
-/// @param labels set of labels coming from an `aml_block_t` or an `aml_descriptor_t`
+/// @param labels set of labels coming from an `aml_block_t` or an `aml_tensormap_t`
 /// @param values array containing the label to lookup
 /// @param count size of the values array
 /// @param result position of the values in the labels or -1 if the values

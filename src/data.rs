@@ -51,7 +51,7 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
     }
 }
 
-/// `aml_array_t` manages 3D arrays the be used as data in a block/descriptor.
+/// `aml_array_t` manages 3D arrays the be used as data in a block/tensor map.
 /// The array itself if opaque to this library and can come from multiple
 /// sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
 /// or torch. The data does not have to live on CPU, or even on the same machine
@@ -126,7 +126,7 @@ pub struct aml_array_t {
 
     /// Set entries in this array taking data from the `other_array`. This array
     /// is guaranteed to be created by calling `aml_array_t::create` with one of
-    /// the arrays in the same block or descriptor as this `array`.
+    /// the arrays in the same block or tensor map as this `array`.
     ///
     /// This function should copy data from `other_array[other_sample, ..., :]` to
     /// `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
@@ -345,7 +345,7 @@ impl aml_array_t {
 
     /// Set entries in this array taking data from the `other` array. This array
     /// MUST have been created by calling `aml_array_t.create()` with one of the
-    /// other arrays in the same block or descriptor.
+    /// other arrays in the same block or tensor map.
     ///
     /// This function will copy data from `other_array[other_sample, ..., :]` to
     /// `array[sample, ..., property_start:property_end]`.

@@ -1,23 +1,25 @@
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
+use indexmap::IndexSet;
+
 use crate::{Block, Error, BasicBlock};
 use crate::{Labels, LabelsBuilder, LabelValue};
 
-/// A descriptor is the main user-facing struct of this library, and can store
+/// A tensor map is the main user-facing struct of this library, and can store
 /// any kind of data used in atomistic machine learning.
 ///
-/// A descriptor contains a list of `Block`s, each one associated with a label
-/// -- called sparse labels.
+/// A tensor map contains a list of `Block`s, each one associated with a key in
+/// the form of a single `Labels` entry.
 ///
-/// A descriptor provides functions to move some of these sparse labels to the
-/// samples or properties labels of the blocks, moving from a sparse
+/// It provides functions to merge blocks together by moving some of these keys
+/// to the samples or properties labels of the blocks, transforming the sparse
 /// representation of the data to a dense one.
 #[derive(Debug)]
-pub struct Descriptor {
-    sparse: Labels,
+pub struct TensorMap {
+    keys: Labels,
     blocks: Vec<Block>,
-    // TODO: arbitrary descriptor level metadata? e.g. using `HashMap<String, String>`
+    // TODO: arbitrary tensor-level metadata? e.g. using `HashMap<String, String>`
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -60,14 +62,15 @@ fn check_labels_names(
     Ok(())
 }
 
-impl Descriptor {
+impl TensorMap {
+    /// TODO: doc
     #[allow(clippy::similar_names)]
-    pub fn new(sparse: Labels, blocks: Vec<Block>) -> Result<Descriptor, Error> {
-        if blocks.len() != sparse.count() {
+    pub fn new(keys: Labels, blocks: Vec<Block>) -> Result<TensorMap, Error> {
+        if blocks.len() != keys.count() {
             return Err(Error::InvalidParameter(format!(
                 "expected the same number of blocks ({}) as the number of \
-                entries in the labels when creating a descriptor, got {}",
-                sparse.count(), blocks.len()
+                entries in the keys when creating a tensor, got {}",
+                keys.count(), blocks.len()
             )))
         }
 
@@ -130,32 +133,31 @@ impl Descriptor {
             }
         }
 
-        Ok(Descriptor {
-            sparse,
+        Ok(TensorMap {
+            keys,
             blocks,
         })
     }
 
-    /// Get the list of blocks in this `Descriptor`
+    /// Get the list of blocks in this `TensorMap`
     pub fn blocks(&self) -> &[Block] {
         &self.blocks
     }
 
-    /// Get the sparse labels associated with this descriptor
-    pub fn sparse(&self) -> &Labels {
-        &self.sparse
+    /// Get the keys defined in this `TensorMap`
+    pub fn keys(&self) -> &Labels {
+        &self.keys
     }
 
-    /// Get an iterator over the labels and associated block
+    /// Get an iterator over the keys and associated block
     pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
-        self.sparse.iter().zip(&self.blocks)
+        self.keys.iter().zip(&self.blocks)
     }
 
     /// Get the list of blocks matching the given selection. The selection must
-    /// contains a single entry, defining the requested values of the sparse
-    /// labels. The selection can contain only a subset of the variables defined
-    /// in the sparse labels, in which case there can be multiple matching
-    /// blocks.
+    /// contains a single entry, defining the requested key. The selection can
+    /// contain only a subset of the variables defined in the keys, in which
+    /// case there can be multiple matching blocks.
     pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&Block>, Error> {
         let matching = self.find_matching_blocks(selection)?;
 
@@ -203,7 +205,7 @@ impl Descriptor {
 
         let mut variables = Vec::new();
         'outer: for requested in selection.names() {
-            for (i, &name) in self.sparse.names().iter().enumerate() {
+            for (i, &name) in self.keys.names().iter().enumerate() {
                 if requested == name {
                     variables.push(i);
                     continue 'outer;
@@ -211,7 +213,7 @@ impl Descriptor {
             }
 
             return Err(Error::InvalidParameter(format!(
-                "'{}' is not part of the sparse labels for this descriptor",
+                "'{}' is not part of the keys for this tensor",
                 requested
             )));
         }
@@ -219,7 +221,7 @@ impl Descriptor {
         let mut matching = Vec::new();
         let selection = selection.iter().next().expect("empty selection");
 
-        for (block_i, labels) in self.sparse.iter().enumerate() {
+        for (block_i, labels) in self.keys.iter().enumerate() {
             let mut selected = true;
             for (&requested_i, &value) in variables.iter().zip(selection) {
                 if labels[requested_i] != value {
@@ -236,26 +238,26 @@ impl Descriptor {
         return Ok(matching);
     }
 
-    /// Move the given variables from the sparse labels to the property labels of
-    /// the blocks.
+    /// Move the given variables from the keys to the property labels of the
+    /// blocks.
     ///
-    /// The current blocks will be merged together according to the sparse
-    /// labels remaining after removing `variables`. The resulting merged blocks
-    /// will have `variables` as the first property variables, followed by the
-    /// current properties. The new sample labels will contains all of the merged
-    /// blocks sample labels, re-ordered to keep them lexicographically sorted.
-    pub fn sparse_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
+    /// Blocks containing the same values in the keys for the `variables` will
+    /// be merged together. The resulting merged blocks will have `variables` as
+    /// the first property variables, followed by the current properties. The
+    /// new sample labels will contains all of the merged blocks sample labels,
+    /// re-ordered to keep them lexicographically sorted.
+    pub fn keys_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
         // TODO: requested values
-        // TODO: sparse_to_properties_no_gradients?
+        // TODO: keys_to_properties_no_gradients?
 
         if variables.is_empty() {
             return Ok(());
         }
 
-        let (new_sparse, new_properties) = self.sparse.split(variables)?;
+        let (new_keys, new_properties) = split_keys(&self.keys, variables)?;
 
         let mut new_blocks = Vec::new();
-        if new_sparse.count() == 1 {
+        if new_keys.count() == 1 {
             // create a single block with everything
             let mut matching = Vec::new();
             for i in 0..self.blocks.len() {
@@ -265,8 +267,8 @@ impl Descriptor {
             let block = self.merge_blocks_along_properties(&matching, &new_properties)?;
             new_blocks.push(block);
         } else {
-            for entry in new_sparse.iter() {
-                let mut selection = LabelsBuilder::new(new_sparse.names());
+            for entry in new_keys.iter() {
+                let mut selection = LabelsBuilder::new(new_keys.names());
                 selection.add(entry.to_vec());
 
                 let matching = self.find_matching_blocks(&selection.finish())?;
@@ -275,7 +277,7 @@ impl Descriptor {
         }
 
 
-        self.sparse = new_sparse;
+        self.keys = new_keys;
         self.blocks = new_blocks;
 
         return Ok(());
@@ -299,7 +301,7 @@ impl Descriptor {
         for block in &blocks_to_merge {
             if block.values.components() != first_components_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse label to properties if the blocks have \
+                    "can not move keys to properties if the blocks have \
                     different components labels, call components_to_properties first".into()
                 ))
             }
@@ -422,7 +424,7 @@ impl Descriptor {
     }
 
     /// Move the given variables from the component labels to the property labels
-    /// for each block in this descriptor.
+    /// for each block in this `TensorMap`.
     pub fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
         // TODO: requested values
         if variables.is_empty() {
@@ -436,28 +438,27 @@ impl Descriptor {
         Ok(())
     }
 
-    /// Move the given variables from the sparse labels to the sample labels of
-    /// the blocks.
+    /// Move the given variables from the keys to the sample labels of the
+    /// blocks.
     ///
-    /// The current blocks will be merged together according to the sparse
-    /// labels remaining after removing `variables`. The resulting merged blocks
-    /// will have `variables` as the last sample variables, preceded by the
-    /// current samples.
+    /// Blocks containing the same values in the keys for the `variables` will
+    /// be merged together. The resulting merged blocks will have `variables` as
+    /// the last sample variables, preceded by the current samples.
     ///
-    /// Currently, this function only works if all merged block have the same
+    /// This function is only implemented if all merged block have the same
     /// property labels.
-    pub fn sparse_to_samples(&mut self, variables: &[&str]) -> Result<(), Error> {
+    pub fn keys_to_samples(&mut self, variables: &[&str]) -> Result<(), Error> {
         // TODO: requested values
-        // TODO: sparse_to_samples_no_gradients?
+        // TODO: keys_to_samples_no_gradients?
 
         if variables.is_empty() {
             return Ok(());
         }
 
-        let (new_sparse, new_samples) = self.sparse.split(variables)?;
+        let (new_keys, new_samples) = split_keys(&self.keys, variables)?;
 
         let mut new_blocks = Vec::new();
-        if new_sparse.count() == 1 {
+        if new_keys.count() == 1 {
             // create a single block with everything
             let mut matching = Vec::new();
             for i in 0..self.blocks.len() {
@@ -467,8 +468,8 @@ impl Descriptor {
             let block = self.merge_blocks_along_samples(&matching, &new_samples)?;
             new_blocks.push(block);
         } else {
-            for entry in new_sparse.iter() {
-                let mut selection = LabelsBuilder::new(new_sparse.names());
+            for entry in new_keys.iter() {
+                let mut selection = LabelsBuilder::new(new_keys.names());
                 selection.add(entry.to_vec());
 
                 let matching = self.find_matching_blocks(&selection.finish())?;
@@ -477,7 +478,7 @@ impl Descriptor {
         }
 
 
-        self.sparse = new_sparse;
+        self.keys = new_keys;
         self.blocks = new_blocks;
 
         return Ok(());
@@ -501,14 +502,14 @@ impl Descriptor {
         for block in &blocks_to_merge {
             if block.values.components() != first_components_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse label to samples if the blocks have \
+                    "can not move keys to samples if the blocks have \
                     different components labels, call components_to_properties first".into()
                 ))
             }
 
             if block.values.properties() != first_properties_label {
                 return Err(Error::InvalidParameter(
-                    "can not move sparse label to samples if the blocks have \
+                    "can not move keys to samples if the blocks have \
                     different property labels".into() // TODO: this might be possible
                 ))
             }
@@ -637,6 +638,74 @@ fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec
     return new_gradient_samples_builder.finish();
 }
 
+/// Split the `keys` into a new set of label without the `variables`; and Labels
+/// containing the values taken by `variables`
+fn split_keys(keys: &Labels, variables: &[&str]) -> Result<(Labels, Labels), Error> {
+    let names = keys.names();
+    for variable in variables {
+        if !names.contains(variable) {
+            return Err(Error::InvalidParameter(format!(
+                "'{}' is not part of the keys for this tensor map",
+                variable
+            )));
+        }
+    }
+
+    // TODO: use Labels instead of Vec<&str> for variables to ensure
+    // uniqueness of variables names & pass 'requested' values around
+
+    let mut remaining = Vec::new();
+    let mut remaining_i = Vec::new();
+    let mut extracted_i = Vec::new();
+
+    'outer: for (i, &name) in names.iter().enumerate() {
+        for &variable in variables {
+            if variable == name {
+                extracted_i.push(i);
+                continue 'outer;
+            }
+        }
+        remaining.push(name);
+        remaining_i.push(i);
+    }
+
+    let mut extracted_keys = IndexSet::new();
+    let mut remaining_keys = IndexSet::new();
+    for key in keys.iter() {
+        let mut label = Vec::new();
+        for &i in &extracted_i {
+            label.push(key[i]);
+        }
+        extracted_keys.insert(label);
+
+        if !remaining_i.is_empty() {
+            let mut label = Vec::new();
+            for &i in &remaining_i {
+                label.push(key[i]);
+            }
+            remaining_keys.insert(label);
+        }
+    }
+
+    let remaining_keys = if remaining_keys.is_empty() {
+        Labels::single()
+    } else {
+        let mut remaining_keys_builder = LabelsBuilder::new(remaining);
+        for entry in remaining_keys {
+            remaining_keys_builder.add(entry);
+        }
+        remaining_keys_builder.finish()
+    };
+
+    assert!(!extracted_keys.is_empty());
+    let mut extracted_keys_builder = LabelsBuilder::new(variables.to_vec());
+    for entry in extracted_keys {
+        extracted_keys_builder.add(entry);
+    }
+
+    return Ok((remaining_keys, extracted_keys_builder.finish()));
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -654,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn descriptor_validation() {
+    fn blocks_validation() {
         let block_1 = Block::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
@@ -669,7 +738,7 @@ mod tests {
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let result = Descriptor::new(example_labels("sparse", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
         assert!(result.is_ok());
 
         /**********************************************************************/
@@ -687,7 +756,7 @@ mod tests {
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let result = Descriptor::new(example_labels("sparse", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same sample label \
@@ -709,7 +778,7 @@ mod tests {
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let result = Descriptor::new(example_labels("sparse", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must contains the same set of \
@@ -732,7 +801,7 @@ mod tests {
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let result = Descriptor::new(example_labels("sparse", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same component label \
@@ -754,7 +823,7 @@ mod tests {
             Arc::new(example_labels("something_else", 1)),
         ).unwrap();
 
-        let result = Descriptor::new(example_labels("sparse", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same property label \
@@ -777,7 +846,7 @@ mod tests {
             return labels.finish();
         }
 
-        fn example_descriptor() -> Descriptor {
+        fn example_tensor() -> TensorMap {
             let mut block_1 = Block::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 1], 1.0))),
                 example_labels("samples", vec![0, 2, 4]),
@@ -864,31 +933,31 @@ mod tests {
 
             /******************************************************************/
 
-            let mut sparse = LabelsBuilder::new(vec!["sparse_1", "sparse_2"]);
-            sparse.add(vec![LabelValue::new(0), LabelValue::new(0)]);
-            sparse.add(vec![LabelValue::new(1), LabelValue::new(0)]);
-            sparse.add(vec![LabelValue::new(2), LabelValue::new(2)]);
-            sparse.add(vec![LabelValue::new(2), LabelValue::new(3)]);
-            let sparse = sparse.finish();
+            let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
+            keys.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+            keys.add(vec![LabelValue::new(1), LabelValue::new(0)]);
+            keys.add(vec![LabelValue::new(2), LabelValue::new(2)]);
+            keys.add(vec![LabelValue::new(2), LabelValue::new(3)]);
+            let keys = keys.finish();
 
-            return Descriptor::new(sparse, vec![block_1, block_2, block_3, block_4]).unwrap();
+            return TensorMap::new(keys, vec![block_1, block_2, block_3, block_4]).unwrap();
         }
 
         #[test]
-        fn sparse_to_properties() {
-            let mut descriptor = example_descriptor();
-            descriptor.sparse_to_properties(&["sparse_1"]).unwrap();
+        fn keys_to_properties() {
+            let mut tensor = example_tensor();
+            tensor.keys_to_properties(&["key_1"]).unwrap();
 
-            assert_eq!(descriptor.sparse().count(), 3);
-            assert_eq!(descriptor.sparse().names(), ["sparse_2"]);
-            assert_eq!(descriptor.sparse()[0], [LabelValue::new(0)]);
-            assert_eq!(descriptor.sparse()[1], [LabelValue::new(2)]);
-            assert_eq!(descriptor.sparse()[2], [LabelValue::new(3)]);
+            assert_eq!(tensor.keys().count(), 3);
+            assert_eq!(tensor.keys().names(), ["key_2"]);
+            assert_eq!(tensor.keys()[0], [LabelValue::new(0)]);
+            assert_eq!(tensor.keys()[1], [LabelValue::new(2)]);
+            assert_eq!(tensor.keys()[2], [LabelValue::new(3)]);
 
-            assert_eq!(descriptor.blocks().len(), 3);
+            assert_eq!(tensor.blocks().len(), 3);
 
             // The new first block contains the old first two blocks merged
-            let block_1 = &descriptor.blocks()[0];
+            let block_1 = &tensor.blocks()[0];
             assert_eq!(block_1.values.samples().names(), ["samples"]);
             assert_eq!(block_1.values.samples().count(), 5);
             assert_eq!(block_1.values.samples()[0], [LabelValue::new(0)]);
@@ -902,7 +971,7 @@ mod tests {
             assert_eq!(block_1.values.components()[0].count(), 1);
             assert_eq!(block_1.values.components()[0][0], [LabelValue::new(0)]);
 
-            assert_eq!(block_1.values.properties().names(), ["sparse_1", "properties"]);
+            assert_eq!(block_1.values.properties().names(), ["key_1", "properties"]);
             assert_eq!(block_1.values.properties().count(), 4);
             assert_eq!(block_1.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
             assert_eq!(block_1.values.properties()[1], [LabelValue::new(1), LabelValue::new(3)]);
@@ -935,38 +1004,38 @@ mod tests {
             assert_eq!(gradient_1.data.as_array(), expected);
 
             // The new second block contains the old third block
-            let block_2 = &descriptor.blocks()[1];
+            let block_2 = &tensor.blocks()[1];
             assert_eq!(block_2.values.data.shape().unwrap(), [4, 3, 1]);
             assert_eq!(block_2.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
 
             // The new third block contains the old second block
-            let block_3 = &descriptor.blocks()[2];
+            let block_3 = &tensor.blocks()[2];
             assert_eq!(block_3.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
         }
 
         #[test]
-        fn sparse_to_samples() {
-            let mut descriptor = example_descriptor();
-            descriptor.sparse_to_samples(&["sparse_2"]).unwrap();
+        fn keys_to_samples() {
+            let mut tensor = example_tensor();
+            tensor.keys_to_samples(&["key_2"]).unwrap();
 
-            assert_eq!(descriptor.sparse().count(), 3);
-            assert_eq!(descriptor.sparse().names(), ["sparse_1"]);
-            assert_eq!(descriptor.sparse()[0], [LabelValue::new(0)]);
-            assert_eq!(descriptor.sparse()[1], [LabelValue::new(1)]);
-            assert_eq!(descriptor.sparse()[2], [LabelValue::new(2)]);
+            assert_eq!(tensor.keys().count(), 3);
+            assert_eq!(tensor.keys().names(), ["key_1"]);
+            assert_eq!(tensor.keys()[0], [LabelValue::new(0)]);
+            assert_eq!(tensor.keys()[1], [LabelValue::new(1)]);
+            assert_eq!(tensor.keys()[2], [LabelValue::new(2)]);
 
-            assert_eq!(descriptor.blocks().len(), 3);
+            assert_eq!(tensor.blocks().len(), 3);
 
             // The first two blocks are not modified
-            let block_1 = &descriptor.blocks()[0];
+            let block_1 = &tensor.blocks()[0];
             assert_eq!(block_1.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 1], 1.0));
 
-            let block_2 = &descriptor.blocks()[1];
+            let block_2 = &tensor.blocks()[1];
             assert_eq!(block_2.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 3], 2.0));
 
             // The new third block contains the old third and fourth blocks merged
-            let block_3 = &descriptor.blocks()[2];
-            assert_eq!(block_3.values.samples().names(), ["samples", "sparse_2"]);
+            let block_3 = &tensor.blocks()[2];
+            assert_eq!(block_3.values.samples().names(), ["samples", "key_2"]);
             assert_eq!(block_3.values.samples().count(), 8);
             assert_eq!(block_3.values.samples()[0], [LabelValue::new(0), LabelValue::new(0)]);
             assert_eq!(block_3.values.samples()[1], [LabelValue::new(0), LabelValue::new(2)]);

@@ -35,19 +35,19 @@
 #define AML_INTERNAL_ERROR 255
 
 /**
- * Basic building block for descriptor. A single block contains a 3-dimensional
- * `aml_array_t`, and three sets of `aml_labels_t` (one for each dimension).
+ * Basic building block for tensor map. A single block contains a n-dimensional
+ * `aml_array_t`, and n sets of `aml_labels_t` (one for each dimension).
  *
  * A block can also contain gradients of the values with respect to a variety
- * of parameters. In this case, each gradient has a separate set of samples,
- * but share the same components and property labels as the values.
+ * of parameters. In this case, each gradient has a separate set of sample
+ * and component labels but share the property labels with the values.
  */
 typedef struct aml_block_t aml_block_t;
 
 /**
- * Opaque type representing a `Descriptor`.
+ * Opaque type representing a `TensorMap`.
  */
-typedef struct aml_descriptor_t aml_descriptor_t;
+typedef struct aml_tensormap_t aml_tensormap_t;
 
 /**
  * Status type returned by all functions in the C API.
@@ -60,7 +60,7 @@ typedef struct aml_descriptor_t aml_descriptor_t;
 typedef int32_t aml_status_t;
 
 /**
- * A set of labels used to carry metadata associated with a descriptor.
+ * A set of labels used to carry metadata associated with a tensor map.
  *
  * This is similar to a list of `count` named tuples, but stored as a 2D array
  * of shape `(count, size)`, with a set of names associated with the columns of
@@ -101,7 +101,7 @@ typedef struct aml_labels_t {
 typedef uint64_t aml_data_origin_t;
 
 /**
- * `aml_array_t` manages 3D arrays the be used as data in a block/descriptor.
+ * `aml_array_t` manages 3D arrays the be used as data in a block/tensor map.
  * The array itself if opaque to this library and can come from multiple
  * sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
  * or torch. The data does not have to live on CPU, or even on the same machine
@@ -161,7 +161,7 @@ typedef struct aml_array_t {
   /**
    * Set entries in this array taking data from the `other_array`. This array
    * is guaranteed to be created by calling `aml_array_t::create` with one of
-   * the arrays in the same block or descriptor as this `array`.
+   * the arrays in the same block or tensor map as this `array`.
    *
    * This function should copy data from `other_array[other_sample, ..., :]` to
    * `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
@@ -185,7 +185,7 @@ const char *aml_last_error(void);
  * of `labels`. This operation is only available if the labels correspond to a
  * set of Rust Labels (i.e. `labels.labels_ptr` is not NULL).
  *
- * @param labels set of labels coming from an `aml_block_t` or an `aml_descriptor_t`
+ * @param labels set of labels coming from an `aml_block_t` or an `aml_tensormap_t`
  * @param values array containing the label to lookup
  * @param count size of the values array
  * @param result position of the values in the labels or -1 if the values
@@ -232,7 +232,7 @@ aml_status_t aml_get_data_origin(aml_data_origin_t origin, char *buffer, uint64_
  * and `properties` labels.
  *
  * The memory allocated by this function and the blocks should be released
- * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+ * using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
  *
  * @param data array handle containing the data for this block. The block takes
  *             ownership of the array, and will release it with
@@ -271,7 +271,7 @@ aml_status_t aml_block_free(struct aml_block_t *block);
  * Make a copy of an `aml_block_t`.
  *
  * The memory allocated by this function and the blocks should be released
- * using `aml_block_free`, or moved into a descriptor using `aml_descriptor`.
+ * using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
  *
  * @param block existing block to copy
  *
@@ -289,8 +289,8 @@ struct aml_block_t *aml_block_copy(const struct aml_block_t *block);
  *
  * The resulting `labels.values` points inside memory owned by the block, and
  * as such is only valid until the block is destroyed with `aml_block_free`, or
- * the containing descriptor is modified with one of the
- * `aml_descriptor_sparse_to_xxx` function.
+ * the containing tensor map is modified with one of the
+ * `aml_tensormap_keys_to_xxx` function.
  *
  * @param block pointer to an existing block
  * @param values_gradients either `"values"` or the name of gradients to lookup
@@ -371,67 +371,65 @@ aml_status_t aml_block_gradients_list(struct aml_block_t *block,
                                       uint64_t *count);
 
 /**
- * Create a new `aml_descriptor_t` with the given `sparse` labels and `blocks`.
+ * Create a new `aml_tensormap_t` with the given `keys` and `blocks`.
  * `blocks_count` must be set to the number of entries in the blocks array.
  *
- * The new descriptor takes ownership of the blocks, which should not be
+ * The new tensor map takes ownership of the blocks, which should not be
  * released separately.
  *
  * The memory allocated by this function and the blocks should be released
- * using `aml_descriptor_free`.
+ * using `aml_tensormap_free`.
  *
- * @param sparse sparse labels associated with each block
+ * @param keys labels containing the keys associated with each block
  * @param blocks pointer to the first element of an array of blocks
  * @param blocks_count number of elements in the `blocks` array
  *
- * @returns A pointer to the newly allocated descriptor, or a `NULL` pointer in
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
  *          case of error. In case of error, you can use `aml_last_error()`
  *          to get the error message.
  */
-struct aml_descriptor_t *aml_descriptor(struct aml_labels_t sparse,
-                                        struct aml_block_t **blocks,
-                                        uint64_t blocks_count);
+struct aml_tensormap_t *aml_tensormap(struct aml_labels_t keys,
+                                      struct aml_block_t **blocks,
+                                      uint64_t blocks_count);
 
 /**
- * Free the memory associated with a `descriptor` previously created with
- * `aml_descriptor`.
+ * Free the memory associated with a `tensor` previously created with
+ * `aml_tensormap`.
  *
- * If `descriptor` is `NULL`, this function does nothing.
+ * If `tensor` is `NULL`, this function does nothing.
  *
- * @param descriptor pointer to an existing descriptor, or `NULL`
+ * @param tensor pointer to an existing tensor map, or `NULL`
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_free(struct aml_descriptor_t *descriptor);
+aml_status_t aml_tensormap_free(struct aml_tensormap_t *tensor);
 
 /**
- * Get the sparse `labels` for the given `descriptor`. After a sucessful call
- * to this function, `labels.values` contains a pointer to memory inside the
- * `descriptor` which is invalidated when the descriptor is freed with
- * `aml_descriptor_free` or the set of sparse labels is modified by calling one
- * of the `aml_descriptor_sparse_to_XXX` function.
- *
- * @param descriptor pointer to an existing descriptor
- * @param labels pointer to be filled with the sparse labels of the descriptor
+ * Get the keys for the given `tensor` map. After a successful call to this
+ * function, `keys.values` contains a pointer to memory inside the
+ * `tensor` which is invalidated when the tensor map is freed with
+ * `aml_tensormap_free` or the set of keys is modified by calling one
+ * of the `aml_tensormap_keys_to_XXX` function.
+ * @param tensor pointer to an existing tensor map
+ * @param keys pointer to be filled with the keys of the tensor map
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_sparse_labels(const struct aml_descriptor_t *descriptor,
-                                          struct aml_labels_t *labels);
+aml_status_t aml_tensormap_keys(const struct aml_tensormap_t *tensor, struct aml_labels_t *keys);
 
 /**
- * Get a pointer to the `index`-th block in this descriptor.
+ * Get a pointer to the `index`-th block in this tensor map.
  *
- * The block memory is still managed by the descriptor, this block should not
- * be freed. The block is invalidated when the descriptor is freed with
- * `aml_descriptor_free` or the set of sparse labels is modified by calling one
- * of the `aml_descriptor_sparse_to_XXX` function.
+ * The block memory is still managed by the tensor map, this block should not
+ * be freed. The block is invalidated when the tensor map is freed with
+ * `aml_tensormap_free` or the set of keys is modified by calling one
+ * of the `aml_tensormap_keys_to_XXX` function.
  *
- * @param descriptor pointer to an existing descriptor
+ * @param tensor pointer to an existing tensor map
  * @param block pointer to be filled with a block
  * @param index index of the block to get
  *
@@ -439,22 +437,22 @@ aml_status_t aml_descriptor_sparse_labels(const struct aml_descriptor_t *descrip
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_block_by_id(const struct aml_descriptor_t *descriptor,
-                                        const struct aml_block_t **block,
-                                        uint64_t index);
+aml_status_t aml_tensormap_block_by_id(const struct aml_tensormap_t *tensor,
+                                       const struct aml_block_t **block,
+                                       uint64_t index);
 
 /**
- * Get a pointer to the `block` in this `descriptor` corresponding to the given
+ * Get a pointer to the `block` in this `tensor` corresponding to the given
  * `selection`. The `selection` should have the same names/variables as the
- * sparse labels for this descriptor, and only one entry, describing the
+ * keys for this tensor map, and only one entry, describing the
  * requested block.
  *
- * The block memory is still managed by the descriptor, this block should not
- * be freed. The block is invalidated when the descriptor is freed with
- * `aml_descriptor_free` or the set of sparse labels is modified by calling one
- * of the `aml_descriptor_sparse_to_XXX` function.
+ * The block memory is still managed by the tensor map, this block should not
+ * be freed. The block is invalidated when the tensor map is freed with
+ * `aml_tensormap_free` or the set of keys is modified by calling one
+ * of the `aml_tensormap_keys_to_XXX` function.
  *
- * @param descriptor pointer to an existing descriptor
+ * @param tensor pointer to an existing tensor map
  * @param block pointer to be filled with a block
  * @param selection labels with a single entry describing which block is requested
  *
@@ -462,77 +460,79 @@ aml_status_t aml_descriptor_block_by_id(const struct aml_descriptor_t *descripto
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_block_selection(const struct aml_descriptor_t *descriptor,
-                                            const struct aml_block_t **block,
-                                            struct aml_labels_t selection);
+aml_status_t aml_tensormap_block_selection(const struct aml_tensormap_t *tensor,
+                                           const struct aml_block_t **block,
+                                           struct aml_labels_t selection);
 
 /**
- * Move the given variables from the sparse labels to the property labels of the
+ * Move the given `variables` from the keys to the property labels of the
  * blocks.
  *
- * The current blocks will be merged together according to the sparse labels
- * remaining after removing `variables`. The resulting merged blocks will have
- * `variables` as the first property variables, followed by the current
- * properties. The new sample labels will contains all of the merged blocks
- * sample labels, re-ordered to keep them lexicographically sorted.
+ * Blocks containing the same values in the keys for the `variables` will
+ * be merged together. The resulting merged blocks will have `variables` as
+ * the first property variables, followed by the current properties. The
+ * new sample labels will contains all of the merged blocks sample labels,
+ * re-ordered to keep them lexicographically sorted.
  *
  * `variables` must be an array of `variables_count` NULL-terminated strings,
  * encoded as UTF-8.
  *
- * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the properties
+ * @param tensor pointer to an existing tensor map
+ * @param variables names of the key variables to move to the properties
  * @param variables_count number of entries in the `variables` array
  *
  * @returns The status code of this operation. If the status is not
  *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
  *          error message.
  */
-aml_status_t aml_descriptor_sparse_to_properties(struct aml_descriptor_t *descriptor,
-                                                 const char *const *variables,
-                                                 uint64_t variables_count);
-
-/**
- * Move the given variables from the component labels to the property labels for
- * each block in this descriptor.
- *
- * `variables` must be an array of `variables_count` NULL-terminated strings,
- * encoded as UTF-8.
- *
- * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the properties
- * @param variables_count number of entries in the `variables` array
- *
- * @returns The status code of this operation. If the status is not
- *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
- *          error message.
- */
-aml_status_t aml_descriptor_components_to_properties(struct aml_descriptor_t *descriptor,
-                                                     const char *const *variables,
-                                                     uint64_t variables_count);
-
-/**
- * Move the given variables from the sparse labels to the sample labels of the
- * blocks.
- *
- * The current blocks will be merged together according to the sparse
- * labels remaining after removing `variables`. The resulting merged
- * blocks will have `variables` as the last sample variables, preceded by
- * the current samples.
- *
- * `variables` must be an array of `variables_count` NULL-terminated strings,
- * encoded as UTF-8.
- *
- * @param descriptor pointer to an existing descriptor
- * @param variables name of the sparse variables to move to the samples
- * @param variables_count number of entries in the `variables` array
- *
- * @returns The status code of this operation. If the status is not
- *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
- *          error message.
- */
-aml_status_t aml_descriptor_sparse_to_samples(struct aml_descriptor_t *descriptor,
+aml_status_t aml_tensormap_keys_to_properties(struct aml_tensormap_t *tensor,
                                               const char *const *variables,
                                               uint64_t variables_count);
+
+/**
+ * Move the given variables from the component labels to the property labels
+ * for each block in this tensor map.
+ *
+ * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * encoded as UTF-8.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param variables names of the key variables to move to the properties
+ * @param variables_count number of entries in the `variables` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
+aml_status_t aml_tensormap_components_to_properties(struct aml_tensormap_t *tensor,
+                                                    const char *const *variables,
+                                                    uint64_t variables_count);
+
+/**
+ * Move the given `variables` from the keys to the sample labels of the
+ * blocks.
+ *
+ * Blocks containing the same values in the keys for the `variables` will
+ * be merged together. The resulting merged blocks will have `variables` as
+ * the last sample variables, preceded by the current samples.
+ *
+ * This function is only implemented if all merged block have the same
+ * property labels.
+ *
+ * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * encoded as UTF-8.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param variables names of the key variables to move to the samples
+ * @param variables_count number of entries in the `variables` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+ *          error message.
+ */
+aml_status_t aml_tensormap_keys_to_samples(struct aml_tensormap_t *tensor,
+                                           const char *const *variables,
+                                           uint64_t variables_count);
 
 #ifdef __cplusplus
 } // extern "C"

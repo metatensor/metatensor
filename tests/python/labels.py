@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from aml_storage import Labels
-from utils import test_descriptor
+from utils import test_tensor_map
 
 
 class TestLabels(unittest.TestCase):
@@ -17,10 +17,10 @@ class TestLabels(unittest.TestCase):
         self.assertEqual(tuple(labels[0]), (0, 0))
 
     def test_native_labels(self):
-        descriptor = test_descriptor()
-        labels = descriptor.sparse
+        tensor = test_tensor_map()
+        labels = tensor.keys
 
-        self.assertEqual(labels.names, ("sparse_1", "sparse_2"))
+        self.assertEqual(labels.names, ("key_1", "key_2"))
         self.assertEqual(len(labels), 4)
         self.assertEqual(tuple(labels[0]), (0, 0))
         self.assertEqual(tuple(labels[1]), (1, 0))
@@ -28,24 +28,24 @@ class TestLabels(unittest.TestCase):
         self.assertEqual(tuple(labels[3]), (2, 3))
 
     def test_position(self):
-        descriptor = test_descriptor()
-        labels = descriptor.sparse
+        tensor = test_tensor_map()
+        labels = tensor.keys
 
         self.assertEqual(labels.position((0, 0)), 0)
         self.assertEqual(labels.position((2, 3)), 3)
         self.assertEqual(labels.position((2, -1)), None)
 
     def test_contains(self):
-        descriptor = test_descriptor()
-        labels = descriptor.sparse
+        tensor = test_tensor_map()
+        labels = tensor.keys
 
         self.assertTrue((0, 0) in labels)
         self.assertTrue((2, 3) in labels)
         self.assertFalse((2, -1) in labels)
 
     def test_named_tuples(self):
-        descriptor = test_descriptor()
-        labels = descriptor.sparse
+        tensor = test_tensor_map()
+        labels = tensor.keys
 
         iterator = labels.as_namedtuples()
         first = next(iterator)
@@ -53,9 +53,9 @@ class TestLabels(unittest.TestCase):
         self.assertTrue(isinstance(first, tuple))
         self.assertTrue(hasattr(first, "_fields"))
 
-        self.assertEqual(first.sparse_1, 0)
-        self.assertEqual(first.sparse_2, 0)
-        self.assertEqual(first.as_dict(), {"sparse_1": 0, "sparse_2": 0})
+        self.assertEqual(first.key_1, 0)
+        self.assertEqual(first.key_2, 0)
+        self.assertEqual(first.as_dict(), {"key_1": 0, "key_2": 0})
 
         self.assertEqual(first, (0, 0))
         self.assertEqual(next(iterator), (1, 0))

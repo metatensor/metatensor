@@ -30,7 +30,7 @@ class aml_block_t(ctypes.Structure):
     pass
 
 
-class aml_descriptor_t(ctypes.Structure):
+class aml_tensormap_t(ctypes.Structure):
     pass
 
 
@@ -142,55 +142,55 @@ def setup_functions(lib):
     ]
     lib.aml_block_gradients_list.restype = _check_status
 
-    lib.aml_descriptor.argtypes = [
+    lib.aml_tensormap.argtypes = [
         aml_labels_t,
         POINTER(POINTER(aml_block_t)),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor.restype = POINTER(aml_descriptor_t)
+    lib.aml_tensormap.restype = POINTER(aml_tensormap_t)
 
-    lib.aml_descriptor_free.argtypes = [
-        POINTER(aml_descriptor_t)
+    lib.aml_tensormap_free.argtypes = [
+        POINTER(aml_tensormap_t)
     ]
-    lib.aml_descriptor_free.restype = _check_status
+    lib.aml_tensormap_free.restype = _check_status
 
-    lib.aml_descriptor_sparse_labels.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_keys.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(aml_labels_t)
     ]
-    lib.aml_descriptor_sparse_labels.restype = _check_status
+    lib.aml_tensormap_keys.restype = _check_status
 
-    lib.aml_descriptor_block_by_id.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_block_by_id.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(POINTER(aml_block_t)),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor_block_by_id.restype = _check_status
+    lib.aml_tensormap_block_by_id.restype = _check_status
 
-    lib.aml_descriptor_block_selection.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_block_selection.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(POINTER(aml_block_t)),
         aml_labels_t
     ]
-    lib.aml_descriptor_block_selection.restype = _check_status
+    lib.aml_tensormap_block_selection.restype = _check_status
 
-    lib.aml_descriptor_sparse_to_properties.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_keys_to_properties.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(ctypes.c_char_p),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor_sparse_to_properties.restype = _check_status
+    lib.aml_tensormap_keys_to_properties.restype = _check_status
 
-    lib.aml_descriptor_components_to_properties.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_components_to_properties.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(ctypes.c_char_p),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor_components_to_properties.restype = _check_status
+    lib.aml_tensormap_components_to_properties.restype = _check_status
 
-    lib.aml_descriptor_sparse_to_samples.argtypes = [
-        POINTER(aml_descriptor_t),
+    lib.aml_tensormap_keys_to_samples.argtypes = [
+        POINTER(aml_tensormap_t),
         POINTER(ctypes.c_char_p),
         ctypes.c_uint64
     ]
-    lib.aml_descriptor_sparse_to_samples.restype = _check_status
+    lib.aml_tensormap_keys_to_samples.restype = _check_status

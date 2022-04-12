@@ -31,7 +31,7 @@ main groups:
 .. toctree::
     :maxdepth: 1
 
-    descriptors
+    tensor
     labels
     blocks
     data
