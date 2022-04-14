@@ -14,7 +14,7 @@ use crate::Error;
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub data: eqs_array_t,
-    pub(crate) samples: Labels,
+    pub(crate) samples: Arc<Labels>,
     pub(crate) components: Vec<Arc<Labels>>,
     pub(crate) properties: Arc<Labels>,
 }
@@ -89,7 +89,7 @@ impl BasicBlock {
     /// Create a new `BasicBlock`, validating the shape of data & labels
     pub fn new(
         data: eqs_array_t,
-        samples: Labels,
+        samples: Arc<Labels>,
         components: Vec<Arc<Labels>>,
         properties: Arc<Labels>,
     ) -> Result<BasicBlock, Error> {
@@ -102,7 +102,7 @@ impl BasicBlock {
     }
 
     /// Get the sample labels in this basic block
-    pub fn samples(&self) -> &Labels {
+    pub fn samples(&self) -> &Arc<Labels> {
         &self.samples
     }
 
@@ -179,7 +179,7 @@ impl TensorBlock {
     /// initialized without any gradients.
     pub fn new(
         data: eqs_array_t,
-        samples: Labels,
+        samples: Arc<Labels>,
         components: Vec<Arc<Labels>>,
         properties: Arc<Labels>,
     ) -> Result<TensorBlock, Error> {
@@ -212,7 +212,7 @@ impl TensorBlock {
         &mut self,
         parameter: &str,
         data: eqs_array_t,
-        samples: Labels,
+        samples: Arc<Labels>,
         components: Vec<Arc<Labels>>,
     ) -> Result<(), Error> {
         if self.gradients.contains_key(parameter) {
@@ -307,18 +307,18 @@ mod tests {
 
     use super::*;
 
-    fn example_labels(name: &str, count: usize) -> Labels {
+    fn example_labels(name: &str, count: usize) -> Arc<Labels> {
         let mut labels = LabelsBuilder::new(vec![name]);
         for i in 0..count {
             labels.add(vec![LabelValue::from(i)]);
         }
-        return labels.finish();
+        return Arc::new(labels.finish());
     }
 
     #[test]
     fn no_components() {
         let samples = example_labels("samples", 4);
-        let properties = Arc::new(example_labels("properties", 7));
+        let properties = example_labels("properties", 7);
         let data = eqs_array_t::new(Box::new(TestArray::new(vec![4, 7])));
         let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
         assert!(result.is_ok());
@@ -350,11 +350,11 @@ mod tests {
 
     #[test]
     fn multiple_components() {
-        let component_1 = Arc::new(example_labels("component_1", 4));
-        let component_2 = Arc::new(example_labels("component_2", 3));
+        let component_1 = example_labels("component_1", 4);
+        let component_2 = example_labels("component_2", 3);
 
         let samples = example_labels("samples", 3);
-        let properties = Arc::new(example_labels("properties", 2));
+        let properties = example_labels("properties", 2);
         let data = eqs_array_t::new(Box::new(TestArray::new(vec![3, 4, 2])));
         let components = vec![Arc::clone(&component_1)];
         let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
@@ -410,7 +410,7 @@ mod tests {
         #[test]
         fn values_without_components() {
             let samples = example_labels("samples", 4);
-            let properties = Arc::new(example_labels("properties", 7));
+            let properties = example_labels("properties", 7);
             let data = eqs_array_t::new(Box::new(TestArray::new(vec![4, 7])));
             let mut block = TensorBlock::new(data, samples, vec![], properties).unwrap();
             assert!(block.gradients().is_empty());
@@ -420,11 +420,12 @@ mod tests {
             gradient_samples.add(vec![LabelValue::new(0), LabelValue::new(0)]);
             gradient_samples.add(vec![LabelValue::new(1), LabelValue::new(1)]);
             gradient_samples.add(vec![LabelValue::new(3), LabelValue::new(-2)]);
-            block.add_gradient("foo", gradient, gradient_samples.finish(), vec![]).unwrap();
+            let gradient_samples = Arc::new(gradient_samples.finish());
+            block.add_gradient("foo", gradient, gradient_samples, vec![]).unwrap();
 
             let gradient = eqs_array_t::new(Box::new(TestArray::new(vec![3, 5, 7])));
             let gradient_samples = example_labels("sample", 3);
-            let component = Arc::new(example_labels("component", 5));
+            let component = example_labels("component", 5);
             block.add_gradient("component", gradient, gradient_samples, vec![component]).unwrap();
 
             let mut gradients_list = block.gradients().keys().collect::<Vec<_>>();
@@ -448,8 +449,8 @@ mod tests {
         #[test]
         fn values_with_components() {
             let samples = example_labels("samples", 4);
-            let component = Arc::new(example_labels("component", 5));
-            let properties = Arc::new(example_labels("properties", 7));
+            let component = example_labels("component", 5);
+            let properties = example_labels("properties", 7);
             let data = eqs_array_t::new(Box::new(TestArray::new(vec![4, 5, 7])));
             let mut block = TensorBlock::new(data, samples, vec![component.clone()], properties).unwrap();
 
@@ -459,7 +460,7 @@ mod tests {
             assert!(result.is_ok());
 
             let gradient = eqs_array_t::new(Box::new(TestArray::new(vec![3, 3, 5, 7])));
-            let component_2 = Arc::new(example_labels("component_2", 3));
+            let component_2 = example_labels("component_2", 3);
             let components = vec![component_2.clone(), component.clone()];
             let result = block.add_gradient("components", gradient, gradient_samples.clone(), components);
             assert!(result.is_ok());
@@ -485,20 +486,20 @@ mod tests {
             let mut block = TensorBlock::new(
                 eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 3], 1.0))),
                 example_labels("samples", 3),
-                vec![Arc::new(example_labels("components", 2))],
-                Arc::new(example_labels("properties", 3)),
+                vec![example_labels("components", 2)],
+                example_labels("properties", 3),
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
             grad_samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
             grad_samples.add(vec![LabelValue::new(1), LabelValue::new(2)]);
-            let grad_samples = grad_samples.finish();
+            let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
                 "parameter",
                 eqs_array_t::new(Box::new(ArrayD::from_elem(vec![2, 2, 3], 11.0))),
                 grad_samples,
-                vec![Arc::new(example_labels("components", 2))],
+                vec![example_labels("components", 2)],
             ).unwrap();
 
             /******************************************************************/
@@ -541,21 +542,21 @@ mod tests {
             ]).unwrap();
 
             let components = vec![
-                Arc::new(example_labels("component_1", 2)),
-                Arc::new(example_labels("component_2", 3)),
+                example_labels("component_1", 2),
+                example_labels("component_2", 3),
             ];
             let mut block = TensorBlock::new(
                 eqs_array_t::new(Box::new(data)),
                 example_labels("samples", 2),
                 components.clone(),
-                Arc::new(example_labels("properties", 2)),
+                example_labels("properties", 2),
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
             grad_samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
             grad_samples.add(vec![LabelValue::new(0), LabelValue::new(3)]);
             grad_samples.add(vec![LabelValue::new(1), LabelValue::new(2)]);
-            let grad_samples = grad_samples.finish();
+            let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
                 "parameter",
