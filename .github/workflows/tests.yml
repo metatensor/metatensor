@@ -51,6 +51,9 @@ jobs:
           apt-get update
           apt-get install -y cmake make gcc g++ git curl rustc
 
+          # workaround https://github.com/actions/checkout/issues/760
+          git config --global --add safe.directory /__w/aml-storage/aml-storage
+
       - uses: actions/checkout@v2
 
       - name: setup Python
