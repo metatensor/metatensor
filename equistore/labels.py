@@ -3,7 +3,7 @@ from typing import List, Optional
 import numpy as np
 import ctypes
 
-from ._c_api import aml_labels_t
+from ._c_api import eqs_labels_t
 from ._c_lib import _get_library
 
 
@@ -82,9 +82,9 @@ class Labels(np.ndarray):
         if values.shape[1] != 0:
             values = values.view(dtype=dtype).reshape((values.shape[0],))
 
-            if "_aml_labels" not in kwargs:
+            if "_eqs_labels" not in kwargs:
                 # check that the values are unique in the labels, we assume
-                # that's the case if we get an `aml_labels` parameter
+                # that's the case if we get an `eqs_labels` parameter
                 if len(np.unique(values)) != len(values):
                     raise ValueError("values in Labels must be unique")
 
@@ -95,9 +95,9 @@ class Labels(np.ndarray):
         # owned by the parent.
         obj._parent = kwargs.get("_parent", None)
 
-        # keep the aml_labels_t object around if we have one, it will be used to
+        # keep the eqs_labels_t object around if we have one, it will be used to
         # implement `position` and `__contains__`
-        obj._aml_labels = kwargs.get("_aml_labels", None)
+        obj._eqs_labels = kwargs.get("_eqs_labels", None)
 
         return obj
 
@@ -105,10 +105,10 @@ class Labels(np.ndarray):
         # keep the parent around when creating sub-views of this array
         self._parent = getattr(object, "_parent", None)
 
-        # do not keep the aml_labels around, since one could be taking only a
+        # do not keep the eqs_labels around, since one could be taking only a
         # subset of the variables (`samples[["structure", "center"]]`) and this
         # would break `position` and `__contains__`
-        self._aml_labels = None
+        self._eqs_labels = None
 
     @property
     def names(self) -> List[str]:
@@ -149,40 +149,40 @@ class Labels(np.ndarray):
         for entry in self:
             yield named_tuple_class(*entry)
 
-    def _as_aml_labels_t(self):
-        """transform these labels into aml_labels_t"""
-        aml_labels = aml_labels_t()
+    def _as_eqs_labels_t(self):
+        """transform these labels into eqs_labels_t"""
+        eqs_labels = eqs_labels_t()
 
         names = ctypes.ARRAY(ctypes.c_char_p, len(self.names))()
         for i, n in enumerate(self.names):
             names[i] = n.encode("utf8")
 
-        aml_labels.labels_ptr = None
-        aml_labels.names = names
-        aml_labels.size = len(names)
-        aml_labels.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-        aml_labels.count = self.shape[0]
+        eqs_labels.labels_ptr = None
+        eqs_labels.names = names
+        eqs_labels.size = len(names)
+        eqs_labels.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+        eqs_labels.count = self.shape[0]
 
-        return aml_labels
+        return eqs_labels
 
     @staticmethod
-    def _from_aml_labels_t(aml_labels, parent):
+    def _from_eqs_labels_t(eqs_labels, parent):
         """
-        Convert an aml_labels_t into a Labels instance.
+        Convert an eqs_labels_t into a Labels instance.
 
-        The :py:class:`Labels` instance is only a view inside the aml_labels_t
+        The :py:class:`Labels` instance is only a view inside the eqs_labels_t
         memory, so one can use the parent parameter to ensure a parent object is
         kept alive for as long as the instance live.
         """
         names = []
-        for i in range(aml_labels.size):
-            names.append(aml_labels.names[i].decode("utf8"))
+        for i in range(eqs_labels.size):
+            names.append(eqs_labels.names[i].decode("utf8"))
 
-        if aml_labels.count != 0:
-            shape = (aml_labels.count, aml_labels.size)
-            values = _ptr_to_ndarray(ptr=aml_labels.values, shape=shape, dtype=np.int32)
+        if eqs_labels.count != 0:
+            shape = (eqs_labels.count, eqs_labels.size)
+            values = _ptr_to_ndarray(ptr=eqs_labels.values, shape=shape, dtype=np.int32)
             values.flags.writeable = False
-            return Labels(names, values, _aml_labels=aml_labels, _parent=parent)
+            return Labels(names, values, _eqs_labels=eqs_labels, _parent=parent)
         else:
             return Labels(
                 names=names,
@@ -197,7 +197,7 @@ class Labels(np.ndarray):
         :py:class:`TensorBlock` or a :py:class:`TensorMap`. If you need it for
         standalone labels, please let us know!
         """
-        if self._aml_labels is not None:
+        if self._eqs_labels is not None:
             lib = _get_library()
 
             result = ctypes.c_int64()
@@ -205,8 +205,8 @@ class Labels(np.ndarray):
             for i, v in enumerate(label):
                 values[i] = ctypes.c_int32(v)
 
-            lib.aml_labels_position(
-                self._aml_labels,
+            lib.eqs_labels_position(
+                self._eqs_labels,
                 values,
                 len(label),
                 result,

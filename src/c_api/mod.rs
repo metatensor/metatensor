@@ -2,9 +2,9 @@
 
 #[macro_use]
 mod status;
-pub use self::status::{catch_unwind, aml_status_t};
-pub use self::status::{AML_SUCCESS, AML_INVALID_PARAMETER_ERROR};
-pub use self::status::{AML_BUFFER_SIZE_ERROR, AML_INTERNAL_ERROR};
+pub use self::status::{catch_unwind, eqs_status_t};
+pub use self::status::{EQS_SUCCESS, EQS_INVALID_PARAMETER_ERROR};
+pub use self::status::{EQS_BUFFER_SIZE_ERROR, EQS_INTERNAL_ERROR};
 
 pub mod labels;
 pub mod data;

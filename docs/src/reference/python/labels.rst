@@ -1,6 +1,6 @@
 Labels
 ======
 
-.. autoclass:: aml_storage.Labels
+.. autoclass:: equistore.Labels
     :members:
     :undoc-members:

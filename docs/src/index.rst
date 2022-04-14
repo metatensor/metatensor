@@ -1,5 +1,5 @@
-aml_storage documentation
-=========================
+Equistore documentation
+=======================
 
 .. toctree::
    :maxdepth: 2

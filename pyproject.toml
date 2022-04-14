@@ -15,7 +15,7 @@ legacy_tox_ini = """
 # instead of pip below
 skip_install = True
 passenv =
-    AML_BUILD_TYPE
+    EQUISTORE_BUILD_TYPE
     RUSTUP_HOME
     CARGO*
 
@@ -30,7 +30,7 @@ commands =
 [testenv:lint]
 skip_install = True
 passenv =
-    AML_BUILD_TYPE
+    EQUISTORE_BUILD_TYPE
     RUSTUP_HOME
     CARGO*
 
@@ -39,6 +39,6 @@ deps =
     flake8
 
 commands =
-    black --check aml_storage --extend-exclude aml_storage/_c_api.py
-    flake8 --max-line-length 88 aml_storage
+    black --check equistore --extend-exclude equistore/_c_api.py
+    flake8 --max-line-length 88 equistore
 """

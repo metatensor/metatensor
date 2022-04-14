@@ -1,6 +1,6 @@
 import numpy as np
 
-from aml_storage import Labels, TensorBlock, TensorMap
+from equistore import Labels, TensorBlock, TensorMap
 
 
 def test_tensor_map():

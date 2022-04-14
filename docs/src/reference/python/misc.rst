@@ -4,4 +4,4 @@ Miscelaneous
 Error handling
 --------------
 
-.. autoclass:: aml_storage.status.AmlError
+.. autoclass:: equistore.status.EquistoreError

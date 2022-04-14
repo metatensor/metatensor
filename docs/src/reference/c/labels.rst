@@ -1,5 +1,5 @@
 Labels
 ======
 
-.. doxygenstruct:: aml_labels_t
+.. doxygenstruct:: eqs_labels_t
     :members:

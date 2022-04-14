@@ -3,46 +3,46 @@ use std::os::raw::c_char;
 use std::ffi::CStr;
 use std::convert::{TryFrom, TryInto};
 
-use crate::{TensorBlock, Labels, Error, aml_array_t};
+use crate::{TensorBlock, Labels, Error, eqs_array_t};
 
-use super::labels::aml_labels_t;
+use super::labels::eqs_labels_t;
 
-use super::{catch_unwind, aml_status_t};
+use super::{catch_unwind, eqs_status_t};
 
 /// Basic building block for tensor map. A single block contains a n-dimensional
-/// `aml_array_t`, and n sets of `aml_labels_t` (one for each dimension).
+/// `eqs_array_t`, and n sets of `eqs_labels_t` (one for each dimension).
 ///
 /// A block can also contain gradients of the values with respect to a variety
 /// of parameters. In this case, each gradient has a separate set of sample
 /// and component labels but share the property labels with the values.
 #[allow(non_camel_case_types)]
-pub struct aml_block_t(TensorBlock);
+pub struct eqs_block_t(TensorBlock);
 
-impl std::ops::Deref for aml_block_t {
+impl std::ops::Deref for eqs_block_t {
     type Target = TensorBlock;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl std::ops::DerefMut for aml_block_t {
+impl std::ops::DerefMut for eqs_block_t {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl aml_block_t {
+impl eqs_block_t {
     pub(super) fn block(self) -> TensorBlock {
         self.0
     }
 }
 
 
-/// Create a new `aml_block_t` with the given `data` and `samples`, `components`
+/// Create a new `eqs_block_t` with the given `data` and `samples`, `components`
 /// and `properties` labels.
 ///
 /// The memory allocated by this function and the blocks should be released
-/// using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
+/// using `eqs_block_free`, or moved into a tensor map using `eqs_tensormap`.
 ///
 /// @param data array handle containing the data for this block. The block takes
 ///             ownership of the array, and will release it with
@@ -54,16 +54,16 @@ impl aml_block_t {
 /// @param properties property labels corresponding to the last dimension of the data
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
-///          case of error. In case of error, you can use `aml_last_error()`
+///          case of error. In case of error, you can use `eqs_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn aml_block(
-    data: aml_array_t,
-    samples: aml_labels_t,
-    components: *const aml_labels_t,
+pub unsafe extern fn eqs_block(
+    data: eqs_array_t,
+    samples: eqs_labels_t,
+    components: *const eqs_labels_t,
     components_count: usize,
-    properties: aml_labels_t,
-) -> *mut aml_block_t {
+    properties: eqs_labels_t,
+) -> *mut eqs_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
@@ -78,7 +78,7 @@ pub unsafe extern fn aml_block(
         let properties = Labels::try_from(&properties)?;
 
         let block = TensorBlock::new(data, samples, rust_components, Arc::new(properties))?;
-        let boxed = Box::new(aml_block_t(block));
+        let boxed = Box::new(eqs_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -96,19 +96,19 @@ pub unsafe extern fn aml_block(
 
 
 /// Free the memory associated with a `block` previously created with
-/// `aml_block`.
+/// `eqs_block`.
 ///
 /// If `block` is `NULL`, this function does nothing.
 ///
 /// @param block pointer to an existing block, or `NULL`
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_free(
-    block: *mut aml_block_t,
-) -> aml_status_t {
+pub unsafe extern fn eqs_block_free(
+    block: *mut eqs_block_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         if !block.is_null() {
             std::mem::drop(Box::from_raw(block));
@@ -118,26 +118,26 @@ pub unsafe extern fn aml_block_free(
     })
 }
 
-/// Make a copy of an `aml_block_t`.
+/// Make a copy of an `eqs_block_t`.
 ///
 /// The memory allocated by this function and the blocks should be released
-/// using `aml_block_free`, or moved into a tensor map using `aml_tensormap`.
+/// using `eqs_block_free`, or moved into a tensor map using `eqs_tensormap`.
 ///
 /// @param block existing block to copy
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
-///          case of error. In case of error, you can use `aml_last_error()`
+///          case of error. In case of error, you can use `eqs_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_copy(
-    block: *const aml_block_t,
-) -> *mut aml_block_t {
+pub unsafe extern fn eqs_block_copy(
+    block: *const eqs_block_t,
+) -> *mut eqs_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         check_pointers!(block);
         let new_block = (*block).clone();
-        let boxed = Box::new(aml_block_t(new_block));
+        let boxed = Box::new(eqs_block_t(new_block));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -160,26 +160,26 @@ pub unsafe extern fn aml_block_copy(
 /// labels for `"values"` or one of the gradients in this block.
 ///
 /// The resulting `labels.values` points inside memory owned by the block, and
-/// as such is only valid until the block is destroyed with `aml_block_free`, or
+/// as such is only valid until the block is destroyed with `eqs_block_free`, or
 /// the containing tensor map is modified with one of the
-/// `aml_tensormap_keys_to_xxx` function.
+/// `eqs_tensormap_keys_to_xxx` function.
 ///
 /// @param block pointer to an existing block
 /// @param values_gradients either `"values"` or the name of gradients to lookup
 /// @param axis axis/dimension of the data array for which you need the labels
-/// @param labels pointer to an empty `aml_labels_t` that will be set to the
+/// @param labels pointer to an empty `eqs_labels_t` that will be set to the
 ///               requested labels
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_labels(
-    block: *const aml_block_t,
+pub unsafe extern fn eqs_block_labels(
+    block: *const eqs_block_t,
     values_gradients: *const c_char,
     axis: usize,
-    labels: *mut aml_labels_t,
-) -> aml_status_t {
+    labels: *mut eqs_labels_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(block, values_gradients, labels);
 
@@ -224,18 +224,18 @@ pub unsafe extern fn aml_block_labels(
 ///
 /// @param block pointer to an existing block
 /// @param values_gradients either `"values"` or the name of gradients to lookup
-/// @param data pointer to an empty `aml_array_t` that will be set to the
+/// @param data pointer to an empty `eqs_array_t` that will be set to the
 ///             requested array
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_data(
-    block: *const aml_block_t,
+pub unsafe extern fn eqs_block_data(
+    block: *const eqs_block_t,
     values_gradients: *const c_char,
-    data: *mut aml_array_t,
-) -> aml_status_t {
+    data: *mut eqs_array_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(block, values_gradients, data);
 
@@ -272,17 +272,17 @@ pub unsafe extern fn aml_block_data(
 /// @param components_count number of entries in the `components` array
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_add_gradient(
-    block: *mut aml_block_t,
+pub unsafe extern fn eqs_block_add_gradient(
+    block: *mut eqs_block_t,
     parameter: *const c_char,
-    data: aml_array_t,
-    samples: aml_labels_t,
-    components: *const aml_labels_t,
+    data: eqs_array_t,
+    samples: eqs_labels_t,
+    components: *const eqs_labels_t,
     components_count: usize,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(block, parameter);
         let parameter = CStr::from_ptr(parameter).to_str().unwrap();
@@ -308,14 +308,14 @@ pub unsafe extern fn aml_block_add_gradient(
 /// @param count will be set to the number of elements in `parameters`
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_block_gradients_list(
-    block: *mut aml_block_t,
+pub unsafe extern fn eqs_block_gradients_list(
+    block: *mut eqs_block_t,
     parameters: *mut *const *const c_char,
     count: *mut u64
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(block, parameters, count);
 

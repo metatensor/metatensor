@@ -10,44 +10,44 @@ except ImportError:
 
 import ctypes
 
-from aml_storage import data
-from aml_storage._c_api import c_uintptr_t, AML_SUCCESS, aml_array_t
+from equistore import data
+from equistore._c_api import c_uintptr_t, EQS_SUCCESS, eqs_array_t
 
 
-class TestAmlDataMixin:
+class TestArrayWrapperMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
-        aml_data = data.AmlData(array)
-        aml_array = aml_data.aml_array
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.eqs_array
 
         self.assertEqual(
-            id(data.aml_array_to_python_object(aml_array).array),
+            id(data.eqs_array_to_python_object(eqs_array).array),
             id(array),
         )
 
-        origin = data.data_origin(aml_array)
+        origin = data.data_origin(eqs_array)
         self.assertEqual(data.data_origin_name(origin), self.expected_origin())
 
     def test_shape(self):
         array = self.create_array((2, 3, 4))
-        aml_data = data.AmlData(array)
-        aml_array = aml_data.aml_array
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.eqs_array
 
-        self.assertEqual(_get_shape(aml_array, self), [2, 3, 4])
+        self.assertEqual(_get_shape(eqs_array, self), [2, 3, 4])
 
         new_shape = ctypes.ARRAY(c_uintptr_t, 4)(2, 3, 2, 2)
-        status = aml_array.reshape(aml_array.ptr, new_shape, len(new_shape))
-        self.assertEqual(status, AML_SUCCESS)
+        status = eqs_array.reshape(eqs_array.ptr, new_shape, len(new_shape))
+        self.assertEqual(status, EQS_SUCCESS)
 
-        self.assertEqual(_get_shape(aml_array, self), [2, 3, 2, 2])
+        self.assertEqual(_get_shape(eqs_array, self), [2, 3, 2, 2])
 
     def test_swap_axes(self):
         array = self.create_array((2, 3, 18, 23))
-        aml_data = data.AmlData(array)
-        aml_array = aml_data.aml_array
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.eqs_array
 
-        aml_array.swap_axes(aml_array.ptr, 1, 3)
-        self.assertEqual(_get_shape(aml_array, self), [2, 23, 18, 3])
+        eqs_array.swap_axes(eqs_array.ptr, 1, 3)
+        self.assertEqual(_get_shape(eqs_array, self), [2, 23, 18, 3])
 
     def test_create(self):
         # TODO
@@ -59,14 +59,14 @@ class TestAmlDataMixin:
         array = self.create_array((2, 3, 4))
         array[1, :, :] = 3
         array[1, 2, :] = 5
-        aml_data = data.AmlData(array)
-        aml_array = aml_data.aml_array
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.eqs_array
 
-        copy = aml_array_t()
-        status = aml_array.copy(aml_array.ptr, copy)
-        self.assertEqual(status, AML_SUCCESS)
+        copy = eqs_array_t()
+        status = eqs_array.copy(eqs_array.ptr, copy)
+        self.assertEqual(status, EQS_SUCCESS)
 
-        array_copy = data.aml_array_to_python_object(copy).array
+        array_copy = data.eqs_array_to_python_object(copy).array
         self.assertNotEqual(id(array_copy), id(array))
 
         self.assertTrue(np.all(np.array(array_copy) == np.array(array)))
@@ -74,15 +74,15 @@ class TestAmlDataMixin:
     def test_move_sample(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
-        aml_data = data.AmlData(array)
-        aml_array = aml_data.aml_array
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.eqs_array
 
         other = self.create_array((1, 3, 4))
         other[:] = 2.0
-        aml_data_other = data.AmlData(other)
-        aml_array_other = aml_data_other.aml_array
+        wrapper_other = data.ArrayWrapper(other)
+        eqs_array_other = wrapper_other.eqs_array
 
-        aml_array.move_sample(aml_array.ptr, 1, 3, 7, aml_array_other.ptr, 0)
+        eqs_array.move_sample(eqs_array.ptr, 1, 3, 7, eqs_array_other.ptr, 0)
         expected = np.array(
             [
                 # unmodified first sample
@@ -102,9 +102,9 @@ class TestAmlDataMixin:
         self.assertTrue(np.all(np.array(array) == expected))
 
 
-class TestNumpyData(unittest.TestCase, TestAmlDataMixin):
+class TestNumpyData(unittest.TestCase, TestArrayWrapperMixin):
     def expected_origin(self):
-        return "aml_storage.data.numpy"
+        return "equistore.data.numpy"
 
     def create_array(self, shape):
         return np.zeros(shape)
@@ -112,20 +112,20 @@ class TestNumpyData(unittest.TestCase, TestAmlDataMixin):
 
 if HAS_TORCH:
 
-    class TestTorchData(unittest.TestCase, TestAmlDataMixin):
+    class TestTorchData(unittest.TestCase, TestArrayWrapperMixin):
         def expected_origin(self):
-            return "aml_storage.data.torch"
+            return "equistore.data.torch"
 
         def create_array(self, shape):
             return torch.zeros(shape, device="cpu")
 
 
-def _get_shape(aml_array, test):
+def _get_shape(eqs_array, test):
     shape_ptr = ctypes.POINTER(c_uintptr_t)()
     shape_count = c_uintptr_t()
-    status = aml_array.shape(aml_array.ptr, shape_ptr, shape_count)
+    status = eqs_array.shape(eqs_array.ptr, shape_ptr, shape_count)
 
-    test.assertEqual(status, AML_SUCCESS)
+    test.assertEqual(status, EQS_SUCCESS)
 
     shape = []
     for i in range(shape_count.value):

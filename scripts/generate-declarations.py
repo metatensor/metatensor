@@ -7,7 +7,7 @@ from pycparser import c_ast, parse_file
 
 ROOT = os.path.dirname(__file__)
 FAKE_INCLUDES = os.path.join(ROOT, "include")
-AML_HEADER = os.path.relpath(os.path.join(ROOT, "..", "include", "aml_storage.h"))
+EQUISTORE_HEADER = os.path.relpath(os.path.join(ROOT, "..", "include", "equistore.h"))
 
 
 class Function:
@@ -47,7 +47,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.defines = {}
 
     def visit_Decl(self, node):
-        if not node.name.startswith("aml_"):
+        if not node.name.startswith("eqs_"):
             return
 
         function = Function(node.name, node.type.type)
@@ -56,7 +56,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not node.name.startswith("aml_"):
+        if not node.name.startswith("eqs_"):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -89,7 +89,7 @@ def parse(file):
             if "#define" in line:
                 split = line.split()
                 name = split[1]
-                if name == "AML_STORAGE_H":
+                if name == "EQUISTORE_H":
                     continue
                 value = split[2]
 
@@ -98,12 +98,8 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name.startswith("aml_"):
-        # enums are represented as int
-        if name == "aml_label_kind":
-            return "ctypes.c_int"
-        else:
-            return name
+    if name.startswith("eqs_"):
+        return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
     elif name == "void":
@@ -220,16 +216,16 @@ def generate_functions(file, functions):
         file.write("\n    ]\n")
 
         restype = type_to_ctypes(function.restype)
-        if restype == "aml_status_t":
+        if restype == "eqs_status_t":
             restype = "_check_status"
 
         file.write(f"    lib.{function.name}.restype = {restype}\n")
 
 
 def generate_declarations():
-    data = parse(AML_HEADER)
+    data = parse(EQUISTORE_HEADER)
 
-    outpath = os.path.join(ROOT, "..", "aml_storage", "_c_api.py")
+    outpath = os.path.join(ROOT, "..", "equistore", "_c_api.py")
     with open(outpath, "w") as file:
         file.write(
             """# -*- coding: utf-8 -*-

@@ -4,7 +4,7 @@ import ctypes
 import numpy as np
 
 from ._c_lib import _get_library
-from ._c_api import aml_block_t, aml_labels_t
+from ._c_api import eqs_block_t, eqs_labels_t
 
 from .status import _check_pointer
 from .labels import Labels, _is_namedtuple
@@ -38,7 +38,7 @@ class TensorMap:
         """
         self._lib = _get_library()
 
-        blocks_array_t = ctypes.POINTER(aml_block_t) * len(blocks)
+        blocks_array_t = ctypes.POINTER(eqs_block_t) * len(blocks)
         blocks_array = blocks_array_t(*[block._ptr for block in blocks])
 
         # all blocks are moved into the tensor map, assign NULL to `block._ptr`
@@ -50,14 +50,14 @@ class TensorMap:
                     "use TensorBlock.copy() to make a copy of each block first"
                 )
 
-            block._ptr = ctypes.POINTER(aml_block_t)()
+            block._ptr = ctypes.POINTER(eqs_block_t)()
 
         # keep a reference to the blocks in the tensor map in case they contain
         # a Python-allocated array that we need to keep alive
         self._blocks = blocks
 
-        self._ptr = self._lib.aml_tensormap(
-            keys._as_aml_labels_t(), blocks_array, len(blocks)
+        self._ptr = self._lib.eqs_tensormap(
+            keys._as_eqs_labels_t(), blocks_array, len(blocks)
         )
 
         _check_pointer(self._ptr)
@@ -76,7 +76,7 @@ class TensorMap:
 
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr"):
-            self._lib.aml_tensormap_free(self._ptr)
+            self._lib.eqs_tensormap_free(self._ptr)
 
     def __iter__(self):
         keys = self.keys
@@ -86,9 +86,9 @@ class TensorMap:
     @property
     def keys(self) -> Labels:
         """The set of keys labeling the blocks in this tensor map."""
-        result = aml_labels_t()
-        self._lib.aml_tensormap_keys(self._ptr, result)
-        return Labels._from_aml_labels_t(result, parent=self)
+        result = eqs_labels_t()
+        self._lib.eqs_tensormap_keys(self._ptr, result)
+        return Labels._from_eqs_labels_t(result, parent=self)
 
     def block(self, *args, **kwargs) -> TensorBlock:
         """
@@ -147,16 +147,16 @@ class TensorMap:
         return self._block_selection(selection)
 
     def _get_block_by_id(self, id) -> TensorBlock:
-        block = ctypes.POINTER(aml_block_t)()
-        self._lib.aml_tensormap_block_by_id(self._ptr, block, id)
+        block = ctypes.POINTER(eqs_block_t)()
+        self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
     def _block_selection(self, selection: Labels) -> TensorBlock:
-        block = ctypes.POINTER(aml_block_t)()
-        self._lib.aml_tensormap_block_selection(
+        block = ctypes.POINTER(eqs_block_t)()
+        self._lib.eqs_tensormap_block_selection(
             self._ptr,
             block,
-            selection._as_aml_labels_t(),
+            selection._as_eqs_labels_t(),
         )
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
@@ -174,7 +174,7 @@ class TensorMap:
         :param variables: name of the variables to move to the properties
         """
         c_variables = _list_or_str_to_array_c_char(variables)
-        self._lib.aml_tensormap_keys_to_properties(
+        self._lib.eqs_tensormap_keys_to_properties(
             self._ptr, c_variables, c_variables._length_
         )
 
@@ -194,7 +194,7 @@ class TensorMap:
         """
         c_variables = _list_or_str_to_array_c_char(variables)
 
-        self._lib.aml_tensormap_keys_to_samples(
+        self._lib.eqs_tensormap_keys_to_samples(
             self._ptr, c_variables, c_variables._length_
         )
 
@@ -207,7 +207,7 @@ class TensorMap:
         """
         c_variables = _list_or_str_to_array_c_char(variables)
 
-        self._lib.aml_tensormap_components_to_properties(
+        self._lib.eqs_tensormap_components_to_properties(
             self._ptr, c_variables, c_variables._length_
         )
 

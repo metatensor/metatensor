@@ -1,11 +1,11 @@
 Blocks
 ======
 
-.. autoclass:: aml_storage.Block
+.. autoclass:: equistore.TensorBlock
     :members:
 
 
-.. autoclass:: aml_storage.block.Gradient()
+.. autoclass:: equistore.block.Gradient()
     :members:
 
-.. autoclass:: aml_storage.data.Array()
+.. autoclass:: equistore.data.Array()
