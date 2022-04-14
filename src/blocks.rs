@@ -73,6 +73,18 @@ fn check_data_and_labels(
     Ok(())
 }
 
+fn check_component_labels(components: &[Arc<Labels>]) -> Result<(), Error> {
+    for (i, component) in components.iter().enumerate() {
+        if component.size() != 1 {
+            return Err(Error::InvalidParameter(format!(
+                "component labels must have a single variable, got {}: [{}] for component {}",
+                component.size(), component.names().join(", "), i
+            )));
+        }
+    }
+    Ok(())
+}
+
 impl BasicBlock {
     /// Create a new `BasicBlock`, validating the shape of data & labels
     pub fn new(
@@ -84,6 +96,8 @@ impl BasicBlock {
         check_data_and_labels(
             "data and labels don't match", &data, &samples, &components, &features
         )?;
+
+        check_component_labels(&components)?;
 
         return Ok(BasicBlock { data, samples, components, features });
     }
@@ -229,6 +243,7 @@ impl Block {
             ))
         }
 
+        check_component_labels(&components)?;
         if self.values.components().len() > components.len() {
             return Err(Error::InvalidParameter(
                 "gradients components should contain at least as many labels \
@@ -371,11 +386,22 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_1)];
-        let result = Block::new(data, samples, components, features);
+        let result = Block::new(data, samples.clone(), components, features.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: some of the \
             component names appear more than once in component labels"
+        );
+
+        let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 1, 2])));
+        let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
+        components.add(vec![LabelValue::from(0), LabelValue::from(1)]);
+
+        let result = Block::new(data, samples, vec![Arc::new(components.finish())], features);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: component labels must have a single variable, \
+            got 2: [component_1, component_2] for component 0"
         );
     }
 
