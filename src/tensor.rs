@@ -3,14 +3,14 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::{Block, Error, BasicBlock};
+use crate::{TensorBlock, Error, BasicBlock};
 use crate::{Labels, LabelsBuilder, LabelValue};
 
 /// A tensor map is the main user-facing struct of this library, and can store
 /// any kind of data used in atomistic machine learning.
 ///
-/// A tensor map contains a list of `Block`s, each one associated with a key in
-/// the form of a single `Labels` entry.
+/// A tensor map contains a list of `TensorBlock`s, each one associated with a
+/// key in the form of a single `Labels` entry.
 ///
 /// It provides functions to merge blocks together by moving some of these keys
 /// to the samples or properties labels of the blocks, transforming the sparse
@@ -18,7 +18,7 @@ use crate::{Labels, LabelsBuilder, LabelValue};
 #[derive(Debug)]
 pub struct TensorMap {
     keys: Labels,
-    blocks: Vec<Block>,
+    blocks: Vec<TensorBlock>,
     // TODO: arbitrary tensor-level metadata? e.g. using `HashMap<String, String>`
 }
 
@@ -65,7 +65,7 @@ fn check_labels_names(
 impl TensorMap {
     /// TODO: doc
     #[allow(clippy::similar_names)]
-    pub fn new(keys: Labels, blocks: Vec<Block>) -> Result<TensorMap, Error> {
+    pub fn new(keys: Labels, blocks: Vec<TensorBlock>) -> Result<TensorMap, Error> {
         if blocks.len() != keys.count() {
             return Err(Error::InvalidParameter(format!(
                 "expected the same number of blocks ({}) as the number of \
@@ -140,7 +140,7 @@ impl TensorMap {
     }
 
     /// Get the list of blocks in this `TensorMap`
-    pub fn blocks(&self) -> &[Block] {
+    pub fn blocks(&self) -> &[TensorBlock] {
         &self.blocks
     }
 
@@ -150,7 +150,7 @@ impl TensorMap {
     }
 
     /// Get an iterator over the keys and associated block
-    pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &Block)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &TensorBlock)> + '_ {
         self.keys.iter().zip(&self.blocks)
     }
 
@@ -158,7 +158,7 @@ impl TensorMap {
     /// contains a single entry, defining the requested key. The selection can
     /// contain only a subset of the variables defined in the keys, in which
     /// case there can be multiple matching blocks.
-    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&Block>, Error> {
+    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&TensorBlock>, Error> {
         let matching = self.find_matching_blocks(selection)?;
 
         return Ok(matching.into_iter().map(|i| &self.blocks[i]).collect());
@@ -169,7 +169,7 @@ impl TensorMap {
     /// The selection behaves similarly to `blocks_matching`, with the exception
     /// that this function returns an error if there is more than one matching
     /// block.
-    pub fn block(&self, selection: &Labels) -> Result<&Block, Error> {
+    pub fn block(&self, selection: &Labels) -> Result<&TensorBlock, Error> {
         let matching = self.find_matching_blocks(selection)?;
         if matching.len() != 1 {
             let selection_str = selection.names()
@@ -291,7 +291,7 @@ impl TensorMap {
         &self,
         block_idx: &[usize],
         new_property_labels: &Labels,
-    ) -> Result<Block, Error> {
+    ) -> Result<TensorBlock, Error> {
         assert!(!block_idx.is_empty());
 
         let blocks_to_merge = block_idx.iter().map(|&i| &self.blocks[i]).collect::<Vec<_>>();
@@ -379,7 +379,12 @@ impl TensorMap {
             }
         }
 
-        let mut new_block = Block::new(new_data, merged_samples, new_components, new_properties).expect("constructed an invalid block");
+        let mut new_block = TensorBlock::new(
+            new_data,
+            merged_samples,
+            new_components,
+            new_properties
+        ).expect("constructed an invalid block");
 
         // now collect & merge the different gradients
         for (parameter, first_gradient) in first_block.gradients() {
@@ -491,7 +496,7 @@ impl TensorMap {
         &self,
         block_idx: &[usize],
         new_sample_labels: &Labels,
-    ) -> Result<Block, Error> {
+    ) -> Result<TensorBlock, Error> {
         assert!(!block_idx.is_empty());
 
         let first_block = &self.blocks[block_idx[0]];
@@ -569,7 +574,12 @@ impl TensorMap {
             }
         }
 
-        let mut new_block = Block::new(new_data, merged_samples, new_components, new_properties).expect("invalid block");
+        let mut new_block = TensorBlock::new(
+            new_data,
+            merged_samples,
+            new_components,
+            new_properties
+        ).expect("invalid block");
 
         // now collect & merge the different gradients
         for (parameter, first_gradient) in first_block.gradients() {
@@ -611,7 +621,7 @@ impl TensorMap {
     }
 }
 
-fn merge_gradient_samples(blocks: &[&Block], gradient_name: &str, mapping: &[Vec<usize>]) -> Labels {
+fn merge_gradient_samples(blocks: &[&TensorBlock], gradient_name: &str, mapping: &[Vec<usize>]) -> Labels {
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
     for (block_i, block) in blocks.iter().enumerate() {
@@ -724,14 +734,14 @@ mod tests {
 
     #[test]
     fn blocks_validation() {
-        let block_1 = Block::new(
+        let block_1 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let block_2 = Block::new(
+        let block_2 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
             example_labels("samples", 2),
             vec![Arc::new(example_labels("components", 3))],
@@ -742,14 +752,14 @@ mod tests {
         assert!(result.is_ok());
 
         /**********************************************************************/
-        let block_1 = Block::new(
+        let block_1 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
             example_labels("samples", 1),
             vec![],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let block_2 = Block::new(
+        let block_2 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("something_else", 2),
             vec![],
@@ -764,14 +774,14 @@ mod tests {
         );
 
         /**********************************************************************/
-        let block_1 = Block::new(
+        let block_1 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let block_2 = Block::new(
+        let block_2 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("samples", 2),
             vec![],
@@ -787,14 +797,14 @@ mod tests {
         );
 
         /**********************************************************************/
-        let block_1 = Block::new(
+        let block_1 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let block_2 = Block::new(
+        let block_2 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
             example_labels("samples", 2),
             vec![Arc::new(example_labels("something_else", 3))],
@@ -809,14 +819,14 @@ mod tests {
         );
 
         /**********************************************************************/
-        let block_1 = Block::new(
+        let block_1 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
             example_labels("samples", 1),
             vec![],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
-        let block_2 = Block::new(
+        let block_2 = TensorBlock::new(
             aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("samples", 2),
             vec![],
@@ -847,7 +857,7 @@ mod tests {
         }
 
         fn example_tensor() -> TensorMap {
-            let mut block_1 = Block::new(
+            let mut block_1 = TensorBlock::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 1], 1.0))),
                 example_labels("samples", vec![0, 2, 4]),
                 vec![Arc::new(example_labels("components", vec![0]))],
@@ -868,7 +878,7 @@ mod tests {
 
             /******************************************************************/
 
-            let mut block_2 = Block::new(
+            let mut block_2 = TensorBlock::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 2.0))),
                 example_labels("samples", vec![0, 1, 3]),
                 vec![Arc::new(example_labels("components", vec![0]))],
@@ -891,7 +901,7 @@ mod tests {
 
             /******************************************************************/
 
-            let mut block_3 = Block::new(
+            let mut block_3 = TensorBlock::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 3.0))),
                 example_labels("samples", vec![0, 3, 6, 8]),
                 // different component size
@@ -912,7 +922,7 @@ mod tests {
 
             /******************************************************************/
 
-            let mut block_4 = Block::new(
+            let mut block_4 = TensorBlock::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 4.0))),
                 example_labels("samples", vec![0, 1, 2, 5]),
                 vec![Arc::new(example_labels("components", vec![0, 1, 2]))],

@@ -19,7 +19,7 @@ pub use self::data::{aml_array_t, DataOrigin, aml_data_origin_t};
 pub use self::data::{register_data_origin, get_data_origin};
 
 mod blocks;
-pub use self::blocks::{BasicBlock, Block};
+pub use self::blocks::{BasicBlock, TensorBlock};
 
 mod tensor;
 pub use self::tensor::TensorMap;

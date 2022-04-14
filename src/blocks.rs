@@ -166,24 +166,24 @@ impl BasicBlock {
 /// A single block in a `TensorMap`, containing both values & optionally
 /// gradients of these values w.r.t. any relevant quantity.
 #[derive(Debug, Clone)]
-pub struct Block {
+pub struct TensorBlock {
     pub values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
     // all the keys from `self.gradients`, as C-compatible strings
     gradient_parameters: Vec<ConstCString>,
 }
 
-impl Block {
-    /// Create a new `Block` containing the given data, described by the
-    /// `samples`, `components`, and `properties` labels. The block is initialized
-    /// without any gradients.
+impl TensorBlock {
+    /// Create a new `TensorBlock` containing the given data, described by the
+    /// `samples`, `components`, and `properties` labels. The block is
+    /// initialized without any gradients.
     pub fn new(
         data: aml_array_t,
         samples: Labels,
         components: Vec<Arc<Labels>>,
         properties: Arc<Labels>,
-    ) -> Result<Block, Error> {
-        Ok(Block {
+    ) -> Result<TensorBlock, Error> {
+        Ok(TensorBlock {
             values: BasicBlock::new(data, samples, components, properties)?,
             gradients: HashMap::new(),
             gradient_parameters: Vec::new(),
@@ -320,11 +320,11 @@ mod tests {
         let samples = example_labels("samples", 4);
         let properties = Arc::new(example_labels("properties", 7));
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 7])));
-        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 7])));
-        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
@@ -332,7 +332,7 @@ mod tests {
         );
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 9])));
-        let result = Block::new(data, samples.clone(), Vec::new(), properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
@@ -340,7 +340,7 @@ mod tests {
         );
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 1, 7])));
-        let result = Block::new(data, samples, Vec::new(), properties);
+        let result = TensorBlock::new(data, samples, Vec::new(), properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has \
@@ -357,17 +357,17 @@ mod tests {
         let properties = Arc::new(example_labels("properties", 2));
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 2])));
         let components = vec![Arc::clone(&component_1)];
-        let result = Block::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 3, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has 3 \
@@ -376,7 +376,7 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = Block::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
@@ -385,7 +385,7 @@ mod tests {
 
         let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 4, 2])));
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_1)];
-        let result = Block::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: some of the \
@@ -396,7 +396,7 @@ mod tests {
         let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
         components.add(vec![LabelValue::from(0), LabelValue::from(1)]);
 
-        let result = Block::new(data, samples, vec![Arc::new(components.finish())], properties);
+        let result = TensorBlock::new(data, samples, vec![Arc::new(components.finish())], properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: component labels must have a single variable, \
@@ -412,7 +412,7 @@ mod tests {
             let samples = example_labels("samples", 4);
             let properties = Arc::new(example_labels("properties", 7));
             let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 7])));
-            let mut block = Block::new(data, samples, vec![], properties).unwrap();
+            let mut block = TensorBlock::new(data, samples, vec![], properties).unwrap();
             assert!(block.gradients().is_empty());
 
             let gradient = aml_array_t::new(Box::new(TestArray::new(vec![3, 7])));
@@ -451,7 +451,7 @@ mod tests {
             let component = Arc::new(example_labels("component", 5));
             let properties = Arc::new(example_labels("properties", 7));
             let data = aml_array_t::new(Box::new(TestArray::new(vec![4, 5, 7])));
-            let mut block = Block::new(data, samples, vec![component.clone()], properties).unwrap();
+            let mut block = TensorBlock::new(data, samples, vec![component.clone()], properties).unwrap();
 
             let gradient = aml_array_t::new(Box::new(TestArray::new(vec![3, 5, 7])));
             let gradient_samples = example_labels("sample", 3);
@@ -482,7 +482,7 @@ mod tests {
 
         #[test]
         fn one_component() {
-            let mut block = Block::new(
+            let mut block = TensorBlock::new(
                 aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 3], 1.0))),
                 example_labels("samples", 3),
                 vec![Arc::new(example_labels("components", 2))],
@@ -544,7 +544,7 @@ mod tests {
                 Arc::new(example_labels("component_1", 2)),
                 Arc::new(example_labels("component_2", 3)),
             ];
-            let mut block = Block::new(
+            let mut block = TensorBlock::new(
                 aml_array_t::new(Box::new(data)),
                 example_labels("samples", 2),
                 components.clone(),

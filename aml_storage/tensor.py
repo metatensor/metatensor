@@ -8,7 +8,7 @@ from ._c_api import aml_block_t, aml_labels_t
 
 from .status import _check_pointer
 from .labels import Labels, _is_namedtuple
-from .block import Block
+from .block import TensorBlock
 
 
 class TensorMap:
@@ -16,7 +16,7 @@ class TensorMap:
     A TensorMap is the main user-facing class of this library, and can store
     any kind of data used in atomistic machine learning.
 
-    A tensor map contains a list of :py:class:`Block`, each one associated with
+    A tensor map contains a list of :py:class:`TensorBlock`, each one associated with
     a key. Users can access the blocks either one by one with the
     :py:func:`TensorMap.block` function, or by iterating over the tensor map
     itself:
@@ -31,7 +31,7 @@ class TensorMap:
     representation of the data to a dense one.
     """
 
-    def __init__(self, keys: Labels, blocks: List[Block]):
+    def __init__(self, keys: Labels, blocks: List[TensorBlock]):
         """
         :param keys: keys associated with each block
         :param blocks: set of blocks containing the actual data
@@ -47,7 +47,7 @@ class TensorMap:
             if not block._owning:
                 raise ValueError(
                     "can not use blocks from another tensor map in a new one, "
-                    "use Block.copy() to make a copy of each block first"
+                    "use TensorBlock.copy() to make a copy of each block first"
                 )
 
             block._ptr = ctypes.POINTER(aml_block_t)()
@@ -90,7 +90,7 @@ class TensorMap:
         self._lib.aml_tensormap_keys(self._ptr, result)
         return Labels._from_aml_labels_t(result, parent=self)
 
-    def block(self, *args, **kwargs) -> Block:
+    def block(self, *args, **kwargs) -> TensorBlock:
         """
         Get a single block in this tensor map, matching the selection made with
         positional and keyword arguments.
@@ -146,19 +146,19 @@ class TensorMap:
 
         return self._block_selection(selection)
 
-    def _get_block_by_id(self, id) -> Block:
+    def _get_block_by_id(self, id) -> TensorBlock:
         block = ctypes.POINTER(aml_block_t)()
         self._lib.aml_tensormap_block_by_id(self._ptr, block, id)
-        return Block._from_ptr(block, parent=self, owning=False)
+        return TensorBlock._from_ptr(block, parent=self, owning=False)
 
-    def _block_selection(self, selection: Labels) -> Block:
+    def _block_selection(self, selection: Labels) -> TensorBlock:
         block = ctypes.POINTER(aml_block_t)()
         self._lib.aml_tensormap_block_selection(
             self._ptr,
             block,
             selection._as_aml_labels_t(),
         )
-        return Block._from_ptr(block, parent=self, owning=False)
+        return TensorBlock._from_ptr(block, parent=self, owning=False)
 
     def keys_to_properties(self, variables: Union[str, List[str]]):
         """

@@ -3,7 +3,7 @@ use std::ffi::CStr;
 use std::convert::{TryFrom, TryInto};
 use std::collections::BTreeSet;
 
-use crate::{TensorMap, Labels, Block, Error};
+use crate::{TensorMap, Labels, TensorBlock, Error};
 
 use super::labels::aml_labels_t;
 use super::blocks::aml_block_t;
@@ -163,7 +163,7 @@ pub unsafe extern fn aml_tensormap_block_by_id(
     catch_unwind(|| {
         check_pointers!(tensor, block);
 
-        (*block) = (&(*tensor).blocks()[index as usize] as *const Block).cast();
+        (*block) = (&(*tensor).blocks()[index as usize] as *const TensorBlock).cast();
 
         Ok(())
     })
@@ -198,7 +198,7 @@ pub unsafe extern fn aml_tensormap_block_selection(
 
         let selection = Labels::try_from(&selection)?;
         let rust_block = (*tensor).block(&selection)?;
-        (*block) = (rust_block as *const Block).cast();
+        (*block) = (rust_block as *const TensorBlock).cast();
 
         Ok(())
     })
