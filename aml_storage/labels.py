@@ -37,11 +37,11 @@ class Labels(np.ndarray):
         np.unique(labels["structures"])
 
     One can also check for the presence of a given entry in Labels, but only if
-    the Labels come from a :py:class:`Block` or a :py:class:`TensorMap`.
+    the Labels come from a :py:class:`TensorBlock` or a :py:class:`TensorMap`.
 
     .. code-block:: python
 
-        # create a Block in some way
+        # create a block in some way
 
         samples = block.samples
 
@@ -193,9 +193,9 @@ class Labels(np.ndarray):
         """
         Get the position of the given ``label`` entry in this set of labels.
 
-        This is only available if the labels comes from a :py:class:`Block` or a
-        :py:class:`TensorMap`. If you need it for standalone labels, please let
-        us know!
+        This is only available if the labels comes from a
+        :py:class:`TensorBlock` or a :py:class:`TensorMap`. If you need it for
+        standalone labels, please let us know!
         """
         if self._aml_labels is not None:
             lib = _get_library()

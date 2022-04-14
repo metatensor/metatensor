@@ -2,12 +2,12 @@ import unittest
 import numpy as np
 
 
-from aml_storage import Block, Labels
+from aml_storage import TensorBlock, Labels
 
 
 class TestBlocks(unittest.TestCase):
     def test_block_no_components(self):
-        block = Block(
+        block = TensorBlock(
             values=np.full((3, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[],
@@ -30,7 +30,7 @@ class TestBlocks(unittest.TestCase):
         self.assertEqual(tuple(block.properties[1]), (3,))
 
     def test_block_with_components(self):
-        block = Block(
+        block = TensorBlock(
             values=np.full((3, 3, 2, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[
@@ -68,7 +68,7 @@ class TestBlocks(unittest.TestCase):
         self.assertEqual(tuple(block.properties[1]), (3,))
 
     def test_gradients(self):
-        block = Block(
+        block = TensorBlock(
             values=np.full((3, 3, 2, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[
@@ -105,7 +105,7 @@ class TestBlocks(unittest.TestCase):
         self.assertTrue(np.all(gradient.data == np.full((2, 3, 2, 2), 11.0)))
 
     def test_copy(self):
-        block = Block(
+        block = TensorBlock(
             values=np.full((3, 3, 2), 2.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[

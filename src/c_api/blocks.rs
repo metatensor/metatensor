@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::ffi::CStr;
 use std::convert::{TryFrom, TryInto};
 
-use crate::{Block, Labels, Error, aml_array_t};
+use crate::{TensorBlock, Labels, Error, aml_array_t};
 
 use super::labels::aml_labels_t;
 
@@ -16,10 +16,10 @@ use super::{catch_unwind, aml_status_t};
 /// of parameters. In this case, each gradient has a separate set of sample
 /// and component labels but share the property labels with the values.
 #[allow(non_camel_case_types)]
-pub struct aml_block_t(Block);
+pub struct aml_block_t(TensorBlock);
 
 impl std::ops::Deref for aml_block_t {
-    type Target = Block;
+    type Target = TensorBlock;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -32,7 +32,7 @@ impl std::ops::DerefMut for aml_block_t {
 }
 
 impl aml_block_t {
-    pub(super) fn block(self) -> Block {
+    pub(super) fn block(self) -> TensorBlock {
         self.0
     }
 }
@@ -77,7 +77,7 @@ pub unsafe extern fn aml_block(
 
         let properties = Labels::try_from(&properties)?;
 
-        let block = Block::new(data, samples, rust_components, Arc::new(properties))?;
+        let block = TensorBlock::new(data, samples, rust_components, Arc::new(properties))?;
         let boxed = Box::new(aml_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just

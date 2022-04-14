@@ -12,7 +12,7 @@ from .labels import Labels
 from .data import AmlData, Array, aml_array_to_python_object
 
 
-class Block:
+class TensorBlock:
     """
     Basic building block for a tensor map.
 
@@ -76,7 +76,7 @@ class Block:
         copy of an existing one) or not (block inside a :py:class:`TensorMap`)
         """
         _check_pointer(ptr)
-        obj = Block.__new__(Block)
+        obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
         obj._ptr = ptr
         obj._owning = owning
@@ -102,7 +102,7 @@ class Block:
             reset_gc = False
 
         new_ptr = self._lib.aml_block_copy(self._ptr)
-        copy = Block._from_ptr(new_ptr, parent=None, owning=True)
+        copy = TensorBlock._from_ptr(new_ptr, parent=None, owning=True)
 
         # Keep references to the arrays in this block if the arrays were
         # allocated by Python
@@ -125,7 +125,7 @@ class Block:
 
         return copy
 
-    def copy(self) -> "Block":
+    def copy(self) -> "TensorBlock":
         """Get a deep copy of this block"""
         return copy.deepcopy(self)
 
@@ -266,7 +266,7 @@ class Gradient:
     inside a block.
     """
 
-    def __init__(self, block: Block, name: str):
+    def __init__(self, block: TensorBlock, name: str):
         self._lib = _get_library()
 
         self._block = block

@@ -23,7 +23,8 @@ if HAS_TORCH:
     # This NewType is only used for typechecking and documentation purposes
     Array = NewType("Array", Union[np.ndarray, torch.Tensor])
     """
-    An ``Array`` contains the actual data stored in a :py:class:`aml_storage.Block`.
+    An ``Array`` contains the actual data stored in a
+    :py:class:`aml_storage.TensorBlock`.
 
     This data is manipulated by ``aml_storage`` in a completely opaque way: this
     library does not know what's inside the arrays appart from a small set of
@@ -36,8 +37,8 @@ if HAS_TORCH:
       another.
 
     The actual type of an ``Array`` depends on how the
-    :py:class:`aml_storage.Block` was created. Currently, numpy ``ndarray`` and
-    torch ``Tensor`` are supported.
+    :py:class:`aml_storage.TensorBlock` was created. Currently, numpy
+    ``ndarray`` and torch ``Tensor`` are supported.
     """
 
 else:

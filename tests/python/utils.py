@@ -1,6 +1,6 @@
 import numpy as np
 
-from aml_storage import Labels, Block, TensorMap
+from aml_storage import Labels, TensorBlock, TensorMap
 
 
 def test_tensor_map():
@@ -8,7 +8,7 @@ def test_tensor_map():
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
     """
-    block_1 = Block(
+    block_1 = TensorBlock(
         values=np.full((3, 1, 1), 1.0),
         samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
@@ -23,7 +23,7 @@ def test_tensor_map():
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
     )
 
-    block_2 = Block(
+    block_2 = TensorBlock(
         values=np.full((3, 1, 3), 2.0),
         samples=Labels(["samples"], np.array([[0], [1], [3]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
@@ -39,7 +39,7 @@ def test_tensor_map():
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
     )
 
-    block_3 = Block(
+    block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
         samples=Labels(["samples"], np.array([[0], [3], [6], [8]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
@@ -55,7 +55,7 @@ def test_tensor_map():
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
     )
 
-    block_4 = Block(
+    block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
         samples=Labels(["samples"], np.array([[0], [1], [2], [5]], dtype=np.int32)),
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
