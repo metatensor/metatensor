@@ -23,13 +23,15 @@ if HAS_TORCH:
     # This NewType is only used for typechecking and documentation purposes
     Array = NewType("Array", Union[np.ndarray, torch.Tensor])
     """
-    An ``Array`` contains the actual data stored in a
-    :py:class:`aml_storage.Block`. This data is manipulated by ``aml_storage``
-    in a completely opaque way: this library does not know what's inside the
-    arrays appart from a small set of constrains:
+    An ``Array`` contains the actual data stored in a :py:class:`aml_storage.Block`.
+
+    This data is manipulated by ``aml_storage`` in a completely opaque way: this
+    library does not know what's inside the arrays appart from a small set of
+    constrains:
 
     - array contains numeric data;
-    - they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
+    - they are stored as row-major, n-dimensional arrays with at least 2
+      dimensions;
     - it is possible to create new arrays and move data from one array to
       another.
 
@@ -104,9 +106,7 @@ def data_origin_name(origin):
 
 
 class AmlData:
-    """
-    Small wrapper making Python arrays compatible with ``aml_array_t``.
-    """
+    """Small wrapper making Python arrays compatible with ``aml_array_t``."""
 
     def __init__(self, array):
         self.array = array

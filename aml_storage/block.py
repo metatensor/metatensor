@@ -14,11 +14,12 @@ from .data import AmlData, Array, aml_array_to_python_object
 
 class Block:
     """
-    Basic building block for a tensor map. A single block contains a
-    n-dimensional :py:class:`aml_storage.data.Array`, and n sets of
-    :py:class:`Labels` (one for each dimension). The first dimension is the
-    *samples* dimension, the last dimension is the *properties* dimension, and
-    any intermediary dimension is called a *component* dimension.
+    Basic building block for a tensor map.
+
+    A single block contains a n-dimensional :py:class:`aml_storage.data.Array`,
+    and n sets of :py:class:`Labels` (one for each dimension). The first
+    dimension is the *samples* dimension, the last dimension is the *properties*
+    dimension. Any intermediate dimension is called a *component* dimension.
 
     Samples should be used to describe *what* we are representing, while
     properties should contain information about *how* we are representing it.
@@ -131,9 +132,10 @@ class Block:
     @property
     def values(self) -> Array:
         """
-        Access the values for this block. The array type depends on how the
-        block was created. Currently, numpy ``ndarray`` and torch ``Tensor`` are
-        supported.
+        Access the values for this block.
+
+        The array type depends on how the block was created. Currently, numpy
+        ``ndarray`` and torch ``Tensor`` are supported.
         """
 
         raw_array = _get_raw_array(self._lib, self._ptr, "values")
@@ -142,16 +144,20 @@ class Block:
     @property
     def samples(self) -> Labels:
         """
-        Access the sample :py:class:`Labels` for this block. The entries in
-        these labels describe the first dimension of the ``values`` array.
+        Access the sample :py:class:`Labels` for this block.
+
+        The entries in these labels describe the first dimension of the
+        ``values`` array.
         """
         return self._labels(0)
 
     @property
     def components(self) -> List[Labels]:
         """
-        Access the component :py:class:`Labels` for this block. The entries in
-        these labels describe intermediate dimensions of the ``values`` array.
+        Access the component :py:class:`Labels` for this block.
+
+        The entries in these labels describe intermediate dimensions of the
+        ``values`` array.
         """
         n_components = len(self.values.shape) - 2
 
@@ -164,10 +170,11 @@ class Block:
     @property
     def properties(self) -> Labels:
         """
-        Access the property :py:class:`Labels` for this block. The entries in
-        these labels describe the last dimension of the ``values`` array. The
-        properties are guaranteed to be the same for values and gradients in the
-        same block.
+        Access the property :py:class:`Labels` for this block.
+
+        The entries in these labels describe the last dimension of the
+        ``values`` array. The properties are guaranteed to be the same for
+        values and gradients in the same block.
         """
         property_axis = len(self.values.shape) - 1
         return self._labels(property_axis)
@@ -198,7 +205,8 @@ class Block:
         samples: Labels,
         components: List[Labels],
     ):
-        """Add a set of gradients with respect to ``parameters`` in this block.
+        """
+        Add a set of gradients with respect to ``parameters`` in this block.
 
         :param data: the gradient array, of shape ``(gradient_samples,
             components, properties)``, where the components and properties labels
@@ -225,7 +233,7 @@ class Block:
         )
 
     def gradients_list(self) -> List[str]:
-        """Get a list of all gradients defined in this block"""
+        """Get a list of all gradients defined in this block."""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = ctypes.c_uint64()
         self._lib.aml_block_gradients_list(self._ptr, parameters, count)
@@ -237,7 +245,8 @@ class Block:
         return result
 
     def has_gradient(self, parameter: str) -> bool:
-        """Check if this block contains gradient information with respect to the
+        """
+        Check if this block contains gradient information with respect to the
         given ``parameter``.
 
         :param parameter: check for gradients with respect to this ``parameter``
@@ -246,9 +255,7 @@ class Block:
         return parameter in self.gradients_list()
 
     def gradients(self) -> Generator[Tuple[str, "Gradient"], None, None]:
-        """
-        Get an iterator over all gradients defined in this block
-        """
+        """Get an iterator over all gradients defined in this block."""
         for parameter in self.gradients_list():
             yield (parameter, self.gradient(parameter))
 
@@ -268,9 +275,10 @@ class Gradient:
     @property
     def data(self) -> Array:
         """
-        Access the data for this gradient. The array type depends on how the
-        block was created. Currently, numpy ``ndarray`` and torch ``Tensor`` are
-        supported.
+        Access the data for this gradient.
+
+        The array type depends on how the block was created. Currently, numpy
+        ``ndarray`` and torch ``Tensor`` are supported.
         """
 
         raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
@@ -279,16 +287,20 @@ class Gradient:
     @property
     def samples(self) -> Labels:
         """
-        Access the sample :py:class:`Labels` for this gradient. The entries in
-        these labels describe the first dimension of the ``data`` array.
+        Access the sample :py:class:`Labels` for this gradient.
+
+        The entries in these labels describe the first dimension of the ``data``
+        array.
         """
         return self._labels(0)
 
     @property
     def components(self) -> List[Labels]:
         """
-        Access the component :py:class:`Labels` for this gradient. The entries
-        in these labels describe intermediate dimensions of the ``data`` array.
+        Access the component :py:class:`Labels` for this gradient.
+
+        The entries in these labels describe intermediate dimensions of the
+        ``data`` array.
         """
         n_components = len(self.data.shape) - 2
 
@@ -301,10 +313,11 @@ class Gradient:
     @property
     def properties(self) -> Labels:
         """
-        Access the property :py:class:`Labels` for this gradient. The entries in
-        these labels describe the last dimension of the ``data`` array. The
-        properties are guaranteed to be the same for values and gradients in the
-        same block.
+        Access the property :py:class:`Labels` for this gradient.
+
+        The entries in these labels describe the last dimension of the ``data``
+        array. The properties are guaranteed to be the same for values and
+        gradients in the same block.
         """
         property_axis = len(self.data.shape) - 1
         return self._labels(property_axis)
