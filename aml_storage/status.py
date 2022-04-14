@@ -6,9 +6,7 @@ from ._c_lib import _get_library
 
 
 class AmlError(Exception):
-    """
-    This class is used to throw exceptions for all errors in AML.
-    """
+    """This class is used to throw exceptions for all errors in AML."""
 
     def __init__(self, message, status=None):
         super(Exception, self).__init__(message)

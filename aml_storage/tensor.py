@@ -85,9 +85,7 @@ class TensorMap:
 
     @property
     def keys(self) -> Labels:
-        """
-        The set of keys labeling the blocks in this tensor map
-        """
+        """The set of keys labeling the blocks in this tensor map."""
         result = aml_labels_t()
         self._lib.aml_tensormap_keys(self._ptr, result)
         return Labels._from_aml_labels_t(result, parent=self)

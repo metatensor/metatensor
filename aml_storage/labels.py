@@ -168,9 +168,11 @@ class Labels(np.ndarray):
     @staticmethod
     def _from_aml_labels_t(aml_labels, parent):
         """
-        Convert an aml_labels_t into a Labels instance. The Labels is only a
-        view inside the aml_labels_t memory, so one can use the parent parameter
-        to ensure a parent object is kept alive for as long as the Labels live.
+        Convert an aml_labels_t into a Labels instance.
+
+        The :py:class:`Labels` instance is only a view inside the aml_labels_t
+        memory, so one can use the parent parameter to ensure a parent object is
+        kept alive for as long as the instance live.
         """
         names = []
         for i in range(aml_labels.size):
