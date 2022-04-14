@@ -5,51 +5,51 @@ use std::collections::BTreeSet;
 
 use crate::{TensorMap, Labels, TensorBlock, Error};
 
-use super::labels::aml_labels_t;
-use super::blocks::aml_block_t;
-use super::status::{aml_status_t, catch_unwind};
+use super::labels::eqs_labels_t;
+use super::blocks::eqs_block_t;
+use super::status::{eqs_status_t, catch_unwind};
 
 /// Opaque type representing a `TensorMap`.
 #[allow(non_camel_case_types)]
-pub struct aml_tensormap_t(TensorMap);
+pub struct eqs_tensormap_t(TensorMap);
 
-impl std::ops::Deref for aml_tensormap_t {
+impl std::ops::Deref for eqs_tensormap_t {
     type Target = TensorMap;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl std::ops::DerefMut for aml_tensormap_t {
+impl std::ops::DerefMut for eqs_tensormap_t {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 
-/// Create a new `aml_tensormap_t` with the given `keys` and `blocks`.
+/// Create a new `eqs_tensormap_t` with the given `keys` and `blocks`.
 /// `blocks_count` must be set to the number of entries in the blocks array.
 ///
 /// The new tensor map takes ownership of the blocks, which should not be
 /// released separately.
 ///
 /// The memory allocated by this function and the blocks should be released
-/// using `aml_tensormap_free`.
+/// using `eqs_tensormap_free`.
 ///
 /// @param keys labels containing the keys associated with each block
 /// @param blocks pointer to the first element of an array of blocks
 /// @param blocks_count number of elements in the `blocks` array
 ///
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
-///          case of error. In case of error, you can use `aml_last_error()`
+///          case of error. In case of error, you can use `eqs_last_error()`
 ///          to get the error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_tensormap(
-    keys: aml_labels_t,
-    blocks: *mut *mut aml_block_t,
+pub unsafe extern fn eqs_tensormap(
+    keys: eqs_labels_t,
+    blocks: *mut *mut eqs_block_t,
     blocks_count: u64,
-) -> *mut aml_tensormap_t {
+) -> *mut eqs_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
@@ -72,7 +72,7 @@ pub unsafe extern fn aml_tensormap(
         }).collect();
 
         let tensor = TensorMap::new(keys, blocks_vec)?;
-        let boxed = Box::new(aml_tensormap_t(tensor));
+        let boxed = Box::new(eqs_tensormap_t(tensor));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -90,19 +90,19 @@ pub unsafe extern fn aml_tensormap(
 
 
 /// Free the memory associated with a `tensor` previously created with
-/// `aml_tensormap`.
+/// `eqs_tensormap`.
 ///
 /// If `tensor` is `NULL`, this function does nothing.
 ///
 /// @param tensor pointer to an existing tensor map, or `NULL`
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_tensormap_free(
-    tensor: *mut aml_tensormap_t,
-) -> aml_status_t {
+pub unsafe extern fn eqs_tensormap_free(
+    tensor: *mut eqs_tensormap_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         if !tensor.is_null() {
             std::mem::drop(Box::from_raw(tensor));
@@ -116,20 +116,20 @@ pub unsafe extern fn aml_tensormap_free(
 /// Get the keys for the given `tensor` map. After a successful call to this
 /// function, `keys.values` contains a pointer to memory inside the
 /// `tensor` which is invalidated when the tensor map is freed with
-/// `aml_tensormap_free` or the set of keys is modified by calling one
-/// of the `aml_tensormap_keys_to_XXX` function.
+/// `eqs_tensormap_free` or the set of keys is modified by calling one
+/// of the `eqs_tensormap_keys_to_XXX` function.
 
 /// @param tensor pointer to an existing tensor map
 /// @param keys pointer to be filled with the keys of the tensor map
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_tensormap_keys(
-    tensor: *const aml_tensormap_t,
-    keys: *mut aml_labels_t,
-) -> aml_status_t {
+pub unsafe extern fn eqs_tensormap_keys(
+    tensor: *const eqs_tensormap_t,
+    keys: *mut eqs_labels_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, keys);
 
@@ -143,23 +143,23 @@ pub unsafe extern fn aml_tensormap_keys(
 ///
 /// The block memory is still managed by the tensor map, this block should not
 /// be freed. The block is invalidated when the tensor map is freed with
-/// `aml_tensormap_free` or the set of keys is modified by calling one
-/// of the `aml_tensormap_keys_to_XXX` function.
+/// `eqs_tensormap_free` or the set of keys is modified by calling one
+/// of the `eqs_tensormap_keys_to_XXX` function.
 ///
 /// @param tensor pointer to an existing tensor map
 /// @param block pointer to be filled with a block
 /// @param index index of the block to get
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_tensormap_block_by_id(
-    tensor: *const aml_tensormap_t,
-    block: *mut *const aml_block_t,
+pub unsafe extern fn eqs_tensormap_block_by_id(
+    tensor: *const eqs_tensormap_t,
+    block: *mut *const eqs_block_t,
     index: u64,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, block);
 
@@ -177,22 +177,22 @@ pub unsafe extern fn aml_tensormap_block_by_id(
 ///
 /// The block memory is still managed by the tensor map, this block should not
 /// be freed. The block is invalidated when the tensor map is freed with
-/// `aml_tensormap_free` or the set of keys is modified by calling one
-/// of the `aml_tensormap_keys_to_XXX` function.
+/// `eqs_tensormap_free` or the set of keys is modified by calling one
+/// of the `eqs_tensormap_keys_to_XXX` function.
 ///
 /// @param tensor pointer to an existing tensor map
 /// @param block pointer to be filled with a block
 /// @param selection labels with a single entry describing which block is requested
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_tensormap_block_selection(
-    tensor: *const aml_tensormap_t,
-    block: *mut *const aml_block_t,
-    selection: aml_labels_t,
-) -> aml_status_t {
+pub unsafe extern fn eqs_tensormap_block_selection(
+    tensor: *const eqs_tensormap_t,
+    block: *mut *const eqs_block_t,
+    selection: eqs_labels_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, block);
 
@@ -222,15 +222,15 @@ pub unsafe extern fn aml_tensormap_block_selection(
 /// @param variables_count number of entries in the `variables` array
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_tensormap_keys_to_properties(
-    tensor: *mut aml_tensormap_t,
+pub unsafe extern fn eqs_tensormap_keys_to_properties(
+    tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: u64,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, variables);
 
@@ -259,15 +259,15 @@ pub unsafe extern fn aml_tensormap_keys_to_properties(
 /// @param variables_count number of entries in the `variables` array
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_tensormap_components_to_properties(
-    tensor: *mut aml_tensormap_t,
+pub unsafe extern fn eqs_tensormap_components_to_properties(
+    tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: u64,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, variables);
 
@@ -302,15 +302,15 @@ pub unsafe extern fn aml_tensormap_components_to_properties(
 /// @param variables_count number of entries in the `variables` array
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_tensormap_keys_to_samples(
-    tensor: *mut aml_tensormap_t,
+pub unsafe extern fn eqs_tensormap_keys_to_samples(
+    tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: u64,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, variables);
 

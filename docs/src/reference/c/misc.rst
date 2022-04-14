@@ -4,14 +4,14 @@ Miscelaneous
 Error handling
 --------------
 
-.. doxygenfunction:: aml_last_error
+.. doxygenfunction:: eqs_last_error
 
-.. doxygentypedef:: aml_status_t
+.. doxygentypedef:: eqs_status_t
 
-.. doxygendefine:: AML_SUCCESS
+.. doxygendefine:: EQS_SUCCESS
 
-.. doxygendefine:: AML_INVALID_PARAMETER_ERROR
+.. doxygendefine:: EQS_INVALID_PARAMETER_ERROR
 
-.. doxygendefine:: AML_BUFFER_SIZE_ERROR
+.. doxygendefine:: EQS_BUFFER_SIZE_ERROR
 
-.. doxygendefine:: AML_INTERNAL_ERROR
+.. doxygendefine:: EQS_INTERNAL_ERROR

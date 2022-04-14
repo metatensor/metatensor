@@ -10,7 +10,7 @@ sys.path.append(ROOT)
 
 # -- Project information -----------------------------------------------------
 
-project = "aml_storage"
+project = "equistore"
 copyright = "2022, Guillaume Fraux"
 author = "Guillaume Fraux"
 
@@ -74,9 +74,9 @@ autodoc_typehints_format = "short"
 
 
 breathe_projects = {
-    "aml_storage": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),
+    "equistore": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),
 }
-breathe_default_project = "aml_storage"
+breathe_default_project = "equistore"
 breathe_domain_by_extension = {
     "h": "c",
 }

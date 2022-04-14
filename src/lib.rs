@@ -15,7 +15,7 @@ mod labels;
 pub use self::labels::{LabelValue, Labels, LabelsBuilder};
 
 mod data;
-pub use self::data::{aml_array_t, DataOrigin, aml_data_origin_t};
+pub use self::data::{eqs_array_t, DataOrigin, eqs_data_origin_t};
 pub use self::data::{register_data_origin, get_data_origin};
 
 mod blocks;
@@ -26,19 +26,19 @@ pub use self::tensor::TensorMap;
 
 #[doc(hidden)]
 pub mod c_api;
-use c_api::aml_status_t;
+use c_api::eqs_status_t;
 
 
-/// The possible sources of error in aml-storage
+/// The possible sources of error in equistore
 #[derive(Debug)]
 pub enum Error {
     /// A function got an invalid parameter
     InvalidParameter(String),
     /// A buffer passed to a C API function does not have the right size
     BufferSize(String),
-    /// External error, coming from a function used as a callback in `aml_array_t`
+    /// External error, coming from a function used as a callback in `eqs_array_t`
     External {
-        status: aml_status_t,
+        status: eqs_status_t,
         context: String,
     },
     /// Any other internal error, usually these are internal bugs.

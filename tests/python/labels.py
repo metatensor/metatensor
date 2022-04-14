@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from aml_storage import Labels
+from equistore import Labels
 from utils import test_tensor_map
 
 

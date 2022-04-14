@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 
-from aml_storage import TensorBlock, Labels
+from equistore import TensorBlock, Labels
 
 
 class TestBlocks(unittest.TestCase):

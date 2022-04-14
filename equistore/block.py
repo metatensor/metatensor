@@ -4,19 +4,19 @@ import ctypes
 from typing import List, Tuple, Generator
 
 from ._c_lib import _get_library
-from ._c_api import aml_labels_t, aml_array_t
+from ._c_api import eqs_labels_t, eqs_array_t
 
 from .status import _check_pointer
 from .labels import Labels
 
-from .data import AmlData, Array, aml_array_to_python_object
+from .data import ArrayWrapper, Array, eqs_array_to_python_object
 
 
 class TensorBlock:
     """
     Basic building block for a tensor map.
 
-    A single block contains a n-dimensional :py:class:`aml_storage.data.Array`,
+    A single block contains a n-dimensional :py:class:`equistore.data.Array`,
     and n sets of :py:class:`Labels` (one for each dimension). The first
     dimension is the *samples* dimension, the last dimension is the *properties*
     dimension. Any intermediate dimension is called a *component* dimension.
@@ -51,19 +51,19 @@ class TensorBlock:
         self._lib = _get_library()
 
         # keep a reference to the values in the block to prevent GC
-        self._values = AmlData(values)
+        self._values = ArrayWrapper(values)
         self._gradients = []
 
-        components_array = ctypes.ARRAY(aml_labels_t, len(components))()
+        components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
         for i, component in enumerate(components):
-            components_array[i] = component._as_aml_labels_t()
+            components_array[i] = component._as_eqs_labels_t()
 
-        self._ptr = self._lib.aml_block(
-            self._values.aml_array,
-            samples._as_aml_labels_t(),
+        self._ptr = self._lib.eqs_block(
+            self._values.eqs_array,
+            samples._as_eqs_labels_t(),
             components_array,
             len(components_array),
-            properties._as_aml_labels_t(),
+            properties._as_eqs_labels_t(),
         )
         self._owning = True
         self._parent = None
@@ -90,25 +90,26 @@ class TensorBlock:
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_owning"):
             if self._owning:
-                self._lib.aml_block_free(self._ptr)
+                self._lib.eqs_block_free(self._ptr)
 
     def __deepcopy__(self, _memodict={}):
-        # Temporarily disable garbage collection to ensure the temporary AmlData
-        # instance created in _aml_storage_copy will still be available below
+        # Temporarily disable garbage collection to ensure the temporary
+        # ArrayWrapper instance created in _eqs_array_copy will still be
+        # available below
         if gc.isenabled():
             gc.disable()
             reset_gc = True
         else:
             reset_gc = False
 
-        new_ptr = self._lib.aml_block_copy(self._ptr)
+        new_ptr = self._lib.eqs_block_copy(self._ptr)
         copy = TensorBlock._from_ptr(new_ptr, parent=None, owning=True)
 
         # Keep references to the arrays in this block if the arrays were
         # allocated by Python
         try:
             raw_array = _get_raw_array(self._lib, copy._ptr, "values")
-            copy._values = aml_array_to_python_object(raw_array)
+            copy._values = eqs_array_to_python_object(raw_array)
         except ValueError:
             # the array was not allocated by Python
             copy._values = None
@@ -116,7 +117,7 @@ class TensorBlock:
         for parameter in self.gradients_list():
             try:
                 raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
-                copy._gradients.append(aml_array_to_python_object(raw_array))
+                copy._gradients.append(eqs_array_to_python_object(raw_array))
             except ValueError:
                 pass
 
@@ -139,7 +140,7 @@ class TensorBlock:
         """
 
         raw_array = _get_raw_array(self._lib, self._ptr, "values")
-        return aml_array_to_python_object(raw_array).array
+        return eqs_array_to_python_object(raw_array).array
 
     @property
     def samples(self) -> Labels:
@@ -180,9 +181,9 @@ class TensorBlock:
         return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
-        result = aml_labels_t()
-        self._lib.aml_block_labels(self._ptr, "values".encode("utf8"), axis, result)
-        return Labels._from_aml_labels_t(result, parent=self)
+        result = eqs_labels_t()
+        self._lib.eqs_block_labels(self._ptr, "values".encode("utf8"), axis, result)
+        return Labels._from_eqs_labels_t(result, parent=self)
 
     def gradient(self, parameter: str) -> "Gradient":
         """
@@ -216,18 +217,18 @@ class TensorBlock:
         :param samples: labels describing the gradient samples
         :param components: labels describing the gradient components
         """
-        data = AmlData(data)
+        data = ArrayWrapper(data)
         self._gradients.append(data)
 
-        components_array = ctypes.ARRAY(aml_labels_t, len(components))()
+        components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
         for i, component in enumerate(components):
-            components_array[i] = component._as_aml_labels_t()
+            components_array[i] = component._as_eqs_labels_t()
 
-        self._lib.aml_block_add_gradient(
+        self._lib.eqs_block_add_gradient(
             self._ptr,
             parameter.encode("utf8"),
-            data.aml_array,
-            samples._as_aml_labels_t(),
+            data.eqs_array,
+            samples._as_eqs_labels_t(),
             components_array,
             len(components_array),
         )
@@ -236,7 +237,7 @@ class TensorBlock:
         """Get a list of all gradients defined in this block."""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = ctypes.c_uint64()
-        self._lib.aml_block_gradients_list(self._ptr, parameters, count)
+        self._lib.eqs_block_gradients_list(self._ptr, parameters, count)
 
         result = []
         for i in range(count.value):
@@ -282,7 +283,7 @@ class Gradient:
         """
 
         raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
-        return aml_array_to_python_object(raw_array).array
+        return eqs_array_to_python_object(raw_array).array
 
     @property
     def samples(self) -> Labels:
@@ -323,14 +324,14 @@ class Gradient:
         return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
-        result = aml_labels_t()
-        self._lib.aml_block_labels(
+        result = eqs_labels_t()
+        self._lib.eqs_block_labels(
             self._block._ptr, self._name.encode("utf8"), axis, result
         )
-        return Labels._from_aml_labels_t(result, parent=self._block)
+        return Labels._from_eqs_labels_t(result, parent=self._block)
 
 
-def _get_raw_array(lib, block_ptr, name) -> aml_array_t:
-    data = aml_array_t()
-    lib.aml_block_data(block_ptr, name.encode("utf8"), data)
+def _get_raw_array(lib, block_ptr, name) -> eqs_array_t:
+    data = eqs_array_t()
+    lib.eqs_block_data(block_ptr, name.encode("utf8"), data)
     return data

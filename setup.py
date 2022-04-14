@@ -12,10 +12,11 @@ if sys.version_info < (3, 6):
     sys.exit("Sorry, Python < 3.6 is not supported")
 
 
-AML_BUILD_TYPE = os.environ.get("AML_BUILD_TYPE", "release")
-if AML_BUILD_TYPE not in ["debug", "release"]:
+EQUISTORE_BUILD_TYPE = os.environ.get("EQUISTORE_BUILD_TYPE", "release")
+if EQUISTORE_BUILD_TYPE not in ["debug", "release"]:
     raise Exception(
-        f"invalid build type passed: '{AML_BUILD_TYPE}', expected 'debug' or 'release'"
+        f"invalid build type passed: '{EQUISTORE_BUILD_TYPE}', "
+        "expected 'debug' or 'release'"
     )
 
 
@@ -40,7 +41,7 @@ class cmake_ext(build_ext):
     def run(self):
         source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
-        install_dir = os.path.join(os.path.realpath(self.build_lib), "aml_storage")
+        install_dir = os.path.join(os.path.realpath(self.build_lib), "equistore")
 
         try:
             os.mkdir(build_dir)
@@ -49,9 +50,9 @@ class cmake_ext(build_ext):
 
         cmake_options = [
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            f"-DCMAKE_BUILD_TYPE={AML_BUILD_TYPE}",
+            f"-DCMAKE_BUILD_TYPE={EQUISTORE_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
-            "-DAML_STORAGE_BUILD_FOR_PYTHON=ON",
+            "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
         ]
 
         if "CARGO" in os.environ:
@@ -88,16 +89,16 @@ setup(
     ext_modules=[
         # only declare the extension, it is built & copied as required by cmake
         # in the build_ext command
-        Extension(name="aml_storage", sources=[]),
+        Extension(name="equistore", sources=[]),
     ],
     cmdclass={
         "build_ext": cmake_ext,
         "bdist_wheel": universal_wheel,
     },
     package_data={
-        "aml_storage": [
-            "aml_storage/lib/*",
-            "aml_storage/include/*",
+        "equistore": [
+            "equistore/lib/*",
+            "equistore/include/*",
         ]
     },
 )

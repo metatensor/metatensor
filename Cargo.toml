@@ -1,10 +1,10 @@
 [package]
-name = "aml-storage"
+name = "equistore"
 version = "0.1.0"
 edition = "2018"
 
 [lib]
-name = "aml_storage"
+name = "equistore"
 # when https://github.com/rust-lang/cargo/pull/8789 lands, use it here!
 # until then, build all the crate-type we need
 crate-type = ["cdylib", "staticlib", "rlib"]

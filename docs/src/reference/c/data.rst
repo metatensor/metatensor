@@ -1,11 +1,11 @@
 Data arrays
 ===========
 
-.. doxygenstruct:: aml_array_t
+.. doxygenstruct:: eqs_array_t
     :members:
 
 ------------------------------------
 
-.. doxygenfunction:: aml_register_data_origin
+.. doxygenfunction:: eqs_register_data_origin
 
-.. doxygenfunction:: aml_get_data_origin
+.. doxygenfunction:: eqs_get_data_origin

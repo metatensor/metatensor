@@ -15,7 +15,7 @@ thread_local! {
 
 /// Status type returned by all functions in the C API.
 ///
-/// The value 0 (`AML_SUCCESS`) is used to indicate successful operations,
+/// The value 0 (`EQS_SUCCESS`) is used to indicate successful operations,
 /// positive values are used by this library to indicate errors, while negative
 /// values are reserved for users of this library to indicate their own errors
 /// in callbacks.
@@ -23,11 +23,11 @@ thread_local! {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 #[must_use]
-pub struct aml_status_t(i32);
+pub struct eqs_status_t(i32);
 
-impl aml_status_t {
+impl eqs_status_t {
     pub fn is_success(self) -> bool {
-        self.0 == AML_SUCCESS
+        self.0 == EQS_SUCCESS
     }
 
     pub fn as_i32(self) -> i32 {
@@ -36,36 +36,36 @@ impl aml_status_t {
 }
 
 /// Status code used when a function succeeded
-pub const AML_SUCCESS: i32 = 0;
+pub const EQS_SUCCESS: i32 = 0;
 /// Status code used when a function got an invalid parameter
-pub const AML_INVALID_PARAMETER_ERROR: i32 = 1;
+pub const EQS_INVALID_PARAMETER_ERROR: i32 = 1;
 /// Status code used when a memory buffer is too small to fit the requested data
-pub const AML_BUFFER_SIZE_ERROR: i32 = 254;
+pub const EQS_BUFFER_SIZE_ERROR: i32 = 254;
 /// Status code used when there was an internal error, i.e. there is a bug
-/// inside AML itself
-pub const AML_INTERNAL_ERROR: i32 = 255;
+/// inside equistore itself
+pub const EQS_INTERNAL_ERROR: i32 = 255;
 
 
-impl From<Error> for aml_status_t {
+impl From<Error> for eqs_status_t {
     #[allow(clippy::match_same_arms)]
-    fn from(error: Error) -> aml_status_t {
+    fn from(error: Error) -> eqs_status_t {
         LAST_ERROR_MESSAGE.with(|message| {
             *message.borrow_mut() = CString::new(format!("{}", error)).expect("error message contains a null byte");
         });
         match error {
-            Error::InvalidParameter(_) => aml_status_t(AML_INVALID_PARAMETER_ERROR),
-            Error::BufferSize(_) => aml_status_t(AML_BUFFER_SIZE_ERROR),
+            Error::InvalidParameter(_) => eqs_status_t(EQS_INVALID_PARAMETER_ERROR),
+            Error::BufferSize(_) => eqs_status_t(EQS_BUFFER_SIZE_ERROR),
             Error::External {status, .. } => status,
-            Error::Internal(_) => aml_status_t(AML_INTERNAL_ERROR),
+            Error::Internal(_) => eqs_status_t(EQS_INTERNAL_ERROR),
         }
     }
 }
 
 /// An alternative to `std::panic::catch_unwind` that automatically transform
-/// the error into `aml_status_t`.
-pub fn catch_unwind<F>(function: F) -> aml_status_t where F: FnOnce() -> Result<(), Error> + UnwindSafe {
+/// the error into `eqs_status_t`.
+pub fn catch_unwind<F>(function: F) -> eqs_status_t where F: FnOnce() -> Result<(), Error> + UnwindSafe {
     match std::panic::catch_unwind(function) {
-        Ok(Ok(_)) => aml_status_t(AML_SUCCESS),
+        Ok(Ok(_)) => eqs_status_t(EQS_SUCCESS),
         Ok(Err(error)) => error.into(),
         Err(error) => Error::from(error).into()
     }
@@ -94,7 +94,7 @@ macro_rules! check_pointers {
 ///
 /// @returns the last error message, as a NULL-terminated string
 #[no_mangle]
-pub unsafe extern fn aml_last_error() -> *const c_char {
+pub unsafe extern fn eqs_last_error() -> *const c_char {
     let mut result = std::ptr::null();
     let wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
@@ -105,7 +105,7 @@ pub unsafe extern fn aml_last_error() -> *const c_char {
         Ok(())
     });
 
-    if status.0 != AML_SUCCESS {
+    if status.0 != EQS_SUCCESS {
         eprintln!("ERROR: unable to get last error message!");
         return std::ptr::null();
     }

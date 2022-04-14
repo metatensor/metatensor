@@ -2,7 +2,7 @@ use std::os::raw::{c_char, c_void};
 use std::ffi::CStr;
 
 use crate::{LabelValue, Labels, LabelsBuilder, Error};
-use super::status::{aml_status_t, catch_unwind};
+use super::status::{eqs_status_t, catch_unwind};
 
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
@@ -11,7 +11,7 @@ use super::status::{aml_status_t, catch_unwind};
 /// this array (often called *variables*). Each row/entry in this array is
 /// unique, and they are often (but not always) sorted in lexicographic order.
 #[repr(C)]
-pub struct aml_labels_t {
+pub struct eqs_labels_t {
     /// internal: pointer to the rust `Labels` struct if any, null otherwise
     pub labels_ptr: *const c_void,
 
@@ -29,10 +29,10 @@ pub struct aml_labels_t {
     pub count: usize,
 }
 
-impl std::convert::TryFrom<&aml_labels_t> for Labels {
+impl std::convert::TryFrom<&eqs_labels_t> for Labels {
     type Error = Error;
 
-    fn try_from(labels: &aml_labels_t) -> Result<Labels, Self::Error> {
+    fn try_from(labels: &eqs_labels_t) -> Result<Labels, Self::Error> {
         if labels.names.is_null() || labels.values.is_null() {
             todo!()
         }
@@ -61,10 +61,10 @@ impl std::convert::TryFrom<&aml_labels_t> for Labels {
 }
 
 
-impl std::convert::TryFrom<&Labels> for aml_labels_t {
+impl std::convert::TryFrom<&Labels> for eqs_labels_t {
     type Error = Error;
 
-    fn try_from(rust_labels: &Labels) -> Result<aml_labels_t, Self::Error> {
+    fn try_from(rust_labels: &Labels) -> Result<eqs_labels_t, Self::Error> {
         let size = rust_labels.size();
         let count = rust_labels.count();
 
@@ -81,13 +81,13 @@ impl std::convert::TryFrom<&Labels> for aml_labels_t {
         };
 
         // this is a bit sketchy & rely on the fact that the containing
-        // `aml_block_t` or `aml_tensormap_t` has a fixed address since it is
+        // `eqs_block_t` or `eqs_tensormap_t` has a fixed address since it is
         // boxed. This also valid only for as long as the block/tensor map is
         // not modified.
         // TODO: could we use Pin/Pin projection here?
         let labels_ptr = (rust_labels as *const Labels).cast();
 
-        Ok(aml_labels_t {
+        Ok(eqs_labels_t {
             labels_ptr, names, values, size, count
         })
     }
@@ -99,26 +99,26 @@ impl std::convert::TryFrom<&Labels> for aml_labels_t {
 /// of `labels`. This operation is only available if the labels correspond to a
 /// set of Rust Labels (i.e. `labels.labels_ptr` is not NULL).
 ///
-/// @param labels set of labels coming from an `aml_block_t` or an `aml_tensormap_t`
+/// @param labels set of labels coming from an `eqs_block_t` or an `eqs_tensormap_t`
 /// @param values array containing the label to lookup
 /// @param count size of the values array
 /// @param result position of the values in the labels or -1 if the values
 ///               were not found
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_labels_position(
-    labels: aml_labels_t,
+pub unsafe extern fn eqs_labels_position(
+    labels: eqs_labels_t,
     values: *const i32,
     count: u64,
     result: *mut i64
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         if labels.labels_ptr.is_null() {
             return Err(Error::InvalidParameter(
-                "these labels do not support calling aml_labels_position".into()
+                "these labels do not support calling eqs_labels_position".into()
             ))
         }
 

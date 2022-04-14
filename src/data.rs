@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use once_cell::sync::Lazy;
 
-use crate::c_api::{aml_status_t, catch_unwind};
+use crate::c_api::{eqs_status_t, catch_unwind};
 use crate::{Error, check_pointers};
 
 /// A single 64-bit integer representing a data origin (numpy ndarray, rust
@@ -12,9 +12,9 @@ use crate::{Error, check_pointers};
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct aml_data_origin_t(pub u64);
+pub struct eqs_data_origin_t(pub u64);
 
-pub type DataOrigin = aml_data_origin_t;
+pub type DataOrigin = eqs_data_origin_t;
 
 static REGISTERED_DATA_ORIGIN: Lazy<Mutex<Vec<String>>> = Lazy::new(|| {
     // start the registered origins at 1, this allow using 0 as a marker for
@@ -29,14 +29,14 @@ pub fn register_data_origin(name: String) -> DataOrigin {
 
     for (i, registered) in registered_origins.iter().enumerate() {
         if registered == &name {
-            return aml_data_origin_t(i as u64);
+            return eqs_data_origin_t(i as u64);
         }
     }
 
     // could not find the origin, register a new one
     registered_origins.push(name);
 
-    return aml_data_origin_t((registered_origins.len() - 1) as u64);
+    return eqs_data_origin_t((registered_origins.len() - 1) as u64);
 }
 
 /// Get the name of the given (pre-registered) origin
@@ -51,8 +51,8 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
     }
 }
 
-/// `aml_array_t` manages 3D arrays the be used as data in a block/tensor map.
-/// The array itself if opaque to this library and can come from multiple
+/// `eqs_array_t` manages n-dimensional arrays used as data in a block or tensor
+/// map. The array itself if opaque to this library and can come from multiple
 /// sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
 /// or torch. The data does not have to live on CPU, or even on the same machine
 /// where this code is executed.
@@ -62,44 +62,44 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
 /// manipulation of the array in an opaque way.
 #[repr(C)]
 #[allow(non_camel_case_types)]
-pub struct aml_array_t {
+pub struct eqs_array_t {
     /// User-provided data should be stored here, it will be passed as the
     /// first parameter to all function pointers below.
     pub ptr: *mut c_void,
 
     /// This function needs to store the "data origin" for this array in
-    /// `origin`. Users of `aml_array_t` should register a single data
+    /// `origin`. Users of `eqs_array_t` should register a single data
     /// origin with `register_data_origin`, and use it for all compatible
     /// arrays.
     origin: Option<unsafe extern fn(
         array: *const c_void,
-        origin: *mut aml_data_origin_t
-    ) -> aml_status_t>,
+        origin: *mut eqs_data_origin_t
+    ) -> eqs_status_t>,
 
-    /// Get the shape of the array managed by this `aml_array_t` in the `*shape`
+    /// Get the shape of the array managed by this `eqs_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`.
     shape: Option<unsafe extern fn(
         array: *const c_void,
         shape: *mut *const usize,
         shape_count: *mut usize,
-    ) -> aml_status_t>,
+    ) -> eqs_status_t>,
 
-    /// Change the shape of the array managed by this `aml_array_t` to the given
+    /// Change the shape of the array managed by this `eqs_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
     /// `shape` array
     reshape: Option<unsafe extern fn(
         array: *mut c_void,
         shape: *const usize,
         shape_count: usize,
-    ) -> aml_status_t>,
+    ) -> eqs_status_t>,
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
     swap_axes: Option<unsafe extern fn(
         array: *mut c_void,
         axis_1: usize,
         axis_2: usize,
-    ) -> aml_status_t>,
+    ) -> eqs_status_t>,
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`; and store it in
@@ -111,21 +111,21 @@ pub struct aml_array_t {
         array: *const c_void,
         shape: *const usize,
         shape_count: usize,
-        new_array: *mut aml_array_t,
-    ) -> aml_status_t>,
+        new_array: *mut eqs_array_t,
+    ) -> eqs_status_t>,
 
     /// Make a copy of this `array` and return the new array in `new_array`
     copy: Option<unsafe extern fn(
         array: *const c_void,
-        new_array: *mut aml_array_t,
-    ) -> aml_status_t>,
+        new_array: *mut eqs_array_t,
+    ) -> eqs_status_t>,
 
     /// Remove this array and free the associated memory. This function can be
     /// set to `NULL` is there is no memory management to do.
     destroy: Option<unsafe extern fn(array: *mut c_void)>,
 
     /// Set entries in this array taking data from the `other_array`. This array
-    /// is guaranteed to be created by calling `aml_array_t::create` with one of
+    /// is guaranteed to be created by calling `eqs_array_t::create` with one of
     /// the arrays in the same block or tensor map as this `array`.
     ///
     /// This function should copy data from `other_array[other_sample, ..., :]` to
@@ -137,10 +137,10 @@ pub struct aml_array_t {
         property_end: u64,
         other_array: *const c_void,
         other_sample: u64
-    ) -> aml_status_t>,
+    ) -> eqs_status_t>,
 }
 
-impl std::fmt::Debug for aml_array_t {
+impl std::fmt::Debug for eqs_array_t {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut origin = None;
         let mut shape = None;
@@ -149,7 +149,7 @@ impl std::fmt::Debug for aml_array_t {
             shape = self.shape().ok();
         }
 
-        f.debug_struct("aml_array_t")
+        f.debug_struct("eqs_array_t")
             .field("ptr", &self.ptr)
             .field("origin", &origin)
             .field("shape", &shape)
@@ -157,7 +157,7 @@ impl std::fmt::Debug for aml_array_t {
     }
 }
 
-impl Drop for aml_array_t {
+impl Drop for eqs_array_t {
     fn drop(&mut self) {
         if let Some(function) = self.destroy {
             unsafe { function(self.ptr) }
@@ -165,28 +165,28 @@ impl Drop for aml_array_t {
     }
 }
 
-impl Clone for aml_array_t {
-    fn clone(&self) -> aml_array_t {
+impl Clone for eqs_array_t {
+    fn clone(&self) -> eqs_array_t {
         if let Some(function) = self.copy {
-            let mut new_array = aml_array_t::null();
+            let mut new_array = eqs_array_t::null();
             let status  = unsafe { function(self.ptr, &mut new_array) };
-            assert!(status.is_success(), "calling aml_array_t.copy failed");
+            assert!(status.is_success(), "calling eqs_array_t.copy failed");
             return new_array;
         } else {
-            panic!("function aml_array_t.copy is not set")
+            panic!("function eqs_array_t.copy is not set")
         }
     }
 }
 
-impl aml_array_t {
-    /// Create an `aml_array_t` from a Rust implementation of the `DataStorage`
+impl eqs_array_t {
+    /// Create an `eqs_array_t` from a Rust implementation of the `DataStorage`
     /// trait.
-    pub fn new(value: Box<dyn DataStorage>) -> aml_array_t {
+    pub fn new(value: Box<dyn DataStorage>) -> eqs_array_t {
         // We need to box the box to make sure the pointer is a normal 1-word
         // pointer (`Box<dyn Trait>` contains a 2-words, *fat* pointer which can
         // not be casted to `*mut c_void`)
         let array = Box::new(value);
-        aml_array_t {
+        eqs_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_data_origin),
             shape: Some(rust_data_shape),
@@ -200,10 +200,10 @@ impl aml_array_t {
     }
 
     /// make a raw (member by member) copy of the array. Contrary to
-    /// `aml_array_t::clone`, the returned array refers to the same
-    /// `aml_array_t` instance, and as such should not be freed.
-    pub(crate) fn raw_copy(&self) -> aml_array_t {
-        aml_array_t {
+    /// `eqs_array_t::clone`, the returned array refers to the same
+    /// `eqs_array_t` instance, and as such should not be freed.
+    pub(crate) fn raw_copy(&self) -> eqs_array_t {
+        eqs_array_t {
             ptr: self.ptr,
             origin: self.origin,
             shape: self.shape,
@@ -216,9 +216,9 @@ impl aml_array_t {
         }
     }
 
-    /// Create an `aml_array_t` with all fields set to null pointers.
-    fn null() -> aml_array_t {
-        aml_array_t {
+    /// Create an `eqs_array_t` with all fields set to null pointers.
+    fn null() -> eqs_array_t {
+        eqs_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             shape: None,
@@ -232,17 +232,17 @@ impl aml_array_t {
     }
 
     /// Get the origin of this array
-    pub fn origin(&self) -> Result<aml_data_origin_t, Error> {
-        let function = self.origin.expect("aml_array_t.origin function is NULL");
+    pub fn origin(&self) -> Result<eqs_data_origin_t, Error> {
+        let function = self.origin.expect("eqs_array_t.origin function is NULL");
 
-        let mut origin = aml_data_origin_t(0);
+        let mut origin = eqs_data_origin_t(0);
         let status = unsafe {
             function(self.ptr, &mut origin)
         };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.origin failed".into()
+                status, context: "calling eqs_array_t.origin failed".into()
             });
         }
 
@@ -252,7 +252,7 @@ impl aml_array_t {
     /// Get the shape of this array
     #[allow(clippy::cast_possible_truncation)]
     pub fn shape(&self) -> Result<&[usize], Error> {
-        let function = self.shape.expect("aml_array_t.shape function is NULL");
+        let function = self.shape.expect("eqs_array_t.shape function is NULL");
 
         let mut shape = std::ptr::null();
         let mut shape_count: usize = 0;
@@ -267,7 +267,7 @@ impl aml_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.shape failed".into()
+                status, context: "calling eqs_array_t.shape failed".into()
             });
         }
 
@@ -280,7 +280,7 @@ impl aml_array_t {
 
     /// Set the shape of this array to the given new `shape`
     pub fn reshape(&mut self, shape: &[usize]) -> Result<(), Error> {
-        let function = self.reshape.expect("aml_array_t.reshape function is NULL");
+        let function = self.reshape.expect("eqs_array_t.reshape function is NULL");
 
         let status = unsafe {
             function(
@@ -292,7 +292,7 @@ impl aml_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.reshape failed".into()
+                status, context: "calling eqs_array_t.reshape failed".into()
             });
         }
 
@@ -301,7 +301,7 @@ impl aml_array_t {
 
     /// Swap the axes `axis_1` and `axis_2` in the dimensions of this array.
     pub fn swap_axes(&mut self, axis_1: usize, axis_2: usize) -> Result<(), Error> {
-        let function = self.swap_axes.expect("aml_array_t.swap_axes function is NULL");
+        let function = self.swap_axes.expect("eqs_array_t.swap_axes function is NULL");
 
         let status = unsafe {
             function(
@@ -313,7 +313,7 @@ impl aml_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.swap_axes failed".into()
+                status, context: "calling eqs_array_t.swap_axes failed".into()
             });
         }
 
@@ -321,10 +321,10 @@ impl aml_array_t {
     }
 
     /// Create a new array with the same settings as this one and the given `shape`
-    pub fn create(&self, shape: &[usize]) -> Result<aml_array_t, Error> {
-        let function = self.create.expect("aml_array_t.create function is NULL");
+    pub fn create(&self, shape: &[usize]) -> Result<eqs_array_t, Error> {
+        let function = self.create.expect("eqs_array_t.create function is NULL");
 
-        let mut data_storage = aml_array_t::null();
+        let mut data_storage = eqs_array_t::null();
         let status = unsafe {
             function(
                 self.ptr,
@@ -336,7 +336,7 @@ impl aml_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.create failed".into()
+                status, context: "calling eqs_array_t.create failed".into()
             });
         }
 
@@ -344,7 +344,7 @@ impl aml_array_t {
     }
 
     /// Set entries in this array taking data from the `other` array. This array
-    /// MUST have been created by calling `aml_array_t.create()` with one of the
+    /// MUST have been created by calling `eqs_array_t.create()` with one of the
     /// other arrays in the same block or tensor map.
     ///
     /// This function will copy data from `other_array[other_sample, ..., :]` to
@@ -353,10 +353,10 @@ impl aml_array_t {
         &mut self,
         sample: usize,
         properties: std::ops::Range<usize>,
-        other: &aml_array_t,
+        other: &eqs_array_t,
         other_sample: usize
     ) -> Result<(), Error> {
-        let function = self.move_sample.expect("aml_array_t.move_sample function is NULL");
+        let function = self.move_sample.expect("eqs_array_t.move_sample function is NULL");
 
         let status = unsafe {
             function(
@@ -371,19 +371,19 @@ impl aml_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling aml_array_t.move_sample failed".into()
+                status, context: "calling eqs_array_t.move_sample failed".into()
             });
         }
 
         return Ok(());
     }
 
-    /// Get the data in this `aml_array_t` as a `ndarray::ArrayD`. This function
-    /// will panic if the data in this `aml_array_t` is not a `ndarray::ArrayD`.
+    /// Get the data in this `eqs_array_t` as a `ndarray::ArrayD`. This function
+    /// will panic if the data in this `eqs_array_t` is not a `ndarray::ArrayD`.
     #[cfg(feature = "ndarray")]
     pub fn as_array(&self) -> &ndarray::ArrayD<f64> {
         assert_eq!(
-            self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
+            self.origin().unwrap_or(eqs_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
             "this array was not create by rust ndarray"
         );
 
@@ -396,7 +396,7 @@ impl aml_array_t {
     #[cfg(feature = "ndarray")]
     pub fn as_array_mut(&mut self) -> &mut ndarray::Array3<f64> {
         assert_eq!(
-            self.origin().unwrap_or(aml_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
+            self.origin().unwrap_or(eqs_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
             "this array was not create by rust ndarray"
         );
 
@@ -407,7 +407,7 @@ impl aml_array_t {
     }
 }
 
-/// A rust trait with the same interface as `aml_array_t`, see this struct for
+/// A rust trait with the same interface as `eqs_array_t`, see this struct for
 /// the documentation
 pub trait DataStorage: std::any::Any{
     fn as_any(&self) -> &dyn std::any::Any;
@@ -432,11 +432,11 @@ pub trait DataStorage: std::any::Any{
     );
 }
 
-/// Implementation of `aml_array_t.origin` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.origin` using `Box<dyn DataStorage>`
 unsafe extern fn rust_data_origin(
     data: *const c_void,
-    origin: *mut aml_data_origin_t
-) -> aml_status_t {
+    origin: *mut eqs_data_origin_t
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data, origin);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -446,12 +446,12 @@ unsafe extern fn rust_data_origin(
     })
 }
 
-/// Implementation of `aml_array_t.shape` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.shape` using `Box<dyn DataStorage>`
 unsafe extern fn rust_data_shape(
     data: *const c_void,
     shape: *mut *const usize,
     shape_count: *mut usize,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data, shape, shape_count);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -464,13 +464,13 @@ unsafe extern fn rust_data_shape(
     })
 }
 
-/// Implementation of `aml_array_t.reshape` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.reshape` using `Box<dyn DataStorage>`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_reshape(
     data: *mut c_void,
     shape: *const usize,
     shape_count: usize,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -480,13 +480,13 @@ unsafe extern fn rust_data_reshape(
     })
 }
 
-/// Implementation of `aml_array_t.swap_axes` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.swap_axes` using `Box<dyn DataStorage>`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_swap_axes(
     data: *mut c_void,
     axis_1: usize,
     axis_2: usize,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -495,14 +495,14 @@ unsafe extern fn rust_data_swap_axes(
     })
 }
 
-/// Implementation of `aml_array_t.create` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.create` using `Box<dyn DataStorage>`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_create(
     data: *const c_void,
     shape: *const usize,
     shape_count: usize,
-    data_storage: *mut aml_array_t,
-) -> aml_status_t {
+    data_storage: *mut eqs_array_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data, data_storage);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -510,28 +510,28 @@ unsafe extern fn rust_data_create(
         let shape = std::slice::from_raw_parts(shape, shape_count);
         let new_data = (*data).create(shape);
 
-        *data_storage = aml_array_t::new(new_data);
+        *data_storage = eqs_array_t::new(new_data);
 
         Ok(())
     })
 }
 
 
-/// Implementation of `aml_array_t.copy` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.copy` using `Box<dyn DataStorage>`
 unsafe extern fn rust_data_copy(
     data: *const c_void,
-    data_storage: *mut aml_array_t,
-) -> aml_status_t {
+    data_storage: *mut eqs_array_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data, data_storage);
         let data = data.cast::<Box<dyn DataStorage>>();
-        *data_storage = aml_array_t::new((*data).copy());
+        *data_storage = eqs_array_t::new((*data).copy());
 
         Ok(())
     })
 }
 
-/// Implementation of `aml_array_t.destroy` for `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.destroy` for `Box<dyn DataStorage>`
 unsafe extern fn rust_data_destroy(
     data: *mut c_void,
 ) {
@@ -542,7 +542,7 @@ unsafe extern fn rust_data_destroy(
     }
 }
 
-/// Implementation of `aml_array_t.move_sample` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.move_sample` using `Box<dyn DataStorage>`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern fn rust_data_move_sample(
     data: *mut c_void,
@@ -551,7 +551,7 @@ unsafe extern fn rust_data_move_sample(
     property_end: u64,
     other: *const c_void,
     other_sample: u64
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(data, other);
         let data = data.cast::<Box<dyn DataStorage>>();
@@ -704,8 +704,8 @@ mod tests {
 
     #[test]
     fn data_origin() {
-        assert_eq!(get_data_origin(aml_data_origin_t(0)), "unregistered origin");
-        assert_eq!(get_data_origin(aml_data_origin_t(10000)), "unregistered origin");
+        assert_eq!(get_data_origin(eqs_data_origin_t(0)), "unregistered origin");
+        assert_eq!(get_data_origin(eqs_data_origin_t(10000)), "unregistered origin");
 
         let origin = register_data_origin("test origin".into());
         assert_eq!(get_data_origin(origin), "test origin");
@@ -713,11 +713,11 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data = aml_array_t::new(Box::new(TestArray::new(vec![3, 4, 5])));
+        let data = eqs_array_t::new(Box::new(TestArray::new(vec![3, 4, 5])));
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
-            "aml_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some([3, 4, 5]) }}",
+            "eqs_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some([3, 4, 5]) }}",
             data.ptr
         ));
     }
@@ -726,11 +726,11 @@ mod tests {
     mod ndarray {
         use ndarray::ArrayD;
 
-        use crate::{aml_array_t, get_data_origin};
+        use crate::{eqs_array_t, get_data_origin};
 
         #[test]
         fn shape() {
-            let mut data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0)));
+            let mut data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0)));
 
             assert_eq!(data.shape().unwrap(), [3, 4, 2]);
             data.reshape(&[12, 2]).unwrap();
@@ -743,7 +743,7 @@ mod tests {
 
         #[test]
         fn create() {
-            let data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 2], 1.0)));
+            let data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 2], 1.0)));
 
             assert_eq!(get_data_origin(data.origin().unwrap()), "rust.ndarray");
             assert_eq!(data.as_array(), ArrayD::from_elem(vec![4, 2], 1.0));
@@ -756,7 +756,7 @@ mod tests {
 
         #[test]
         fn move_sample() {
-            let data = aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)));
+            let data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)));
 
             let mut other = data.create(&[1, 2, 2, 8]).unwrap();
             assert_eq!(other.as_array(), ArrayD::from_elem(vec![1, 2, 2, 8], 0.0));

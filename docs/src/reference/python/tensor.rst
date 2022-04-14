@@ -1,5 +1,5 @@
 Tensor Maps
 ===========
 
-.. autoclass:: aml_storage.TensorMap
+.. autoclass:: equistore.TensorMap
     :members:

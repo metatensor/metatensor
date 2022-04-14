@@ -1,26 +1,26 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
-use crate::aml_data_origin_t;
+use crate::eqs_data_origin_t;
 
-use super::{aml_status_t, catch_unwind};
+use super::{eqs_status_t, catch_unwind};
 use super::utils::copy_str_to_c;
 
 
 /// Register a new data origin with the given `name`. Calling this function
-/// multiple times with the same name will give the same `aml_data_origin_t`.
+/// multiple times with the same name will give the same `eqs_data_origin_t`.
 ///
 /// @param name name of the data origin as an UTF-8 encoded NULL-terminated string
-/// @param origin pointer to an `aml_data_origin_t` where the origin will be stored
+/// @param origin pointer to an `eqs_data_origin_t` where the origin will be stored
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn aml_register_data_origin(
+pub unsafe extern fn eqs_register_data_origin(
     name: *const c_char,
-    origin: *mut aml_data_origin_t,
-) -> aml_status_t {
+    origin: *mut eqs_data_origin_t,
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(name, origin);
 
@@ -40,15 +40,15 @@ pub unsafe extern fn aml_register_data_origin(
 /// @param buffer_size size of the buffer
 ///
 /// @returns The status code of this operation. If the status is not
-///          `AML_SUCCESS`, you can use `aml_last_error()` to get the full
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn aml_get_data_origin(
-    origin: aml_data_origin_t,
+pub unsafe extern fn eqs_get_data_origin(
+    origin: eqs_data_origin_t,
     buffer: *mut c_char,
     buffer_size: u64,
-) -> aml_status_t {
+) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(buffer);
 

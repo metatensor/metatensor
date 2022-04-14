@@ -721,7 +721,7 @@ fn split_keys(keys: &Labels, variables: &[&str]) -> Result<(Labels, Labels), Err
 mod tests {
     use super::*;
 
-    use crate::aml_array_t;
+    use crate::eqs_array_t;
     use crate::data::TestArray;
 
     fn example_labels(name: &str, count: usize) -> Labels {
@@ -735,14 +735,14 @@ mod tests {
     #[test]
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
             example_labels("samples", 2),
             vec![Arc::new(example_labels("components", 3))],
             Arc::new(example_labels("properties", 1)),
@@ -753,14 +753,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
             example_labels("samples", 1),
             vec![],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("something_else", 2),
             vec![],
             Arc::new(example_labels("properties", 1)),
@@ -775,14 +775,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("samples", 2),
             vec![],
             Arc::new(example_labels("properties", 1)),
@@ -798,14 +798,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
             example_labels("samples", 1),
             vec![Arc::new(example_labels("components", 1))],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
             example_labels("samples", 2),
             vec![Arc::new(example_labels("something_else", 3))],
             Arc::new(example_labels("properties", 1)),
@@ -820,14 +820,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
             example_labels("samples", 1),
             vec![],
             Arc::new(example_labels("properties", 1)),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            aml_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
             example_labels("samples", 2),
             vec![],
             Arc::new(example_labels("something_else", 1)),
@@ -858,7 +858,7 @@ mod tests {
 
         fn example_tensor() -> TensorMap {
             let mut block_1 = TensorBlock::new(
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 1], 1.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 1], 1.0))),
                 example_labels("samples", vec![0, 2, 4]),
                 vec![Arc::new(example_labels("components", vec![0]))],
                 Arc::new(example_labels("properties", vec![0])),
@@ -871,7 +871,7 @@ mod tests {
 
             block_1.add_gradient(
                 "parameter",
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![2, 1, 1], 11.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![2, 1, 1], 11.0))),
                 gradient_samples_1,
                 vec![Arc::new(example_labels("components", vec![0]))],
             ).unwrap();
@@ -879,7 +879,7 @@ mod tests {
             /******************************************************************/
 
             let mut block_2 = TensorBlock::new(
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 2.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 2.0))),
                 example_labels("samples", vec![0, 1, 3]),
                 vec![Arc::new(example_labels("components", vec![0]))],
                 // different property size
@@ -894,7 +894,7 @@ mod tests {
 
             block_2.add_gradient(
                 "parameter",
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 12.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 12.0))),
                 gradient_samples_2,
                 vec![Arc::new(example_labels("components", vec![0]))],
             ).unwrap();
@@ -902,7 +902,7 @@ mod tests {
             /******************************************************************/
 
             let mut block_3 = TensorBlock::new(
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 3.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 3.0))),
                 example_labels("samples", vec![0, 3, 6, 8]),
                 // different component size
                 vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
@@ -915,7 +915,7 @@ mod tests {
 
             block_3.add_gradient(
                 "parameter",
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![1, 3, 1], 13.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![1, 3, 1], 13.0))),
                 gradient_samples_3,
                 vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
             ).unwrap();
@@ -923,7 +923,7 @@ mod tests {
             /******************************************************************/
 
             let mut block_4 = TensorBlock::new(
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 4.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 4.0))),
                 example_labels("samples", vec![0, 1, 2, 5]),
                 vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
                 Arc::new(example_labels("properties", vec![0])),
@@ -936,7 +936,7 @@ mod tests {
 
             block_4.add_gradient(
                 "parameter",
-                aml_array_t::new(Box::new(ArrayD::from_elem(vec![2, 3, 1], 14.0))),
+                eqs_array_t::new(Box::new(ArrayD::from_elem(vec![2, 3, 1], 14.0))),
                 gradient_samples_4,
                 vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
             ).unwrap();

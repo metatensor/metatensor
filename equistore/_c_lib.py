@@ -23,13 +23,13 @@ class LibraryFinder(object):
 def _lib_path():
     if sys.platform.startswith("darwin"):
         windows = False
-        name = "libaml_storage.dylib"
+        name = "libequistore.dylib"
     elif sys.platform.startswith("linux"):
         windows = False
-        name = "libaml_storage.so"
+        name = "libequistore.so"
     elif sys.platform.startswith("win"):
         windows = True
-        name = "libaml_storage.dll"
+        name = "libequistore.dll"
     else:
         raise ImportError("Unknown platform. Please edit this file")
 
@@ -39,7 +39,7 @@ def _lib_path():
             _check_dll(path)
         return path
 
-    raise ImportError("Could not find aml-storage shared library at " + path)
+    raise ImportError("Could not find equistore shared library at " + path)
 
 
 def _check_dll(path):

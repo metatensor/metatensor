@@ -1,7 +1,7 @@
 import ctypes
 
-from ._c_api import AML_BUFFER_SIZE_ERROR
-from .status import AmlError, _save_exception
+from ._c_api import EQS_BUFFER_SIZE_ERROR
+from .status import EquistoreError, _save_exception
 
 
 def _call_with_growing_buffer(callback, initial=1024):
@@ -12,8 +12,8 @@ def _call_with_growing_buffer(callback, initial=1024):
         try:
             callback(buffer, bufflen)
             break
-        except AmlError as e:
-            if e.status == AML_BUFFER_SIZE_ERROR:
+        except EquistoreError as e:
+            if e.status == EQS_BUFFER_SIZE_ERROR:
                 # grow the buffer and retry
                 bufflen *= 2
             else:
