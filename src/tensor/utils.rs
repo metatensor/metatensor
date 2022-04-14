@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use indexmap::IndexSet;
 
@@ -72,7 +73,7 @@ pub fn merge_gradient_samples(
     blocks: &[KeyAndBlock],
     gradient_name: &str,
     samples_mappings: &[Vec<eqs_sample_mapping_t>],
-) -> Labels {
+) -> Arc<Labels> {
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
     for ((_, block), samples_mapping) in blocks.iter().zip(samples_mappings) {
@@ -100,14 +101,14 @@ pub fn merge_gradient_samples(
         new_gradient_samples_builder.add(sample);
     }
 
-    return new_gradient_samples_builder.finish();
+    return Arc::new(new_gradient_samples_builder.finish());
 }
 
 pub fn merge_samples(
     blocks: &[KeyAndBlock],
     new_sample_names: Vec<&str>,
     sort: bool
-) -> (Labels, Vec<Vec<eqs_sample_mapping_t>>) {
+) -> (Arc<Labels>, Vec<Vec<eqs_sample_mapping_t>>) {
     let add_key_to_samples = blocks[0].1.values.samples().size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
@@ -133,7 +134,7 @@ pub fn merge_samples(
         merged_samples_builder.add(sample);
     }
 
-    let merged_samples = merged_samples_builder.finish();
+    let merged_samples = Arc::new(merged_samples_builder.finish());
 
     let mut samples_mappings = Vec::new();
     for (key, block) in blocks {
@@ -159,25 +160,35 @@ pub fn merge_samples(
 /******************************************************************************/
 
 #[cfg(all(test, feature = "ndarray"))]
-pub use self::tests_utils::{example_labels, example_block, example_tensor};
+pub use self::tests_utils_ndarray::{example_block, example_tensor};
 
-#[cfg(all(test, feature = "ndarray"))]
+#[cfg(test)]
+pub use self::tests_utils::example_labels;
+
+#[cfg(test)]
 mod tests_utils {
     use std::sync::Arc;
-
     use crate::labels::{Labels, LabelsBuilder, LabelValue};
-    use crate::{TensorBlock, TensorMap};
-    use crate::eqs_array_t;
 
-    use ndarray::ArrayD;
-
-    pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
+    pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Arc<Labels> {
         let mut labels = LabelsBuilder::new(names);
         for entry in values {
             labels.add(entry.iter().copied().map(LabelValue::from).collect());
         }
-        return labels.finish();
+        return Arc::new(labels.finish());
     }
+}
+
+
+#[cfg(all(test, feature = "ndarray"))]
+mod tests_utils_ndarray {
+    use super::tests_utils::example_labels;
+
+    use crate::labels::{LabelsBuilder, LabelValue};
+    use crate::{TensorBlock, TensorMap};
+    use crate::eqs_array_t;
+
+    use ndarray::ArrayD;
 
     pub fn example_block(
         samples: Vec<[i32; 1]>,
@@ -195,8 +206,8 @@ mod tests_utils {
         let mut block = TensorBlock::new(
             eqs_array_t::new(Box::new(ArrayD::from_elem(shape, values))),
             samples,
-            vec![Arc::new(components.clone())],
-            Arc::new(properties.clone()),
+            vec![components.clone()],
+            properties.clone(),
         ).unwrap();
 
         let gradient_samples = example_labels(vec!["sample", "parameter"], gradient_samples);
@@ -206,7 +217,7 @@ mod tests_utils {
             "parameter",
             eqs_array_t::new(Box::new(ArrayD::from_elem(shape, gradient_values))),
             gradient_samples,
-            vec![Arc::new(components)],
+            vec![components],
         ).unwrap();
 
         return block;

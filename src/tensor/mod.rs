@@ -262,57 +262,54 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::eqs_array_t;
     use crate::data::TestArray;
-    use crate::LabelsBuilder;
 
     use super::*;
-
-    fn example_labels(name: &str, count: usize) -> Labels {
-        let mut labels = LabelsBuilder::new(vec![name]);
-        for i in 0..count {
-            labels.add(vec![LabelValue::from(i)]);
-        }
-        return labels.finish();
-    }
+    use super::utils::example_labels;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
-            example_labels("samples", 1),
-            vec![Arc::new(example_labels("components", 1))],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["samples"], vec![[0]]),
+            vec![example_labels(vec!["components"], vec![[0]])],
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
-            example_labels("samples", 2),
-            vec![Arc::new(example_labels("components", 3))],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["samples"], vec![[0], [1]]),
+            vec![example_labels(vec!["components"], vec![[0], [1], [2]])],
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
-        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(
+            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            vec![block_1, block_2],
+        );
         assert!(result.is_ok());
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
-            example_labels("samples", 1),
+            example_labels(vec!["samples"], vec![[0]]),
             vec![],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
-            example_labels("something_else", 2),
+            example_labels(vec!["something_else"], vec![[0], [1]]),
             vec![],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
-        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(
+            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            vec![block_1, block_2],
+        );
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same sample label \
@@ -322,19 +319,22 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
-            example_labels("samples", 1),
-            vec![Arc::new(example_labels("components", 1))],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["samples"], vec![[0]]),
+            vec![example_labels(vec!["components"], vec![[0]])],
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
-            example_labels("samples", 2),
+            example_labels(vec!["samples"], vec![[0], [1]]),
             vec![],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
-        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(
+            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            vec![block_1, block_2],
+        );
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must contains the same set of \
@@ -345,19 +345,22 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
-            example_labels("samples", 1),
-            vec![Arc::new(example_labels("components", 1))],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["samples"], vec![[0]]),
+            vec![example_labels(vec!["components"], vec![[0]])],
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
-            example_labels("samples", 2),
-            vec![Arc::new(example_labels("something_else", 3))],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["samples"], vec![[0], [1]]),
+            vec![example_labels(vec!["something_else"], vec![[0], [1], [2]])],
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
-        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(
+            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            vec![block_1, block_2],
+        );
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same component label \
@@ -367,19 +370,22 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
-            example_labels("samples", 1),
+            example_labels(vec!["samples"], vec![[0]]),
             vec![],
-            Arc::new(example_labels("properties", 1)),
+            example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
-            example_labels("samples", 2),
+            example_labels(vec!["samples"], vec![[0], [1]]),
             vec![],
-            Arc::new(example_labels("something_else", 1)),
+            example_labels(vec!["something_else"], vec![[0]]),
         ).unwrap();
 
-        let result = TensorMap::new(example_labels("keys", 2), vec![block_1, block_2]);
+        let result = TensorMap::new(
+            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            vec![block_1, block_2],
+        );
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: all blocks must have the same property label \

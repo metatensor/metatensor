@@ -305,25 +305,25 @@ mod tests {
         let keys_to_move = LabelsBuilder::new(vec!["key_1"]).finish();
         tensor.keys_to_properties(&keys_to_move, true).unwrap();
 
-        assert_eq!(tensor.keys(), &example_labels(vec!["key_2"], vec![[0], [2], [3]]));
+        assert_eq!(tensor.keys(), &*example_labels(vec!["key_2"], vec![[0], [2], [3]]));
         assert_eq!(tensor.blocks().len(), 3);
 
         // The new first block contains the old first two blocks merged
         let block = &tensor.blocks()[0];
         assert_eq!(
-            block.values.samples(),
-            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+            *block.values.samples(),
+            example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
         );
 
         assert_eq!(block.values.components().len(), 1);
         assert_eq!(
-            &*block.values.components()[0],
-            &example_labels(vec!["components"], vec![[0]])
+            block.values.components()[0],
+            example_labels(vec!["components"], vec![[0]])
         );
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![[0, 0], [1, 3], [1, 4], [1, 5]])
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![[0, 0], [1, 3], [1, 4], [1, 5]])
         );
 
         let expected = ArrayD::from_shape_vec(vec![5, 1, 4], vec![
@@ -337,8 +337,8 @@ mod tests {
 
         let gradient_1 = block.get_gradient("parameter").unwrap();
         assert_eq!(
-            gradient_1.samples(),
-            &example_labels(vec!["sample", "parameter"], vec![[0, -2], [0, 3], [3, -2], [4, 3]])
+            *gradient_1.samples(),
+            example_labels(vec!["sample", "parameter"], vec![[0, -2], [0, 3], [3, -2], [4, 3]])
         );
 
         let expected = ArrayD::from_shape_vec(vec![4, 1, 4], vec![
@@ -355,16 +355,16 @@ mod tests {
         assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![[2, 0]])
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![[2, 0]])
         );
 
         // The new third block contains the old second block
         let block = &tensor.blocks()[2];
         assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![[2, 0]])
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![[2, 0]])
         );
     }
 
@@ -457,13 +457,13 @@ mod tests {
 
         assert_eq!(block.values.components().len(), 1);
         assert_eq!(
-            &*block.values.components()[0],
-            &example_labels(vec!["components"], vec![[0]])
+            block.values.components()[0],
+            example_labels(vec!["components"], vec![[0]])
         );
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
                 [1, 0], [1, 1], [1, 2], [1, 3],
             ])
@@ -489,8 +489,8 @@ mod tests {
         assert_eq!(block.values.data.as_array(), expected);
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
                 [1, 0], [1, 1], [1, 2], [1, 3],
             ])
@@ -512,13 +512,13 @@ mod tests {
 
         assert_eq!(block.values.components().len(), 1);
         assert_eq!(
-            &*block.values.components()[0],
-            &example_labels(vec!["components"], vec![[0]])
+            block.values.components()[0],
+            example_labels(vec!["components"], vec![[0]])
         );
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
             ])
         );
@@ -539,8 +539,8 @@ mod tests {
         assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 4], 3.0));
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
             ])
         );
@@ -557,19 +557,19 @@ mod tests {
 
         let block = &tensor.blocks()[0];
         assert_eq!(
-            block.values.samples(),
-            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+            *block.values.samples(),
+            example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
         );
 
         assert_eq!(block.values.components().len(), 1);
         assert_eq!(
-            &*block.values.components()[0],
-            &example_labels(vec!["components"], vec![[0]])
+            block.values.components()[0],
+            example_labels(vec!["components"], vec![[0]])
         );
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
                 [1, 0], [1, 1], [1, 2], [1, 3],
                 [2, 0], [2, 1], [2, 2], [2, 3],
@@ -595,8 +595,8 @@ mod tests {
         assert_eq!(block.values.data.as_array(), expected);
 
         assert_eq!(
-            &**block.values.properties(),
-            &example_labels(vec!["key_1", "properties"], vec![
+            *block.values.properties(),
+            example_labels(vec!["key_1", "properties"], vec![
                 [0, 0], [0, 1], [0, 2], [0, 3],
                 [1, 0], [1, 1], [1, 2], [1, 3],
                 [2, 0], [2, 1], [2, 2], [2, 3],

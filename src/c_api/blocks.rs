@@ -67,7 +67,7 @@ pub unsafe extern fn eqs_block(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let samples = Labels::try_from(&samples)?;
+        let samples = Arc::new(Labels::try_from(&samples)?);
 
         let mut rust_components = Vec::new();
         for component in std::slice::from_raw_parts(components, components_count) {
@@ -75,9 +75,9 @@ pub unsafe extern fn eqs_block(
             rust_components.push(Arc::new(component));
         }
 
-        let properties = Labels::try_from(&properties)?;
+        let properties = Arc::new(Labels::try_from(&properties)?);
 
-        let block = TensorBlock::new(data, samples, rust_components, Arc::new(properties))?;
+        let block = TensorBlock::new(data, samples, rust_components, properties)?;
         let boxed = Box::new(eqs_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -286,7 +286,7 @@ pub unsafe extern fn eqs_block_add_gradient(
     catch_unwind(|| {
         check_pointers!(block, parameter);
         let parameter = CStr::from_ptr(parameter).to_str().unwrap();
-        let samples = Labels::try_from(&samples)?;
+        let samples = Arc::new(Labels::try_from(&samples)?);
 
         let mut rust_components = Vec::new();
         for component in std::slice::from_raw_parts(components, components_count) {
