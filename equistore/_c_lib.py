@@ -7,6 +7,21 @@ from ._c_api import setup_functions
 
 _HERE = os.path.realpath(os.path.dirname(__file__))
 
+EQUISTORE_LIBRARY_PATH = None
+
+
+def _set_equistore_library_path(path):
+    """
+    Set the path of the shared library exporting the equistore functions.
+
+    This is an advanced functionality most users should not need. There can only
+    be one call to this function, before trying to create any equistore object.
+    """
+    global EQUISTORE_LIBRARY_PATH
+    if EQUISTORE_LIBRARY_PATH is not None:
+        raise ValueError("Trying to set the EQUISTORE library path twice")
+    EQUISTORE_LIBRARY_PATH = str(path)
+
 
 class LibraryFinder(object):
     def __init__(self):
@@ -21,7 +36,10 @@ class LibraryFinder(object):
 
 
 def _lib_path():
-    if sys.platform.startswith("darwin"):
+    global EQUISTORE_LIBRARY_PATH
+    if EQUISTORE_LIBRARY_PATH is not None:
+        return EQUISTORE_LIBRARY_PATH
+    elif sys.platform.startswith("darwin"):
         windows = False
         name = "libequistore.dylib"
     elif sys.platform.startswith("linux"):
@@ -34,6 +52,8 @@ def _lib_path():
         raise ImportError("Unknown platform. Please edit this file")
 
     path = os.path.join(os.path.join(_HERE, "lib"), name)
+    EQUISTORE_LIBRARY_PATH = path
+
     if os.path.isfile(path):
         if windows:
             _check_dll(path)
