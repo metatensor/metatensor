@@ -100,6 +100,14 @@ def setup_functions(lib):
     ]
     lib.eqs_get_data_origin.restype = _check_status
 
+    lib.eqs_get_rust_array.argtypes = [
+        POINTER(eqs_array_t),
+        POINTER(POINTER(ctypes.c_double)),
+        POINTER(POINTER(c_uintptr_t)),
+        POINTER(c_uintptr_t)
+    ]
+    lib.eqs_get_rust_array.restype = _check_status
+
     lib.eqs_block.argtypes = [
         eqs_array_t,
         eqs_labels_t,

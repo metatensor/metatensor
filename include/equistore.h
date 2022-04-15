@@ -255,6 +255,29 @@ eqs_status_t eqs_register_data_origin(const char *name, eqs_data_origin_t *origi
 eqs_status_t eqs_get_data_origin(eqs_data_origin_t origin, char *buffer, uint64_t buffer_size);
 
 /**
+ * Access the data stored inside a rust ndarray.
+ *
+ * After a successful call, the `*data` will point to the first element of a
+ * row-major array, the shape of which will be stored in `*shape`.
+ *
+ * @param array `eqs_array_t` wrapping a rust ndarray
+ * @param data pointer to be filled with a pointer to the first element of the
+ *             data
+ * @param shape pointer to be filled with the an array containing the shape of
+ *              the data
+ * @param shape_count pointer to be filled with the number of entries in the
+ *                   `shape` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+ *          error message.
+ */
+eqs_status_t eqs_get_rust_array(const struct eqs_array_t *array,
+                                const double **data,
+                                const uintptr_t **shape,
+                                uintptr_t *shape_count);
+
+/**
  * Create a new `eqs_block_t` with the given `data` and `samples`, `components`
  * and `properties` labels.
  *

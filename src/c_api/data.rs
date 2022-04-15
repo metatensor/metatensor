@@ -1,7 +1,7 @@
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
-use crate::eqs_data_origin_t;
+use crate::{eqs_data_origin_t, eqs_array_t};
 
 use super::{eqs_status_t, catch_unwind};
 use super::utils::copy_str_to_c;
@@ -54,5 +54,52 @@ pub unsafe extern fn eqs_get_data_origin(
 
         let origin = crate::get_data_origin(origin);
         return copy_str_to_c(&origin, buffer, buffer_size as usize);
+    })
+}
+
+/// Access the data stored inside a rust ndarray.
+///
+/// After a successful call, the `*data` will point to the first element of a
+/// row-major array, the shape of which will be stored in `*shape`.
+///
+/// @param array `eqs_array_t` wrapping a rust ndarray
+/// @param data pointer to be filled with a pointer to the first element of the
+///             data
+/// @param shape pointer to be filled with the an array containing the shape of
+///              the data
+/// @param shape_count pointer to be filled with the number of entries in the
+///                   `shape` array
+///
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn eqs_get_rust_array(
+    array: *const eqs_array_t,
+    data: *mut *const f64,
+    shape: *mut *const usize,
+    shape_count: *mut usize,
+) -> eqs_status_t {
+    catch_unwind(|| {
+        check_pointers!(array, data, shape, shape_count);
+
+        #[cfg(feature = "ndarray")]
+        {
+            let array = (*array).as_array();
+            assert!(array.is_standard_layout());
+            *data = array.as_ptr();
+            *shape = array.shape().as_ptr();
+            *shape_count = array.shape().len();
+
+            return Ok(());
+        }
+
+        #[cfg(not(feature = "ndarray"))]
+        {
+            return Err(crate::Error::Internal(
+                "support for rust ndarray is disabled, please recompile the code \
+                to activate it".into()
+            ));
+        }
     })
 }

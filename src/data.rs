@@ -465,7 +465,7 @@ impl eqs_array_t {
     }
 
     #[cfg(feature = "ndarray")]
-    pub fn as_array_mut(&mut self) -> &mut ndarray::Array3<f64> {
+    pub fn as_array_mut(&mut self) -> &mut ndarray::ArrayD<f64> {
         assert_eq!(
             self.origin().unwrap_or(eqs_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
             "this array was not create by rust ndarray"
