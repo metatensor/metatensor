@@ -6,6 +6,7 @@ import numpy as np
 
 from ._c_api import eqs_labels_t
 from ._c_lib import _get_library
+from .utils import _ptr_to_const_ndarray
 
 
 class Labels(np.ndarray):
@@ -181,7 +182,9 @@ class Labels(np.ndarray):
 
         if eqs_labels.count != 0:
             shape = (eqs_labels.count, eqs_labels.size)
-            values = _ptr_to_ndarray(ptr=eqs_labels.values, shape=shape, dtype=np.int32)
+            values = _ptr_to_const_ndarray(
+                ptr=eqs_labels.values, shape=shape, dtype=np.int32
+            )
             values.flags.writeable = False
             return Labels(names, values, _eqs_labels=eqs_labels, _parent=parent)
         else:
@@ -236,11 +239,3 @@ def _is_namedtuple(x):
     if not isinstance(f, tuple):
         return False
     return all(type(n) == str for n in f)
-
-
-def _ptr_to_ndarray(ptr, shape, dtype):
-    assert len(shape) == 2
-    assert shape[1] != 0 and ptr is not None
-    array = np.ctypeslib.as_array(ptr, shape=shape)
-    assert array.dtype == dtype
-    return array

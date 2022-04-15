@@ -1,4 +1,5 @@
 import ctypes
+import numpy as np
 
 from ._c_api import EQS_BUFFER_SIZE_ERROR
 from .status import EquistoreError, _save_exception
@@ -31,3 +32,12 @@ def catch_exceptions(function):
         return 0
 
     return inner
+
+
+def _ptr_to_const_ndarray(ptr, shape, dtype):
+    assert ptr is not None
+    array = np.ctypeslib.as_array(ptr, shape=shape)
+    assert array.dtype == dtype
+    assert array.flags["OWNDATA"] == False
+    array.flags["WRITEABLE"] = False
+    return array

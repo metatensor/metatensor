@@ -5,7 +5,7 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, eqs_array_t, eqs_data_origin_t
 from ._c_lib import _get_library
-from .utils import _call_with_growing_buffer, catch_exceptions
+from .utils import _call_with_growing_buffer, _ptr_to_const_ndarray, catch_exceptions
 
 try:
     import torch
@@ -17,6 +17,7 @@ except ImportError:
 
 _NUMPY_STORAGE_ORIGIN = None
 _TORCH_STORAGE_ORIGIN = None
+_RUST_STORAGE_ORIGIN = None
 
 if HAS_TORCH:
     # This NewType is only used for typechecking and documentation purposes
@@ -48,15 +49,17 @@ def _is_numpy_array(array):
     return isinstance(array, np.ndarray)
 
 
+def _register_origin(name):
+    lib = _get_library()
+    origin = ctypes.c_uint64(0)
+    lib.eqs_register_data_origin(name.encode("utf8"), origin)
+    return origin.value
+
+
 def _numpy_origin():
     global _NUMPY_STORAGE_ORIGIN
     if _NUMPY_STORAGE_ORIGIN is None:
-        _NUMPY_STORAGE_ORIGIN = ctypes.c_uint64(0)
-        lib = _get_library()
-
-        origin_name = __name__ + ".numpy"
-        lib.eqs_register_data_origin(origin_name.encode("utf8"), _NUMPY_STORAGE_ORIGIN)
-        _NUMPY_STORAGE_ORIGIN = _NUMPY_STORAGE_ORIGIN.value
+        _NUMPY_STORAGE_ORIGIN = _register_origin(__name__ + ".numpy")
 
     return _NUMPY_STORAGE_ORIGIN
 
@@ -71,20 +74,39 @@ def _is_torch_array(array):
 def _torch_origin():
     global _TORCH_STORAGE_ORIGIN
     if _TORCH_STORAGE_ORIGIN is None:
-        _TORCH_STORAGE_ORIGIN = ctypes.c_uint64(0)
-        lib = _get_library()
-
-        origin_name = __name__ + ".torch"
-        lib.eqs_register_data_origin(origin_name.encode("utf8"), _TORCH_STORAGE_ORIGIN)
-        _TORCH_STORAGE_ORIGIN = _TORCH_STORAGE_ORIGIN.value
+        _TORCH_STORAGE_ORIGIN = _register_origin(__name__ + ".torch")
 
     return _TORCH_STORAGE_ORIGIN
 
 
-def eqs_array_to_python_object(data):
-    origin = data_origin(data)
+class RustNDArray:
+    def __init__(self, eqs_array):
+        lib = _get_library()
+
+        data = ctypes.POINTER(ctypes.c_double)()
+        shape_ptr = ctypes.POINTER(c_uintptr_t)()
+        shape_count = c_uintptr_t()
+
+        lib.eqs_get_rust_array(eqs_array, data, shape_ptr, shape_count)
+
+        shape = []
+        for i in range(shape_count.value):
+            shape.append(shape_ptr[i])
+
+        self._storage = eqs_array
+        self.array = _ptr_to_const_ndarray(data, shape, np.float64)
+
+
+def eqs_array_to_python_object(eqs_array):
+    global _RUST_STORAGE_ORIGIN
+    if _RUST_STORAGE_ORIGIN is None:
+        _RUST_STORAGE_ORIGIN = _register_origin("rust.ndarray")
+
+    origin = data_origin(eqs_array)
     if origin in [_NUMPY_STORAGE_ORIGIN, _TORCH_STORAGE_ORIGIN]:
-        return _object_from_ptr(data.ptr)
+        return _object_from_ptr(eqs_array.ptr)
+    elif origin == _RUST_STORAGE_ORIGIN:
+        return RustNDArray(eqs_array)
     else:
         raise ValueError(
             f"unable to handle data coming from '{data_origin_name(origin)}'"
