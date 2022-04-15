@@ -1,14 +1,13 @@
+import ctypes
 from typing import List, Union
 
-import ctypes
 import numpy as np
 
-from ._c_lib import _get_library
 from ._c_api import eqs_block_t, eqs_labels_t
-
-from .status import _check_pointer
-from .labels import Labels, _is_namedtuple
+from ._c_lib import _get_library
 from .block import TensorBlock
+from .labels import Labels, _is_namedtuple
+from .status import _check_pointer
 
 
 class TensorMap:
@@ -61,18 +60,6 @@ class TensorMap:
         )
 
         _check_pointer(self._ptr)
-
-        first_block = self.block(0)
-        self.sample_names: List[str] = first_block.samples.names
-        """Names of the sample labels for all blocks in this tensor map"""
-
-        self.component_names: List[List[str]] = [
-            c.names for c in first_block.components
-        ]
-        """Names of the component labels for all blocks in this tensor map"""
-
-        self.property_names: List[str] = first_block.properties.names
-        """Names of the property labels for all blocks in this tensor map"""
 
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr"):
@@ -243,6 +230,21 @@ class TensorMap:
         self._lib.eqs_tensormap_components_to_properties(
             self._ptr, c_variables, c_variables._length_
         )
+
+    @property
+    def sample_names(self) -> List[str]:
+        """Names of the sample labels for all blocks in this tensor map"""
+        return self.block(0).samples.names
+
+    @property
+    def components_names(self) -> List[List[str]]:
+        """Names of the component labels for all blocks in this tensor map"""
+        return [c.names for c in self.block(0).components]
+
+    @property
+    def property_names(self) -> List[str]:
+        """Names of the property labels for all blocks in this tensor map"""
+        return self.block(0).properties.names
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):

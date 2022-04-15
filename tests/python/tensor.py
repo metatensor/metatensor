@@ -18,7 +18,7 @@ class TestTensorMap(unittest.TestCase):
         tensor = test_tensor_map()
 
         self.assertEqual(tensor.sample_names, ("samples",))
-        self.assertEqual(tensor.component_names, [("components",)])
+        self.assertEqual(tensor.components_names, [("components",)])
         self.assertEqual(tensor.property_names, ("properties",))
 
     def test_get_block(self):
