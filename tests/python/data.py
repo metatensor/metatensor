@@ -11,7 +11,7 @@ except ImportError:
 import ctypes
 
 from equistore import data
-from equistore._c_api import c_uintptr_t, EQS_SUCCESS, eqs_array_t
+from equistore._c_api import c_uintptr_t, EQS_SUCCESS, eqs_array_t, eqs_sample_move_t
 
 
 class TestArrayWrapperMixin:
@@ -71,7 +71,7 @@ class TestArrayWrapperMixin:
 
         self.assertTrue(np.all(np.array(array_copy) == np.array(array)))
 
-    def test_move_sample(self):
+    def test_move_samples_from(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
         wrapper = data.ArrayWrapper(array)
@@ -82,7 +82,17 @@ class TestArrayWrapperMixin:
         wrapper_other = data.ArrayWrapper(other)
         eqs_array_other = wrapper_other.eqs_array
 
-        eqs_array.move_sample(eqs_array.ptr, 1, 3, 7, eqs_array_other.ptr, 0)
+        move = eqs_sample_move_t(input=0, output=1)
+        move_array = ctypes.ARRAY(eqs_sample_move_t, 1)(move)
+
+        eqs_array.move_samples_from(
+            eqs_array.ptr,
+            eqs_array_other.ptr,
+            move_array,
+            len(move_array),
+            3,
+            7,
+        )
         expected = np.array(
             [
                 # unmodified first sample

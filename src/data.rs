@@ -1,6 +1,6 @@
+use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
-use std::ops::Range;
 
 use once_cell::sync::Lazy;
 
@@ -124,20 +124,35 @@ pub struct eqs_array_t {
     /// set to `NULL` is there is no memory management to do.
     destroy: Option<unsafe extern fn(array: *mut c_void)>,
 
-    /// Set entries in this array taking data from the `other_array`. This array
-    /// is guaranteed to be created by calling `eqs_array_t::create` with one of
-    /// the arrays in the same block or tensor map as this `array`.
+    /// Set entries in the `output` array (the current array) taking data from
+    /// the `input` array. The `output` array is guaranteed to be created by
+    /// calling `eqs_array_t::create` with one of the arrays in the same block
+    /// or tensor map as the `input`.
     ///
-    /// This function should copy data from `other_array[other_sample, ..., :]` to
-    /// `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
-    move_sample: Option<unsafe extern fn(
-        array: *mut c_void,
-        sample: u64,
-        property_start: u64,
-        property_end: u64,
-        other_array: *const c_void,
-        other_sample: u64
+    /// The `samples` array of size `samples_count` indicate where the data
+    /// should be moved from `input` to `output`.
+    ///
+    /// This function should copy data from `input[samples[i].input, ..., :]` to
+    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
+    /// to `samples_count`. All indexes are 0-based.
+    move_samples_from: Option<unsafe extern fn(
+        output: *mut c_void,
+        input: *const c_void,
+        samples: *const eqs_sample_move_t,
+        samples_count: usize,
+        property_start: usize,
+        property_end: usize,
     ) -> eqs_status_t>,
+}
+
+/// Representation of a single sample moved from an input array to another array.
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct eqs_sample_move_t {
+    /// index of the moved sample in the input array
+    pub input: usize,
+    /// index of the moved sample in the output array
+    pub output: usize,
 }
 
 impl std::fmt::Debug for eqs_array_t {
@@ -195,7 +210,7 @@ impl eqs_array_t {
             create: Some(rust_data_create),
             copy: Some(rust_data_copy),
             destroy: Some(rust_data_destroy),
-            move_sample: Some(rust_data_move_sample),
+            move_samples_from: Some(rust_data_move_samples_from),
         }
     }
 
@@ -212,7 +227,7 @@ impl eqs_array_t {
             create: self.create,
             copy: self.copy,
             destroy: None,
-            move_sample: self.move_sample,
+            move_samples_from: self.move_samples_from,
         }
     }
 
@@ -227,7 +242,7 @@ impl eqs_array_t {
             create: None,
             copy: None,
             destroy: None,
-            move_sample: None,
+            move_samples_from: None,
         }
     }
 
@@ -343,29 +358,40 @@ impl eqs_array_t {
         return Ok(data_storage);
     }
 
-    /// Set entries in this array taking data from the `other` array. This array
-    /// MUST have been created by calling `eqs_array_t.create()` with one of the
-    /// other arrays in the same block or tensor map.
+    // Set entries in this array taking data from the `other` array. This array
+    // MUST have been created by calling `eqs_array_t.create()` with one of the
+    // other arrays in the same block or tensor map.
+    //
+    // This function will copy data from `other_array[other_sample, ..., :]` to
+    // `array[sample, ..., property_start:property_end]`.
+
+    /// Set entries in `self` (the current array) taking data from the `input`
+    /// array. The `self` array is guaranteed to be created by calling
+    /// `DataStorage::create` with one of the arrays in the same block or tensor
+    /// map as the `input`.
     ///
-    /// This function will copy data from `other_array[other_sample, ..., :]` to
-    /// `array[sample, ..., property_start:property_end]`.
-    pub fn move_sample(
+    /// The `samples` array indicate where the data should be moved from `input`
+    /// to `output`.
+    ///
+    /// This function should copy data from `input[sample.input, ..., :]` to
+    /// `array[sample.output, ..., properties]` for all `sample` in `samples`.
+    /// All indexes are 0-based.
+    pub fn move_samples_from(
         &mut self,
-        sample: usize,
-        properties: std::ops::Range<usize>,
-        other: &eqs_array_t,
-        other_sample: usize
+        input: &eqs_array_t,
+        samples: &[eqs_sample_move_t],
+        properties: Range<usize>,
     ) -> Result<(), Error> {
-        let function = self.move_sample.expect("eqs_array_t.move_sample function is NULL");
+        let function = self.move_samples_from.expect("eqs_array_t.move_samples_from function is NULL");
 
         let status = unsafe {
             function(
                 self.ptr,
-                sample as u64,
-                properties.start as u64,
-                properties.end as u64,
-                other.ptr,
-                other_sample as u64,
+                input.ptr,
+                samples.as_ptr(),
+                samples.len(),
+                properties.start,
+                properties.end,
             )
         };
 
@@ -423,12 +449,11 @@ pub trait DataStorage: std::any::Any{
     fn reshape(&mut self, shape: &[usize]);
     fn swap_axes(&mut self, axis_1: usize, axis_2: usize);
 
-    fn move_sample(
+    fn move_samples_from(
         &mut self,
-        sample: usize,
+        input: &dyn DataStorage,
+        samples: &[eqs_sample_move_t],
         properties: Range<usize>,
-        other: &dyn DataStorage,
-        sample_other: usize
     );
 }
 
@@ -544,25 +569,21 @@ unsafe extern fn rust_data_destroy(
 
 /// Implementation of `eqs_array_t.move_sample` using `Box<dyn DataStorage>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_move_sample(
-    data: *mut c_void,
-    sample: u64,
-    property_start: u64,
-    property_end: u64,
-    other: *const c_void,
-    other_sample: u64
+unsafe extern fn rust_data_move_samples_from(
+    output: *mut c_void,
+    input: *const c_void,
+    samples: *const eqs_sample_move_t,
+    samples_count: usize,
+    property_start: usize,
+    property_end: usize,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data, other);
-        let data = data.cast::<Box<dyn DataStorage>>();
-        let other = other.cast::<Box<dyn DataStorage>>();
+        check_pointers!(output, input);
+        let output = output.cast::<Box<dyn DataStorage>>();
+        let input = input.cast::<Box<dyn DataStorage>>();
 
-        (*data).move_sample(
-            sample as usize,
-            property_start as usize .. property_end as usize,
-            &**other,
-            other_sample as usize,
-        );
+        let samples = std::slice::from_raw_parts(samples, samples_count);
+        (*output).move_samples_from(&**input, samples, property_start..property_end);
 
         Ok(())
     })
@@ -612,24 +633,28 @@ impl DataStorage for ndarray::ArrayD<f64> {
         self.swap_axes(axis_1, axis_2);
     }
 
-    fn move_sample(
+    fn move_samples_from(
         &mut self,
-        sample: usize,
-        properties: Range<usize>,
-        other: &dyn DataStorage,
-        sample_other: usize
+        input: &dyn DataStorage,
+        samples: &[eqs_sample_move_t],
+        property: Range<usize>,
     ) {
         use ndarray::{Axis, Slice};
 
-        let other = other.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("other must be a ndarray");
-        let value = other.index_axis(Axis(0), sample_other);
-
-        // -2 since we also remove one axis with `index_axis_mut`
+        // -2 since we also remove one axis with `index_axis_mut` below
         let property_axis = self.shape().len() - 2;
-        let mut output = self.index_axis_mut(Axis(0), sample);
-        let mut output = output.slice_axis_mut(Axis(property_axis), Slice::from(properties));
 
-        output.assign(&value);
+        let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
+        for sample in samples {
+            let value = input.index_axis(Axis(0), sample.input);
+
+            let mut output_location = self.index_axis_mut(Axis(0), sample.output);
+            let mut output_location = output_location.slice_axis_mut(
+                Axis(property_axis), Slice::from(property.clone())
+            );
+
+            output_location.assign(&value);
+        }
     }
 }
 
@@ -691,13 +716,7 @@ mod tests {
             self.shape.swap(axis_1, axis_2);
         }
 
-        fn move_sample(
-            &mut self,
-            _sample: usize,
-            _properties: std::ops::Range<usize>,
-            _other: &dyn DataStorage,
-            _sample_other: usize
-        ) {
+        fn move_samples_from(&mut self, _: &dyn DataStorage, _: &[eqs_sample_move_t], _: Range<usize>) {
             unimplemented!()
         }
     }
@@ -726,7 +745,7 @@ mod tests {
     mod ndarray {
         use ndarray::ArrayD;
 
-        use crate::{eqs_array_t, get_data_origin};
+        use crate::{eqs_array_t, get_data_origin, eqs_sample_move_t};
 
         #[test]
         fn shape() {
@@ -755,13 +774,17 @@ mod tests {
         }
 
         #[test]
-        fn move_sample() {
+        fn move_samples_from() {
             let data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)));
 
             let mut other = data.create(&[1, 2, 2, 8]).unwrap();
             assert_eq!(other.as_array(), ArrayD::from_elem(vec![1, 2, 2, 8], 0.0));
 
-            other.move_sample(0, 2..6, &data, 1).unwrap();
+            let to_move = eqs_sample_move_t {
+                output: 0,
+                input: 1,
+            };
+            other.move_samples_from(&data, &[to_move], 2..6).unwrap();
             let expected = ArrayD::from_shape_vec(vec![1, 2, 2, 8], vec![
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,

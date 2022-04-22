@@ -101,6 +101,20 @@ typedef struct eqs_labels_t {
 typedef uint64_t eqs_data_origin_t;
 
 /**
+ * Representation of a single sample moved from an input array to another array.
+ */
+typedef struct eqs_sample_move_t {
+  /**
+   * index of the moved sample in the input array
+   */
+  uintptr_t input;
+  /**
+   * index of the moved sample in the output array
+   */
+  uintptr_t output;
+} eqs_sample_move_t;
+
+/**
  * `eqs_array_t` manages n-dimensional arrays used as data in a block or tensor
  * map. The array itself if opaque to this library and can come from multiple
  * sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
@@ -159,14 +173,19 @@ typedef struct eqs_array_t {
    */
   void (*destroy)(void *array);
   /**
-   * Set entries in this array taking data from the `other_array`. This array
-   * is guaranteed to be created by calling `eqs_array_t::create` with one of
-   * the arrays in the same block or tensor map as this `array`.
+   * Set entries in the `output` array (the current array) taking data from
+   * the `input` array. The `output` array is guaranteed to be created by
+   * calling `eqs_array_t::create` with one of the arrays in the same block
+   * or tensor map as the `input`.
    *
-   * This function should copy data from `other_array[other_sample, ..., :]` to
-   * `array[sample, ..., property_start:property_end]`. All indexes are 0-based.
+   * The `samples` array of size `samples_count` indicate where the data
+   * should be moved from `input` to `output`.
+   *
+   * This function should copy data from `input[samples[i].input, ..., :]` to
+   * `array[samples[i].output, ..., property_start:property_end]` for `i` up
+   * to `samples_count`. All indexes are 0-based.
    */
-  eqs_status_t (*move_sample)(void *array, uint64_t sample, uint64_t property_start, uint64_t property_end, const void *other_array, uint64_t other_sample);
+  eqs_status_t (*move_samples_from)(void *output, const void *input, const struct eqs_sample_move_t *samples, uintptr_t samples_count, uintptr_t property_start, uintptr_t property_end);
 } eqs_array_t;
 
 #ifdef __cplusplus
