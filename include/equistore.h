@@ -471,8 +471,12 @@ eqs_status_t eqs_tensormap_block_selection(const struct eqs_tensormap_t *tensor,
  * Blocks containing the same values in the keys for the `variables` will
  * be merged together. The resulting merged blocks will have `variables` as
  * the first property variables, followed by the current properties. The
- * new sample labels will contains all of the merged blocks sample labels,
- * re-ordered to keep them lexicographically sorted.
+ * new sample labels will contains all of the merged blocks sample labels.
+ *
+ * The order of the samples is controlled by `sort_samples`. If
+ * `sort_samples` is true, samples are re-ordered to keep them
+ * lexicographically sorted. Otherwise they are kept in the order in which
+ * they appear in the blocks.
  *
  * `variables` must be an array of `variables_count` NULL-terminated strings,
  * encoded as UTF-8.
@@ -480,6 +484,8 @@ eqs_status_t eqs_tensormap_block_selection(const struct eqs_tensormap_t *tensor,
  * @param tensor pointer to an existing tensor map
  * @param variables names of the key variables to move to the properties
  * @param variables_count number of entries in the `variables` array
+ * @param sort_samples whether to sort the samples lexicographically after
+ *                     merging blocks or not
  *
  * @returns The status code of this operation. If the status is not
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -487,7 +493,8 @@ eqs_status_t eqs_tensormap_block_selection(const struct eqs_tensormap_t *tensor,
  */
 eqs_status_t eqs_tensormap_keys_to_properties(struct eqs_tensormap_t *tensor,
                                               const char *const *variables,
-                                              uint64_t variables_count);
+                                              uint64_t variables_count,
+                                              bool sort_samples);
 
 /**
  * Move the given variables from the component labels to the property labels

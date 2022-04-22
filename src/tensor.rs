@@ -244,9 +244,13 @@ impl TensorMap {
     /// Blocks containing the same values in the keys for the `variables` will
     /// be merged together. The resulting merged blocks will have `variables` as
     /// the first property variables, followed by the current properties. The
-    /// new sample labels will contains all of the merged blocks sample labels,
-    /// re-ordered to keep them lexicographically sorted.
-    pub fn keys_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
+    /// new sample labels will contains all of the merged blocks sample labels.
+    ///
+    /// The order of the samples is controlled by `sort_samples`. If
+    /// `sort_samples` is true, samples are re-ordered to keep them
+    /// lexicographically sorted. Otherwise they are kept in the order in which
+    /// they appear in the blocks.
+    pub fn keys_to_properties(&mut self, variables: &[&str], sort_samples: bool) -> Result<(), Error> {
         // TODO: requested values
         // TODO: keys_to_properties_no_gradients?
 
@@ -264,7 +268,9 @@ impl TensorMap {
                 matching.push(i);
             }
 
-            let block = self.merge_blocks_along_properties(&matching, &new_properties)?;
+            let block = self.merge_blocks_along_properties(
+                &matching, &new_properties, sort_samples
+            )?;
             new_blocks.push(block);
         } else {
             for entry in new_keys.iter() {
@@ -272,7 +278,10 @@ impl TensorMap {
                 selection.add(entry.to_vec());
 
                 let matching = self.find_matching_blocks(&selection.finish())?;
-                new_blocks.push(self.merge_blocks_along_properties(&matching, &new_properties)?);
+                let block = self.merge_blocks_along_properties(
+                    &matching, &new_properties, sort_samples
+                )?;
+                new_blocks.push(block);
             }
         }
 
@@ -291,6 +300,7 @@ impl TensorMap {
         &self,
         block_idx: &[usize],
         new_property_labels: &Labels,
+        sort_samples: bool,
     ) -> Result<TensorBlock, Error> {
         assert!(!block_idx.is_empty());
 
@@ -314,9 +324,9 @@ impl TensorMap {
         let mut new_properties_builder = LabelsBuilder::new(new_property_names);
         let mut old_property_sizes = Vec::new();
 
-        // we need to collect the new samples in a BTree set to ensure they stay
-        // lexicographically ordered
-        let mut merged_samples = BTreeSet::new();
+        // Collect samples in an IndexSet to keep them in the same order as they
+        // were in the blocks, and then optionally sort them later below
+        let mut merged_samples = IndexSet::new();
         for (block, new_property) in blocks_to_merge.iter().zip(new_property_labels) {
             for sample in block.values.samples().iter() {
                 merged_samples.insert(sample.to_vec());
@@ -329,6 +339,10 @@ impl TensorMap {
                 property.extend_from_slice(old_property);
                 new_properties_builder.add(property);
             }
+        }
+
+        if sort_samples {
+            merged_samples.sort_unstable();
         }
 
         let mut merged_samples_builder = LabelsBuilder::new(first_block.values.samples().names());
@@ -956,7 +970,7 @@ mod tests {
         #[test]
         fn keys_to_properties() {
             let mut tensor = example_tensor();
-            tensor.keys_to_properties(&["key_1"]).unwrap();
+            tensor.keys_to_properties(&["key_1"], true).unwrap();
 
             assert_eq!(tensor.keys().count(), 3);
             assert_eq!(tensor.keys().names(), ["key_2"]);
@@ -1021,6 +1035,22 @@ mod tests {
             // The new third block contains the old second block
             let block_3 = &tensor.blocks()[2];
             assert_eq!(block_3.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
+
+            // without sorting the samples
+            let mut tensor = example_tensor();
+            tensor.keys_to_properties(&["key_1"], false).unwrap();
+
+            assert_eq!(tensor.keys().count(), 3);
+            assert_eq!(tensor.blocks().len(), 3);
+
+            let block_1 = &tensor.blocks()[0];
+            assert_eq!(block_1.values.samples().names(), ["samples"]);
+            assert_eq!(block_1.values.samples().count(), 5);
+            assert_eq!(block_1.values.samples()[0], [LabelValue::new(0)]);
+            assert_eq!(block_1.values.samples()[1], [LabelValue::new(2)]);
+            assert_eq!(block_1.values.samples()[2], [LabelValue::new(4)]);
+            assert_eq!(block_1.values.samples()[3], [LabelValue::new(1)]);
+            assert_eq!(block_1.values.samples()[4], [LabelValue::new(3)]);
         }
 
         #[test]

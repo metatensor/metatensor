@@ -160,7 +160,7 @@ class TensorMap:
         )
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
-    def keys_to_properties(self, variables: Union[str, List[str]]):
+    def keys_to_properties(self, variables: Union[str, List[str]], sort_samples=True):
         """
         Move the given ``variables`` from the keys to the property labels of the
         blocks.
@@ -168,14 +168,20 @@ class TensorMap:
         Blocks containing the same values in the keys for the ``variables`` will
         be merged together. The resulting merged blocks will have ``variables``
         as the first property variables, followed by the current properties. The
-        new sample labels will contains all of the merged blocks sample labels,
-        re-ordered to keep them lexicographically sorted.
+        new sample labels will contains all of the merged blocks sample labels.
+
+        The order of the samples is controlled by ``sort_samples``. If
+        ``sort_samples`` is true, samples are re-ordered to keep them
+        lexicographically sorted. Otherwise they are kept in the order in which
+        they appear in the blocks.
 
         :param variables: name of the variables to move to the properties
+        :param sort_samples: whether to sort the merged samples or keep them in
+            the order in which they appear in the original blocks
         """
         c_variables = _list_or_str_to_array_c_char(variables)
         self._lib.eqs_tensormap_keys_to_properties(
-            self._ptr, c_variables, c_variables._length_
+            self._ptr, c_variables, c_variables._length_, sort_samples
         )
 
     def keys_to_samples(self, variables: Union[str, List[str]]):
