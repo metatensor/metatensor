@@ -211,8 +211,12 @@ pub unsafe extern fn eqs_tensormap_block_selection(
 /// Blocks containing the same values in the keys for the `variables` will
 /// be merged together. The resulting merged blocks will have `variables` as
 /// the first property variables, followed by the current properties. The
-/// new sample labels will contains all of the merged blocks sample labels,
-/// re-ordered to keep them lexicographically sorted.
+/// new sample labels will contains all of the merged blocks sample labels.
+///
+/// The order of the samples is controlled by `sort_samples`. If
+/// `sort_samples` is true, samples are re-ordered to keep them
+/// lexicographically sorted. Otherwise they are kept in the order in which
+/// they appear in the blocks.
 ///
 /// `variables` must be an array of `variables_count` NULL-terminated strings,
 /// encoded as UTF-8.
@@ -220,6 +224,8 @@ pub unsafe extern fn eqs_tensormap_block_selection(
 /// @param tensor pointer to an existing tensor map
 /// @param variables names of the key variables to move to the properties
 /// @param variables_count number of entries in the `variables` array
+/// @param sort_samples whether to sort the samples lexicographically after
+///                     merging blocks or not
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -230,6 +236,7 @@ pub unsafe extern fn eqs_tensormap_keys_to_properties(
     tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: u64,
+    sort_samples: bool,
 ) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, variables);
@@ -241,7 +248,7 @@ pub unsafe extern fn eqs_tensormap_keys_to_properties(
             rust_variables.push(variable);
         }
 
-        (*tensor).keys_to_properties(&rust_variables)?;
+        (*tensor).keys_to_properties(&rust_variables, sort_samples)?;
 
         Ok(())
     })
