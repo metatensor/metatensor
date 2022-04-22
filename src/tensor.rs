@@ -5,6 +5,7 @@ use indexmap::IndexSet;
 
 use crate::{TensorBlock, Error, BasicBlock};
 use crate::{Labels, LabelsBuilder, LabelValue};
+use crate::data::eqs_sample_move_t;
 
 /// A tensor map is the main user-facing struct of this library, and can store
 /// any kind of data used in atomistic machine learning.
@@ -381,16 +382,21 @@ impl TensorMap {
             start = stop;
         }
 
+        // for each block, gather the data to be moved & send it in one go
         for ((block_i, block), property_range) in blocks_to_merge.iter().enumerate().zip(&property_ranges) {
+            let mut samples_to_move = Vec::new();
             for sample_i in 0..block.values.samples().count() {
                 let new_sample_i = samples_mapping[block_i][sample_i];
-                new_data.move_sample(
-                    new_sample_i,
-                    property_range.clone(),
-                    &block.values.data,
-                    sample_i
-                )?;
+                samples_to_move.push(eqs_sample_move_t {
+                    input: sample_i,
+                    output: new_sample_i,
+                });
             }
+            new_data.move_samples_from(
+                &block.values.data,
+                &samples_to_move,
+                property_range.clone()
+            )?;
         }
 
         let mut new_block = TensorBlock::new(
@@ -418,6 +424,7 @@ impl TensorMap {
                 let gradient = block.get_gradient(parameter).expect("missing gradient");
                 debug_assert!(gradient.components() == new_components);
 
+                let mut samples_to_move = Vec::new();
                 for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
                     // translate from the old sample id in gradients to the new ones
                     let mut grad_sample = grad_sample.to_vec();
@@ -425,13 +432,16 @@ impl TensorMap {
                     grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
 
                     let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                    new_gradient.move_sample(
-                        new_sample_i,
-                        property_range.clone(),
-                        &gradient.data,
-                        sample_i
-                    )?;
+                    samples_to_move.push(eqs_sample_move_t {
+                        input: sample_i,
+                        output: new_sample_i,
+                    });
                 }
+                new_gradient.move_samples_from(
+                    &gradient.data,
+                    &samples_to_move,
+                    property_range.clone(),
+                )?;
             }
 
             new_block.add_gradient(
@@ -506,6 +516,7 @@ impl TensorMap {
     /// Merge the blocks with the given `block_idx` along the sample axis. The
     /// new sample names & values to add to the sample axis are passed in
     /// `new_sample_labels`.
+    #[allow(clippy::too_many_lines)]
     fn merge_blocks_along_samples(
         &self,
         block_idx: &[usize],
@@ -577,15 +588,19 @@ impl TensorMap {
         let property_range = 0..new_properties.count();
 
         for (block_i, block) in blocks_to_merge.iter().enumerate() {
+            let mut samples_to_move = Vec::new();
             for sample_i in 0..block.values.samples().count() {
-
-                new_data.move_sample(
-                    samples_mapping[block_i][sample_i],
-                    property_range.clone(),
-                    &block.values.data,
-                    sample_i
-                )?;
+                let new_sample_i = samples_mapping[block_i][sample_i];
+                samples_to_move.push(eqs_sample_move_t {
+                    input: sample_i,
+                    output: new_sample_i,
+                });
             }
+            new_data.move_samples_from(
+                &block.values.data,
+                &samples_to_move,
+                property_range.clone(),
+            )?;
         }
 
         let mut new_block = TensorBlock::new(
@@ -610,6 +625,7 @@ impl TensorMap {
                 let gradient = block.get_gradient(parameter).expect("missing gradient");
                 debug_assert!(gradient.components() == new_components);
 
+                let mut samples_to_move = Vec::new();
                 for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
                     // translate from the old sample id in gradients to the new ones
                     let mut grad_sample = grad_sample.to_vec();
@@ -617,13 +633,16 @@ impl TensorMap {
                     grad_sample[0] = LabelValue::from(samples_mapping[block_i][old_sample_i]);
 
                     let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                    new_gradient.move_sample(
-                        new_sample_i,
-                        property_range.clone(),
-                        &gradient.data,
-                        sample_i
-                    )?;
+                    samples_to_move.push(eqs_sample_move_t {
+                        input: sample_i,
+                        output: new_sample_i,
+                    });
                 }
+                new_gradient.move_samples_from(
+                    &gradient.data,
+                    &samples_to_move,
+                    property_range.clone(),
+                )?;
             }
 
             new_block.add_gradient(

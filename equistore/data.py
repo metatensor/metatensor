@@ -145,8 +145,8 @@ class ArrayWrapper:
         self.eqs_array.copy = self.eqs_array.copy.__class__(_eqs_array_copy)
         self.eqs_array.destroy = self.eqs_array.destroy.__class__(_eqs_array_destroy)
 
-        self.eqs_array.move_sample = self.eqs_array.move_sample.__class__(
-            _eqs_array_move_sample
+        self.eqs_array.move_samples_from = self.eqs_array.move_samples_from.__class__(
+            _eqs_array_move_samples_from
         )
 
 
@@ -224,9 +224,22 @@ def _eqs_array_destroy(this):
 
 
 @catch_exceptions
-def _eqs_array_move_sample(
-    this, sample, property_start, property_stop, other, other_sample
+def _eqs_array_move_samples_from(
+    this,
+    input,
+    samples_ptr,
+    samples_count,
+    property_start,
+    property_end,
 ):
-    other = _object_from_ptr(other).array
+    input = _object_from_ptr(input).array
     output = _object_from_ptr(this).array
-    output[sample, ..., property_start:property_stop] = other[other_sample, ..., :]
+
+    input_samples = []
+    output_samples = []
+    for i in range(samples_count):
+        input_samples.append(samples_ptr[i].input)
+        output_samples.append(samples_ptr[i].output)
+
+    properties = slice(property_start, property_end)
+    output[output_samples, ..., properties] = input[input_samples, ..., :]
