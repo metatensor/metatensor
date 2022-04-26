@@ -298,6 +298,11 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
 /// be merged together. The resulting merged blocks will have `variables` as
 /// the last sample variables, preceded by the current samples.
 ///
+/// The order of the samples is controlled by `sort_samples`. If
+/// `sort_samples` is true, samples are re-ordered to keep them
+/// lexicographically sorted. Otherwise they are kept in the order in which
+/// they appear in the blocks.
+///
 /// This function is only implemented if all merged block have the same
 /// property labels.
 ///
@@ -307,6 +312,8 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
 /// @param tensor pointer to an existing tensor map
 /// @param variables names of the key variables to move to the samples
 /// @param variables_count number of entries in the `variables` array
+/// @param sort_samples whether to sort the samples lexicographically after
+///                     merging blocks or not
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -317,6 +324,7 @@ pub unsafe extern fn eqs_tensormap_keys_to_samples(
     tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: u64,
+    sort_samples: bool,
 ) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(tensor, variables);
@@ -328,7 +336,7 @@ pub unsafe extern fn eqs_tensormap_keys_to_samples(
             rust_variables.push(variable);
         }
 
-        (*tensor).keys_to_samples(&rust_variables)?;
+        (*tensor).keys_to_samples(&rust_variables, sort_samples)?;
 
         Ok(())
     })

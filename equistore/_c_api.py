@@ -50,8 +50,8 @@ class eqs_sample_move_t(ctypes.Structure):
     pass
 
 eqs_sample_move_t._fields_ = [
-    ("output", c_uintptr_t),
     ("input", c_uintptr_t),
+    ("output", c_uintptr_t),
 ]
 
 
@@ -201,6 +201,7 @@ def setup_functions(lib):
     lib.eqs_tensormap_keys_to_samples.argtypes = [
         POINTER(eqs_tensormap_t),
         POINTER(ctypes.c_char_p),
-        ctypes.c_uint64
+        ctypes.c_uint64,
+        ctypes.c_bool
     ]
     lib.eqs_tensormap_keys_to_samples.restype = _check_status
