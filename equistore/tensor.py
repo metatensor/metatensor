@@ -184,7 +184,7 @@ class TensorMap:
             self._ptr, c_variables, c_variables._length_, sort_samples
         )
 
-    def keys_to_samples(self, variables: Union[str, List[str]]):
+    def keys_to_samples(self, variables: Union[str, List[str]], sort_samples=True):
         """
         Move the given ``variables`` from the keys to the sample labels of the
         blocks.
@@ -192,6 +192,11 @@ class TensorMap:
         Blocks containing the same values in the keys for the ``variables`` will
         be merged together. The resulting merged blocks will have ``variables``
         as the last sample variables, preceded by the current samples.
+
+        The order of the samples is controlled by ``sort_samples``. If
+        ``sort_samples`` is true, samples are re-ordered to keep them
+        lexicographically sorted. Otherwise they are kept in the order in which
+        they appear in the blocks.
 
         This function is only implemented if all blocks to merge have the same
         property labels.
@@ -201,7 +206,7 @@ class TensorMap:
         c_variables = _list_or_str_to_array_c_char(variables)
 
         self._lib.eqs_tensormap_keys_to_samples(
-            self._ptr, c_variables, c_variables._length_
+            self._ptr, c_variables, c_variables._length_, sort_samples
         )
 
     def components_to_properties(self, variables: Union[str, List[str]]):
