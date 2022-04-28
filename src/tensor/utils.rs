@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use indexmap::IndexSet;
 
 use crate::labels::{Labels, LabelsBuilder, LabelValue};
-use crate::{Error, TensorBlock};
+use crate::{Error, TensorBlock, eqs_sample_mapping_t};
 
 /// single block and part of the associated key, this is used for the various
 /// `keys_to_xxx` functions
@@ -91,10 +91,14 @@ pub fn split_keys(keys: &Labels, variables: &[&str]) -> Result<SplittedKeys, Err
     });
 }
 
-pub fn merge_gradient_samples(blocks: &[KeyAndBlock], gradient_name: &str, mapping: &[Vec<usize>]) -> Labels {
+pub fn merge_gradient_samples(
+    blocks: &[KeyAndBlock],
+    gradient_name: &str,
+    samples_mappings: &[Vec<eqs_sample_mapping_t>],
+) -> Labels {
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
-    for (block_i, (_, block)) in blocks.iter().enumerate() {
+    for ((_, block), samples_mapping) in blocks.iter().zip(samples_mappings) {
         let gradient = block.get_gradient(gradient_name).expect("missing gradient");
 
         if new_gradient_samples_names.is_none() {
@@ -105,7 +109,10 @@ pub fn merge_gradient_samples(blocks: &[KeyAndBlock], gradient_name: &str, mappi
             // translate from the old sample id in gradients to the new ones
             let mut grad_sample = grad_sample.to_vec();
             let old_sample_i = grad_sample[0].usize();
-            grad_sample[0] = LabelValue::from(mapping[block_i][old_sample_i]);
+
+            let mapping = &samples_mapping[old_sample_i];
+            debug_assert_eq!(mapping.input, old_sample_i);
+            grad_sample[0] = mapping.output.into();
 
             new_gradient_samples.insert(grad_sample);
         }
@@ -115,6 +122,7 @@ pub fn merge_gradient_samples(blocks: &[KeyAndBlock], gradient_name: &str, mappi
     for sample in new_gradient_samples {
         new_gradient_samples_builder.add(sample);
     }
+
     return new_gradient_samples_builder.finish();
 }
 
@@ -122,7 +130,7 @@ pub fn merge_samples(
     blocks: &[KeyAndBlock],
     new_sample_names: Vec<&str>,
     sort: bool
-) -> (Labels, Vec<Vec<usize>>) {
+) -> (Labels, Vec<Vec<eqs_sample_mapping_t>>) {
     let add_key_to_samples = blocks[0].1.values.samples().size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
@@ -150,24 +158,25 @@ pub fn merge_samples(
 
     let merged_samples = merged_samples_builder.finish();
 
-    // Vec<Vec<usize>> mapping from old values sample index (per block) to
-    // the new sample index
-    let mut samples_mapping = Vec::new();
+    let mut samples_mappings = Vec::new();
     for (key, block) in blocks {
         let mut mapping_for_block = Vec::new();
-        for sample in block.values.samples().iter() {
+        for (sample_i, sample) in block.values.samples().iter().enumerate() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
             }
 
             let new_sample_i = merged_samples.position(&sample).expect("missing entry in merged samples");
-            mapping_for_block.push(new_sample_i);
+            mapping_for_block.push(eqs_sample_mapping_t {
+                input: sample_i,
+                output: new_sample_i,
+            });
         }
-        samples_mapping.push(mapping_for_block);
+        samples_mappings.push(mapping_for_block);
     }
 
-    return (merged_samples, samples_mapping)
+    return (merged_samples, samples_mappings)
 }
 
 /******************************************************************************/

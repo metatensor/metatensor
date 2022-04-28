@@ -101,9 +101,9 @@ typedef struct eqs_labels_t {
 typedef uint64_t eqs_data_origin_t;
 
 /**
- * Representation of a single sample moved from an input array to another array.
+ * Representation of a single sample moved from an array to another one
  */
-typedef struct eqs_sample_move_t {
+typedef struct eqs_sample_mapping_t {
   /**
    * index of the moved sample in the input array
    */
@@ -112,7 +112,7 @@ typedef struct eqs_sample_move_t {
    * index of the moved sample in the output array
    */
   uintptr_t output;
-} eqs_sample_move_t;
+} eqs_sample_mapping_t;
 
 /**
  * `eqs_array_t` manages n-dimensional arrays used as data in a block or tensor
@@ -185,7 +185,7 @@ typedef struct eqs_array_t {
    * `array[samples[i].output, ..., property_start:property_end]` for `i` up
    * to `samples_count`. All indexes are 0-based.
    */
-  eqs_status_t (*move_samples_from)(void *output, const void *input, const struct eqs_sample_move_t *samples, uintptr_t samples_count, uintptr_t property_start, uintptr_t property_end);
+  eqs_status_t (*move_samples_from)(void *output, const void *input, const struct eqs_sample_mapping_t *samples, uintptr_t samples_count, uintptr_t property_start, uintptr_t property_end);
 } eqs_array_t;
 
 #ifdef __cplusplus

@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use crate::labels::{Labels, LabelsBuilder, LabelValue};
+use crate::labels::{Labels, LabelsBuilder};
 use crate::{Error, TensorBlock};
 
-use crate::data::eqs_sample_move_t;
+use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, split_keys, merge_samples, merge_gradient_samples};
@@ -117,7 +117,7 @@ fn merge_blocks_along_samples(
     let new_samples_names = first_block.values.samples().names().iter().copied()
         .chain(extracted_samples.names())
         .collect();
-    let (merged_samples, samples_mapping) = merge_samples(
+    let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
         new_samples_names,
         sort_samples,
@@ -132,18 +132,11 @@ fn merge_blocks_along_samples(
 
     let property_range = 0..new_properties.count();
 
-    debug_assert_eq!(blocks_to_merge.len(), samples_mapping.len());
-    for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mapping) {
-        let mut samples_to_move = Vec::new();
-        for (sample_i, &new_sample_i) in samples_mapping.iter().enumerate() {
-            samples_to_move.push(eqs_sample_move_t {
-                input: sample_i,
-                output: new_sample_i,
-            });
-        }
+    debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
+    for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
         new_data.move_samples_from(
             &block.values.data,
-            &samples_to_move,
+            samples_mapping,
             property_range.clone(),
         )?;
     }
@@ -158,7 +151,7 @@ fn merge_blocks_along_samples(
     // now collect & merge the different gradients
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
-            blocks_to_merge, parameter, &samples_mapping
+            blocks_to_merge, parameter, &samples_mappings
         );
 
         let mut new_shape = first_gradient.data.shape()?.to_vec();
@@ -166,7 +159,7 @@ fn merge_blocks_along_samples(
         let mut new_gradient = first_block.values.data.create(&new_shape)?;
         let new_components = first_gradient.components().to_vec();
 
-        for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mapping) {
+        for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
             let gradient = block.get_gradient(parameter).expect("missing gradient");
             debug_assert!(gradient.components() == new_components);
 
@@ -175,10 +168,13 @@ fn merge_blocks_along_samples(
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
                 let old_sample_i = grad_sample[0].usize();
-                grad_sample[0] = LabelValue::from(samples_mapping[old_sample_i]);
+
+                let mapping = &samples_mapping[old_sample_i];
+                debug_assert_eq!(mapping.input, old_sample_i);
+                grad_sample[0] = mapping.output.into();
 
                 let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                samples_to_move.push(eqs_sample_move_t {
+                samples_to_move.push(eqs_sample_mapping_t {
                     input: sample_i,
                     output: new_sample_i,
                 });
@@ -201,7 +197,7 @@ fn merge_blocks_along_samples(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use super::*;
+    use crate::labels::LabelValue;
     use super::super::utils::example_tensor;
 
     use ndarray::ArrayD;
