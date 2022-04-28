@@ -15,8 +15,8 @@ mod labels;
 pub use self::labels::{LabelValue, Labels, LabelsBuilder};
 
 mod data;
-pub use self::data::{eqs_array_t, eqs_sample_move_t, DataOrigin, eqs_data_origin_t};
-pub use self::data::{register_data_origin, get_data_origin};
+pub use self::data::{eqs_array_t, eqs_sample_mapping_t, eqs_data_origin_t};
+pub use self::data::{DataOrigin, register_data_origin, get_data_origin};
 
 mod blocks;
 pub use self::blocks::{BasicBlock, TensorBlock};

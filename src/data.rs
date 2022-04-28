@@ -138,17 +138,17 @@ pub struct eqs_array_t {
     move_samples_from: Option<unsafe extern fn(
         output: *mut c_void,
         input: *const c_void,
-        samples: *const eqs_sample_move_t,
+        samples: *const eqs_sample_mapping_t,
         samples_count: usize,
         property_start: usize,
         property_end: usize,
     ) -> eqs_status_t>,
 }
 
-/// Representation of a single sample moved from an input array to another array.
+/// Representation of a single sample moved from an array to another one
 #[derive(Debug, Clone)]
 #[repr(C)]
-pub struct eqs_sample_move_t {
+pub struct eqs_sample_mapping_t {
     /// index of the moved sample in the input array
     pub input: usize,
     /// index of the moved sample in the output array
@@ -379,7 +379,7 @@ impl eqs_array_t {
     pub fn move_samples_from(
         &mut self,
         input: &eqs_array_t,
-        samples: &[eqs_sample_move_t],
+        samples: &[eqs_sample_mapping_t],
         properties: Range<usize>,
     ) -> Result<(), Error> {
         let function = self.move_samples_from.expect("eqs_array_t.move_samples_from function is NULL");
@@ -397,7 +397,7 @@ impl eqs_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling eqs_array_t.move_sample failed".into()
+                status, context: "calling eqs_array_t.move_samples_from failed".into()
             });
         }
 
@@ -452,7 +452,7 @@ pub trait DataStorage: std::any::Any{
     fn move_samples_from(
         &mut self,
         input: &dyn DataStorage,
-        samples: &[eqs_sample_move_t],
+        samples: &[eqs_sample_mapping_t],
         properties: Range<usize>,
     );
 }
@@ -572,7 +572,7 @@ unsafe extern fn rust_data_destroy(
 unsafe extern fn rust_data_move_samples_from(
     output: *mut c_void,
     input: *const c_void,
-    samples: *const eqs_sample_move_t,
+    samples: *const eqs_sample_mapping_t,
     samples_count: usize,
     property_start: usize,
     property_end: usize,
@@ -636,7 +636,7 @@ impl DataStorage for ndarray::ArrayD<f64> {
     fn move_samples_from(
         &mut self,
         input: &dyn DataStorage,
-        samples: &[eqs_sample_move_t],
+        samples: &[eqs_sample_mapping_t],
         property: Range<usize>,
     ) {
         use ndarray::{Axis, Slice};
@@ -646,6 +646,7 @@ impl DataStorage for ndarray::ArrayD<f64> {
 
         let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
         for sample in samples {
+            dbg!(sample.input);
             let value = input.index_axis(Axis(0), sample.input);
 
             let mut output_location = self.index_axis_mut(Axis(0), sample.output);
@@ -716,7 +717,7 @@ mod tests {
             self.shape.swap(axis_1, axis_2);
         }
 
-        fn move_samples_from(&mut self, _: &dyn DataStorage, _: &[eqs_sample_move_t], _: Range<usize>) {
+        fn move_samples_from(&mut self, _: &dyn DataStorage, _: &[eqs_sample_mapping_t], _: Range<usize>) {
             unimplemented!()
         }
     }
@@ -745,7 +746,7 @@ mod tests {
     mod ndarray {
         use ndarray::ArrayD;
 
-        use crate::{eqs_array_t, get_data_origin, eqs_sample_move_t};
+        use crate::{eqs_array_t, get_data_origin, eqs_sample_mapping_t};
 
         #[test]
         fn shape() {
@@ -780,11 +781,11 @@ mod tests {
             let mut other = data.create(&[1, 2, 2, 8]).unwrap();
             assert_eq!(other.as_array(), ArrayD::from_elem(vec![1, 2, 2, 8], 0.0));
 
-            let to_move = eqs_sample_move_t {
+            let mapping = eqs_sample_mapping_t {
                 output: 0,
                 input: 1,
             };
-            other.move_samples_from(&data, &[to_move], 2..6).unwrap();
+            other.move_samples_from(&data, &[mapping], 2..6).unwrap();
             let expected = ArrayD::from_shape_vec(vec![1, 2, 2, 8], vec![
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,

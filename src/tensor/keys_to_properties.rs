@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::labels::{Labels, LabelsBuilder, LabelValue};
+use crate::labels::{Labels, LabelsBuilder};
 use crate::{Error, TensorBlock};
 
-use crate::data::eqs_sample_move_t;
+use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, split_keys, merge_samples, merge_gradient_samples};
@@ -112,11 +112,13 @@ fn merge_blocks_along_properties(
     }
 
     // collect and merge samples across the blocks
-    let (merged_samples, samples_mapping) = merge_samples(
+    let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
         first_block.values.samples.names(),
         sort_samples,
     );
+
+    dbg!(&samples_mappings);
 
     // collect properties across the blocks, augmenting them with the new
     // properties
@@ -163,20 +165,13 @@ fn merge_blocks_along_properties(
         property_ranges.push(start..(start + size));
     }
 
-    debug_assert_eq!(blocks_to_merge.len(), samples_mapping.len());
+    debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     debug_assert_eq!(blocks_to_merge.len(), property_ranges.len());
     // for each block, gather the data to be moved & send it in one go
-    for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mapping).zip(&property_ranges) {
-        let mut samples_to_move = Vec::new();
-        for (sample_i, &new_sample_i) in samples_mapping.iter().enumerate() {
-            samples_to_move.push(eqs_sample_move_t {
-                input: sample_i,
-                output: new_sample_i,
-            });
-        }
+    for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
         new_data.move_samples_from(
             &block.values.data,
-            &samples_to_move,
+            samples_mapping,
             property_range.clone()
         )?;
     }
@@ -191,7 +186,7 @@ fn merge_blocks_along_properties(
     // now collect & merge the different gradients
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
-            blocks_to_merge, parameter, &samples_mapping
+            blocks_to_merge, parameter, &samples_mappings
         );
 
         let mut new_shape = first_gradient.data.shape()?.to_vec();
@@ -202,7 +197,7 @@ fn merge_blocks_along_properties(
         let mut new_gradient = first_block.values.data.create(&new_shape)?;
         let new_components = first_gradient.components().to_vec();
 
-        for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mapping).zip(&property_ranges) {
+        for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
             let gradient = block.get_gradient(parameter).expect("missing gradient");
             debug_assert!(gradient.components() == new_components);
 
@@ -211,10 +206,13 @@ fn merge_blocks_along_properties(
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
                 let old_sample_i = grad_sample[0].usize();
-                grad_sample[0] = LabelValue::from(samples_mapping[old_sample_i]);
+
+                let mapping = &samples_mapping[old_sample_i];
+                debug_assert_eq!(mapping.input, old_sample_i);
+                grad_sample[0] = mapping.output.into();
 
                 let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                samples_to_move.push(eqs_sample_move_t {
+                samples_to_move.push(eqs_sample_mapping_t {
                     input: sample_i,
                     output: new_sample_i,
                 });
@@ -237,7 +235,7 @@ fn merge_blocks_along_properties(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use super::*;
+    use crate::labels::LabelValue;
     use super::super::utils::example_tensor;
 
     use ndarray::ArrayD;

@@ -232,8 +232,8 @@ def _eqs_array_move_samples_from(
     property_start,
     property_end,
 ):
-    input = _object_from_ptr(input).array
     output = _object_from_ptr(this).array
+    input = _object_from_ptr(input).array
 
     input_samples = []
     output_samples = []

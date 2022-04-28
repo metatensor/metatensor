@@ -46,10 +46,10 @@ eqs_labels_t._fields_ = [
 ]
 
 
-class eqs_sample_move_t(ctypes.Structure):
+class eqs_sample_mapping_t(ctypes.Structure):
     pass
 
-eqs_sample_move_t._fields_ = [
+eqs_sample_mapping_t._fields_ = [
     ("input", c_uintptr_t),
     ("output", c_uintptr_t),
 ]
@@ -67,7 +67,7 @@ eqs_array_t._fields_ = [
     ("create", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, POINTER(eqs_array_t))),
     ("copy", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(eqs_array_t))),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
-    ("move_samples_from", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(eqs_sample_move_t), c_uintptr_t, c_uintptr_t, c_uintptr_t)),
+    ("move_samples_from", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(eqs_sample_mapping_t), c_uintptr_t, c_uintptr_t, c_uintptr_t)),
 ]
 
 
