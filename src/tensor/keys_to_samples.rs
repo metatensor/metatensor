@@ -6,32 +6,40 @@ use crate::{Error, TensorBlock};
 use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
-use super::utils::{KeyAndBlock, split_keys, merge_samples, merge_gradient_samples};
+use super::utils::{KeyAndBlock, remove_variables_from_keys, merge_samples, merge_gradient_samples};
 
 impl TensorMap {
-    /// Move the given variables from the keys to the sample labels of the
-    /// blocks.
+    /// Merge blocks with the same value for selected keys variables along the
+    /// samples axis.
     ///
-    /// Blocks containing the same values in the keys for the `variables` will
-    /// be merged together. The resulting merged blocks will have `variables` as
-    /// the last sample variables, preceded by the current samples.
+    /// The variables (names) of `keys_to_move` will be moved from the keys to
+    /// the sample labels, and blocks with the same remaining keys variables
+    /// will be merged together along the sample axis.
     ///
-    /// This function is only implemented if all merged block have the same
-    /// property labels.
+    /// `keys_to_move` must be empty (`keys_to_move.count() == 0`), and the new
+    /// sample labels will contain entries corresponding to the merged blocks'
+    /// keys.
     ///
-    /// The order of the samples is controlled by `sort_samples`. If
+    /// The new sample labels will contains all of the merged blocks sample
+    /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_samples(&mut self, variables: &[&str], sort_samples: bool) -> Result<(), Error> {
-        // TODO: requested values
+    ///
+    /// This function is only implemented if all merged block have the same
+    /// property labels.
+    pub fn keys_to_samples(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
         // TODO: keys_to_samples_no_gradients?
 
-        if variables.is_empty() {
-            return Ok(());
+        if keys_to_move.count() > 0 {
+            return Err(Error::InvalidParameter(
+                "user provided values for the keys to move is not yet implemented, \
+                `keys_to_move` should not contain any entry when calling keys_to_samples".into()
+            ))
         }
 
-        let splitted_keys = split_keys(&self.keys, variables)?;
+        let names_to_move = keys_to_move.names();
+        let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
@@ -39,17 +47,19 @@ impl TensorMap {
             let blocks_to_merge = self.keys.iter()
                 .zip(&self.blocks)
                 .map(|(key, block)| {
-                    let mut extracted = Vec::new();
-                    for &i in &splitted_keys.extracted_positions {
-                        extracted.push(key[i]);
+                    let mut moved_key = Vec::new();
+                    for &i in &splitted_keys.variables_positions {
+                        moved_key.push(key[i]);
                     }
 
-                    (extracted, block)
+                    (moved_key, block)
                 })
                 .collect::<Vec<_>>();
 
             let block = merge_blocks_along_samples(
-                &blocks_to_merge, &splitted_keys.extracted_keys, sort_samples
+                &blocks_to_merge,
+                &names_to_move,
+                sort_samples,
             )?;
             new_blocks.push(block);
         } else {
@@ -62,17 +72,19 @@ impl TensorMap {
                     .map(|&i| {
                         let block = &self.blocks[i];
                         let key = &self.keys[i];
-                        let mut extracted = Vec::new();
-                        for &i in &splitted_keys.extracted_positions {
-                            extracted.push(key[i]);
+                        let mut moved_key = Vec::new();
+                        for &i in &splitted_keys.variables_positions {
+                            moved_key.push(key[i]);
                         }
 
-                        (extracted, block)
+                        (moved_key, block)
                     })
                     .collect::<Vec<_>>();
 
                 new_blocks.push(merge_blocks_along_samples(
-                    &blocks_to_merge, &splitted_keys.extracted_keys, sort_samples
+                    &blocks_to_merge,
+                    &names_to_move,
+                    sort_samples,
                 )?);
             }
         }
@@ -88,7 +100,7 @@ impl TensorMap {
 /// Merge the given `blocks` along the sample axis.
 fn merge_blocks_along_samples(
     blocks_to_merge: &[KeyAndBlock],
-    extracted_samples: &Labels,
+    extracted_names: &[&str],
     sort_samples: bool,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
@@ -114,8 +126,9 @@ fn merge_blocks_along_samples(
     }
 
     // collect and merge samples across the blocks
-    let new_samples_names = first_block.values.samples().names().iter().copied()
-        .chain(extracted_samples.names())
+    let new_samples_names = first_block.values.samples().names().iter()
+        .chain(extracted_names.iter())
+        .copied()
         .collect();
     let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
@@ -197,7 +210,7 @@ fn merge_blocks_along_samples(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use crate::labels::LabelValue;
+    use crate::{LabelValue, LabelsBuilder};
     use super::super::utils::example_tensor;
 
     use ndarray::ArrayD;
@@ -205,7 +218,8 @@ mod tests {
     #[test]
     fn sorted_samples() {
         let mut tensor = example_tensor();
-        tensor.keys_to_samples(&["key_2"], true).unwrap();
+        let keys_to_move = LabelsBuilder::new(vec!["key_2"]).finish();
+        tensor.keys_to_samples(&keys_to_move, true).unwrap();
 
         assert_eq!(tensor.keys().count(), 3);
         assert_eq!(tensor.keys().names(), ["key_1"]);
@@ -284,7 +298,8 @@ mod tests {
     #[test]
     fn unsorted_samples() {
         let mut tensor = example_tensor();
-        tensor.keys_to_samples(&["key_2"], false).unwrap();
+        let keys_to_move = LabelsBuilder::new(vec!["key_2"]).finish();
+        tensor.keys_to_samples(&keys_to_move, false).unwrap();
 
         let block_3 = &tensor.blocks()[2];
         assert_eq!(block_3.values.samples().names(), ["samples", "key_2"]);
@@ -297,5 +312,20 @@ mod tests {
         assert_eq!(block_3.values.samples()[5], [LabelValue::new(1), LabelValue::new(3)]);
         assert_eq!(block_3.values.samples()[6], [LabelValue::new(2), LabelValue::new(3)]);
         assert_eq!(block_3.values.samples()[7], [LabelValue::new(5), LabelValue::new(3)]);
+    }
+
+    #[test]
+    fn user_provided_entries() {
+        let mut tensor = example_tensor();
+        let mut keys_to_move = LabelsBuilder::new(vec!["key_2"]);
+        keys_to_move.add(vec![3.into()]);
+        let result = tensor.keys_to_samples(&keys_to_move.finish(), false);
+
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: user provided values for the keys to move is \
+            not yet implemented, `keys_to_move` should not contain any entry \
+            when calling keys_to_samples"
+        );
     }
 }

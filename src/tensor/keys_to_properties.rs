@@ -8,31 +8,47 @@ use crate::{Error, TensorBlock};
 use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
-use super::utils::{KeyAndBlock, split_keys, merge_samples, merge_gradient_samples};
+use super::utils::{KeyAndBlock, remove_variables_from_keys, merge_samples, merge_gradient_samples};
 
 
 impl TensorMap {
-    /// Move the given variables from the keys to the property labels of the
-    /// blocks.
+    /// Merge blocks with the same value for selected keys variables along the
+    /// property axis.
     ///
-    /// Blocks containing the same values in the keys for the `variables` will
-    /// be merged together. The resulting merged blocks will have `variables` as
-    /// the first property variables, followed by the current properties. The
-    /// new sample labels will contains all of the merged blocks sample labels.
+    /// The variables (names) of `keys_to_move` will be moved from the keys to
+    /// the property labels, and blocks with the same remaining keys variables
+    /// will be merged together along the property axis.
     ///
-    /// The order of the samples is controlled by `sort_samples`. If
+    /// If `keys_to_move` does not contains any entries (`keys_to_move.count()
+    /// == 0`), then the new property labels will contain entries corresponding
+    /// to the merged blocks only. For example, merging a block with key `a=0`
+    /// and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
+    /// 3` will produce a block with properties `a, p = (0, 1), (0, 2), (2, 1),
+    /// (2, 3)`.
+    ///
+    /// If `keys_to_move` contains entries, then the property labels must be the
+    /// same for all the merged blocks. In that case, the merged property labels
+    /// will contains each of the entries of `keys_to_move` and then the current
+    /// property labels. For example, using `a=2, 3` in `keys_to_move`, and
+    /// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
+    /// (3, 1), (3, 2)`.
+    ///
+    /// The new sample labels will contains all of the merged blocks sample
+    /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_properties(&mut self, variables: &[&str], sort_samples: bool) -> Result<(), Error> {
-        // TODO: requested values
+    pub fn keys_to_properties(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
         // TODO: keys_to_properties_no_gradients?
 
-        if variables.is_empty() {
-            return Ok(());
-        }
+        let names_to_move = keys_to_move.names();
+        let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
 
-        let splitted_keys = split_keys(&self.keys, variables)?;
+        let keys_to_move = if keys_to_move.count() == 0 {
+            None
+        } else {
+            Some(keys_to_move)
+        };
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
@@ -40,18 +56,19 @@ impl TensorMap {
             let blocks_to_merge = self.keys.iter()
                 .zip(&self.blocks)
                 .map(|(key, block)| {
-                    let mut extracted = Vec::new();
-                    for &i in &splitted_keys.extracted_positions {
-                        extracted.push(key[i]);
+                    let mut moved_key = Vec::new();
+                    for &i in &splitted_keys.variables_positions {
+                        moved_key.push(key[i]);
                     }
 
-                    (extracted, block)
+                    (moved_key, block)
                 })
                 .collect::<Vec<_>>();
 
             let block = merge_blocks_along_properties(
                 &blocks_to_merge,
-                &splitted_keys.extracted_keys,
+                keys_to_move,
+                &names_to_move,
                 sort_samples,
             )?;
             new_blocks.push(block);
@@ -65,18 +82,19 @@ impl TensorMap {
                     .map(|&i| {
                         let block = &self.blocks[i];
                         let key = &self.keys[i];
-                        let mut extracted = Vec::new();
-                        for &i in &splitted_keys.extracted_positions {
-                            extracted.push(key[i]);
+                        let mut moved_key = Vec::new();
+                        for &i in &splitted_keys.variables_positions {
+                            moved_key.push(key[i]);
                         }
 
-                        (extracted, block)
+                        (moved_key, block)
                     })
                     .collect::<Vec<_>>();
 
                 let block = merge_blocks_along_properties(
                     &blocks_to_merge,
-                    &splitted_keys.extracted_keys,
+                    keys_to_move,
+                    &names_to_move,
                     sort_samples,
                 )?;
                 new_blocks.push(block);
@@ -95,19 +113,31 @@ impl TensorMap {
 #[allow(clippy::too_many_lines)]
 fn merge_blocks_along_properties(
     blocks_to_merge: &[KeyAndBlock],
-    extracted_properties: &Labels,
+    keys_to_move: Option<&Labels>,
+    extracted_names: &[&str],
     sort_samples: bool,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
     let first_block = blocks_to_merge[0].1;
     let first_components_label = first_block.values.components();
+    let first_property_labels = first_block.values.properties();
     for (_, block) in blocks_to_merge {
         if block.values.components() != first_components_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to properties if the blocks have \
                 different components labels, call components_to_properties first".into()
-            ))
+            ));
+        }
+
+        if keys_to_move.is_some() && block.values.properties() != first_property_labels {
+            // TODO: this might be possible but also pretty slow. It would
+            // requires to lookup the position of properties one by one in the
+            // merged properties
+            return Err(Error::InvalidParameter(
+                "can not provide values for the keys to move to properties if \
+                the blocks have different property labels".into()
+            ));
         }
     }
 
@@ -118,20 +148,32 @@ fn merge_blocks_along_properties(
         sort_samples,
     );
 
-    dbg!(&samples_mappings);
-
-    // collect properties across the blocks, augmenting them with the new
-    // properties
     let mut new_properties = IndexSet::new();
-    for (new_property, block) in blocks_to_merge {
-        for old_property in block.values.properties().iter() {
-            let mut property = new_property.clone();
-            property.extend_from_slice(old_property);
-            new_properties.insert(property);
+    if let Some(keys_to_move) = keys_to_move {
+        // use the user-provided new values
+        for new_property in keys_to_move {
+            for (_, block) in blocks_to_merge {
+                for old_property in block.values.properties().iter() {
+                    let mut property = new_property.to_vec();
+                    property.extend_from_slice(old_property);
+                    new_properties.insert(property);
+                }
+            }
+        }
+        assert_eq!(new_properties.len(), first_property_labels.count() * keys_to_move.count());
+    } else {
+        // collect properties from the blocks, augmenting them with the new
+        // properties
+        for (new_property, block) in blocks_to_merge {
+            for old_property in block.values.properties().iter() {
+                let mut property = new_property.clone();
+                property.extend_from_slice(old_property);
+                new_properties.insert(property);
+            }
         }
     }
 
-    let new_property_names = extracted_properties.names().iter()
+    let new_property_names = extracted_names.iter()
         .chain(first_block.values.properties().names().iter())
         .copied()
         .collect();
@@ -160,20 +202,32 @@ fn merge_blocks_along_properties(
         let mut first = new_property.clone();
         first.extend_from_slice(&block.values.properties()[0]);
 
-        let start = new_properties.position(&first).expect("missing the first merged property");
+        // we can lookup only the `first` new property here, since all blocks
+        // are checked to have the same properties, which makes the new
+        // properties match exactly the old ones, just with an added "channel"
+        // of the moved key.
 
-        property_ranges.push(start..(start + size));
+        // start can be None is the user requested a set of values which do not
+        // include the key for the current block
+        let start = new_properties.position(&first);
+        if let Some(start) = start {
+            property_ranges.push(Some(start..(start + size)));
+        } else {
+            property_ranges.push(None);
+        }
     }
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     debug_assert_eq!(blocks_to_merge.len(), property_ranges.len());
     // for each block, gather the data to be moved & send it in one go
     for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
-        new_data.move_samples_from(
-            &block.values.data,
-            samples_mapping,
-            property_range.clone()
-        )?;
+        if let Some(property_range) = property_range {
+            new_data.move_samples_from(
+                &block.values.data,
+                samples_mapping,
+                property_range.clone()
+            )?;
+        }
     }
 
     let mut new_block = TensorBlock::new(
@@ -198,6 +252,11 @@ fn merge_blocks_along_properties(
         let new_components = first_gradient.components().to_vec();
 
         for (((_, block), samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
+            if property_range.is_none() {
+                continue;
+            }
+            let property_range = property_range.as_ref().unwrap();
+
             let gradient = block.get_gradient(parameter).expect("missing gradient");
             debug_assert!(gradient.components() == new_components);
 
@@ -235,45 +294,37 @@ fn merge_blocks_along_properties(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use crate::labels::LabelValue;
-    use super::super::utils::example_tensor;
+    use crate::{LabelValue, LabelsBuilder, TensorMap};
+    use super::super::utils::{example_tensor, example_block, example_labels};
 
     use ndarray::ArrayD;
 
     #[test]
     fn sorted_samples() {
         let mut tensor = example_tensor();
-        tensor.keys_to_properties(&["key_1"], true).unwrap();
+        let keys_to_move = LabelsBuilder::new(vec!["key_1"]).finish();
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
 
-        assert_eq!(tensor.keys().count(), 3);
-        assert_eq!(tensor.keys().names(), ["key_2"]);
-        assert_eq!(tensor.keys()[0], [LabelValue::new(0)]);
-        assert_eq!(tensor.keys()[1], [LabelValue::new(2)]);
-        assert_eq!(tensor.keys()[2], [LabelValue::new(3)]);
-
+        assert_eq!(tensor.keys(), &example_labels(vec!["key_2"], vec![[0], [2], [3]]));
         assert_eq!(tensor.blocks().len(), 3);
 
         // The new first block contains the old first two blocks merged
-        let block_1 = &tensor.blocks()[0];
-        assert_eq!(block_1.values.samples().names(), ["samples"]);
-        assert_eq!(block_1.values.samples().count(), 5);
-        assert_eq!(block_1.values.samples()[0], [LabelValue::new(0)]);
-        assert_eq!(block_1.values.samples()[1], [LabelValue::new(1)]);
-        assert_eq!(block_1.values.samples()[2], [LabelValue::new(2)]);
-        assert_eq!(block_1.values.samples()[3], [LabelValue::new(3)]);
-        assert_eq!(block_1.values.samples()[4], [LabelValue::new(4)]);
+        let block = &tensor.blocks()[0];
+        assert_eq!(
+            block.values.samples(),
+            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+        );
 
-        assert_eq!(block_1.values.components().len(), 1);
-        assert_eq!(block_1.values.components()[0].names(), ["components"]);
-        assert_eq!(block_1.values.components()[0].count(), 1);
-        assert_eq!(block_1.values.components()[0][0], [LabelValue::new(0)]);
+        assert_eq!(block.values.components().len(), 1);
+        assert_eq!(
+            &*block.values.components()[0],
+            &example_labels(vec!["components"], vec![[0]])
+        );
 
-        assert_eq!(block_1.values.properties().names(), ["key_1", "properties"]);
-        assert_eq!(block_1.values.properties().count(), 4);
-        assert_eq!(block_1.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
-        assert_eq!(block_1.values.properties()[1], [LabelValue::new(1), LabelValue::new(3)]);
-        assert_eq!(block_1.values.properties()[2], [LabelValue::new(1), LabelValue::new(4)]);
-        assert_eq!(block_1.values.properties()[3], [LabelValue::new(1), LabelValue::new(5)]);
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![[0, 0], [1, 3], [1, 4], [1, 5]])
+        );
 
         let expected = ArrayD::from_shape_vec(vec![5, 1, 4], vec![
             1.0, 2.0, 2.0, 2.0,
@@ -282,15 +333,13 @@ mod tests {
             0.0, 2.0, 2.0, 2.0,
             1.0, 0.0, 0.0, 0.0,
         ]).unwrap();
-        assert_eq!(block_1.values.data.as_array(), expected);
+        assert_eq!(block.values.data.as_array(), expected);
 
-        let gradient_1 = block_1.get_gradient("parameter").unwrap();
-        assert_eq!(gradient_1.samples().names(), ["sample", "parameter"]);
-        assert_eq!(gradient_1.samples().count(), 4);
-        assert_eq!(gradient_1.samples()[0], [LabelValue::new(0), LabelValue::new(-2)]);
-        assert_eq!(gradient_1.samples()[1], [LabelValue::new(0), LabelValue::new(3)]);
-        assert_eq!(gradient_1.samples()[2], [LabelValue::new(3), LabelValue::new(-2)]);
-        assert_eq!(gradient_1.samples()[3], [LabelValue::new(4), LabelValue::new(3)]);
+        let gradient_1 = block.get_gradient("parameter").unwrap();
+        assert_eq!(
+            gradient_1.samples(),
+            &example_labels(vec!["sample", "parameter"], vec![[0, -2], [0, 3], [3, -2], [4, 3]])
+        );
 
         let expected = ArrayD::from_shape_vec(vec![4, 1, 4], vec![
             11.0, 12.0, 12.0, 12.0,
@@ -301,35 +350,257 @@ mod tests {
         assert_eq!(gradient_1.data.as_array(), expected);
 
         // The new second block contains the old third block
-        let block_2 = &tensor.blocks()[1];
-        assert_eq!(block_2.values.data.shape().unwrap(), [4, 3, 1]);
-        assert_eq!(block_2.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
-        assert_eq!(block_2.values.properties().count(), 1);
-        assert_eq!(block_2.values.properties()[0], [LabelValue::new(2), LabelValue::new(0)]);
+        let block = &tensor.blocks()[1];
+        assert_eq!(block.values.data.shape().unwrap(), [4, 3, 1]);
+        assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![[2, 0]])
+        );
 
         // The new third block contains the old second block
-        let block_3 = &tensor.blocks()[2];
-        assert_eq!(block_3.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
-        assert_eq!(block_3.values.properties().count(), 1);
-        assert_eq!(block_3.values.properties()[0], [LabelValue::new(2), LabelValue::new(0)]);
-
+        let block = &tensor.blocks()[2];
+        assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![[2, 0]])
+        );
     }
 
     #[test]
     fn unsorted_samples() {
         let mut tensor = example_tensor();
-        tensor.keys_to_properties(&["key_1"], false).unwrap();
+        let keys_to_move = LabelsBuilder::new(vec!["key_1"]).finish();
+        tensor.keys_to_properties(&keys_to_move, false).unwrap();
 
         assert_eq!(tensor.keys().count(), 3);
         assert_eq!(tensor.blocks().len(), 3);
 
-        let block_1 = &tensor.blocks()[0];
-        assert_eq!(block_1.values.samples().names(), ["samples"]);
-        assert_eq!(block_1.values.samples().count(), 5);
-        assert_eq!(block_1.values.samples()[0], [LabelValue::new(0)]);
-        assert_eq!(block_1.values.samples()[1], [LabelValue::new(2)]);
-        assert_eq!(block_1.values.samples()[2], [LabelValue::new(4)]);
-        assert_eq!(block_1.values.samples()[3], [LabelValue::new(1)]);
-        assert_eq!(block_1.values.samples()[4], [LabelValue::new(3)]);
+        let block = &tensor.blocks()[0];
+        assert_eq!(
+            block.values.samples(),
+            &example_labels(vec!["samples"], vec![[0], [2], [4], [1], [3]])
+        );
+    }
+
+    #[test]
+    fn user_provided_entries_different_properties() {
+        let mut tensor = example_tensor();
+        let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
+        keys_to_move.add(vec![0_i32.into()]);
+        let result = tensor.keys_to_properties(&keys_to_move.finish(), false);
+
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: can not provide values for the keys to move to \
+            properties if the blocks have different property labels"
+        );
+    }
+
+    #[allow(clippy::vec_init_then_push)]
+    fn example_tensor_same_properties_in_all_blocks() -> TensorMap {
+        let mut blocks = Vec::new();
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [2], [4]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![[0, 1], [0, 2], [2, 0]],
+            /* values           */ 1.0,
+            /* gradient_values  */ 11.0,
+        ));
+
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [1], [3]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![],
+            /* values           */ 2.0,
+            /* gradient_values  */ 12.0,
+        ));
+
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [1], [4]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![[0, 1], [0, 2], [2, 0]],
+            /* values           */ 3.0,
+            /* gradient_values  */ 13.0,
+        ));
+
+        let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        keys.add(vec![LabelValue::new(0), LabelValue::new(0)]);
+        keys.add(vec![LabelValue::new(1), LabelValue::new(0)]);
+        keys.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+        let keys = keys.finish();
+
+        return TensorMap::new(keys, blocks).unwrap();
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn user_provided_entries() {
+        let initial_tensor = example_tensor_same_properties_in_all_blocks();
+
+        let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
+        keys_to_move.add(vec![0_i32.into()]);
+        keys_to_move.add(vec![1_i32.into()]);
+        let mut tensor = initial_tensor.clone();
+        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+
+        // The new first block contains the old first two blocks merged
+        let block = &tensor.blocks()[0];
+        assert_eq!(
+            block.values.samples(),
+            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+        );
+
+        assert_eq!(block.values.components().len(), 1);
+        assert_eq!(
+            &*block.values.components()[0],
+            &example_labels(vec!["components"], vec![[0]])
+        );
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+                [1, 0], [1, 1], [1, 2], [1, 3],
+            ])
+        );
+
+        let expected = ArrayD::from_shape_vec(vec![5, 1, 8], vec![
+            1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0,
+            0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0,
+            1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0,
+            1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+        ]).unwrap();
+        assert_eq!(block.values.data.as_array(), expected);
+
+        // second block also contains the new property chanel even if it was not
+        // merged with another block
+        let block = &tensor.blocks()[1];
+        let expected = ArrayD::from_shape_vec(vec![3, 1, 8], vec![
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
+        ]).unwrap();
+        assert_eq!(block.values.data.as_array(), expected);
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+                [1, 0], [1, 1], [1, 2], [1, 3],
+            ])
+        );
+
+        /**********************************************************************/
+
+        // only keep a subset of the data
+        let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
+        keys_to_move.add(vec![0_i32.into()]);
+        let mut tensor = initial_tensor.clone();
+        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+
+        let block = &tensor.blocks()[0];
+        assert_eq!(
+            block.values.samples(),
+            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+        );
+
+        assert_eq!(block.values.components().len(), 1);
+        assert_eq!(
+            &*block.values.components()[0],
+            &example_labels(vec!["components"], vec![[0]])
+        );
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+            ])
+        );
+
+        // only data from the first block was kept
+        let expected = ArrayD::from_shape_vec(vec![5, 1, 4], vec![
+            1.0, 1.0, 1.0, 1.0,
+            0.0, 0.0, 0.0, 0.0,
+            1.0, 1.0, 1.0, 1.0,
+            0.0, 0.0, 0.0, 0.0,
+            1.0, 1.0, 1.0, 1.0,
+        ]).unwrap();
+        assert_eq!(block.values.data.as_array(), expected);
+
+        // second block stayed the same, only properties labels changed
+        let block = &tensor.blocks()[1];
+        assert_eq!(block.values.data.shape().unwrap(), [3, 1, 4]);
+        assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 4], 3.0));
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+            ])
+        );
+
+        /**********************************************************************/
+
+        // request keys not present in the input
+        let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
+        keys_to_move.add(vec![0_i32.into()]);
+        keys_to_move.add(vec![1_i32.into()]);
+        keys_to_move.add(vec![2_i32.into()]);
+        let mut tensor = initial_tensor;
+        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+
+        let block = &tensor.blocks()[0];
+        assert_eq!(
+            block.values.samples(),
+            &example_labels(vec!["samples"], vec![[0], [1], [2], [3], [4]])
+        );
+
+        assert_eq!(block.values.components().len(), 1);
+        assert_eq!(
+            &*block.values.components()[0],
+            &example_labels(vec!["components"], vec![[0]])
+        );
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+                [1, 0], [1, 1], [1, 2], [1, 3],
+                [2, 0], [2, 1], [2, 2], [2, 3],
+            ])
+        );
+
+        let expected = ArrayD::from_shape_vec(vec![5, 1, 12], vec![
+            1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
+            1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
+            1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ]).unwrap();
+        assert_eq!(block.values.data.as_array(), expected);
+
+        // Second block
+        let block = &tensor.blocks()[1];
+        let expected = ArrayD::from_shape_vec(vec![3, 1, 12], vec![
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ]).unwrap();
+        assert_eq!(block.values.data.as_array(), expected);
+
+        assert_eq!(
+            &**block.values.properties(),
+            &example_labels(vec!["key_1", "properties"], vec![
+                [0, 0], [0, 1], [0, 2], [0, 3],
+                [1, 0], [1, 1], [1, 2], [1, 3],
+                [2, 0], [2, 1], [2, 2], [2, 3],
+            ])
+        );
     }
 }

@@ -185,8 +185,7 @@ def setup_functions(lib):
 
     lib.eqs_tensormap_keys_to_properties.argtypes = [
         POINTER(eqs_tensormap_t),
-        POINTER(ctypes.c_char_p),
-        ctypes.c_uint64,
+        eqs_labels_t,
         ctypes.c_bool
     ]
     lib.eqs_tensormap_keys_to_properties.restype = _check_status
@@ -200,8 +199,7 @@ def setup_functions(lib):
 
     lib.eqs_tensormap_keys_to_samples.argtypes = [
         POINTER(eqs_tensormap_t),
-        POINTER(ctypes.c_char_p),
-        ctypes.c_uint64,
+        eqs_labels_t,
         ctypes.c_bool
     ]
     lib.eqs_tensormap_keys_to_samples.restype = _check_status
