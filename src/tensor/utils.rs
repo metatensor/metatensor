@@ -9,19 +9,17 @@ use crate::{Error, TensorBlock, eqs_sample_mapping_t};
 /// `keys_to_xxx` functions
 pub type KeyAndBlock<'a> = (Vec<LabelValue>, &'a TensorBlock);
 
-// result of the split_keys function
-pub struct SplittedKeys {
+/// Result of the `remove_variables_from_keys` function
+pub struct RemovedVariablesKeys {
     /// keys without the variables
     pub(super) new_keys: Labels,
-    /// values taken by the variables in the original keys
-    pub(super) extracted_keys: Labels,
-    /// positions of the variables in the original keys
-    pub(super) extracted_positions: Vec<usize>,
+    /// positions of the moved variables in the original keys
+    pub(super) variables_positions: Vec<usize>,
 }
 
-/// Split the `keys` into a new set of label without the `variables`; and Labels
-/// containing the values taken by `variables`
-pub fn split_keys(keys: &Labels, variables: &[&str]) -> Result<SplittedKeys, Error> {
+/// Remove the given variables from these keys, returning the updated set of
+/// keys and the positions of the removed variables in the initial keys
+pub fn remove_variables_from_keys(keys: &Labels, variables: &[&str]) -> Result<RemovedVariablesKeys, Error> {
     let names = keys.names();
     for variable in variables {
         if !names.contains(variable) {
@@ -32,62 +30,41 @@ pub fn split_keys(keys: &Labels, variables: &[&str]) -> Result<SplittedKeys, Err
         }
     }
 
-    // TODO: use Labels instead of Vec<&str> for variables to ensure
-    // uniqueness of variables names & pass 'requested' values around
-
-    let mut remaining = Vec::new();
+    let mut remaining_names = Vec::new();
     let mut remaining_i = Vec::new();
     let mut extracted_i = Vec::new();
 
-    'outer: for (i, &name) in names.iter().enumerate() {
-        for &variable in variables {
-            if variable == name {
-                extracted_i.push(i);
-                continue 'outer;
-            }
+    for (i, &name) in names.iter().enumerate() {
+        if variables.contains(&name) {
+            extracted_i.push(i);
+        } else {
+            remaining_names.push(name);
+            remaining_i.push(i);
         }
-        remaining.push(name);
-        remaining_i.push(i);
     }
 
-    let mut extracted_keys = IndexSet::new();
-    let mut remaining_keys = IndexSet::new();
-    for key in keys.iter() {
-        let mut label = Vec::new();
-        for &i in &extracted_i {
-            label.push(key[i]);
-        }
-        extracted_keys.insert(label);
-
-        if !remaining_i.is_empty() {
+    let remaining_keys = if remaining_i.is_empty() {
+        Labels::single()
+    } else {
+        let mut remaining_keys = IndexSet::new();
+        for key in keys.iter() {
             let mut label = Vec::new();
             for &i in &remaining_i {
                 label.push(key[i]);
             }
             remaining_keys.insert(label);
         }
-    }
 
-    let remaining_keys = if remaining_keys.is_empty() {
-        Labels::single()
-    } else {
-        let mut remaining_keys_builder = LabelsBuilder::new(remaining);
+        let mut remaining_keys_builder = LabelsBuilder::new(remaining_names);
         for entry in remaining_keys {
             remaining_keys_builder.add(entry);
         }
         remaining_keys_builder.finish()
     };
 
-    assert!(!extracted_keys.is_empty());
-    let mut extracted_keys_builder = LabelsBuilder::new(variables.to_vec());
-    for entry in extracted_keys {
-        extracted_keys_builder.add(entry);
-    }
-
-    return Ok(SplittedKeys {
+    return Ok(RemovedVariablesKeys {
         new_keys: remaining_keys,
-        extracted_keys: extracted_keys_builder.finish(),
-        extracted_positions: extracted_i,
+        variables_positions: extracted_i,
     });
 }
 
@@ -182,7 +159,7 @@ pub fn merge_samples(
 /******************************************************************************/
 
 #[cfg(all(test, feature = "ndarray"))]
-pub use self::tests_utils::example_tensor;
+pub use self::tests_utils::{example_labels, example_block, example_tensor};
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests_utils {
@@ -194,100 +171,85 @@ mod tests_utils {
 
     use ndarray::ArrayD;
 
-    fn example_labels(name: &str, values: Vec<i32>) -> Labels {
-        let mut labels = LabelsBuilder::new(vec![name]);
-        for i in values {
-            labels.add(vec![LabelValue::from(i)]);
+    pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
+        let mut labels = LabelsBuilder::new(names);
+        for entry in values {
+            labels.add(entry.iter().copied().map(LabelValue::from).collect());
         }
         return labels.finish();
     }
 
+    pub fn example_block(
+        samples: Vec<[i32; 1]>,
+        components: Vec<[i32; 1]>,
+        properties: Vec<[i32; 1]>,
+        gradient_samples: Vec<[i32; 2]>,
+        values: f64,
+        gradient_values: f64
+    ) -> TensorBlock {
+        let samples = example_labels(vec!["samples"], samples);
+        let components = example_labels(vec!["components"], components);
+        let properties = example_labels(vec!["properties"], properties);
+
+        let shape = vec![samples.count(), components.count(), properties.count()];
+        let mut block = TensorBlock::new(
+            eqs_array_t::new(Box::new(ArrayD::from_elem(shape, values))),
+            samples,
+            vec![Arc::new(components.clone())],
+            Arc::new(properties.clone()),
+        ).unwrap();
+
+        let gradient_samples = example_labels(vec!["sample", "parameter"], gradient_samples);
+
+        let shape = vec![gradient_samples.count(), components.count(), properties.count()];
+        block.add_gradient(
+            "parameter",
+            eqs_array_t::new(Box::new(ArrayD::from_elem(shape, gradient_values))),
+            gradient_samples,
+            vec![Arc::new(components)],
+        ).unwrap();
+
+        return block;
+    }
+
     pub fn example_tensor() -> TensorMap {
-        let mut block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 1], 1.0))),
-            example_labels("samples", vec![0, 2, 4]),
-            vec![Arc::new(example_labels("components", vec![0]))],
-            Arc::new(example_labels("properties", vec![0])),
-        ).unwrap();
+        let block_1 = example_block(
+            /* samples          */ vec![[0], [2], [4]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0]],
+            /* gradient_samples */ vec![[0, -2], [2, 3]],
+            /* values           */ 1.0,
+            /* gradient_values  */ 11.0,
+        );
 
-        let mut gradient_samples_1 = LabelsBuilder::new(vec!["sample", "parameter"]);
-        gradient_samples_1.add(vec![LabelValue::new(0), LabelValue::new(-2)]);
-        gradient_samples_1.add(vec![LabelValue::new(2), LabelValue::new(3)]);
-        let gradient_samples_1 = gradient_samples_1.finish();
+        // different property size
+        let block_2 = example_block(
+            /* samples          */ vec![[0], [1], [3]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[3], [4], [5]],
+            /* gradient_samples */ vec![[0, -2], [0, 3], [2, -2]],
+            /* values           */ 2.0,
+            /* gradient_values  */ 12.0,
+        );
 
-        block_1.add_gradient(
-            "parameter",
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![2, 1, 1], 11.0))),
-            gradient_samples_1,
-            vec![Arc::new(example_labels("components", vec![0]))],
-        ).unwrap();
+        // different component size
+        let block_3 = example_block(
+            /* samples          */ vec![[0], [3], [6], [8]],
+            /* components       */ vec![[0], [1], [2]],
+            /* properties       */ vec![[0]],
+            /* gradient_samples */ vec![[1, -2]],
+            /* values           */ 3.0,
+            /* gradient_values  */ 13.0,
+        );
 
-        /******************************************************************/
-
-        let mut block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 2.0))),
-            example_labels("samples", vec![0, 1, 3]),
-            vec![Arc::new(example_labels("components", vec![0]))],
-            // different property size
-            Arc::new(example_labels("properties", vec![3, 4, 5])),
-        ).unwrap();
-
-        let mut gradient_samples_2 = LabelsBuilder::new(vec!["sample", "parameter"]);
-        gradient_samples_2.add(vec![LabelValue::new(0), LabelValue::new(-2)]);
-        gradient_samples_2.add(vec![LabelValue::new(0), LabelValue::new(3)]);
-        gradient_samples_2.add(vec![LabelValue::new(2), LabelValue::new(-2)]);
-        let gradient_samples_2 = gradient_samples_2.finish();
-
-        block_2.add_gradient(
-            "parameter",
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 1, 3], 12.0))),
-            gradient_samples_2,
-            vec![Arc::new(example_labels("components", vec![0]))],
-        ).unwrap();
-
-        /******************************************************************/
-
-        let mut block_3 = TensorBlock::new(
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 3.0))),
-            example_labels("samples", vec![0, 3, 6, 8]),
-            // different component size
-            vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
-            Arc::new(example_labels("properties", vec![0])),
-        ).unwrap();
-
-        let mut gradient_samples_3 = LabelsBuilder::new(vec!["sample", "parameter"]);
-        gradient_samples_3.add(vec![LabelValue::new(1), LabelValue::new(-2)]);
-        let gradient_samples_3 = gradient_samples_3.finish();
-
-        block_3.add_gradient(
-            "parameter",
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![1, 3, 1], 13.0))),
-            gradient_samples_3,
-            vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
-        ).unwrap();
-
-        /******************************************************************/
-
-        let mut block_4 = TensorBlock::new(
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 3, 1], 4.0))),
-            example_labels("samples", vec![0, 1, 2, 5]),
-            vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
-            Arc::new(example_labels("properties", vec![0])),
-        ).unwrap();
-
-        let mut gradient_samples_4 = LabelsBuilder::new(vec!["sample", "parameter"]);
-        gradient_samples_4.add(vec![LabelValue::new(0), LabelValue::new(1)]);
-        gradient_samples_4.add(vec![LabelValue::new(3), LabelValue::new(3)]);
-        let gradient_samples_4 = gradient_samples_4.finish();
-
-        block_4.add_gradient(
-            "parameter",
-            eqs_array_t::new(Box::new(ArrayD::from_elem(vec![2, 3, 1], 14.0))),
-            gradient_samples_4,
-            vec![Arc::new(example_labels("components", vec![0, 1, 2]))],
-        ).unwrap();
-
-        /******************************************************************/
+        let block_4 = example_block(
+            /* samples          */ vec![[0], [1], [2], [5]],
+            /* components       */ vec![[0], [1], [2]],
+            /* properties       */ vec![[0]],
+            /* gradient_samples */ vec![[0, 1], [3, 3]],
+            /* values           */ 4.0,
+            /* gradient_values  */ 14.0,
+        );
 
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
         keys.add(vec![LabelValue::new(0), LabelValue::new(0)]);

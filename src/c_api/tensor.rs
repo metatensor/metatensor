@@ -205,27 +205,37 @@ pub unsafe extern fn eqs_tensormap_block_selection(
 }
 
 
-/// Move the given `variables` from the keys to the property labels of the
-/// blocks.
+/// Merge blocks with the same value for selected keys variables along the
+/// property axis.
 ///
-/// Blocks containing the same values in the keys for the `variables` will
-/// be merged together. The resulting merged blocks will have `variables` as
-/// the first property variables, followed by the current properties. The
-/// new sample labels will contains all of the merged blocks sample labels.
+/// The variables (names) of `keys_to_move` will be moved from the keys to
+/// the property labels, and blocks with the same remaining keys variables
+/// will be merged together along the property axis.
 ///
-/// The order of the samples is controlled by `sort_samples`. If
+/// If `keys_to_move` does not contains any entries (`keys_to_move.count
+/// == 0`), then the new property labels will contain entries corresponding
+/// to the merged blocks only. For example, merging a block with key `a=0`
+/// and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
+/// 3` will produce a block with properties `a, p = (0, 1), (0, 2), (2, 1),
+/// (2, 3)`.
+///
+/// If `keys_to_move` contains entries, then the property labels must be the
+/// same for all the merged blocks. In that case, the merged property labels
+/// will contains each of the entries of `keys_to_move` and then the current
+/// property labels. For example, using `a=2, 3` in `keys_to_move`, and
+/// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
+/// (3, 1), (3, 2)`.
+///
+/// The new sample labels will contains all of the merged blocks sample
+/// labels. The order of the samples is controlled by `sort_samples`. If
 /// `sort_samples` is true, samples are re-ordered to keep them
 /// lexicographically sorted. Otherwise they are kept in the order in which
 /// they appear in the blocks.
 ///
-/// `variables` must be an array of `variables_count` NULL-terminated strings,
-/// encoded as UTF-8.
-///
 /// @param tensor pointer to an existing tensor map
-/// @param variables names of the key variables to move to the properties
-/// @param variables_count number of entries in the `variables` array
+/// @param keys_to_move description of the keys to move
 /// @param sort_samples whether to sort the samples lexicographically after
-///                     merging blocks or not
+///                     merging blocks
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -234,21 +244,14 @@ pub unsafe extern fn eqs_tensormap_block_selection(
 #[allow(clippy::cast_possible_truncation)]
 pub unsafe extern fn eqs_tensormap_keys_to_properties(
     tensor: *mut eqs_tensormap_t,
-    variables: *const *const c_char,
-    variables_count: u64,
+    keys_to_move: eqs_labels_t,
     sort_samples: bool,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, variables);
+        check_pointers!(tensor);
 
-        let mut rust_variables = Vec::new();
-        for &variable in std::slice::from_raw_parts(variables, variables_count as usize) {
-            check_pointers!(variable);
-            let variable = CStr::from_ptr(variable).to_str().expect("invalid utf8");
-            rust_variables.push(variable);
-        }
-
-        (*tensor).keys_to_properties(&rust_variables, sort_samples)?;
+        let keys_to_move = Labels::try_from(&keys_to_move)?;
+        (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
 
         Ok(())
     })
@@ -291,14 +294,19 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
     })
 }
 
-/// Move the given `variables` from the keys to the sample labels of the
-/// blocks.
+/// Merge blocks with the same value for selected keys variables along the
+/// samples axis.
 ///
-/// Blocks containing the same values in the keys for the `variables` will
-/// be merged together. The resulting merged blocks will have `variables` as
-/// the last sample variables, preceded by the current samples.
+/// The variables (names) of `keys_to_move` will be moved from the keys to
+/// the sample labels, and blocks with the same remaining keys variables
+/// will be merged together along the sample axis.
 ///
-/// The order of the samples is controlled by `sort_samples`. If
+/// `keys_to_move` must be empty (`keys_to_move.count == 0`), and the new
+/// sample labels will contain entries corresponding to the merged blocks'
+/// keys.
+///
+/// The new sample labels will contains all of the merged blocks sample
+/// labels. The order of the samples is controlled by `sort_samples`. If
 /// `sort_samples` is true, samples are re-ordered to keep them
 /// lexicographically sorted. Otherwise they are kept in the order in which
 /// they appear in the blocks.
@@ -306,12 +314,8 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
 /// This function is only implemented if all merged block have the same
 /// property labels.
 ///
-/// `variables` must be an array of `variables_count` NULL-terminated strings,
-/// encoded as UTF-8.
-///
 /// @param tensor pointer to an existing tensor map
-/// @param variables names of the key variables to move to the samples
-/// @param variables_count number of entries in the `variables` array
+/// @param keys_to_move description of the keys to move
 /// @param sort_samples whether to sort the samples lexicographically after
 ///                     merging blocks or not
 ///
@@ -322,21 +326,14 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
 #[allow(clippy::cast_possible_truncation)]
 pub unsafe extern fn eqs_tensormap_keys_to_samples(
     tensor: *mut eqs_tensormap_t,
-    variables: *const *const c_char,
-    variables_count: u64,
+    keys_to_move: eqs_labels_t,
     sort_samples: bool,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, variables);
+        check_pointers!(tensor);
 
-        let mut rust_variables = Vec::new();
-        for &variable in std::slice::from_raw_parts(variables, variables_count as usize) {
-            check_pointers!(variable);
-            let variable = CStr::from_ptr(variable).to_str().expect("invalid utf8");
-            rust_variables.push(variable);
-        }
-
-        (*tensor).keys_to_samples(&rust_variables, sort_samples)?;
+        let keys_to_move = Labels::try_from(&keys_to_move)?;
+        (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
 
         Ok(())
     })

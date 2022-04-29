@@ -646,7 +646,6 @@ impl DataStorage for ndarray::ArrayD<f64> {
 
         let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
         for sample in samples {
-            dbg!(sample.input);
             let value = input.index_axis(Axis(0), sample.input);
 
             let mut output_location = self.index_axis_mut(Axis(0), sample.output);

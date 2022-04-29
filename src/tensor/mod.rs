@@ -17,7 +17,7 @@ mod keys_to_properties;
 /// It provides functions to merge blocks together by moving some of these keys
 /// to the samples or properties labels of the blocks, transforming the sparse
 /// representation of the data to a dense one.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TensorMap {
     keys: Labels,
     blocks: Vec<TensorBlock>,
@@ -65,7 +65,11 @@ fn check_labels_names(
 }
 
 impl TensorMap {
-    /// TODO: doc
+    /// Create a new `TensorMap` with the given keys and blocks.
+    ///
+    /// The number of keys must match the number of blocks, and all the blocks
+    /// must contain the same kind of data (same labels names, same gradients
+    /// defined on all blocks).
     #[allow(clippy::similar_names)]
     pub fn new(keys: Labels, blocks: Vec<TensorBlock>) -> Result<TensorMap, Error> {
         if blocks.len() != keys.count() {
@@ -243,7 +247,6 @@ impl TensorMap {
     /// Move the given variables from the component labels to the property labels
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
-        // TODO: requested values
         if variables.is_empty() {
             return Ok(());
         }
