@@ -269,6 +269,7 @@ def _list_or_str_to_array_c_char(strings: Union[str, List[str]]):
 
     c_strings = ctypes.ARRAY(ctypes.c_char_p, len(strings))()
     for i, v in enumerate(strings):
+        assert isinstance(v, str)
         c_strings[i] = v.encode("utf8")
 
     return c_strings
