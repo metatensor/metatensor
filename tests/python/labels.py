@@ -1,8 +1,9 @@
 import unittest
+
 import numpy as np
+from utils import test_tensor_map
 
 from equistore import Labels
-from utils import test_tensor_map
 
 
 class TestLabels(unittest.TestCase):

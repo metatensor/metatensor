@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 
 try:
@@ -11,7 +12,7 @@ except ImportError:
 import ctypes
 
 from equistore import data
-from equistore._c_api import c_uintptr_t, EQS_SUCCESS, eqs_array_t, eqs_sample_mapping_t
+from equistore._c_api import EQS_SUCCESS, c_uintptr_t, eqs_array_t, eqs_sample_mapping_t
 
 
 class TestArrayWrapperMixin:

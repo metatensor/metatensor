@@ -1,11 +1,10 @@
-import numpy as np
 import ctypes
-from typing import Union, NewType
+from typing import NewType, Union
 
+import numpy as np
 
+from ._c_api import c_uintptr_t, eqs_array_t, eqs_data_origin_t
 from ._c_lib import _get_library
-from ._c_api import eqs_array_t, eqs_data_origin_t, c_uintptr_t
-
 from .utils import _call_with_growing_buffer, catch_exceptions
 
 try:

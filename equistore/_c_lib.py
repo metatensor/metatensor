@@ -46,8 +46,8 @@ def _check_dll(path):
     """
     Check if the DLL pointer size matches Python (32-bit or 64-bit)
     """
-    import struct
     import platform
+    import struct
 
     IMAGE_FILE_MACHINE_I386 = 332
     IMAGE_FILE_MACHINE_AMD64 = 34404

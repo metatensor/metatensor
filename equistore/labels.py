@@ -1,7 +1,8 @@
+import ctypes
 from collections import namedtuple
 from typing import List, Optional
+
 import numpy as np
-import ctypes
 
 from ._c_api import eqs_labels_t
 from ._c_lib import _get_library

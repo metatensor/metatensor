@@ -1,8 +1,8 @@
 import unittest
+
 import numpy as np
 
-
-from equistore import TensorBlock, Labels
+from equistore import Labels, TensorBlock
 
 
 class TestBlocks(unittest.TestCase):
