@@ -11,7 +11,7 @@ use super::status::{eqs_status_t, catch_unwind};
 
 /// Opaque type representing a `TensorMap`.
 #[allow(non_camel_case_types)]
-pub struct eqs_tensormap_t(TensorMap);
+pub struct eqs_tensormap_t(pub(crate) TensorMap);
 
 impl std::ops::Deref for eqs_tensormap_t {
     type Target = TensorMap;

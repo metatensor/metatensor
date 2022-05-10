@@ -58,8 +58,17 @@ class TensorMap:
         self._ptr = self._lib.eqs_tensormap(
             keys._as_eqs_labels_t(), blocks_array, len(blocks)
         )
-
         _check_pointer(self._ptr)
+
+    @staticmethod
+    def _from_ptr(ptr):
+        """Create a tensor map from a pointer owning its data"""
+        _check_pointer(ptr)
+        obj = TensorMap.__new__(TensorMap)
+        obj._lib = _get_library()
+        obj._ptr = ptr
+        obj._blocks = []
+        return obj
 
     def __del__(self):
         if hasattr(self, "_lib") and hasattr(self, "_ptr"):

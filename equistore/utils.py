@@ -1,4 +1,5 @@
 import ctypes
+
 import numpy as np
 
 from ._c_api import EQS_BUFFER_SIZE_ERROR
@@ -38,6 +39,6 @@ def _ptr_to_const_ndarray(ptr, shape, dtype):
     assert ptr is not None
     array = np.ctypeslib.as_array(ptr, shape=shape)
     assert array.dtype == dtype
-    assert array.flags["OWNDATA"] == False
+    assert not array.flags["OWNDATA"]
     array.flags["WRITEABLE"] = False
     return array

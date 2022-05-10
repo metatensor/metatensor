@@ -101,6 +101,10 @@ else()
     set(EQUISTORE_LOCATION "${CARGO_TARGET_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
+if (EQUISTORE_BUILD_FOR_PYTHON)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--features=serialization")
+endif()
+
 get_filename_component(EQUISTORE_LIB_NAME ${EQUISTORE_LOCATION} NAME)
 add_custom_target(cargo-build-equistore ALL
     COMMAND cargo build ${CARGO_BUILD_ARG}

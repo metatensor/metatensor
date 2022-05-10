@@ -10,5 +10,6 @@ pub mod labels;
 pub mod data;
 pub mod blocks;
 pub mod tensor;
+pub mod io;
 
 mod utils;

@@ -17,6 +17,8 @@ elif arch == "64bit":
 
 EQS_SUCCESS = 0
 EQS_INVALID_PARAMETER_ERROR = 1
+EQS_IO_ERROR = 2
+EQS_SERIALIZATION_ERROR = 3
 EQS_BUFFER_SIZE_ERROR = 254
 EQS_INTERNAL_ERROR = 255
 
@@ -211,3 +213,14 @@ def setup_functions(lib):
         ctypes.c_bool
     ]
     lib.eqs_tensormap_keys_to_samples.restype = _check_status
+
+    lib.eqs_tensormap_load.argtypes = [
+        ctypes.c_char_p
+    ]
+    lib.eqs_tensormap_load.restype = POINTER(eqs_tensormap_t)
+
+    lib.eqs_tensormap_save.argtypes = [
+        ctypes.c_char_p,
+        POINTER(eqs_tensormap_t)
+    ]
+    lib.eqs_tensormap_save.restype = _check_status
