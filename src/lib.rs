@@ -5,9 +5,7 @@
 #![allow(clippy::redundant_field_names, clippy::redundant_closure_for_method_calls, clippy::redundant_else)]
 #![allow(clippy::unreadable_literal, clippy::option_if_let_else, clippy::module_name_repetitions)]
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
-
-// introduced in rustc 1.60
-#![allow(clippy::borrow_as_ptr)]
+#![allow(clippy::similar_names, clippy::borrow_as_ptr)]
 
 
 mod utils;
