@@ -1,15 +1,13 @@
-import gc
 import copy
 import ctypes
-from typing import List, Tuple, Generator
+import gc
+from typing import Generator, List, Tuple
 
+from ._c_api import eqs_array_t, eqs_labels_t
 from ._c_lib import _get_library
-from ._c_api import eqs_labels_t, eqs_array_t
-
-from .status import _check_pointer
+from .data import Array, ArrayWrapper, eqs_array_to_python_object
 from .labels import Labels
-
-from .data import ArrayWrapper, Array, eqs_array_to_python_object
+from .status import _check_pointer
 
 
 class TensorBlock:

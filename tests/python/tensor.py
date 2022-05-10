@@ -1,6 +1,6 @@
 import unittest
-import numpy as np
 
+import numpy as np
 from utils import test_tensor_map
 
 
