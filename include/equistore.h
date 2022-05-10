@@ -24,6 +24,17 @@
 #define EQS_INVALID_PARAMETER_ERROR 1
 
 /**
+ * Status code indicating I/O error when loading/writing `eqs_tensormap_t` to a file
+ */
+#define EQS_IO_ERROR 2
+
+/**
+ * Status code indicating errors in the serialization format when
+ * loading/writing `eqs_tensormap_t` to a file
+ */
+#define EQS_SERIALIZATION_ERROR 3
+
+/**
  * Status code used when a memory buffer is too small to fit the requested data
  */
 #define EQS_BUFFER_SIZE_ERROR 254
@@ -607,6 +618,34 @@ eqs_status_t eqs_tensormap_components_to_properties(struct eqs_tensormap_t *tens
 eqs_status_t eqs_tensormap_keys_to_samples(struct eqs_tensormap_t *tensor,
                                            struct eqs_labels_t keys_to_move,
                                            bool sort_samples);
+
+/**
+ * Load a tensor map from the file at the given path.
+ *
+ * The memory allocated by this function should be released using
+ * `eqs_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `eqs_last_error()`
+ *          to get the error message.
+ */
+struct eqs_tensormap_t *eqs_tensormap_load(const char *path);
+
+/**
+ * Save a tensor map to the file at the given path.
+ *
+ * If the file already exists, it is overwritten.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param tensor tensor map to save to the file
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+ *          error message.
+ */
+eqs_status_t eqs_tensormap_save(const char *path, const struct eqs_tensormap_t *tensor);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -26,6 +26,22 @@ pub use self::tensor::TensorMap;
 pub mod c_api;
 use c_api::eqs_status_t;
 
+#[cfg(feature = "serialization")]
+pub mod io;
+
+#[cfg(not(feature = "serialization"))]
+pub mod io {
+    #![allow(unused_variables)]
+    use super::{Error, TensorMap};
+
+    pub fn load<R: std::io::Read + std::io::Seek>(reader: R) -> Result<TensorMap, Error> {
+        return Err(Error::Serialization("serialization was not enabled in equistore".into()))
+    }
+
+    pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
+        return Err(Error::Serialization("serialization was not enabled in equistore".into()))
+    }
+}
 
 /// The possible sources of error in equistore
 #[derive(Debug)]
@@ -34,6 +50,10 @@ pub enum Error {
     InvalidParameter(String),
     /// A buffer passed to a C API function does not have the right size
     BufferSize(String),
+    /// I/O error when loading/writing `TensorMap` to a file
+    Io(std::io::Error),
+    /// Serialization format error when loading/writing `TensorMap` to a file
+    Serialization(String),
     /// External error, coming from a function used as a callback in `eqs_array_t`
     External {
         status: eqs_status_t,
@@ -47,6 +67,8 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::InvalidParameter(e) => write!(f, "invalid parameter: {}", e),
+            Error::Io(e) => write!(f, "io error: {}", e),
+            Error::Serialization(e) => write!(f, "serialization format error: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
             Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
             Error::Internal(e) => write!(f, "internal error: {}", e),
@@ -58,13 +80,30 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::InvalidParameter(_) |
+            Error::Serialization(_) |
             Error::Internal(_) |
             Error::BufferSize(_) |
-            Error::External {..} => None
+            Error::External {..} => None,
+            Error::Io(e) => Some(e),
         }
     }
 }
 
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::Io(error)
+    }
+}
+
+#[cfg(feature = "serialization")]
+impl From<(String, zip::result::ZipError)> for Error {
+    fn from((path, error): (String, zip::result::ZipError)) -> Self {
+        match error {
+            zip::result::ZipError::Io(e) => Error::Io(e),
+            error => Error::Serialization(format!("{}: {}", error, path)),
+        }
+    }
+}
 
 // Box<dyn Any + Send + 'static> is the error type in std::panic::catch_unwind
 impl From<Box<dyn std::any::Any + Send + 'static>> for Error {

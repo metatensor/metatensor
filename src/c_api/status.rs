@@ -39,6 +39,12 @@ impl eqs_status_t {
 pub const EQS_SUCCESS: i32 = 0;
 /// Status code used when a function got an invalid parameter
 pub const EQS_INVALID_PARAMETER_ERROR: i32 = 1;
+/// Status code indicating I/O error when loading/writing `eqs_tensormap_t` to a file
+pub const EQS_IO_ERROR: i32 = 2;
+/// Status code indicating errors in the serialization format when
+/// loading/writing `eqs_tensormap_t` to a file
+pub const EQS_SERIALIZATION_ERROR: i32 = 3;
+
 /// Status code used when a memory buffer is too small to fit the requested data
 pub const EQS_BUFFER_SIZE_ERROR: i32 = 254;
 /// Status code used when there was an internal error, i.e. there is a bug
@@ -54,6 +60,8 @@ impl From<Error> for eqs_status_t {
         });
         match error {
             Error::InvalidParameter(_) => eqs_status_t(EQS_INVALID_PARAMETER_ERROR),
+            Error::Io(_) => eqs_status_t(EQS_IO_ERROR),
+            Error::Serialization(_) => eqs_status_t(EQS_SERIALIZATION_ERROR),
             Error::BufferSize(_) => eqs_status_t(EQS_BUFFER_SIZE_ERROR),
             Error::External {status, .. } => status,
             Error::Internal(_) => eqs_status_t(EQS_INTERNAL_ERROR),
