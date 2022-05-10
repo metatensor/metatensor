@@ -134,6 +134,8 @@ class ArrayWrapper:
         # use storage.XXX.__class__ to get the right type for all functions
         self.eqs_array.origin = self.eqs_array.origin.__class__(eqs_array_origin)
 
+        self.eqs_array.data = self.eqs_array.data.__class__(_eqs_array_data)
+
         self.eqs_array.shape = self.eqs_array.shape.__class__(_eqs_array_shape)
         self.eqs_array.reshape = self.eqs_array.reshape.__class__(_eqs_array_reshape)
         self.eqs_array.swap_axes = self.eqs_array.swap_axes.__class__(
@@ -152,6 +154,34 @@ class ArrayWrapper:
 def _object_from_ptr(ptr):
     """Extract the Python object from a pointer to the PyObject"""
     return ctypes.cast(ptr, ctypes.POINTER(ctypes.py_object)).contents.value
+
+
+@catch_exceptions
+def _eqs_array_data(this, data):
+    storage = _object_from_ptr(this)
+
+    if _is_numpy_array(storage.array):
+        array = storage.array
+
+    elif _is_torch_array(storage.array):
+        array = storage.array
+
+        if array.device.type == "cpu":
+            raise ValueError("can not get data pointer for tensors not on CPU")
+
+        # `.numpy()` will fail if the data is on GPU or requires gradient
+        # tracking, and the resulting array is sharing data storage with the
+        # tensor, meaning we can take a pointer to it without the array being
+        # freed immediately.
+        array = array.numpy()
+
+    if not array.data.c_contiguous:
+        raise ValueError("can not get data pointer for non contiguous array")
+
+    if not array.dtype == np.float64:
+        raise ValueError(f"can not get data pointer for array type {array.dtype}")
+
+    data[0] = array.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
 
 
 @catch_exceptions

@@ -139,6 +139,14 @@ typedef struct eqs_array_t {
    */
   eqs_status_t (*origin)(const void *array, eqs_data_origin_t *origin);
   /**
+   * Get a pointer to the underlying data storage.
+   *
+   * This function is allowed to fail if the data is not accessible in RAM,
+   * not stored as 64-bit floating point values, or not stored as a
+   * C-contiguous array.
+   */
+  eqs_status_t (*data)(const void *array, const double **data);
+  /**
    * Get the shape of the array managed by this `eqs_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
    * `*shape_count`.

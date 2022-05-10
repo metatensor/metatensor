@@ -60,6 +60,7 @@ class eqs_array_t(ctypes.Structure):
 eqs_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(eqs_data_origin_t))),
+    ("data", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_double)))),
     ("shape", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(eqs_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),

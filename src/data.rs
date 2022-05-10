@@ -76,6 +76,16 @@ pub struct eqs_array_t {
         origin: *mut eqs_data_origin_t
     ) -> eqs_status_t>,
 
+    /// Get a pointer to the underlying data storage.
+    ///
+    /// This function is allowed to fail if the data is not accessible in RAM,
+    /// not stored as 64-bit floating point values, or not stored as a
+    /// C-contiguous array.
+    data: Option<unsafe extern fn(
+        array: *const c_void,
+        data: *mut *const f64,
+    ) -> eqs_status_t>,
+
     /// Get the shape of the array managed by this `eqs_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`.
@@ -194,23 +204,24 @@ impl Clone for eqs_array_t {
 }
 
 impl eqs_array_t {
-    /// Create an `eqs_array_t` from a Rust implementation of the `DataStorage`
+    /// Create an `eqs_array_t` from a Rust implementation of the `Array`
     /// trait.
-    pub fn new(value: Box<dyn DataStorage>) -> eqs_array_t {
+    pub fn new(value: Box<dyn Array>) -> eqs_array_t {
         // We need to box the box to make sure the pointer is a normal 1-word
         // pointer (`Box<dyn Trait>` contains a 2-words, *fat* pointer which can
         // not be casted to `*mut c_void`)
         let array = Box::new(value);
         eqs_array_t {
             ptr: Box::into_raw(array).cast(),
-            origin: Some(rust_data_origin),
-            shape: Some(rust_data_shape),
-            reshape: Some(rust_data_reshape),
-            swap_axes: Some(rust_data_swap_axes),
-            create: Some(rust_data_create),
-            copy: Some(rust_data_copy),
-            destroy: Some(rust_data_destroy),
-            move_samples_from: Some(rust_data_move_samples_from),
+            origin: Some(rust_array_origin),
+            data: Some(rust_array_data),
+            shape: Some(rust_array_shape),
+            reshape: Some(rust_array_reshape),
+            swap_axes: Some(rust_array_swap_axes),
+            create: Some(rust_array_create),
+            copy: Some(rust_array_copy),
+            destroy: Some(rust_array_destroy),
+            move_samples_from: Some(rust_array_move_samples_from),
         }
     }
 
@@ -221,6 +232,7 @@ impl eqs_array_t {
         eqs_array_t {
             ptr: self.ptr,
             origin: self.origin,
+            data: self.data,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -236,6 +248,7 @@ impl eqs_array_t {
         eqs_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
+            data: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -262,6 +275,38 @@ impl eqs_array_t {
         }
 
         return Ok(origin);
+    }
+
+    /// Get the underlying data for this array.
+    pub fn data(&self) -> Result<&[f64], Error> {
+        let shape = self.shape()?;
+        let mut len = 1;
+        for s in shape {
+            len *= s;
+        }
+
+        let function = self.data.expect("eqs_array_t.data function is NULL");
+
+        let mut data_ptr = std::ptr::null();
+
+        let status = unsafe {
+            function(
+                self.ptr,
+                &mut data_ptr,
+            )
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling eqs_array_t.data failed".into()
+            });
+        }
+
+        let data = unsafe {
+            std::slice::from_raw_parts(data_ptr, len)
+        };
+
+        return Ok(data);
     }
 
     /// Get the shape of this array
@@ -367,7 +412,7 @@ impl eqs_array_t {
 
     /// Set entries in `self` (the current array) taking data from the `input`
     /// array. The `self` array is guaranteed to be created by calling
-    /// `DataStorage::create` with one of the arrays in the same block or tensor
+    /// `Array::create` with one of the arrays in the same block or tensor
     /// map as the `input`.
     ///
     /// The `samples` array indicate where the data should be moved from `input`
@@ -413,7 +458,7 @@ impl eqs_array_t {
             "this array was not create by rust ndarray"
         );
 
-        let array = self.ptr.cast::<Box<dyn DataStorage>>();
+        let array = self.ptr.cast::<Box<dyn Array>>();
         unsafe {
             (*array).as_any().downcast_ref().expect("invalid array type")
         }
@@ -426,7 +471,7 @@ impl eqs_array_t {
             "this array was not create by rust ndarray"
         );
 
-        let array = self.ptr.cast::<Box<dyn DataStorage>>();
+        let array = self.ptr.cast::<Box<dyn Array>>();
         unsafe {
             (*array).as_any_mut().downcast_mut().expect("invalid array type")
         }
@@ -434,16 +479,20 @@ impl eqs_array_t {
 }
 
 /// A rust trait with the same interface as `eqs_array_t`, see this struct for
-/// the documentation
-pub trait DataStorage: std::any::Any{
+/// documentation on all methods.
+pub trait Array: std::any::Any{
+    // TODO: add docs to this trait directly
+
     fn as_any(&self) -> &dyn std::any::Any;
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 
     fn origin(&self) -> DataOrigin;
 
-    fn create(&self, shape: &[usize]) -> Box<dyn DataStorage>;
+    fn create(&self, shape: &[usize]) -> Box<dyn Array>;
 
-    fn copy(&self) -> Box<dyn DataStorage>;
+    fn copy(&self) -> Box<dyn Array>;
+
+    fn data(&self) -> &[f64];
 
     fn shape(&self) -> &[usize];
     fn reshape(&mut self, shape: &[usize]);
@@ -451,36 +500,36 @@ pub trait DataStorage: std::any::Any{
 
     fn move_samples_from(
         &mut self,
-        input: &dyn DataStorage,
+        input: &dyn Array,
         samples: &[eqs_sample_mapping_t],
         properties: Range<usize>,
     );
 }
 
-/// Implementation of `eqs_array_t.origin` using `Box<dyn DataStorage>`
-unsafe extern fn rust_data_origin(
-    data: *const c_void,
+/// Implementation of `eqs_array_t.origin` using `Box<dyn Array>`
+unsafe extern fn rust_array_origin(
+    array: *const c_void,
     origin: *mut eqs_data_origin_t
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data, origin);
-        let data = data.cast::<Box<dyn DataStorage>>();
+        check_pointers!(array, origin);
+        let array = array.cast::<Box<dyn Array>>();
 
-        *origin = (*data).origin();
+        *origin = (*array).origin();
         Ok(())
     })
 }
 
-/// Implementation of `eqs_array_t.shape` using `Box<dyn DataStorage>`
-unsafe extern fn rust_data_shape(
-    data: *const c_void,
+/// Implementation of `eqs_array_t.shape` using `Box<dyn Array>`
+unsafe extern fn rust_array_shape(
+    array: *const c_void,
     shape: *mut *const usize,
     shape_count: *mut usize,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data, shape, shape_count);
-        let data = data.cast::<Box<dyn DataStorage>>();
-        let rust_shape = (*data).shape();
+        check_pointers!(array, shape, shape_count);
+        let array = array.cast::<Box<dyn Array>>();
+        let rust_shape = (*array).shape();
 
         *shape = rust_shape.as_ptr();
         *shape_count = rust_shape.len();
@@ -489,87 +538,100 @@ unsafe extern fn rust_data_shape(
     })
 }
 
-/// Implementation of `eqs_array_t.reshape` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.reshape` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_reshape(
-    data: *mut c_void,
+unsafe extern fn rust_array_reshape(
+    array: *mut c_void,
     shape: *const usize,
     shape_count: usize,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data);
-        let data = data.cast::<Box<dyn DataStorage>>();
+        check_pointers!(array);
+        let array = array.cast::<Box<dyn Array>>();
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        (*data).reshape(shape);
+        (*array).reshape(shape);
         Ok(())
     })
 }
 
-/// Implementation of `eqs_array_t.swap_axes` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.swap_axes` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_swap_axes(
-    data: *mut c_void,
+unsafe extern fn rust_array_swap_axes(
+    array: *mut c_void,
     axis_1: usize,
     axis_2: usize,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data);
-        let data = data.cast::<Box<dyn DataStorage>>();
-        (*data).swap_axes(axis_1, axis_2);
+        check_pointers!(array);
+        let array = array.cast::<Box<dyn Array>>();
+        (*array).swap_axes(axis_1, axis_2);
         Ok(())
     })
 }
 
-/// Implementation of `eqs_array_t.create` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.create` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_create(
-    data: *const c_void,
+unsafe extern fn rust_array_create(
+    array: *const c_void,
     shape: *const usize,
     shape_count: usize,
-    data_storage: *mut eqs_array_t,
+    array_storage: *mut eqs_array_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data, data_storage);
-        let data = data.cast::<Box<dyn DataStorage>>();
+        check_pointers!(array, array_storage);
+        let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        let new_data = (*data).create(shape);
+        let new_array = (*array).create(shape);
 
-        *data_storage = eqs_array_t::new(new_data);
+        *array_storage = eqs_array_t::new(new_array);
 
         Ok(())
     })
 }
 
-
-/// Implementation of `eqs_array_t.copy` using `Box<dyn DataStorage>`
-unsafe extern fn rust_data_copy(
-    data: *const c_void,
-    data_storage: *mut eqs_array_t,
+/// Implementation of `eqs_array_t.data` for `Box<dyn Array>`
+unsafe extern fn rust_array_data(
+    array: *const c_void,
+    data: *mut *const f64,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(data, data_storage);
-        let data = data.cast::<Box<dyn DataStorage>>();
-        *data_storage = eqs_array_t::new((*data).copy());
+        check_pointers!(array, data);
+        let array = array.cast::<Box<dyn Array>>();
+        *data = (*array).data().as_ptr();
+        Ok(())
+    })
+}
+
+
+/// Implementation of `eqs_array_t.copy` using `Box<dyn Array>`
+unsafe extern fn rust_array_copy(
+    array: *const c_void,
+    array_storage: *mut eqs_array_t,
+) -> eqs_status_t {
+    catch_unwind(|| {
+        check_pointers!(array, array_storage);
+        let array = array.cast::<Box<dyn Array>>();
+        *array_storage = eqs_array_t::new((*array).copy());
 
         Ok(())
     })
 }
 
-/// Implementation of `eqs_array_t.destroy` for `Box<dyn DataStorage>`
-unsafe extern fn rust_data_destroy(
-    data: *mut c_void,
+/// Implementation of `eqs_array_t.destroy` for `Box<dyn Array>`
+unsafe extern fn rust_array_destroy(
+    array: *mut c_void,
 ) {
-    if !data.is_null() {
-        let data = data.cast::<Box<dyn DataStorage>>();
-        let boxed = Box::from_raw(data);
+    if !array.is_null() {
+        let array = array.cast::<Box<dyn Array>>();
+        let boxed = Box::from_raw(array);
         std::mem::drop(boxed);
     }
 }
 
-/// Implementation of `eqs_array_t.move_sample` using `Box<dyn DataStorage>`
+/// Implementation of `eqs_array_t.move_sample` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_data_move_samples_from(
+unsafe extern fn rust_array_move_samples_from(
     output: *mut c_void,
     input: *const c_void,
     samples: *const eqs_sample_mapping_t,
@@ -579,8 +641,8 @@ unsafe extern fn rust_data_move_samples_from(
 ) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(output, input);
-        let output = output.cast::<Box<dyn DataStorage>>();
-        let input = input.cast::<Box<dyn DataStorage>>();
+        let output = output.cast::<Box<dyn Array>>();
+        let input = input.cast::<Box<dyn Array>>();
 
         let samples = std::slice::from_raw_parts(samples, samples_count);
         (*output).move_samples_from(&**input, samples, property_start..property_end);
@@ -598,7 +660,7 @@ static NDARRAY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
 
 
 #[cfg(feature = "ndarray")]
-impl DataStorage for ndarray::ArrayD<f64> {
+impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -611,12 +673,16 @@ impl DataStorage for ndarray::ArrayD<f64> {
         return *NDARRAY_DATA_ORIGIN;
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn DataStorage> {
+    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
         return Box::new(ndarray::Array::from_elem(shape, 0.0));
     }
 
-    fn copy(&self) -> Box<dyn DataStorage> {
+    fn copy(&self) -> Box<dyn Array> {
         return Box::new(self.clone());
+    }
+
+    fn data(&self) -> &[f64] {
+        return self.as_slice().expect("array is not contiguous")
     }
 
     fn shape(&self) -> &[usize] {
@@ -635,7 +701,7 @@ impl DataStorage for ndarray::ArrayD<f64> {
 
     fn move_samples_from(
         &mut self,
-        input: &dyn DataStorage,
+        input: &dyn Array,
         samples: &[eqs_sample_mapping_t],
         property: Range<usize>,
     ) {
@@ -671,7 +737,7 @@ mod tests {
         register_data_origin("dummy test data".into())
     });
 
-    /// An implementation of the `DataStorage` trait without any data. This only
+    /// An implementation of the `Array` trait without any data. This only
     /// tracks the shape of the array.
     pub struct TestArray {
         shape: Vec<usize>,
@@ -683,7 +749,7 @@ mod tests {
         }
     }
 
-    impl DataStorage for TestArray {
+    impl Array for TestArray {
         fn as_any(&self) -> &dyn std::any::Any {
             self
         }
@@ -696,11 +762,15 @@ mod tests {
             *DUMMY_DATA_ORIGIN
         }
 
-        fn create(&self, shape: &[usize]) -> Box<dyn DataStorage> {
+        fn data(&self) -> &[f64] {
+            unimplemented!()
+        }
+
+        fn create(&self, shape: &[usize]) -> Box<dyn Array> {
             Box::new(TestArray { shape: shape.to_vec() })
         }
 
-        fn copy(&self) -> Box<dyn DataStorage> {
+        fn copy(&self) -> Box<dyn Array> {
             Box::new(TestArray { shape: self.shape.clone() })
         }
 
@@ -716,7 +786,7 @@ mod tests {
             self.shape.swap(axis_1, axis_2);
         }
 
-        fn move_samples_from(&mut self, _: &dyn DataStorage, _: &[eqs_sample_mapping_t], _: Range<usize>) {
+        fn move_samples_from(&mut self, _: &dyn Array, _: &[eqs_sample_mapping_t], _: Range<usize>) {
             unimplemented!()
         }
     }
