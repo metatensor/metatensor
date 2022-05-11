@@ -11,7 +11,22 @@ use super::status::{eqs_status_t, catch_unwind};
 
 /// Opaque type representing a `TensorMap`.
 #[allow(non_camel_case_types)]
-pub struct eqs_tensormap_t(pub(crate) TensorMap);
+pub struct eqs_tensormap_t(TensorMap);
+
+impl eqs_tensormap_t {
+    /// Create a raw pointer to `eqs_tensormap_t` using a rust Box
+    pub fn into_boxed_raw(tensor: TensorMap) -> *mut eqs_tensormap_t {
+        let boxed = Box::new(eqs_tensormap_t(tensor));
+        return Box::into_raw(boxed);
+    }
+
+    /// Take a raw pointer created by `eqs_tensormap_t::into_boxed_raw` and
+    /// extract the TensorMap. The pointer is consumed by this function and no
+    /// longer valid.
+    pub unsafe fn from_boxed_raw(tensor: *mut eqs_tensormap_t) -> TensorMap {
+        return Box::from_raw(tensor).0;
+    }
+}
 
 impl std::ops::Deref for eqs_tensormap_t {
     type Target = TensorMap;
@@ -72,12 +87,11 @@ pub unsafe extern fn eqs_tensormap(
         }).collect();
 
         let tensor = TensorMap::new(keys, blocks_vec)?;
-        let boxed = Box::new(eqs_tensormap_t(tensor));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        *(unwind_wrapper.0) = eqs_tensormap_t::into_boxed_raw(tensor);
         Ok(())
     });
 
@@ -100,12 +114,10 @@ pub unsafe extern fn eqs_tensormap(
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn eqs_tensormap_free(
-    tensor: *mut eqs_tensormap_t,
-) -> eqs_status_t {
+pub unsafe extern fn eqs_tensormap_free(tensor: *mut eqs_tensormap_t) -> eqs_status_t {
     catch_unwind(|| {
         if !tensor.is_null() {
-            std::mem::drop(Box::from_raw(tensor));
+            std::mem::drop(eqs_tensormap_t::from_boxed_raw(tensor));
         }
 
         Ok(())
