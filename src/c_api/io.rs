@@ -28,12 +28,11 @@ pub unsafe extern fn eqs_tensormap_load(
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufReader::new(File::open(path)?);
         let tensor = crate::io::load(file)?;
-        let boxed = Box::new(eqs_tensormap_t(tensor));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        *(unwind_wrapper.0) = eqs_tensormap_t::into_boxed_raw(tensor);
         Ok(())
     });
 
