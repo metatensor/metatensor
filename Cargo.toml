@@ -27,5 +27,5 @@ default = []
 serialization = ["ndarray", "py_literal", "byteorder", "num-traits", "zip"]
 
 [build-dependencies]
-cbindgen = "0.20"
+cbindgen = "0.23"
 glob = "0.3"

@@ -14,21 +14,25 @@ jobs:
     strategy:
       matrix:
         include:
+          # test without any feature
           - os: ubuntu-18.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
-            # test without any feature
+
           - os: ubuntu-18.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: release
             cargo-build-flags: --release --all-features
+
+          # MSRV (Minimally Supported Rust Version)
           - os: ubuntu-18.04
-            rust-version: 1.53
+            rust-version: 1.54
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
+
           # check the build on a stock Ubuntu 18.04, including cmake 3.10
           - os: ubuntu-18.04
             rust-version: from Ubuntu
@@ -36,6 +40,7 @@ jobs:
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
+
           - os: macos-10.15
             rust-version: stable
             rust-target: x86_64-apple-darwin
