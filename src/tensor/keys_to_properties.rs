@@ -77,7 +77,7 @@ impl TensorMap {
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
                 selection.add(entry.to_vec());
 
-                let matching = self.find_matching_blocks(&selection.finish())?;
+                let matching = self.blocks_matching(&selection.finish())?;
                 let blocks_to_merge = matching.iter()
                     .map(|&i| {
                         let block = &self.blocks[i];
