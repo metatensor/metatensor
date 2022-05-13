@@ -186,7 +186,6 @@ mod tests_utils_ndarray {
 
     use crate::labels::{LabelsBuilder, LabelValue};
     use crate::{TensorBlock, TensorMap};
-    use crate::eqs_array_t;
 
     use ndarray::ArrayD;
 
@@ -204,7 +203,7 @@ mod tests_utils_ndarray {
 
         let shape = vec![samples.count(), components.count(), properties.count()];
         let mut block = TensorBlock::new(
-            eqs_array_t::new(Box::new(ArrayD::from_elem(shape, values))),
+            ArrayD::from_elem(shape, values),
             samples,
             vec![components.clone()],
             properties.clone(),
@@ -215,7 +214,7 @@ mod tests_utils_ndarray {
         let shape = vec![gradient_samples.count(), components.count(), properties.count()];
         block.add_gradient(
             "parameter",
-            eqs_array_t::new(Box::new(ArrayD::from_elem(shape, gradient_values))),
+            ArrayD::from_elem(shape, gradient_values),
             gradient_samples,
             vec![components],
         ).unwrap();
