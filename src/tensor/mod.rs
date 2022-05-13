@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{TensorBlock, Error, BasicBlock};
-use crate::{Labels, LabelValue};
+use crate::{TensorBlock, BasicBlock};
+use crate::{Labels, Error};
 
 mod utils;
 
@@ -155,49 +155,12 @@ impl TensorMap {
         &self.keys
     }
 
-    /// Get an iterator over the keys and associated block
-    pub fn iter(&self) -> impl Iterator<Item=(&[LabelValue], &TensorBlock)> + '_ {
-        self.keys.iter().zip(&self.blocks)
-    }
-
-    /// Get the list of blocks matching the given selection. The selection must
-    /// contains a single entry, defining the requested key. The selection can
-    /// contain only a subset of the variables defined in the keys, in which
-    /// case there can be multiple matching blocks.
-    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<&TensorBlock>, Error> {
-        let matching = self.find_matching_blocks(selection)?;
-
-        return Ok(matching.into_iter().map(|i| &self.blocks[i]).collect());
-    }
-
-    /// Get a reference to the block matching the given selection.
+    /// Get the index of blocks matching the given selection.
     ///
-    /// The selection behaves similarly to `blocks_matching`, with the exception
-    /// that this function returns an error if there is more than one matching
-    /// block.
-    pub fn block(&self, selection: &Labels) -> Result<&TensorBlock, Error> {
-        let matching = self.find_matching_blocks(selection)?;
-        if matching.len() != 1 {
-            let selection_str = selection.names()
-                .iter().zip(&selection[0])
-                .map(|(name, value)| format!("{} = {}", name, value))
-                .collect::<Vec<_>>()
-                .join(", ");
-
-
-            return Err(Error::InvalidParameter(format!(
-                "{} blocks matched the selection ({}), expected only one",
-                matching.len(), selection_str
-            )));
-        }
-
-        return Ok(&self.blocks[matching[0]]);
-    }
-
-    /// Actual implementation of `blocks_matching` and related functions, this
-    /// function finds the matching blocks & return their index in the
-    /// `self.blocks` vector.
-    fn find_matching_blocks(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
+    /// The selection must contains a single entry, defining the requested key
+    /// or keys. If the selection contains only a subset of the variables of the
+    /// keys, there can be multiple matching blocks.
+    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
         if selection.size() == 0 {
             return Ok((0..self.blocks().len()).collect());
         }
@@ -244,6 +207,43 @@ impl TensorMap {
         return Ok(matching);
     }
 
+    /// Get the index of the single block matching the given selection.
+    ///
+    /// This function is similar to [`TensorMap::blocks_id`], but also returns
+    /// an error if more than one block matches the selection.
+    pub fn block_matching(&self, selection: &Labels) -> Result<usize, Error> {
+        let matching = self.blocks_matching(selection)?;
+        if matching.len() != 1 {
+            let selection_str = selection.names()
+                .iter().zip(&selection[0])
+                .map(|(name, value)| format!("{} = {}", name, value))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+
+            if matching.is_empty() {
+                return Err(Error::InvalidParameter(format!(
+                    "no blocks matched the selection ({})", selection_str
+                )));
+            } else {
+                return Err(Error::InvalidParameter(format!(
+                    "{} blocks matched the selection ({}), expected only one",
+                    matching.len(), selection_str
+                )));
+            }
+        }
+
+        return Ok(matching[0])
+    }
+
+    /// Get a reference to the block matching the given selection.
+    ///
+    /// This function uses [`TensorMap::blocks_matching`] under the hood to find the
+    /// matching block.
+    pub fn block(&self, selection: &Labels) -> Result<&TensorBlock, Error> {
+        return Ok(&self.blocks[self.block_matching(selection)?]);
+    }
+
     /// Move the given variables from the component labels to the property labels
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
@@ -262,7 +262,7 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::EmptyArray;
+    use crate::{EmptyArray, LabelsBuilder};
 
     use super::*;
     use super::utils::example_labels;
@@ -392,5 +392,63 @@ mod tests {
         );
 
         // TODO: check error messages for gradients
+    }
+
+    #[test]
+    fn blocks_matching() {
+        let mut blocks = Vec::new();
+        for _ in 0..6 {
+            blocks.push(TensorBlock::new(
+                EmptyArray::new(vec![1, 1]),
+                example_labels(vec!["samples"], vec![[0]]),
+                vec![],
+                example_labels(vec!["properties"], vec![[0]]),
+            ).unwrap());
+        }
+
+        let keys = example_labels(vec!["key_1", "key_2"], vec![
+            [0, 1], [0, 2], [1, 1],
+            [1, 2], [3, 0], [4, 3],
+        ]);
+
+        let tensor = TensorMap::new((&*keys).clone(), blocks).unwrap();
+
+        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        selection.add(&[1, 1]);
+        assert_eq!(
+            tensor.blocks_matching(&selection.finish()).unwrap(),
+            [2]
+        );
+
+        let mut selection = LabelsBuilder::new(vec!["key_1"]);
+        selection.add(&[1]);
+        assert_eq!(
+            tensor.blocks_matching(&selection.finish()).unwrap(),
+            [2, 3]
+        );
+
+        let selection = LabelsBuilder::new(vec!["key_1"]);
+        let result = tensor.blocks_matching(&selection.finish());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: block selection labels must contain a single row, got 0"
+        );
+
+        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        selection.add(&[3, 4]);
+        selection.add(&[1, 2]);
+        let result = tensor.blocks_matching(&selection.finish());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: block selection labels must contain a single row, got 2"
+        );
+
+        let mut selection = LabelsBuilder::new(vec!["key_3"]);
+        selection.add(&[1]);
+        let result = tensor.blocks_matching(&selection.finish());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: 'key_3' is not part of the keys for this tensor"
+        );
     }
 }
