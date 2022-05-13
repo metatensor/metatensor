@@ -478,6 +478,12 @@ impl eqs_array_t {
     }
 }
 
+impl<A: Array> From<A> for eqs_array_t {
+    fn from(array: A) -> Self {
+        eqs_array_t::new(Box::new(array))
+    }
+}
+
 /// A rust trait with the same interface as `eqs_array_t`, see this struct for
 /// documentation on all methods.
 pub trait Array: std::any::Any{
@@ -726,70 +732,70 @@ impl Array for ndarray::ArrayD<f64> {
 
 /******************************************************************************/
 
-#[cfg(test)]
-pub use self::tests::TestArray;
+static DUMMY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
+    register_data_origin("rust.EmptyArray".into())
+});
+
+/// An implementation of the `Array` trait without any data. This only
+/// tracks the shape of the array.
+pub struct EmptyArray {
+    shape: Vec<usize>,
+}
+
+impl EmptyArray {
+    /// Create a new `EmptyArray` with the given shape.
+    pub fn new(shape: Vec<usize>) -> EmptyArray {
+        EmptyArray { shape }
+    }
+}
+
+impl Array for EmptyArray {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    fn origin(&self) -> crate::DataOrigin {
+        *DUMMY_DATA_ORIGIN
+    }
+
+    fn data(&self) -> &[f64] {
+        panic!("can not call Array::data() for EmptyArray");
+    }
+
+    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
+        Box::new(EmptyArray { shape: shape.to_vec() })
+    }
+
+    fn copy(&self) -> Box<dyn Array> {
+        Box::new(EmptyArray { shape: self.shape.clone() })
+    }
+
+    fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+
+    fn reshape(&mut self, shape: &[usize]) {
+        self.shape = shape.to_vec();
+    }
+
+    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
+        self.shape.swap(axis_1, axis_2);
+    }
+
+    fn move_samples_from(&mut self, _: &dyn Array, _: &[eqs_sample_mapping_t], _: Range<usize>) {
+        panic!("can not call Array::move_samples_from() for EmptyArray");
+    }
+}
+
+/******************************************************************************/
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    static DUMMY_DATA_ORIGIN: Lazy<DataOrigin> = Lazy::new(|| {
-        register_data_origin("dummy test data".into())
-    });
-
-    /// An implementation of the `Array` trait without any data. This only
-    /// tracks the shape of the array.
-    pub struct TestArray {
-        shape: Vec<usize>,
-    }
-
-    impl TestArray {
-        pub fn new(shape: Vec<usize>) -> TestArray {
-            TestArray { shape }
-        }
-    }
-
-    impl Array for TestArray {
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
-
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-            self
-        }
-
-        fn origin(&self) -> crate::DataOrigin {
-            *DUMMY_DATA_ORIGIN
-        }
-
-        fn data(&self) -> &[f64] {
-            unimplemented!()
-        }
-
-        fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-            Box::new(TestArray { shape: shape.to_vec() })
-        }
-
-        fn copy(&self) -> Box<dyn Array> {
-            Box::new(TestArray { shape: self.shape.clone() })
-        }
-
-        fn shape(&self) -> &[usize] {
-            &self.shape
-        }
-
-        fn reshape(&mut self, shape: &[usize]) {
-            self.shape = shape.to_vec();
-        }
-
-        fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-            self.shape.swap(axis_1, axis_2);
-        }
-
-        fn move_samples_from(&mut self, _: &dyn Array, _: &[eqs_sample_mapping_t], _: Range<usize>) {
-            unimplemented!()
-        }
-    }
 
     #[test]
     fn data_origin() {
@@ -802,11 +808,11 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data = eqs_array_t::new(Box::new(TestArray::new(vec![3, 4, 5])));
+        let data: eqs_array_t = EmptyArray::new(vec![3, 4, 5]).into();
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
-            "eqs_array_t {{ ptr: {:?}, origin: Some(\"dummy test data\"), shape: Some([3, 4, 5]) }}",
+            "eqs_array_t {{ ptr: {:?}, origin: Some(\"rust.EmptyArray\"), shape: Some([3, 4, 5]) }}",
             data.ptr
         ));
     }
@@ -819,7 +825,7 @@ mod tests {
 
         #[test]
         fn shape() {
-            let mut data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0)));
+            let mut data: eqs_array_t = ArrayD::from_elem(vec![3, 4, 2], 1.0).into();
 
             assert_eq!(data.shape().unwrap(), [3, 4, 2]);
             data.reshape(&[12, 2]).unwrap();
@@ -832,7 +838,7 @@ mod tests {
 
         #[test]
         fn create() {
-            let data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![4, 2], 1.0)));
+            let data: eqs_array_t = ArrayD::from_elem(vec![4, 2], 1.0).into();
 
             assert_eq!(get_data_origin(data.origin().unwrap()), "rust.ndarray");
             assert_eq!(data.as_array(), ArrayD::from_elem(vec![4, 2], 1.0));
@@ -845,7 +851,7 @@ mod tests {
 
         #[test]
         fn move_samples_from() {
-            let data = eqs_array_t::new(Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)));
+            let data: eqs_array_t = ArrayD::from_elem(vec![3, 2, 2, 4], 1.0).into();
 
             let mut other = data.create(&[1, 2, 2, 8]).unwrap();
             assert_eq!(other.as_array(), ArrayD::from_elem(vec![1, 2, 2, 8], 0.0));

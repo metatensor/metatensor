@@ -84,7 +84,6 @@ pub fn load<R: std::io::Read + std::io::Seek>(reader: R) -> Result<TensorMap, Er
         let properties_file = archive.by_name(&path).map_err(|e| (path, e))?;
         let properties = Arc::new(read_npy_labels(properties_file)?);
 
-        let data = eqs_array_t::new(Box::new(data));
         let mut block = TensorBlock::new(data, samples, components, properties)?;
 
         for parameter in &parameters {
@@ -103,7 +102,6 @@ pub fn load<R: std::io::Read + std::io::Seek>(reader: R) -> Result<TensorMap, Er
                 components.push(Arc::new(read_npy_labels(component_file)?));
             }
 
-            let data = eqs_array_t::new(Box::new(data));
             block.add_gradient(parameter, data, samples, components)?;
         }
 

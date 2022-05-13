@@ -262,8 +262,7 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::eqs_array_t;
-    use crate::data::TestArray;
+    use crate::EmptyArray;
 
     use super::*;
     use super::utils::example_labels;
@@ -272,14 +271,14 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            EmptyArray::new(vec![1, 1, 1]),
             example_labels(vec!["samples"], vec![[0]]),
             vec![example_labels(vec!["components"], vec![[0]])],
             example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
+            EmptyArray::new(vec![2, 3, 1]),
             example_labels(vec!["samples"], vec![[0], [1]]),
             vec![example_labels(vec!["components"], vec![[0], [1], [2]])],
             example_labels(vec!["properties"], vec![[0]]),
@@ -293,14 +292,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
+            EmptyArray::new(vec![1, 1]),
             example_labels(vec!["samples"], vec![[0]]),
             vec![],
             example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            EmptyArray::new(vec![2, 1]),
             example_labels(vec!["something_else"], vec![[0], [1]]),
             vec![],
             example_labels(vec!["properties"], vec![[0]]),
@@ -318,14 +317,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            EmptyArray::new(vec![1, 1, 1]),
             example_labels(vec!["samples"], vec![[0]]),
             vec![example_labels(vec!["components"], vec![[0]])],
             example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            EmptyArray::new(vec![2, 1]),
             example_labels(vec!["samples"], vec![[0], [1]]),
             vec![],
             example_labels(vec!["properties"], vec![[0]]),
@@ -344,14 +343,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1, 1]))),
+            EmptyArray::new(vec![1, 1, 1]),
             example_labels(vec!["samples"], vec![[0]]),
             vec![example_labels(vec!["components"], vec![[0]])],
             example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![2, 3, 1]))),
+            EmptyArray::new(vec![2, 3, 1]),
             example_labels(vec!["samples"], vec![[0], [1]]),
             vec![example_labels(vec!["something_else"], vec![[0], [1], [2]])],
             example_labels(vec!["properties"], vec![[0]]),
@@ -369,14 +368,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![1, 1]))),
+            EmptyArray::new(vec![1, 1]),
             example_labels(vec!["samples"], vec![[0]]),
             vec![],
             example_labels(vec!["properties"], vec![[0]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            eqs_array_t::new(Box::new(TestArray::new(vec![2, 1]))),
+            EmptyArray::new(vec![2, 1]),
             example_labels(vec!["samples"], vec![[0], [1]]),
             vec![],
             example_labels(vec!["something_else"], vec![[0]]),
