@@ -65,7 +65,7 @@ impl TensorMap {
         } else {
             for entry in splitted_keys.new_keys.iter() {
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
-                selection.add(entry.to_vec());
+                selection.add(entry);
 
                 let matching = self.blocks_matching(&selection.finish())?;
                 let blocks_to_merge = matching.iter()
@@ -318,7 +318,7 @@ mod tests {
     fn user_provided_entries() {
         let mut tensor = example_tensor();
         let mut keys_to_move = LabelsBuilder::new(vec!["key_2"]);
-        keys_to_move.add(vec![3.into()]);
+        keys_to_move.add(&[3.into()]);
         let result = tensor.keys_to_samples(&keys_to_move.finish(), false);
 
         assert_eq!(

@@ -139,12 +139,13 @@ impl BasicBlock {
             .chain(old_properties.names().iter())
             .copied()
             .collect();
+
         let mut new_properties_builder = LabelsBuilder::new(new_property_names);
         for new_property in moved_component.iter() {
             for old_property in old_properties.iter() {
                 let mut property = new_property.to_vec();
-                property.extend_from_slice(old_property);
-                new_properties_builder.add(property);
+                property.extend_from_slice(&*old_property);
+                new_properties_builder.add(&property);
             }
         }
         let new_properties = new_properties_builder.finish();
@@ -311,7 +312,7 @@ mod tests {
     fn example_labels(name: &str, count: usize) -> Arc<Labels> {
         let mut labels = LabelsBuilder::new(vec![name]);
         for i in 0..count {
-            labels.add(vec![LabelValue::from(i)]);
+            labels.add(&[LabelValue::from(i)]);
         }
         return Arc::new(labels.finish());
     }
@@ -395,7 +396,7 @@ mod tests {
 
         let data = EmptyArray::new(vec![3, 1, 2]);
         let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
-        components.add(vec![LabelValue::from(0), LabelValue::from(1)]);
+        components.add(&[LabelValue::from(0), LabelValue::from(1)]);
 
         let result = TensorBlock::new(data, samples, vec![Arc::new(components.finish())], properties);
         assert_eq!(
@@ -418,9 +419,9 @@ mod tests {
 
             let gradient = EmptyArray::new(vec![3, 7]);
             let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]);
-            gradient_samples.add(vec![LabelValue::new(0), LabelValue::new(0)]);
-            gradient_samples.add(vec![LabelValue::new(1), LabelValue::new(1)]);
-            gradient_samples.add(vec![LabelValue::new(3), LabelValue::new(-2)]);
+            gradient_samples.add(&[LabelValue::new(0), LabelValue::new(0)]);
+            gradient_samples.add(&[LabelValue::new(1), LabelValue::new(1)]);
+            gradient_samples.add(&[LabelValue::new(3), LabelValue::new(-2)]);
             let gradient_samples = Arc::new(gradient_samples.finish());
             block.add_gradient("foo", gradient, gradient_samples, vec![]).unwrap();
 
@@ -492,8 +493,8 @@ mod tests {
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
-            grad_samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
-            grad_samples.add(vec![LabelValue::new(1), LabelValue::new(2)]);
+            grad_samples.add(&[LabelValue::new(0), LabelValue::new(2)]);
+            grad_samples.add(&[LabelValue::new(1), LabelValue::new(2)]);
             let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
@@ -554,9 +555,9 @@ mod tests {
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
-            grad_samples.add(vec![LabelValue::new(0), LabelValue::new(2)]);
-            grad_samples.add(vec![LabelValue::new(0), LabelValue::new(3)]);
-            grad_samples.add(vec![LabelValue::new(1), LabelValue::new(2)]);
+            grad_samples.add(&[LabelValue::new(0), LabelValue::new(2)]);
+            grad_samples.add(&[LabelValue::new(0), LabelValue::new(3)]);
+            grad_samples.add(&[LabelValue::new(1), LabelValue::new(2)]);
             let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
