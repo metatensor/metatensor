@@ -10,7 +10,7 @@
 
 mod utils;
 mod labels;
-pub use self::labels::{LabelValue, Labels, LabelsBuilder};
+pub use self::labels::{LabelsBuilder, LabelValue, Labels};
 
 mod data;
 pub use self::data::{eqs_array_t, eqs_sample_mapping_t, eqs_data_origin_t};

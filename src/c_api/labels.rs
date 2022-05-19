@@ -51,7 +51,7 @@ impl std::convert::TryFrom<&eqs_labels_t> for Labels {
             let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
             if !slice.is_empty() {
                 for chunk in slice.chunks_exact(labels.size) {
-                    builder.add(chunk.to_vec());
+                    builder.add(chunk);
                 }
             }
         }

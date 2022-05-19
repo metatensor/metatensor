@@ -75,7 +75,7 @@ impl TensorMap {
         } else {
             for entry in splitted_keys.new_keys.iter() {
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
-                selection.add(entry.to_vec());
+                selection.add(entry);
 
                 let matching = self.blocks_matching(&selection.finish())?;
                 let blocks_to_merge = matching.iter()
@@ -179,7 +179,7 @@ fn merge_blocks_along_properties(
         .collect();
     let mut new_properties_builder = LabelsBuilder::new(new_property_names);
     for property in new_properties {
-        new_properties_builder.add(property);
+        new_properties_builder.add(&property);
     }
 
     let new_components = first_block.values.components().to_vec();
@@ -388,7 +388,7 @@ mod tests {
     fn user_provided_entries_different_properties() {
         let mut tensor = example_tensor();
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(vec![0_i32.into()]);
+        keys_to_move.add(&[0_i32.into()]);
         let result = tensor.keys_to_properties(&keys_to_move.finish(), false);
 
         assert_eq!(
@@ -429,9 +429,9 @@ mod tests {
         ));
 
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
-        keys.add(vec![LabelValue::new(0), LabelValue::new(0)]);
-        keys.add(vec![LabelValue::new(1), LabelValue::new(0)]);
-        keys.add(vec![LabelValue::new(0), LabelValue::new(1)]);
+        keys.add(&[LabelValue::new(0), LabelValue::new(0)]);
+        keys.add(&[LabelValue::new(1), LabelValue::new(0)]);
+        keys.add(&[LabelValue::new(0), LabelValue::new(1)]);
         let keys = keys.finish();
 
         return TensorMap::new(keys, blocks).unwrap();
@@ -443,8 +443,8 @@ mod tests {
         let initial_tensor = example_tensor_same_properties_in_all_blocks();
 
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(vec![0_i32.into()]);
-        keys_to_move.add(vec![1_i32.into()]);
+        keys_to_move.add(&[LabelValue::new(0)]);
+        keys_to_move.add(&[LabelValue::new(1)]);
         let mut tensor = initial_tensor.clone();
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
@@ -500,7 +500,7 @@ mod tests {
 
         // only keep a subset of the data
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(vec![0_i32.into()]);
+        keys_to_move.add(&[LabelValue::new(0)]);
         let mut tensor = initial_tensor.clone();
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
@@ -549,9 +549,9 @@ mod tests {
 
         // request keys not present in the input
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(vec![0_i32.into()]);
-        keys_to_move.add(vec![1_i32.into()]);
-        keys_to_move.add(vec![2_i32.into()]);
+        keys_to_move.add(&[LabelValue::new(0)]);
+        keys_to_move.add(&[LabelValue::new(1)]);
+        keys_to_move.add(&[LabelValue::new(2)]);
         let mut tensor = initial_tensor;
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 

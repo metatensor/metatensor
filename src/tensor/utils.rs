@@ -58,7 +58,7 @@ pub fn remove_variables_from_keys(keys: &Labels, variables: &[&str]) -> Result<R
 
         let mut remaining_keys_builder = LabelsBuilder::new(remaining_names);
         for entry in remaining_keys {
-            remaining_keys_builder.add(entry);
+            remaining_keys_builder.add(&entry);
         }
         remaining_keys_builder.finish()
     };
@@ -98,7 +98,7 @@ pub fn merge_gradient_samples(
 
     let mut new_gradient_samples_builder = LabelsBuilder::new(new_gradient_samples_names.expect("missing gradient samples names"));
     for sample in new_gradient_samples {
-        new_gradient_samples_builder.add(sample);
+        new_gradient_samples_builder.add(&sample);
     }
 
     return Arc::new(new_gradient_samples_builder.finish());
@@ -131,7 +131,7 @@ pub fn merge_samples(
 
     let mut merged_samples_builder = LabelsBuilder::new(new_sample_names);
     for sample in merged_samples {
-        merged_samples_builder.add(sample);
+        merged_samples_builder.add(&sample);
     }
 
     let merged_samples = Arc::new(merged_samples_builder.finish());
@@ -173,7 +173,7 @@ mod tests_utils {
     pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Arc<Labels> {
         let mut labels = LabelsBuilder::new(names);
         for entry in values {
-            labels.add(entry.iter().copied().map(LabelValue::from).collect());
+            labels.add(&entry.iter().copied().map(LabelValue::from).collect::<Vec<_>>());
         }
         return Arc::new(labels.finish());
     }
@@ -262,10 +262,10 @@ mod tests_utils_ndarray {
         );
 
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
-        keys.add(vec![LabelValue::new(0), LabelValue::new(0)]);
-        keys.add(vec![LabelValue::new(1), LabelValue::new(0)]);
-        keys.add(vec![LabelValue::new(2), LabelValue::new(2)]);
-        keys.add(vec![LabelValue::new(2), LabelValue::new(3)]);
+        keys.add(&[LabelValue::new(0), LabelValue::new(0)]);
+        keys.add(&[LabelValue::new(1), LabelValue::new(0)]);
+        keys.add(&[LabelValue::new(2), LabelValue::new(2)]);
+        keys.add(&[LabelValue::new(2), LabelValue::new(3)]);
         let keys = keys.finish();
 
         return TensorMap::new(keys, vec![block_1, block_2, block_3, block_4]).unwrap();
