@@ -33,8 +33,12 @@ impl std::convert::TryFrom<&eqs_labels_t> for Labels {
     type Error = Error;
 
     fn try_from(labels: &eqs_labels_t) -> Result<Labels, Self::Error> {
-        if labels.names.is_null() || labels.values.is_null() {
-            return Err(Error::InvalidParameter("labels.names and labels.values can not be NULL in eqs_labels_t".into()))
+        if labels.names.is_null() {
+            return Err(Error::InvalidParameter("labels.names can not be NULL in eqs_labels_t".into()))
+        }
+
+        if labels.values.is_null() && labels.count > 0 {
+            return Err(Error::InvalidParameter("labels.values is NULL but labels.count is >0 in eqs_labels_t".into()))
         }
 
         let mut names = Vec::new();
