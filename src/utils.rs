@@ -56,9 +56,10 @@ impl Clone for ConstCString {
     }
 }
 
-// SAFETY: Sync is ok since `ConstCString` is immutable, so sharing it between
-// threads causes no issue
+// SAFETY: `ConstCString` is immutable, so sharing between threads causes no
+// issue
 unsafe impl Sync for ConstCString {}
+unsafe impl Send for ConstCString {}
 
 impl std::fmt::Debug for ConstCString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

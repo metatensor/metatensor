@@ -9,7 +9,8 @@
 
 
 mod utils;
-mod labels;
+
+pub mod labels;
 pub use self::labels::{LabelsBuilder, LabelValue, Labels};
 
 mod data;
@@ -20,7 +21,7 @@ pub use self::data::{Array, EmptyArray};
 mod blocks;
 pub use self::blocks::{BasicBlock, TensorBlock, TensorBlockRefMut};
 
-mod tensor;
+pub mod tensor;
 pub use self::tensor::TensorMap;
 
 #[doc(hidden)]

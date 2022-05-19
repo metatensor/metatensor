@@ -279,15 +279,6 @@ impl Labels {
         return self.values.len() / self.size();
     }
 
-    /// Iterate over the rows in this set of labels
-    pub fn iter(&self) -> Iter {
-        debug_assert!(self.values.len() % self.names.len() == 0);
-        return Iter {
-            size: self.names.len(),
-            values: &self.values
-        };
-    }
-
     /// Check whether the given `label` is part of this set of labels
     pub fn contains(&self, label: &[LabelValue]) -> bool {
         self.positions.contains_key(label)
@@ -300,30 +291,113 @@ impl Labels {
 
         self.positions.get(value).copied()
     }
+
+    /// Iterate over the entries in this set of labels
+    pub fn iter(&self) -> Iter {
+        debug_assert!(self.values.len() % self.names.len() == 0);
+        return Iter {
+            chunks: self.values.chunks_exact(self.names.len())
+        };
+    }
+
+    /// Iterate over the entries in this set of labels in parallel
+    #[cfg(feature = "rayon")]
+    pub fn par_iter(&self) -> ParIter {
+        use rayon::prelude::*;
+        debug_assert!(self.values.len() % self.names.len() == 0);
+        return ParIter {
+            chunks: self.values.par_chunks_exact(self.names.len())
+        };
+    }
+
+    /// Iterate over the entries in this set of labels as fixed-size arrays
+    pub fn iter_fixed_size<const N: usize>(&self) -> FixedSizeIter<N> {
+        debug_assert!(self.values.len() % self.names.len() == 0);
+        assert!(N == self.size(),
+            "wrong label size in `iter_fixed_size`: the entries contains {} element\
+            but this function was called with size of {}",
+            self.size(), N
+        );
+
+        return FixedSizeIter {
+            values: &self.values
+        };
+    }
 }
 
-/// An iterator over `Labels`
+/// iterator over `Labels` entries
 pub struct Iter<'a> {
-    size: usize,
-    values: &'a [LabelValue],
+    chunks: std::slice::ChunksExact<'a, LabelValue>,
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = &'a[LabelValue];
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.values.is_empty() {
-            return None
-        }
+    type Item = &'a [LabelValue];
 
-        let (value, rest) = self.values.split_at(self.size);
-        self.values = rest;
-        return Some(value);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.chunks.next()
     }
 }
 
 impl<'a> ExactSizeIterator for Iter<'a> {
     fn len(&self) -> usize {
-        self.values.len() / self.size
+        self.chunks.len()
+    }
+}
+
+/// Parallel iterator over entries in a set of `Labels`
+#[cfg(feature = "rayon")]
+pub struct ParIter<'a> {
+    chunks: rayon::slice::ChunksExact<'a, LabelValue>,
+}
+
+#[cfg(feature = "rayon")]
+impl<'a> rayon::iter::ParallelIterator for ParIter<'a> {
+    type Item = &'a [LabelValue];
+
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where
+        C: rayon::iter::plumbing::UnindexedConsumer<Self::Item> {
+        self.chunks.drive_unindexed(consumer)
+    }
+}
+
+#[cfg(feature = "rayon")]
+impl<'a> rayon::iter::IndexedParallelIterator for ParIter<'a> {
+    fn len(&self) -> usize {
+        self.chunks.len()
+    }
+
+    fn drive<C: rayon::iter::plumbing::Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+        self.chunks.drive(consumer)
+    }
+
+    fn with_producer<CB: rayon::iter::plumbing::ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
+        self.chunks.with_producer(callback)
+    }
+}
+
+/// Iterator over entries in a set of `Labels` as fixed size arrays
+pub struct FixedSizeIter<'a, const N: usize> {
+    values: &'a [LabelValue],
+}
+
+impl<'a, const N: usize> Iterator for FixedSizeIter<'a, N> {
+    type Item = &'a [LabelValue; N];
+    fn next(&mut self) -> Option<Self::Item> {
+        use std::convert::TryInto;
+        if self.values.is_empty() {
+            return None
+        }
+
+        let (value, rest) = self.values.split_at(N);
+        self.values = rest;
+        return Some(value.try_into().expect("wrong size in FixedSizeIter::next"));
+    }
+}
+
+impl<'a, const N: usize> ExactSizeIterator for FixedSizeIter<'a, N> {
+    fn len(&self) -> usize {
+        self.values.len() / N
     }
 }
 

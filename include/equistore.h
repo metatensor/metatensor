@@ -135,6 +135,10 @@ typedef struct eqs_sample_mapping_t {
  * This struct contains a C-compatible manual implementation of a virtual table
  * (vtable, i.e. trait in Rust, pure virtual class in C++); allowing
  * manipulation of the array in an opaque way.
+ *
+ * **WARNING**: all function implementations **MUST** be thread-safe, and can
+ * be called from multiple threads at the same time. The `eqs_array_t` itself
+ * might be moved from one thread to another.
  */
 typedef struct eqs_array_t {
   /**

@@ -51,6 +51,11 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
     }
 }
 
+// SAFETY: this should be checked by the user/implementor of `eqs_array_t`. On
+// the rust side, the `Array` trait requires Send + Sync
+unsafe impl Sync for eqs_array_t {}
+unsafe impl Send for eqs_array_t {}
+
 /// `eqs_array_t` manages n-dimensional arrays used as data in a block or tensor
 /// map. The array itself if opaque to this library and can come from multiple
 /// sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
@@ -60,6 +65,10 @@ pub fn get_data_origin(origin: DataOrigin) -> String {
 /// This struct contains a C-compatible manual implementation of a virtual table
 /// (vtable, i.e. trait in Rust, pure virtual class in C++); allowing
 /// manipulation of the array in an opaque way.
+///
+/// **WARNING**: all function implementations **MUST** be thread-safe, and can
+/// be called from multiple threads at the same time. The `eqs_array_t` itself
+/// might be moved from one thread to another.
 #[repr(C)]
 #[allow(non_camel_case_types)]
 pub struct eqs_array_t {
@@ -403,13 +412,6 @@ impl eqs_array_t {
         return Ok(data_storage);
     }
 
-    // Set entries in this array taking data from the `other` array. This array
-    // MUST have been created by calling `eqs_array_t.create()` with one of the
-    // other arrays in the same block or tensor map.
-    //
-    // This function will copy data from `other_array[other_sample, ..., :]` to
-    // `array[sample, ..., property_start:property_end]`.
-
     /// Set entries in `self` (the current array) taking data from the `input`
     /// array. The `self` array is guaranteed to be created by calling
     /// `Array::create` with one of the arrays in the same block or tensor
@@ -455,7 +457,7 @@ impl eqs_array_t {
     pub fn as_array(&self) -> &ndarray::ArrayD<f64> {
         assert_eq!(
             self.origin().unwrap_or(eqs_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
-            "this array was not create by rust ndarray"
+            "this array was not created by rust ndarray"
         );
 
         let array = self.ptr.cast::<Box<dyn Array>>();
@@ -468,7 +470,7 @@ impl eqs_array_t {
     pub fn as_array_mut(&mut self) -> &mut ndarray::ArrayD<f64> {
         assert_eq!(
             self.origin().unwrap_or(eqs_data_origin_t(0)), *NDARRAY_DATA_ORIGIN,
-            "this array was not create by rust ndarray"
+            "this array was not created by rust ndarray"
         );
 
         let array = self.ptr.cast::<Box<dyn Array>>();
@@ -486,7 +488,7 @@ impl<A: Array> From<A> for eqs_array_t {
 
 /// A rust trait with the same interface as `eqs_array_t`, see this struct for
 /// documentation on all methods.
-pub trait Array: std::any::Any{
+pub trait Array: std::any::Any + Send + Sync {
     // TODO: add docs to this trait directly
 
     fn as_any(&self) -> &dyn std::any::Any;

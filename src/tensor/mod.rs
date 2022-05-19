@@ -5,6 +5,11 @@ use crate::{Labels, Error};
 
 mod utils;
 
+mod iter;
+pub use self::iter::{Iter, IterMut};
+#[cfg(feature = "rayon")]
+pub use self::iter::{ParIter, ParIterMut};
+
 mod keys_to_samples;
 mod keys_to_properties;
 
