@@ -16,6 +16,18 @@ use crate::utils::ConstCString;
 #[repr(transparent)]
 pub struct LabelValue(i32);
 
+impl PartialEq<i32> for LabelValue {
+    fn eq(&self, other: &i32) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<LabelValue> for i32 {
+    fn eq(&self, other: &LabelValue) -> bool {
+        *self == other.0
+    }
+}
+
 impl std::fmt::Debug for LabelValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
