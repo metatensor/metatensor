@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{TensorBlock, BasicBlock};
+use crate::{TensorBlock, BasicBlock, TensorBlockRefMut};
 use crate::{Labels, Error};
 
 mod utils;
 
 mod keys_to_samples;
 mod keys_to_properties;
+
 
 /// A tensor map is the main user-facing struct of this library, and can store
 /// any kind of data used in atomistic machine learning.
@@ -31,26 +32,26 @@ fn check_labels_names(
     components_names: &[Vec<&str>],
     context: String,
 ) -> Result<(), Error> {
-    if block.samples().names() != sample_names {
+    if block.samples.names() != sample_names {
         return Err(Error::InvalidParameter(format!(
             "all blocks must have the same sample label names, got [{}] and [{}]{}",
-            block.samples().names().join(", "),
+            block.samples.names().join(", "),
             sample_names.join(", "),
             context,
         )));
     }
 
-    if block.components().len() != components_names.len() {
+    if block.components.len() != components_names.len() {
         return Err(Error::InvalidParameter(format!(
             "all blocks must contains the same set of components, the current \
             block has {} components while the first block has {}{}",
-            block.components().len(),
+            block.components.len(),
             components_names.len(),
             context,
         )));
     }
 
-    for (component_i, component) in block.components().iter().enumerate() {
+    for (component_i, component) in block.components.iter().enumerate() {
         if component.names() != components_names[component_i] {
             return Err(Error::InvalidParameter(format!(
                 "all blocks must have the same component label names, got [{}] and [{}]{}",
@@ -83,31 +84,29 @@ impl TensorMap {
         if !blocks.is_empty() {
             // make sure all blocks have the same kind of samples, components &
             // properties labels
-            let sample_names = blocks[0].values.samples().names();
-            let components_names = blocks[0].values.components()
-                .iter()
+            let sample_names = blocks[0].values().samples.names();
+            let components_names = blocks[0].values().components.iter()
                 .map(|c| c.names())
                 .collect::<Vec<_>>();
-            let properties_names = blocks[0].values.properties().names();
+            let properties_names = blocks[0].values().properties.names();
 
             let gradients_data = blocks[0].gradients().iter()
                 .map(|(name, gradient)| {
-                    let components_names = gradient.components()
-                        .iter()
+                    let components_names = gradient.components.iter()
                         .map(|c| c.names())
                         .collect::<Vec<_>>();
-                    (&**name, (gradient.samples().names(), components_names))
+                    (&**name, (gradient.samples.names(), components_names))
                 })
                 .collect::<HashMap<_, _>>();
 
 
             for block in &blocks {
-                check_labels_names(&block.values, &sample_names, &components_names, "".into())?;
+                check_labels_names(block.values(), &sample_names, &components_names, "".into())?;
 
-                if block.values.properties().names() != properties_names {
+                if block.values().properties.names() != properties_names {
                     return Err(Error::InvalidParameter(format!(
                         "all blocks must have the same property label names, got [{}] and [{}]",
-                        block.values.properties().names().join(", "),
+                        block.values().properties.names().join(", "),
                         properties_names.join(", "),
                     )));
                 }
@@ -148,6 +147,11 @@ impl TensorMap {
     /// Get the list of blocks in this `TensorMap`
     pub fn blocks(&self) -> &[TensorBlock] {
         &self.blocks
+    }
+
+    /// Get read-write access to the block at the given index in this `TensorMap`
+    pub fn block_mut(&mut self, index: usize) -> TensorBlockRefMut<'_> {
+        self.blocks[index].as_mut()
     }
 
     /// Get the keys defined in this `TensorMap`

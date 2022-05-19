@@ -127,13 +127,13 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
     for (block_i, block) in tensor.blocks().iter().enumerate() {
         let path = format!("blocks/{}/values/data.npy", block_i);
         archive.start_file(&path, options).map_err(|e| (path, e))?;
-        write_data(&mut archive, &block.values.data)?;
+        write_data(&mut archive, &block.values().data)?;
 
         let path = format!("blocks/{}/values/samples.npy", block_i);
         archive.start_file(&path, options).map_err(|e| (path, e))?;
-        write_npy_labels(&mut archive, block.values.samples())?;
+        write_npy_labels(&mut archive, &block.values().samples)?;
 
-        for (i, component) in block.values.components().iter().enumerate() {
+        for (i, component) in block.values().components.iter().enumerate() {
             let path = format!("blocks/{}/values/components/{}.npy", block_i, i);
             archive.start_file(&path, options).map_err(|e| (path, e))?;
             write_npy_labels(&mut archive, component)?;
@@ -141,7 +141,7 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
 
         let path = format!("blocks/{}/values/properties.npy", block_i);
         archive.start_file(&path, options).map_err(|e| (path, e))?;
-        write_npy_labels(&mut archive, block.values.properties())?;
+        write_npy_labels(&mut archive, &block.values().properties)?;
 
         for (parameter, gradient) in block.gradients() {
             let path = format!("blocks/{}/gradients/{}/data.npy", block_i, parameter);
@@ -150,9 +150,9 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
 
             let path = format!("blocks/{}/gradients/{}/samples.npy", block_i, parameter);
             archive.start_file(&path, options).map_err(|e| (path, e))?;
-            write_npy_labels(&mut archive, gradient.samples())?;
+            write_npy_labels(&mut archive, &gradient.samples)?;
 
-            for (i, component) in gradient.components().iter().enumerate() {
+            for (i, component) in gradient.components.iter().enumerate() {
                 let path = format!("blocks/{}/gradients/{}/components/{}.npy", block_i, parameter, i);
                 archive.start_file(&path, options).map_err(|e| (path, e))?;
                 write_npy_labels(&mut archive, component)?;

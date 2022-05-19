@@ -7,6 +7,28 @@ use crate::{Labels, LabelsBuilder};
 use crate::{eqs_array_t, get_data_origin};
 use crate::Error;
 
+/// A `Vec` which can not be modified
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImmutableVec<T>(Vec<T>);
+
+impl<T> std::ops::Deref for ImmutableVec<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a, T> IntoIterator for &'a ImmutableVec<T> {
+    type Item = &'a T;
+
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
 /// Basic building block for `TensorMap`. A single basic block contains a
 /// n-dimensional array, and n sets of labels (one for each dimension). The
 /// sample labels are specific to this block, but component & property labels
@@ -14,9 +36,9 @@ use crate::Error;
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub data: eqs_array_t,
-    pub(crate) samples: Arc<Labels>,
-    pub(crate) components: Vec<Arc<Labels>>,
-    pub(crate) properties: Arc<Labels>,
+    pub samples: Arc<Labels>,
+    pub components: ImmutableVec<Arc<Labels>>,
+    pub properties: Arc<Labels>,
 }
 
 fn check_data_and_labels(
@@ -98,22 +120,8 @@ impl BasicBlock {
         )?;
 
         check_component_labels(&components)?;
+        let components = ImmutableVec(components);
         return Ok(BasicBlock { data, samples, components, properties });
-    }
-
-    /// Get the sample labels in this basic block
-    pub fn samples(&self) -> &Arc<Labels> {
-        &self.samples
-    }
-
-    /// Get the components labels in this basic block
-    pub fn components(&self) -> &[Arc<Labels>] {
-        &self.components
-    }
-
-    /// Get the property labels in this basic block
-    pub fn properties(&self) -> &Arc<Labels> {
-        &self.properties
     }
 
     fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
@@ -131,7 +139,7 @@ impl BasicBlock {
             "unable to find [{}] in the components ", variables.join(", ")
         )))?;
 
-        let moved_component = self.components.remove(component_axis);
+        let moved_component = self.components.0.remove(component_axis);
 
         // construct the new property with old properties and the components
         let old_properties = &self.properties;
@@ -168,7 +176,7 @@ impl BasicBlock {
 /// gradients of these values w.r.t. any relevant quantity.
 #[derive(Debug, Clone)]
 pub struct TensorBlock {
-    pub values: BasicBlock,
+    values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
     // all the keys from `self.gradients`, as C-compatible strings
     gradient_parameters: Vec<ConstCString>,
@@ -191,9 +199,25 @@ impl TensorBlock {
         })
     }
 
+    /// Get the values data and metadata in this block
+    pub fn values(&self) -> &BasicBlock {
+        &self.values
+    }
+
+    /// Get read-write access to the values data and metadata in this block
+    pub fn values_mut(&mut self) -> &mut BasicBlock {
+        &mut self.values
+    }
+
     /// Get all gradients defined in this block
     pub fn gradients(&self) -> &HashMap<String, BasicBlock> {
         &self.gradients
+    }
+
+    /// Get the data and metadata for the gradient with respect to the given
+    /// parameter in this block, if it exists.
+    pub fn gradient(&self, parameter: &str) -> Option<&BasicBlock> {
+        self.gradients.get(parameter)
     }
 
     /// Get the list of gradients in this block for the C API
@@ -245,16 +269,16 @@ impl TensorBlock {
         }
 
         check_component_labels(&components)?;
-        if self.values.components().len() > components.len() {
+        if self.values.components.len() > components.len() {
             return Err(Error::InvalidParameter(
                 "gradients components should contain at least as many labels \
                 as the values components".into()
             ))
         }
-        let extra_gradient_components = components.len() - self.values.components().len();
+        let extra_gradient_components = components.len() - self.values.components.len();
         for (component_i, (gradient_labels, values_labels)) in components.iter()
             .skip(extra_gradient_components)
-            .zip(self.values.components())
+            .zip(&*self.values.components)
             .enumerate() {
                 if gradient_labels != values_labels {
                     return Err(Error::InvalidParameter(format!(
@@ -265,11 +289,12 @@ impl TensorBlock {
                 }
             }
 
-        let properties = Arc::clone(self.values.properties());
+        let properties = Arc::clone(&self.values.properties);
         check_data_and_labels(
             "gradient data and labels don't match", &data, &samples, &components, &properties
         )?;
 
+        let components = ImmutableVec(components);
         self.gradients.insert(parameter.into(), BasicBlock {
             data,
             samples,
@@ -283,11 +308,6 @@ impl TensorBlock {
         return Ok(())
     }
 
-    /// Get the gradients w.r.t. `parameter` in this block or None.
-    pub fn get_gradient(&self, parameter: &str) -> Option<&BasicBlock> {
-        self.gradients.get(parameter)
-    }
-
     pub(crate) fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
         if variables.is_empty() {
             return Ok(());
@@ -299,6 +319,52 @@ impl TensorBlock {
         }
 
         Ok(())
+    }
+
+    /// Create a mutable reference manager for this block
+    pub(crate) fn as_mut(&mut self) -> TensorBlockRefMut {
+        TensorBlockRefMut { block: self }
+    }
+}
+
+/// Alternative to `&mut TensorBlock` allowing mutable access to the data, but
+/// not to modify the set of gradients or number of components in a block.
+pub struct TensorBlockRefMut<'a>  {
+    block: &'a mut TensorBlock
+}
+
+impl<'a> TensorBlockRefMut<'a> {
+    /// Get the values data and metadata in this block
+    pub fn values(&self) -> &BasicBlock {
+        &self.block.values
+    }
+
+    /// Get read-write access to the values data and metadata in this block
+    pub fn values_mut(&mut self) -> &mut BasicBlock {
+        &mut self.block.values
+    }
+
+    /// Get all gradients defined in this block
+    pub fn gradients(&self) -> &HashMap<String, BasicBlock> {
+        &self.block.gradients
+    }
+
+    /// Get an iterator over all gradients defined in this block, with
+    /// read-write access to the data and metadata
+    pub fn gradients_mut(&mut self) -> impl Iterator<Item=(&String, &mut BasicBlock)> {
+        self.block.gradients.iter_mut()
+    }
+
+    /// Get the data and metadata for the gradient with respect to the given
+    /// parameter in this block, if it exists.
+    pub fn gradient(&self, parameter: &str) -> Option<&BasicBlock> {
+        self.block.gradients.get(parameter)
+    }
+
+    /// Get read-write access to the data and metadata for the gradient with
+    /// respect to the given parameter in this block, if it exists.
+    pub fn gradient_mut(&mut self, parameter: &str) -> Option<&mut BasicBlock> {
+        self.block.gradients.get_mut(parameter)
     }
 }
 
@@ -435,15 +501,15 @@ mod tests {
             assert_eq!(gradients_list, ["component", "foo"]);
 
             let basic_block = block.gradients().get("foo").unwrap();
-            assert_eq!(basic_block.samples().names(), ["sample", "foo"]);
-            assert!(basic_block.components().is_empty());
-            assert_eq!(basic_block.properties().names(), ["properties"]);
+            assert_eq!(basic_block.samples.names(), ["sample", "foo"]);
+            assert!(basic_block.components.is_empty());
+            assert_eq!(basic_block.properties.names(), ["properties"]);
 
             let basic_block = block.gradients().get("component").unwrap();
-            assert_eq!(basic_block.samples().names(), ["sample"]);
-            assert_eq!(basic_block.components().len(), 1);
-            assert_eq!(basic_block.components()[0].names(), ["component"]);
-            assert_eq!(basic_block.properties().names(), ["properties"]);
+            assert_eq!(basic_block.samples.names(), ["sample"]);
+            assert_eq!(basic_block.components.len(), 1);
+            assert_eq!(basic_block.components[0].names(), ["component"]);
+            assert_eq!(basic_block.properties.names(), ["properties"]);
 
             assert!(block.gradients().get("baz").is_none());
         }
@@ -508,30 +574,30 @@ mod tests {
 
             block.components_to_properties(&["components"]).unwrap();
 
-            assert_eq!(block.values.samples().names(), ["samples"]);
-            assert_eq!(block.values.samples().count(), 3);
-            assert_eq!(block.values.samples()[0], [LabelValue::new(0)]);
-            assert_eq!(block.values.samples()[1], [LabelValue::new(1)]);
-            assert_eq!(block.values.samples()[2], [LabelValue::new(2)]);
+            assert_eq!(block.values.samples.names(), ["samples"]);
+            assert_eq!(block.values.samples.count(), 3);
+            assert_eq!(block.values.samples[0], [LabelValue::new(0)]);
+            assert_eq!(block.values.samples[1], [LabelValue::new(1)]);
+            assert_eq!(block.values.samples[2], [LabelValue::new(2)]);
 
-            assert_eq!(block.values.components().len(), 0);
+            assert_eq!(block.values.components.len(), 0);
 
-            assert_eq!(block.values.properties().names(), ["components", "properties"]);
-            assert_eq!(block.values.properties().count(), 6);
-            assert_eq!(block.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.properties()[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.properties()[2], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(block.values.properties()[3], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.properties()[4], [LabelValue::new(1), LabelValue::new(1)]);
-            assert_eq!(block.values.properties()[5], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(block.values.properties.names(), ["components", "properties"]);
+            assert_eq!(block.values.properties.count(), 6);
+            assert_eq!(block.values.properties[0], [LabelValue::new(0), LabelValue::new(0)]);
+            assert_eq!(block.values.properties[1], [LabelValue::new(0), LabelValue::new(1)]);
+            assert_eq!(block.values.properties[2], [LabelValue::new(0), LabelValue::new(2)]);
+            assert_eq!(block.values.properties[3], [LabelValue::new(1), LabelValue::new(0)]);
+            assert_eq!(block.values.properties[4], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(block.values.properties[5], [LabelValue::new(1), LabelValue::new(2)]);
 
             assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![3, 6], 1.0));
 
-            let gradient = block.get_gradient("parameter").unwrap();
-            assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
-            assert_eq!(gradient.samples().count(), 2);
-            assert_eq!(gradient.samples()[0], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(gradient.samples()[1], [LabelValue::new(1), LabelValue::new(2)]);
+            let gradient = block.gradient("parameter").unwrap();
+            assert_eq!(gradient.samples.names(), ["sample", "parameter"]);
+            assert_eq!(gradient.samples.count(), 2);
+            assert_eq!(gradient.samples[0], [LabelValue::new(0), LabelValue::new(2)]);
+            assert_eq!(gradient.samples[1], [LabelValue::new(1), LabelValue::new(2)]);
 
             assert_eq!(gradient.data.as_array(), ArrayD::from_elem(vec![2, 6], 11.0));
         }
@@ -571,24 +637,24 @@ mod tests {
 
             block.components_to_properties(&["component_1"]).unwrap();
 
-            assert_eq!(block.values.samples().names(), ["samples"]);
-            assert_eq!(block.values.samples().count(), 2);
-            assert_eq!(block.values.samples()[0], [LabelValue::new(0)]);
-            assert_eq!(block.values.samples()[1], [LabelValue::new(1)]);
+            assert_eq!(block.values.samples.names(), ["samples"]);
+            assert_eq!(block.values.samples.count(), 2);
+            assert_eq!(block.values.samples[0], [LabelValue::new(0)]);
+            assert_eq!(block.values.samples[1], [LabelValue::new(1)]);
 
-            assert_eq!(block.values.components().len(), 1);
-            assert_eq!(block.values.components()[0].names(), ["component_2"]);
-            assert_eq!(block.values.components()[0].count(), 3);
-            assert_eq!(block.values.components()[0][0], [LabelValue::new(0)]);
-            assert_eq!(block.values.components()[0][1], [LabelValue::new(1)]);
-            assert_eq!(block.values.components()[0][2], [LabelValue::new(2)]);
+            assert_eq!(block.values.components.len(), 1);
+            assert_eq!(block.values.components[0].names(), ["component_2"]);
+            assert_eq!(block.values.components[0].count(), 3);
+            assert_eq!(block.values.components[0][0], [LabelValue::new(0)]);
+            assert_eq!(block.values.components[0][1], [LabelValue::new(1)]);
+            assert_eq!(block.values.components[0][2], [LabelValue::new(2)]);
 
-            assert_eq!(block.values.properties().names(), ["component_1", "properties"]);
-            assert_eq!(block.values.properties().count(), 4);
-            assert_eq!(block.values.properties()[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.properties()[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.properties()[2], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.properties()[3], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(block.values.properties.names(), ["component_1", "properties"]);
+            assert_eq!(block.values.properties.count(), 4);
+            assert_eq!(block.values.properties[0], [LabelValue::new(0), LabelValue::new(0)]);
+            assert_eq!(block.values.properties[1], [LabelValue::new(0), LabelValue::new(1)]);
+            assert_eq!(block.values.properties[2], [LabelValue::new(1), LabelValue::new(0)]);
+            assert_eq!(block.values.properties[3], [LabelValue::new(1), LabelValue::new(1)]);
 
             let expected = ArrayD::from_shape_vec(vec![2, 3, 4], vec![
                 1.0, 1.0, 4.0, 4.0, 2.0, 2.0, 5.0, 5.0, 3.0, 3.0, 6.0, 6.0,
@@ -596,12 +662,12 @@ mod tests {
             ]).unwrap();
             assert_eq!(block.values.data.as_array(), expected);
 
-            let gradient = block.get_gradient("parameter").unwrap();
-            assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
-            assert_eq!(gradient.samples().count(), 3);
-            assert_eq!(gradient.samples()[0], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(gradient.samples()[1], [LabelValue::new(0), LabelValue::new(3)]);
-            assert_eq!(gradient.samples()[2], [LabelValue::new(1), LabelValue::new(2)]);
+            let gradient = block.gradient("parameter").unwrap();
+            assert_eq!(gradient.samples.names(), ["sample", "parameter"]);
+            assert_eq!(gradient.samples.count(), 3);
+            assert_eq!(gradient.samples[0], [LabelValue::new(0), LabelValue::new(2)]);
+            assert_eq!(gradient.samples[1], [LabelValue::new(0), LabelValue::new(3)]);
+            assert_eq!(gradient.samples[2], [LabelValue::new(1), LabelValue::new(2)]);
 
             assert_eq!(gradient.data.as_array(), ArrayD::from_elem(vec![3, 3, 4], 11.0));
         }

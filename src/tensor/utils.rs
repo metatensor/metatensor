@@ -77,13 +77,13 @@ pub fn merge_gradient_samples(
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
     for ((_, block), samples_mapping) in blocks.iter().zip(samples_mappings) {
-        let gradient = block.get_gradient(gradient_name).expect("missing gradient");
+        let gradient = block.gradient(gradient_name).expect("missing gradient");
 
         if new_gradient_samples_names.is_none() {
-            new_gradient_samples_names = Some(gradient.samples().names());
+            new_gradient_samples_names = Some(gradient.samples.names());
         }
 
-        for grad_sample in gradient.samples().iter() {
+        for grad_sample in gradient.samples.iter() {
             // translate from the old sample id in gradients to the new ones
             let mut grad_sample = grad_sample.to_vec();
             let old_sample_i = grad_sample[0].usize();
@@ -109,13 +109,13 @@ pub fn merge_samples(
     new_sample_names: Vec<&str>,
     sort: bool
 ) -> (Arc<Labels>, Vec<Vec<eqs_sample_mapping_t>>) {
-    let add_key_to_samples = blocks[0].1.values.samples().size() < new_sample_names.len();
+    let add_key_to_samples = blocks[0].1.values().samples.size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
     // were in the blocks, and then optionally sort them later below
     let mut merged_samples = IndexSet::new();
     for (key, block) in blocks {
-        for sample in block.values.samples().iter() {
+        for sample in block.values().samples.iter() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
@@ -139,7 +139,7 @@ pub fn merge_samples(
     let mut samples_mappings = Vec::new();
     for (key, block) in blocks {
         let mut mapping_for_block = Vec::new();
-        for (sample_i, sample) in block.values.samples().iter().enumerate() {
+        for (sample_i, sample) in block.values().samples.iter().enumerate() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);

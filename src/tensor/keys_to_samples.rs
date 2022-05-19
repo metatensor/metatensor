@@ -106,18 +106,18 @@ fn merge_blocks_along_samples(
     assert!(!blocks_to_merge.is_empty());
 
     let first_block = blocks_to_merge[0].1;
-    let first_components_label = first_block.values.components();
-    let first_properties_label = first_block.values.properties();
+    let first_components_label = &first_block.values().components;
+    let first_properties_label = &first_block.values().properties;
 
     for (_, block) in blocks_to_merge {
-        if block.values.components() != first_components_label {
+        if &block.values().components != first_components_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
                 different components labels, call components_to_properties first".into()
             ))
         }
 
-        if block.values.properties() != first_properties_label {
+        if &block.values().properties != first_properties_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
                 different property labels".into() // TODO: this might be possible
@@ -126,7 +126,7 @@ fn merge_blocks_along_samples(
     }
 
     // collect and merge samples across the blocks
-    let new_samples_names = first_block.values.samples().names().iter()
+    let new_samples_names = first_block.values().samples.names().iter()
         .chain(extracted_names.iter())
         .copied()
         .collect();
@@ -136,19 +136,19 @@ fn merge_blocks_along_samples(
         sort_samples,
     );
 
-    let new_components = first_block.values.components().to_vec();
-    let new_properties = Arc::clone(first_block.values.properties());
+    let new_components = first_block.values().components.to_vec();
+    let new_properties = Arc::clone(&first_block.values().properties);
 
-    let mut new_shape = first_block.values.data.shape()?.to_vec();
+    let mut new_shape = first_block.values().data.shape()?.to_vec();
     new_shape[0] = merged_samples.count();
-    let mut new_data = first_block.values.data.create(&new_shape)?;
+    let mut new_data = first_block.values().data.create(&new_shape)?;
 
     let property_range = 0..new_properties.count();
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
         new_data.move_samples_from(
-            &block.values.data,
+            &block.values().data,
             samples_mapping,
             property_range.clone(),
         )?;
@@ -169,15 +169,15 @@ fn merge_blocks_along_samples(
 
         let mut new_shape = first_gradient.data.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();
-        let mut new_gradient = first_block.values.data.create(&new_shape)?;
-        let new_components = first_gradient.components().to_vec();
+        let mut new_gradient = first_block.values().data.create(&new_shape)?;
+        let new_components = first_gradient.components.to_vec();
 
         for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
-            let gradient = block.get_gradient(parameter).expect("missing gradient");
-            debug_assert!(gradient.components() == new_components);
+            let gradient = block.gradient(parameter).expect("missing gradient");
+            debug_assert!(*gradient.components == *new_components);
 
             let mut samples_to_move = Vec::new();
-            for (sample_i, grad_sample) in gradient.samples().iter().enumerate() {
+            for (sample_i, grad_sample) in gradient.samples.iter().enumerate() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
                 let old_sample_i = grad_sample[0].usize();
@@ -231,42 +231,42 @@ mod tests {
 
         // The first two blocks are not modified
         let block_1 = &tensor.blocks()[0];
-        assert_eq!(block_1.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 1], 1.0));
-        assert_eq!(block_1.values.samples().count(), 3);
-        assert_eq!(block_1.values.samples()[0], [LabelValue::new(0), LabelValue::new(0)]);
-        assert_eq!(block_1.values.samples()[1], [LabelValue::new(2), LabelValue::new(0)]);
-        assert_eq!(block_1.values.samples()[2], [LabelValue::new(4), LabelValue::new(0)]);
+        assert_eq!(block_1.values().data.as_array(), ArrayD::from_elem(vec![3, 1, 1], 1.0));
+        assert_eq!(block_1.values().samples.count(), 3);
+        assert_eq!(block_1.values().samples[0], [LabelValue::new(0), LabelValue::new(0)]);
+        assert_eq!(block_1.values().samples[1], [LabelValue::new(2), LabelValue::new(0)]);
+        assert_eq!(block_1.values().samples[2], [LabelValue::new(4), LabelValue::new(0)]);
 
         let block_2 = &tensor.blocks()[1];
-        assert_eq!(block_2.values.data.as_array(), ArrayD::from_elem(vec![3, 1, 3], 2.0));
-        assert_eq!(block_2.values.samples().count(), 3);
-        assert_eq!(block_2.values.samples()[0], [LabelValue::new(0), LabelValue::new(0)]);
-        assert_eq!(block_2.values.samples()[1], [LabelValue::new(1), LabelValue::new(0)]);
-        assert_eq!(block_2.values.samples()[2], [LabelValue::new(3), LabelValue::new(0)]);
+        assert_eq!(block_2.values().data.as_array(), ArrayD::from_elem(vec![3, 1, 3], 2.0));
+        assert_eq!(block_2.values().samples.count(), 3);
+        assert_eq!(block_2.values().samples[0], [LabelValue::new(0), LabelValue::new(0)]);
+        assert_eq!(block_2.values().samples[1], [LabelValue::new(1), LabelValue::new(0)]);
+        assert_eq!(block_2.values().samples[2], [LabelValue::new(3), LabelValue::new(0)]);
 
         // The new third block contains the old third and fourth blocks merged
         let block_3 = &tensor.blocks()[2];
-        assert_eq!(block_3.values.samples().names(), ["samples", "key_2"]);
-        assert_eq!(block_3.values.samples().count(), 8);
-        assert_eq!(block_3.values.samples()[0], [LabelValue::new(0), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[1], [LabelValue::new(0), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[2], [LabelValue::new(1), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[3], [LabelValue::new(2), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[4], [LabelValue::new(3), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[5], [LabelValue::new(5), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[6], [LabelValue::new(6), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[7], [LabelValue::new(8), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples.names(), ["samples", "key_2"]);
+        assert_eq!(block_3.values().samples.count(), 8);
+        assert_eq!(block_3.values().samples[0], [LabelValue::new(0), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[1], [LabelValue::new(0), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[2], [LabelValue::new(1), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[3], [LabelValue::new(2), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[4], [LabelValue::new(3), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[5], [LabelValue::new(5), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[6], [LabelValue::new(6), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[7], [LabelValue::new(8), LabelValue::new(2)]);
 
-        assert_eq!(block_3.values.components().len(), 1);
-        assert_eq!(block_3.values.components()[0].names(), ["components"]);
-        assert_eq!(block_3.values.components()[0].count(), 3);
-        assert_eq!(block_3.values.components()[0][0], [LabelValue::new(0)]);
-        assert_eq!(block_3.values.components()[0][1], [LabelValue::new(1)]);
-        assert_eq!(block_3.values.components()[0][2], [LabelValue::new(2)]);
+        assert_eq!(block_3.values().components.len(), 1);
+        assert_eq!(block_3.values().components[0].names(), ["components"]);
+        assert_eq!(block_3.values().components[0].count(), 3);
+        assert_eq!(block_3.values().components[0][0], [LabelValue::new(0)]);
+        assert_eq!(block_3.values().components[0][1], [LabelValue::new(1)]);
+        assert_eq!(block_3.values().components[0][2], [LabelValue::new(2)]);
 
-        assert_eq!(block_3.values.properties().names(), ["properties"]);
-        assert_eq!(block_3.values.properties().count(), 1);
-        assert_eq!(block_3.values.properties()[0], [LabelValue::new(0)]);
+        assert_eq!(block_3.values().properties.names(), ["properties"]);
+        assert_eq!(block_3.values().properties.count(), 1);
+        assert_eq!(block_3.values().properties[0], [LabelValue::new(0)]);
 
         let expected = ArrayD::from_shape_vec(vec![8, 3, 1], vec![
             3.0, 3.0, 3.0,
@@ -278,14 +278,14 @@ mod tests {
             3.0, 3.0, 3.0,
             3.0, 3.0, 3.0,
         ]).unwrap();
-        assert_eq!(block_3.values.data.as_array(), expected);
+        assert_eq!(block_3.values().data.as_array(), expected);
 
-        let gradient_3 = block_3.get_gradient("parameter").unwrap();
-        assert_eq!(gradient_3.samples().names(), ["sample", "parameter"]);
-        assert_eq!(gradient_3.samples().count(), 3);
-        assert_eq!(gradient_3.samples()[0], [LabelValue::new(1), LabelValue::new(1)]);
-        assert_eq!(gradient_3.samples()[1], [LabelValue::new(4), LabelValue::new(-2)]);
-        assert_eq!(gradient_3.samples()[2], [LabelValue::new(5), LabelValue::new(3)]);
+        let gradient_3 = block_3.gradient("parameter").unwrap();
+        assert_eq!(gradient_3.samples.names(), ["sample", "parameter"]);
+        assert_eq!(gradient_3.samples.count(), 3);
+        assert_eq!(gradient_3.samples[0], [LabelValue::new(1), LabelValue::new(1)]);
+        assert_eq!(gradient_3.samples[1], [LabelValue::new(4), LabelValue::new(-2)]);
+        assert_eq!(gradient_3.samples[2], [LabelValue::new(5), LabelValue::new(3)]);
 
         let expected = ArrayD::from_shape_vec(vec![3, 3, 1], vec![
             14.0, 14.0, 14.0,
@@ -302,16 +302,16 @@ mod tests {
         tensor.keys_to_samples(&keys_to_move, false).unwrap();
 
         let block_3 = &tensor.blocks()[2];
-        assert_eq!(block_3.values.samples().names(), ["samples", "key_2"]);
-        assert_eq!(block_3.values.samples().count(), 8);
-        assert_eq!(block_3.values.samples()[0], [LabelValue::new(0), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[1], [LabelValue::new(3), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[2], [LabelValue::new(6), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[3], [LabelValue::new(8), LabelValue::new(2)]);
-        assert_eq!(block_3.values.samples()[4], [LabelValue::new(0), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[5], [LabelValue::new(1), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[6], [LabelValue::new(2), LabelValue::new(3)]);
-        assert_eq!(block_3.values.samples()[7], [LabelValue::new(5), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples.names(), ["samples", "key_2"]);
+        assert_eq!(block_3.values().samples.count(), 8);
+        assert_eq!(block_3.values().samples[0], [LabelValue::new(0), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[1], [LabelValue::new(3), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[2], [LabelValue::new(6), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[3], [LabelValue::new(8), LabelValue::new(2)]);
+        assert_eq!(block_3.values().samples[4], [LabelValue::new(0), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[5], [LabelValue::new(1), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[6], [LabelValue::new(2), LabelValue::new(3)]);
+        assert_eq!(block_3.values().samples[7], [LabelValue::new(5), LabelValue::new(3)]);
     }
 
     #[test]
