@@ -15,10 +15,10 @@ pub use self::labels::{LabelsBuilder, LabelValue, Labels};
 mod data;
 pub use self::data::{eqs_array_t, eqs_sample_mapping_t, eqs_data_origin_t};
 pub use self::data::{DataOrigin, register_data_origin, get_data_origin};
-pub use self::data::EmptyArray;
+pub use self::data::{Array, EmptyArray};
 
 mod blocks;
-pub use self::blocks::{BasicBlock, TensorBlock};
+pub use self::blocks::{BasicBlock, TensorBlock, TensorBlockRefMut};
 
 mod tensor;
 pub use self::tensor::TensorMap;

@@ -185,32 +185,32 @@ pub unsafe extern fn eqs_block_labels(
 
         let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
         let basic_block = match values_gradients {
-            "values" => &(*block).values,
-            gradients => {
-                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
-                    "can not find gradients with respect to '{}' in this block", gradients
+            "values" => (*block).values(),
+            parameter => {
+                (*block).gradient(parameter).ok_or_else(|| Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", parameter
                 )))?
             }
         };
 
-        let n_components = basic_block.components().len();
+        let n_components = basic_block.components.len();
 
         let rust_labels = if axis == 0 {
-            basic_block.samples()
+            &basic_block.samples
         } else if axis - 1 < n_components {
             // component labels
-            &*basic_block.components()[axis - 1]
+            &basic_block.components[axis - 1]
         } else if axis == n_components + 1 {
             // property labels
-            &*basic_block.properties()
+            &basic_block.properties
         } else {
             return Err(Error::InvalidParameter(format!(
                 "tried to get the labels for axis {}, but we only have {} axes for this block",
-                axis, basic_block.components().len() + 2
+                axis, n_components + 2
             )));
         };
 
-        *labels = rust_labels.try_into()?;
+        *labels = (&**rust_labels).try_into()?;
 
         Ok(())
     })
@@ -241,10 +241,10 @@ pub unsafe extern fn eqs_block_data(
 
         let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
         let basic_block = match values_gradients {
-            "values" => &(*block).values,
-            gradients => {
-                (*block).get_gradient(gradients).ok_or_else(|| Error::InvalidParameter(format!(
-                    "can not find gradients with respect to '{}' in this block", gradients
+            "values" => (*block).values(),
+            parameter => {
+                (*block).gradient(parameter).ok_or_else(|| Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", parameter
                 )))?
             }
         };
