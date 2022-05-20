@@ -1,4 +1,6 @@
 import ctypes
+import operator
+from functools import reduce
 
 import numpy as np
 
@@ -36,6 +38,9 @@ def catch_exceptions(function):
 
 
 def _ptr_to_const_ndarray(ptr, shape, dtype):
+    if reduce(operator.mul, shape) == 0:
+        return np.empty(shape=shape, dtype=dtype)
+
     assert ptr is not None
     array = np.ctypeslib.as_array(ptr, shape=shape)
     assert array.dtype == dtype
