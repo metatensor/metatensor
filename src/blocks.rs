@@ -485,9 +485,9 @@ mod tests {
 
             let gradient = EmptyArray::new(vec![3, 7]);
             let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]);
-            gradient_samples.add(&[LabelValue::new(0), LabelValue::new(0)]);
-            gradient_samples.add(&[LabelValue::new(1), LabelValue::new(1)]);
-            gradient_samples.add(&[LabelValue::new(3), LabelValue::new(-2)]);
+            gradient_samples.add(&[0, 0]);
+            gradient_samples.add(&[1, 1]);
+            gradient_samples.add(&[3, -2]);
             let gradient_samples = Arc::new(gradient_samples.finish());
             block.add_gradient("foo", gradient, gradient_samples, vec![]).unwrap();
 
@@ -559,8 +559,8 @@ mod tests {
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
-            grad_samples.add(&[LabelValue::new(0), LabelValue::new(2)]);
-            grad_samples.add(&[LabelValue::new(1), LabelValue::new(2)]);
+            grad_samples.add(&[0, 2]);
+            grad_samples.add(&[1, 2]);
             let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
@@ -576,28 +576,28 @@ mod tests {
 
             assert_eq!(block.values.samples.names(), ["samples"]);
             assert_eq!(block.values.samples.count(), 3);
-            assert_eq!(block.values.samples[0], [LabelValue::new(0)]);
-            assert_eq!(block.values.samples[1], [LabelValue::new(1)]);
-            assert_eq!(block.values.samples[2], [LabelValue::new(2)]);
+            assert_eq!(block.values.samples[0], [0]);
+            assert_eq!(block.values.samples[1], [1]);
+            assert_eq!(block.values.samples[2], [2]);
 
             assert_eq!(block.values.components.len(), 0);
 
             assert_eq!(block.values.properties.names(), ["components", "properties"]);
             assert_eq!(block.values.properties.count(), 6);
-            assert_eq!(block.values.properties[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.properties[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.properties[2], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(block.values.properties[3], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.properties[4], [LabelValue::new(1), LabelValue::new(1)]);
-            assert_eq!(block.values.properties[5], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(block.values.properties[0], [0, 0]);
+            assert_eq!(block.values.properties[1], [0, 1]);
+            assert_eq!(block.values.properties[2], [0, 2]);
+            assert_eq!(block.values.properties[3], [1, 0]);
+            assert_eq!(block.values.properties[4], [1, 1]);
+            assert_eq!(block.values.properties[5], [1, 2]);
 
             assert_eq!(block.values.data.as_array(), ArrayD::from_elem(vec![3, 6], 1.0));
 
             let gradient = block.gradient("parameter").unwrap();
             assert_eq!(gradient.samples.names(), ["sample", "parameter"]);
             assert_eq!(gradient.samples.count(), 2);
-            assert_eq!(gradient.samples[0], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(gradient.samples[1], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(gradient.samples[0], [0, 2]);
+            assert_eq!(gradient.samples[1], [1, 2]);
 
             assert_eq!(gradient.data.as_array(), ArrayD::from_elem(vec![2, 6], 11.0));
         }
@@ -621,9 +621,9 @@ mod tests {
             ).unwrap();
 
             let mut grad_samples = LabelsBuilder::new(vec!["sample", "parameter"]);
-            grad_samples.add(&[LabelValue::new(0), LabelValue::new(2)]);
-            grad_samples.add(&[LabelValue::new(0), LabelValue::new(3)]);
-            grad_samples.add(&[LabelValue::new(1), LabelValue::new(2)]);
+            grad_samples.add(&[0, 2]);
+            grad_samples.add(&[0, 3]);
+            grad_samples.add(&[1, 2]);
             let grad_samples = Arc::new(grad_samples.finish());
 
             block.add_gradient(
@@ -639,22 +639,22 @@ mod tests {
 
             assert_eq!(block.values.samples.names(), ["samples"]);
             assert_eq!(block.values.samples.count(), 2);
-            assert_eq!(block.values.samples[0], [LabelValue::new(0)]);
-            assert_eq!(block.values.samples[1], [LabelValue::new(1)]);
+            assert_eq!(block.values.samples[0], [0]);
+            assert_eq!(block.values.samples[1], [1]);
 
             assert_eq!(block.values.components.len(), 1);
             assert_eq!(block.values.components[0].names(), ["component_2"]);
             assert_eq!(block.values.components[0].count(), 3);
-            assert_eq!(block.values.components[0][0], [LabelValue::new(0)]);
-            assert_eq!(block.values.components[0][1], [LabelValue::new(1)]);
-            assert_eq!(block.values.components[0][2], [LabelValue::new(2)]);
+            assert_eq!(block.values.components[0][0], [0]);
+            assert_eq!(block.values.components[0][1], [1]);
+            assert_eq!(block.values.components[0][2], [2]);
 
             assert_eq!(block.values.properties.names(), ["component_1", "properties"]);
             assert_eq!(block.values.properties.count(), 4);
-            assert_eq!(block.values.properties[0], [LabelValue::new(0), LabelValue::new(0)]);
-            assert_eq!(block.values.properties[1], [LabelValue::new(0), LabelValue::new(1)]);
-            assert_eq!(block.values.properties[2], [LabelValue::new(1), LabelValue::new(0)]);
-            assert_eq!(block.values.properties[3], [LabelValue::new(1), LabelValue::new(1)]);
+            assert_eq!(block.values.properties[0], [0, 0]);
+            assert_eq!(block.values.properties[1], [0, 1]);
+            assert_eq!(block.values.properties[2], [1, 0]);
+            assert_eq!(block.values.properties[3], [1, 1]);
 
             let expected = ArrayD::from_shape_vec(vec![2, 3, 4], vec![
                 1.0, 1.0, 4.0, 4.0, 2.0, 2.0, 5.0, 5.0, 3.0, 3.0, 6.0, 6.0,
@@ -665,9 +665,9 @@ mod tests {
             let gradient = block.gradient("parameter").unwrap();
             assert_eq!(gradient.samples.names(), ["sample", "parameter"]);
             assert_eq!(gradient.samples.count(), 3);
-            assert_eq!(gradient.samples[0], [LabelValue::new(0), LabelValue::new(2)]);
-            assert_eq!(gradient.samples[1], [LabelValue::new(0), LabelValue::new(3)]);
-            assert_eq!(gradient.samples[2], [LabelValue::new(1), LabelValue::new(2)]);
+            assert_eq!(gradient.samples[0], [0, 2]);
+            assert_eq!(gradient.samples[1], [0, 3]);
+            assert_eq!(gradient.samples[2], [1, 2]);
 
             assert_eq!(gradient.data.as_array(), ArrayD::from_elem(vec![3, 3, 4], 11.0));
         }

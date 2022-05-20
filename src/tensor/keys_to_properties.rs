@@ -294,7 +294,7 @@ fn merge_blocks_along_properties(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use crate::{LabelValue, LabelsBuilder, TensorMap};
+    use crate::{LabelsBuilder, TensorMap};
     use super::super::utils::{example_tensor, example_block, example_labels};
 
     use ndarray::ArrayD;
@@ -388,7 +388,7 @@ mod tests {
     fn user_provided_entries_different_properties() {
         let mut tensor = example_tensor();
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(&[0_i32.into()]);
+        keys_to_move.add(&[0]);
         let result = tensor.keys_to_properties(&keys_to_move.finish(), false);
 
         assert_eq!(
@@ -429,9 +429,9 @@ mod tests {
         ));
 
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
-        keys.add(&[LabelValue::new(0), LabelValue::new(0)]);
-        keys.add(&[LabelValue::new(1), LabelValue::new(0)]);
-        keys.add(&[LabelValue::new(0), LabelValue::new(1)]);
+        keys.add(&[0, 0]);
+        keys.add(&[1, 0]);
+        keys.add(&[0, 1]);
         let keys = keys.finish();
 
         return TensorMap::new(keys, blocks).unwrap();
@@ -443,8 +443,8 @@ mod tests {
         let initial_tensor = example_tensor_same_properties_in_all_blocks();
 
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(&[LabelValue::new(0)]);
-        keys_to_move.add(&[LabelValue::new(1)]);
+        keys_to_move.add(&[0]);
+        keys_to_move.add(&[1]);
         let mut tensor = initial_tensor.clone();
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
@@ -500,7 +500,7 @@ mod tests {
 
         // only keep a subset of the data
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(&[LabelValue::new(0)]);
+        keys_to_move.add(&[0]);
         let mut tensor = initial_tensor.clone();
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
@@ -549,9 +549,9 @@ mod tests {
 
         // request keys not present in the input
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
-        keys_to_move.add(&[LabelValue::new(0)]);
-        keys_to_move.add(&[LabelValue::new(1)]);
-        keys_to_move.add(&[LabelValue::new(2)]);
+        keys_to_move.add(&[0]);
+        keys_to_move.add(&[1]);
+        keys_to_move.add(&[2]);
         let mut tensor = initial_tensor;
         tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 

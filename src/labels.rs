@@ -131,21 +131,22 @@ impl LabelsBuilder {
         self.names.len()
     }
 
-    /// Add a single `label` to this set of labels.
+    /// Add a single `entry` to this set of labels.
     ///
     /// This function will panic when attempting to add the same `label` more
     /// than once.
-    pub fn add(&mut self, label: &[LabelValue]) {
+    pub fn add<T>(&mut self, entry: &[T]) where T: Copy + Into<LabelValue> {
         assert_eq!(
-            self.size(), label.len(),
+            self.size(), entry.len(),
             "wrong size for added label: got {}, but expected {}",
-            label.len(), self.size()
+            entry.len(), self.size()
         );
 
-        self.values.extend(label);
+        let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
+        self.values.extend(&entry);
 
         let new_position = self.positions.len();
-        match self.positions.entry(label.into()) {
+        match self.positions.entry(entry) {
             Entry::Occupied(entry) => {
                 let values_display = entry.key().iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 panic!(
@@ -253,7 +254,7 @@ impl Labels {
     /// there is no relevant information to store.
     pub fn single() -> Labels {
         let mut builder = LabelsBuilder::new(vec!["_"]);
-        builder.add(&[LabelValue::new(0)]);
+        builder.add(&[0]);
 
         return builder.finish();
     }
@@ -425,34 +426,34 @@ mod tests {
     #[test]
     fn labels() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[LabelValue::new(2), LabelValue::new(3)]);
-        builder.add(&[LabelValue::new(1), LabelValue::new(243)]);
-        builder.add(&[LabelValue::new(-4), LabelValue::new(-2413)]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 243]);
+        builder.add(&[-4, -2413]);
 
         let idx = builder.finish();
         assert_eq!(idx.names(), &["foo", "bar"]);
         assert_eq!(idx.size(), 2);
         assert_eq!(idx.count(), 3);
 
-        assert_eq!(idx[0], [LabelValue::new(2), LabelValue::new(3)]);
-        assert_eq!(idx[1], [LabelValue::new(1), LabelValue::new(243)]);
-        assert_eq!(idx[2], [LabelValue::new(-4), LabelValue::new(-2413)]);
+        assert_eq!(idx[0], [2, 3]);
+        assert_eq!(idx[1], [1, 243]);
+        assert_eq!(idx[2], [-4, -2413]);
     }
 
     #[test]
     fn labels_iter() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[LabelValue::new(2), LabelValue::new(3)]);
-        builder.add(&[LabelValue::new(1), LabelValue::new(2)]);
-        builder.add(&[LabelValue::new(4), LabelValue::new(3)]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 2]);
+        builder.add(&[4, 3]);
 
         let idx = builder.finish();
         let mut iter = idx.iter();
         assert_eq!(iter.len(), 3);
 
-        assert_eq!(&*iter.next().unwrap(), &[LabelValue::new(2), LabelValue::new(3)]);
-        assert_eq!(&*iter.next().unwrap(), &[LabelValue::new(1), LabelValue::new(2)]);
-        assert_eq!(&*iter.next().unwrap(), &[LabelValue::new(4), LabelValue::new(3)]);
+        assert_eq!(&*iter.next().unwrap(), &[2, 3]);
+        assert_eq!(&*iter.next().unwrap(), &[1, 2]);
+        assert_eq!(&*iter.next().unwrap(), &[4, 3]);
         assert_eq!(iter.next(), None);
     }
 
@@ -472,8 +473,8 @@ mod tests {
     #[should_panic(expected = "can not have the same label value multiple time: [0, 1] is already present at position 0")]
     fn duplicated_label_value() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[LabelValue::new(0), LabelValue::new(1)]);
-        builder.add(&[LabelValue::new(0), LabelValue::new(1)]);
+        builder.add(&[0, 1]);
+        builder.add(&[0, 1]);
         builder.finish();
     }
 

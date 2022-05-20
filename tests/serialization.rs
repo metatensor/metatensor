@@ -1,9 +1,9 @@
-use std::io::BufReader;
-use std::fs::File;
-
 #[test]
 #[cfg(feature = "serialization")]
 fn load_file() {
+    use std::io::BufReader;
+    use std::fs::File;
+
     let file = File::open("tests/data.npz").unwrap();
     let tensor = equistore::io::load(BufReader::new(file)).unwrap();
 

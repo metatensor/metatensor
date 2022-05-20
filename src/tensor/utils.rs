@@ -184,8 +184,7 @@ mod tests_utils {
 mod tests_utils_ndarray {
     use super::tests_utils::example_labels;
 
-    use crate::labels::{LabelsBuilder, LabelValue};
-    use crate::{TensorBlock, TensorMap};
+    use crate::{LabelsBuilder, TensorBlock, TensorMap};
 
     use ndarray::ArrayD;
 
@@ -262,10 +261,10 @@ mod tests_utils_ndarray {
         );
 
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
-        keys.add(&[LabelValue::new(0), LabelValue::new(0)]);
-        keys.add(&[LabelValue::new(1), LabelValue::new(0)]);
-        keys.add(&[LabelValue::new(2), LabelValue::new(2)]);
-        keys.add(&[LabelValue::new(2), LabelValue::new(3)]);
+        keys.add(&[0, 0]);
+        keys.add(&[1, 0]);
+        keys.add(&[2, 2]);
+        keys.add(&[2, 3]);
         let keys = keys.finish();
 
         return TensorMap::new(keys, vec![block_1, block_2, block_3, block_4]).unwrap();
