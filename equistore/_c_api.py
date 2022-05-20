@@ -186,12 +186,13 @@ def setup_functions(lib):
     ]
     lib.eqs_tensormap_block_by_id.restype = _check_status
 
-    lib.eqs_tensormap_block_selection.argtypes = [
+    lib.eqs_tensormap_blocks_matching.argtypes = [
         POINTER(eqs_tensormap_t),
-        POINTER(POINTER(eqs_block_t)),
+        POINTER(c_uintptr_t),
+        POINTER(c_uintptr_t),
         eqs_labels_t
     ]
-    lib.eqs_tensormap_block_selection.restype = _check_status
+    lib.eqs_tensormap_blocks_matching.restype = _check_status
 
     lib.eqs_tensormap_keys_to_properties.argtypes = [
         POINTER(eqs_tensormap_t),

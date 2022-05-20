@@ -507,26 +507,23 @@ eqs_status_t eqs_tensormap_block_by_id(const struct eqs_tensormap_t *tensor,
                                        uint64_t index);
 
 /**
- * Get a pointer to the `block` in this `tensor` corresponding to the given
+ * Get indices of the `blocks` in this `tensor` corresponding to the given
  * `selection`. The `selection` should have the same names/variables as the
  * keys for this tensor map, and only one entry, describing the
- * requested block.
- *
- * The block memory is still managed by the tensor map, this block should not
- * be freed. The block is invalidated when the tensor map is freed with
- * `eqs_tensormap_free` or the set of keys is modified by calling one
- * of the `eqs_tensormap_keys_to_XXX` function.
+ * requested blocks.
  *
  * @param tensor pointer to an existing tensor map
- * @param block pointer to be filled with a block
+ * @param block_indexes array to be filled with indexes of blocks in the tensor map matching the criteria
+ * @param count number of entries in block_indexes (equal to the number of blocks matching the selection criteria)
  * @param selection labels with a single entry describing which block is requested
  *
  * @returns The status code of this operation. If the status is not
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
-eqs_status_t eqs_tensormap_block_selection(const struct eqs_tensormap_t *tensor,
-                                           const struct eqs_block_t **block,
+eqs_status_t eqs_tensormap_blocks_matching(const struct eqs_tensormap_t *tensor,
+                                           uintptr_t *block_indexes,
+                                           uintptr_t *count,
                                            struct eqs_labels_t selection);
 
 /**

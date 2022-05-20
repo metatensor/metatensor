@@ -36,6 +36,21 @@ class TestTensorMap(unittest.TestCase):
         block = tensor.block(tensor.keys[0])
         self.assertTrue(np.all(block.values == np.full((3, 1, 1), 1.0)))
 
+        # block selections
+        #: return list of multiple blocks
+        blocks = tensor.block(key_2=0)
+        self.assertEqual(len(blocks), 2)
+
+        # return 1 block
+        blocks = tensor.block(key_1=1, key_2=0)
+        self.assertTrue(np.all(blocks.values == np.full((3, 1, 1), 2.0)))
+
+        # 0 blocks matching criteria
+        with self.assertRaises(ValueError) as cm:
+            tensor.block(key_1=3)
+
+        self.assertEqual(str(cm.exception), "Couldn't find any matching block")
+
     def test_iter(self):
         expected = [
             ((0, 0), np.full((3, 1, 1), 1.0)),
