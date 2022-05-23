@@ -3,7 +3,7 @@ from typing import List, Union
 
 import numpy as np
 
-from ._c_api import eqs_block_t, eqs_labels_t
+from ._c_api import eqs_block_t, eqs_labels_t, c_uintptr_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .labels import Labels, _is_namedtuple
@@ -88,8 +88,10 @@ class TensorMap:
 
     def block(self, *args, **kwargs) -> TensorBlock:
         """
-        Get a single block in this tensor map, matching the selection made with
-        positional and keyword arguments.
+        Get blocks in this tensor map, matching the selection made with
+        positional and keyword arguments. Returns a list of multiple
+        blocks matching the criteria and returns a single block if the
+        selection criteria is only satisfied by one block.
 
         There are a couple of different ways to call this function:
 
@@ -122,7 +124,7 @@ class TensorMap:
             if isinstance(arg, int):
                 return self._get_block_by_id(arg)
             elif isinstance(arg, Labels):
-                return self._block_selection(arg)
+                return self._blocks_matching(arg)
             elif isinstance(arg, np.void):
                 # single entry from an Labels array
                 return self.block(
@@ -140,21 +142,37 @@ class TensorMap:
             np.array(list(kwargs.values()), dtype=np.int32).reshape(1, -1),
         )
 
-        return self._block_selection(selection)
+        return self._blocks_matching(selection)
 
     def _get_block_by_id(self, id) -> TensorBlock:
         block = ctypes.POINTER(eqs_block_t)()
         self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
-    def _block_selection(self, selection: Labels) -> TensorBlock:
-        block = ctypes.POINTER(eqs_block_t)()
-        self._lib.eqs_tensormap_block_selection(
+    def _blocks_matching(
+        self, selection: Labels
+    ) -> Union[TensorBlock, List[TensorBlock]]:
+        block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
+        count = c_uintptr_t(block_indexes._length_)
+
+        self._lib.eqs_tensormap_blocks_matching(
             self._ptr,
-            block,
+            block_indexes,
+            count,
             selection._as_eqs_labels_t(),
         )
-        return TensorBlock._from_ptr(block, parent=self, owning=False)
+
+        selected_blocks = []
+
+        for i in range(count.value):
+            selected_blocks.append(self._get_block_by_id(block_indexes[i]))
+
+        if len(selected_blocks) == 0:
+            raise ValueError("Couldn't find any matching block")
+        elif len(selected_blocks) == 1:
+            return selected_blocks[0]
+        else:
+            return selected_blocks
 
     def keys_to_properties(
         self, keys_to_move: Union[str, List[str], Labels], sort_samples=True

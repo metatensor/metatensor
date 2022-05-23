@@ -182,35 +182,40 @@ pub unsafe extern fn eqs_tensormap_block_by_id(
 }
 
 
-/// Get a pointer to the `block` in this `tensor` corresponding to the given
+/// Get indices of the `blocks` in this `tensor` corresponding to the given
 /// `selection`. The `selection` should have the same names/variables as the
 /// keys for this tensor map, and only one entry, describing the
-/// requested block.
+/// requested blocks.
 ///
-/// The block memory is still managed by the tensor map, this block should not
-/// be freed. The block is invalidated when the tensor map is freed with
-/// `eqs_tensormap_free` or the set of keys is modified by calling one
-/// of the `eqs_tensormap_keys_to_XXX` function.
+/// When calling this function, `*count` should contain the number of entries in `block_indexes`. 
+/// When the function returns, `*count` will contain the number of blocks matching the selection, 
+/// i.e. how many values were written to `block_indexes`.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param block pointer to be filled with a block
+/// @param block_indexes array to be filled with indexes of blocks in the tensor map matching the criteria 
+/// @param count number of entries in block_indexes
 /// @param selection labels with a single entry describing which block is requested
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn eqs_tensormap_block_selection(
+pub unsafe extern fn eqs_tensormap_blocks_matching(
     tensor: *const eqs_tensormap_t,
-    block: *mut *const eqs_block_t,
+    block_indexes: *mut usize,
+	count: *mut usize, 
     selection: eqs_labels_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, block);
+        check_pointers!(tensor, block_indexes, count);
 
         let selection = Labels::try_from(&selection)?;
-        let rust_block = (*tensor).block(&selection)?;
-        (*block) = (rust_block as *const TensorBlock).cast();
+        let rust_blocks = (*tensor).blocks_matching(&selection)?;
+        let block_indexes = std::slice::from_raw_parts_mut(block_indexes, *count);
+		*count = rust_blocks.len();
+		for (idx,block) in rust_blocks.into_iter().enumerate() {
+            block_indexes[idx] = block;
+		}
 
         Ok(())
     })
