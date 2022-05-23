@@ -149,7 +149,9 @@ class TensorMap:
         self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
-    def _blocks_matching(self, selection: Labels) -> TensorBlock:
+    def _blocks_matching(
+        self, selection: Labels
+    ) -> Union[TensorBlock, List[TensorBlock]]:
         block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
         count = c_uintptr_t(block_indexes._length_)
 
