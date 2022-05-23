@@ -4,12 +4,7 @@
 use std::ffi::CString;
 use std::collections::{BTreeSet, HashMap};
 use std::collections::hash_map::Entry;
-use std::hash::BuildHasherDefault;
 
-// these two crates are used for performance improvement in the lookup of labels
-// (Labels::position). XxHash64 is a fast hash function, and SmallVec removes
-// one pointer indirection when checking for equality in the hash map
-use twox_hash::XxHash64;
 use smallvec::SmallVec;
 
 use crate::utils::ConstCString;
@@ -100,7 +95,7 @@ pub struct LabelsBuilder {
     // cf `Labels` for the documentation of the fields
     names: Vec<String>,
     values: Vec<LabelValue>,
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, BuildHasherDefault<XxHash64>>,
+    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, ahash::RandomState>,
 }
 
 impl LabelsBuilder {
@@ -227,7 +222,7 @@ pub struct Labels {
     /// This uses `XxHash64` instead of the default hasher in std since
     /// `XxHash64` is much faster and we don't need the cryptographic strength
     /// hash from std.
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, BuildHasherDefault<XxHash64>>,
+    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, ahash::RandomState>,
 }
 
 impl std::fmt::Debug for Labels {
