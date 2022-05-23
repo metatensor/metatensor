@@ -512,9 +512,13 @@ eqs_status_t eqs_tensormap_block_by_id(const struct eqs_tensormap_t *tensor,
  * keys for this tensor map, and only one entry, describing the
  * requested blocks.
  *
+ * When calling this function, `*count` should contain the number of entries in `block_indexes`.
+ * When the function returns, `*count` will contain the number of blocks matching the selection,
+ * i.e. how many values were written to `block_indexes`.
+ *
  * @param tensor pointer to an existing tensor map
  * @param block_indexes array to be filled with indexes of blocks in the tensor map matching the criteria
- * @param count number of entries in block_indexes (equal to the number of blocks matching the selection criteria)
+ * @param count number of entries in block_indexes
  * @param selection labels with a single entry describing which block is requested
  *
  * @returns The status code of this operation. If the status is not
