@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use byteorder::{LittleEndian, BigEndian, ReadBytesExt, WriteBytesExt, NativeEndian};
 use py_literal::Value as PyValue;
-use zip::{ZipArchive, ZipWriter};
+use zip::{ZipArchive, ZipWriter, DateTime};
 
 use ndarray::{ArrayD, Dimension, IntoDimension};
 
@@ -118,7 +118,10 @@ pub fn load<R: std::io::Read + std::io::Seek>(reader: R) -> Result<TensorMap, Er
 /// numpy's NPZ format (i.e. zip archive containing NPY files).
 pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);
-    let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let options = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .large_file(true)
+        .last_modified_time(DateTime::from_date_and_time(2000, 1, 1, 0, 0, 0).expect("invalid datetime"));
 
     let path = String::from("keys.npy");
     archive.start_file(&path, options).map_err(|e| (path, e))?;
