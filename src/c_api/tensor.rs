@@ -182,19 +182,21 @@ pub unsafe extern fn eqs_tensormap_block_by_id(
 }
 
 
-/// Get indices of the `blocks` in this `tensor` corresponding to the given
-/// `selection`. The `selection` should have the same names/variables as the
-/// keys for this tensor map, and only one entry, describing the
-/// requested blocks.
+/// Get indices of the blocks in this `tensor` corresponding to the given
+/// `selection`. The `selection` should have a subset of the names/variables of
+/// the keys for this tensor map, and only one entry, describing the requested
+/// blocks.
 ///
-/// When calling this function, `*count` should contain the number of entries in `block_indexes`. 
-/// When the function returns, `*count` will contain the number of blocks matching the selection, 
-/// i.e. how many values were written to `block_indexes`.
+/// When calling this function, `*count` should contain the number of entries in
+/// `block_indexes`. When the function returns successfully, `*count` will
+/// contain the number of blocks matching the selection, i.e. how many values
+/// were written to `block_indexes`.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param block_indexes array to be filled with indexes of blocks in the tensor map matching the criteria 
-/// @param count number of entries in block_indexes
-/// @param selection labels with a single entry describing which block is requested
+/// @param block_indexes array to be filled with indexes of blocks in the tensor
+///                      map matching the `selection`
+/// @param count number of entries in `block_indexes`
+/// @param selection labels with a single entry describing which blocks are requested
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -203,7 +205,7 @@ pub unsafe extern fn eqs_tensormap_block_by_id(
 pub unsafe extern fn eqs_tensormap_blocks_matching(
     tensor: *const eqs_tensormap_t,
     block_indexes: *mut usize,
-	count: *mut usize, 
+	count: *mut usize,
     selection: eqs_labels_t,
 ) -> eqs_status_t {
     catch_unwind(|| {

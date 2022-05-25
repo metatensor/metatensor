@@ -3,7 +3,7 @@ from typing import List, Union
 
 import numpy as np
 
-from ._c_api import eqs_block_t, eqs_labels_t, c_uintptr_t
+from ._c_api import c_uintptr_t, eqs_block_t, eqs_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .labels import Labels, _is_namedtuple
@@ -86,12 +86,12 @@ class TensorMap:
         self._lib.eqs_tensormap_keys(self._ptr, result)
         return Labels._from_eqs_labels_t(result, parent=self)
 
-    def block(self, *args, **kwargs) -> TensorBlock:
+    def block(self, *args, **kwargs) -> Union[TensorBlock, List[TensorBlock]]:
         """
         Get blocks in this tensor map, matching the selection made with
-        positional and keyword arguments. Returns a list of multiple
-        blocks matching the criteria and returns a single block if the
-        selection criteria is only satisfied by one block.
+        positional and keyword arguments. Returns a list of multiple blocks
+        matching the criteria or a single block if the selection criteria is
+        only satisfied by one block.
 
         There are a couple of different ways to call this function:
 
@@ -116,42 +116,61 @@ class TensorMap:
             block = tensor.block(labels)
         """
 
+        if args and isinstance(args[0], int):
+            return self._get_block_by_id(args[0])
+
+        matching, selection = self.blocks_matching(
+            *args, **kwargs, __return_selection=True
+        )
+
+        if len(matching) == 0:
+            selection = next(selection.as_namedtuples())
+            raise ValueError(
+                f"Couldn't find any block matching the selection {selection.as_dict()}"
+            )
+        elif len(matching) == 1:
+            return self._get_block_by_id(matching[0])
+        else:
+            return [self._get_block_by_id(i) for i in matching]
+
+    def blocks_matching(self, *args, **kwargs) -> List[int]:
+        """
+        Get a (possibly empty) list of block indexes matching the selection made
+        with positional and keyword arguments. This function can be called with
+        different kinds of argument, similarly to :py:func:`TensorMap.block`.
+        """
+        return_selection = kwargs.pop("__return_selection", False)
+
+        selection = None
         if args:
             if len(args) > 1:
                 raise ValueError("only one non-keyword argument is supported")
 
             arg = args[0]
-            if isinstance(arg, int):
-                return self._get_block_by_id(arg)
-            elif isinstance(arg, Labels):
-                return self._blocks_matching(arg)
+            if isinstance(arg, Labels):
+                selection = arg
             elif isinstance(arg, np.void):
                 # single entry from an Labels array
-                return self.block(
-                    **{name: arg[i] for i, name in enumerate(arg.dtype.names)}
+                return self.blocks_matching(
+                    **{name: arg[i] for i, name in enumerate(arg.dtype.names)},
+                    __return_selection=return_selection,
                 )
             elif _is_namedtuple(arg):
-                return self.block(**arg.as_dict())
+                return self.blocks_matching(
+                    **arg.as_dict(),
+                    __return_selection=return_selection,
+                )
             else:
                 raise ValueError(
-                    f"got unexpected object in `TensorMap.block`: {type(arg)}"
+                    f"got unexpected object in `TensorMap.blocks_matching`: {type(arg)}"
                 )
 
-        selection = Labels(
-            kwargs.keys(),
-            np.array(list(kwargs.values()), dtype=np.int32).reshape(1, -1),
-        )
+        if selection is None:
+            selection = Labels(
+                kwargs.keys(),
+                np.array(list(kwargs.values()), dtype=np.int32).reshape(1, -1),
+            )
 
-        return self._blocks_matching(selection)
-
-    def _get_block_by_id(self, id) -> TensorBlock:
-        block = ctypes.POINTER(eqs_block_t)()
-        self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
-        return TensorBlock._from_ptr(block, parent=self, owning=False)
-
-    def _blocks_matching(
-        self, selection: Labels
-    ) -> Union[TensorBlock, List[TensorBlock]]:
         block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
         count = c_uintptr_t(block_indexes._length_)
 
@@ -162,17 +181,19 @@ class TensorMap:
             selection._as_eqs_labels_t(),
         )
 
-        selected_blocks = []
-
+        result = []
         for i in range(count.value):
-            selected_blocks.append(self._get_block_by_id(block_indexes[i]))
+            result.append(int(block_indexes[i]))
 
-        if len(selected_blocks) == 0:
-            raise ValueError("Couldn't find any matching block")
-        elif len(selected_blocks) == 1:
-            return selected_blocks[0]
+        if return_selection:
+            return result, selection
         else:
-            return selected_blocks
+            return result
+
+    def _get_block_by_id(self, id) -> TensorBlock:
+        block = ctypes.POINTER(eqs_block_t)()
+        self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
+        return TensorBlock._from_ptr(block, parent=self, owning=False)
 
     def keys_to_properties(
         self, keys_to_move: Union[str, List[str], Labels], sort_samples=True

@@ -49,7 +49,10 @@ class TestTensorMap(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             tensor.block(key_1=3)
 
-        self.assertEqual(str(cm.exception), "Couldn't find any matching block")
+        self.assertEqual(
+            str(cm.exception),
+            "Couldn't find any block matching the selection {'key_1': 3}",
+        )
 
     def test_iter(self):
         expected = [

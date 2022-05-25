@@ -218,8 +218,8 @@ impl TensorMap {
 
     /// Get the index of the single block matching the given selection.
     ///
-    /// This function is similar to [`TensorMap::blocks_id`], but also returns
-    /// an error if more than one block matches the selection.
+    /// This function is similar to [`TensorMap::blocks_matching`], but also
+    /// returns an error if more than one block matches the selection.
     pub fn block_matching(&self, selection: &Labels) -> Result<usize, Error> {
         let matching = self.blocks_matching(selection)?;
         if matching.len() != 1 {
