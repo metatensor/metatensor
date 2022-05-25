@@ -216,6 +216,16 @@ extern "C" {
 #endif // __cplusplus
 
 /**
+ * Disable printing of the message to stderr when some Rust code reach a panic.
+ *
+ * All panics from Rust code are caught anyway and translated to an error
+ * status code, and the message is stored and accessible through
+ * `eqs_last_error`. To print the error message and Rust backtrace anyway,
+ * users can set the `RUST_BACKTRACE` environment variable to 1.
+ */
+void eqs_disable_panic_printing(void);
+
+/**
  * Get the last error message that was created on the current thread.
  *
  * @returns the last error message, as a NULL-terminated string

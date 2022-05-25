@@ -76,6 +76,11 @@ eqs_array_t._fields_ = [
 def setup_functions(lib):
     from .status import _check_status
 
+    lib.eqs_disable_panic_printing.argtypes = [
+        
+    ]
+    lib.eqs_disable_panic_printing.restype = None
+
     lib.eqs_last_error.argtypes = [
         
     ]
