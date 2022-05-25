@@ -32,6 +32,11 @@ class LibraryFinder(object):
             path = _lib_path()
             self._cached_dll = cdll.LoadLibrary(path)
             setup_functions(self._cached_dll)
+
+            # initial setup, disable printing of the error in case of panic
+            # the error will be transformed to a Python exception anyway
+            self._cached_dll.eqs_disable_panic_printing()
+
         return self._cached_dll
 
 
