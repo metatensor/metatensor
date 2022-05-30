@@ -143,6 +143,15 @@ set_target_properties(equistore PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
 )
 
+# strip dynamic library for smaller wheels to download/install
+if (EQUISTORE_BUILD_FOR_PYTHON AND UNIX)
+    add_custom_command(TARGET cargo-build-equistore POST_BUILD
+        COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
+        # remove debug & non-global symbols
+        ARGS "-S" "-x" "${EQUISTORE_LOCATION}"
+    )
+endif()
+
 #------------------------------------------------------------------------------#
 # Installation configuration
 #------------------------------------------------------------------------------#
