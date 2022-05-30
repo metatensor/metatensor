@@ -1,10 +1,10 @@
 import os
-import sys
 import subprocess
-
-from setuptools import setup, Extension
-from wheel.bdist_wheel import bdist_wheel
+import sys
 from distutils.command.build_ext import build_ext  # type: ignore
+
+from setuptools import Extension, setup
+from wheel.bdist_wheel import bdist_wheel
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 
@@ -18,6 +18,8 @@ if EQUISTORE_BUILD_TYPE not in ["debug", "release"]:
         f"invalid build type passed: '{EQUISTORE_BUILD_TYPE}', "
         "expected 'debug' or 'release'"
     )
+
+RUST_BUILD_TARGET = os.environ.get("RUST_BUILD_TARGET", None)
 
 
 class universal_wheel(bdist_wheel):
@@ -54,6 +56,9 @@ class cmake_ext(build_ext):
             "-DBUILD_SHARED_LIBS=ON",
             "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
         ]
+
+        if RUST_BUILD_TARGET is not None:
+            cmake_options.append(f"-DRUST_BUILD_TARGET={RUST_BUILD_TARGET}")
 
         if "CARGO" in os.environ:
             cmake_options.append(f"-DCARGO_EXE={os.environ['CARGO']}")

@@ -52,7 +52,7 @@ def _lib_path():
         name = "libequistore.so"
     elif sys.platform.startswith("win"):
         windows = True
-        name = "libequistore.dll"
+        name = "equistore.dll"
     else:
         raise ImportError("Unknown platform. Please edit this file")
 
