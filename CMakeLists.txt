@@ -24,6 +24,7 @@ option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
 
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
+set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
 
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
@@ -53,6 +54,14 @@ elseif("${BUILD_TYPE}" STREQUAL "relwithdebinfo")
     set(CARGO_BUILD_TYPE "release")
 else()
     message(FATAL_ERROR "unsuported build type: ${CMAKE_BUILD_TYPE}")
+endif()
+
+# Handle cross compilation with RUST_BUILD_TARGET
+if ("${RUST_BUILD_TARGET}" STREQUAL "")
+    set(CARGO_TARGET_DIR "${PROJECT_SOURCE_DIR}/target/${CARGO_BUILD_TYPE}")
+else()
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
+    set(CARGO_TARGET_DIR "${PROJECT_SOURCE_DIR}/target/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
 endif()
 
 find_program(CARGO_EXE "cargo" DOC "path to cargo (Rust build system)")
@@ -92,7 +101,6 @@ file(GLOB_RECURSE ALL_RUST_SOURCES
     ${PROJECT_SOURCE_DIR}/src/**.rs
 )
 
-set(CARGO_TARGET_DIR "${PROJECT_SOURCE_DIR}/target/${CARGO_BUILD_TYPE}")
 if(${BUILD_SHARED_LIBS})
     add_library(equistore SHARED IMPORTED GLOBAL)
     set(EQUISTORE_LOCATION "${CARGO_TARGET_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore${CMAKE_SHARED_LIBRARY_SUFFIX}")
