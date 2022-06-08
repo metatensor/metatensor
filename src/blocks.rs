@@ -333,6 +333,14 @@ pub struct TensorBlockRefMut<'a>  {
     block: &'a mut TensorBlock
 }
 
+impl<'a> std::ops::Deref for TensorBlockRefMut<'a>  {
+    type Target = TensorBlock;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.block
+    }
+}
+
 impl<'a> TensorBlockRefMut<'a> {
     /// Get the values data and metadata in this block
     pub fn values(&self) -> &BasicBlock {
