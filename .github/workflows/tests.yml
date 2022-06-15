@@ -54,12 +54,9 @@ jobs:
           apt-get install -y software-properties-common
           add-apt-repository -y ppa:git-core/ppa
           apt-get update
-          apt-get install -y cmake make gcc g++ git curl rustc
+          apt-get install -y cmake make gcc g++ git curl rustc cargo
 
-          # workaround https://github.com/actions/checkout/issues/760
-          git config --global --add safe.directory /__w/equistore/equistore
-
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: setup Python
         uses: actions/setup-python@v2
