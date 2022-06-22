@@ -239,3 +239,78 @@ def _is_namedtuple(x):
     if not isinstance(f, tuple):
         return False
     return all(type(n) == str for n in f)
+
+
+def _print_labels_skip(Labels: Labels, header: str = "names", lskip: int = 10) -> str:
+    """
+    Utility function to print a Label in a table-like format,
+    with the number alligned under names of the correponding column.
+    If len(Labels)>lskip it will print only the first three columns and the last three,
+    if lskip<6 it will print all the table.
+    if header='names' the result will look like
+
+    names: ['name_1', 'name_2', 'name_3']
+                v11       v12       v13
+                v21       v22       v23
+                v31       v32       v33
+
+    with vij being the corresponding values.
+
+    :param Labels: the input label
+    :param header: the general names of the "column-names"
+    :param lskip: the maximum number of line you want to print without skipping
+    """
+    if lskip < 6:
+        lskip = 10
+    ln = len(Labels)
+    width = []
+    s = header + ": ["
+    for i in Labels.names:
+        s += "'{}' ".format(i)
+        width.append(len(i) + 3)
+    if ln > 0:
+        s = s[:-2]  # cancel last ", "
+    s += "]\n"
+    lheader = len(header)
+    prev = lheader + 3
+    if ln <= lskip:
+        for ik in Labels:
+            for iw, i in zip(width, ik):
+                s += _make_padding(value=i, width=iw, prev=prev)
+                # pad=prev+iw//2-li//2
+                # s+=("{:>"+str(pad)+"}").format(i)
+                prev = iw // 2
+            s += "\n"
+            prev = lheader + 3
+            # iw=width[-1]
+            # i=ik[-1]
+            # pad=prev+iw//2-len(i)//2
+            # s+=("{:"+str(pad)+"} \n").format(i)
+    else:
+        for ik in Labels[:3]:
+            for iw, i in zip(width, ik):
+                s += _make_padding(value=i, width=iw, prev=prev)
+                prev = iw // 2
+                # s+="\t{},".format(i)
+            s += "\n"
+            prev = lheader + 3
+        s += "...\n".rjust(prev + width[0] // 2)
+        for ik in Labels[-3:]:
+            for iw, i in zip(width, ik):
+                s += _make_padding(value=i, width=iw, prev=prev)
+                prev = iw // 2
+            s += "\n"
+            prev = lheader + 3
+    return s[:-1]
+
+
+def _make_padding(value, width: int, prev=0):
+    """
+    Utility to make the padding in the output string
+
+    :param value : value to write
+    :param width : width of the name of that column
+    :param prev  : additional padding
+    """
+    pad = prev + width // 2
+    return ("{:>" + str(pad) + "}").format(value)

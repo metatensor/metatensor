@@ -129,8 +129,41 @@ class TensorBlock:
         return copy
 
     def copy(self) -> "TensorBlock":
-        """Get a deep copy of this block"""
+        """
+        Get a deep copy of this block
+        """
         return copy.deepcopy(self)
+
+    def __repr__(self) -> str:
+        s = "TensorBlock \n"
+        s += "samples: ["
+        for sname in self.samples.names[:-1]:
+            s += "'" + sname + "', "
+        s += "'" + self.samples.names[-1] + "']"
+        s += "\n"
+        s += "component: ["
+        for ic in self.components:
+            for name in ic.names[:]:
+                s += "'" + name + "', "
+        if len(self.components) > 0:
+            s = s[:-2]
+        s += "]\n"
+        s += "properties: ["
+        for name in self.properties.names[:-1]:
+            s += "'" + name + "', "
+        s += "'" + self.properties.names[-1] + "']\n"
+        s += "gradients: "
+        if len(self.gradients_list()) > 0:
+            s += "["
+            for gr in self.gradients_list()[:-1]:
+                s += "'{}', ".format(gr)
+            s += "'{}']".format(self.gradients_list()[-1])
+            # s+=", ".join(self.gradients_list())
+            # s+="]"
+        else:
+            s += "No"
+
+        return s
 
     @property
     def values(self) -> Array:
@@ -274,6 +307,28 @@ class Gradient:
 
         self._block = block
         self._name = name
+
+    def __repr__(self) -> str:
+        s = "Gradient TensorBlock \n"
+        s += "parameter: '{}'\n".format(self._name)
+        s += "samples: ["
+        for sname in self.samples.names[:-1]:
+            s += "'" + sname + "', "
+        s += "'" + self.samples.names[-1] + "']"
+        s += "\n"
+        s += "component: ["
+        for ic in self.components:
+            for name in ic.names[:]:
+                s += "'" + name + "', "
+        if len(self.components) > 0:
+            s = s[:-2]
+        s += "]\n"
+        s += "properties: ["
+        for name in self.properties.names[:-1]:
+            s += "'" + name + "', "
+        s += "'" + self.properties.names[-1] + "']"
+
+        return s
 
     @property
     def data(self) -> Array:
