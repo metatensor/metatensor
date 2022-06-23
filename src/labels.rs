@@ -310,7 +310,7 @@ impl Labels {
     pub fn iter_fixed_size<const N: usize>(&self) -> FixedSizeIter<N> {
         debug_assert!(self.values.len() % self.names.len() == 0);
         assert!(N == self.size(),
-            "wrong label size in `iter_fixed_size`: the entries contains {} element\
+            "wrong label size in `iter_fixed_size`: the entries contains {} element \
             but this function was called with size of {}",
             self.size(), N
         );
