@@ -380,7 +380,6 @@ pub struct FixedSizeIter<'a, const N: usize> {
 impl<'a, const N: usize> Iterator for FixedSizeIter<'a, N> {
     type Item = &'a [LabelValue; N];
     fn next(&mut self) -> Option<Self::Item> {
-        use std::convert::TryInto;
         if self.values.is_empty() {
             return None
         }
