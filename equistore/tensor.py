@@ -79,6 +79,9 @@ class TensorMap:
         for i, keys in enumerate(keys):
             yield keys, self._get_block_by_id(i)
 
+    def __len__(self):
+        return len(self.keys)
+
     def __repr__(self) -> str:
         s = f"TensorMap with {len(self.keys)} blocks\n"
         s += _print_labels_skip(self.keys, header="keys")
