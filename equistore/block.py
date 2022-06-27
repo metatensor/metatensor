@@ -158,10 +158,8 @@ class TensorBlock:
             for gr in self.gradients_list()[:-1]:
                 s += "'{}', ".format(gr)
             s += "'{}']".format(self.gradients_list()[-1])
-            # s+=", ".join(self.gradients_list())
-            # s+="]"
         else:
-            s += "No"
+            s += "no"
 
         return s
 
