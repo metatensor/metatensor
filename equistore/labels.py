@@ -269,7 +269,7 @@ def _print_labels_skip(Labels: Labels, header: str = "names", lskip: int = 10) -
         s += "'{}' ".format(i)
         width.append(len(i) + 3)
     if ln > 0:
-        s = s[:-2]  # cancel last ", "
+        s = s[:-1]  # cancel last " "
     s += "]\n"
     lheader = len(header)
     prev = lheader + 3
@@ -277,21 +277,14 @@ def _print_labels_skip(Labels: Labels, header: str = "names", lskip: int = 10) -
         for ik in Labels:
             for iw, i in zip(width, ik):
                 s += _make_padding(value=i, width=iw, prev=prev)
-                # pad=prev+iw//2-li//2
-                # s+=("{:>"+str(pad)+"}").format(i)
                 prev = iw // 2
             s += "\n"
             prev = lheader + 3
-            # iw=width[-1]
-            # i=ik[-1]
-            # pad=prev+iw//2-len(i)//2
-            # s+=("{:"+str(pad)+"} \n").format(i)
     else:
         for ik in Labels[:3]:
             for iw, i in zip(width, ik):
                 s += _make_padding(value=i, width=iw, prev=prev)
                 prev = iw // 2
-                # s+="\t{},".format(i)
             s += "\n"
             prev = lheader + 3
         s += "...\n".rjust(prev + width[0] // 2)

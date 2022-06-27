@@ -1,7 +1,8 @@
 import unittest
+import os
 
 import numpy as np
-from utils import test_tensor_map
+from utils import test_tensor_map, test_large_tensor_map
 
 
 class TestTensorMap(unittest.TestCase):
@@ -9,10 +10,39 @@ class TestTensorMap(unittest.TestCase):
         tensor = test_tensor_map()
         self.assertEqual(tensor.keys.names, ("key_1", "key_2"))
         self.assertEqual(len(tensor.keys), 4)
+        self.assertEqual(len(tensor), 4)
         self.assertEqual(tuple(tensor.keys[0]), (0, 0))
         self.assertEqual(tuple(tensor.keys[1]), (1, 0))
         self.assertEqual(tuple(tensor.keys[2]), (2, 2))
         self.assertEqual(tuple(tensor.keys[3]), (2, 3))
+
+    def test_print(self):
+        """
+        Test routine for the print function of the TensorBlock.
+        It compare the reults with those in a file.
+        """
+        tensor = test_tensor_map()
+        repr = tensor.__repr__()
+        expected = """TensorMap with 4 blocks
+keys: ['key_1' 'key_2']
+          0       0
+          1       0
+          2       2
+          2       3"""
+        self.assertTrue(expected == repr)
+
+        tensor = test_large_tensor_map()
+        _print = tensor.__repr__()
+        expected = """TensorMap with 12 blocks
+keys: ['key_1' 'key_2']
+          0       0
+          1       0
+          2       2
+       ...
+          1       5
+          2       5
+          3       5"""
+        self.assertTrue(expected == _print)
 
     def test_labels_names(self):
         tensor = test_tensor_map()
