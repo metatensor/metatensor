@@ -3,7 +3,7 @@ import ctypes
 import gc
 from typing import Generator, List, Tuple
 
-from ._c_api import eqs_array_t, eqs_labels_t
+from ._c_api import c_uintptr_t, eqs_array_t, eqs_labels_t
 from ._c_lib import _get_library
 from .data import (
     Array,
@@ -269,7 +269,7 @@ class TensorBlock:
     def gradients_list(self) -> List[str]:
         """Get a list of all gradients defined in this block."""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
-        count = ctypes.c_uint64()
+        count = c_uintptr_t()
         self._lib.eqs_block_gradients_list(self._ptr, parameters, count)
 
         result = []
