@@ -49,6 +49,13 @@ def _is_numpy_array(array):
     return isinstance(array, np.ndarray)
 
 
+def _is_torch_array(array):
+    if not HAS_TORCH:
+        return False
+
+    return isinstance(array, torch.Tensor)
+
+
 def _register_origin(name):
     lib = _get_library()
     origin = ctypes.c_uint64(0)
@@ -64,13 +71,6 @@ def _numpy_origin():
     return _NUMPY_STORAGE_ORIGIN
 
 
-def _is_torch_array(array):
-    if not HAS_TORCH:
-        return False
-
-    return isinstance(array, torch.Tensor)
-
-
 def _torch_origin():
     global _TORCH_STORAGE_ORIGIN
     if _TORCH_STORAGE_ORIGIN is None:
@@ -79,38 +79,67 @@ def _torch_origin():
     return _TORCH_STORAGE_ORIGIN
 
 
-class RustNDArray:
-    def __init__(self, eqs_array):
+def _rust_origin():
+    global _RUST_STORAGE_ORIGIN
+    if _RUST_STORAGE_ORIGIN is None:
+        _RUST_STORAGE_ORIGIN = _register_origin("rust.ndarray")
+
+    return _RUST_STORAGE_ORIGIN
+
+
+class _RustNDArray(np.ndarray):
+    """
+    Small wrapper class around ``np.ndarray``, adding a reference to a parent
+    Python object that actually owns the memory used inside the array. This
+    prevents the parent from being garbage collected while the ndarray is still
+    alive, thus preventing use-after-free.
+    """
+
+    def __new__(cls, eqs_array, parent):
         lib = _get_library()
 
         data = ctypes.POINTER(ctypes.c_double)()
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
 
+        # this requires the data origin of this array is "rust.ndarray", which
+        # is guaranteed by `eqs_array_to_python_object`. This function call will
+        # fail anyway if this is not the case.
         lib.eqs_get_rust_array(eqs_array, data, shape_ptr, shape_count)
 
         shape = []
         for i in range(shape_count.value):
             shape.append(shape_ptr[i])
 
-        self._storage = eqs_array
-        self.array = _ptr_to_const_ndarray(data, shape, np.float64)
+        array = _ptr_to_const_ndarray(data, shape, np.float64)
+        obj = array.view(cls)
+
+        # keep a reference to the parent object (if any) to prevent it from
+        # being garbage-collected too early.
+        obj._parent = parent
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        # keep the parent around when creating sub-views of this array
+        self._parent = getattr(obj, "_parent", None)
 
 
-def eqs_array_to_python_object(eqs_array):
-    global _RUST_STORAGE_ORIGIN
-    if _RUST_STORAGE_ORIGIN is None:
-        _RUST_STORAGE_ORIGIN = _register_origin("rust.ndarray")
-
+def eqs_array_to_python_object(eqs_array, parent=None):
     origin = data_origin(eqs_array)
-    if origin in [_NUMPY_STORAGE_ORIGIN, _TORCH_STORAGE_ORIGIN]:
+    if origin in [_numpy_origin(), _torch_origin()]:
         return _object_from_ptr(eqs_array.ptr)
-    elif origin == _RUST_STORAGE_ORIGIN:
-        return RustNDArray(eqs_array)
+    elif origin == _rust_origin():
+        return ArrayWrapper(_RustNDArray(eqs_array, parent=parent))
     else:
         raise ValueError(
             f"unable to handle data coming from '{data_origin_name(origin)}'"
         )
+
+
+def eqs_array_was_allocated_by_python(eqs_array):
+    origin = data_origin(eqs_array)
+    return origin in [_numpy_origin(), _torch_origin()]
 
 
 def data_origin(eqs_array):

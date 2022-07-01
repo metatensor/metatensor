@@ -105,7 +105,7 @@ class Labels(np.ndarray):
 
     def __array_finalize__(self, obj):
         # keep the parent around when creating sub-views of this array
-        self._parent = getattr(object, "_parent", None)
+        self._parent = getattr(obj, "_parent", None)
 
         # do not keep the eqs_labels around, since one could be taking only a
         # subset of the variables (`samples[["structure", "center"]]`) and this
