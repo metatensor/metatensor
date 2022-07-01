@@ -5,7 +5,12 @@ from typing import Generator, List, Tuple
 
 from ._c_api import eqs_array_t, eqs_labels_t
 from ._c_lib import _get_library
-from .data import Array, ArrayWrapper, eqs_array_to_python_object
+from .data import (
+    Array,
+    ArrayWrapper,
+    eqs_array_to_python_object,
+    eqs_array_was_allocated_by_python,
+)
 from .labels import Labels
 from .status import _check_pointer
 
@@ -105,18 +110,17 @@ class TensorBlock:
 
         # Keep references to the arrays in this block if the arrays were
         # allocated by Python
-        try:
-            raw_array = _get_raw_array(self._lib, copy._ptr, "values")
-            copy._values = eqs_array_to_python_object(raw_array)
-        except ValueError:
-            # the array was not allocated by Python
+        raw_values = _get_raw_array(self._lib, copy._ptr, "values")
+        if eqs_array_was_allocated_by_python(raw_values):
+            copy._values = eqs_array_to_python_object(raw_values)
+        else:
             copy._values = None
 
         for parameter in self.gradients_list():
-            try:
-                raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
+            raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
+            if eqs_array_was_allocated_by_python(raw_array):
                 copy._gradients.append(eqs_array_to_python_object(raw_array))
-            except ValueError:
+            else:
                 pass
 
         if reset_gc:
@@ -138,7 +142,7 @@ class TensorBlock:
         """
 
         raw_array = _get_raw_array(self._lib, self._ptr, "values")
-        return eqs_array_to_python_object(raw_array).array
+        return eqs_array_to_python_object(raw_array, parent=self).array
 
     @property
     def samples(self) -> Labels:
@@ -281,7 +285,7 @@ class Gradient:
         """
 
         raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
-        return eqs_array_to_python_object(raw_array).array
+        return eqs_array_to_python_object(raw_array, parent=self).array
 
     @property
     def samples(self) -> Labels:
