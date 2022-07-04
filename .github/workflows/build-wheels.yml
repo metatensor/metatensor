@@ -29,6 +29,8 @@ jobs:
             platform-name: win_amd64
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup rust
         uses: actions-rs/toolchain@v1
         with:
@@ -63,7 +65,9 @@ jobs:
     # TODO: add other arch for linux?
     name: x86_64 manylinux2010
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: build manylinux2010 with rust docker image
         run: docker build -t manylinux2010-with-rust scripts/build-wheels
       - name: build wheel in docker
@@ -88,7 +92,9 @@ jobs:
     runs-on: ubuntu-20.04
     name: sdist
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
