@@ -78,19 +78,78 @@ class cmake_ext(build_ext):
         )
 
 
-# read version from Cargo.toml
-with open("Cargo.toml") as fd:
-    for line in fd:
-        if line.startswith("version"):
-            _, version = line.split(" = ")
-            # remove quotes
-            version = version[1:-2]
-            # take the first version in the file, this should be the right
-            # version
-            break
+def get_version():
+    """
+    Get the version of equistore from the Cargo.toml file and git metadata.
+
+    If git is available, it is used to check if we are installing a development
+    version or a released version (by checking how many commits happened since
+    the last tag).
+    """
+
+    # read version from Cargo.toml
+    with open("Cargo.toml") as fd:
+        for line in fd:
+            if line.startswith("version"):
+                _, version = line.split(" = ")
+                # remove quotes
+                version = version[1:-2]
+                # take the first version in the file, this should be the right
+                # version
+                break
+
+    # Add pre-release info the version
+    try:
+        tags_list = subprocess.run(
+            ["git", "tag"],
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        tags_list = tags_list.stdout.decode("utf8").strip()
+
+        if tags_list == "":
+            first_commit = subprocess.run(
+                ["git", "rev-list", "--max-parents=0", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                check=True,
+            )
+            reference = first_commit.stdout.decode("utf8").strip()
+
+        else:
+            last_tag = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                check=True,
+            )
+
+            reference = last_tag.stdout.decode("utf8").strip()
+
+    except Exception:
+        reference = ""
+        pass
+
+    try:
+        n_commits_since_tag = subprocess.run(
+            ["git", "rev-list", f"{reference}..HEAD", "--count"],
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        n_commits_since_tag = n_commits_since_tag.stdout.decode("utf8").strip()
+
+        if n_commits_since_tag != 0:
+            version += ".dev" + n_commits_since_tag
+    except Exception:
+        pass
+
+    return version
+
 
 setup(
-    version=version,
+    version=get_version(),
     ext_modules=[
         # only declare the extension, it is built & copied as required by cmake
         # in the build_ext command
