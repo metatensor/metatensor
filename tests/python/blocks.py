@@ -1,5 +1,4 @@
 import unittest
-import os
 
 import numpy as np
 
@@ -7,14 +6,18 @@ from equistore import Labels, TensorBlock
 
 
 class TestBlocks(unittest.TestCase):
-    def test_repr_(self):
+    def test_repr(self):
         block = TensorBlock(
             values=np.full((3, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
-        expected = "TensorBlock \nsamples: ['samples']\ncomponent: []\nproperties: ['properties']\ngradients: no"
+        expected = """TensorBlock
+    samples: ['samples']
+    component: []
+    properties: ['properties']
+    gradients: no"""
         self.assertTrue(block.__repr__() == expected)
 
     def test_block_no_components(self):

@@ -6,7 +6,7 @@ import numpy as np
 from ._c_api import c_uintptr_t, eqs_block_t, eqs_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
-from .labels import Labels, _is_namedtuple, _print_labels_skip
+from .labels import Labels, _is_namedtuple, _print_labels
 from .status import _check_pointer
 
 
@@ -83,15 +83,18 @@ class TensorMap:
         return len(self.keys)
 
     def __repr__(self) -> str:
-        s = f"TensorMap with {len(self.keys)} blocks\n"
-        s += _print_labels_skip(self.keys, header="keys")
-        return s
+        result = f"TensorMap with {len(self)} blocks\n"
+        result += _print_labels(self.keys, header="keys")
+        return result
 
     def __str__(self) -> str:
-        ln = len(self.keys)
-        s = f"TensorMap with {ln} blocks\n"
-        s += _print_labels_skip(self.keys, header="keys", lskip=ln + 1)
-        return s
+        result = f"TensorMap with {len(self)} blocks\n"
+        result += _print_labels(
+            self.keys,
+            header="keys",
+            print_limit=len(self) + 1,
+        )
+        return result
 
     @property
     def keys(self) -> Labels:
