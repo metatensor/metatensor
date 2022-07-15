@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 from distutils.command.build_ext import build_ext  # type: ignore
+from distutils.command.install import install as distutils_install  # type: ignore
 
 from setuptools import Extension, setup
 from wheel.bdist_wheel import bdist_wheel
@@ -158,6 +159,10 @@ setup(
     cmdclass={
         "build_ext": cmake_ext,
         "bdist_wheel": universal_wheel,
+        # HACK: do not use the new setuptools install implementation, it tries
+        # to install the package with `easy_install`, which fails to resolve the
+        # freshly installed package and tries to load it from pypi.
+        "install": distutils_install,
     },
     package_data={
         "equistore": [
