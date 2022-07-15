@@ -50,7 +50,7 @@ keys: ['key_1' 'key_2']
         self.assertEqual(tensor.components_names, [("components",)])
         self.assertEqual(tensor.property_names, ("properties",))
 
-    def test_get_block(self):
+    def test_block(self):
         tensor = test_tensor_map()
 
         # block by index
@@ -65,15 +65,6 @@ keys: ['key_1' 'key_2']
         block = tensor.block(tensor.keys[0])
         self.assertTrue(np.all(block.values == np.full((3, 1, 1), 1.0)))
 
-        # block selections
-        #: return list of multiple blocks
-        blocks = tensor.block(key_2=0)
-        self.assertEqual(len(blocks), 2)
-
-        # return 1 block
-        blocks = tensor.block(key_1=1, key_2=0)
-        self.assertTrue(np.all(blocks.values == np.full((3, 1, 1), 2.0)))
-
         # 0 blocks matching criteria
         with self.assertRaises(ValueError) as cm:
             tensor.block(key_1=3)
@@ -82,6 +73,36 @@ keys: ['key_1' 'key_2']
             str(cm.exception),
             "Couldn't find any block matching the selection {'key_1': 3}",
         )
+
+        # more than one block matching criteria
+        with self.assertRaises(ValueError) as cm:
+            tensor.block(key_2=0)
+
+        self.assertEqual(
+            str(cm.exception),
+            "more than one block matched {'key_2': 0}, use `TensorMap.blocks` "
+            "if you want to get all of them",
+        )
+
+    def test_blocks(self):
+        tensor = test_tensor_map()
+
+        # block by index
+        blocks = tensor.blocks(2)
+        self.assertEqual(len(blocks), 1)
+        self.assertTrue(np.all(blocks[0].values == np.full((4, 3, 1), 3.0)))
+
+        # block by kwargs
+        blocks = tensor.blocks(key_1=1, key_2=0)
+        self.assertEqual(len(blocks), 1)
+        self.assertTrue(np.all(blocks[0].values == np.full((3, 1, 1), 2.0)))
+
+        # more than one block
+        blocks = tensor.blocks(key_2=0)
+        self.assertEqual(len(blocks), 2)
+
+        self.assertTrue(np.all(blocks[0].values == np.full((3, 1, 1), 1.0)))
+        self.assertTrue(np.all(blocks[1].values == np.full((3, 1, 3), 2.0)))
 
     def test_iter(self):
         expected = [

@@ -103,12 +103,10 @@ class TensorMap:
         self._lib.eqs_tensormap_keys(self._ptr, result)
         return Labels._from_eqs_labels_t(result, parent=self)
 
-    def block(self, *args, **kwargs) -> Union[TensorBlock, List[TensorBlock]]:
+    def block(self, *args, **kwargs) -> TensorBlock:
         """
-        Get blocks in this tensor map, matching the selection made with
-        positional and keyword arguments. Returns a list of multiple blocks
-        matching the criteria or a single block if the selection criteria is
-        only satisfied by one block.
+        Get the block in this tensor map matching the selection made with
+        positional and keyword arguments.
 
         There are a couple of different ways to call this function:
 
@@ -145,8 +143,56 @@ class TensorMap:
             raise ValueError(
                 f"Couldn't find any block matching the selection {selection.as_dict()}"
             )
-        elif len(matching) == 1:
+        elif len(matching) > 1:
+            selection = next(selection.as_namedtuples())
+            raise ValueError(
+                f"more than one block matched {selection.as_dict()}, use "
+                "`TensorMap.blocks` if you want to get all of them"
+            )
+        else:
             return self._get_block_by_id(matching[0])
+
+    def blocks(self, *args, **kwargs) -> List[TensorBlock]:
+        """
+        Get blocks in this tensor map, matching the selection made with
+        positional and keyword arguments. Returns a list of all blocks matching
+        the criteria.
+
+        There are a couple of different ways to call this function:
+
+        .. code-block:: python
+
+            # with a numeric index, this gives a block by its position
+            blocks = tensor.blocks(3)
+            # this block corresponds to tensor.keys[3]
+
+            # with a key
+            blocks = tensor.blocks(tensor.keys[3])
+
+            # with keyword arguments selecting the blocks
+            blocks = tensor.blocks(key=-3, symmetric=4)
+            # this assumes `tensor.keys.names == ("key", "symmetric")`
+
+            # with Labels containing a single entry
+            labels = Labels(
+                names=["key"],
+                values=np.array([[-3]], dtype=np.int32)
+            )
+            blocks = tensor.blocks(labels)
+        """
+
+        if args and isinstance(args[0], int):
+            return [self._get_block_by_id(args[0])]
+
+        matching, selection = self.blocks_matching(
+            *args, **kwargs, __return_selection=True
+        )
+
+        if len(matching) == 0:
+            selection = next(selection.as_namedtuples())
+            raise ValueError(
+                f"Couldn't find any block matching the selection {selection.as_dict()}"
+            )
         else:
             return [self._get_block_by_id(i) for i in matching]
 
