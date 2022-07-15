@@ -37,7 +37,7 @@ def catch_exceptions(function):
     return inner
 
 
-def _ptr_to_const_ndarray(ptr, shape, dtype):
+def _ptr_to_ndarray(ptr, shape, dtype):
     if reduce(operator.mul, shape) == 0:
         return np.empty(shape=shape, dtype=dtype)
 
@@ -45,5 +45,11 @@ def _ptr_to_const_ndarray(ptr, shape, dtype):
     array = np.ctypeslib.as_array(ptr, shape=shape)
     assert array.dtype == dtype
     assert not array.flags["OWNDATA"]
+    array.flags["WRITEABLE"] = True
+    return array
+
+
+def _ptr_to_const_ndarray(ptr, shape, dtype):
+    array = _ptr_to_ndarray(ptr, shape, dtype)
     array.flags["WRITEABLE"] = False
     return array

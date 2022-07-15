@@ -65,6 +65,15 @@ class TestLabels(unittest.TestCase):
 
         self.assertRaises(StopIteration, next, iterator)
 
+    def test_not_writeable(self):
+        tensor = test_tensor_map()
+        labels = tensor.keys
+
+        with self.assertRaises(ValueError) as cm:
+            labels[0][0] = 4
+
+        self.assertEqual(str(cm.exception), "assignment destination is read-only")
+
 
 if __name__ == "__main__":
     unittest.main()
