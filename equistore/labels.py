@@ -75,10 +75,19 @@ class Labels(np.ndarray):
                 "names parameter must have an entry for each column of the array"
             )
 
-        if values.dtype != np.int32:
-            raise ValueError("values parameter must be an array of 32-bit integers")
+        try:
+            values = np.ascontiguousarray(
+                values.astype(
+                    np.int32,
+                    order="C",
+                    casting="same_kind",
+                    subok=False,
+                    copy=False,
+                )
+            )
+        except TypeError as e:
+            raise TypeError("Labels values must be convertible to integers") from e
 
-        values = np.ascontiguousarray(values)
         dtype = [(name, np.int32) for name in names]
 
         if values.shape[1] != 0:
