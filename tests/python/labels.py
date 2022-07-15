@@ -17,6 +17,8 @@ class TestLabels(unittest.TestCase):
         self.assertEqual(len(labels), 1)
         self.assertEqual(tuple(labels[0]), (0, 0))
 
+        self.assertTrue(np.all(labels.asarray() == np.array([[0, 0]])))
+
     def test_native_labels(self):
         tensor = test_tensor_map()
         labels = tensor.keys
@@ -27,6 +29,16 @@ class TestLabels(unittest.TestCase):
         self.assertEqual(tuple(labels[1]), (1, 0))
         self.assertEqual(tuple(labels[2]), (2, 2))
         self.assertEqual(tuple(labels[3]), (2, 3))
+
+        expected = np.array(
+            [
+                [0, 0],
+                [1, 0],
+                [2, 2],
+                [2, 3],
+            ]
+        )
+        self.assertTrue(np.all(labels.asarray() == expected))
 
     def test_position(self):
         tensor = test_tensor_map()
