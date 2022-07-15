@@ -226,6 +226,10 @@ class Labels(np.ndarray):
                 "move them to a block or tensor map first"
             )
 
+    def asarray(self):
+        """Get a view of these ``Labels`` as a raw 2D array of integers"""
+        return self.view(dtype=np.int32).reshape(self.shape[0], -1)
+
     def __contains__(self, label):
         return self.position(label) is not None
 
