@@ -5,7 +5,7 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, eqs_array_t, eqs_data_origin_t
 from ._c_lib import _get_library
-from .utils import _call_with_growing_buffer, _ptr_to_const_ndarray, catch_exceptions
+from .utils import _call_with_growing_buffer, _ptr_to_ndarray, catch_exceptions
 
 try:
     import torch
@@ -111,7 +111,7 @@ class _RustNDArray(np.ndarray):
         for i in range(shape_count.value):
             shape.append(shape_ptr[i])
 
-        array = _ptr_to_const_ndarray(data, shape, np.float64)
+        array = _ptr_to_ndarray(data, shape, np.float64)
         obj = array.view(cls)
 
         # keep a reference to the parent object (if any) to prevent it from
