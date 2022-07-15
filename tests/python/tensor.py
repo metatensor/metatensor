@@ -1,8 +1,7 @@
 import unittest
-import os
 
 import numpy as np
-from utils import test_tensor_map, test_large_tensor_map
+from utils import test_large_tensor_map, test_tensor_map
 
 
 class TestTensorMap(unittest.TestCase):
