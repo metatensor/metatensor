@@ -19,6 +19,27 @@ class TestLabels(unittest.TestCase):
 
         self.assertTrue(np.all(labels.asarray() == np.array([[0, 0]])))
 
+        # check that we can convert from more than strict 2D arrays of int32
+        labels = Labels(
+            names=["a", "b"],
+            values=np.array([[0, 0]]),
+        )
+
+        labels = Labels(
+            names=["a", "b"],
+            values=np.array([[0, 0]], dtype=np.int64),
+        )
+
+        with self.assertRaises(TypeError) as cm:
+            labels = Labels(
+                names=["a", "b"],
+                values=np.array([[0, 0]], dtype=np.float64),
+            )
+        self.assertEqual(
+            str(cm.exception),
+            "Labels values must be convertible to integers",
+        )
+
     def test_native_labels(self):
         tensor = test_tensor_map()
         labels = tensor.keys
