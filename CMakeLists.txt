@@ -6,6 +6,9 @@ if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 file(STRINGS "Cargo.toml" CARGO_TOML_CONTENT)
 foreach(line ${CARGO_TOML_CONTENT})
     string(REGEX REPLACE "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\".*" "\\1" EQUISTORE_VERSION ${line})
@@ -21,6 +24,7 @@ project(equistore
 )
 
 option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
+option(EQUISTORE_SERIALIZATION "Enable the serialization feature of equistore" OFF)
 
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
@@ -56,12 +60,14 @@ else()
     message(FATAL_ERROR "unsuported build type: ${CMAKE_BUILD_TYPE}")
 endif()
 
+set(CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/target)
+set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target-dir=${CARGO_TARGET_DIR}")
 # Handle cross compilation with RUST_BUILD_TARGET
 if ("${RUST_BUILD_TARGET}" STREQUAL "")
-    set(CARGO_TARGET_DIR "${PROJECT_SOURCE_DIR}/target/${CARGO_BUILD_TYPE}")
+    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${CARGO_BUILD_TYPE}")
 else()
     set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
-    set(CARGO_TARGET_DIR "${PROJECT_SOURCE_DIR}/target/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
+    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
 endif()
 
 find_program(CARGO_EXE "cargo" DOC "path to cargo (Rust build system)")
@@ -103,13 +109,13 @@ file(GLOB_RECURSE ALL_RUST_SOURCES
 
 if(${BUILD_SHARED_LIBS})
     add_library(equistore SHARED IMPORTED GLOBAL)
-    set(EQUISTORE_LOCATION "${CARGO_TARGET_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(EQUISTORE_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore${CMAKE_SHARED_LIBRARY_SUFFIX}")
 else()
     add_library(equistore STATIC IMPORTED GLOBAL)
-    set(EQUISTORE_LOCATION "${CARGO_TARGET_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set(EQUISTORE_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
-if (EQUISTORE_BUILD_FOR_PYTHON)
+if (EQUISTORE_SERIALIZATION)
     set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--features=serialization")
 endif()
 
@@ -135,6 +141,7 @@ endif()
 add_dependencies(equistore cargo-build-equistore)
 set(EQUISTORE_HEADERS
     "${PROJECT_SOURCE_DIR}/include/equistore.h"
+    "${PROJECT_SOURCE_DIR}/include/equistore.hpp"
 )
 set(EQUISTORE_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/)
 

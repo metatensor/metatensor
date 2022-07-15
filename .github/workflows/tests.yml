@@ -77,8 +77,5 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install tox black flake8
 
-      - name: rust tests
+      - name: run tests
         run: cargo test --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
-
-      - name: python tests
-        run: tox
