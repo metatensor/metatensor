@@ -211,7 +211,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
 /// often (but not always) sorted in  lexicographic order.
 ///
 /// The main way to construct a new set of labels is to use a `LabelsBuilder`.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
     /// with the C API
@@ -445,9 +445,9 @@ mod tests {
         let mut iter = idx.iter();
         assert_eq!(iter.len(), 3);
 
-        assert_eq!(&*iter.next().unwrap(), &[2, 3]);
-        assert_eq!(&*iter.next().unwrap(), &[1, 2]);
-        assert_eq!(&*iter.next().unwrap(), &[4, 3]);
+        assert_eq!(iter.next().unwrap(), &[2, 3]);
+        assert_eq!(iter.next().unwrap(), &[1, 2]);
+        assert_eq!(iter.next().unwrap(), &[4, 3]);
         assert_eq!(iter.next(), None);
     }
 
