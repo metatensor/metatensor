@@ -6,11 +6,14 @@
 #include <string>
 #include <memory>
 #include <stdexcept>
+#include <exception>
+#include <type_traits>
 #include <initializer_list>
 
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <cstdlib>
 
 #include "equistore.h"
 
@@ -20,10 +23,6 @@
 /// providing functions to extract the C API handles (named `as_eqs_XXX`).
 
 namespace equistore {
-class Labels;
-class TensorBlock;
-class TensorMap;
-
 
 /// Exception class used for all errors in equistore
 class Error: public std::runtime_error {
@@ -420,7 +419,7 @@ public:
 
     ~Labels() {
         for (auto variable: this->names_) {
-            free(const_cast<char*>(variable));
+            std::free(const_cast<char*>(variable));
         }
     }
 
@@ -439,7 +438,7 @@ public:
         NDArray<int32_t>::operator=(std::move(other));
 
         for (auto variable: this->names_) {
-            free(const_cast<char*>(variable));
+            std::free(const_cast<char*>(variable));
         }
 
         this->names_ = std::move(other.names_);
