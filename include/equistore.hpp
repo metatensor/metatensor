@@ -363,7 +363,7 @@ bool operator==(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     if (lhs.shape() != rhs.shape()) {
         return false;
     }
-    return std::memcmp(lhs.data(), rhs.data(), details::product(lhs.shape())) == 0;
+    return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
 }
 
 /// Compare this `NDArray` with another `NDarray`. The array are equal if

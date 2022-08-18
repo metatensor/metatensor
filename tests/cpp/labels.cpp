@@ -31,6 +31,7 @@ TEST_CASE("Labels") {
 
     CHECK(labels == Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 6}}));
     CHECK(labels != Labels({"bar", "foo"}, {{1, 2}, {3, 4}, {5, 6}}));
+    CHECK(labels != Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 5}}));
 
 
     CHECK_THROWS_WITH(labels(1), "expected 2 indexes in Labels::operator(), got 1");
