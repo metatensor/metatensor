@@ -21,11 +21,15 @@ pub mod io;
 
 mod utils;
 
-/// Get the content of the C API header for aml_storage functions & structs
-pub fn header_content() -> &'static str {
+/// Get the content of the C API header for equistore functions & structs
+pub fn c_header_content() -> &'static str {
     include_str!("../../include/equistore.h")
 }
 
+/// Get the content of the C++ API header for equistore functions & structs
+pub fn cxx_header_content() -> &'static str {
+    include_str!("../../include/equistore.hpp")
+}
 
 /// Disable printing of the message to stderr when some Rust code reach a panic.
 ///
