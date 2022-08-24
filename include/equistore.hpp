@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <exception>
+#include <functional>
 #include <type_traits>
 #include <initializer_list>
 
