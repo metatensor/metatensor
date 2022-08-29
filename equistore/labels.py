@@ -26,17 +26,18 @@ class Labels(np.ndarray):
     .. code-block:: python
 
         labels = Labels(
-            names=["structure", "atom", "center_species"] values=...
+            names=["structure", "atom", "center_species"],
+            values=...,
         )
 
-        # access all values in a column by name structures =
-        labels["structures"]
+        # access all values in a column by name
+        structures = labels["structures"]
 
-        # multiple columns at once data = labels[["structures",
-        "center_species"]]
+        # multiple columns at once
+        data = labels[["structures", "center_species"]]
 
-        # we can still use all the usual numpy operations unique_structures =
-        np.unique(labels["structures"])
+        # we can still use all the usual numpy operations
+        unique_structures = np.unique(labels["structures"])
 
     One can also check for the presence of a given entry in Labels, but only if
     the Labels come from a :py:class:`TensorBlock` or a :py:class:`TensorMap`.
