@@ -22,7 +22,7 @@ class TestArrayWrapperMixin:
         eqs_array = wrapper.eqs_array
 
         self.assertEqual(
-            id(data.eqs_array_to_python_object(eqs_array).array),
+            id(data.eqs_array_to_python_array(eqs_array)),
             id(array),
         )
 
@@ -67,7 +67,7 @@ class TestArrayWrapperMixin:
         status = eqs_array.copy(eqs_array.ptr, copy)
         self.assertEqual(status, EQS_SUCCESS)
 
-        array_copy = data.eqs_array_to_python_object(copy).array
+        array_copy = data.eqs_array_to_python_array(copy)
         self.assertNotEqual(id(array_copy), id(array))
 
         self.assertTrue(np.all(np.array(array_copy) == np.array(array)))
@@ -115,7 +115,7 @@ class TestArrayWrapperMixin:
 
 class TestNumpyData(unittest.TestCase, TestArrayWrapperMixin):
     def expected_origin(self):
-        return "equistore.data.numpy"
+        return "equistore.data.array.numpy"
 
     def create_array(self, shape):
         return np.zeros(shape)
@@ -125,7 +125,7 @@ if HAS_TORCH:
 
     class TestTorchData(unittest.TestCase, TestArrayWrapperMixin):
         def expected_origin(self):
-            return "equistore.data.torch"
+            return "equistore.data.array.torch"
 
         def create_array(self, shape):
             return torch.zeros(shape, device="cpu")
