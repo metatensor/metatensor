@@ -4,7 +4,7 @@ import numpy as np
 
 from ._c_lib import _get_library
 from .block import TensorBlock
-from .data import _is_numpy_array, _is_torch_array
+from .data.array import _is_numpy_array, _is_torch_array
 from .labels import Labels
 from .tensor import TensorMap
 

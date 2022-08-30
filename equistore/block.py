@@ -8,7 +8,8 @@ from ._c_lib import _get_library
 from .data import (
     Array,
     ArrayWrapper,
-    eqs_array_to_python_object,
+    eqs_array_to_python_array,
+    eqs_array_to_python_wrapper,
     eqs_array_was_allocated_by_python,
 )
 from .labels import Labels
@@ -108,18 +109,18 @@ class TensorBlock:
         new_ptr = self._lib.eqs_block_copy(self._ptr)
         copy = TensorBlock._from_ptr(new_ptr, parent=None, owning=True)
 
-        # Keep references to the arrays in this block if the arrays were
+        # Keep references to the wrappers in this block if the arrays were
         # allocated by Python
-        raw_values = _get_raw_array(self._lib, copy._ptr, "values")
-        if eqs_array_was_allocated_by_python(raw_values):
-            copy._values = eqs_array_to_python_object(raw_values)
+        raw_array = _get_raw_array(self._lib, copy._ptr, "values")
+        if eqs_array_was_allocated_by_python(raw_array):
+            copy._values = eqs_array_to_python_wrapper(raw_array)
         else:
             copy._values = None
 
         for parameter in self.gradients_list():
             raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
             if eqs_array_was_allocated_by_python(raw_array):
-                copy._gradients.append(eqs_array_to_python_object(raw_array))
+                copy._gradients.append(eqs_array_to_python_wrapper(raw_array))
             else:
                 pass
 
@@ -173,7 +174,7 @@ class TensorBlock:
         """
 
         raw_array = _get_raw_array(self._lib, self._ptr, "values")
-        return eqs_array_to_python_object(raw_array, parent=self).array
+        return eqs_array_to_python_array(raw_array, parent=self)
 
     @property
     def samples(self) -> Labels:
@@ -344,7 +345,7 @@ class Gradient:
         """
 
         raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
-        return eqs_array_to_python_object(raw_array, parent=self).array
+        return eqs_array_to_python_array(raw_array, parent=self)
 
     @property
     def samples(self) -> Labels:

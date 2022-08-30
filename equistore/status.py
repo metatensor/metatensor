@@ -2,7 +2,6 @@
 from typing import Optional
 
 from ._c_api import EQS_SUCCESS
-from ._c_lib import _get_library
 
 
 class EquistoreError(Exception):
@@ -51,6 +50,8 @@ def _check_pointer(pointer):
 
 def last_error():
     """Get the last error message on this thread"""
+    from ._c_lib import _get_library
+
     lib = _get_library()
     message = lib.eqs_last_error()
     return message.decode("utf8")
