@@ -589,9 +589,9 @@ public:
     /// DataArrayBase can be copy-assigned
     DataArrayBase& operator=(const DataArrayBase&) = default;
     /// DataArrayBase can be move-constructed
-    DataArrayBase(DataArrayBase&&) = default;
+    DataArrayBase(DataArrayBase&&) noexcept = default;
     /// DataArrayBase can be move-assigned
-    DataArrayBase& operator=(DataArrayBase&&) = default;
+    DataArrayBase& operator=(DataArrayBase&&) noexcept = default;
 
     /// Convert a concrete `DataArrayBase` to a C-compatible `eqs_array_t`
     static eqs_array_t to_eqs_array_t(std::unique_ptr<DataArrayBase> data) {
@@ -814,9 +814,9 @@ public:
     /// SimpleDataArray can be copy-assigned
     SimpleDataArray& operator=(const SimpleDataArray&) = default;
     /// SimpleDataArray can be move-constructed
-    SimpleDataArray(SimpleDataArray&&) = default;
+    SimpleDataArray(SimpleDataArray&&) noexcept = default;
     /// SimpleDataArray can be move-assigned
-    SimpleDataArray& operator=(SimpleDataArray&&) = default;
+    SimpleDataArray& operator=(SimpleDataArray&&) noexcept = default;
 
     eqs_data_origin_t origin() const override {
         eqs_data_origin_t origin = 0;
@@ -1019,9 +1019,9 @@ public:
     /// GradientProxy can be copy-assigned
     GradientProxy& operator=(const GradientProxy&) = default;
     /// GradientProxy can be move-constructed
-    GradientProxy(GradientProxy&&) = default;
+    GradientProxy(GradientProxy&&) noexcept = default;
     /// GradientProxy can be move-assigned
-    GradientProxy& operator=(GradientProxy&&) = default;
+    GradientProxy& operator=(GradientProxy&&) noexcept = default;
 
     /// Get a const view of the data for this gradient
     NDArray<double> data() const {
@@ -1194,12 +1194,12 @@ public:
     }
 
     /// TensorBlock can be move constructed
-    TensorBlock(TensorBlock&& other): TensorBlock() {
+    TensorBlock(TensorBlock&& other) noexcept : TensorBlock() {
         *this = std::move(other);
     }
 
     /// TensorBlock can be moved assigned
-    TensorBlock& operator=(TensorBlock&& other) {
+    TensorBlock& operator=(TensorBlock&& other) noexcept {
         if (!is_view_) {
             eqs_block_free(block_);
         }
@@ -1482,13 +1482,13 @@ public:
     TensorMap& operator=(const TensorMap&) = delete;
 
     /// TensorMap can be move constructed
-    TensorMap(TensorMap&& other): TensorMap(nullptr) {
+    TensorMap(TensorMap&& other) noexcept : TensorMap(nullptr) {
         *this = std::move(other);
     }
 
     /// TensorMap can be move assigned
-    TensorMap& operator=(TensorMap&& other) {
-        details::check_status(eqs_tensormap_free(tensor_));
+    TensorMap& operator=(TensorMap&& other) noexcept {
+        eqs_tensormap_free(tensor_);
 
         this->tensor_ = other.tensor_;
         other.tensor_ = nullptr;
