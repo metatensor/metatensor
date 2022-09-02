@@ -295,6 +295,13 @@ class TensorBlock:
         """
         return parameter in self.gradients_list()
 
+    def has_any_gradient(self) -> bool:
+        """
+        Check if this block contains any gradient information with respect to any
+        parameter.
+        """
+        return len(self.gradients_list()) > 0
+
     def gradients(self) -> Generator[Tuple[str, "Gradient"], None, None]:
         """Get an iterator over all gradients defined in this block."""
         for parameter in self.gradients_list():
