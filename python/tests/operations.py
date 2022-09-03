@@ -53,9 +53,9 @@ class TestDot(unittest.TestCase):
 
         dot_tensor = fn.dot(tensor1=tensor1, tensor2=tensor2)
         self.assertTrue(np.all(expected_tensor.keys == dot_tensor.keys))
-        for key, block1 in dot_tensor:
+        for key, expected_block in expected_tensor:
 
-            comparing_dict = compare_blocks(block1, dot_tensor.block(key))
+            comparing_dict = compare_blocks(expected_block, dot_tensor.block(key))
             self.assertTrue(comparing_dict["general"])
 
 
