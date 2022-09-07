@@ -57,6 +57,10 @@ keys: ['key_1' 'key_2']
         block = tensor.block(2)
         self.assertTrue(np.all(block.values == np.full((4, 3, 1), 3.0)))
 
+        # block by index with __getitem__
+        block = tensor[2]
+        self.assertTrue(np.all(block.values == np.full((4, 3, 1), 3.0)))
+
         # block by kwargs
         block = tensor.block(key_1=1, key_2=0)
         self.assertTrue(np.all(block.values == np.full((3, 1, 1), 2.0)))
@@ -64,6 +68,47 @@ keys: ['key_1' 'key_2']
         # block by Label entry
         block = tensor.block(tensor.keys[0])
         self.assertTrue(np.all(block.values == np.full((3, 1, 1), 1.0)))
+
+        # block by Label entry with __getitem__
+        block = tensor[tensor.keys[0]]
+        self.assertTrue(np.all(block.values == np.full((3, 1, 1), 1.0)))
+
+        # More arguments than needed: two integers
+        # by index
+        with self.assertRaises(ValueError) as cm:
+            tensor.block(3, 4)
+
+        self.assertEqual(
+            str(cm.exception),
+            "only one non-keyword argument is supported, 2 are given",
+        )
+
+        # 4 input with the first as integer by __getitem__
+        with self.assertRaises(ValueError) as cm:
+            tensor[3, 4, 7.0, "r"]
+
+        self.assertEqual(
+            str(cm.exception),
+            "only one non-keyword argument is supported, 4 are given",
+        )
+
+        # More arguments than needed: 3 Labels
+        with self.assertRaises(ValueError) as cm:
+            tensor.block(tensor.keys[0], tensor.keys[1], tensor.keys[3])
+
+        self.assertEqual(
+            str(cm.exception),
+            "only one non-keyword argument is supported, 3 are given",
+        )
+
+        # by __getitem__
+        with self.assertRaises(ValueError) as cm:
+            tensor[tensor.keys[1], 4]
+
+        self.assertEqual(
+            str(cm.exception),
+            "only one non-keyword argument is supported, 2 are given",
+        )
 
         # 0 blocks matching criteria
         with self.assertRaises(ValueError) as cm:
