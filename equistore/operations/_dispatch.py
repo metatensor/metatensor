@@ -72,14 +72,33 @@ def linalg_inv(array, detach=False):
 
 
 def solve(array1, array2):
-    """Computes the solution of a square system of linear equations with a unique solution.
-    This function has the equivalent bheaviour of  ``numpy.linalg.solve(array1,array2)``.
+    """Computes the solution of a square system of linear equations
+    with a unique solution.
+    This function has the equivalent
+    behaviour of  ``numpy.linalg.solve(array1,array2)``.
     """
-    # TODO not sure if it is usefull
     if isinstance(array1, np.ndarray) and isinstance(array2, np.ndarray):
         return np.linalg.solve(array1, array2)
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
         result = torch.linalg.solve(array1, array2)
+        return result
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def lstsq(array1, array2):
+    """
+    Computes a solution to the least squares problem
+    of a system of linear equations.
+    Computes the vector x that approximately
+    solves the equation ``array1 @ x = array2``.
+    This function has the equivalent
+    behaviour of ``numpy.linalg.lstsq(array1,array2)``.
+    """
+    if isinstance(array1, np.ndarray) and isinstance(array2, np.ndarray):
+        return np.linalg.lstsq(array1, array2)[0]
+    elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
+        result = torch.linalg.lstsq(array1, array2)[0]
         return result
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)

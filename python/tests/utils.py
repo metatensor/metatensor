@@ -150,7 +150,7 @@ def compare_blocks(block1: TensorBlock, block2: TensorBlock, rtol=1e-13):
     if the gradient is present a nested dictionary with the same structure is present in the returned dictionary.
     """
     result = {}
-    result["values"] = np.allclose(block1.values, block2.values, rtol=1e-13)
+    result["values"] = np.allclose(block1.values, block2.values, rtol=rtol)
     result["samples"] = np.all(block1.samples == block2.samples)
     if len(block1.properties) == len(block2.properties):
         result["properties"] = np.all(

@@ -27,7 +27,9 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     )
 
     if block2.has_any_gradient():
-        raise ValueError("The second block should not have gradient informations ")
+        raise ValueError(
+            "The second TensorBlock should not have gradient informations "
+        )
 
     if block1.has_any_gradient():
         for parameter in block1.gradients_list():
@@ -59,9 +61,9 @@ def dot(tensor1: TensorMap, tensor2: TensorMap) -> TensorMap:
     :param tensor2: second :py:class:`TensorMap` to multiply
     """
     if len(tensor1.keys) != len(tensor2.keys) or (
-        not np.all(tensor1.keys == tensor2.keys)
+        not np.all([key in tensor2.keys for key in tensor1.keys])
     ):
-        raise ValueError("The two tensors should have the same keys")
+        raise ValueError("The two input tensorMaps should have the same keys")
     blocks = []
     for key, block1 in tensor1:
         block2 = tensor2.block(key)
