@@ -1,17 +1,13 @@
 import os
 import subprocess
-import sys
 from distutils.command.build_ext import build_ext  # type: ignore
 from distutils.command.install import install as distutils_install  # type: ignore
 
 from setuptools import Extension, setup
 from wheel.bdist_wheel import bdist_wheel
 
+
 ROOT = os.path.realpath(os.path.dirname(__file__))
-
-if sys.version_info < (3, 6):
-    sys.exit("Sorry, Python < 3.6 is not supported")
-
 
 EQUISTORE_BUILD_TYPE = os.environ.get("EQUISTORE_BUILD_TYPE", "release")
 if EQUISTORE_BUILD_TYPE not in ["debug", "release"]:
