@@ -1175,23 +1175,11 @@ public:
         }
     }
 
-    /// TensorBlock can be copy constructed
-    TensorBlock(const TensorBlock& other): TensorBlock() {
-        *this = other;
-    }
+    /// TensorBlock can NOT be copy constructed, use TensorBlock::clone instead
+    TensorBlock(const TensorBlock&) = delete;
 
-    /// TensorBlock can be copy assigned
-    TensorBlock& operator=(const TensorBlock& other) {
-        if (!is_view_) {
-            eqs_block_free(block_);
-        }
-
-        block_ = eqs_block_copy(other.block_);
-        is_view_ = false;
-        details::check_pointer(block_);
-
-        return *this;
-    }
+    /// TensorBlock can NOT be copy assigned, use TensorBlock::clone instead
+    TensorBlock& operator=(const TensorBlock& other) = delete;
 
     /// TensorBlock can be move constructed
     TensorBlock(TensorBlock&& other) noexcept : TensorBlock() {
@@ -1210,6 +1198,15 @@ public:
         other.is_view_ = true;
 
         return *this;
+    }
+
+    /// Make a copy of this `TensorBlock`, including all the data contained inside
+    TensorBlock clone() const {
+        auto copy = TensorBlock();
+        copy.is_view_ = false;
+        copy.block_ = eqs_block_copy(this->block_);
+        details::check_pointer(copy.block_);
+        return copy;
     }
 
     /// Get a const view in the values in this block
