@@ -86,7 +86,7 @@ def solve(array1, array2):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def lstsq(array1, array2):
+def lstsq(array1, array2, rcond=None):
     """
     Computes a solution to the least squares problem
     of a system of linear equations.
@@ -96,9 +96,28 @@ def lstsq(array1, array2):
     behaviour of ``numpy.linalg.lstsq(array1,array2)``.
     """
     if isinstance(array1, np.ndarray) and isinstance(array2, np.ndarray):
-        return np.linalg.lstsq(array1, array2)[0]
+        return np.linalg.lstsq(array1, array2, rcond=rcond)[0]
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
         result = torch.linalg.lstsq(array1, array2)[0]
         return result
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def vstack(arrays: tuple):
+    """Stack vertically a group of arrays.
+    This function has the equivalent
+    behaviour of ``numpy.vstack(arrays)``.
+
+    Args:
+        arrays : sequence of arrays
+
+    Returns:
+        array : vertical-stacked array
+    """
+    if isinstance(arrays[0], np.ndarray):
+        return np.vstack(arrays)
+    elif isinstance(arrays[0], TorchTensor):
+        return torch.vstack(arrays)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)

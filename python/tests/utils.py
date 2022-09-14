@@ -1,3 +1,4 @@
+from array import array
 from unittest import result
 
 import numpy as np
@@ -228,3 +229,65 @@ def compare_blocks(block1: TensorBlock, block2: TensorBlock, rtol=1e-13):
         and result["gradients"]["general"]
     )
     return result
+
+
+def Xfun1(x, y, z):
+    return np.arctan(-x + 2 * y * y + 3 * z * z * z)
+
+
+def Xfun1_dx(x, y, z):
+    """derivative w.r.t x of Xfun1"""
+    return -1 / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
+
+
+def Xfun1_dy(x, y, z):
+    """derivative w.r.t y of Xfun1"""
+    return 4 * y / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
+
+
+def Xfun1_dz(x, y, z):
+    """derivative w.r.t z of Xfun1"""
+    return 9 * z * z / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
+
+
+def Xfun2(x, y, z):
+    return x**3 + 2 * y + 3 * z**2
+
+
+def Xfun2_dx(x, y, z):
+    """derivative w.r.t x of Xfun2"""
+    return 3 * x**2
+
+
+def Xfun2_dy(x, y, z):
+    """derivative w.r.t y of Xfun2"""
+    return 2
+
+
+def Xfun2_dz(x, y, z):
+    """derivative w.r.t z of Xfun2"""
+    return 6 * z
+
+
+def get_value_linear_solve():
+    """Generate a value matrix for block and gradient in
+    the test for the linear solve
+    """
+    data = np.arange(15).reshape((-1, 3))
+    Xval = np.zeros((len(data), 2))
+    Xgradval = np.zeros((len(data), 3, 2))
+    for i in range(len(data)):
+        Xval[i, 0] = Xfun1(data[i, 0], data[i, 1], data[i, 2])
+        Xval[i, 1] = Xfun2(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 0, 0] = Xfun1_dx(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 1, 0] = Xfun1_dy(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 2, 0] = Xfun1_dz(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 0, 1] = Xfun2_dx(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 1, 1] = Xfun2_dy(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 2, 1] = Xfun2_dz(data[i, 0], data[i, 1], data[i, 2])
+
+    w = np.array([[1], [3]])
+    Yval = np.dot(Xval, w)
+    Ygradval = np.dot(Xgradval, w)
+
+    return Xval, Xgradval, Yval, Ygradval
