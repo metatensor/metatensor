@@ -34,6 +34,8 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     assert len(X.components) == 0, "solve for block with components is not implemented"
     assert len(Y.components) == 0, "solve for block with components is not implemented"
 
+    valuesX = X.values
+    valuesY = Y.values
     if X.has_any_gradient():
         if len(X.gradients_list()) != len(Y.gradients_list()) or (
             not np.all(
@@ -41,17 +43,15 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
             )
         ):
             raise ValueError("The two input TensorBlock should have the same gradients")
+
         for parameter, Xgradient in X.gradients():
             X_grad_data_reshape = Xgradient.data.reshape(-1, X.values.shape[-1])
             # TODO: this assume the atoms are in the same order in X_grad &
             # forces
             Ygradient = Y.gradient(parameter)
             Y_grad_data_reshape = Ygradient.data.reshape(-1, Y.values.shape[-1])
-            valuesY = _dispatch.vstack((Y.values, Y_grad_data_reshape))
-            valuesX = _dispatch.vstack((X.values, X_grad_data_reshape))
-    else:
-        valuesX = X.values
-        valuesY = Y.values
+            valuesY = _dispatch.vstack((valuesY, Y_grad_data_reshape))
+            valuesX = _dispatch.vstack((valuesX, X_grad_data_reshape))
 
     Xshape = valuesX.shape
     if len(Xshape) != 2:
