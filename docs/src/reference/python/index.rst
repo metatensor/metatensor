@@ -15,5 +15,5 @@ provided in ``equistore`` can be grouped in four main groups:
     labels
     block
     data
-    operations/index
     misc/index
+    operations/index

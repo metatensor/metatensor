@@ -1,8 +1,14 @@
-API reference
-=============
+.. _userdoc-references:
+
+Reference guides
+----------------
+
+The reference guides describe how the equistore API 
+can be used from each language.
+
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     python/index
     cxx/index
