@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - name: x86_64 macOS
-            os: macos-10.15
+            os: macos-11
             rust-target: x86_64-apple-darwin
             platform-name: macosx-10.9-x86_64
           - name: M1 macOS
