@@ -15,40 +15,40 @@ jobs:
       matrix:
         include:
           # test without any feature
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
 
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: release
             cargo-build-flags: --release --all-features
 
           # MSRV (Minimally Supported Rust Version)
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             rust-version: 1.56
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
 
-          # check the build on a stock Ubuntu 18.04, including cmake 3.10
-          - os: ubuntu-18.04
+          # check the build on a stock Ubuntu 20.04, including cmake 3.10
+          - os: ubuntu-20.04
             rust-version: from Ubuntu
-            container: ubuntu:18.04
+            container: ubuntu:20.04
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
 
-          - os: macos-10.15
+          - os: macos-11
             rust-version: stable
             rust-target: x86_64-apple-darwin
             build-type: debug
             cargo-build-flags: --all-features
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:18.04'
+        if: matrix.container == 'ubuntu:20.04'
         run: |
           apt-get update
           apt-get install -y software-properties-common
@@ -61,7 +61,7 @@ jobs:
       - name: setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: "3.10"
 
       - name: setup rust
         uses: actions-rs/toolchain@v1
