@@ -78,7 +78,7 @@ jobs:
             const {owner, repo} = context.repo;
             const pr = ${{ toJSON(github.event.pull_request) }};
 
-            let body = 'The documentation for this PR is (or will soon be) available on readthedocs: ';
+            let body = 'The documentation for this pull request is (or will soon be) available on readthedocs: ';
             body += `https://equistore--${pr.number}.org.readthedocs.build/en/${pr.number}/`;
             core.info("Review thread message body:", body);
 
