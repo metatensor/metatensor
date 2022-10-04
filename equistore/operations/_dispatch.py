@@ -1,11 +1,9 @@
 import numpy as np
 
-from ..data import HAS_TORCH
-
-if HAS_TORCH:
+try:
     import torch
     from torch import Tensor as TorchTensor
-else:
+except ImportError:
 
     class TorchTensor:
         pass
