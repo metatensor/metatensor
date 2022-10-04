@@ -5,35 +5,30 @@ from equistore import TensorBlock, TensorMap
 from . import _dispatch
 
 
-def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
+def lstsq(X: TensorMap, Y: TensorMap, rcond=None) -> TensorMap:
     """
     Solve a linear system among two :py:class:`TensorMap`.
-    Solve the linear equation set X * w = Y for the unknown w.
+    Return the least-squares solution
+    to a linear equation X * w = Y for the unknown w.
     Where X , w, Y are all :py:class:`TensorMap`
     """
 
     if len(X) != len(Y) or (not np.all([key in Y.keys for key in X.keys])):
         raise ValueError("The two input TensorMap should have the same keys")
 
-    for key, blockX in X:
-        Xshape = blockX.values.shape
-        if len(Xshape) != 2 or (not (Xshape[0] == Xshape[1])):
-            raise ValueError(
-                "the values in each TensorBlock of X should be a 2D-square array"
-            )
-
     blocks = []
     for key, blockX in X:
         blockY = Y.block(key)
-        blocks.append(_solve_block(blockX, blockY))
+        blocks.append(_lstsq_block(blockX, blockY, rcond=rcond))
 
     return TensorMap(X.keys, blocks)
 
 
-def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
+def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond=None) -> TensorBlock:
     """
     Solve a linear system among two :py:class:`TensorBlock`.
-    Solve the linear equation set X * w = Y for the unknown w.
+    Return the least-squares solution
+    to a linear equation X * w = Y for the unknown w.
     Where X , w, Y are all :py:class:`TensorBlock`
     """
     # TODO properties and samples not in the same order
@@ -60,7 +55,11 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
             valuesY = _dispatch.vstack((valuesY, Y_grad_data_reshape))
             valuesX = _dispatch.vstack((valuesX, X_grad_data_reshape))
 
-    valuesw = _dispatch.solve(valuesX, valuesY)
+    Xshape = valuesX.shape
+    if len(Xshape) != 2:
+        raise ValueError("X.values should be a 2D array")
+
+    valuesw = _dispatch.lstsq(valuesX, valuesY, rcond=rcond)
 
     w = TensorBlock(
         values=valuesw.T,
