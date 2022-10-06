@@ -5,13 +5,23 @@ from equistore import TensorBlock, TensorMap
 from . import _dispatch
 
 
-def lstsq(X: TensorMap, Y: TensorMap, rcond=None) -> TensorMap:
+def lstsq(X: TensorMap, Y: TensorMap, rcond) -> TensorMap:
     """
     Solve a linear system among two :py:class:`TensorMap`.
     Return the least-squares solution
     to a linear equation X * w = Y for the unknown w.
     Where X , w, Y are all :py:class:`TensorMap`
+
+    rcond:
+    Cut-off ratio for small singular values of a.
+    None chose the default value for numpy or pytorch
     """
+    if rcond is None:
+        print(
+            "WARNING rcond is set to None, which will trigger the default behaviour \
+            which is different between numpy and torch lstsq function, \
+            and might depend on the version you are using."
+        )
 
     if len(X) != len(Y) or (not np.all([key in Y.keys for key in X.keys])):
         raise ValueError("The two input TensorMap should have the same keys")
@@ -24,7 +34,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond=None) -> TensorMap:
     return TensorMap(X.keys, blocks)
 
 
-def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond=None) -> TensorBlock:
+def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
     """
     Solve a linear system among two :py:class:`TensorBlock`.
     Return the least-squares solution
@@ -48,8 +58,6 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond=None) -> TensorBlock:
 
         for parameter, Xgradient in X.gradients():
             X_grad_data_reshape = Xgradient.data.reshape(-1, X.values.shape[-1])
-            # TODO: this assume the atoms are in the same order in X_grad &
-            # forces
             Ygradient = Y.gradient(parameter)
             Y_grad_data_reshape = Ygradient.data.reshape(-1, Y.values.shape[-1])
             valuesY = _dispatch.vstack((valuesY, Y_grad_data_reshape))

@@ -6,6 +6,7 @@ from utils import compare_blocks, get_value_linear_solve
 
 import equistore.io
 import equistore.operations as fn
+from equistore.operations.dot import _dot_block
 from equistore import Labels, TensorBlock, TensorMap
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -54,7 +55,7 @@ class TestSolve(unittest.TestCase):
         )
 
         # solve with least square
-        w = fn.lstsq(X, Y)
+        w = fn.lstsq(X, Y, rcond=1e-13)
 
         self.assertTrue(len(w) == 2)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -180,7 +181,7 @@ class TestSolve(unittest.TestCase):
 
         X = TensorMap(keys, [block_X])
         Y = TensorMap(keys, [block_Y])
-        w = fn.lstsq(X, Y)
+        w = fn.lstsq(X, Y, rcond=1e-13)
 
         self.assertTrue(len(w) == 1)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -222,7 +223,7 @@ class TestDot(unittest.TestCase):
         dot_blocks = []
         for key, block1 in tensor1:
             block2 = tensor2.block(key)
-            result_block = fn._dot_block(block1, block2)
+            result_block = _dot_block(block1, block2)
             dot_blocks.append(result_block)
             expected_values = np.dot(block1.values, block2.values.T)
             self.assertTrue(

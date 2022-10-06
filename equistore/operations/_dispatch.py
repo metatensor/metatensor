@@ -96,13 +96,13 @@ def lstsq(array1, array2, rcond=None):
     if isinstance(array1, np.ndarray) and isinstance(array2, np.ndarray):
         return np.linalg.lstsq(array1, array2, rcond=rcond)[0]
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
-        result = torch.linalg.lstsq(array1, array2)[0]
+        result = torch.linalg.lstsq(array1, array2, rcond=rcond)[0]
         return result
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def vstack(arrays: tuple):
+def vstack(arrays):
     """Stack vertically a group of arrays.
     This function has the equivalent
     behaviour of ``numpy.vstack(arrays)``.
