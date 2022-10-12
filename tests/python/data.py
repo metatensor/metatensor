@@ -1,4 +1,7 @@
+import gc
+import os
 import unittest
+import weakref
 
 import numpy as np
 
@@ -11,8 +14,12 @@ except ImportError:
 
 import ctypes
 
+import equistore
+import equistore.io
 from equistore import data
 from equistore._c_api import EQS_SUCCESS, c_uintptr_t, eqs_array_t, eqs_sample_mapping_t
+
+ROOT = os.path.dirname(__file__)
 
 
 class TestArrayWrapperMixin:
@@ -143,6 +150,39 @@ def _get_shape(eqs_array, test):
         shape.append(shape_ptr[i])
 
     return shape
+
+
+class TestRustData(unittest.TestCase):
+    def test_parent_keepalive(self):
+        path = os.path.join(ROOT, "..", "data.npz")
+        tensor = equistore.io.load(path, use_numpy=False)
+
+        values = tensor.block(0).values
+        self.assertTrue(isinstance(values, equistore.data.extract._RustNDArray))
+        self.assertIsNotNone(values._parent)
+
+        tensor_ref = weakref.ref(tensor)
+        del tensor
+        gc.collect()
+
+        # values should keep the tensor alive
+        self.assertIsNotNone(tensor_ref())
+
+        view = values[::2]
+        del values
+        gc.collect()
+
+        # view should keep the tensor alive
+        self.assertIsNotNone(tensor_ref())
+
+        transformed = np.sum(view)
+        del view
+        gc.collect()
+
+        # transformed should NOT keep the tensor alive
+        self.assertIsNone(tensor_ref())
+
+        self.assertTrue(np.isclose(transformed, 1.1596965632269784))
 
 
 if __name__ == "__main__":
