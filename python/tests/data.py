@@ -154,7 +154,7 @@ def _get_shape(eqs_array, test):
 
 class TestRustData(unittest.TestCase):
     def test_parent_keepalive(self):
-        path = os.path.join(ROOT, "..", "data.npz")
+        path = os.path.join(ROOT, "..", "..", "tests", "data.npz")
         tensor = equistore.io.load(path, use_numpy=False)
 
         values = tensor.block(0).values

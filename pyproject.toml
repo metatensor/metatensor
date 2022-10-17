@@ -11,21 +11,25 @@ legacy_tox_ini = """
 [tox]
 
 [testenv:tests]
-# skip install to avoid rebuilding the world, do the install with setup.py
-# instead of pip below
+# skip install to avoid rebuilding the world, instead build the wheel and
+# install it manually (see below)
 skip_install = True
 passenv =
     EQUISTORE_BUILD_TYPE
     RUSTUP_HOME
     CARGO*
 
+allowlist_externals =
+    bash
+
 deps =
     discover
     numpy
 
 commands =
-    python setup.py --quiet install
-    discover -p "*.py" -s tests/python
+    python setup.py --quiet bdist_wheel
+    bash -c "pip install --force-reinstall --no-deps ./dist/equistore-*.whl"
+    discover -p "*.py" -s python/tests
 
 [testenv:lint]
 skip_install = True
@@ -39,6 +43,6 @@ deps =
     flake8
 
 commands =
-    black --check equistore
-    flake8 --max-line-length=88 --ignore=E203 equistore
+    black --check python
+    flake8 --max-line-length=88 --ignore=E203 python
 """

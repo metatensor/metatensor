@@ -5,4 +5,5 @@ Equistore documentation
    :maxdepth: 2
    :caption: Contents:
 
+   get-started/index
    reference/index
