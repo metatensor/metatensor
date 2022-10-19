@@ -42,13 +42,20 @@ def dot(array1, array2):
         if len(shape1) == 2 and len(shape2) == 2:
             return array1 @ array2.T
         else:
-            return np.dot(array1, array2.T)
+            # axis = list(range(array2.ndim))
+            # axis[-1], axis[-2] = axis[-2], axis[-1]
+            # return np.dot(array1, np.transpose(array2, axes=axis))
+            return np.dot(array1, np.transpose(array2))
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
         shape1 = array1.size()
         shape2 = array2.size()
         if len(shape1) == 1 and len(shape2) == 1:
             return torch.dot(array1, array2.T)
         else:
+            # axis = list(range(array2.ndim))
+            # return torch.matmul(
+            #    array1, torch.Traspose(array2, dim0=axis[-2], dim1=axis[-1])
+            # )
             return torch.matmul(array1, torch.Traspose(array2))
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)

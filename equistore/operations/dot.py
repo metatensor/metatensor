@@ -10,15 +10,36 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     The `TensorBlocks` should have the same `properties`
     """
 
-    assert np.all(block1.properties == block2.properties)
+    if not np.all(block1.properties == block2.properties):
+        raise ValueError("the two TensorBlocks should have the same properties ")
+    if not np.all(block1.components == block2.components):
+        raise ValueError("the two TensorBlocks should have the same components ")
+    if block2.has_any_gradient():
+        raise ValueError(
+            "The second TensorBlock should not have gradient informations "
+        )
 
-    values1 = block1.values
-    values2 = block2.values
+    values1 = block1.values.reshape((len(block1.samples), -1))
+    values2 = block2.values.reshape((len(block2.samples), -1))
     values = _dispatch.dot(values1, values2)
-    # only deal with invariants for no
-    assert len(block1.components) == 0
-    assert len(block2.components) == 0
 
+    # TODO capire se senza component posso usare
+    # components=block1.components o devo fare un if con
+    # components=[]
+    # if len(block1.components) > 0:
+    #    result_block = TensorBlock(
+    #        values=values,
+    #        samples=block1.samples,
+    #        components=block1.components,
+    #        properties=block2.samples,
+    #    )
+    # else:
+    #    result_block = TensorBlock(
+    #        values=values,
+    #        samples=block1.samples,
+    #        components=[],
+    #        properties=block2.samples,
+    #    )
     result_block = TensorBlock(
         values=values,
         samples=block1.samples,
@@ -26,24 +47,25 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
         properties=block2.samples,
     )
 
-    if block2.has_any_gradient():
-        raise ValueError(
-            "The second TensorBlock should not have gradient informations "
-        )
-
     if block1.has_any_gradient():
         for parameter in block1.gradients_list():
             gradient = block1.gradient(parameter)
+            # TODO this assume that the "gradient" component are the first ones
+            # do not know if it si true ask guillaume
+            nderiv = len(gradient.components) - len(block1.components)
+            shape = [gradient.data.shape[i] for i in range(1 + nderiv)]
+            shape.append(-1)
+            gr1 = gradient.data.reshape(tuple(shape))
 
             gradient_data = _dispatch.dot(
-                gradient.data, block2.values
+                gr1, values2
             )  # gradient.data @ block2.values.T
 
             result_block.add_gradient(
                 parameter,
                 gradient_data,
                 gradient.samples,
-                gradient.components,
+                gradient.components[:nderiv],
             )
 
     return result_block
