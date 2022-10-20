@@ -69,7 +69,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: build manylinux2010 with rust docker image
-        run: docker build -t manylinux2010-with-rust scripts/build-wheels
+        run: docker build -t manylinux2010-with-rust python/scripts/build-wheels
       - name: build wheel in docker
         run: docker run --rm -v $(pwd):/code manylinux2010-with-rust bash -c "cd /code && /opt/python/cp38-cp38/bin/python setup.py bdist_wheel"
       - name: run auditwheel in docker
