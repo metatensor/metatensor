@@ -91,7 +91,7 @@ def solve(array1, array2):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def lstsq(array1, array2, rcond=None):
+def lstsq(array1, array2, rcond):
     """
     Computes a solution to the least squares problem
     of a system of linear equations.
