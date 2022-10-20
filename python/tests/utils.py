@@ -160,7 +160,15 @@ def compare_blocks(block1: TensorBlock, block2: TensorBlock, rtol=1e-13):
     else:
         result["properties"] = False
 
-    result["components"] = np.all(block1.components == block2.components)
+    result["components"] = True
+    if len(block1.components) > 0:
+        for icomp, bc in enumerate(block1.components):
+            result["components"] = result["components"] and np.all(
+                bc == block2.components[icomp]
+            )
+    if len(block1.components) == 0 and len(block2.components) > len(block1.components):
+        result["components"] = False
+
     result["gradients"] = {}
     if block1.has_any_gradient() > 0 and len(block1.gradients_list()) == len(
         block2.gradients_list()
