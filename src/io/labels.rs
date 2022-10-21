@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 use py_literal::Value as PyValue;
 
@@ -44,10 +46,10 @@ pub fn write_npy_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> R
     let mut type_descriptor = String::from("[");
     for name in labels.names() {
         if cfg!(target_endian = "little") {
-            type_descriptor += &format!("('{}', '<i4'), ", name);
+            write!(type_descriptor, "('{}', '<i4'), ", name).expect("failed to write dtype");
         } else {
             assert!(cfg!(target_endian = "big"));
-            type_descriptor += &format!("('{}', '>i4'), ", name);
+            write!(type_descriptor, "('{}', '>i4'), ", name).expect("failed to write dtype");
         }
     }
     type_descriptor += "]";
