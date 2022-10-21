@@ -55,9 +55,6 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
             and in the same order"
         )
 
-    # assert len(X.components) == 0, "solve for block with components is not implemented"
-    # assert len(Y.components) == 0, "solve for block with components is not implemented"
-
     valuesX = X.values.reshape(-1, X.values.shape[-1])
     valuesY = Y.values.reshape(-1, Y.values.shape[-1])
     if X.has_any_gradient():
