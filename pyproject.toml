@@ -11,9 +11,11 @@ legacy_tox_ini = """
 [tox]
 
 [testenv:tests]
-# skip install to avoid rebuilding the world, instead build the wheel and
-# install it manually (see below)
+# avoid rebuilding and installing all rust dependencies, this is especially
+# useful for local testing. Instead we manually build the wheel and install
+# it below, re-using the content of `build/cmake-build/target`
 skip_install = True
+
 passenv =
     EQUISTORE_BUILD_TYPE
     RUSTUP_HOME
@@ -27,8 +29,10 @@ deps =
     numpy
 
 commands =
+    bash -c "rm -rf ./dist/equistore-*.whl"
     python setup.py --quiet bdist_wheel
     bash -c "pip install --force-reinstall --no-deps ./dist/equistore-*.whl"
+
     discover -p "*.py" -s python/tests
 
 [testenv:lint]
