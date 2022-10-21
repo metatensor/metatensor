@@ -420,7 +420,7 @@ mod tests {
             [1, 2], [3, 0], [4, 3],
         ]);
 
-        let tensor = TensorMap::new((&*keys).clone(), blocks).unwrap();
+        let tensor = TensorMap::new((*keys).clone(), blocks).unwrap();
 
         let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
         selection.add(&[1, 1]);
