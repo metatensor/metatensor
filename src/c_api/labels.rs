@@ -45,7 +45,13 @@ impl std::convert::TryFrom<&eqs_labels_t> for Labels {
         unsafe {
             for i in 0..labels.size {
                 let name = CStr::from_ptr(*(labels.names.add(i)));
-                names.push(name.to_str().expect("invalid UTF8 name"));
+                let name = name.to_str().expect("invalid UTF8 name");
+                if !crate::labels::is_valid_label_name(name) {
+                    return Err(Error::InvalidParameter(format!(
+                        "'{}' is not a valid label name", name
+                    )));
+                }
+                names.push(name);
             }
         }
 
