@@ -3,8 +3,11 @@
 set -eux
 
 SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-cd $SCRIPTPATH/..
+cd $SCRIPTPATH/../..
 
-rm -rf *.egg-info
-rm -rf dist build
-rm -rf equistore/lib/lib*
+rm -rf dist
+rm -rf build
+
+cd $SCRIPTPATH/..
+rm -rf src/equistore/lib/lib*
+rm -rf src/*.egg-info
