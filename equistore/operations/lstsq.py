@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from equistore import TensorBlock, TensorMap
@@ -17,7 +19,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond) -> TensorMap:
     None chose the default value for numpy or pytorch
     """
     if rcond is None:
-        print(
+        warnings.warn(
             "WARNING rcond is set to None, which will trigger the default behaviour \
             which is different between numpy and torch lstsq function, \
             and might depend on the version you are using."
@@ -42,12 +44,22 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
     Where X , w, Y are all :py:class:`TensorBlock`
     """
     # TODO properties and samples not in the same order
-    assert np.all(X.samples == Y.samples)
-    assert len(X.components) == 0, "solve for block with components is not implemented"
-    assert len(Y.components) == 0, "solve for block with components is not implemented"
+    if not np.all(X.samples == Y.samples):
+        raise ValueError(
+            "The two input TensorBlock should have the same samples\
+            and in the same order"
+        )
+    if not np.all(X.components == Y.components):
+        raise ValueError(
+            "The two input TensorBlock should have the same component\
+            and in the same order"
+        )
 
-    valuesX = X.values
-    valuesY = Y.values
+    # assert len(X.components) == 0, "solve for block with components is not implemented"
+    # assert len(Y.components) == 0, "solve for block with components is not implemented"
+
+    valuesX = X.values.reshape(-1, X.values.shape[-1])
+    valuesY = Y.values.reshape(-1, Y.values.shape[-1])
     if X.has_any_gradient():
         if len(X.gradients_list()) != len(Y.gradients_list()) or (
             not np.all(

@@ -170,7 +170,7 @@ def compare_blocks(block1: TensorBlock, block2: TensorBlock, rtol=1e-13):
         result["components"] = False
 
     result["gradients"] = {}
-    if block1.has_any_gradient() and len(block1.gradients_list()) == len(
+    if len(block1.gradients_list()) > 0 and len(block1.gradients_list()) == len(
         block2.gradients_list()
     ):
         result["gradients"]["general"] = True
