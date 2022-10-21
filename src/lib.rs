@@ -74,7 +74,7 @@ impl std::fmt::Display for Error {
             Error::Serialization(e) => write!(f, "serialization format error: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
             Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
-            Error::Internal(e) => write!(f, "internal error: {}", e),
+            Error::Internal(e) => write!(f, "internal error (this is likely a bug, please report it): {}", e),
         }
     }
 }
