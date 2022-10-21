@@ -49,11 +49,18 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
             "The two input TensorBlock should have the same samples\
             and in the same order"
         )
-    if not np.all(X.components == Y.components):
-        raise ValueError(
-            "The two input TensorBlock should have the same component\
-            and in the same order"
-        )
+    if len(X.components) > 0:
+        if len(X.components) != len(Y.components):
+            raise ValueError(
+                "The two input TensorBlock should have the same components\
+                    and in the same order"
+            )
+        for ic, Xcomp in enumerate(X.components):
+            if not np.all(Xcomp == Y.components[ic]):
+                raise ValueError(
+                    "The two input TensorBlock should have the same components\
+                    and in the same order"
+                )
 
     valuesX = X.values.reshape(-1, X.values.shape[-1])
     valuesY = Y.values.reshape(-1, Y.values.shape[-1])

@@ -1,3 +1,4 @@
+from array import array
 import os
 import unittest
 
@@ -172,6 +173,97 @@ class TestSolve(unittest.TestCase):
             ),
             components=[
                 Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))
+            ],
+        )
+
+        keys = Labels(
+            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
+        )
+
+        X = TensorMap(keys, [block_X])
+        Y = TensorMap(keys, [block_Y])
+        w = fn.lstsq(X, Y, rcond=1e-13)
+
+        self.assertTrue(len(w) == 1)
+        self.assertTrue(np.all(w.keys == X.keys))
+        self.assertTrue(
+            np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
+        )
+
+        for key, blockw in w:
+            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
+            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
+
+        Ydot = fn.dot(X, w)
+        self.assertTrue(np.all(Ydot.keys == Y.keys))
+        for key, expected_block in Ydot:
+            comparing_dict = compare_blocks(expected_block, Y.block(key), rtol=1e-3)
+            if not comparing_dict["general"]:
+                print(str(comparing_dict))
+            self.assertTrue(comparing_dict["general"])
+            self.assertTrue(
+                np.allclose(expected_block.values, Y.block(key).values, rtol=1e-13)
+            )
+            self.assertTrue(
+                np.allclose(
+                    expected_block.gradient("positions").data,
+                    Y.block(key).gradient("positions").data,
+                    rtol=1e-13,
+                )
+            )
+        return
+
+    def test_self_lstsq_grad_components(self):
+        Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
+        xdim = len(Xval)
+        ydim = len(Yval)
+        block_X = TensorBlock(
+            values=Xval.reshape((1, xdim, Xval.shape[-1])),
+            samples=Labels(["samples"], np.array([[0]], dtype=np.int32)),
+            components=[
+                Labels(
+                    ["components"], np.array([[0], [1], [2], [3], [4]]), dtype=np.int32
+                )
+            ],
+            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        )
+        block_X.add_gradient(
+            "positions",
+            data=Xgradval.reshape(1, 3, xdim, Xval.shape[-1]),
+            samples=Labels(
+                ["sample", "positions"],
+                np.array([[0, 1]], dtype=np.int32),
+            ),
+            components=[
+                Labels(["der_components"], np.array([[0], [1], [2]], dtype=np.int32)),
+                Labels(
+                    ["components"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
+                ),
+            ],
+        )
+
+        block_Y = TensorBlock(
+            values=Yval.reshape((1, ydim, Yval.shape[-1])),
+            samples=Labels(["samples"], np.array([[0]], dtype=np.int32)),
+            components=[
+                Labels(
+                    ["components"], np.array([[0], [1], [2], [3], [4]]), dtype=np.int32
+                )
+            ],
+            properties=Labels(["properties"], np.array([[2]], dtype=np.int32)),
+        )
+        block_Y.add_gradient(
+            "positions",
+            data=Ygradval.reshape((1, 3, ydim, Yval.shape[-1])),
+            samples=Labels(
+                ["sample", "positions"],
+                np.array([[0, 1]], dtype=np.int32),
+            ),
+            components=[
+                Labels(["der_components"], np.array([[0], [1], [2]], dtype=np.int32)),
+                Labels(
+                    ["components"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
+                ),
             ],
         )
 
