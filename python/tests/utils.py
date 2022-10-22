@@ -1,6 +1,3 @@
-from array import array
-from unittest import result
-
 import numpy as np
 
 from equistore import Labels, TensorBlock, TensorMap
@@ -148,7 +145,8 @@ def compare_blocks(block1: TensorBlock, block2: TensorBlock, rtol=1e-13):
     global : bool -> are the two blocks globally equal ?
     values, properties, ... : bool -> one for each property of the block
 
-    if the gradient is present a nested dictionary with the same structure is present in the returned dictionary.
+    if the gradient is present a nested dictionary
+    with the same structure is present in the returned dictionary.
     """
     result = {}
     result["values"] = np.allclose(block1.values, block2.values, rtol=rtol)
