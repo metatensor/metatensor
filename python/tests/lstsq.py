@@ -1,18 +1,15 @@
 import os
 import unittest
-
 import numpy as np
-from utils import compare_blocks, get_value_linear_solve
+from utils import compare_blocks
 
-import equistore.io
 import equistore.operations as fn
-from equistore.operations.dot import _dot_block
 from equistore import Labels, TensorBlock, TensorMap
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
-class TestSolve(unittest.TestCase):
+class TestLstsq(unittest.TestCase):
     def test_self_lstsq_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
@@ -63,61 +60,6 @@ class TestSolve(unittest.TestCase):
             np.allclose(w.block(0).values, np.array([-1.0, 1.0]), rtol=1e-13)
         )
         self.assertTrue(np.allclose(w.block(1).values, np.array([7, 8]), rtol=1e-7))
-        for key, blockw in w:
-            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
-            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
-
-        Ydot = fn.dot(X, w)
-        self.assertTrue(np.all(Ydot.keys == Y.keys))
-        for key, expected_block in Ydot:
-            comparing_dict = compare_blocks(expected_block, Y.block(key), rtol=1e-3)
-            if not comparing_dict["general"]:
-                print(str(comparing_dict))
-            self.assertTrue(comparing_dict["general"])
-            self.assertTrue(
-                np.allclose(expected_block.values, Y.block(key).values, rtol=1e-13)
-            )
-
-    def test_self_solve_nograd(self):
-        block_1 = TensorBlock(
-            values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_2 = TensorBlock(
-            values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_3 = TensorBlock(
-            values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
-        )
-        block_4 = TensorBlock(
-            values=np.array([[2], [4]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
-        )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
-        X = TensorMap(keys, [block_1, block_2])
-        Y = TensorMap(keys, [block_3, block_4])
-        w = fn.solve(X, Y)
-
-        self.assertTrue(len(w) == 2)
-        self.assertTrue(np.all(w.keys == X.keys))
-        self.assertTrue(
-            np.allclose(w.block(0).values, np.array([-1.0, 1.0]), rtol=1e-13)
-        )
-        self.assertTrue(
-            np.allclose(w.block(1).values, np.array([-2.0, 2.0]), rtol=1e-7)
-        )
         for key, blockw in w:
             self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
@@ -304,118 +246,66 @@ class TestSolve(unittest.TestCase):
         return
 
 
-class TestDot(unittest.TestCase):
-    def test_self_dot_no_components(self):
-        tensor1 = equistore.io.load(
-            os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-            use_numpy=True,
-        )
-        tensor2 = fn.remove_gradients(tensor1)
-        dot_blocks = []
-        for key, block1 in tensor1:
-            block2 = tensor2.block(key)
-            result_block = _dot_block(block1, block2)
-            dot_blocks.append(result_block)
-            expected_values = np.dot(block1.values, block2.values.T)
-            self.assertTrue(
-                np.allclose(result_block.values, expected_values, rtol=1e-13)
-            )
-            self.assertTrue(np.all(block1.samples == result_block.samples))
-            self.assertTrue(np.all(block2.samples == result_block.properties))
+def Xfun1(x, y, z):
+    return np.arctan(-x + 2 * y * y + 3 * z * z * z)
 
-            self.assertTrue(
-                len(block1.gradients_list()) == len(result_block.gradients_list())
-            )
-            for parameter, gradient1 in block1.gradients():
-                result_gradient = result_block.gradient(parameter)
-                self.assertTrue(np.all(gradient1.samples == result_gradient.samples))
-                self.assertTrue(
-                    len(gradient1.components) == len(result_gradient.components)
-                )
-                for c1, cres in zip(gradient1.components, result_gradient.components):
-                    self.assertTrue(np.all(c1 == cres))
 
-                self.assertTrue(len(block2.samples) == len(result_gradient.properties))
-                for p1, pres in zip(block2.samples, result_gradient.properties):
-                    self.assertTrue(np.all(p1 == pres))
+def Xfun1_dx(x, y, z):
+    """derivative w.r.t x of Xfun1"""
+    return -1 / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
 
-                expected_data = gradient1.data @ block2.values.T
-                self.assertTrue(
-                    np.allclose(expected_data, result_gradient.data, rtol=1e-13)
-                )
-        expected_tensor = TensorMap(tensor1.keys, dot_blocks)
 
-        dot_tensor = fn.dot(tensor1=tensor1, tensor2=tensor2)
-        self.assertTrue(np.all(expected_tensor.keys == dot_tensor.keys))
-        for key, expected_block in expected_tensor:
+def Xfun1_dy(x, y, z):
+    """derivative w.r.t y of Xfun1"""
+    return 4 * y / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
 
-            comparing_dict = compare_blocks(expected_block, dot_tensor.block(key))
-            self.assertTrue(comparing_dict["general"])
 
-    def test_self_dot_components(self):
-        tensor1 = equistore.io.load(
-            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-            use_numpy=True,
-        )
-        tensor2 = []
-        dot_blocks = []
-        isample = 1
-        for key, block1 in tensor1:
-            value2 = np.arange(isample * len(block1.properties)).reshape(
-                isample, len(block1.properties)
-            )
+def Xfun1_dz(x, y, z):
+    """derivative w.r.t z of Xfun1"""
+    return 9 * z * z / (1 + (-x + 2 * y * y + 3 * z * z * z) ** 2)
 
-            block2 = TensorBlock(
-                values=value2,
-                samples=Labels(
-                    ["samples"], np.array([[i] for i in range(isample)], dtype=np.int32)
-                ),
-                components=[],
-                properties=block1.properties,
-            )
-            tensor2.append(block2)
-            result_block = _dot_block(block1, block2)
-            dot_blocks.append(result_block)
-            expected_values = np.dot(
-                block1.values,
-                block2.values.T,
-            )
-            self.assertTrue(
-                np.allclose(result_block.values, expected_values, rtol=1e-13)
-            )
-            self.assertTrue(np.all(block1.samples == result_block.samples))
-            self.assertTrue(np.all(block2.samples == result_block.properties))
 
-            self.assertTrue(
-                len(block1.gradients_list()) == len(result_block.gradients_list())
-            )
-            for parameter, gradient1 in block1.gradients():
-                result_gradient = result_block.gradient(parameter)
-                self.assertTrue(np.all(gradient1.samples == result_gradient.samples))
-                for i in range(len(gradient1.components)):
-                    self.assertTrue(
-                        len(gradient1.components[i])
-                        == len(result_gradient.components[i])
-                    )
-                for c1, cres in zip(gradient1.components, result_gradient.components):
-                    self.assertTrue(np.all(c1 == cres))
+def Xfun2(x, y, z):
+    return x**3 + 2 * y + 3 * z**2
 
-                self.assertTrue(len(block2.samples) == len(result_gradient.properties))
-                for p1, pres in zip(block2.samples, result_gradient.properties):
-                    self.assertTrue(np.all(p1 == pres))
-                expected_data = gradient1.data @ value2.T
-                self.assertTrue(
-                    np.allclose(expected_data, result_gradient.data, rtol=1e-13)
-                )
-        expected_tensor = TensorMap(tensor1.keys, dot_blocks)
-        tensor2 = TensorMap(tensor1.keys, tensor2)
 
-        dot_tensor = fn.dot(tensor1=tensor1, tensor2=tensor2)
-        self.assertTrue(np.all(expected_tensor.keys == dot_tensor.keys))
-        for key, expected_block in expected_tensor:
+def Xfun2_dx(x, y, z):
+    """derivative w.r.t x of Xfun2"""
+    return 3 * x**2
 
-            comparing_dict = compare_blocks(expected_block, dot_tensor.block(key))
-            self.assertTrue(comparing_dict["general"])
+
+def Xfun2_dy(x, y, z):
+    """derivative w.r.t y of Xfun2"""
+    return 2
+
+
+def Xfun2_dz(x, y, z):
+    """derivative w.r.t z of Xfun2"""
+    return 6 * z
+
+
+def get_value_linear_solve():
+    """Generate a value matrix for block and gradient in
+    the test for the linear solve
+    """
+    data = np.arange(15).reshape((-1, 3))
+    Xval = np.zeros((len(data), 2))
+    Xgradval = np.zeros((len(data), 3, 2))
+    for i in range(len(data)):
+        Xval[i, 0] = Xfun1(data[i, 0], data[i, 1], data[i, 2])
+        Xval[i, 1] = Xfun2(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 0, 0] = Xfun1_dx(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 1, 0] = Xfun1_dy(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 2, 0] = Xfun1_dz(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 0, 1] = Xfun2_dx(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 1, 1] = Xfun2_dy(data[i, 0], data[i, 1], data[i, 2])
+        Xgradval[i, 2, 1] = Xfun2_dz(data[i, 0], data[i, 1], data[i, 2])
+
+    w = np.array([[1], [3]])
+    Yval = np.dot(Xval, w)
+    Ygradval = np.dot(Xgradval, w)
+
+    return Xval, Xgradval, Yval, Ygradval
 
 
 # TODO: add tests with torch & torch scripting/tracing
