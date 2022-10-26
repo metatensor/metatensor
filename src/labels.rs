@@ -245,6 +245,25 @@ impl std::fmt::Debug for Labels {
 }
 
 impl Labels {
+    /// Create a new set of Labels with the given names and values.
+    ///
+    /// This is a convenience function replacing the manual use of
+    /// `LabelsBuilder`. If you need more flexibility or incremental `Labels`
+    /// construction, use `LabelsBuilder`.
+    ///
+    /// # Panics
+    ///
+    /// If the set of names is not valid, or any of the value is duplicated
+    pub fn new<T, const N: usize>(names: [&str; N], values: &[[T; N]]) -> Labels
+        where T: Copy + Into<LabelValue>
+    {
+        let mut builder = LabelsBuilder::new(names.to_vec());
+        for entry in values {
+            builder.add(entry);
+        }
+        return builder.finish();
+    }
+
     /// Create a set of `Labels` containing a single entry, to be used when
     /// there is no relevant information to store.
     pub fn single() -> Labels {
@@ -273,6 +292,11 @@ impl Labels {
     /// Get the total number of entries in this set of labels
     pub fn count(&self) -> usize {
         return self.values.len() / self.size();
+    }
+
+    /// Check if this set of Labels is empty (contains no entry)
+    pub fn empty(&self) -> bool {
+        self.count() == 0
     }
 
     /// Check whether the given `label` is part of this set of labels
@@ -432,6 +456,26 @@ mod tests {
         assert_eq!(idx[0], [2, 3]);
         assert_eq!(idx[1], [1, 243]);
         assert_eq!(idx[2], [-4, -2413]);
+    }
+
+    #[test]
+    fn direct_construct() {
+        let labels = Labels::new(
+            ["foo", "bar"],
+            &[
+                [2, 3],
+                [1, 243],
+                [-4, -2413],
+            ]
+        );
+
+        assert_eq!(labels.names(), &["foo", "bar"]);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels.count(), 3);
+
+        assert_eq!(labels[0], [2, 3]);
+        assert_eq!(labels[1], [1, 243]);
+        assert_eq!(labels[2], [-4, -2413]);
     }
 
     #[test]
