@@ -253,6 +253,15 @@ impl TensorMap {
         return Ok(&self.blocks[self.block_matching(selection)?]);
     }
 
+    /// Get a reference to the block with the given id
+    ///
+    /// # Panics
+    ///
+    /// If the id is larger than the number of blocks
+    pub fn block_by_id(&self, id: usize) -> &TensorBlock {
+        return &self.blocks[id];
+    }
+
     /// Move the given variables from the component labels to the property labels
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
