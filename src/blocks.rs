@@ -8,7 +8,7 @@ use crate::{eqs_array_t, get_data_origin};
 use crate::Error;
 
 /// A `Vec` which can not be modified
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImmutableVec<T>(Vec<T>);
 
 impl<T> std::ops::Deref for ImmutableVec<T> {
@@ -152,7 +152,7 @@ impl BasicBlock {
         for new_property in moved_component.iter() {
             for old_property in old_properties.iter() {
                 let mut property = new_property.to_vec();
-                property.extend_from_slice(&*old_property);
+                property.extend_from_slice(old_property);
                 new_properties_builder.add(&property);
             }
         }

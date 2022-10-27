@@ -96,6 +96,14 @@ class TensorMap:
         )
         return result
 
+    def __getitem__(self, *args) -> TensorBlock:
+        """This is equivalent to self.block(*args)"""
+        if args and isinstance(args[0], tuple):
+            raise ValueError(
+                f"only one non-keyword argument is supported, {len(args[0])} are given"
+            )
+        return self.block(*args)
+
     @property
     def keys(self) -> Labels:
         """The set of keys labeling the blocks in this tensor map."""
@@ -130,6 +138,10 @@ class TensorMap:
             )
             block = tensor.block(labels)
         """
+        if len(args) > 1:
+            raise ValueError(
+                f"only one non-keyword argument is supported, {len(args)} are given"
+            )
 
         if args and isinstance(args[0], int):
             return self._get_block_by_id(args[0])
@@ -181,6 +193,10 @@ class TensorMap:
             blocks = tensor.blocks(labels)
         """
 
+        if len(args) > 1:
+            raise ValueError(
+                f"only one non-keyword argument is supported, {len(args)} are given"
+            )
         if args and isinstance(args[0], int):
             return [self._get_block_by_id(args[0])]
 
@@ -207,7 +223,9 @@ class TensorMap:
         selection = None
         if args:
             if len(args) > 1:
-                raise ValueError("only one non-keyword argument is supported")
+                raise ValueError(
+                    f"only one non-keyword argument is supported, {len(args)} are given"
+                )
 
             arg = args[0]
             if isinstance(arg, Labels):
@@ -259,7 +277,10 @@ class TensorMap:
         return TensorBlock._from_ptr(block, parent=self, owning=False)
 
     def keys_to_properties(
-        self, keys_to_move: Union[str, List[str], Labels], sort_samples=True
+        self,
+        keys_to_move: Union[str, List[str], Labels],
+        *,
+        sort_samples=True,
     ):
         """
         Merge blocks with the same value for selected keys variables along the
@@ -298,7 +319,12 @@ class TensorMap:
             self._ptr, keys_to_move._as_eqs_labels_t(), sort_samples
         )
 
-    def keys_to_samples(self, keys_to_move: Union[str, List[str]], sort_samples=True):
+    def keys_to_samples(
+        self,
+        keys_to_move: Union[str, List[str]],
+        *,
+        sort_samples=True,
+    ):
         """
         Merge blocks with the same value for selected keys variables along the
         samples axis.

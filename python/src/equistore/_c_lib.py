@@ -4,6 +4,8 @@ import sys
 from ctypes import cdll
 
 from ._c_api import setup_functions
+from .data import register_external_data_wrapper
+from .data.extract import _RustNDArray
 
 _HERE = os.path.realpath(os.path.dirname(__file__))
 
@@ -36,6 +38,8 @@ class LibraryFinder(object):
             # initial setup, disable printing of the error in case of panic
             # the error will be transformed to a Python exception anyway
             self._cached_dll.eqs_disable_panic_printing()
+
+            register_external_data_wrapper("rust.ndarray", _RustNDArray)
 
         return self._cached_dll
 

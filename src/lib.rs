@@ -32,6 +32,7 @@ use c_api::eqs_status_t;
 pub mod io;
 
 #[cfg(not(feature = "serialization"))]
+#[allow(clippy::needless_pass_by_value)]
 pub mod io {
     #![allow(unused_variables)]
     use super::{Error, TensorMap};
@@ -73,7 +74,7 @@ impl std::fmt::Display for Error {
             Error::Serialization(e) => write!(f, "serialization format error: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
             Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
-            Error::Internal(e) => write!(f, "internal error: {}", e),
+            Error::Internal(e) => write!(f, "internal error (this is likely a bug, please report it): {}", e),
         }
     }
 }

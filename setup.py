@@ -1,17 +1,13 @@
 import os
 import subprocess
 import sys
-from distutils.command.build_ext import build_ext  # type: ignore
-from distutils.command.install import install as distutils_install  # type: ignore
 
 from setuptools import Extension, setup
+from setuptools.command.bdist_egg import bdist_egg
+from setuptools.command.build_ext import build_ext
 from wheel.bdist_wheel import bdist_wheel
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-
-if sys.version_info < (3, 6):
-    sys.exit("Sorry, Python < 3.6 is not supported")
-
 
 EQUISTORE_BUILD_TYPE = os.environ.get("EQUISTORE_BUILD_TYPE", "release")
 if EQUISTORE_BUILD_TYPE not in ["debug", "release"]:
@@ -56,6 +52,7 @@ class cmake_ext(build_ext):
             f"-DCMAKE_BUILD_TYPE={EQUISTORE_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
             "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
+            "-DEQUISTORE_SERIALIZATION=ON",
         ]
 
         if RUST_BUILD_TARGET is not None:
@@ -70,12 +67,23 @@ class cmake_ext(build_ext):
             check=True,
         )
         subprocess.run(
-            ["cmake", "--build", build_dir],
-            check=True,
-        )
-        subprocess.run(
             ["cmake", "--build", build_dir, "--target", "install"],
             check=True,
+        )
+
+
+class bdist_egg_disabled(bdist_egg):
+    """Disabled version of bdist_egg
+
+    Prevents setup.py install performing setuptools' default easy_install,
+    which it should never ever do.
+    """
+
+    def run(self):
+        sys.exit(
+            "Aborting implicit building of eggs. "
+            + "Use `pip install .` or `python setup.py bdist_wheel && pip "
+            + "install dist/equistore-*.whl` to install from source."
         )
 
 
@@ -158,11 +166,8 @@ setup(
     ],
     cmdclass={
         "build_ext": cmake_ext,
+        "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
         "bdist_wheel": universal_wheel,
-        # HACK: do not use the new setuptools install implementation, it tries
-        # to install the package with `easy_install`, which fails to resolve the
-        # freshly installed package and tries to load it from pypi.
-        "install": distutils_install,
     },
     package_data={
         "equistore": [

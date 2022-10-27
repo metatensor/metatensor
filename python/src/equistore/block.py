@@ -3,12 +3,13 @@ import ctypes
 import gc
 from typing import Generator, List, Tuple
 
-from ._c_api import eqs_array_t, eqs_labels_t
+from ._c_api import c_uintptr_t, eqs_array_t, eqs_labels_t
 from ._c_lib import _get_library
 from .data import (
     Array,
     ArrayWrapper,
-    eqs_array_to_python_object,
+    eqs_array_to_python_array,
+    eqs_array_to_python_wrapper,
     eqs_array_was_allocated_by_python,
 )
 from .labels import Labels
@@ -108,18 +109,18 @@ class TensorBlock:
         new_ptr = self._lib.eqs_block_copy(self._ptr)
         copy = TensorBlock._from_ptr(new_ptr, parent=None, owning=True)
 
-        # Keep references to the arrays in this block if the arrays were
+        # Keep references to the wrappers in this block if the arrays were
         # allocated by Python
-        raw_values = _get_raw_array(self._lib, copy._ptr, "values")
-        if eqs_array_was_allocated_by_python(raw_values):
-            copy._values = eqs_array_to_python_object(raw_values)
+        raw_array = _get_raw_array(self._lib, copy._ptr, "values")
+        if eqs_array_was_allocated_by_python(raw_array):
+            copy._values = eqs_array_to_python_wrapper(raw_array)
         else:
             copy._values = None
 
         for parameter in self.gradients_list():
             raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
             if eqs_array_was_allocated_by_python(raw_array):
-                copy._gradients.append(eqs_array_to_python_object(raw_array))
+                copy._gradients.append(eqs_array_to_python_wrapper(raw_array))
             else:
                 pass
 
@@ -173,7 +174,7 @@ class TensorBlock:
         """
 
         raw_array = _get_raw_array(self._lib, self._ptr, "values")
-        return eqs_array_to_python_object(raw_array, parent=self).array
+        return eqs_array_to_python_array(raw_array, parent=self)
 
     @property
     def samples(self) -> Labels:
@@ -242,14 +243,20 @@ class TensorBlock:
         """
         Add a set of gradients with respect to ``parameters`` in this block.
 
-        :param data: the gradient array, of shape ``(gradient_samples,
-            components, properties)``, where the components and properties labels
-            are the same as the values components and properties labels.
         :param parameter: add gradients with respect to this ``parameter`` (e.g.
             ``positions``, ``cell``, ...)
+        :param data: the gradient array, of shape ``(gradient_samples,
+            components, properties)``, where the properties labels are the same
+            as the values' properties labels.
         :param samples: labels describing the gradient samples
         :param components: labels describing the gradient components
         """
+        if self._parent is not None:
+            raise ValueError(
+                "can not add gradient on this block since it is a view inside "
+                "a TensorMap"
+            )
+
         data = ArrayWrapper(data)
         self._gradients.append(data)
 
@@ -269,7 +276,7 @@ class TensorBlock:
     def gradients_list(self) -> List[str]:
         """Get a list of all gradients defined in this block."""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
-        count = ctypes.c_uint64()
+        count = c_uintptr_t()
         self._lib.eqs_block_gradients_list(self._ptr, parameters, count)
 
         result = []
@@ -338,7 +345,7 @@ class Gradient:
         """
 
         raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
-        return eqs_array_to_python_object(raw_array, parent=self).array
+        return eqs_array_to_python_array(raw_array, parent=self)
 
     @property
     def samples(self) -> Labels:
