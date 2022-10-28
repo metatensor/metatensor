@@ -16,7 +16,7 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     if len(block2.components) > 0:
         raise ValueError("The second TensorBlock should not have components ")
 
-    if block2.has_any_gradient():
+    if len(block2.gradients_list()) > 0:
         raise ValueError(
             "The second TensorBlock should not have gradient informations "
         )
@@ -32,7 +32,7 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
         properties=block2.samples,
     )
 
-    if block1.has_any_gradient():
+    if len(block1.gradients_list()) > 0:
         for parameter in block1.gradients_list():
             gradient = block1.gradient(parameter)
 

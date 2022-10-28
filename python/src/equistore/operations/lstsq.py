@@ -64,7 +64,7 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
 
     valuesX = X.values.reshape(-1, X.values.shape[-1])
     valuesY = Y.values.reshape(-1, Y.values.shape[-1])
-    if X.has_any_gradient():
+    if len(X.gradients_list()) > 0:
         if len(X.gradients_list()) != len(Y.gradients_list()) or (
             not np.all(
                 [parameter in Y.gradients_list() for parameter in X.gradients_list()]
