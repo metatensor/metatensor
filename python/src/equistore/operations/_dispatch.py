@@ -30,7 +30,7 @@ def norm(array, axis=None):
 
 def dot(array1, array2):
     """Compute dot product of two arrays.
-    This function has the equivalent bheaviour of  ``np.dot(array1,array2.T)``.
+    This function has the equivalent behaviour of  ``np.dot(array1,array2.T)``.
     For numpy array, it check if the arrays are 2D, in which case it uses the matmul,
     which is preferred according to the doc.
     For torch it uses ``torch.dot``
@@ -42,9 +42,6 @@ def dot(array1, array2):
         if len(shape1) == 2 and len(shape2) == 2:
             return array1 @ array2.T
         else:
-            # axis = list(range(array2.ndim))
-            # axis[-1], axis[-2] = axis[-2], axis[-1]
-            # return np.dot(array1, np.transpose(array2, axes=axis))
             return np.dot(array1, np.transpose(array2))
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
         shape1 = array1.size()
@@ -52,11 +49,7 @@ def dot(array1, array2):
         if len(shape1) == 1 and len(shape2) == 1:
             return torch.dot(array1, array2.T)
         else:
-            # axis = list(range(array2.ndim))
-            # return torch.matmul(
-            #    array1, torch.Traspose(array2, dim0=axis[-2], dim1=axis[-1])
-            # )
-            return torch.matmul(array1, torch.Traspose(array2))
+            return array1 @ array2.T
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -64,6 +57,9 @@ def dot(array1, array2):
 def linalg_inv(array, detach=False):
     """Compute the (multiplicative) inverse of a matrix.
     This function has the equivalent bheaviour of  ``numpy.linalg.inv(array)``.
+    detach: used only with torch (ignored if numpy)
+            if True, it returns a new Tensor, detached from the current graph.
+            The result will never require gradient.
     """
     if isinstance(array, np.ndarray):
         return np.linalg.inv(array)
@@ -91,7 +87,7 @@ def solve(array1, array2):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def lstsq(array1, array2, rcond):
+def lstsq(array1, array2, rcond, driver=None):
     """
     Computes a solution to the least squares problem
     of a system of linear equations.
@@ -99,11 +95,29 @@ def lstsq(array1, array2, rcond):
     solves the equation ``array1 @ x = array2``.
     This function has the equivalent
     behaviour of ``numpy.linalg.lstsq(array1,array2)``.
+
+    rcond: Cut-off ratio for small singular values of a.
+    WARNING: the default rcond=None for numpy and torch is different
+    numpy -> rcond is the machine precision times max(M, N).
+             with M, N being the dimensions of array1
+    torch -> rcond is the machine precision,
+             to have this behaviour in numpy use
+             rcond=-1
+
+    driver: Used only in torch (ignored if numpy id used).
+            It chooses the LAPACK/MAGMA function that will be used.
+            Possible values: for CPU ‘gels’, ‘gelsy’, ‘gelsd, ‘gelss’.
+                             for GPU  the only valid driver is ‘gels’,
+                             which assumes that A is full-rank
+            see https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html
+            for a full description
+            If None, ‘gelsy’ is used for CPU inputs
+            and ‘gels’ for CUDA inputs. Default: None
     """
     if isinstance(array1, np.ndarray) and isinstance(array2, np.ndarray):
         return np.linalg.lstsq(array1, array2, rcond=rcond)[0]
     elif isinstance(array1, TorchTensor) and isinstance(array2, TorchTensor):
-        result = torch.linalg.lstsq(array1, array2, rcond=rcond)[0]
+        result = torch.linalg.lstsq(array1, array2, rcond=rcond, driver=driver)[0]
         return result
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
