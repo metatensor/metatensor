@@ -18,7 +18,15 @@ Note: Depending on the hyperparameters chosen, some degree of feature selection 
 
 Navigating through the TensorMap 
 ----
+Accessing different Blocks on the Tensormap
+#########
+There are three main ways to access blocks on the Tensormap, by index, keys or multiple keys at once. The first method involving index would require access blocks based on the order (??)::
+	#The first tensorblock can be accessed using ...
+	TensorMap.block(0) 
 
+The second method involves calling the key of the TensorBlock directly using the tuple (*spherical_harmonics_l*, *species_center*)::
+	#The tensorblock corresponding to key () can be accessed using ...
+	TensorMap.key(key)
 
 
 Simple operations on TensorMaps 
