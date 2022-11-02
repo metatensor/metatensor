@@ -37,7 +37,7 @@ Creating your own TensorBlocks and TensorMap
 -----
 In principle once you have defined blocks and keys, a TensorMap is simply obtained by collecting all the blocks into a common container. So how do we get these blocks? We need to define **Labels** for each dimension of the block values 
 
-list_of_blocks = []
+``list_of_blocks = []
 list_of_blocks.append( TensorBlock(block.values = values,
 block.samples = samples, 
 block. properties = properties,
@@ -46,7 +46,7 @@ block.components = components
 )
 
 tensormap = TensorMap(blocks, keys)
-
+``
 where values is an n-dim array with the actual data that you began with, whereas samples, properties, components are Label objects.  (make sure that the Label objetcs have been appropriately defined to follow this explanation)
 
 samples = Labels( values, names
