@@ -264,6 +264,11 @@ impl Labels {
         return builder.finish();
     }
 
+    /// Create a set of `Labels` with the given names, containing no entries.
+    pub fn empty(names: Vec<&str>) -> Labels {
+        return LabelsBuilder::new(names).finish()
+    }
+
     /// Create a set of `Labels` containing a single entry, to be used when
     /// there is no relevant information to store.
     pub fn single() -> Labels {
@@ -295,7 +300,7 @@ impl Labels {
     }
 
     /// Check if this set of Labels is empty (contains no entry)
-    pub fn empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.count() == 0
     }
 
