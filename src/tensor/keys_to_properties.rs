@@ -39,8 +39,6 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     pub fn keys_to_properties(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
-        // TODO: keys_to_properties_no_gradients?
-
         let names_to_move = keys_to_move.names();
         let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
 
@@ -294,7 +292,7 @@ fn merge_blocks_along_properties(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use crate::{LabelsBuilder, TensorMap};
+    use crate::{LabelsBuilder, Labels, TensorMap};
     use super::super::utils::{example_tensor, example_block, example_labels};
 
     use ndarray::ArrayD;
@@ -435,6 +433,54 @@ mod tests {
         let keys = keys.finish();
 
         return TensorMap::new(keys, blocks).unwrap();
+    }
+
+    #[test]
+    fn keys_to_move_in_different_order() {
+        let mut tensor = example_tensor_same_properties_in_all_blocks();
+
+        let keys_to_move = Labels::empty(vec!["key_1", "key_2"]);
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().properties,
+            Labels::new(["key_1", "key_2", "properties"], &[
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 2],
+                [0, 0, 3],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 0, 2],
+                [1, 0, 3],
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 1, 2],
+                [0, 1, 3],
+            ])
+        );
+
+        let mut tensor = example_tensor_same_properties_in_all_blocks();
+        let keys_to_move = Labels::empty(vec!["key_2", "key_1"]);
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().properties,
+            Labels::new(["key_2", "key_1", "properties"], &[
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 2],
+                [0, 0, 3],
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 1, 2],
+                [0, 1, 3],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 0, 2],
+                [1, 0, 3],
+            ])
+        );
     }
 
     #[test]

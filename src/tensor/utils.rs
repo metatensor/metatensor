@@ -11,6 +11,7 @@ use crate::{Error, TensorBlock, eqs_sample_mapping_t};
 pub type KeyAndBlock<'a> = (Vec<LabelValue>, &'a TensorBlock);
 
 /// Result of the `remove_variables_from_keys` function
+#[derive(Debug, Clone)]
 pub struct RemovedVariablesKeys {
     /// keys without the variables
     pub(super) new_keys: Labels,
@@ -31,14 +32,19 @@ pub fn remove_variables_from_keys(keys: &Labels, variables: &[&str]) -> Result<R
         }
     }
 
+    let mut extracted_i = Vec::new();
+    for &variable in variables {
+        for (i, &name) in names.iter().enumerate() {
+            if variable == name {
+                extracted_i.push(i);
+            }
+        }
+    }
+
     let mut remaining_names = Vec::new();
     let mut remaining_i = Vec::new();
-    let mut extracted_i = Vec::new();
-
     for (i, &name) in names.iter().enumerate() {
-        if variables.contains(&name) {
-            extracted_i.push(i);
-        } else {
+        if !extracted_i.contains(&i) {
             remaining_names.push(name);
             remaining_i.push(i);
         }
