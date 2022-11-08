@@ -8,8 +8,19 @@ from . import _dispatch
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     """
     Solve a linear system among two :py:class:`TensorMap`.
-    Solve the linear equation set X * w = Y for the unknown w.
-    Where X , w, Y are all :py:class:`TensorMap`
+    Solve the linear equation set
+    ``Y = X * w`` for the unknown ``w``.
+    Where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`.
+    ``Y`` and ``X`` must have the same ``keys`` and
+    all their :py:class:`TensorBlock` must be 2D-square array.
+
+    :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
+    :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
+
+    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``,
+            and where each :py:class:`TensorBlock` has: the ``sample``
+            equal to the ``properties`` of ``Y``;
+            and the ``properties`` equal to the ``properties`` of ``X``.
     """
 
     if len(X) != len(Y) or (not np.all([key in Y.keys for key in X.keys])):

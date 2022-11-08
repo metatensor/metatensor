@@ -54,24 +54,6 @@ def dot(array1, array2):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def linalg_inv(array, detach=False):
-    """Compute the (multiplicative) inverse of a matrix.
-    This function has the equivalent bheaviour of  ``numpy.linalg.inv(array)``.
-    detach: used only with torch (ignored if numpy)
-            if True, it returns a new Tensor, detached from the current graph.
-            The result will never require gradient.
-    """
-    if isinstance(array, np.ndarray):
-        return np.linalg.inv(array)
-    elif isinstance(array, torch.Tensor):
-        result = torch.linalg.inv(array)
-        if detach:
-            result = result.detach()
-        return result
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
 def solve(array1, array2):
     """Computes the solution of a square system of linear equations
     with a unique solution.

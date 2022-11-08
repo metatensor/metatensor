@@ -53,7 +53,7 @@ class TestDot(unittest.TestCase):
                 )
         expected_tensor = TensorMap(tensor1.keys, dot_blocks)
 
-        dot_tensor = fn.dot(tensor1=tensor1, tensor2=tensor2)
+        dot_tensor = fn.dot(A=tensor1, B=tensor2)
         self.assertTrue(np.all(expected_tensor.keys == dot_tensor.keys))
         for key, expected_block in expected_tensor:
 
@@ -118,7 +118,7 @@ class TestDot(unittest.TestCase):
         expected_tensor = TensorMap(tensor1.keys, dot_blocks)
         tensor2 = TensorMap(tensor1.keys, tensor2)
 
-        dot_tensor = fn.dot(tensor1=tensor1, tensor2=tensor2)
+        dot_tensor = fn.dot(A=tensor1, B=tensor2)
         self.assertTrue(np.all(expected_tensor.keys == dot_tensor.keys))
         for key, expected_block in expected_tensor:
 

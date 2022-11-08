@@ -8,9 +8,10 @@ def remove_gradients(
     remove: Optional[List[str]] = None,
 ) -> TensorMap:
     """
-    Create a new tensor map without some or all of the gradients from ``tensor``.
+    Create a new :py:class:`TensorMap` without some or
+    all of the gradients from ``tensor``.
 
-    :param tensor: input tensor map, with gradients to remove
+    :param tensor: input :py:class:`TensorMap`, with gradients to remove
     :param remove: which gradients should be excluded from the new tensor map.
         If this is set to ``None`` (this is the default), all the gradients will
         be removed.

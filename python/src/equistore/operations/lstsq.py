@@ -11,12 +11,19 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond) -> TensorMap:
     """
     Solve a linear system among two :py:class:`TensorMap`.
     Return the least-squares solution
-    to a linear equation X * w = Y for the unknown w.
-    Where X , w, Y are all :py:class:`TensorMap`
+    to a linear equation ``Y = X * w`` for the unknown ``w``.
+    Where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`.
+    ``Y`` and ``X`` must have the same ``keys``.
 
-    rcond:
-    Cut-off ratio for small singular values of a.
-    None chose the default value for numpy or pytorch
+    :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
+    :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
+    :param rcond: Cut-off ratio for small singular values of a.
+                None chose the default value for numpy or pytorch
+
+    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``,
+            and where each :py:class:`TensorBlock` has: the ``sample``
+            equal to the ``properties`` of ``Y``;
+            and the ``properties`` equal to the ``properties`` of ``X``.
     """
     if rcond is None:
         warnings.warn(
