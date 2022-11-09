@@ -1,10 +1,11 @@
 import os
 import unittest
 import numpy as np
-from utils import compare_blocks
 
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
+
+from .utils import compare_blocks
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -48,7 +49,7 @@ class TestLstsq(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            "the values in each TensorBlock of X should be a 2D-square array",
+            "the values in each block of X should be a square 2D array",
         )
 
         # solve with least square

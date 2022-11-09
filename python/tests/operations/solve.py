@@ -2,10 +2,11 @@ import os
 import unittest
 
 import numpy as np
-from utils import compare_blocks
 
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
+
+from .utils import compare_blocks
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
