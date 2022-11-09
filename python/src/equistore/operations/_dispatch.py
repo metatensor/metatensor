@@ -14,6 +14,14 @@ UNKNOWN_ARRAY_TYPE = (
 )
 
 
+def _check_all_same_type(arrays, expected_type):
+    for array in arrays:
+        if not isinstance(array, expected_type):
+            raise TypeError(
+                f"expected argument to be a {expected_type}, but got {type(array)}"
+            )
+
+
 def norm(array, axis=None):
     """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
@@ -34,7 +42,8 @@ def dot(A, B):
     This function has the same behavior as  ``np.dot(A, B.T)``, and assumes the
     second array is 2-dimensional.
     """
-    if isinstance(A, np.ndarray) and isinstance(B, np.ndarray):
+    if isinstance(A, np.ndarray):
+        _check_all_same_type([B], np.ndarray)
         shape1 = A.shape
         assert len(B.shape) == 2
         # Using matmul/@ is the recommended way in numpy docs for 2-dimensional
@@ -43,7 +52,8 @@ def dot(A, B):
             return A @ B.T
         else:
             return np.dot(A, B.T)
-    elif isinstance(A, TorchTensor) and isinstance(B, TorchTensor):
+    elif isinstance(A, TorchTensor):
+        _check_all_same_type([B], TorchTensor)
         assert len(B.shape) == 2
         return A @ B.T
     else:
@@ -57,9 +67,11 @@ def solve(X, Y):
 
     This function has the same behavior as ``numpy.linalg.solve(X, Y)``.
     """
-    if isinstance(X, np.ndarray) and isinstance(Y, np.ndarray):
+    if isinstance(X, np.ndarray):
+        _check_all_same_type([Y], np.ndarray)
         return np.linalg.solve(X, Y)
-    elif isinstance(X, TorchTensor) and isinstance(Y, TorchTensor):
+    elif isinstance(X, TorchTensor):
+        _check_all_same_type([Y], TorchTensor)
         result = torch.linalg.solve(X, Y)
         return result
     else:
@@ -80,7 +92,7 @@ def lstsq(X, Y, rcond, driver=None):
         numpy -> rcond is the machine precision times max(M, N).
                 with M, N being the dimensions of array1
         torch -> rcond is the machine precision,
-                to have this behaviour in numpy use
+                to have this behavior in numpy use
                 rcond=-1
 
     :param driver: Used only in torch (ignored if numpy id used).
@@ -93,9 +105,11 @@ def lstsq(X, Y, rcond, driver=None):
             If None, 'gelsy' is used for CPU inputs
             and 'gels' for CUDA inputs. Default: None
     """
-    if isinstance(X, np.ndarray) and isinstance(Y, np.ndarray):
+    if isinstance(X, np.ndarray):
+        _check_all_same_type([Y], np.ndarray)
         return np.linalg.lstsq(X, Y, rcond=rcond)[0]
-    elif isinstance(X, TorchTensor) and isinstance(Y, TorchTensor):
+    elif isinstance(X, TorchTensor):
+        _check_all_same_type([Y], TorchTensor)
         result = torch.linalg.lstsq(X, Y, rcond=rcond, driver=driver)[0]
         return result
     else:
@@ -108,8 +122,10 @@ def vstack(arrays):
     This function has the same behavior as ``numpy.vstack(arrays)``.
     """
     if isinstance(arrays[0], np.ndarray):
+        _check_all_same_type(arrays, np.ndarray)
         return np.vstack(arrays)
     elif isinstance(arrays[0], TorchTensor):
+        _check_all_same_type(arrays, TorchTensor)
         return torch.vstack(arrays)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
