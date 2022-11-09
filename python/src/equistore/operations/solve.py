@@ -1,8 +1,10 @@
 import numpy as np
 
-from equistore import TensorBlock, TensorMap
+from ..tensor import TensorMap
+from ..block import TensorBlock
 
 from . import _dispatch
+from ._utils import _check_same_keys, _check_same_gradients
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -22,21 +24,19 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
             equal to the ``properties`` of ``Y``;
             and the ``properties`` equal to the ``properties`` of ``X``.
     """
+    _check_same_keys(X, Y, "solve")
 
-    if len(X) != len(Y) or (not np.all([key in Y.keys for key in X.keys])):
-        raise ValueError("The two input TensorMap should have the same keys")
-
-    for key, blockX in X:
-        Xshape = blockX.values.shape
-        if len(Xshape) != 2 or (not (Xshape[0] == Xshape[1])):
+    for key, X_block in X:
+        shape = X_block.values.shape
+        if len(shape) != 2 or (not (shape[0] == shape[1])):
             raise ValueError(
-                "the values in each TensorBlock of X should be a 2D-square array"
+                "the values in each block of X should be a square 2D array"
             )
 
     blocks = []
-    for key, blockX in X:
-        blockY = Y.block(key)
-        blocks.append(_solve_block(blockX, blockY))
+    for key, X_block in X:
+        Y_block = Y.block(key)
+        blocks.append(_solve_block(X_block, Y_block))
 
     return TensorMap(X.keys, blocks)
 
@@ -47,51 +47,50 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     Solve the linear equation set X * w = Y for the unknown w.
     Where X , w, Y are all :py:class:`TensorBlock`
     """
-    # TODO properties and samples not in the same order
+    # TODO handle properties and samples not in the same order?
+
     if not np.all(X.samples == Y.samples):
         raise ValueError(
-            "The two input TensorBlock should have the same samples\
-            and in the same order"
+            "X and Y blocks in `solve` should have the same samples in the same order"
         )
+
     if len(X.components) > 0:
         if len(X.components) != len(Y.components):
             raise ValueError(
-                "The two input TensorBlock should have the same components\
-                    and in the same order"
+                "X and Y blocks in `solve` should have the same components \
+                in the same order"
             )
-        for ic, Xcomp in enumerate(X.components):
-            if not np.all(Xcomp == Y.components[ic]):
+
+        for X_component, Y_component in zip(X.components, Y.components):
+            if not np.all(X_component == Y_component):
                 raise ValueError(
-                    "The two input TensorBlock should have the same components\
-                    and in the same order"
+                    "X and Y blocks in `solve` should have the same components \
+                    in the same order"
                 )
 
-    valuesX = X.values.reshape(-1, X.values.shape[-1])
-    valuesY = Y.values.reshape(-1, Y.values.shape[-1])
+    # reshape components together with the samples
+    X_n_properties = X.values.shape[-1]
+    X_values = X.values.reshape(-1, X_n_properties)
+
+    Y_n_properties = Y.values.shape[-1]
+    Y_values = Y.values.reshape(-1, Y_n_properties)
+
     if len(X.gradients_list()) > 0:
-        if len(X.gradients_list()) != len(Y.gradients_list()) or (
-            not np.all(
-                [parameter in Y.gradients_list() for parameter in X.gradients_list()]
-            )
-        ):
-            raise ValueError("The two input TensorBlock should have the same gradients")
+        _check_same_gradients(X, Y, "solve")
 
-        for parameter, Xgradient in X.gradients():
-            X_grad_data_reshape = Xgradient.data.reshape(-1, X.values.shape[-1])
-            # TODO: this assume the atoms are in the same order in X_grad &
-            # forces
-            Ygradient = Y.gradient(parameter)
-            Y_grad_data_reshape = Ygradient.data.reshape(-1, Y.values.shape[-1])
-            valuesY = _dispatch.vstack((valuesY, Y_grad_data_reshape))
-            valuesX = _dispatch.vstack((valuesX, X_grad_data_reshape))
+        for parameter, X_gradient in X.gradients():
+            X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)
+            X_values = _dispatch.vstack((X_values, X_gradient_data))
 
-    valuesw = _dispatch.solve(valuesX, valuesY)
+            Y_gradient = Y.gradient(parameter)
+            Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
+            Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
 
-    w = TensorBlock(
-        values=valuesw.T,
+    weights = _dispatch.solve(X_values, Y_values)
+
+    return TensorBlock(
+        values=weights.T,
         samples=Y.properties,
         components=[],
         properties=X.properties,
     )
-
-    return w

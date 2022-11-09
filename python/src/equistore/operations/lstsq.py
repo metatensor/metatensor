@@ -2,101 +2,96 @@ import warnings
 
 import numpy as np
 
-from equistore import TensorBlock, TensorMap
+from ..tensor import TensorMap
+from ..block import TensorBlock
 
 from . import _dispatch
+from ._utils import _check_same_keys, _check_same_gradients
 
 
-def lstsq(X: TensorMap, Y: TensorMap, rcond) -> TensorMap:
+def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     """
-    Solve a linear system among two :py:class:`TensorMap`.
-    Return the least-squares solution
-    to a linear equation ``Y = X * w`` for the unknown ``w``.
-    Where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`.
-    ``Y`` and ``X`` must have the same ``keys``.
+    Solve a linear system using two :py:class:`TensorMap`.
+
+    Return the least-squares solution to a linear equation ``Y = X * w`` solving
+    for ``w``, where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`. ``Y``
+    and ``X`` must have the same ``keys``.
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
-    :param rcond: Cut-off ratio for small singular values of a.
-                None chose the default value for numpy or pytorch
+    :param rcond: Cut-off ratio for small singular values of a. None chose the
+                default value for numpy or PyTorch
+    :param driver: Used only in torch (ignored if numpy is used), see
+        https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html
+        for a full description
 
-    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``,
-            and where each :py:class:`TensorBlock` has: the ``sample``
-            equal to the ``properties`` of ``Y``;
-            and the ``properties`` equal to the ``properties`` of ``X``.
+    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``, and
+            where each :py:class:`TensorBlock` has: the ``sample`` equal to the
+            ``properties`` of ``Y``; and the ``properties`` equal to the
+            ``properties`` of ``X``.
     """
     if rcond is None:
         warnings.warn(
-            "WARNING rcond is set to None, which will trigger the default behaviour \
-            which is different between numpy and torch lstsq function, \
+            "WARNING rcond is set to None, which will trigger the default \
+            behavior which is different between numpy and torch lstsq function, \
             and might depend on the version you are using."
         )
 
-    if len(X) != len(Y) or (not np.all([key in Y.keys for key in X.keys])):
-        raise ValueError("The two input TensorMap should have the same keys")
+    _check_same_keys(X, Y, "lstsq")
 
     blocks = []
-    for key, blockX in X:
-        blockY = Y.block(key)
-        blocks.append(_lstsq_block(blockX, blockY, rcond=rcond))
+    for key, X_block in X:
+        Y_block = Y.block(key)
+        blocks.append(_lstsq_block(X_block, Y_block, rcond=rcond, driver=driver))
 
     return TensorMap(X.keys, blocks)
 
 
-def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond) -> TensorBlock:
-    """
-    Solve a linear system among two :py:class:`TensorBlock`.
-    Return the least-squares solution
-    to a linear equation X * w = Y for the unknown w.
-    Where X , w, Y are all :py:class:`TensorBlock`
-    """
-    # TODO properties and samples not in the same order
+def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
+    # TODO handle properties and samples not in the same order?
+
     if not np.all(X.samples == Y.samples):
         raise ValueError(
-            "The two input TensorBlock should have the same samples\
-            and in the same order"
+            "X and Y blocks in `lstsq` should have the same samples in the same order"
         )
+
     if len(X.components) > 0:
         if len(X.components) != len(Y.components):
             raise ValueError(
-                "The two input TensorBlock should have the same components\
-                    and in the same order"
+                "X and Y blocks in `lstsq` should have the same components \
+                in the same order"
             )
-        for ic, Xcomp in enumerate(X.components):
-            if not np.all(Xcomp == Y.components[ic]):
+
+        for x_component, y_component in zip(X.components, Y.components):
+            if not np.all(x_component == y_component):
                 raise ValueError(
-                    "The two input TensorBlock should have the same components\
-                    and in the same order"
+                    "X and Y blocks in `lstsq` should have the same components \
+                    in the same order"
                 )
 
-    valuesX = X.values.reshape(-1, X.values.shape[-1])
-    valuesY = Y.values.reshape(-1, Y.values.shape[-1])
+    # reshape components together with the samples
+    X_n_properties = X.values.shape[-1]
+    X_values = X.values.reshape(-1, X_n_properties)
+
+    Y_n_properties = Y.values.shape[-1]
+    Y_values = Y.values.reshape(-1, Y_n_properties)
+
     if len(X.gradients_list()) > 0:
-        if len(X.gradients_list()) != len(Y.gradients_list()) or (
-            not np.all(
-                [parameter in Y.gradients_list() for parameter in X.gradients_list()]
-            )
-        ):
-            raise ValueError("The two input TensorBlock should have the same gradients")
+        _check_same_gradients(X, Y, "lstsq")
 
-        for parameter, Xgradient in X.gradients():
-            X_grad_data_reshape = Xgradient.data.reshape(-1, X.values.shape[-1])
-            Ygradient = Y.gradient(parameter)
-            Y_grad_data_reshape = Ygradient.data.reshape(-1, Y.values.shape[-1])
-            valuesY = _dispatch.vstack((valuesY, Y_grad_data_reshape))
-            valuesX = _dispatch.vstack((valuesX, X_grad_data_reshape))
+        for parameter, X_gradient in X.gradients():
+            X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)
+            X_values = _dispatch.vstack((X_values, X_gradient_data))
 
-    Xshape = valuesX.shape
-    if len(Xshape) != 2:
-        raise ValueError("X.values should be a 2D array")
+            Y_gradient = Y.gradient(parameter)
+            Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
+            Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
 
-    valuesw = _dispatch.lstsq(valuesX, valuesY, rcond=rcond)
+    weights = _dispatch.lstsq(X_values, Y_values, rcond=rcond, driver=driver)
 
-    w = TensorBlock(
-        values=valuesw.T,
+    return TensorBlock(
+        values=weights.T,
         samples=Y.properties,
         components=[],
         properties=X.properties,
     )
-
-    return w

@@ -95,8 +95,8 @@ def lstsq(X, Y, rcond, driver=None):
                 to have this behavior in numpy use
                 rcond=-1
 
-    :param driver: Used only in torch (ignored if numpy id used).
-            It chooses the LAPACK/MAGMA function that will be used.
+    :param driver: Used only in torch (ignored if numpy is used).
+            Chooses the LAPACK/MAGMA function that will be used.
             Possible values: for CPU 'gels', 'gelsy', 'gelsd', 'gelss'.
                              for GPU  the only valid driver is 'gels',
                              which assumes that A is full-rank
