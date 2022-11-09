@@ -6,7 +6,7 @@ from utils import compare_blocks
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
+DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
 class TestLstsq(unittest.TestCase):
@@ -131,9 +131,9 @@ class TestLstsq(unittest.TestCase):
             np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
         )
 
-        for key, blockw in w:
-            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
-            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
+        for key, block_w in w:
+            self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
+            self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
         Ydot = fn.dot(X, w)
         self.assertTrue(np.all(Ydot.keys == Y.keys))
@@ -152,7 +152,6 @@ class TestLstsq(unittest.TestCase):
                     rtol=1e-13,
                 )
             )
-        return
 
     def test_self_lstsq_grad_components(self):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
@@ -243,7 +242,6 @@ class TestLstsq(unittest.TestCase):
                     rtol=1e-13,
                 )
             )
-        return
 
 
 def Xfun1(x, y, z):

@@ -7,7 +7,7 @@ from utils import compare_blocks
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
+DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
 class TestSolve(unittest.TestCase):
