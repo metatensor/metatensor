@@ -1,12 +1,11 @@
-How to
-======
+.. _userdoc-how-to:
 
-Equivariant Linear Model
--------
+How-to guides
+=============
 
-Torch 
--------
-Using torch tensors as data (gpus, autograd) 
+.. toctree::
+    :maxdepth: 2
 
-Operations by Davide (TBD) 
------
+    linear-model
+    operations
+    torch
