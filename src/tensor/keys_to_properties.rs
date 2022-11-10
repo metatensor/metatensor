@@ -39,8 +39,6 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     pub fn keys_to_properties(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
-        // TODO: keys_to_properties_no_gradients?
-
         let names_to_move = keys_to_move.names();
         let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
 
@@ -197,19 +195,23 @@ fn merge_blocks_along_properties(
     // the corresponding data
     let mut property_ranges = Vec::new();
     for (new_property, block) in blocks_to_merge {
-        let size = block.values().properties.count();
+        if block.values().properties.is_empty() {
+            // no properties, ignore this block
+            property_ranges.push(None);
+            continue;
+        }
 
         let mut first = new_property.clone();
         first.extend_from_slice(&block.values().properties[0]);
 
-        // we can lookup only the `first` new property here, since all blocks
-        // are checked to have the same properties, which makes the new
+        // we can lookup only the `first` new property here, since the new
         // properties match exactly the old ones, just with an added "channel"
         // of the moved key.
 
         // start can be None is the user requested a set of values which do not
         // include the key for the current block
         let start = new_properties.position(&first);
+        let size = block.values().properties.count();
         if let Some(start) = start {
             property_ranges.push(Some(start..(start + size)));
         } else {
@@ -293,8 +295,9 @@ fn merge_blocks_along_properties(
 
 
 #[cfg(all(test, feature = "ndarray"))]
+#[allow(clippy::vec_init_then_push)]
 mod tests {
-    use crate::{LabelsBuilder, TensorMap};
+    use crate::{LabelsBuilder, Labels, TensorMap};
     use super::super::utils::{example_tensor, example_block, example_labels};
 
     use ndarray::ArrayD;
@@ -398,7 +401,47 @@ mod tests {
         );
     }
 
-    #[allow(clippy::vec_init_then_push)]
+    #[test]
+    fn empty_properties() {
+        let mut blocks = Vec::new();
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [2], [4]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![],
+            /* values           */ 1.0,
+            /* gradient_values  */ 11.0,
+        ));
+
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [1], [3]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![],
+            /* gradient_samples */ vec![],
+            /* values           */ 0.0,
+            /* gradient_values  */ 0.0,
+        ));
+        let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        keys.add(&[0, 0]);
+        keys.add(&[1, 0]);
+        let keys = keys.finish();
+
+        let mut tensor = TensorMap::new(keys, blocks).unwrap();
+
+        let keys_to_move = Labels::empty(vec!["key_1"]);
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().properties,
+            Labels::new(["key_1", "properties"], &[
+                [0, 0],
+                [0, 1],
+                [0, 2],
+                [0, 3],
+            ])
+        );
+    }
+
     fn example_tensor_same_properties_in_all_blocks() -> TensorMap {
         let mut blocks = Vec::new();
         blocks.push(example_block(
@@ -435,6 +478,54 @@ mod tests {
         let keys = keys.finish();
 
         return TensorMap::new(keys, blocks).unwrap();
+    }
+
+    #[test]
+    fn keys_to_move_in_different_order() {
+        let mut tensor = example_tensor_same_properties_in_all_blocks();
+
+        let keys_to_move = Labels::empty(vec!["key_1", "key_2"]);
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().properties,
+            Labels::new(["key_1", "key_2", "properties"], &[
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 2],
+                [0, 0, 3],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 0, 2],
+                [1, 0, 3],
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 1, 2],
+                [0, 1, 3],
+            ])
+        );
+
+        let mut tensor = example_tensor_same_properties_in_all_blocks();
+        let keys_to_move = Labels::empty(vec!["key_2", "key_1"]);
+        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().properties,
+            Labels::new(["key_2", "key_1", "properties"], &[
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 2],
+                [0, 0, 3],
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 1, 2],
+                [0, 1, 3],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 0, 2],
+                [1, 0, 3],
+            ])
+        );
     }
 
     #[test]

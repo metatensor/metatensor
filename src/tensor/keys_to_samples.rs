@@ -210,8 +210,8 @@ fn merge_blocks_along_samples(
 
 #[cfg(all(test, feature = "ndarray"))]
 mod tests {
-    use crate::LabelsBuilder;
-    use super::super::utils::example_tensor;
+    use crate::{LabelsBuilder, Labels, TensorMap};
+    use super::super::utils::{example_tensor, example_block};
 
     use ndarray::ArrayD;
 
@@ -326,6 +326,47 @@ mod tests {
             "invalid parameter: user provided values for the keys to move is \
             not yet implemented, `keys_to_move` should not contain any entry \
             when calling keys_to_samples"
+        );
+    }
+
+    #[test]
+    #[allow(clippy::vec_init_then_push)]
+    fn empty_samples() {
+        let mut blocks = Vec::new();
+        blocks.push(example_block(
+            /* samples          */ vec![[0], [2], [4]],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![],
+            /* values           */ 1.0,
+            /* gradient_values  */ 11.0,
+        ));
+
+        blocks.push(example_block(
+            /* samples          */ vec![],
+            /* components       */ vec![[0]],
+            /* properties       */ vec![[0], [1], [2], [3]],
+            /* gradient_samples */ vec![],
+            /* values           */ 0.0,
+            /* gradient_values  */ 0.0,
+        ));
+        let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        keys.add(&[0, 0]);
+        keys.add(&[1, 0]);
+        let keys = keys.finish();
+
+        let mut tensor = TensorMap::new(keys, blocks).unwrap();
+
+        let keys_to_move = Labels::empty(vec!["key_1"]);
+        tensor.keys_to_samples(&keys_to_move, true).unwrap();
+
+        assert_eq!(
+            *tensor.block_by_id(0).values().samples,
+            Labels::new(["samples", "key_1"], &[
+                [0, 0],
+                [2, 0],
+                [4, 0],
+            ])
         );
     }
 }
