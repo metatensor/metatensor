@@ -168,3 +168,17 @@ class _RustNDArray(np.ndarray):
     def __array_finalize__(self, obj):
         # keep the parent around when creating sub-views of this array
         self._parent = getattr(obj, "_parent", None)
+
+    def __array_wrap__(self, new):
+        self_ptr = self.ctypes.data
+        self_size = self.nbytes
+
+        new_ptr = new.ctypes.data
+
+        if self_ptr <= new_ptr <= self_ptr + self_size:
+            # if the new array is a view inside memory owned by self, wrap it in
+            # a _RustNDArray
+            return super().__array_wrap__(new)
+        else:
+            # return the ndarray straight away
+            return new

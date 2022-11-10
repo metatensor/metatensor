@@ -5,20 +5,22 @@ The first step towards more accessible simulations starts here! To get started
 with Equistore, you can install the latest stable version from one of the
 sources below.
 
-Precompiled Python installation
--------------------------------
+Installing the Python library
+-----------------------------
 
-TBD
+Prebuild binary:
+
+.. code-block:: bash
+
+    pip install --extra-index-url https://luthaf.fr/temporary-wheels/ equistore
 
 .. _`install-python-lib`:
 
-Python from source
-------------------
+From source:
 
 You can build equistore from the source by::
 
     pip install https://github.com/lab-cosmo/equistore.git
-
 
 .. _`install-c-lib`:
 
@@ -26,15 +28,16 @@ Installing the C/C++ library
 ----------------------------
 
 This installs a C-compatible shared library that can also be called from C++, as
-well as CMake files that can be used with ``find_package(rascaline)``.
+well as CMake files that can be used with ``find_package(equistore)``.
 
 .. code-block:: bash
 
-    git clone https://github.com/lab-cosmo/equistore.git
-    mkdir build
-    cd build
-    cmake <CMAKE_OPTIONS_HERE> ..
-    make install
+    git clone https://github.com/lab-cosmo/equistore
+    cd equistore
+    mkdir build && cd build
+    cmake ..
+    # configure cmake if needed
+    cmake --build . --target install
 
 The build and installation can be configures with a few cmake options, using
 ``-D<OPTION>=<VALUE>`` on the cmake command line, or one of the cmake GUI

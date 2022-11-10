@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from utils import test_tensor_map
 
-from equistore import Labels
+from equistore import Labels, TensorBlock, EquistoreError
 
 
 class TestLabels(unittest.TestCase):
@@ -106,6 +106,24 @@ class TestLabels(unittest.TestCase):
             labels[0][0] = 4
 
         self.assertEqual(str(cm.exception), "assignment destination is read-only")
+
+    def test_invalid_names(self):
+        samples = Labels(
+            names=["not an ident"],
+            values=np.array([[0]], dtype=np.int32),
+        )
+
+        with self.assertRaises(EquistoreError) as cm:
+            _ = TensorBlock(
+                values=np.empty((1, 1)),
+                samples=samples,
+                components=[],
+                properties=Labels.single(),
+            )
+        self.assertEqual(
+            str(cm.exception),
+            "invalid parameter: 'not an ident' is not a valid label name",
+        )
 
 
 if __name__ == "__main__":

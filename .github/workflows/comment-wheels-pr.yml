@@ -47,10 +47,15 @@ jobs:
             if (!artifacts.length) {
                 return core.error(`No artifacts found`);
             }
-            let body = `Download the artifacts for this pull request:\n`;
-            for (const art of artifacts) {
-                body += `\n* [${art.name}.zip](https://nightly.link/${owner}/${repo}/actions/artifacts/${art.id}.zip)`;
+
+            if (artifacts.length !== 1) {
+                return core.error(`more than one artifact found`);
             }
+            const link = `https://nightly.link/${owner}/${repo}/actions/artifacts/${artifacts[0].id}.zip`
+
+            let body = `Here is a pre-built version of the code in this pull request: [wheels.zip](${link}), `;
+            body += 'you can install it locally by unzipping `wheels.zip` and using `pip` to install the file matching your system';
+
             core.info("Review thread message body:", body);
             for (const pr of pull_requests) {
                 await insertUpdateComment(owner, repo, pr.number, "link-to-wheels", body);

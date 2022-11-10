@@ -66,3 +66,26 @@ TEST_CASE("Labels inside blocks") {
         "invalid parameter: expected label of size 3 in eqs_labels_position, got size 2"
     );
 }
+
+TEST_CASE("Invalid Labels names") {
+    const char* names[1] = {"not an ident"};
+    int32_t values[1] = {0};
+    auto raw_samples = eqs_labels_t {
+        nullptr,
+        names,
+        values,
+        1,
+        1,
+    };
+
+    // the error only happens when trying to use the Labels from Rust
+    CHECK_THROWS_WITH(
+        TensorBlock(
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({1, 1})),
+            Labels::unsafe_from_eqs_labels(raw_samples),
+            {},
+            Labels({"properties"}, {{0}})
+        ),
+        "invalid parameter: 'not an ident' is not a valid label name"
+    );
+}

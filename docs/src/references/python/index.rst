@@ -14,4 +14,5 @@ provided in ``equistore`` can be grouped in four main groups:
     tensor
     labels
     blocks
+    operations
     misc

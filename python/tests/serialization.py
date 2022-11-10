@@ -1,4 +1,3 @@
-import hashlib
 import os
 import tempfile
 import unittest
@@ -33,7 +32,7 @@ class TestIo(unittest.TestCase):
             self.assertEquals(gradient.samples.names, ("sample", "structure", "atom"))
             self.assertEquals(gradient.data.shape, (59, 3, 5, 3))
 
-        path = os.path.join(ROOT, "..", "data.npz")
+        path = os.path.join(ROOT, "..", "..", "tests", "data.npz")
 
         try:
             tensor = equistore.io.load(path, use_numpy=False)
@@ -41,7 +40,8 @@ class TestIo(unittest.TestCase):
         except EquistoreError as e:
             self.assertEqual(
                 str(e),
-                "serialization format error: serialization was not enabled in equistore",
+                "serialization format error: serialization was not "
+                "enabled in equistore",
             )
 
         tensor = equistore.io.load(path, use_numpy=True)
@@ -85,7 +85,8 @@ class TestIo(unittest.TestCase):
         except EquistoreError as e:
             self.assertEqual(
                 str(e),
-                "serialization format error: serialization was not enabled in equistore",
+                "serialization format error: serialization was not "
+                "enabled in equistore",
             )
 
         equistore.io.save(tmpfile, tensor, use_numpy=True)

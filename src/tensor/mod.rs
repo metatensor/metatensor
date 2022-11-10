@@ -154,8 +154,26 @@ impl TensorMap {
         &self.blocks
     }
 
-    /// Get read-write access to the block at the given index in this `TensorMap`
-    pub fn block_mut(&mut self, index: usize) -> TensorBlockRefMut<'_> {
+    /// Get mutable access to the list of blocks in this `TensorMap`
+    pub fn blocks_mut(&mut self) -> &mut [TensorBlock] {
+        &mut self.blocks
+    }
+
+    /// Get a reference to the block with the given id
+    ///
+    /// # Panics
+    ///
+    /// If the id is larger than the number of blocks
+    pub fn block_by_id(&self, id: usize) -> &TensorBlock {
+        return &self.blocks[id];
+    }
+
+    /// Get a mutable reference to the block with the given id
+    ///
+    /// # Panics
+    ///
+    /// If the id is larger than the number of blocks
+    pub fn block_mut_by_id(&mut self, index: usize) -> TensorBlockRefMut<'_> {
         self.blocks[index].as_mut()
     }
 
@@ -420,7 +438,7 @@ mod tests {
             [1, 2], [3, 0], [4, 3],
         ]);
 
-        let tensor = TensorMap::new((&*keys).clone(), blocks).unwrap();
+        let tensor = TensorMap::new((*keys).clone(), blocks).unwrap();
 
         let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
         selection.add(&[1, 1]);
