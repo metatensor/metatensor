@@ -9,19 +9,14 @@ atomistic simulation needs and more.
 The core of the library is written in Rust and we provide
 APIs for C/C++ and Python as well.
 
-.. warning::
-
-    **Rascaline is still as the proof of concept stage. You should not use it for
-    anything important.**
-
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
-.. _`documentation`: https://luthaf.fr/rascaline/index.html
+.. _`documentation`: https://lab-cosmo.github.io/equistore/latest/
 
-.. |test| image:: https://github.com/lab-cosmos/equistore/actions/workflows/tests.yml/badge.svg
+.. |test| image:: https://github.com/lab-cosmo/equistore/actions/workflows/tests.yml/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: https://github.com/Luthaf/lab-cosmos/equistore/workflows/tests.yml
+   :target: https://github.com/Luthaf/lab-cosmo/equistore/workflows/tests.yml
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
-   :target: https://lab-cosmo.github.io/equistore/latest/
+   :target: `documentation`_
