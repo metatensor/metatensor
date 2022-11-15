@@ -33,10 +33,10 @@ jobs:
             build-type: debug
             cargo-build-flags: --all-features
 
-          # check the build on a stock Ubuntu 20.04, including cmake 3.10
+          # check the build on a stock Ubuntu 18.04, including cmake 3.10
           - os: ubuntu-20.04
             rust-version: from Ubuntu
-            container: ubuntu:20.04
+            container: ubuntu:18.04
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
@@ -48,18 +48,21 @@ jobs:
             cargo-build-flags: --all-features
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:18.04'
         run: |
-          apt-get update
-          apt-get install -y software-properties-common
+          apt update
+          apt install -y software-properties-common
           add-apt-repository -y ppa:git-core/ppa
-          apt-get update
-          apt-get install -y cmake make gcc g++ git curl rustc cargo
+          add-apt-repository ppa:deadsnakes/ppa
+          apt install -y cmake make gcc g++ git curl rustc cargo
+          apt install -y python3.7 python3-pip
+          ln -s /usr/bin/python3.7 /usr/bin/python
 
       - uses: actions/checkout@v3
 
       - name: setup Python
         uses: actions/setup-python@v2
+        if: "!matrix.container"
         with:
           python-version: "3.10"
 
