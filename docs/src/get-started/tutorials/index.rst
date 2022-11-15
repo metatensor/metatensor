@@ -8,4 +8,4 @@ The presented tutorials allow you to perform basic calculations in equistore.
 .. toctree::
     :maxdepth: 1
 
-    first-tensor
+    ../../examples/first-tensormap

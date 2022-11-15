@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 
 import toml
 
@@ -11,9 +12,9 @@ sys.path.append(os.path.join(ROOT, "python", "src"))
 
 # -- Project information -----------------------------------------------------
 
-project = "equistore"
-copyright = "2022, Guillaume Fraux"
-author = "Guillaume Fraux"
+project = "Equistore"
+copyright = f"{datetime.now().date().year}, Equistore developers"
+author = "Equistore developers"
 
 
 def load_version_from_cargo_toml():
@@ -47,6 +48,10 @@ build_cargo_docs()
 build_doxygen_docs()
 
 
+def setup(app):
+    app.add_css_file("equistore.css")
+
+
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "4.0.0"
@@ -56,6 +61,8 @@ needs_sphinx = "4.0.0"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx_gallery.gen_gallery",
     "breathe",
 ]
 
@@ -73,6 +80,15 @@ autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"
 
+sphinx_gallery_conf = {
+    "filename_pattern": "/*",
+    "examples_dirs": ["../../python/examples"],
+    "gallery_dirs": ["examples"],
+    "min_reported_time": 60,
+    # Make the code snippet for equistore functions clickable
+    #"reference_url": {"equistore": None},
+    #"prefer_full_module": ["equistore"],
+}
 
 breathe_projects = {
     "equistore": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),
@@ -80,6 +96,14 @@ breathe_projects = {
 breathe_default_project = "equistore"
 breathe_domain_by_extension = {
     "h": "c",
+}
+
+intersphinx_mapping = {
+    "chemfiles": ("https://chemfiles.org/chemfiles.py/latest/", None),
+    "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "python": ("https://docs.python.org/3", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -92,4 +116,22 @@ html_theme = "furo"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = [os.path.join(ROOT, "docs", "static")]
+
+html_theme_options = {
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/lab-cosmo/equistore",
+            "html": "",
+            "class": "fa-brands fa-github fa-2x",
+        },
+    ],
+}
+
+# font-awesome logos (used in the footer)
+html_css_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css",
+]
