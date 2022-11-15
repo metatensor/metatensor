@@ -150,16 +150,23 @@ class TensorMap:
             *args, **kwargs, __return_selection=True
         )
 
+        def _format_selection(selection):
+            kv = []
+            for key, value in selection.as_dict().items():
+                kv.append(f"{key} = {value}")
+            return f"'{', '.join(kv)}'"
+
         if len(matching) == 0:
             selection = next(selection.as_namedtuples())
             raise ValueError(
-                f"Couldn't find any block matching the selection {selection.as_dict()}"
+                "Couldn't find any block matching the selection "
+                f"{_format_selection(selection)}"
             )
         elif len(matching) > 1:
             selection = next(selection.as_namedtuples())
             raise ValueError(
-                f"more than one block matched {selection.as_dict()}, use "
-                "`TensorMap.blocks` if you want to get all of them"
+                f"more than one block matched {_format_selection(selection)}, "
+                "use `TensorMap.blocks` if you want to get all of them"
             )
         else:
             return self._get_block_by_id(matching[0])

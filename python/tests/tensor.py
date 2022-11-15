@@ -116,7 +116,7 @@ keys: ['key_1' 'key_2']
 
         self.assertEqual(
             str(cm.exception),
-            "Couldn't find any block matching the selection {'key_1': 3}",
+            "Couldn't find any block matching the selection 'key_1 = 3'",
         )
 
         # more than one block matching criteria
@@ -125,7 +125,7 @@ keys: ['key_1' 'key_2']
 
         self.assertEqual(
             str(cm.exception),
-            "more than one block matched {'key_2': 0}, use `TensorMap.blocks` "
+            "more than one block matched 'key_2 = 0', use `TensorMap.blocks` "
             "if you want to get all of them",
         )
 
