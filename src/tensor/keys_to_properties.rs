@@ -9,7 +9,8 @@ use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_variables_from_keys, merge_samples, merge_gradient_samples};
-
+//MC
+use std::time::{Duration, Instant};
 
 impl TensorMap {
     /// Merge blocks with the same value for selected keys variables along the
@@ -49,10 +50,12 @@ impl TensorMap {
         } else {
             Some(keys_to_move)
         };
+        println!("Moving keys {:?}", keys_to_move);
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
             // create a single block with everything
+            let start = Instant::now();
             let blocks_to_merge = self.keys.iter()
                 .zip(&self.blocks)
                 .map(|(key, block)| {
@@ -64,7 +67,9 @@ impl TensorMap {
                     (moved_key, block)
                 })
                 .collect::<Vec<_>>();
+            println!("Time elapsed building block list: {:?}", start.elapsed());
 
+            let start = Instant::now();
             let block = merge_blocks_along_properties(
                 &blocks_to_merge,
                 keys_to_move,
@@ -72,8 +77,11 @@ impl TensorMap {
                 sort_samples,
             )?;
             new_blocks.push(block);
-        } else {
+            println!("Time elapsed merging block: {:?}", start.elapsed());
+
+        } else {            
             for entry in splitted_keys.new_keys.iter() {
+                println!("Merging key {:?}", entry);
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
                 selection.add(entry);
 

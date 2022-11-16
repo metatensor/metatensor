@@ -9,7 +9,7 @@ from .block import TensorBlock
 from .labels import Labels, _is_namedtuple, _print_labels
 from .status import _check_pointer
 
-
+from time import time 
 class TensorMap:
     """
     A TensorMap is the main user-facing class of this library, and can store
@@ -314,10 +314,14 @@ class TensorMap:
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         """
+
+        start = time()
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         self._lib.eqs_tensormap_keys_to_properties(
             self._ptr, keys_to_move._as_eqs_labels_t(), sort_samples
         )
+
+        print("Timing for key2prop", time() - start )
 
     def keys_to_samples(
         self,
