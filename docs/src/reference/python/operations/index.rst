@@ -10,5 +10,7 @@ Operations
     allclose() <allclose>
     dot() <dot>
     lstsq() <lstsq>
+    mean_over_samples() <mean_over_samples>
     remove_gradients() <remove-gradients>
     solve() <solve>
+    sum_over_samples() <sum_over_samples>

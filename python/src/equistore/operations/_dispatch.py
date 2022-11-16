@@ -40,6 +40,25 @@ def allclose(a, b, rtol, atol, equal_nan=False):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def bincount(input, weights=None, minlength=0):
+    """Count number of occurrences of each value in array of non-negative ints.
+    Equivalent of ``numpy.bitcount(input, weights, minlength)``
+
+    Args:
+        input (array_like): Input array.
+        weights (array_like, optional): Weights, array of the same shape as input.
+                                        Defaults to None.
+        minlength (int, optional): A minimum number of bins for the output array.
+                                        Defaults to 0.
+    """
+    if isinstance(input, np.ndarray):
+        return np.bincount(input, weights=weights, minlength=minlength)
+    elif isinstance(input, TorchTensor):
+        return torch.bincount(input, weights=weights, minlength=minlength)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def norm(array, axis=None):
     """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
@@ -145,5 +164,46 @@ def vstack(arrays):
     elif isinstance(arrays[0], TorchTensor):
         _check_all_same_type(arrays, TorchTensor)
         return torch.vstack(arrays)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def index_add(output_array, input_array, index):
+    """Accumulates in `output_array`
+    the elements of `array`
+    by adding to the indices in the order given in index.
+
+    it is equivalent of torch's:
+
+    output_array.index_add_(0, torch.tensor(index),input_array)
+
+    """
+    if len(index.shape) != 1:
+        raise ValueError("index should be 1D array")
+    if isinstance(input_array, np.ndarray):
+        _check_all_same_type([output_array], np.ndarray)
+        np.add.at(output_array, index, input_array)
+    elif isinstance(input_array, TorchTensor):
+        _check_all_same_type([output_array], TorchTensor)
+        output_array.index_add_(0, torch.tensor(index), input_array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def zeros_like(array, shape=None):
+    """Create an zeros_like with the same size of array.
+    if shape is not None it overrides the shape of the result.
+
+    It is equivalent of np.zeros_like(array, shape=shape).
+    requires_grad is used only in torch"""
+    if isinstance(array, np.ndarray):
+        return np.zeros_like(array, shape=shape)
+    elif isinstance(array, TorchTensor):
+        if shape is None:
+            shape = array.size()
+
+        return torch.zeros(
+            shape, dtype=array.dtype, layout=array.layout, device=array.device
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
