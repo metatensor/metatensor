@@ -1,7 +1,7 @@
 import numpy as np
 
-from ..tensor import TensorMap
 from ..block import TensorBlock
+from ..tensor import TensorMap
 
 
 def _check_same_keys(a: TensorMap, b: TensorMap, fname: str):

@@ -22,6 +22,24 @@ def _check_all_same_type(arrays, expected_type):
             )
 
 
+def allclose(a, b, rtol, atol, equal_nan=False):
+    """Compare two arrays using ``allclose``
+
+    This function has the same behavior as
+    ``np.allclose(array1, array2, rtol, atol, equal_nan)``.
+    """
+    if isinstance(a, np.ndarray):
+        _check_all_same_type([b], np.ndarray)
+        return np.allclose(a=a, b=b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    elif isinstance(a, TorchTensor):
+        _check_all_same_type([b], TorchTensor)
+        return torch.allclose(
+            input=a, other=b, rtol=rtol, atol=atol, equal_nan=equal_nan
+        )
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def norm(array, axis=None):
     """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
