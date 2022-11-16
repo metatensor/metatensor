@@ -50,7 +50,7 @@ impl TensorMap {
         } else {
             Some(keys_to_move)
         };
-        println!("Moving keys {:?}", keys_to_move);
+        //println!("Moving keys {:?}", names_to_move);
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
@@ -67,7 +67,7 @@ impl TensorMap {
                     (moved_key, block)
                 })
                 .collect::<Vec<_>>();
-            println!("Time elapsed building block list: {:?}", start.elapsed());
+            //println!("Time elapsed building block list: {:?}", start.elapsed());
 
             let start = Instant::now();
             let block = merge_blocks_along_properties(
@@ -77,11 +77,11 @@ impl TensorMap {
                 sort_samples,
             )?;
             new_blocks.push(block);
-            println!("Time elapsed merging block: {:?}", start.elapsed());
+            //println!("Time elapsed merging block: {:?}", start.elapsed());
 
-        } else {            
+        } else {
+            let start = Instant::now();         
             for entry in splitted_keys.new_keys.iter() {
-                println!("Merging key {:?}", entry);
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
                 selection.add(entry);
 
@@ -107,6 +107,7 @@ impl TensorMap {
                 )?;
                 new_blocks.push(block);
             }
+            //println!("Time elapsed merging keys: {:?}", start.elapsed());
         }
 
 
