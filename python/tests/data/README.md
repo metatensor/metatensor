@@ -11,7 +11,7 @@ max_angular=4,
 atomic_gaussian_width=0.3,
 radial_basis={"Gto": {}},
 center_atom_weight=1.0,
-gradients=False,
+gradients=True,
 cutoff_function={"ShiftedCosine": {"width": 0.5}},
 ```
 
@@ -27,6 +27,6 @@ max_angular=4,
 atomic_gaussian_width=0.3,
 radial_basis={"Gto": {}},
 center_atom_weight=1.0,
-gradients=False,
+gradients=True,
 cutoff_function={"ShiftedCosine": {"width": 0.5}},
 ```
