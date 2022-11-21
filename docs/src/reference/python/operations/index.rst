@@ -14,6 +14,7 @@ Operations
     allclose() <allclose>
     dot() <dot>
     lstsq() <lstsq>
+    slice() <slice>
     solve() <solve>
 
     sum_over_samples() and mean_over_samples() <samples-reduction>
