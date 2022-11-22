@@ -1,0 +1,1 @@
+.. autoclass:: equistore.data.Array

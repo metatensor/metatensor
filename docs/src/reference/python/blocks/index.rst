@@ -1,0 +1,6 @@
+Blocks
+======
+
+.. toctree::
+    gradient
+    array
