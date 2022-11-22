@@ -11,9 +11,9 @@ provided in ``equistore`` can be grouped in four main groups:
 .. toctree::
     :maxdepth: 1
 
-    tensormap
+    tensor
     labels
-    tensorblock
-    blocks/index
+    block
+    data
     operations/index
     misc/index

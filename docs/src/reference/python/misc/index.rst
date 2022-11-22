@@ -1,9 +1,8 @@
 Miscelaneous
 ============
 
-Helper classes and functions for error handling and serialization.
+Helper classes and functions for serialization and error handling.
 
 .. toctree::
+    io
     errors
-    save
-    load

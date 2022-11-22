@@ -1,2 +1,4 @@
-.. autoclass:: equistore.operations.lstsq
-    :members:
+lstsq
+======
+
+.. autofunction:: equistore.operations.lstsq

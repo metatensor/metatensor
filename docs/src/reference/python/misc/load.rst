@@ -1,1 +1,0 @@
-.. autofunction:: equistore.io.load

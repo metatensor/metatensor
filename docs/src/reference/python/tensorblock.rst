@@ -1,2 +1,0 @@
-.. autoclass:: equistore.TensorBlock
-    :members:

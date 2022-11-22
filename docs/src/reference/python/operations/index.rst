@@ -5,8 +5,8 @@ Operations
     :undoc-members:
 
 .. toctree::
-    allclose
-    dot
-    lstsq
-    remove-gradients
-    solve
+    allclose() <allclose>
+    dot() <dot>
+    lstsq() <lstsq>
+    remove_gradients() <remove-gradients>
+    solve() <solve>

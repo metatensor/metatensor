@@ -1,2 +1,4 @@
-.. autoclass:: equistore.operations.dot
-    :members:
+dot
+===
+
+.. autofunction:: equistore.operations.dot

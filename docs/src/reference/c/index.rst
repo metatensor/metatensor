@@ -33,6 +33,6 @@ main groups:
 
     tensor
     labels
-    blocks
+    block
     data
     misc

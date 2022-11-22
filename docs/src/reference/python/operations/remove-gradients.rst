@@ -1,2 +1,4 @@
-.. autoclass:: equistore.operations.remove_gradients
-    :members:
+remove_gradients
+================
+
+.. autofunction:: equistore.operations.remove_gradients
