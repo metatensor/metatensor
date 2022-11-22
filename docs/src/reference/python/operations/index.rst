@@ -5,6 +5,8 @@ Operations
     :undoc-members:
 
 .. toctree::
+    :maxdepth: 1
+
     allclose() <allclose>
     dot() <dot>
     lstsq() <lstsq>
