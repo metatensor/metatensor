@@ -1,4 +1,4 @@
 Data arrays
 ===========
 
-.. autoclass:: equistore.data.Array
+.. autoclass:: equistore.data.Array()
