@@ -1,5 +1,5 @@
-Blocks
-======
+TensorBlock
+===========
 
 .. doxygentypedef:: eqs_block_t
 

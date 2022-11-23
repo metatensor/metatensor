@@ -8,6 +8,6 @@ C++ API reference
 
     tensor
     labels
-    blocks
+    block
     data
     misc
