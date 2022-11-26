@@ -1,0 +1,10 @@
+/* increase spacing between entries in the C reference documentation */
+dl.function, dl.struct {
+  margin-bottom: 2em;
+}
+
+/* Change the color of download links from sphinx-gallery */
+div.sphx-glr-download a {
+  background-color: #e0edff !important;
+  background-image: none !important;
+}

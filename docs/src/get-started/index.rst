@@ -9,5 +9,6 @@ The following sections describes how to install and start with using equistore.
     :maxdepth: 2
 
     equistore
+    concepts
     installation
     tutorials/index

@@ -11,6 +11,5 @@ all about.
 .. toctree::
    :maxdepth: 2
 
-   concepts
    data
    gradients
