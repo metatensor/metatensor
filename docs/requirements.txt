@@ -9,6 +9,5 @@ toml
 # dependencies for the tutorials
 chemfiles
 ase
-itertools
 matplotlib
 skcosmo
