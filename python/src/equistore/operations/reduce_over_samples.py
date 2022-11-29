@@ -107,9 +107,9 @@ def _reduce_over_samples_block(
 
 def sum_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
-    as the input `tensor`, and each :py:class:`TensorBlock` is obtained summing
-    the corresponding input :py:class:`TensorBlock` over the rows with the same
-    sample_names.
+    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
+    summing the corresponding input :py:class:`TensorBlock` over the rows with
+    the same ``sample_names``.
 
     For example if ``sample_name = ["structure"]``, the function sums over all
     the sample with the same structure, and if ``sample_name = ["structure",
@@ -141,9 +141,9 @@ def sum_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
 
 def mean_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
-    as the input `tensor`, and each :py:class:`TensorBlock` is obtained
+    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     averaging the corresponding input :py:class:`TensorBlock` over the rows with
-    the same sample_names.
+    the same ``sample_names``.
 
     For example if ``sample_name = ["structure"]``, the function averages over
     all the sample with the same structure, and if ``sample_name = ["structure",
