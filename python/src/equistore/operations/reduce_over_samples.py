@@ -38,17 +38,17 @@ def _reduce_over_samples_block(
         block_values, shape=(new_samples.shape[0],) + other_shape
     )
 
+    _dispatch.index_add(
+        values_result,
+        block_values,
+        index,
+    )
+
     if reduction == "mean":
         bincount = _dispatch.bincount(index)
-
-        _dispatch.index_add(
-            values_result,
-            block_values[:, ...]
-            / bincount[index].reshape((-1,) + (1,) * len(other_shape)),
-            index,
+        values_result = values_result / bincount.reshape(
+            (-1,) + (1,) * len(other_shape)
         )
-    elif reduction == "sum":
-        _dispatch.index_add(values_result, block_values, index)
 
     result_block = TensorBlock(
         values=values_result,
@@ -83,17 +83,13 @@ def _reduce_over_samples_block(
             gradient_data,
             shape=(new_gradient_samples.shape[0],) + other_shape,
         )
+        _dispatch.index_add(data_result, gradient_data, index_gradient)
 
         if reduction == "mean":
             bincount = _dispatch.bincount(index_gradient)
-            _dispatch.index_add(
-                data_result,
-                gradient_data[:, ...]
-                / bincount[index_gradient].reshape((-1,) + (1,) * len(other_shape)),
-                index_gradient,
+            data_result = data_result / bincount.reshape(
+                (-1,) + (1,) * len(other_shape)
             )
-        elif reduction == "sum":
-            _dispatch.index_add(data_result, gradient_data, index_gradient)
 
         result_block.add_gradient(
             parameter,

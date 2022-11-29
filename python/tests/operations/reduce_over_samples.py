@@ -1,11 +1,11 @@
 import os
 import unittest
 
-import equistore.io
 import numpy as np
+
+import equistore.io
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
-
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
