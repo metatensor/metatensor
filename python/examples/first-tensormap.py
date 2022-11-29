@@ -13,7 +13,10 @@ Getting your first Tensormap
 import numpy as np
 from chemfiles import Trajectory
 import equistore
-import ase 
+import ase
+from ase.io import read
+from itertools import product
+from equistore import TensorBlock, TensorMap,Labels
 #Load the frames of the dataset
 frames=[]
 #Load the dataset
@@ -59,14 +62,14 @@ for (a1,a2) in  species_pairs:
         #create tuples of the form (idx_frame, idx_i, idx_j)
         #where idx_i is the index of atoms in the frame such that they have species =a1
         #and idx_j is the index of atoms in the frame such that they have species =a2
-        idx_, idx_j = np.where(f.numbers==a1)[0], np.where(f.numbers==a2)[0]
+        idx_i, idx_j = np.where(f.numbers==a1)[0], np.where(f.numbers==a2)[0]
         frame_samples.append(list(product([idx_frame], idx_i, idx_j)))
 
     block_samples.append(np.vstack(frame_samples) )
 
 #block_samples will have as many items as in the list of species_pairs
 
-sample_labels = Labels(("structure, atom_i, atom_j"), np.asarray(block_samples[0], dtype=np.int32))
+sample_labels = Labels(("structure", "atom_i", "atom_j"), np.asarray(block_samples[0], dtype=np.int32))
 # Equistore uses Labels that describe or enumerate each column of the values being considered. For example
 # in the code snippet above, we used  labels to specify that the array of sample indices has three columns
 # the first column always holds the structure index, whereas the two following columns have info about the atoms
