@@ -8,87 +8,168 @@ Getting your first Tensormap
 # %%
 #
 # We will start by importing all the required packages: the classic numpy;
-# chemfiles to load data, and rascaline to compute representations. Afterward
-# we will load the dataset using chemfiles.
+# chemfile to load data, and of course equistore.
 
 import numpy as np
-
+from chemfiles import Trajectory
 import equistore
+import ase 
+#Load the frames of the dataset
+frames=[]
+#Load the dataset
 
-equistore.Labels(names=["foo", "bar"], values=np.array([[1,1],[2,4]]))
+# frames=[]
+# with Trajectory('dataset.xyz') as dataset:
+#     frames = [f for f in dataset]
+
+frames = read('dataset.xyz', ':10')
+print(len(frames))
 
 # %%
 #
-# Rascaline
+# Equistore
 # ---------
 
-# In this tutorial, we are going to use Rascaline calculators,
-# https://github.com/Luthaf/rascaline, to generate equistore
-# **TensorMaps** for atom-centered density correlations of molecules in our
-# dataset. The spherical expansion(nu = 1) calculator and the SOAP Power
-# spectrum (nu = 2) calculator will be used for this example.
+# In this tutorial, we are going to use a new storage format, Equistore,
+# https://github.com/lab_cosmo/equistore.
 
-# Hypers used
-# -----------
+# Creating your first TensorMap
+# --------------------------------
+# Let us start with the example of storing bond lengths as a TensorMap. We can think of categorizing the data 
+# based on the chemical nature (atomic species) of the two atoms involved in the pair. As not all species might
+# be present in all the frames, this choice of storage format will enable us to exploit the sparsity. 
 
-# For this exercise, we choose the hyperparameters, :math:`max_radial = 3` 
-# and :math:`max_angular = 2`)  for the number of spherical harmonics and radial
-# basis functions used in the expansion respectively. As the **keys** of the
-# equistore TensorMap are tuples in the form
-# (*spherical_harmonics_l*, *species_center*), we would expect the number
-# of **keys** = [(*max_angular*) + 1] x (*number of species_center*). As each
-# key corresponds to a **TensorBlock**, the number of **keys** would be the
-# same as the number of **TensorBlocks**. The **components** of the **TensorBlock**,
+# We start by identifying the set of species present in the system.  
+
+species = np.unique(np.hstack([np.unique(f.numbers) for f in frames]))
+
+#Creating all possible species pairs -these will form the keys of our TensorMap
+species_pairs = []
+for species1 in species: 
+	for species2 in species: 
+		species_pairs.append((species1, species2)) # or one could have used itertools.product to get the same result, species_pairs = list(product(species, species))
+
+
+#For each species pairs, find the relevant samples, i.e. the list of all frames and index of atoms in the frame
+#that correspond to the species pair in block_samples
+block_samples = [] 
+for (a1,a2) in  species_pairs:
+    frame_samples = []
+    for idx_frame, f in enumerate(frames):
+        #create tuples of the form (idx_frame, idx_i, idx_j)
+        #where idx_i is the index of atoms in the frame such that they have species =a1
+        #and idx_j is the index of atoms in the frame such that they have species =a2
+        idx_, idx_j = np.where(f.numbers==a1)[0], np.where(f.numbers==a2)[0]
+        frame_samples.append(list(product([idx_frame], idx_i, idx_j)))
+
+    block_samples.append(np.vstack(frame_samples) )
+
+#block_samples will have as many items as in the list of species_pairs
+
+sample_labels = Labels(("structure, atom_i, atom_j"), np.asarray(block_samples[0], dtype=np.int32))
+# Equistore uses Labels that describe or enumerate each column of the values being considered. For example
+# in the code snippet above, we used  labels to specify that the array of sample indices has three columns
+# the first column always holds the structure index, whereas the two following columns have info about the atoms
+
+# Labels((name1, name2, name3), [(value1, value2, value3),
+#                                (value1, value2, value3),
+#                                (value1, value2, value3)])
+
+# For this particular case, each row describes the corresponding row of  "TensorMap.values" that are called samples
+
+#Now we need to find the corresponding values of the bond length for each sample
+
+block_values = []
+for (a1,a2) in  species_pairs:
+    frame_values = []
+    for idx_frame, f in enumerate(frames):
+        idx_i, idx_j = np.where(f.numbers==a1)[0], np.where(f.numbers==a2)[0]
+        frame_values.append([f.get_all_distances()[i,j] for i in idx_i for j in idx_j])
+    block_values.append(np.vstack(frame_values))
+
+#We could have easily merged this operation with the loops above but for clarity we are repeating them here. We use ASE's
+#get_all_distances() function to calculate the bond lengths
+
+block_components = [Labels(['spherical_m'], np.asarray([[0]],dtype=np.int32))]
+#TODO
+#The **components** of the **TensorBlock**, 
 # correspond to the equivariant behaviour of the features calculated, with the
 # number of **components** = (2 x *lambda* + 1) where lambda tags the behaviour
-# under the irreducible SO(3) group action. For spherical expansion, the
-# **properties** (manifests as the last dimension) in each **TensorBlock** are
-# labelled by a tuple of the form (*number of neighbour_species*, *max_radial*)
-# and thus, the number of **properties** in each **TensorBlock** = (*number of
-# neighbour_species* x *max_radial*). Meanwhile for the SOAP power spectrum,
-# the **properties** in each **TensorBlock** are labelled by a tuple of the form
-# (*neighbour_species_a, radial_expansion_a, spherical_expansion_l_a,
-# neighbour_species_b, radial_expansion_b, spherical_expansion_l_b*),
-# and hence the number of **properties** in each **TensorBlock** =
-# (:math: `*total number of species*^2 x *max_radial*^2`). Finally,
-# the **samples** (manifests as rows) in each **TensorBlock** are organized
-# in the fashion:(*atom_index*, *structure_index*), and thus the number of rows
-# in each **TensorBlock** = *Total number of the chosen element in the dataset*,
-# whereby the chosen element can be identified by the value of the *species_center*
-# in the **key** of the **TensorBlock**. Hence, each **TensorBlock** will take the
-# shape (*Number of **Samples***, *Number of **Components***, *Number of **Properties***)
-# and each of them can be identified via its own **key**. 
+# under the irreducible SO(3) group action.
+block_properties = Labels(['Angstrom'], np.asarray([(0,)],dtype=np.int32))
+#TODO
 
-# Using these hyperparameters for feature calculations on this dataset consisting
-# of one frame of water, H2O [(O, H, H)], and one frame of ethanol
-# [(O, C, C, H, H, H, H, H, H)], C2H5OH, the resulting **TensorMap** produced
-# by Rascaline would contain [(*max_angular*) + 1] x (*number of species_center*)
-# = [(2 + 1] x 3 = 9 **TensorBlocks** and **keys**. The list of **keys** would be
-# [(0,1), (0,6), (0,8), (1,1), (1,6), (1,8), (2,1), (2,6), (2,8)], whereby the first
-# index denotes the value of the *spherical_harmonics_l* and the second index denotes
-# the proton number of the *species_center*. The number of **components** in the
-# respective **Tensorblocks** would be [1, 1, 1, 3, 3, 3, 5, 5, 5], as calculated
-# by number of **components** = (2 x *lambda* + 1) and each **TensorBlock** will
-# contain 12 **samples** (rows), as there are a total of 12 atoms in this dataset.
-# For spherical expansion,  each **TensorBlock** will have 9 **properties** as
-# given by number of 
-# **properties** = (*number of neighbour_species* x *max_radial*) = (3 x 3) = 9.
+# We have collected all the necessary ingredients to create our first TensorMap. Since a TensorMap is a container
+# that holds blocks of data - namely TensorBlocks, let us transform our data to TensorBlock format
+blocks=[]
+for block_idx, samples in enumerate(block_samples):
+    blocks.append(TensorBlock( values = np.hstack(block_values[block_idx]).reshape(-1,1,1),
+                               samples = Labels(["structure", "atom_i", "atom_j"], np.asarray(samples, dtype=np.int32)),
+                               components = block_components,
+                               properties = block_properties
+                              )
 
-# Note: Depending on the hyperparameters chosen, some degree of feature selection
-# might occur during computation, which affects the number of properties calculated.
+                 )
 
-# Navigating through the TensorMap
-# --------------------------------
+# A TensorBlock is the fundamental constituent of a TensorMap. Each Tensorblock is associated with "values" or data array with n-dimensions (here 3 dimensions), each
+# identified by a Label. The first dimension refers to the *samples*.
+
+# The last dimension of the n-dimensional array is the one indexing the "properties" or features
+# of what we are describing in the TensorBlock.  These also usually correspond to
+# all the entries in the basis or :math: `<q|` when the object being represented
+# in mathematically expressed as :math: `<q|f>`.
+# For the given example, the property dimension is a dummy variable since we are just storing one number corresponding to the bondlength(A).
+# But for instance, we could have chosen to project these values on a radial basis <n|r_{ij}>, then
+# the properties dimension would correspond to the radial channels or *n* going from 0 up to :math:`n_max`.
+
+# All intermediate dimensions of the array are referred to as *components* and
+# are used to describe vectorial or tensorial components of the data.
+
+# A block can also contain gradients of the values with respect to a variety of
+# parameters. More about this can be found in the **gradients** section.
+
+
+bond_lengths = TensorMap(Labels(("species_1", "species_2"), np.asarray(species_pairs, np.int32)), 
+                         blocks)
+
+# Here we instantiated a TensorMap by specifying the constituent blocks and their labels (this special class 
+# of labels for blocks are also called "keys") 
+
+
+# Using TensorMaps with Models 
+# -----------
+# To motivate why this way of storage in Equistore is helpful,let's consider a model built on top of these bondlengths 
+
+# Storing our targets as TensorMaps 
+# Just like we did for the bond-lengths, we can create a TensorMap for energies of the structures
+energies = np.array([f.info["energy"] for f in frames])
+
+energy_tmap = TensorMap(Labels(["dummy"], np.asarray([(0,)], np.int32)), 
+           
+          [TensorBlock(values = energies.reshape(-1,1,1) ,
+            samples = Labels(["structure"], np.asarray(list(range(len(frames))), dtype=np.int32).reshape(-1,1)),
+            components = block_components,
+            properties = Labels(['eV'], np.asarray([(0,)],dtype=np.int32))
+           )]
+              )
+
+#we created a dummy index to address our block of the energy_tmap that just has one tensorblock. 
+
+forces = np.array([f.get_forces() for f in frames])
+
+for idx_frame, f in enumerate(frames): 
+    values = f.get_forces()
+    samples = Labels(["structure", "center"], np.asarray(list(product([idx_frame],range(len(f)))), dtype=np.int32))
+    components = [Labels(["component"], np.asarray([[0,1,2]], np.int32).reshape(-1,1))]
+                #cartesian force direction components x=0, y=1, z=2
+    properties =  Labels(["eV/A"], np.asarray([[0]])) 
 
 # Accessing different Blocks on the Tensormap
 # -------------------------------------------
 
-# There are three main ways to access blocks on the Tensormap, by index, keys or
-# multiple keys at once. The first method involving index would require access blocks
-# based on the order (??)
+# There are three main ways to access blocks on the TensorMap, by specifying an index corresponding to the absolute position of the block in the TensorMap, or by specifying the values of one or multiple keys of the TensorMap.
 
 # The first tensorblock can be accessed using
-
 # TensorMap.block(0)
 
 # %%
