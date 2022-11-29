@@ -114,8 +114,8 @@ def _eqs_array_data(this, data):
     elif _is_torch_array(storage.array):
         array = storage.array
 
-        if array.device.type == "cpu":
-            raise ValueError("can not get data pointer for tensors not on CPU")
+        if array.device.type != "cpu":
+            raise ValueError("can only get data pointer for tensors on CPU")
 
         # `.numpy()` will fail if the data is on GPU or requires gradient
         # tracking, and the resulting array is sharing data storage with the
