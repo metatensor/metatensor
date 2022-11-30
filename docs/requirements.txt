@@ -11,3 +11,4 @@ chemfiles
 ase
 matplotlib
 skcosmo
+scikit-learn

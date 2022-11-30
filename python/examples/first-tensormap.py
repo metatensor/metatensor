@@ -246,9 +246,54 @@ bond_lengths.keys[bond_lengths.blocks_matching(species_1 = 1)]
 # Keys to properties 
 # keys to samples
 # components to properties 
-# 
+# Going from tensormap to a dense array
+
 
 # %%
 #
-# Going from tensormap to a dense array
-# -------------------------------------
+# Training your first model using Equistore
+# ----------------------------------------------
+# To demonstrate the accessibility and flexiblity of Equistore, we are going to use the polynomial features of the bond lengths, with a cutoff based on the 
+# atomic number of the species involved, to predict the energy of the system. 
+
+Cutoff = {
+    1 : 2,
+    6 : 3,
+    7 : 4,
+    8 : 4
+}
+
+# %%
+#
+# As Equistore indexes features based on their metadata, it facillitates the implementation of customizable feature engineering for different feature subsets.
+# In the following code block, we will build the polynomial features of the bond lengths, with its corresponding cutoff. For instance,
+# the bond length of C-H will have its cutoff at :math:`3 + 2 = 5`, meaning that we will take polynomial features of C-H up to degree 5.
+
+training_features = []
+
+for (i, j) in bond_lengths.keys:
+    block = bond_lengths.block(species_1 = i, species_2 = j)
+    Polynomial_Cutoff = Cutoff[i] + Cutoff[j]
+    all_structures = np.unique(block.samples["structure"])
+    individual_features = []
+    for structure_i in all_structures:
+        polynomial_features = []
+        atoms_i = block.samples["structure"] == structure_i
+        for power in range(Polynomial_Cutoff):
+            feature = np.sum(np.power(block.values[atoms_i,:], power + 1), axis = 0)
+            polynomial_features.append(feature)
+        individual_features.append(np.array(polynomial_features).squeeze())
+    structure_feature = np.vstack(individual_features)
+    training_features.append(structure_feature)
+    
+training_features = np.hstack(training_features)
+    
+# %%
+#
+# Using these features, we can now build our model to predict the energy of the system. For the sake of simplicity, we are going to use Sklearn's implementation 
+# for Linear Regression.
+
+from sklearn.linear_model import LinearRegression
+
+model = LinearRegression().fit(training_features, energies)
+print ("The R2 score for our model is {}".format(model.score(training_features, energies)))
