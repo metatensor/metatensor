@@ -27,37 +27,37 @@ class TestSlice(unittest.TestCase):
 
     # TEST BLOCK 1: SLICING SAMPLES WITHOUT GRADIENTS
 
-    def test_slice_samples_tensorblock_no_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_samples_block_no_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'structures' 2, 4, 6, 8
         structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             samples_to_slice=samples_to_slice,
         )
         # Check 1: no slicing of properties has occurred
         self.assertTrue(
-            tensorblock.properties.asarray().shape,
-            sliced_tensorblock.properties.asarray().shape,
+            block.properties.asarray().shape,
+            sliced_block.properties.asarray().shape,
         )
         # Check 2: samples have been sliced to the correct dimension
         self.assertEqual(
-            len(sliced_tensorblock.samples),
+            len(sliced_block.samples),
             len(
                 [
                     struct_i
-                    for struct_i in tensorblock.samples["structure"]
+                    for struct_i in block.samples["structure"]
                     if struct_i in structures_to_keep
                 ]
             ),
@@ -67,40 +67,40 @@ class TestSlice(unittest.TestCase):
             np.all(
                 [
                     struct_i in structures_to_keep
-                    for struct_i in sliced_tensorblock.samples["structure"]
+                    for struct_i in sliced_block.samples["structure"]
                 ]
             )
         )
         # Check 4: no components have been sliced
-        for i, comp in enumerate(sliced_tensorblock.components):
-            self.assertEqual(len(comp), len(tensorblock.components[i]))
+        for i, comp in enumerate(sliced_block.components):
+            self.assertEqual(len(comp), len(block.components[i]))
 
     def test_slice_samples_tensormap_no_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'structures' 2, 4, 6, 8
         structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             samples_to_slice=samples_to_slice,
         )
-        for i, (key, block) in enumerate(tensormap):
+        for i, (key, block) in enumerate(tensor):
             # Check 1: no slicing of properties has occurred
             self.assertEqual(
-                sliced_tensormap.block(i).properties.asarray().shape,
+                sliced_tensor.block(i).properties.asarray().shape,
                 block.properties.asarray().shape,
             )
             # Check 2: samples have been sliced to the correct dimension
             self.assertEqual(
-                len(sliced_tensormap.block(i).samples),
+                len(sliced_tensor.block(i).samples),
                 len(
                     [
                         struct_i
@@ -114,109 +114,101 @@ class TestSlice(unittest.TestCase):
                 np.all(
                     [
                         struct_i in structures_to_keep
-                        for struct_i in sliced_tensormap.block(i).samples["structure"]
+                        for struct_i in sliced_tensor.block(i).samples["structure"]
                     ]
                 )
             )
             # Check 4: no components have been sliced
             for j, comp in enumerate(block.components):
-                self.assertEqual(
-                    len(comp), len(sliced_tensormap.block(i).components[j])
-                )
+                self.assertEqual(len(comp), len(sliced_tensor.block(i).components[j]))
 
-        # Check 5: all the keys in the sliced tensormap are in the original
-        self.assertTrue(
-            np.all([key in tensormap.keys for key in sliced_tensormap.keys])
-        )
+        # Check 5: all the keys in the sliced tensor are in the original
+        self.assertTrue(np.all([key in tensor.keys for key in sliced_tensor.keys]))
 
-    def test_slice_samples_tensorblock_empty_no_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_samples_block_empty_no_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
         structures_to_keep = np.array([-1]).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             samples_to_slice=samples_to_slice,
         )
-        # Check 1: returned tensorblock has no values
-        self.assertTrue(len(sliced_tensorblock.values.flatten()) == 0)
+        # Check 1: returned block has no values
+        self.assertTrue(len(sliced_block.values.flatten()) == 0)
 
-        # Check 2: returned tensorblock has dimension zero for samples
-        self.assertTrue(sliced_tensorblock.values.shape[0] == 0)
+        # Check 2: returned block has dimension zero for samples
+        self.assertTrue(sliced_block.values.shape[0] == 0)
 
-        # Check 3: returned tensorblock has original dimension for properties
-        self.assertEqual(
-            sliced_tensorblock.values.shape[-1], tensorblock.values.shape[-1]
-        )
+        # Check 3: returned block has original dimension for properties
+        self.assertEqual(sliced_block.values.shape[-1], block.values.shape[-1])
 
     def test_slice_samples_tensormap_empty_no_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
         structures_to_keep = np.array([-1]).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             samples_to_slice=samples_to_slice,
         )
-        for _, block in sliced_tensormap:
+        for _, block in sliced_tensor:
             # Check 1: all blocks are empty
             self.assertEqual(len(block.values.flatten()), 0)
 
-        # Check 2: all the original keys are kept in the output tensormap
-        self.assertTrue(
-            np.all([key in sliced_tensormap.keys for key in tensormap.keys])
-        )
+        # Check 2: all the original keys are kept in the output tensor
+        self.assertTrue(np.all([key in sliced_tensor.keys for key in tensor.keys]))
 
     # TEST BLOCK 2: SLICING SAMPLES WITH GRADIENTS
 
-    def test_slice_samples_tensorblock_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_samples_block_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'structures' 2, 4, 6, 8
         structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             samples_to_slice=samples_to_slice,
         )
-        for i, (parameter, gradient) in enumerate(sliced_tensorblock.gradients()):
+        for i, (parameter, gradient) in enumerate(sliced_block.gradients()):
             # Check 1: no slicing of properties has occurred
             self.assertEqual(
-                list(tensorblock.gradients())[i][1].properties.asarray().shape,
+                list(block.gradients())[i][1].properties.asarray().shape,
                 gradient.properties.asarray().shape,
             )
             # Check 2: samples have been sliced to the correct dimension
             self.assertEqual(
-                len(sliced_tensorblock.samples),
+                len(sliced_block.samples),
                 len(
                     [
                         struct_i
-                        for struct_i in tensorblock.samples["structure"]
+                        for struct_i in block.samples["structure"]
                         if struct_i in structures_to_keep
                     ]
                 ),
@@ -226,37 +218,37 @@ class TestSlice(unittest.TestCase):
                 np.all(
                     [
                         struct_i in structures_to_keep
-                        for struct_i in sliced_tensorblock.samples["structure"]
+                        for struct_i in sliced_block.samples["structure"]
                     ]
                 )
             )
             # Check 4: same number of components as original
             self.assertEqual(
                 len(gradient.components),
-                len(list(tensorblock.gradients())[i][1].components),
+                len(list(block.gradients())[i][1].components),
             )
 
-    def test_slice_samples_tensorblock_empty_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_samples_block_empty_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
         structures_to_keep = np.array([-1]).reshape(-1, 1)
         samples_to_slice = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             samples_to_slice=samples_to_slice,
         )
-        # Check 1: returned tensorblock has no values
-        self.assertEqual(len(sliced_tensorblock.values.flatten()), 0)
+        # Check 1: returned block has no values
+        self.assertEqual(len(sliced_block.values.flatten()), 0)
 
-        for i, (_, gradient) in enumerate(sliced_tensorblock.gradients()):
+        for i, (_, gradient) in enumerate(sliced_block.gradients()):
             # Check 2: all gradients have no values
             self.assertEqual(len(gradient.data), 0)
 
@@ -264,11 +256,11 @@ class TestSlice(unittest.TestCase):
             # original in all but the samples (i.e. 1st) dimension
             self.assertEqual(
                 gradient.data.shape[1:],
-                list(tensorblock.gradients())[i][1].data.shape[1:],
+                list(block.gradients())[i][1].data.shape[1:],
             )
 
     def test_slice_samples_tensormap_empty_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -278,11 +270,11 @@ class TestSlice(unittest.TestCase):
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             samples_to_slice=samples_to_slice,
         )
-        for i, (_, block) in enumerate(sliced_tensormap):
+        for i, (_, block) in enumerate(sliced_tensor):
             for j, (_, gradient) in enumerate(block.gradients()):
                 # Check 1: all gradient blocks are empty
                 self.assertEqual(len(gradient.data.flatten()), 0)
@@ -291,47 +283,45 @@ class TestSlice(unittest.TestCase):
                 # original in all but the samples (i.e. 1st) dimension
                 self.assertEqual(
                     gradient.data.shape[1:],
-                    list(tensormap.block(i).gradients())[j][1].data.shape[1:],
+                    list(tensor.block(i).gradients())[j][1].data.shape[1:],
                 )
 
-        # Check 3: all the original keys are kept in the output tensormap
-        self.assertTrue(
-            np.all([key in sliced_tensormap.keys for key in tensormap.keys])
-        )
+        # Check 3: all the original keys are kept in the output tensor
+        self.assertTrue(np.all([key in sliced_tensor.keys for key in tensor.keys]))
 
     # TEST BLOCK 3: SLICING PROPERTIES WITHOUT GRADIENTS
 
-    def test_slice_properties_tensorblock_no_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_properties_block_no_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'n' (i.e. radial channels) 1, 3
         channels_to_keep = np.arange(1, 5, 2).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             properties_to_slice=properties_to_slice,
         )
         # Check 1: no slicing of samples has occurred
         self.assertEqual(
-            tensorblock.samples.asarray().shape,
-            sliced_tensorblock.samples.asarray().shape,
+            block.samples.asarray().shape,
+            sliced_block.samples.asarray().shape,
         )
         # Check 2: properties have been sliced to the correct dimension
         self.assertEqual(
-            len(sliced_tensorblock.properties),
+            len(sliced_block.properties),
             len(
                 [
                     channel_i
-                    for channel_i in tensorblock.properties["n"]
+                    for channel_i in block.properties["n"]
                     if channel_i in channels_to_keep
                 ]
             ),
@@ -341,40 +331,40 @@ class TestSlice(unittest.TestCase):
             np.all(
                 [
                     channel_i in channels_to_keep
-                    for channel_i in sliced_tensorblock.properties["n"]
+                    for channel_i in sliced_block.properties["n"]
                 ]
             )
         )
         # Check 4: no components have been sliced
-        for i, comp in enumerate(sliced_tensorblock.components):
-            self.assertEqual(len(comp), len(tensorblock.components[i]))
+        for i, comp in enumerate(sliced_block.components):
+            self.assertEqual(len(comp), len(block.components[i]))
 
     def test_slice_properties_tensormap_no_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'n' (i.e. radial channels) 1, 3
         channels_to_keep = np.arange(1, 5, 2).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             properties_to_slice=properties_to_slice,
         )
-        for i, (key, block) in enumerate(tensormap):
+        for i, (key, block) in enumerate(tensor):
             # Check 1: no slicing of samples has occurred
             self.assertEqual(
-                sliced_tensormap.block(i).samples.asarray().shape,
+                sliced_tensor.block(i).samples.asarray().shape,
                 block.samples.asarray().shape,
             )
             # Check 2: properties have been sliced to the correct dimension
             self.assertEqual(
-                len(sliced_tensormap.block(i).properties),
+                len(sliced_tensor.block(i).properties),
                 len(
                     [
                         channel_i
@@ -388,112 +378,104 @@ class TestSlice(unittest.TestCase):
                 np.all(
                     [
                         channel_i in channels_to_keep
-                        for channel_i in sliced_tensormap.block(i).properties["n"]
+                        for channel_i in sliced_tensor.block(i).properties["n"]
                     ]
                 )
             )
             # Check 4: no components have been sliced
             for j, comp in enumerate(block.components):
-                self.assertEqual(
-                    len(comp), len(sliced_tensormap.block(i).components[j])
-                )
+                self.assertEqual(len(comp), len(sliced_tensor.block(i).components[j]))
 
-        # Check 5: all the keys in the sliced tensormap are in the original
-        self.assertTrue(
-            np.all([key in tensormap.keys for key in sliced_tensormap.keys])
-        )
+        # Check 5: all the keys in the sliced tensor are in the original
+        self.assertTrue(np.all([key in tensor.keys for key in sliced_tensor.keys]))
 
-    def test_slice_properties_tensorblock_empty_no_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_properties_block_empty_no_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
         channels_to_keep = np.array([-1]).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             properties_to_slice=properties_to_slice,
         )
-        # Check 1: returned tensorblock has no values
-        self.assertEqual(len(sliced_tensorblock.values.flatten()), 0)
+        # Check 1: returned block has no values
+        self.assertEqual(len(sliced_block.values.flatten()), 0)
 
-        # Check 2: returned tensorblock has dimension zero for properties
-        self.assertEqual(sliced_tensorblock.values.shape[-1], 0)
+        # Check 2: returned block has dimension zero for properties
+        self.assertEqual(sliced_block.values.shape[-1], 0)
 
-        # Check 3: returned tensorblock has original dimension for samples
-        self.assertEqual(
-            sliced_tensorblock.values.shape[0], tensorblock.values.shape[0]
-        )
+        # Check 3: returned block has original dimension for samples
+        self.assertEqual(sliced_block.values.shape[0], block.values.shape[0])
 
     def test_slice_properties_tensormap_empty_no_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
         channels_to_keep = np.array([-1]).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             properties_to_slice=properties_to_slice,
         )
-        for _, block in sliced_tensormap:
+        for _, block in sliced_tensor:
             # Check 1: all blocks are empty
             self.assertEqual(len(block.values.flatten()), 0)
 
             # Check 2: the properties dimension is zero
             self.assertEqual(block.values.shape[-1], 0)
 
-        # Check 2: all the original keys are kept in the output tensormap
-        self.assertTrue(
-            np.all([key in sliced_tensormap.keys for key in tensormap.keys])
-        )
+        # Check 2: all the original keys are kept in the output tensor
+        self.assertTrue(np.all([key in sliced_tensor.keys for key in tensor.keys]))
 
     # TEST BLOCK 4: SLICING PROPERTIES WITH GRADIENTS
 
-    def test_slice_properties_tensorblock_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_properties_block_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'n' (i.e. radial channels) 1, 3
         channels_to_keep = np.arange(1, 5, 2).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             properties_to_slice=properties_to_slice,
         )
-        for i, (parameter, gradient) in enumerate(sliced_tensorblock.gradients()):
+        for i, (parameter, gradient) in enumerate(sliced_block.gradients()):
             # Check 1: no slicing of samples has occurred
             self.assertEqual(
-                list(tensorblock.gradients())[i][1].samples.asarray().shape,
+                list(block.gradients())[i][1].samples.asarray().shape,
                 gradient.samples.asarray().shape,
             )
             # Check 2: properties have been sliced to the correct dimension
             self.assertEqual(
-                len(sliced_tensorblock.properties),
+                len(sliced_block.properties),
                 len(
                     [
                         channel_i
-                        for channel_i in tensorblock.properties["n"]
+                        for channel_i in block.properties["n"]
                         if channel_i in channels_to_keep
                     ]
                 ),
@@ -503,37 +485,37 @@ class TestSlice(unittest.TestCase):
                 np.all(
                     [
                         channel_i in channels_to_keep
-                        for channel_i in sliced_tensorblock.properties["n"]
+                        for channel_i in sliced_block.properties["n"]
                     ]
                 )
             )
             # Check 4: same number of components as original
             self.assertEqual(
                 len(gradient.components),
-                len(list(tensorblock.gradients())[i][1].components),
+                len(list(block.gradients())[i][1].components),
             )
 
-    def test_slice_properties_tensorblock_empty_gradients(self):
-        tensormap = equistore.io.load(
+    def test_slice_properties_block_empty_gradients(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
         channels_to_keep = np.array([-1]).reshape(-1, 1)
         properties_to_slice = Labels(
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             properties_to_slice=properties_to_slice,
         )
-        # Check 1: returned tensorblock has no values
-        self.assertEqual(len(sliced_tensorblock.values.flatten()), 0)
+        # Check 1: returned block has no values
+        self.assertEqual(len(sliced_block.values.flatten()), 0)
 
-        for i, (_, gradient) in enumerate(sliced_tensorblock.gradients()):
+        for i, (_, gradient) in enumerate(sliced_block.gradients()):
             # Check 2: all gradients have no values
             self.assertEqual(len(gradient.data.flatten()), 0)
 
@@ -541,11 +523,11 @@ class TestSlice(unittest.TestCase):
             # original in all but the properties (i.e. last) dimension
             self.assertEqual(
                 gradient.data.shape[:-1],
-                list(tensorblock.gradients())[i][1].data.shape[:-1],
+                list(block.gradients())[i][1].data.shape[:-1],
             )
 
     def test_slice_properties_tensormap_empty_gradients(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -555,11 +537,11 @@ class TestSlice(unittest.TestCase):
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensormap = fn.slice(
-            tensormap,
+        sliced_tensor = fn.slice(
+            tensor,
             properties_to_slice=properties_to_slice,
         )
-        for i, (_, block) in enumerate(sliced_tensormap):
+        for i, (_, block) in enumerate(sliced_tensor):
             for j, (_, gradient) in enumerate(block.gradients()):
                 # Check 1: all gradient blocks are empty
                 self.assertEqual(len(gradient.data.flatten()), 0)
@@ -568,22 +550,20 @@ class TestSlice(unittest.TestCase):
                 # original in all but the properties (i.e. last) dimension
                 self.assertEqual(
                     gradient.data.shape[:-1],
-                    list(tensormap.block(i).gradients())[j][1].data.shape[:-1],
+                    list(tensor.block(i).gradients())[j][1].data.shape[:-1],
                 )
 
-        # Check 3: all the original keys are kept in the output tensormap
-        self.assertTrue(
-            np.all([key in sliced_tensormap.keys for key in tensormap.keys])
-        )
+        # Check 3: all the original keys are kept in the output tensor
+        self.assertTrue(np.all([key in sliced_tensor.keys for key in tensor.keys]))
 
     # TEST BLOCK 5: SLICING SAMPLES AND PROPERTIES SIMULTANEOUSLY
 
-    def test_slice_samples_properties_tensorblock(self):
-        tensormap = equistore.io.load(
+    def test_slice_samples_properties_block(self):
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
-        tensorblock = tensormap.block(5)
+        block = tensor.block(5)
         # Slice 'center' 1, 3, 5
         centers_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
         samples_to_slice = Labels(
@@ -596,8 +576,8 @@ class TestSlice(unittest.TestCase):
             names=["n"],
             values=channels_to_keep,
         )
-        sliced_tensorblock = fn.slice_block(
-            tensorblock,
+        sliced_block = fn.slice_block(
+            block,
             samples_to_slice=samples_to_slice,
             properties_to_slice=properties_to_slice,
         )
@@ -606,7 +586,7 @@ class TestSlice(unittest.TestCase):
             np.all(
                 [
                     center_i in centers_to_keep
-                    for center_i in sliced_tensorblock.samples["center"]
+                    for center_i in sliced_block.samples["center"]
                 ]
             )
         )
@@ -615,55 +595,47 @@ class TestSlice(unittest.TestCase):
             np.all(
                 [
                     channel_i in channels_to_keep
-                    for channel_i in sliced_tensorblock.properties["n"]
+                    for channel_i in sliced_block.properties["n"]
                 ]
             )
         )
         # Check 3: There are the correct number of samples
         self.assertEqual(
-            sliced_tensorblock.values.shape[0],
+            sliced_block.values.shape[0],
             len(
                 [
                     sample
-                    for sample in tensorblock.samples
+                    for sample in block.samples
                     if sample["center"] in centers_to_keep
                 ]
             ),
         )
         # Check 4: There are the correct number of properties
         self.assertEqual(
-            sliced_tensorblock.values.shape[-1],
-            len(
-                [
-                    prop
-                    for prop in tensorblock.properties
-                    if prop["n"] in channels_to_keep
-                ]
-            ),
+            sliced_block.values.shape[-1],
+            len([prop for prop in block.properties if prop["n"] in channels_to_keep]),
         )
         # Check 6: actual values are what they should be
         samples_filter = [
-            sample["center"] in centers_to_keep for sample in tensorblock.samples
+            sample["center"] in centers_to_keep for sample in block.samples
         ]
-        properties_filter = [
-            prop["n"] in channels_to_keep for prop in tensorblock.properties
-        ]
+        properties_filter = [prop["n"] in channels_to_keep for prop in block.properties]
         self.assertTrue(
             np.array_equal(
-                tensorblock.values[samples_filter][..., properties_filter],
-                sliced_tensorblock.values,
+                block.values[samples_filter][..., properties_filter],
+                sliced_block.values,
             )
         )
 
     # TEST BLOCK 6: TESTING TYPE HANDLING OF USER-FACING SLICE FUNCTION
 
     def test_slice_type_handling(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice 'center' 1, 3, 5
         structures_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
         samples_to_slice = Labels(
@@ -672,12 +644,10 @@ class TestSlice(unittest.TestCase):
         )
         # Check 1: TensorBlock -> TypeError
         with self.assertRaises(TypeError):
-            fn.slice(tensorblock, samples_to_slice=samples_to_slice),
+            fn.slice(block, samples_to_slice=samples_to_slice),
         # Check 2: TensorMap -> TensorMap
         self.assertTrue(
-            isinstance(
-                fn.slice(tensormap, samples_to_slice=samples_to_slice), TensorMap
-            )
+            isinstance(fn.slice(tensor, samples_to_slice=samples_to_slice), TensorMap)
         )
         # Check 3: passing tensor=float raises TypeError
         with self.assertRaises(TypeError):
@@ -685,7 +655,7 @@ class TestSlice(unittest.TestCase):
         # Check 4: passing samples_to_slice=np.array raises TypeError
         with self.assertRaises(TypeError):
             fn.slice(
-                tensormap,
+                tensor,
                 samples_to_slice=np.array(
                     [
                         [
@@ -699,12 +669,12 @@ class TestSlice(unittest.TestCase):
             )
 
     def test_slice_block_type_handling(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Define a single block to test
-        tensorblock = tensormap.block(0)
+        block = tensor.block(0)
         # Slice 'center' 1, 3, 5
         structures_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
         samples_to_slice = Labels(
@@ -713,11 +683,11 @@ class TestSlice(unittest.TestCase):
         )
         # Check 1: TensorMap -> TypeError
         with self.assertRaises(TypeError):
-            fn.slice_block(tensormap, samples_to_slice=samples_to_slice),
+            fn.slice_block(tensor, samples_to_slice=samples_to_slice),
         # Check 2: TensorBlock -> TensorBlock
         self.assertTrue(
             isinstance(
-                fn.slice_block(tensorblock, samples_to_slice=samples_to_slice),
+                fn.slice_block(block, samples_to_slice=samples_to_slice),
                 TensorBlock,
             )
         )
@@ -727,7 +697,7 @@ class TestSlice(unittest.TestCase):
         # Check 4: passing samples_to_slice=np.array raises TypeError
         with self.assertRaises(TypeError):
             fn.slice_block(
-                tensorblock,
+                block,
                 samples_to_slice=np.array(
                     [
                         [
@@ -743,12 +713,12 @@ class TestSlice(unittest.TestCase):
     # TEST BLOCK 7: TESTING WARNINGS OF THE SLICE FUNCTION
 
     def test_slice_samples_tensormap_partially_empty_warning(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'structures' 2
         structures_to_keep = np.array([2]).reshape(-1, 1)
         samples_to_slice = Labels(
@@ -758,7 +728,7 @@ class TestSlice(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             # Check 1: warning raised as some empty blocks produced
             fn.slice(
-                tensormap,
+                tensor,
                 samples_to_slice=samples_to_slice,
             )
         self.assertTrue(
@@ -766,12 +736,12 @@ class TestSlice(unittest.TestCase):
         )
 
     def test_slice_samples_tensormap_completely_empty_warning(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
         structures_to_keep = np.array([-1]).reshape(-1, 1)
         samples_to_slice = Labels(
@@ -781,7 +751,7 @@ class TestSlice(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             # Check 1: warning raised as all empty blocks produced
             fn.slice(
-                tensormap,
+                tensor,
                 samples_to_slice=samples_to_slice,
             )
         self.assertTrue(
@@ -789,12 +759,12 @@ class TestSlice(unittest.TestCase):
         )
 
     def test_slice_properties_tensormap_completely_empty_warning(self):
-        tensormap = equistore.io.load(
+        tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
         # Remove the gradients to simplify test
-        tensormap = fn.remove_gradients(tensormap)
+        tensor = fn.remove_gradients(tensor)
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
         channels_to_keep = np.array([-1]).reshape(-1, 1)
         properties_to_slice = Labels(
@@ -804,7 +774,7 @@ class TestSlice(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             # Check 1: warning raised as all empty blocks produced
             fn.slice(
-                tensormap,
+                tensor,
                 properties_to_slice=properties_to_slice,
             )
         self.assertTrue(
