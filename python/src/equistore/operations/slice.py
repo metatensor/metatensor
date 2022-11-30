@@ -308,15 +308,17 @@ def _slice_block(
         properties=new_properties,
     )
 
-    # Create a list of numeric indices of the samples that were sliced. Needed
-    # to create filters for Gradient TensorBlocks as there isn't a one-to-one
-    # mapping between samples of the parent TensorBlock and its Gradients. This
-    # doesn't need to be done for properties as the mapping is by definition a
-    # one-to-one.
+    # Create a map from the previous samples indexes to the new sample indexes
+    # to update the gradient samples
     if samples_to_slice is not None:
-        set_samples_idxs_to_slice = set(
-            i for i, val in enumerate(samples_filter) if val
-        )
+        # sample_map contains at position old_sample the index of the
+        # corresponding new sample
+        sample_map = np.full(shape=len(samples_filter), fill_value=-1)
+        last = 0
+        for i, picked in enumerate(samples_filter):
+            if picked:
+                sample_map[i] = last
+                last += 1
 
     # Slice each Gradient TensorBlock and add to the new_block.
     for parameter, gradient in block.gradients():
@@ -326,11 +328,24 @@ def _slice_block(
 
         # Create a samples filter for the Gradient TensorBlock
         if samples_to_slice is not None:
-            grad_samples = gradient.samples["sample"].tolist()
-            grad_samples_filter = np.array(
-                [grad_samp in set_samples_idxs_to_slice for grad_samp in grad_samples]
-            )
+            grad_samples_filter = samples_filter[gradient.samples["sample"]]
             new_grad_samples = new_grad_samples[grad_samples_filter]
+
+            if new_grad_samples.shape[0] != 0:
+                # update the "sample" column of the gradient samples
+                # to refer to the new samples
+                new_grad_samples = (
+                    new_grad_samples.view(dtype=np.int32)
+                    .reshape(new_grad_samples.shape[0], -1)
+                    .copy()
+                )
+                new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
+
+                new_grad_samples = Labels(
+                    names=gradient.samples.names,
+                    values=new_grad_samples,
+                )
+
             new_grad_data = new_grad_data[grad_samples_filter]
         if properties_to_slice is not None:
             new_grad_data = new_grad_data[..., properties_filter]

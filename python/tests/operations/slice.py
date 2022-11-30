@@ -42,9 +42,9 @@ class TestSliceSamples(unittest.TestCase):
             self.assertTrue(np.all(sliced_c == c))
 
         # we have the right values
-        samples_filter = [
-            sample["structure"] in structures_to_keep for sample in block.samples
-        ]
+        samples_filter = np.array(
+            [sample["structure"] in structures_to_keep for sample in block.samples]
+        )
         self.assertTrue(
             np.all(sliced_block.values == block.values[samples_filter, ...])
         )
@@ -54,26 +54,26 @@ class TestSliceSamples(unittest.TestCase):
             # no slicing of properties has occurred
             self.assertTrue(np.all(sliced_gradient.properties == gradient.properties))
 
-            # samples have been sliced to the correct dimension
+            # samples have been updated to refer to the new samples
+            self.assertLess(
+                np.max(sliced_gradient.samples["sample"]),
+                sliced_block.values.shape[0],
+            )
 
-            # FIXME: this only works for position gradients
-            # self.assertEqual(
-            #     len(sliced_block.samples),
-            #     len(
-            #         [
-            #             s
-            #             for s in gradient.samples["structure"]
-            #             if s in structures_to_keep
-            #         ]
-            #     ),
-            # )
+            # other columns in the gradient samples have been sliced correctly
+            gradient_sample_filter = samples_filter[gradient.samples["sample"]]
+            if len(gradient.samples.names) > 0:
+                expected = gradient.samples.asarray()[gradient_sample_filter, 1:]
+                sliced_gradient_samples = sliced_gradient.samples.asarray()[:, 1:]
+                self.assertTrue(np.all(sliced_gradient_samples == expected))
 
             # same components as the original
             self.assertEqual(len(gradient.components), len(sliced_gradient.components))
             for sliced_c, c in zip(sliced_gradient.components, gradient.components):
                 self.assertTrue(np.all(sliced_c == c))
 
-            # TODO: check values
+            expected = gradient.data[gradient_sample_filter]
+            self.assertTrue(np.all(sliced_gradient.data == expected))
 
     def _check_empty_block(self, block, sliced_block):
         # sliced block has no values
