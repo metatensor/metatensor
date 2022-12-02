@@ -2,12 +2,12 @@ import warnings
 
 import numpy as np
 
-from ..tensor import TensorMap
 from ..block import TensorBlock
 from ..labels import Labels
+from ..tensor import TensorMap
 
 
-def slice(tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None):
+def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
     """
     Slices an input :py:class:`TensorMap` along the samples and/or properties
     dimension(s). ``samples_to_slice`` and ``properties_to_slice`` are
@@ -20,8 +20,8 @@ def slice(tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None)
 
     .. code-block:: python
 
-        sliced_tensormap = slice(
-            tensormap,
+        sliced_tensor = slice(
+            tensor,
             samples=Labels(
                 names=["structure", "center"],
                 values=np.array(
@@ -50,7 +50,7 @@ def slice(tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None)
 
     For example, if a TensorBlock of shape (52, 1, 5) is passed, and only some
     samples are specified to be sliced but none of these appear in the input
-    TesnorBlock, the returned TensorBlock values array will be empty, but its
+    TensorBlock, the returned TensorBlock values array will be empty, but its
     shape will be (0, 1, 5) - i.e. the samples dimension has been sliced to zero
     but the components and properties dimensions remain in-tact. The same logic
     applies to any Gradient TensorBlocks the input TensorBlock may have
@@ -76,46 +76,22 @@ def slice(tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None)
     """
 
     # Perform input checks
-    if not isinstance(tensormap, TensorMap):
+    if not isinstance(tensor, TensorMap):
         raise TypeError(
-            "Input tensor must be an equistore `TensorMap` object."
-            + " If attempting to slice an equistore `TensorBlock`,"
-            + " use the `slice_block()` function instead."
+            "the input tensor must be a `TensorMap` object, if you want to "
+            "to slice a `TensorBlock`, use `slice_block()` instead"
         )
-    if samples_to_slice is None and properties_to_slice is None:
-        raise ValueError(
-            "Must specify either some samples or properties (or both) to slice by."
-        )
-    if samples_to_slice is not None:
-        if not isinstance(samples_to_slice, Labels):
-            raise TypeError(
-                "samples_to_slice must be passed as a equistore `Labels` object."
-            )
-        sample_names = tensormap.sample_names
-        for name in samples_to_slice.names:
-            if name not in sample_names:
-                raise ValueError(
-                    "Invalid sample name '"
-                    + name
-                    + "' - doesn't exist in input `TensorMap`."
-                )
-    if properties_to_slice is not None:
-        if not isinstance(properties_to_slice, Labels):
-            raise TypeError(
-                "properties_to_slice must be passed as a equistore `Labels` object."
-            )
-        property_names = tensormap.property_names
-        for name in properties_to_slice.names:
-            if name not in property_names:
-                raise ValueError(
-                    "Invalid property name '"
-                    + name
-                    + "' - doesn't exist in input `TensorMap`."
-                )
+
+    _check_slice_types(
+        samples_to_slice=samples_to_slice,
+        properties_to_slice=properties_to_slice,
+        sample_names=tensor.sample_names,
+        property_names=tensor.property_names,
+    )
 
     # Slice TensorMap
-    sliced_tensormap = _slice_tensormap(
-        tensormap,
+    sliced_tensor = _slice_tensormap(
+        tensor,
         samples_to_slice=samples_to_slice,
         properties_to_slice=properties_to_slice,
     )
@@ -123,29 +99,29 @@ def slice(tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None)
     # Calculate which blocks have been sliced to now be empty. True if any
     # dimension of block.values is 0, False otherwise.
     empty_blocks = np.array(
-        [np.any(np.array(block.values.shape) == 0) for _, block in sliced_tensormap]
+        [np.any(np.array(block.values.shape) == 0) for _, block in sliced_tensor]
     )
 
     # Issue warnings if some or all of the blocks are now empty.
     if np.any(empty_blocks):
         if np.all(empty_blocks):
             warnings.warn(
-                "\nAll TensorBlocks in the sliced TensorMap are now empty, "
-                + "based on your choice of samples and/or properties to slice by. "
+                "All TensorBlocks in the sliced TensorMap are now empty, "
+                "based on your choice of samples and/or properties to slice by. "
             )
         else:
             warnings.warn(
-                "\nSome TensorBlocks in the sliced TensorMap are now empty, "
-                + "based on your choice of samples and/or properties to slice by. "
-                + "The keys of the empty TensorBlocks are:\n"
-                + str(tensormap.keys[empty_blocks])
+                "Some TensorBlocks in the sliced TensorMap are now empty, "
+                "based on your choice of samples and/or properties to slice by. "
+                "The keys of the empty TensorBlocks are:\n "
+                f"{tensor.keys[empty_blocks]}"
             )
 
-    return sliced_tensormap
+    return sliced_tensor
 
 
 def slice_block(
-    tensorblock: TensorBlock,
+    block: TensorBlock,
     samples_to_slice=None,
     properties_to_slice=None,
 ) -> TensorBlock:
@@ -168,8 +144,8 @@ def slice_block(
 
     .. code-block:: python
 
-        sliced_tensorblock = slice_block(
-            tensorblock,
+        sliced_block = slice_block(
+            block,
             samples=Labels(
                 names=["structure", "center"],
                 values=np.array(
@@ -191,13 +167,13 @@ def slice_block(
 
     For instance, if a TensorBlock of shape (52, 1, 5) is passed, and only some
     samples are specified to be sliced but none of these appear in the input
-    TesnorBlock, the returned TensorBlock values array will be empty, but its
+    TensorBlock, the returned TensorBlock values array will be empty, but its
     shape will be (0, 1, 5) - i.e. the samples dimension has been sliced to zero
     but the components and properties dimensions remain in-tact. The same logic
     applies to any Gradient TensorBlocks the input TensorBlock may have
     associated with it.
 
-    :param tensorblock: the input :py:class:`TensorBlock` to be sliced.
+    :param block: the input :py:class:`TensorBlock` to be sliced.
     :param samples_to_slice: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
@@ -212,60 +188,69 @@ def slice_block(
     """
 
     # Perform input checks
-    if not isinstance(tensorblock, TensorBlock):
+    if not isinstance(block, TensorBlock):
         raise TypeError(
-            "Input tensor must be an equistore `TensorBlock` object."
-            + " If attempting to slice an equistore `TensorMap`,"
-            + " use the `slice()` function instead."
+            "the input tensor must be a `TensorBlock` object, if you want to "
+            "to slice a `TensorMap`, use `slice()` instead"
         )
-    if samples_to_slice is None and properties_to_slice is None:
-        raise ValueError(
-            "Must specify either some samples or properties (or both) to slice by."
-        )
-    if samples_to_slice is not None:
-        if not isinstance(samples_to_slice, Labels):
-            raise TypeError(
-                "samples_to_slice must be passed as a equistore.Labels object."
-            )
-        sample_names = tensorblock.samples.names
-        for name in samples_to_slice.names:
-            if name not in sample_names:
-                raise ValueError(
-                    "Invalid sample name '"
-                    + name
-                    + "' - doesn't exist in input `TensorBlock`."
-                )
-    if properties_to_slice is not None:
-        if not isinstance(properties_to_slice, Labels):
-            raise TypeError(
-                "properties_to_slice must be passed as a equistore.Labels object."
-            )
-        property_names = tensorblock.properties.names
-        for name in properties_to_slice.names:
-            if name not in property_names:
-                raise ValueError(
-                    "Invalid property name '"
-                    + name
-                    + "' - doesn't exist in input `TensorBlock`."
-                )
+
+    _check_slice_types(
+        samples_to_slice=samples_to_slice,
+        properties_to_slice=properties_to_slice,
+        sample_names=block.samples.names,
+        property_names=block.properties.names,
+    )
 
     # Slice TensorMap and issue warning if the output block is empty
-    sliced_tensorblock = _slice_tensorblock(
-        tensorblock,
+    sliced_block = _slice_block(
+        block,
         samples_to_slice=samples_to_slice,
         properties_to_slice=properties_to_slice,
     )
-    if np.any(np.array(sliced_tensorblock.values.shape) == 0):
+    if np.any(np.array(sliced_block.values.shape) == 0):
         warnings.warn(
             "Your input TensorBlock is now empty, based on your choice of samples "
             + "and/or properties to slice by. "
         )
 
-    return sliced_tensorblock
+    return sliced_block
 
 
-def _slice_tensorblock(
-    tensorblock: TensorBlock, samples_to_slice=None, properties_to_slice=None
+def _check_slice_types(
+    samples_to_slice,
+    properties_to_slice,
+    sample_names,
+    property_names,
+):
+    """Perform checks for samples_to_slice/properties_to_slice"""
+
+    if samples_to_slice is None and properties_to_slice is None:
+        raise ValueError(
+            "you must specify either samples or properties (or both) to slice by"
+        )
+
+    if samples_to_slice is not None:
+        if not isinstance(samples_to_slice, Labels):
+            raise TypeError("samples_to_slice must be a `Labels` object")
+        for name in samples_to_slice.names:
+            if name not in sample_names:
+                raise ValueError(
+                    f"invalid sample name '{name}' which is not part of the input"
+                )
+
+    if properties_to_slice is not None:
+        if not isinstance(properties_to_slice, Labels):
+            raise TypeError("properties_to_slice must be a `Labels` object")
+
+        for name in properties_to_slice.names:
+            if name not in property_names:
+                raise ValueError(
+                    f"invalid property name '{name}' which is not part of the input"
+                )
+
+
+def _slice_block(
+    block: TensorBlock, samples_to_slice=None, properties_to_slice=None
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
@@ -277,7 +262,7 @@ def _slice_tensorblock(
     Note that either ``samples_to_slice`` or ``properties_to_slice``, or both,
     should be specified as input.
 
-    :param tensorblock: the input :py:class:`TensorBlock` to be sliced.
+    :param block: the input :py:class:`TensorBlock` to be sliced.
     :param samples_to_slice: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
@@ -291,13 +276,13 @@ def _slice_tensorblock(
         input.
     """
 
-    new_values = tensorblock.values
-    new_samples = tensorblock.samples
-    new_properties = tensorblock.properties
+    new_values = block.values
+    new_samples = block.samples
+    new_properties = block.properties
 
     # Generate arrays of bools indicating which samples indices to keep upon slicing.
     if samples_to_slice is not None:
-        samples = tensorblock.samples[list(samples_to_slice.names)].tolist()
+        samples = block.samples[list(samples_to_slice.names)].tolist()
         set_samples_to_slice = set(samples_to_slice.tolist())
         samples_filter = np.array(
             [sample in set_samples_to_slice for sample in samples]
@@ -307,7 +292,7 @@ def _slice_tensorblock(
 
     # Generate array of bools indicating which properties indices to keep upon slicing.
     if properties_to_slice is not None:
-        properties = tensorblock.properties[list(properties_to_slice.names)].tolist()
+        properties = block.properties[list(properties_to_slice.names)].tolist()
         set_properties_to_slice = set(properties_to_slice.tolist())
         properties_filter = np.array(
             [prop in set_properties_to_slice for prop in properties]
@@ -319,32 +304,48 @@ def _slice_tensorblock(
     new_block = TensorBlock(
         values=new_values,
         samples=new_samples,
-        components=tensorblock.components,
+        components=block.components,
         properties=new_properties,
     )
 
-    # Create a list of numeric indices of the samples that were sliced. Needed to
-    # create filters for Gradient TensorBlocks as there isn't a one-to-one mapping
-    # between samples of the parent TensorBlock and its Gradients. This doesn't
-    # need to be done for properties as the mapping is by definition a one-to-one.
+    # Create a map from the previous samples indexes to the new sample indexes
+    # to update the gradient samples
     if samples_to_slice is not None:
-        set_samples_idxs_to_slice = set(
-            i for i, val in enumerate(samples_filter) if val
-        )
+        # sample_map contains at position old_sample the index of the
+        # corresponding new sample
+        sample_map = np.full(shape=len(samples_filter), fill_value=-1)
+        last = 0
+        for i, picked in enumerate(samples_filter):
+            if picked:
+                sample_map[i] = last
+                last += 1
 
     # Slice each Gradient TensorBlock and add to the new_block.
-    for parameter, gradient in tensorblock.gradients():
+    for parameter, gradient in block.gradients():
 
         new_grad_data = gradient.data
         new_grad_samples = gradient.samples
 
         # Create a samples filter for the Gradient TensorBlock
         if samples_to_slice is not None:
-            grad_samples = gradient.samples["sample"].tolist()
-            grad_samples_filter = np.array(
-                [grad_samp in set_samples_idxs_to_slice for grad_samp in grad_samples]
-            )
+            grad_samples_filter = samples_filter[gradient.samples["sample"]]
             new_grad_samples = new_grad_samples[grad_samples_filter]
+
+            if new_grad_samples.shape[0] != 0:
+                # update the "sample" column of the gradient samples
+                # to refer to the new samples
+                new_grad_samples = (
+                    new_grad_samples.view(dtype=np.int32)
+                    .reshape(new_grad_samples.shape[0], -1)
+                    .copy()
+                )
+                new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
+
+                new_grad_samples = Labels(
+                    names=gradient.samples.names,
+                    values=new_grad_samples,
+                )
+
             new_grad_data = new_grad_data[grad_samples_filter]
         if properties_to_slice is not None:
             new_grad_data = new_grad_data[..., properties_filter]
@@ -393,7 +394,7 @@ def _slice_tensormap(
     return TensorMap(
         keys=tensormap.keys,
         blocks=[
-            _slice_tensorblock(block, samples_to_slice, properties_to_slice)
+            _slice_block(block, samples_to_slice, properties_to_slice)
             for _, block in tensormap
         ],
     )
