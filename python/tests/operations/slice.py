@@ -94,20 +94,20 @@ class TestSliceSamples(unittest.TestCase):
     def test_slice_block(self):
         # Slice only 'structures' 2, 4, 6, 8
         structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
         block = self.tensor.block(0)
         sliced_block = fn.slice_block(
             block,
-            samples_to_slice=samples_to_slice,
+            samples=samples,
         )
         self._check_sliced_block(block, sliced_block, structures_to_keep)
 
         # ===== Slice to an empty block =====
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -116,7 +116,7 @@ class TestSliceSamples(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_block = fn.slice_block(
                 block,
-                samples_to_slice=samples_to_slice,
+                samples=samples,
             )
 
         self._check_empty_block(block, sliced_block)
@@ -124,13 +124,13 @@ class TestSliceSamples(unittest.TestCase):
     def test_slice(self):
         # Slice only 'structures' 2, 4, 6, 8
         structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=structures_to_keep,
         )
         sliced_tensor = fn.slice(
             self.tensor,
-            samples_to_slice=samples_to_slice,
+            samples=samples,
         )
 
         for key, block in self.tensor:
@@ -142,7 +142,7 @@ class TestSliceSamples(unittest.TestCase):
 
         # ===== Slice to all empty blocks =====
         # Slice only 'structures' -1 (i.e. a sample that doesn't exist in the data)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -151,7 +151,7 @@ class TestSliceSamples(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_tensor = fn.slice(
                 self.tensor,
-                samples_to_slice=samples_to_slice,
+                samples=samples,
             )
 
         for _, block in sliced_tensor:
@@ -239,7 +239,7 @@ class TestSliceProperties(unittest.TestCase):
     def test_slice_block(self):
         # Slice only 'n' (i.e. radial channels) 1, 3
         radial_to_keep = np.arange(1, 5, 2).reshape(-1, 1)
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=radial_to_keep,
         )
@@ -247,13 +247,13 @@ class TestSliceProperties(unittest.TestCase):
         block = self.tensor.block(0)
         sliced_block = fn.slice_block(
             block,
-            properties_to_slice=properties_to_slice,
+            properties=properties,
         )
         self._check_sliced_block(block, sliced_block, radial_to_keep)
 
         # ===== Slice to an empty block =====
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -262,7 +262,7 @@ class TestSliceProperties(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_block = fn.slice_block(
                 block,
-                properties_to_slice=properties_to_slice,
+                properties=properties,
             )
 
         self._check_empty_block(block, sliced_block)
@@ -270,14 +270,14 @@ class TestSliceProperties(unittest.TestCase):
     def test_slice(self):
         # Slice only 'n' (i.e. radial channels) 1, 3
         radial_to_keep = np.arange(1, 5, 2).reshape(-1, 1)
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=radial_to_keep,
         )
 
         sliced_tensor = fn.slice(
             self.tensor,
-            properties_to_slice=properties_to_slice,
+            properties=properties,
         )
 
         for key, block in self.tensor:
@@ -289,7 +289,7 @@ class TestSliceProperties(unittest.TestCase):
 
         # ===== Slice to all empty blocks =====
         # Slice only 'n' (i.e. radial channels) -1 (i.e. non-existent channel)
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -298,7 +298,7 @@ class TestSliceProperties(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_tensor = fn.slice(
                 self.tensor,
-                properties_to_slice=properties_to_slice,
+                properties=properties,
             )
 
         for key, block in self.tensor:
@@ -316,21 +316,21 @@ class TestSliceBoth(unittest.TestCase):
         block = tensor.block(5)
         # Slice 'center' 1, 3, 5
         centers_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["center"],
             values=centers_to_keep,
         )
         # Slice 'n' (i.e. radial channel) 0, 1, 2
         channels_to_keep = np.arange(0, 3).reshape(-1, 1)
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=channels_to_keep,
         )
 
         sliced_block = fn.slice_block(
             block,
-            samples_to_slice=samples_to_slice,
-            properties_to_slice=properties_to_slice,
+            samples=samples,
+            properties=properties,
         )
 
         # only desired samples are in the output.
@@ -375,13 +375,13 @@ class TestSliceErrorsWarnings(unittest.TestCase):
 
     def test_slice_errors(self):
         centers_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["center"],
             values=centers_to_keep,
         )
 
         with self.assertRaises(TypeError) as cm:
-            fn.slice(self.tensor.block(0), samples_to_slice=samples_to_slice),
+            fn.slice(self.tensor.block(0), samples=samples),
 
         self.assertEqual(
             str(cm.exception),
@@ -389,39 +389,39 @@ class TestSliceErrorsWarnings(unittest.TestCase):
             "to slice a `TensorBlock`, use `slice_block()` instead",
         )
 
-        # passing samples_to_slice=np.array raises TypeError
+        # passing samples=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             fn.slice(
                 self.tensor,
-                samples_to_slice=np.array([[5], [6]]),
+                samples=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "samples_to_slice must be a `Labels` object",
+            "samples must be a `Labels` object",
         )
 
-        # passing properties_to_slice=np.array raises TypeError
+        # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             fn.slice(
                 self.tensor,
-                properties_to_slice=np.array([[5], [6]]),
+                properties=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "properties_to_slice must be a `Labels` object",
+            "properties must be a `Labels` object",
         )
 
     def test_slice_block_errors(self):
         centers_to_keep = np.arange(1, 7, 2).reshape(-1, 1)
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["center"],
             values=centers_to_keep,
         )
 
         with self.assertRaises(TypeError) as cm:
-            fn.slice_block(self.tensor, samples_to_slice=samples_to_slice),
+            fn.slice_block(self.tensor, samples=samples),
 
         self.assertEqual(
             str(cm.exception),
@@ -430,33 +430,33 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         )
 
         block = self.tensor.block(0)
-        # passing samples_to_slice=np.array raises TypeError
+        # passing samples=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             fn.slice_block(
                 block,
-                samples_to_slice=np.array([[5], [6]]),
+                samples=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "samples_to_slice must be a `Labels` object",
+            "samples must be a `Labels` object",
         )
 
-        # passing properties_to_slice=np.array raises TypeError
+        # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             fn.slice_block(
                 block,
-                properties_to_slice=np.array([[5], [6]]),
+                properties=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "properties_to_slice must be a `Labels` object",
+            "properties must be a `Labels` object",
         )
 
     def test_warnings(self):
         # ==== warning when some empty blocks produced
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=np.array([2]).reshape(-1, 1),
         )
@@ -464,7 +464,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             fn.slice(
                 self.tensor,
-                samples_to_slice=samples_to_slice,
+                samples=samples,
             )
 
         self.assertIn(
@@ -473,7 +473,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         )
 
         # ==== warning when only empty blocks are produced
-        samples_to_slice = Labels(
+        samples = Labels(
             names=["structure"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -481,7 +481,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             fn.slice(
                 self.tensor,
-                samples_to_slice=samples_to_slice,
+                samples=samples,
             )
 
         self.assertIn(
@@ -489,7 +489,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
             str(cm.warning),
         )
 
-        properties_to_slice = Labels(
+        properties = Labels(
             names=["n"],
             values=np.array([-1]).reshape(-1, 1),
         )
@@ -497,7 +497,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             fn.slice(
                 self.tensor,
-                properties_to_slice=properties_to_slice,
+                properties=properties,
             )
 
         self.assertIn(

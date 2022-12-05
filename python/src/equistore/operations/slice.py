@@ -7,15 +7,15 @@ from ..labels import Labels
 from ..tensor import TensorMap
 
 
-def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
+def slice(tensor: TensorMap, samples=None, properties=None) -> TensorMap:
     """
     Slices an input :py:class:`TensorMap` along the samples and/or properties
-    dimension(s). ``samples_to_slice`` and ``properties_to_slice`` are
+    dimension(s). ``samples`` and ``properties`` are
     :py:class:`Labels` objects that specify the samples/properties
     (respectively) names and indices that should be sliced, i.e. kept in the
     output tensor.
 
-    Note that either ``samples_to_slice`` or ``properties_to_slice``, or both,
+    Note that either ``samples`` or ``properties``, or both,
     should be specified as input.
 
     .. code-block:: python
@@ -39,7 +39,7 @@ def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
     input. However, the returned :py:class:`TensorMap` will be returned with the
     same number of blocks and the corresponding keys as the input. If any block
     upon slicing is reduced to nothing, i.e. in the case that it has none of the
-    specified ``samples_to_slice`` or ``properties_to_slice``, an empty block
+    specified ``samples`` or ``properties``, an empty block
     will be returned but will still be accessible by its key. User warnings will
     be issued if any blocks are sliced to contain no values.
 
@@ -60,12 +60,12 @@ def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
     individual :py:class:`TensorBlock` is sliced.
 
     :param tensor: the input :py:class:`TensorMap` to be sliced.
-    :param samples_to_slice: a :py:class:`Labels` object containing the names
+    :param samples: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the each of the sliced
         :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
         value of None indicates no slicing along the samples dimension should
         occur.
-    :param properties_to_slice: a :py:class:`Labels` object containing the names
+    :param properties: a :py:class:`Labels` object containing the names
         and indices of properties to keep in each of the sliced
         :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
         value of None indicates no slicing along the properties dimension should
@@ -83,8 +83,8 @@ def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
         )
 
     _check_slice_types(
-        samples_to_slice=samples_to_slice,
-        properties_to_slice=properties_to_slice,
+        samples=samples,
+        properties=properties,
         sample_names=tensor.sample_names,
         property_names=tensor.property_names,
     )
@@ -92,8 +92,8 @@ def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
     # Slice TensorMap
     sliced_tensor = _slice_tensormap(
         tensor,
-        samples_to_slice=samples_to_slice,
-        properties_to_slice=properties_to_slice,
+        samples=samples,
+        properties=properties,
     )
 
     # Calculate which blocks have been sliced to now be empty. True if any
@@ -122,17 +122,17 @@ def slice(tensor: TensorMap, samples_to_slice=None, properties_to_slice=None):
 
 def slice_block(
     block: TensorBlock,
-    samples_to_slice=None,
-    properties_to_slice=None,
+    samples=None,
+    properties=None,
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
-    dimension(s). ``samples_to_slice`` and ``properties_to_slice`` are
+    dimension(s). ``samples`` and ``properties`` are
     :py:class:`Labels` objects that specify the samples/properties
     (respectively) names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
-    Note that either ``samples_to_slice`` or ``properties_to_slice``, or both,
+    Note that either ``samples`` or ``properties``, or both,
     should be specified as input.
 
     Example: take an input :py:class:`TensorBlock` of shape (100, 1, 6), where
@@ -174,11 +174,11 @@ def slice_block(
     associated with it.
 
     :param block: the input :py:class:`TensorBlock` to be sliced.
-    :param samples_to_slice: a :py:class:`Labels` object containing the names
+    :param samples: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
         along the samples dimension should occur.
-    :param properties_to_slice: a :py:class:`Labels` object containing the names
+    :param properties: a :py:class:`Labels` object containing the names
         and indices of properties to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
         along the properties dimension should occur.
@@ -195,8 +195,8 @@ def slice_block(
         )
 
     _check_slice_types(
-        samples_to_slice=samples_to_slice,
-        properties_to_slice=properties_to_slice,
+        samples=samples,
+        properties=properties,
         sample_names=block.samples.names,
         property_names=block.properties.names,
     )
@@ -204,8 +204,8 @@ def slice_block(
     # Slice TensorMap and issue warning if the output block is empty
     sliced_block = _slice_block(
         block,
-        samples_to_slice=samples_to_slice,
-        properties_to_slice=properties_to_slice,
+        samples=samples,
+        properties=properties,
     )
     if np.any(np.array(sliced_block.values.shape) == 0):
         warnings.warn(
@@ -217,57 +217,55 @@ def slice_block(
 
 
 def _check_slice_types(
-    samples_to_slice,
-    properties_to_slice,
+    samples,
+    properties,
     sample_names,
     property_names,
 ):
-    """Perform checks for samples_to_slice/properties_to_slice"""
+    """Perform checks for samples/properties"""
 
-    if samples_to_slice is None and properties_to_slice is None:
+    if samples is None and properties is None:
         raise ValueError(
             "you must specify either samples or properties (or both) to slice by"
         )
 
-    if samples_to_slice is not None:
-        if not isinstance(samples_to_slice, Labels):
-            raise TypeError("samples_to_slice must be a `Labels` object")
-        for name in samples_to_slice.names:
+    if samples is not None:
+        if not isinstance(samples, Labels):
+            raise TypeError("samples must be a `Labels` object")
+        for name in samples.names:
             if name not in sample_names:
                 raise ValueError(
                     f"invalid sample name '{name}' which is not part of the input"
                 )
 
-    if properties_to_slice is not None:
-        if not isinstance(properties_to_slice, Labels):
-            raise TypeError("properties_to_slice must be a `Labels` object")
+    if properties is not None:
+        if not isinstance(properties, Labels):
+            raise TypeError("properties must be a `Labels` object")
 
-        for name in properties_to_slice.names:
+        for name in properties.names:
             if name not in property_names:
                 raise ValueError(
                     f"invalid property name '{name}' which is not part of the input"
                 )
 
 
-def _slice_block(
-    block: TensorBlock, samples_to_slice=None, properties_to_slice=None
-) -> TensorBlock:
+def _slice_block(block: TensorBlock, samples=None, properties=None) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
-    dimension(s). ``samples_to_slice`` and ``properties_to_slice`` are
+    dimension(s). ``samples`` and ``properties`` are
     :py:class:`Labels` objects that specify the samples/properties
     (respectively) names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
-    Note that either ``samples_to_slice`` or ``properties_to_slice``, or both,
+    Note that either ``samples`` or ``properties``, or both,
     should be specified as input.
 
     :param block: the input :py:class:`TensorBlock` to be sliced.
-    :param samples_to_slice: a :py:class:`Labels` object containing the names
+    :param samples: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
         along the samples dimension should occur.
-    :param properties_to_slice: a :py:class:`Labels` object containing the names
+    :param properties: a :py:class:`Labels` object containing the names
         and indices of properties to keep in the sliced output
         :py:class:`TensorBlock`. Default value of None indicates no slicing
         along the properties dimension should occur.
@@ -281,21 +279,21 @@ def _slice_block(
     new_properties = block.properties
 
     # Generate arrays of bools indicating which samples indices to keep upon slicing.
-    if samples_to_slice is not None:
-        samples = block.samples[list(samples_to_slice.names)].tolist()
-        set_samples_to_slice = set(samples_to_slice.tolist())
+    if samples is not None:
+        all_samples = block.samples[list(samples.names)].tolist()
+        set_samples_to_slice = set(samples.tolist())
         samples_filter = np.array(
-            [sample in set_samples_to_slice for sample in samples]
+            [sample in set_samples_to_slice for sample in all_samples]
         )
         new_values = new_values[samples_filter]
         new_samples = new_samples[samples_filter]
 
     # Generate array of bools indicating which properties indices to keep upon slicing.
-    if properties_to_slice is not None:
-        properties = block.properties[list(properties_to_slice.names)].tolist()
-        set_properties_to_slice = set(properties_to_slice.tolist())
+    if properties is not None:
+        all_properties = block.properties[list(properties.names)].tolist()
+        set_properties_to_slice = set(properties.tolist())
         properties_filter = np.array(
-            [prop in set_properties_to_slice for prop in properties]
+            [prop in set_properties_to_slice for prop in all_properties]
         )
         new_values = new_values[..., properties_filter]
         new_properties = new_properties[properties_filter]
@@ -310,7 +308,7 @@ def _slice_block(
 
     # Create a map from the previous samples indexes to the new sample indexes
     # to update the gradient samples
-    if samples_to_slice is not None:
+    if samples is not None:
         # sample_map contains at position old_sample the index of the
         # corresponding new sample
         sample_map = np.full(shape=len(samples_filter), fill_value=-1)
@@ -327,7 +325,7 @@ def _slice_block(
         new_grad_samples = gradient.samples
 
         # Create a samples filter for the Gradient TensorBlock
-        if samples_to_slice is not None:
+        if samples is not None:
             grad_samples_filter = samples_filter[gradient.samples["sample"]]
             new_grad_samples = new_grad_samples[grad_samples_filter]
 
@@ -347,7 +345,7 @@ def _slice_block(
                 )
 
             new_grad_data = new_grad_data[grad_samples_filter]
-        if properties_to_slice is not None:
+        if properties is not None:
             new_grad_data = new_grad_data[..., properties_filter]
 
         # Add sliced Gradient to the TensorBlock
@@ -361,26 +359,24 @@ def _slice_block(
     return new_block
 
 
-def _slice_tensormap(
-    tensormap: TensorMap, samples_to_slice=None, properties_to_slice=None
-) -> TensorMap:
+def _slice_tensormap(tensormap: TensorMap, samples=None, properties=None) -> TensorMap:
     """
     Slices an input :py:class:`TensorMap` along the samples and/or properties
-    dimension(s). ``samples_to_slice`` and ``properties_to_slice`` are
+    dimension(s). ``samples`` and ``properties`` are
     :py:class:`Labels` objects that specify the samples/properties
     (respectively) names and indices that should be sliced, i.e. kept in the
     output tensor.
 
-    Note that either ``samples_to_slice`` or ``properties_to_slice``, or both,
+    Note that either ``samples`` or ``properties``, or both,
     should be specified as input.
 
     :param tensor: the input :py:class:`TensorMap` to be sliced.
-    :param samples_to_slice: a :py:class:`Labels` object containing the names
+    :param samples: a :py:class:`Labels` object containing the names
         and indices of samples to keep in the sliced :py:class:`TensorBlock`
         output, or each of the sliced :py:class:`TensorBlock` objects of the
         output :py:class:`TensorMap`. Default value of None indicates no slicing
         along the samples dimension should occur.
-    :param properties_to_slice: a :py:class:`Labels` object containing the names
+    :param properties: a :py:class:`Labels` object containing the names
         and indices of properties to keep in the sliced :py:class:`TensorBlock`
         output, or each of the sliced :py:class:`TensorBlock` objects of the
         output :py:class:`TensorMap`. Default value of None indicates no slicing
@@ -393,8 +389,5 @@ def _slice_tensormap(
     # Iterate over, and slice, each block (+ gradients) of the input TensorMap in turn.
     return TensorMap(
         keys=tensormap.keys,
-        blocks=[
-            _slice_block(block, samples_to_slice, properties_to_slice)
-            for _, block in tensormap
-        ],
+        blocks=[_slice_block(block, samples, properties) for _, block in tensormap],
     )
