@@ -198,13 +198,39 @@ def _get_shape(eqs_array, test):
     return shape
 
 
+TEST_ORIGIN = equistore.data.array._register_origin("python.test-origin")
+equistore.data.register_external_data_wrapper(
+    "python.test-origin",
+    equistore.data.extract.ExternalCpuArray,
+)
+
+
+@equistore.utils.catch_exceptions
+def create_test_array(shape_ptr, shape_count, array):
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
+
+    data = np.zeros(shape)
+    wrapper = equistore.data.array.ArrayWrapper(data)
+    eqs_array = wrapper.into_eqs_array()
+
+    @equistore.utils.catch_exceptions
+    def test_origin(this, origin):
+        origin[0] = TEST_ORIGIN
+
+    eqs_array.origin = eqs_array.origin.__class__(test_origin)
+
+    array[0] = eqs_array
+
+
 class TestRustData(unittest.TestCase):
     def test_parent_keepalive(self):
-        path = os.path.join(ROOT, "..", "..", "tests", "data.npz")
-        tensor = equistore.io.load(path, use_numpy=False)
+        path = os.path.join(ROOT, "..", "..", "equistore-core", "tests", "data.npz")
+        tensor = equistore.io.load_custom_array(path, create_test_array)
 
         values = tensor.block(0).values
-        self.assertTrue(isinstance(values, equistore.data.extract._RustNDArray))
+        self.assertTrue(isinstance(values, equistore.data.extract.ExternalCpuArray))
         self.assertIsNotNone(values._parent)
 
         tensor_ref = weakref.ref(tensor)

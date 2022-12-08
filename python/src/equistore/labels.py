@@ -64,6 +64,11 @@ class Labels(np.ndarray):
         :param values: values of the variables, this needs to be a 2D array of
             ``np.int32`` values
         """
+
+        for key in kwargs.keys():
+            if key != "_eqs_labels_t":
+                raise ValueError(f"unexpected kwarg to Labels: {key}")
+
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 
@@ -101,33 +106,36 @@ class Labels(np.ndarray):
         if values.shape[1] != 0:
             values = values.view(dtype=dtype).reshape((values.shape[0],))
 
-            if "_eqs_labels" not in kwargs:
-                # check that the values are unique in the labels, we assume
-                # that's the case if we get an `eqs_labels` parameter
-                if len(np.unique(values)) != len(values):
-                    raise ValueError("values in Labels must be unique")
-
         obj = values.view(cls)
 
-        # keep a reference to the parent object (if any) to prevent it from
-        # beeing garbage-collected when the Labels are a view inside memory
-        # owned by the parent.
-        obj._parent = kwargs.get("_parent", None)
+        obj._lib = _get_library()
 
-        # keep the eqs_labels_t object around if we have one, it will be used to
-        # implement `position` and `__contains__`
-        obj._eqs_labels = kwargs.get("_eqs_labels", None)
+        obj._eqs_labels_t = kwargs.get("_eqs_labels_t")
+        if obj._eqs_labels_t is not None:
+            # ensure we have a valid Rust pointer
+            assert obj._eqs_labels_t.internal_ptr_ is not None
+        else:
+            # create a new Rust pointer for these Labels
+            obj._eqs_labels_t = _eqs_labels_view(obj)
+            obj._lib.eqs_labels_create(obj._eqs_labels_t)
 
         return obj
 
     def __array_finalize__(self, obj):
-        # keep the parent around when creating sub-views of this array
-        self._parent = getattr(obj, "_parent", None)
-
-        # do not keep the eqs_labels around, since one could be taking only a
+        # do not keep the Rust pointer around around, since one could be taking only a
         # subset of the variables (`samples[["structure", "center"]]`) and this
         # would break `position` and `__contains__`
-        self._eqs_labels = None
+        self._eqs_labels_t = None
+
+        self._lib = getattr(obj, "_lib", None)
+
+    def __del__(self):
+        if (
+            hasattr(self, "_lib")
+            and self._lib is not None
+            and hasattr(self, "_eqs_labels_t")
+        ):
+            self._lib.eqs_labels_free(self._eqs_labels_t)
 
     @property
     def names(self) -> List[str]:
@@ -170,28 +178,15 @@ class Labels(np.ndarray):
 
     def _as_eqs_labels_t(self):
         """transform these labels into eqs_labels_t"""
-        eqs_labels = eqs_labels_t()
-
-        names = ctypes.ARRAY(ctypes.c_char_p, len(self.names))()
-        for i, n in enumerate(self.names):
-            names[i] = n.encode("utf8")
-
-        eqs_labels.labels_ptr = None
-        eqs_labels.names = names
-        eqs_labels.size = len(names)
-        eqs_labels.values = self.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-        eqs_labels.count = self.shape[0]
-
-        return eqs_labels
+        if self._eqs_labels_t is None:
+            return _eqs_labels_view(self)
+        else:
+            return self._eqs_labels_t
 
     @staticmethod
-    def _from_eqs_labels_t(eqs_labels, parent):
+    def _from_eqs_labels_t(eqs_labels):
         """
         Convert an eqs_labels_t into a Labels instance.
-
-        The :py:class:`Labels` instance is only a view inside the eqs_labels_t
-        memory, so one can use the parent parameter to ensure a parent object is
-        kept alive for as long as the instance live.
         """
         names = []
         for i in range(eqs_labels.size):
@@ -203,7 +198,7 @@ class Labels(np.ndarray):
                 ptr=eqs_labels.values, shape=shape, dtype=np.int32
             )
             values.flags.writeable = False
-            return Labels(names, values, _eqs_labels=eqs_labels, _parent=parent)
+            return Labels(names, values, _eqs_labels_t=eqs_labels)
         else:
             return Labels(
                 names=names,
@@ -218,30 +213,24 @@ class Labels(np.ndarray):
         :py:class:`TensorBlock` or a :py:class:`TensorMap`. If you need it for
         standalone labels, please let us know!
         """
-        if self._eqs_labels is not None:
-            lib = _get_library()
+        lib = _get_library()
 
-            result = ctypes.c_int64()
-            values = ctypes.ARRAY(ctypes.c_int32, len(label))()
-            for i, v in enumerate(label):
-                values[i] = ctypes.c_int32(v)
+        result = ctypes.c_int64()
+        values = ctypes.ARRAY(ctypes.c_int32, len(label))()
+        for i, v in enumerate(label):
+            values[i] = ctypes.c_int32(v)
 
-            lib.eqs_labels_position(
-                self._eqs_labels,
-                values,
-                len(label),
-                result,
-            )
+        lib.eqs_labels_position(
+            self._eqs_labels_t,
+            values,
+            len(label),
+            result,
+        )
 
-            if result.value >= 0:
-                return result.value
-            else:
-                return None
+        if result.value >= 0:
+            return result.value
         else:
-            raise Exception(
-                "can not lookup the position of an entry in standalone Labels,"
-                "move them to a block or tensor map first"
-            )
+            return None
 
     def asarray(self):
         """Get a view of these ``Labels`` as a raw 2D array of integers"""
@@ -249,6 +238,22 @@ class Labels(np.ndarray):
 
     def __contains__(self, label):
         return self.position(label) is not None
+
+
+def _eqs_labels_view(array):
+    """Create a new eqs_label_t where the values are a view inside the array"""
+    labels = eqs_labels_t()
+    names = ctypes.ARRAY(ctypes.c_char_p, len(array.names))()
+    for i, n in enumerate(array.names):
+        names[i] = n.encode("utf8")
+
+    labels.internal_ptr_ = None
+    labels.names = names
+    labels.size = len(array.names)
+    labels.values = array.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+    labels.count = array.shape[0]
+
+    return labels
 
 
 def _is_namedtuple(x):

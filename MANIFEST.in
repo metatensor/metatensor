@@ -3,14 +3,14 @@ global-exclude .DS_Store
 
 prune docs
 
-recursive-include src *
-include Cargo.*
+recursive-include equistore-core *
+prune equistore-core/tests
+exclude Cargo.toml
+exclude Cargo.lock
+
 include pyproject.toml
-include CMakeLists.txt
 include AUTHORS
 include LICENSE
-recursive-include cmake *
-recursive-include include *
 
 prune python/tests
 prune python/*.egg-info

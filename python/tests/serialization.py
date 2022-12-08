@@ -6,7 +6,7 @@ import numpy as np
 from utils import test_tensor_map
 
 import equistore.io
-from equistore import EquistoreError, TensorMap
+from equistore import TensorMap
 
 
 ROOT = os.path.dirname(__file__)
@@ -16,34 +16,26 @@ class TestIo(unittest.TestCase):
     def test_load(self):
         def check(tensor):
             self.assertIsInstance(tensor, TensorMap)
-            self.assertEquals(
+            self.assertEqual(
                 tensor.keys.names,
                 ("spherical_harmonics_l", "center_species", "neighbor_species"),
             )
-            self.assertEquals(len(tensor.keys), 27)
+            self.assertEqual(len(tensor.keys), 27)
 
             block = tensor.block(
                 spherical_harmonics_l=2, center_species=6, neighbor_species=1
             )
-
-            self.assertEquals(block.samples.names, ("structure", "center"))
-            self.assertEquals(block.values.shape, (9, 5, 3))
+            self.assertEqual(block.samples.names, ("structure", "center"))
+            self.assertEqual(block.values.shape, (9, 5, 3))
 
             gradient = block.gradient("positions")
-            self.assertEquals(gradient.samples.names, ("sample", "structure", "atom"))
-            self.assertEquals(gradient.data.shape, (59, 3, 5, 3))
+            self.assertEqual(gradient.samples.names, ("sample", "structure", "atom"))
+            self.assertEqual(gradient.data.shape, (59, 3, 5, 3))
 
-        path = os.path.join(ROOT, "..", "..", "tests", "data.npz")
+        path = os.path.join(ROOT, "..", "..", "equistore-core", "tests", "data.npz")
 
-        try:
-            tensor = equistore.io.load(path, use_numpy=False)
-            check(tensor)
-        except EquistoreError as e:
-            self.assertEqual(
-                str(e),
-                "serialization format error: serialization was not "
-                "enabled in equistore",
-            )
+        tensor = equistore.io.load(path, use_numpy=False)
+        check(tensor)
 
         tensor = equistore.io.load(path, use_numpy=True)
         check(tensor)
@@ -80,15 +72,8 @@ class TestIo(unittest.TestCase):
         tmpfile = os.path.join(tempfile.gettempdir(), "serialize-test.npz")
         tensor = test_tensor_map()
 
-        try:
-            equistore.io.save(tmpfile, tensor, use_numpy=False)
-            check_file(tmpfile, tensor)
-        except EquistoreError as e:
-            self.assertEqual(
-                str(e),
-                "serialization format error: serialization was not "
-                "enabled in equistore",
-            )
+        equistore.io.save(tmpfile, tensor, use_numpy=False)
+        check_file(tmpfile, tensor)
 
         equistore.io.save(tmpfile, tensor, use_numpy=True)
         check_file(tmpfile, tensor)

@@ -1,6 +1,6 @@
 import ctypes
+import functools
 import operator
-from functools import reduce
 
 import numpy as np
 
@@ -26,6 +26,7 @@ def _call_with_growing_buffer(callback, initial=1024):
 
 
 def catch_exceptions(function):
+    @functools.wraps(function)
     def inner(*args, **kwargs):
         try:
             function(*args, **kwargs)
@@ -38,7 +39,7 @@ def catch_exceptions(function):
 
 
 def _ptr_to_ndarray(ptr, shape, dtype):
-    if reduce(operator.mul, shape) == 0:
+    if functools.reduce(operator.mul, shape) == 0:
         return np.empty(shape=shape, dtype=dtype)
 
     assert ptr is not None

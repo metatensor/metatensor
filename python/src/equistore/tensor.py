@@ -52,10 +52,6 @@ class TensorMap:
         for block in blocks:
             block._ptr = ctypes.POINTER(eqs_block_t)()
 
-        # keep a reference to the blocks in the tensor map in case they contain
-        # a Python-allocated array that we need to keep alive
-        self._blocks = blocks
-
         self._ptr = self._lib.eqs_tensormap(
             keys._as_eqs_labels_t(), blocks_array, len(blocks)
         )
@@ -72,7 +68,7 @@ class TensorMap:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr"):
+        if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
             self._lib.eqs_tensormap_free(self._ptr)
 
     def __iter__(self):
@@ -110,7 +106,7 @@ class TensorMap:
         """The set of keys labeling the blocks in this tensor map."""
         result = eqs_labels_t()
         self._lib.eqs_tensormap_keys(self._ptr, result)
-        return Labels._from_eqs_labels_t(result, parent=self)
+        return Labels._from_eqs_labels_t(result)
 
     def block(self, *args, **kwargs) -> TensorBlock:
         """
