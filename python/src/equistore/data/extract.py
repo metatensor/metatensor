@@ -3,7 +3,8 @@ from typing import NewType, Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, eqs_data_origin_t
+from .._c_api import c_uintptr_t, eqs_array_t, eqs_data_origin_t
+from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
 from .array import _object_from_ptr, _origin_numpy, _origin_pytorch, _register_origin
 
@@ -78,7 +79,8 @@ def eqs_array_to_python_array(eqs_array, parent=None):
         return _ADDITIONAL_ORIGINS[origin](eqs_array, parent=parent)
     else:
         raise ValueError(
-            f"unable to handle data coming from '{data_origin_name(origin)}'"
+            f"unable to handle data coming from '{data_origin_name(origin)}', "
+            "you should maybe register a new array wrapper with equistore"
         )
 
 
@@ -112,36 +114,30 @@ def data_origin_name(origin):
 # ============================================================================ #
 
 
-class _RustNDArray(np.ndarray):
+class ExternalCpuArray(np.ndarray):
     """
     Small wrapper class around ``np.ndarray``, adding a reference to a parent
     Python object that actually owns the memory used inside the array. This
     prevents the parent from being garbage collected while the ndarray is still
     alive, thus preventing use-after-free.
 
-    This is intended to be used to wrap Rust-owned memory inside a ndarray,
-    while making sure the memory owner is kept around for long enough.
-
-    This will be registered when loading the equistore library for the first time.
+    This is intended to be used to wrap Rust-owned memory inside a numpy's
+    ndarray, while making sure the memory owner is kept around for long enough.
     """
 
-    def __new__(cls, eqs_array, parent):
-        from .._c_lib import _get_library
-
-        lib = _get_library()
-
-        data = ctypes.POINTER(ctypes.c_double)()
+    def __new__(cls, eqs_array: eqs_array_t, parent):
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
-
-        # this requires the data origin of this array is "rust.ndarray", which
-        # is guaranteed by `eqs_array_to_python_object`. This function call will
-        # fail anyway if this is not the case.
-        lib.eqs_get_rust_array(eqs_array, data, shape_ptr, shape_count)
+        status = eqs_array.shape(eqs_array.ptr, shape_ptr, shape_count)
+        _check_status(status)
 
         shape = []
         for i in range(shape_count.value):
             shape.append(shape_ptr[i])
+
+        data = ctypes.POINTER(ctypes.c_double)()
+        status = eqs_array.data(eqs_array.ptr, data)
+        _check_status(status)
 
         array = _ptr_to_ndarray(data, shape, np.float64)
         obj = array.view(cls)
@@ -164,7 +160,7 @@ class _RustNDArray(np.ndarray):
 
         if self_ptr <= new_ptr <= self_ptr + self_size:
             # if the new array is a view inside memory owned by self, wrap it in
-            # a _RustNDArray
+            # a ExternalCpuArray
             return super().__array_wrap__(new)
         else:
             # return the ndarray straight away

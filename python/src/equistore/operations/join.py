@@ -166,9 +166,7 @@ def _join_blocks_along_properties(blocks: List[TensorBlock]) -> TensorBlock:
 
             # find the correct sample position to put the data
             for i_grad, sample_grad in enumerate(gradient.samples):
-                # TODO: once C-API is changed replace by:
-                # i_sample = gradient_samples.position(sample_grad)`
-                i_sample = np.where(gradient_samples == sample_grad)[0][0]
+                i_sample = gradient_samples.position(sample_grad)
                 gradient_data[
                     i_sample,
                     ...,

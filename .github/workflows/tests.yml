@@ -81,18 +81,51 @@ jobs:
           python -m pip install tox black flake8
 
       - name: run tests
-        run: cargo test --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
+        run: cargo test --all --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
-  # second set of jobs checking that (non-test) code still compiles/run as expected
+  # check that the C API declarations are correctly mirrored to Rust and Python
   prevent-bitrot:
     runs-on: ubuntu-20.04
-    name: check examples / benchmarks / Python build
+    name: check C API declarations
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      - name: setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+          target: x86_64-unknown-linux-gnu
+
+      - name: install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pycparser
+
+      - name: check that Rust's C API declarations are up to date
+        run: |
+          # bindgen is already installed on GitHub Actions VM
+          ./equistore/scripts/update-core.sh
+          git diff --exit-code
+
+      - name: check that Python's C API declarations are up to date
+        run: |
+          python python/scripts/generate-declarations.py
+          git diff --exit-code
+
+  # check that we can build the Python wheel
+  python-build:
+    runs-on: ubuntu-20.04
+    name: check Python build
     strategy:
       matrix:
         python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11']
-        include:
-          - rust-version: stable
-            rust-target: x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v3
 
@@ -105,9 +138,9 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust-version }}
+          toolchain: stable
           default: true
-          target: ${{ matrix.rust-target }}
+          target: x86_64-unknown-linux-gnu
 
       - name: install python dependencies
         run: |

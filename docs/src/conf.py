@@ -19,7 +19,7 @@ copyright = f"{datetime.now().date().year}, {author}"
 
 
 def load_version_from_cargo_toml():
-    with open(os.path.join(ROOT, "Cargo.toml")) as fd:
+    with open(os.path.join(ROOT, "equistore-core", "Cargo.toml")) as fd:
         data = toml.load(fd)
     return data["package"]["version"]
 
@@ -29,7 +29,7 @@ release = load_version_from_cargo_toml()
 
 
 def build_cargo_docs():
-    subprocess.run(["cargo", "doc", "--no-deps"])
+    subprocess.run(["cargo", "doc", "--no-deps", "--package", "equistore"])
     output_dir = os.path.join(ROOT, "docs", "build", "html", "reference", "rust")
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)

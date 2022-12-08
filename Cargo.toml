@@ -1,36 +1,6 @@
-[package]
-name = "equistore"
-version = "0.0.0"
-edition = "2021"
-rust-version = "1.61"
+[workspace]
 
-[lib]
-# when https://github.com/rust-lang/cargo/pull/8789 lands, use it here!
-# until then, build all the crate-type we need
-crate-type = ["cdylib", "staticlib", "rlib"]
-bench = false
-
-[dependencies]
-ahash = "0.7"
-indexmap = "1"
-once_cell = "1"
-smallvec = {version = "1", features = ["union"]}
-ndarray = {version = "0.15", optional = true}
-rayon = {version = "1", optional = true}
-
-# implementation of the NPZ serialization format
-py_literal = {version = "0.4", optional = true}
-byteorder = {version = "1", optional = true}
-num-traits = {version = "0.2", default-features = false, optional = true}
-zip = {version = "0.6", default-features = false, optional = true}
-
-[features]
-default = []
-serialization = ["ndarray", "py_literal", "byteorder", "num-traits", "zip"]
-
-[build-dependencies]
-cbindgen = { version = "0.24", default-features = false }
-glob = "0.3"
-
-[dev-dependencies]
-which = "4"
+members = [
+    "equistore-core",
+    "equistore",
+]

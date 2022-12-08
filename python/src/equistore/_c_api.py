@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # fmt: off
 # flake8: noqa
 """
@@ -45,7 +44,7 @@ class eqs_labels_t(ctypes.Structure):
     pass
 
 eqs_labels_t._fields_ = [
-    ("labels_ptr", ctypes.c_void_p),
+    ("internal_ptr_", ctypes.c_void_p),
     ("names", POINTER(ctypes.c_char_p)),
     ("values", POINTER(ctypes.c_int32)),
     ("size", c_uintptr_t),
@@ -79,12 +78,19 @@ eqs_array_t._fields_ = [
 ]
 
 
+eqs_create_array_callback_t = CFUNCTYPE(eqs_status_t, POINTER(c_uintptr_t), c_uintptr_t, POINTER(eqs_array_t))
+
+
 def setup_functions(lib):
     from .status import _check_status
 
     lib.eqs_disable_panic_printing.argtypes = [
     ]
     lib.eqs_disable_panic_printing.restype = None
+
+    lib.eqs_version.argtypes = [
+    ]
+    lib.eqs_version.restype = ctypes.c_char_p
 
     lib.eqs_last_error.argtypes = [
     ]
@@ -98,6 +104,22 @@ def setup_functions(lib):
     ]
     lib.eqs_labels_position.restype = _check_status
 
+    lib.eqs_labels_create.argtypes = [
+        POINTER(eqs_labels_t),
+    ]
+    lib.eqs_labels_create.restype = _check_status
+
+    lib.eqs_labels_clone.argtypes = [
+        eqs_labels_t,
+        POINTER(eqs_labels_t),
+    ]
+    lib.eqs_labels_clone.restype = _check_status
+
+    lib.eqs_labels_free.argtypes = [
+        POINTER(eqs_labels_t),
+    ]
+    lib.eqs_labels_free.restype = _check_status
+
     lib.eqs_register_data_origin.argtypes = [
         ctypes.c_char_p,
         POINTER(eqs_data_origin_t),
@@ -110,14 +132,6 @@ def setup_functions(lib):
         c_uintptr_t,
     ]
     lib.eqs_get_data_origin.restype = _check_status
-
-    lib.eqs_get_rust_array.argtypes = [
-        POINTER(eqs_array_t),
-        POINTER(POINTER(ctypes.c_double)),
-        POINTER(POINTER(c_uintptr_t)),
-        POINTER(c_uintptr_t),
-    ]
-    lib.eqs_get_rust_array.restype = _check_status
 
     lib.eqs_block.argtypes = [
         eqs_array_t,
@@ -226,6 +240,7 @@ def setup_functions(lib):
 
     lib.eqs_tensormap_load.argtypes = [
         ctypes.c_char_p,
+        eqs_create_array_callback_t,
     ]
     lib.eqs_tensormap_load.restype = POINTER(eqs_tensormap_t)
 

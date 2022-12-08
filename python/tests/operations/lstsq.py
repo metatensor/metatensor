@@ -137,57 +137,40 @@ class TestLstsq(unittest.TestCase):
         ydim = len(Yval)
         block_X = TensorBlock(
             values=Xval.reshape((1, xdim, Xval.shape[-1])),
-            samples=Labels(["samples"], np.array([[0]], dtype=np.int32)),
-            components=[
-                Labels(
-                    ["components"], np.array([[0], [1], [2], [3], [4]]), dtype=np.int32
-                )
-            ],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0]])),
+            components=[Labels(["components"], np.array([[0], [1], [2], [3], [4]]))],
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_X.add_gradient(
             "positions",
             data=Xgradval.reshape(1, 3, xdim, Xval.shape[-1]),
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1]], dtype=np.int32),
+                np.array([[0, 1]]),
             ),
             components=[
-                Labels(["der_components"], np.array([[0], [1], [2]], dtype=np.int32)),
-                Labels(
-                    ["components"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
-                ),
+                Labels(["der_components"], np.array([[0], [1], [2]])),
+                Labels(["components"], np.array([[0], [1], [2], [3], [4]])),
             ],
         )
 
         block_Y = TensorBlock(
             values=Yval.reshape((1, ydim, Yval.shape[-1])),
-            samples=Labels(["samples"], np.array([[0]], dtype=np.int32)),
-            components=[
-                Labels(
-                    ["components"], np.array([[0], [1], [2], [3], [4]]), dtype=np.int32
-                )
-            ],
-            properties=Labels(["properties"], np.array([[2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0]])),
+            components=[Labels(["components"], np.array([[0], [1], [2], [3], [4]]))],
+            properties=Labels(["properties"], np.array([[2]])),
         )
         block_Y.add_gradient(
             "positions",
             data=Ygradval.reshape((1, 3, ydim, Yval.shape[-1])),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1]], dtype=np.int32),
-            ),
+            samples=Labels(["sample", "positions"], np.array([[0, 1]])),
             components=[
-                Labels(["der_components"], np.array([[0], [1], [2]], dtype=np.int32)),
-                Labels(
-                    ["components"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
-                ),
+                Labels(["der_components"], np.array([[0], [1], [2]])),
+                Labels(["components"], np.array([[0], [1], [2], [3], [4]])),
             ],
         )
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
 
         X = TensorMap(keys, [block_X])
         Y = TensorMap(keys, [block_Y])

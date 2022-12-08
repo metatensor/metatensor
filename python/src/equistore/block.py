@@ -79,7 +79,12 @@ class TensorBlock:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_parent"):
+        if (
+            hasattr(self, "_lib")
+            and self._lib is not None
+            and hasattr(self, "_ptr")
+            and hasattr(self, "_parent")
+        ):
             if self._parent is None:
                 self._lib.eqs_block_free(self._ptr)
 
@@ -177,7 +182,7 @@ class TensorBlock:
     def _labels(self, axis) -> Labels:
         result = eqs_labels_t()
         self._lib.eqs_block_labels(self._ptr, "values".encode("utf8"), axis, result)
-        return Labels._from_eqs_labels_t(result, parent=self)
+        return Labels._from_eqs_labels_t(result)
 
     def gradient(self, parameter: str) -> "Gradient":
         """
@@ -350,7 +355,7 @@ class Gradient:
         self._lib.eqs_block_labels(
             self._block._ptr, self._name.encode("utf8"), axis, result
         )
-        return Labels._from_eqs_labels_t(result, parent=self._block)
+        return Labels._from_eqs_labels_t(result)
 
 
 def _get_raw_array(lib, block_ptr, name) -> eqs_array_t:

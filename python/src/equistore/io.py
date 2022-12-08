@@ -1,12 +1,49 @@
+import ctypes
 import warnings
+from typing import Callable
 
 import numpy as np
 
+from ._c_api import c_uintptr_t, eqs_array_t, eqs_create_array_callback_t
 from ._c_lib import _get_library
 from .block import TensorBlock
-from .data.array import _is_numpy_array, _is_torch_array
+from .data.array import ArrayWrapper, _is_numpy_array, _is_torch_array
 from .labels import Labels
 from .tensor import TensorMap
+from .utils import catch_exceptions
+
+
+@catch_exceptions
+def create_numpy_array(shape_ptr, shape_count, array):
+    """
+    Callback function that can be used with
+    :py:func:`equistore.io.load_custom_array` to load data in numpy arrays.
+    """
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
+
+    data = np.empty(shape, dtype=np.float64)
+    wrapper = ArrayWrapper(data)
+    array[0] = wrapper.into_eqs_array()
+
+
+@catch_exceptions
+def create_torch_array(shape_ptr, shape_count, array):
+    """
+    Callback function that can be used with
+    :py:func:`equistore.io.load_custom_array` to load data in torch tensors. The
+    resulting tensors are stored on CPU, and their dtype is ``torch.float64``.
+    """
+    import torch
+
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
+
+    data = torch.empty(shape, dtype=torch.float64, device="cpu")
+    wrapper = ArrayWrapper(data)
+    array[0] = wrapper.into_eqs_array()
 
 
 def load(path: str, use_numpy=False) -> TensorMap:
@@ -27,8 +64,42 @@ def load(path: str, use_numpy=False) -> TensorMap:
     if use_numpy:
         return _read_npz(path)
     else:
-        lib = _get_library()
-        return TensorMap._from_ptr(lib.eqs_tensormap_load(path.encode("utf8")))
+        return load_custom_array(path, create_numpy_array)
+
+
+CreateArrayCallback = Callable[
+    [ctypes.POINTER(c_uintptr_t), c_uintptr_t, ctypes.POINTER(eqs_array_t)], None
+]
+
+
+# TODO: type hints on create_array
+def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap:
+    """
+    Load a previously saved :py:class:`equistore.TensorMap` from the given path
+    using a custom array creation callback.
+
+    This is an advanced functionality, which should not be needed by most users.
+
+    This function allows to specify the kind of array to use when loading the
+    data through the create_array callback. This callback should take three
+    arguments: a pointer to the shape, the number of elements in the shape, and
+    a pointer to the ``eqs_array_t`` to be filled.
+
+    :py:func:`equistore.io.create_numpy_array` and
+    :py:func:`equistore.io.create_torch_array` can be used to load data into
+    numpy and torch arrays respectively.
+
+    :param path: path of the file to load
+    :param create_array: callback used to create arrays as needed
+    """
+
+    lib = _get_library()
+
+    ptr = lib.eqs_tensormap_load(
+        path.encode("utf8"), eqs_create_array_callback_t(create_array)
+    )
+
+    return TensorMap._from_ptr(ptr)
 
 
 def save(path: str, tensor: TensorMap, use_numpy=False):
