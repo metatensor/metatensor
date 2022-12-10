@@ -573,18 +573,20 @@ eqs_status_t eqs_tensormap_blocks_matching(const struct eqs_tensormap_t *tensor,
  * lexicographically sorted. Otherwise they are kept in the order in which
  * they appear in the blocks.
  *
+ * The result is a new tensor map, which should be freed with `eqs_tensormap_free`.
+ *
  * @param tensor pointer to an existing tensor map
  * @param keys_to_move description of the keys to move
  * @param sort_samples whether to sort the samples lexicographically after
  *                     merging blocks
  *
- * @returns The status code of this operation. If the status is not
- *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
- *          error message.
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `eqs_last_error()`
+ *          to get the error message.
  */
-eqs_status_t eqs_tensormap_keys_to_properties(struct eqs_tensormap_t *tensor,
-                                              struct eqs_labels_t keys_to_move,
-                                              bool sort_samples);
+struct eqs_tensormap_t *eqs_tensormap_keys_to_properties(const struct eqs_tensormap_t *tensor,
+                                                         struct eqs_labels_t keys_to_move,
+                                                         bool sort_samples);
 
 /**
  * Move the given variables from the component labels to the property labels
@@ -601,9 +603,9 @@ eqs_status_t eqs_tensormap_keys_to_properties(struct eqs_tensormap_t *tensor,
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
-eqs_status_t eqs_tensormap_components_to_properties(struct eqs_tensormap_t *tensor,
-                                                    const char *const *variables,
-                                                    uintptr_t variables_count);
+struct eqs_tensormap_t *eqs_tensormap_components_to_properties(struct eqs_tensormap_t *tensor,
+                                                               const char *const *variables,
+                                                               uintptr_t variables_count);
 
 /**
  * Merge blocks with the same value for selected keys variables along the
@@ -635,9 +637,9 @@ eqs_status_t eqs_tensormap_components_to_properties(struct eqs_tensormap_t *tens
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
-eqs_status_t eqs_tensormap_keys_to_samples(struct eqs_tensormap_t *tensor,
-                                           struct eqs_labels_t keys_to_move,
-                                           bool sort_samples);
+struct eqs_tensormap_t *eqs_tensormap_keys_to_samples(const struct eqs_tensormap_t *tensor,
+                                                      struct eqs_labels_t keys_to_move,
+                                                      bool sort_samples);
 
 /**
  * Load a tensor map from the file at the given path.

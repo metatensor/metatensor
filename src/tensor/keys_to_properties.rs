@@ -38,7 +38,7 @@ impl TensorMap {
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_properties(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
         let names_to_move = keys_to_move.names();
         let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
 
@@ -99,11 +99,7 @@ impl TensorMap {
             }
         }
 
-
-        self.keys = splitted_keys.new_keys;
-        self.blocks = new_blocks;
-
-        return Ok(());
+        return TensorMap::new(splitted_keys.new_keys, new_blocks);
     }
 }
 
@@ -304,9 +300,8 @@ mod tests {
 
     #[test]
     fn sorted_samples() {
-        let mut tensor = example_tensor();
         let keys_to_move = LabelsBuilder::new(vec!["key_1"]).finish();
-        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+        let tensor = example_tensor().keys_to_properties(&keys_to_move, true).unwrap();
 
         assert_eq!(tensor.keys(), &*example_labels(vec!["key_2"], vec![[0], [2], [3]]));
         assert_eq!(tensor.blocks().len(), 3);
@@ -373,9 +368,8 @@ mod tests {
 
     #[test]
     fn unsorted_samples() {
-        let mut tensor = example_tensor();
         let keys_to_move = LabelsBuilder::new(vec!["key_1"]).finish();
-        tensor.keys_to_properties(&keys_to_move, false).unwrap();
+        let tensor = example_tensor().keys_to_properties(&keys_to_move, false).unwrap();
 
         assert_eq!(tensor.keys().count(), 3);
         assert_eq!(tensor.blocks().len(), 3);
@@ -389,10 +383,9 @@ mod tests {
 
     #[test]
     fn user_provided_entries_different_properties() {
-        let mut tensor = example_tensor();
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
         keys_to_move.add(&[0]);
-        let result = tensor.keys_to_properties(&keys_to_move.finish(), false);
+        let result = example_tensor().keys_to_properties(&keys_to_move.finish(), false);
 
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -426,13 +419,13 @@ mod tests {
         keys.add(&[1, 0]);
         let keys = keys.finish();
 
-        let mut tensor = TensorMap::new(keys, blocks).unwrap();
+        let tensor = TensorMap::new(keys, blocks).unwrap();
 
         let keys_to_move = Labels::empty(vec!["key_1"]);
-        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+        let moved = tensor.keys_to_properties(&keys_to_move, true).unwrap();
 
         assert_eq!(
-            *tensor.block_by_id(0).values().properties,
+            *moved.block_by_id(0).values().properties,
             Labels::new(["key_1", "properties"], &[
                 [0, 0],
                 [0, 1],
@@ -482,13 +475,13 @@ mod tests {
 
     #[test]
     fn keys_to_move_in_different_order() {
-        let mut tensor = example_tensor_same_properties_in_all_blocks();
+        let tensor = example_tensor_same_properties_in_all_blocks();
 
         let keys_to_move = Labels::empty(vec!["key_1", "key_2"]);
-        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+        let moved = tensor.keys_to_properties(&keys_to_move, true).unwrap();
 
         assert_eq!(
-            *tensor.block_by_id(0).values().properties,
+            *moved.block_by_id(0).values().properties,
             Labels::new(["key_1", "key_2", "properties"], &[
                 [0, 0, 0],
                 [0, 0, 1],
@@ -505,12 +498,11 @@ mod tests {
             ])
         );
 
-        let mut tensor = example_tensor_same_properties_in_all_blocks();
         let keys_to_move = Labels::empty(vec!["key_2", "key_1"]);
-        tensor.keys_to_properties(&keys_to_move, true).unwrap();
+        let moved = tensor.keys_to_properties(&keys_to_move, true).unwrap();
 
         assert_eq!(
-            *tensor.block_by_id(0).values().properties,
+            *moved.block_by_id(0).values().properties,
             Labels::new(["key_2", "key_1", "properties"], &[
                 [0, 0, 0],
                 [0, 0, 1],
@@ -536,8 +528,7 @@ mod tests {
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
         keys_to_move.add(&[0]);
         keys_to_move.add(&[1]);
-        let mut tensor = initial_tensor.clone();
-        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+        let tensor = initial_tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
         // The new first block contains the old first two blocks merged
         let block = &tensor.blocks()[0];
@@ -592,8 +583,7 @@ mod tests {
         // only keep a subset of the data
         let mut keys_to_move = LabelsBuilder::new(vec!["key_1"]);
         keys_to_move.add(&[0]);
-        let mut tensor = initial_tensor.clone();
-        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+        let tensor = initial_tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
         let block = &tensor.blocks()[0];
         assert_eq!(
@@ -643,8 +633,7 @@ mod tests {
         keys_to_move.add(&[0]);
         keys_to_move.add(&[1]);
         keys_to_move.add(&[2]);
-        let mut tensor = initial_tensor;
-        tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
+        let tensor = initial_tensor.keys_to_properties(&keys_to_move.finish(), true).unwrap();
 
         let block = &tensor.blocks()[0];
         assert_eq!(

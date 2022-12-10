@@ -8,7 +8,9 @@ from pycparser import c_ast, parse_file
 
 ROOT = os.path.dirname(__file__)
 FAKE_INCLUDES = os.path.join(ROOT, "include")
-EQUISTORE_HEADER = os.path.relpath(os.path.join(ROOT, "..", "include", "equistore.h"))
+EQUISTORE_HEADER = os.path.relpath(
+    os.path.join(ROOT, "..", "..", "include", "equistore.h")
+)
 
 
 class Function:
@@ -228,7 +230,7 @@ def generate_functions(file, functions):
 def generate_declarations():
     data = parse(EQUISTORE_HEADER)
 
-    outpath = os.path.join(ROOT, "..", "equistore", "_c_api.py")
+    outpath = os.path.join(ROOT, "..", "src", "equistore", "_c_api.py")
     with open(outpath, "w") as file:
         file.write(
             """# -*- coding: utf-8 -*-
