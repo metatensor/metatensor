@@ -61,7 +61,6 @@ class ArrayWrapper:
         self.array = array
         self._shape = ctypes.ARRAY(c_uintptr_t, len(array.shape))(*array.shape)
 
-        self._children = []
         if _is_numpy_array(array):
             array_origin = _origin_numpy()
         elif _is_torch_array(array):
@@ -69,10 +68,9 @@ class ArrayWrapper:
         else:
             raise ValueError(f"unknown array type: {type(array)}")
 
-        self.eqs_array = eqs_array_t()
-
-        # `eqs_data.eqs_array.ptr` is a pointer to the PyObject `self`
-        self.eqs_array.ptr = ctypes.cast(
+        eqs_array = eqs_array_t()
+        # `eqs_array_t::ptr` is a pointer to the PyObject `self`
+        eqs_array.ptr = ctypes.cast(
             ctypes.pointer(ctypes.py_object(self)), ctypes.c_void_p
         )
 
@@ -81,23 +79,38 @@ class ArrayWrapper:
             origin[0] = array_origin
 
         # use storage.XXX.__class__ to get the right type for all functions
-        self.eqs_array.origin = self.eqs_array.origin.__class__(eqs_array_origin)
+        eqs_array.origin = eqs_array.origin.__class__(eqs_array_origin)
 
-        self.eqs_array.data = self.eqs_array.data.__class__(_eqs_array_data)
+        eqs_array.data = eqs_array.data.__class__(_eqs_array_data)
 
-        self.eqs_array.shape = self.eqs_array.shape.__class__(_eqs_array_shape)
-        self.eqs_array.reshape = self.eqs_array.reshape.__class__(_eqs_array_reshape)
-        self.eqs_array.swap_axes = self.eqs_array.swap_axes.__class__(
-            _eqs_array_swap_axes
-        )
+        eqs_array.shape = eqs_array.shape.__class__(_eqs_array_shape)
+        eqs_array.reshape = eqs_array.reshape.__class__(_eqs_array_reshape)
+        eqs_array.swap_axes = eqs_array.swap_axes.__class__(_eqs_array_swap_axes)
 
-        self.eqs_array.create = self.eqs_array.create.__class__(_eqs_array_create)
-        self.eqs_array.copy = self.eqs_array.copy.__class__(_eqs_array_copy)
-        self.eqs_array.destroy = self.eqs_array.destroy.__class__(_eqs_array_destroy)
+        eqs_array.create = eqs_array.create.__class__(_eqs_array_create)
+        eqs_array.copy = eqs_array.copy.__class__(_eqs_array_copy)
+        eqs_array.destroy = eqs_array.destroy.__class__(_eqs_array_destroy)
 
-        self.eqs_array.move_samples_from = self.eqs_array.move_samples_from.__class__(
+        eqs_array.move_samples_from = eqs_array.move_samples_from.__class__(
             _eqs_array_move_samples_from
         )
+
+        self._eqs_array = eqs_array
+
+    def into_eqs_array(self):
+        """
+        Get an eqs_array_t instance for the wrapper array.
+
+        This function increase the Python-side reference count to the wrapper to
+        ensure the wrapper and arrays are kept alive. The reference count is
+        reduced again when calling `eqs_array_t::destroy` (which will typically
+        be done by the Rust side of the code).
+        """
+        # The returned array is keeping a reference to this python object, we
+        # need to tell Python so that it does not garbage-collect the wrapper
+        ctypes.pythonapi.Py_IncRef(ctypes.py_object(self))
+
+        return self._eqs_array
 
 
 def _object_from_ptr(ptr):
@@ -135,70 +148,69 @@ def _eqs_array_data(this, data):
 
 @catch_exceptions
 def _eqs_array_shape(this, shape_ptr, shape_count):
-    storage = _object_from_ptr(this)
+    wrapper = _object_from_ptr(this)
 
-    shape_ptr[0] = storage._shape
-    shape_count[0] = len(storage._shape)
+    shape_ptr[0] = wrapper._shape
+    shape_count[0] = len(wrapper._shape)
 
 
 @catch_exceptions
 def _eqs_array_reshape(this, shape_ptr, shape_count):
-    storage = _object_from_ptr(this)
+    wrapper = _object_from_ptr(this)
 
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
-    storage.array = storage.array.reshape(shape)
-    storage._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
+    wrapper.array = wrapper.array.reshape(shape)
+    wrapper._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
 
 
 @catch_exceptions
 def _eqs_array_swap_axes(this, axis_1, axis_2):
-    storage = _object_from_ptr(this)
-    storage.array = storage.array.swapaxes(axis_1, axis_2)
+    wrapper = _object_from_ptr(this)
+    wrapper.array = wrapper.array.swapaxes(axis_1, axis_2)
 
-    shape = storage.array.shape
-    storage._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
+    shape = wrapper.array.shape
+    wrapper._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
 
 
 @catch_exceptions
-def _eqs_array_create(this, shape_ptr, shape_count, data_storage):
-    storage = _object_from_ptr(this)
+def _eqs_array_create(this, shape_ptr, shape_count, new_array):
+    wrapper = _object_from_ptr(this)
 
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])
-    dtype = storage.array.dtype
+    dtype = wrapper.array.dtype
 
-    if _is_numpy_array(storage.array):
+    if _is_numpy_array(wrapper.array):
         array = np.zeros(shape, dtype=dtype)
-    elif _is_torch_array(storage.array):
-        array = torch.zeros(shape, dtype=dtype, device=storage.array.device)
+    elif _is_torch_array(wrapper.array):
+        array = torch.zeros(shape, dtype=dtype, device=wrapper.array.device)
 
-    wrapper = ArrayWrapper(array)
-    storage._children.append(wrapper)
-
-    data_storage[0] = wrapper.eqs_array
+    new_wrapper = ArrayWrapper(array)
+    new_array[0] = new_wrapper.into_eqs_array()
 
 
 @catch_exceptions
-def _eqs_array_copy(this, data_storage):
-    storage = _object_from_ptr(this)
+def _eqs_array_copy(this, new_array):
+    wrapper = _object_from_ptr(this)
 
-    if _is_numpy_array(storage.array):
-        array = storage.array.copy()
-    elif _is_torch_array(storage.array):
-        array = storage.array.clone()
+    if _is_numpy_array(wrapper.array):
+        array = wrapper.array.copy()
+    elif _is_torch_array(wrapper.array):
+        array = wrapper.array.clone()
 
-    wrapper = ArrayWrapper(array)
-    data_storage[0] = wrapper.eqs_array
+    new_wrapper = ArrayWrapper(array)
+    new_array[0] = new_wrapper.into_eqs_array()
 
 
 @catch_exceptions
 def _eqs_array_destroy(this):
-    storage = _object_from_ptr(this)
-    storage.array = None
+    wrapper = _object_from_ptr(this)
+    # remove the additional reference to the wrapper, added in `into_eqs_array``
+    ctypes.pythonapi.Py_DecRef(ctypes.py_object(wrapper))
 
 
 @catch_exceptions

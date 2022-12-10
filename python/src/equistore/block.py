@@ -1,17 +1,10 @@
 import copy
 import ctypes
-import gc
 from typing import Generator, List, Tuple
 
 from ._c_api import c_uintptr_t, eqs_array_t, eqs_labels_t
 from ._c_lib import _get_library
-from .data import (
-    Array,
-    ArrayWrapper,
-    eqs_array_to_python_array,
-    eqs_array_to_python_wrapper,
-    eqs_array_was_allocated_by_python,
-)
+from .data import Array, ArrayWrapper, eqs_array_to_python_array
 from .labels import Labels
 from .status import _check_pointer
 
@@ -53,28 +46,25 @@ class TensorBlock:
             array)
         """
         self._lib = _get_library()
-
-        # keep a reference to the values in the block to prevent GC
-        self._values = ArrayWrapper(values)
-        self._gradients = []
+        self._parent = None
 
         components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
         for i, component in enumerate(components):
             components_array[i] = component._as_eqs_labels_t()
 
+        values = ArrayWrapper(values)
+
         self._ptr = self._lib.eqs_block(
-            self._values.eqs_array,
+            values.into_eqs_array(),
             samples._as_eqs_labels_t(),
             components_array,
             len(components_array),
             properties._as_eqs_labels_t(),
         )
-        self._owning = True
-        self._parent = None
         _check_pointer(self._ptr)
 
     @staticmethod
-    def _from_ptr(ptr, parent, owning):
+    def _from_ptr(ptr, parent):
         """
         create a block from a pointer, either owning its data (new block as a
         copy of an existing one) or not (block inside a :py:class:`TensorMap`)
@@ -83,51 +73,19 @@ class TensorBlock:
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
         obj._ptr = ptr
-        obj._owning = owning
-        obj._values = None
-        obj._gradients = []
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from beeing garbage-collected & removing this block
         obj._parent = parent
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_owning"):
-            if self._owning:
+        if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_parent"):
+            if self._parent is None:
                 self._lib.eqs_block_free(self._ptr)
 
     def __deepcopy__(self, _memodict):
-        # Temporarily disable garbage collection to ensure the temporary
-        # ArrayWrapper instance created in _eqs_array_copy will still be
-        # available below
-        if gc.isenabled():
-            gc.disable()
-            reset_gc = True
-        else:
-            reset_gc = False
-
         new_ptr = self._lib.eqs_block_copy(self._ptr)
-        copy = TensorBlock._from_ptr(new_ptr, parent=None, owning=True)
-
-        # Keep references to the wrappers in this block if the arrays were
-        # allocated by Python
-        raw_array = _get_raw_array(self._lib, copy._ptr, "values")
-        if eqs_array_was_allocated_by_python(raw_array):
-            copy._values = eqs_array_to_python_wrapper(raw_array)
-        else:
-            copy._values = None
-
-        for parameter in self.gradients_list():
-            raw_array = _get_raw_array(self._lib, copy._ptr, parameter)
-            if eqs_array_was_allocated_by_python(raw_array):
-                copy._gradients.append(eqs_array_to_python_wrapper(raw_array))
-            else:
-                pass
-
-        if reset_gc:
-            gc.enable()
-
-        return copy
+        return TensorBlock._from_ptr(new_ptr, parent=None)
 
     def copy(self) -> "TensorBlock":
         """
@@ -256,18 +214,16 @@ class TensorBlock:
                 "can not add gradient on this block since it is a view inside "
                 "a TensorMap"
             )
-
-        data = ArrayWrapper(data)
-        self._gradients.append(data)
-
         components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
         for i, component in enumerate(components):
             components_array[i] = component._as_eqs_labels_t()
 
+        data = ArrayWrapper(data)
+
         self._lib.eqs_block_add_gradient(
             self._ptr,
             parameter.encode("utf8"),
-            data.eqs_array,
+            data.into_eqs_array(),
             samples._as_eqs_labels_t(),
             components_array,
             len(components_array),

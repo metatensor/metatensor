@@ -24,11 +24,15 @@ from equistore._c_api import EQS_SUCCESS, c_uintptr_t, eqs_array_t, eqs_sample_m
 ROOT = os.path.dirname(__file__)
 
 
+def free_eqs_array(array):
+    array.destroy(array.ptr)
+
+
 class TestArrayWrapperMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
         wrapper = data.ArrayWrapper(array)
-        eqs_array = wrapper.eqs_array
+        eqs_array = wrapper.into_eqs_array()
 
         self.assertEqual(
             id(data.eqs_array_to_python_array(eqs_array)),
@@ -38,10 +42,12 @@ class TestArrayWrapperMixin:
         origin = data.data_origin(eqs_array)
         self.assertEqual(data.data_origin_name(origin), self.expected_origin())
 
+        free_eqs_array(eqs_array)
+
     def test_shape(self):
         array = self.create_array((2, 3, 4))
         wrapper = data.ArrayWrapper(array)
-        eqs_array = wrapper.eqs_array
+        eqs_array = wrapper.into_eqs_array()
 
         self.assertEqual(_get_shape(eqs_array, self), [2, 3, 4])
 
@@ -51,26 +57,58 @@ class TestArrayWrapperMixin:
 
         self.assertEqual(_get_shape(eqs_array, self), [2, 3, 2, 2])
 
+        free_eqs_array(eqs_array)
+
     def test_swap_axes(self):
         array = self.create_array((2, 3, 18, 23))
         wrapper = data.ArrayWrapper(array)
-        eqs_array = wrapper.eqs_array
+        eqs_array = wrapper.into_eqs_array()
 
         eqs_array.swap_axes(eqs_array.ptr, 1, 3)
         self.assertEqual(_get_shape(eqs_array, self), [2, 23, 18, 3])
 
-    def test_create(self):
-        # TODO
+        free_eqs_array(eqs_array)
 
-        # include tests for destroy here
-        pass
+    def test_create(self):
+        array = self.create_array((2, 3))
+        array_ref = weakref.ref(array)
+
+        wrapper = data.ArrayWrapper(array)
+        eqs_array = wrapper.into_eqs_array()
+
+        new_eqs_array = eqs_array_t()
+        new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
+        status = eqs_array.create(
+            eqs_array.ptr, new_shape, len(new_shape), new_eqs_array
+        )
+        self.assertEqual(status, EQS_SUCCESS)
+
+        new_array = data.eqs_array_to_python_array(new_eqs_array)
+        self.assertNotEqual(id(new_array), id(array))
+
+        self.assertTrue(np.all(np.array(new_array) == np.zeros((18, 4))))
+
+        del array
+        del wrapper
+        gc.collect()
+
+        # there is still one reference to the array through eqs_array
+        self.assertIsNotNone(array_ref())
+
+        free_eqs_array(eqs_array)
+        del eqs_array
+        gc.collect()
+
+        self.assertIsNone(array_ref())
+
+        free_eqs_array(new_eqs_array)
 
     def test_copy(self):
         array = self.create_array((2, 3, 4))
         array[1, :, :] = 3
         array[1, 2, :] = 5
         wrapper = data.ArrayWrapper(array)
-        eqs_array = wrapper.eqs_array
+        eqs_array = wrapper.into_eqs_array()
 
         copy = eqs_array_t()
         status = eqs_array.copy(eqs_array.ptr, copy)
@@ -81,16 +119,19 @@ class TestArrayWrapperMixin:
 
         self.assertTrue(np.all(np.array(array_copy) == np.array(array)))
 
+        free_eqs_array(eqs_array)
+        free_eqs_array(copy)
+
     def test_move_samples_from(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
         wrapper = data.ArrayWrapper(array)
-        eqs_array = wrapper.eqs_array
+        eqs_array = wrapper.into_eqs_array()
 
         other = self.create_array((1, 3, 4))
         other[:] = 2.0
         wrapper_other = data.ArrayWrapper(other)
-        eqs_array_other = wrapper_other.eqs_array
+        eqs_array_other = wrapper_other.into_eqs_array()
 
         move = eqs_sample_mapping_t(input=0, output=1)
         move_array = ctypes.ARRAY(eqs_sample_mapping_t, 1)(move)
@@ -120,6 +161,9 @@ class TestArrayWrapperMixin:
             ]
         )
         self.assertTrue(np.all(np.array(array) == expected))
+
+        free_eqs_array(eqs_array)
+        free_eqs_array(eqs_array_other)
 
 
 class TestNumpyData(unittest.TestCase, TestArrayWrapperMixin):
