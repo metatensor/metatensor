@@ -284,12 +284,63 @@ class TensorMap:
         self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
         return TensorBlock._from_ptr(block, parent=self)
 
+    def keys_to_samples(
+        self,
+        keys_to_move: Union[str, List[str]],
+        *,
+        sort_samples=True,
+    ) -> "TensorMap":
+        """
+        Merge blocks with the same value for selected keys variables along the
+        samples axis.
+
+        The variables (names) of ``keys_to_move`` will be moved from the keys to
+        the sample labels, and blocks with the same remaining keys variables
+        will be merged together along the sample axis.
+
+        If ``keys_to_move`` is a set of :py:class:`Labels`, it must be empty
+        (``keys_to_move.shape[0] == 0``). The new sample labels will contain
+        entries corresponding to the merged blocks' keys.
+
+        The order of the samples is controlled by ``sort_samples``. If
+        ``sort_samples`` is true, samples are re-ordered to keep them
+        lexicographically sorted. Otherwise they are kept in the order in which
+        they appear in the blocks.
+
+        This function is only implemented if all merged block have the same
+        property labels.
+
+        :param keys_to_move: description of the keys to move
+        :param sort_samples: whether to sort the merged samples or keep them in
+            the order in which they appear in the original blocks
+        """
+        keys_to_move = _normalize_keys_to_move(keys_to_move)
+
+        ptr = self._lib.eqs_tensormap_keys_to_samples(
+            self._ptr, keys_to_move._as_eqs_labels_t(), sort_samples
+        )
+        return TensorMap._from_ptr(ptr)
+
+    def components_to_properties(self, variables: Union[str, List[str]]) -> "TensorMap":
+        """
+        Move the given variables from the component labels to the property labels
+        for each block.
+
+        :param variables: name of the component variables to move to the properties
+        """
+        c_variables = _list_or_str_to_array_c_char(variables)
+
+        ptr = self._lib.eqs_tensormap_components_to_properties(
+            self._ptr, c_variables, c_variables._length_
+        )
+        return TensorMap._from_ptr(ptr)
+
     def keys_to_properties(
         self,
         keys_to_move: Union[str, List[str], Labels],
         *,
         sort_samples=True,
-    ):
+    ) -> "TensorMap":
         """
         Merge blocks with the same value for selected keys variables along the
         property axis.
@@ -323,58 +374,10 @@ class TensorMap:
             the order in which they appear in the original blocks
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
-        self._lib.eqs_tensormap_keys_to_properties(
+        ptr = self._lib.eqs_tensormap_keys_to_properties(
             self._ptr, keys_to_move._as_eqs_labels_t(), sort_samples
         )
-
-    def keys_to_samples(
-        self,
-        keys_to_move: Union[str, List[str]],
-        *,
-        sort_samples=True,
-    ):
-        """
-        Merge blocks with the same value for selected keys variables along the
-        samples axis.
-
-        The variables (names) of ``keys_to_move`` will be moved from the keys to
-        the sample labels, and blocks with the same remaining keys variables
-        will be merged together along the sample axis.
-
-        If ``keys_to_move`` is a set of :py:class:`Labels`, it must be empty
-        (``keys_to_move.shape[0] == 0``). The new sample labels will contain
-        entries corresponding to the merged blocks' keys.
-
-        The order of the samples is controlled by ``sort_samples``. If
-        ``sort_samples`` is true, samples are re-ordered to keep them
-        lexicographically sorted. Otherwise they are kept in the order in which
-        they appear in the blocks.
-
-        This function is only implemented if all merged block have the same
-        property labels.
-
-        :param keys_to_move: description of the keys to move
-        :param sort_samples: whether to sort the merged samples or keep them in
-            the order in which they appear in the original blocks
-        """
-        keys_to_move = _normalize_keys_to_move(keys_to_move)
-
-        self._lib.eqs_tensormap_keys_to_samples(
-            self._ptr, keys_to_move._as_eqs_labels_t(), sort_samples
-        )
-
-    def components_to_properties(self, variables: Union[str, List[str]]):
-        """
-        Move the given variables from the component labels to the property labels
-        for each block.
-
-        :param variables: name of the component variables to move to the properties
-        """
-        c_variables = _list_or_str_to_array_c_char(variables)
-
-        self._lib.eqs_tensormap_components_to_properties(
-            self._ptr, c_variables, c_variables._length_
-        )
+        return TensorMap._from_ptr(ptr)
 
     @property
     def sample_names(self) -> List[str]:

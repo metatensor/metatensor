@@ -1560,24 +1560,27 @@ public:
     /// @param keys_to_move description of the keys to move
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
-    void keys_to_properties(const Labels& keys_to_move, bool sort_samples = true) {
-        details::check_status(eqs_tensormap_keys_to_properties(
+    TensorMap keys_to_properties(const Labels& keys_to_move, bool sort_samples = true) const {
+        auto ptr = eqs_tensormap_keys_to_properties(
             tensor_,
             keys_to_move.as_eqs_labels_t(),
             sort_samples
-        ));
+        );
+
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with the variables defined in `keys_to_move`
-    void keys_to_properties(const std::vector<std::string>& keys_to_move, bool sort_samples = true) {
-        keys_to_properties(Labels(keys_to_move), sort_samples);
+    TensorMap keys_to_properties(const std::vector<std::string>& keys_to_move, bool sort_samples = true) const {
+        return keys_to_properties(Labels(keys_to_move), sort_samples);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single variable: `key_to_move`
-    void keys_to_properties(const std::string& key_to_move, bool sort_samples = true) {
-        keys_to_properties(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_properties(const std::string& key_to_move, bool sort_samples = true) const {
+        return keys_to_properties(std::vector<std::string>{key_to_move}, sort_samples);
     }
 
     /// Merge blocks with the same value for selected keys variables along the
@@ -1602,24 +1605,27 @@ public:
     /// @param keys_to_move description of the keys to move
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
-    void keys_to_samples(const Labels& keys_to_move, bool sort_samples = true) {
-        details::check_status(eqs_tensormap_keys_to_samples(
+    TensorMap keys_to_samples(const Labels& keys_to_move, bool sort_samples = true) const {
+        auto ptr = eqs_tensormap_keys_to_samples(
             tensor_,
             keys_to_move.as_eqs_labels_t(),
             sort_samples
-        ));
+        );
+
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with the variables defined in `keys_to_move`
-    void keys_to_samples(const std::vector<std::string>& keys_to_move, bool sort_samples = true) {
-        keys_to_samples(Labels(keys_to_move), sort_samples);
+    TensorMap keys_to_samples(const std::vector<std::string>& keys_to_move, bool sort_samples = true) const {
+        return keys_to_samples(Labels(keys_to_move), sort_samples);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single variable: `key_to_move`
-    void keys_to_samples(const std::string& key_to_move, bool sort_samples = true) {
-        keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_samples(const std::string& key_to_move, bool sort_samples = true) const {
+        return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
     }
 
     /// Move the given `variables` from the component labels to the property
@@ -1627,27 +1633,31 @@ public:
     ///
     /// @param variables name of the component variables to move to the
     ///                  properties
-    void components_to_properties(const std::vector<std::string>& variables) {
+    TensorMap  components_to_properties(const std::vector<std::string>& variables) const {
         auto c_variables = std::vector<const char*>();
         for (const auto& v: variables) {
             c_variables.push_back(v.c_str());
         }
 
-        details::check_status(eqs_tensormap_components_to_properties(
+        auto ptr = eqs_tensormap_components_to_properties(
             tensor_,
             c_variables.data(),
             c_variables.size()
-        ));
+        );
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
     }
 
     /// Call `components_to_properties` with a single variable
-    void components_to_properties(const std::string& variable) {
+    TensorMap components_to_properties(const std::string& variable) const {
         const char* c_str = variable.c_str();
-        details::check_status(eqs_tensormap_components_to_properties(
+        auto ptr = eqs_tensormap_components_to_properties(
             tensor_,
             &c_str,
             1
-        ));
+        );
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
     }
 
     /// Load a previously saved `TensorMap` from the given path.

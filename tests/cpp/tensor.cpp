@@ -33,8 +33,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_samples") {
-        auto tensor = test_tensor_map();
-        tensor.keys_to_samples("key_2", /* sort_samples */ true);
+        auto tensor = test_tensor_map().keys_to_samples("key_2", /* sort_samples */ true);
 
         CHECK(tensor.keys() == Labels({"key_1"}, {{0}, {1}, {2}}));
 
@@ -86,8 +85,7 @@ TEST_CASE("TensorMap") {
         CHECK(gradient_3 == expected);
 
         // unsorted samples
-        tensor = test_tensor_map();
-        tensor.keys_to_samples("key_2", /*sort_samples*/ false);
+        tensor = test_tensor_map().keys_to_samples("key_2", /*sort_samples*/ false);
 
         block = tensor.block_by_id(2);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {
@@ -96,8 +94,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_properties") {
-        auto tensor = test_tensor_map();
-        tensor.keys_to_properties("key_1");
+        auto tensor = test_tensor_map().keys_to_properties("key_1");
 
         CHECK(tensor.keys() == Labels({"key_2"}, {{0}, {2}, {3}}));
 
@@ -153,8 +150,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("component_to_properties") {
-        auto tensor = test_tensor_map();
-        tensor.components_to_properties("component");
+        auto tensor = test_tensor_map().components_to_properties("component");
 
         auto block = tensor.block_by_id(0);
 

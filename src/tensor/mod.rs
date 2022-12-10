@@ -273,16 +273,18 @@ impl TensorMap {
 
     /// Move the given variables from the component labels to the property labels
     /// for each block in this `TensorMap`.
-    pub fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
+    pub fn components_to_properties(&self, variables: &[&str]) -> Result<TensorMap, Error> {
+        let mut clone = self.clone();
+
         if variables.is_empty() {
-            return Ok(());
+            return Ok(clone);
         }
 
-        for block in &mut self.blocks {
+        for block in &mut clone.blocks {
             block.components_to_properties(variables)?;
         }
 
-        Ok(())
+        return Ok(clone);
     }
 }
 

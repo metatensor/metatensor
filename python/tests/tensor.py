@@ -165,9 +165,7 @@ keys: ['key_1' 'key_2']
             self.assertTrue(np.all(block.values == expected_values))
 
     def test_keys_to_properties(self):
-        tensor = test_tensor_map()
-
-        tensor.keys_to_properties("key_1")
+        tensor = test_tensor_map().keys_to_properties("key_1")
 
         self.assertEqual(tensor.keys.names, ("key_2",))
         self.assertEqual(tuple(tensor.keys[0]), (0,))
@@ -233,8 +231,7 @@ keys: ['key_1' 'key_2']
         self.assertTrue(np.all(block.values == np.full((4, 3, 1), 4.0)))
 
     def test_keys_to_samples(self):
-        tensor = test_tensor_map()
-        tensor.keys_to_samples("key_2", sort_samples=True)
+        tensor = test_tensor_map().keys_to_samples("key_2", sort_samples=True)
 
         self.assertEqual(tensor.keys.names, ("key_1",))
         self.assertEqual(tuple(tensor.keys[0]), (0,))
@@ -301,8 +298,7 @@ keys: ['key_1' 'key_2']
         self.assertTrue(np.all(gradient.data == expected))
 
         # unsorted samples
-        tensor = test_tensor_map()
-        tensor.keys_to_samples("key_2", sort_samples=False)
+        tensor = test_tensor_map().keys_to_samples("key_2", sort_samples=False)
 
         block = tensor.block(2)
         self.assertEqual(block.samples.names, ("samples", "key_2"))
@@ -316,8 +312,7 @@ keys: ['key_1' 'key_2']
         self.assertEqual(tuple(block.samples[7]), (5, 3))
 
     def test_components_to_properties(self):
-        tensor = test_tensor_map()
-        tensor.components_to_properties("components")
+        tensor = test_tensor_map().components_to_properties("components")
 
         block = tensor.block(0)
         self.assertEqual(block.samples.names, ("samples",))

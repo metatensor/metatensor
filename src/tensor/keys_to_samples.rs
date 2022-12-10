@@ -28,9 +28,7 @@ impl TensorMap {
     ///
     /// This function is only implemented if all merged block have the same
     /// property labels.
-    pub fn keys_to_samples(&mut self, keys_to_move: &Labels, sort_samples: bool) -> Result<(), Error> {
-        // TODO: keys_to_samples_no_gradients?
-
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
         if keys_to_move.count() > 0 {
             return Err(Error::InvalidParameter(
                 "user provided values for the keys to move is not yet implemented, \
@@ -89,11 +87,7 @@ impl TensorMap {
             }
         }
 
-
-        self.keys = splitted_keys.new_keys;
-        self.blocks = new_blocks;
-
-        return Ok(());
+        return TensorMap::new(splitted_keys.new_keys, new_blocks);
     }
 }
 
@@ -217,9 +211,8 @@ mod tests {
 
     #[test]
     fn sorted_samples() {
-        let mut tensor = example_tensor();
         let keys_to_move = LabelsBuilder::new(vec!["key_2"]).finish();
-        tensor.keys_to_samples(&keys_to_move, true).unwrap();
+        let tensor = example_tensor().keys_to_samples(&keys_to_move, true).unwrap();
 
         assert_eq!(tensor.keys().count(), 3);
         assert_eq!(tensor.keys().names(), ["key_1"]);
@@ -297,9 +290,8 @@ mod tests {
 
     #[test]
     fn unsorted_samples() {
-        let mut tensor = example_tensor();
         let keys_to_move = LabelsBuilder::new(vec!["key_2"]).finish();
-        tensor.keys_to_samples(&keys_to_move, false).unwrap();
+        let tensor = example_tensor().keys_to_samples(&keys_to_move, false).unwrap();
 
         let block_3 = &tensor.blocks()[2];
         assert_eq!(block_3.values().samples.names(), ["samples", "key_2"]);
@@ -316,10 +308,9 @@ mod tests {
 
     #[test]
     fn user_provided_entries() {
-        let mut tensor = example_tensor();
         let mut keys_to_move = LabelsBuilder::new(vec!["key_2"]);
         keys_to_move.add(&[3]);
-        let result = tensor.keys_to_samples(&keys_to_move.finish(), false);
+        let result = example_tensor().keys_to_samples(&keys_to_move.finish(), false);
 
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -355,13 +346,13 @@ mod tests {
         keys.add(&[1, 0]);
         let keys = keys.finish();
 
-        let mut tensor = TensorMap::new(keys, blocks).unwrap();
+        let tensor = TensorMap::new(keys, blocks).unwrap();
 
         let keys_to_move = Labels::empty(vec!["key_1"]);
-        tensor.keys_to_samples(&keys_to_move, true).unwrap();
+        let moved = tensor.keys_to_samples(&keys_to_move, true).unwrap();
 
         assert_eq!(
-            *tensor.block_by_id(0).values().samples,
+            *moved.block_by_id(0).values().samples,
             Labels::new(["samples", "key_1"], &[
                 [0, 0],
                 [2, 0],

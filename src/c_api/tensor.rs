@@ -66,6 +66,7 @@ pub unsafe extern fn eqs_tensormap(
 ) -> *mut eqs_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
     let status = catch_unwind(move || {
         let keys = Labels::try_from(&keys)?;
 
@@ -90,7 +91,7 @@ pub unsafe extern fn eqs_tensormap(
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = eqs_tensormap_t::into_boxed_raw(tensor);
+        *unwind_wrapper.0 = eqs_tensormap_t::into_boxed_raw(tensor);
         Ok(())
     });
 
@@ -256,28 +257,43 @@ pub unsafe extern fn eqs_tensormap_blocks_matching(
 /// lexicographically sorted. Otherwise they are kept in the order in which
 /// they appear in the blocks.
 ///
+/// The result is a new tensor map, which should be freed with `eqs_tensormap_free`.
+///
 /// @param tensor pointer to an existing tensor map
 /// @param keys_to_move description of the keys to move
 /// @param sort_samples whether to sort the samples lexicographically after
 ///                     merging blocks
 ///
-/// @returns The status code of this operation. If the status is not
-///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
-///          error message.
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+///          case of error. In case of error, you can use `eqs_last_error()`
+///          to get the error message.
 #[no_mangle]
 pub unsafe extern fn eqs_tensormap_keys_to_properties(
-    tensor: *mut eqs_tensormap_t,
+    tensor: *const eqs_tensormap_t,
     keys_to_move: eqs_labels_t,
     sort_samples: bool,
-) -> eqs_status_t {
-    catch_unwind(|| {
+) -> *mut eqs_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
         check_pointers!(tensor);
 
         let keys_to_move = Labels::try_from(&keys_to_move)?;
-        (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
+        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
 
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = eqs_tensormap_t::into_boxed_raw(moved);
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 
@@ -299,8 +315,11 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
     tensor: *mut eqs_tensormap_t,
     variables: *const *const c_char,
     variables_count: usize,
-) -> eqs_status_t {
-    catch_unwind(|| {
+) -> *mut eqs_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
         check_pointers!(tensor, variables);
 
         let mut rust_variables = Vec::new();
@@ -310,10 +329,21 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
             rust_variables.push(variable);
         }
 
-        (*tensor).components_to_properties(&rust_variables)?;
+        let moved = (*tensor).components_to_properties(&rust_variables)?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = eqs_tensormap_t::into_boxed_raw(moved);
 
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 /// Merge blocks with the same value for selected keys variables along the
@@ -346,16 +376,29 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
 ///          error message.
 #[no_mangle]
 pub unsafe extern fn eqs_tensormap_keys_to_samples(
-    tensor: *mut eqs_tensormap_t,
+    tensor: *const eqs_tensormap_t,
     keys_to_move: eqs_labels_t,
     sort_samples: bool,
-) -> eqs_status_t {
-    catch_unwind(|| {
+) -> *mut eqs_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
         check_pointers!(tensor);
 
         let keys_to_move = Labels::try_from(&keys_to_move)?;
-        (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
+        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
 
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = eqs_tensormap_t::into_boxed_raw(moved);
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
