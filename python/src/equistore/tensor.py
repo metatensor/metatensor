@@ -40,15 +40,16 @@ class TensorMap:
         blocks_array_t = ctypes.POINTER(eqs_block_t) * len(blocks)
         blocks_array = blocks_array_t(*[block._ptr for block in blocks])
 
-        # all blocks are moved into the tensor map, assign NULL to `block._ptr`
-        # to prevent accessing the blocks from Python/double free
         for block in blocks:
-            if not block._owning:
+            if block._parent is not None:
                 raise ValueError(
                     "can not use blocks from another tensor map in a new one, "
                     "use TensorBlock.copy() to make a copy of each block first"
                 )
 
+        # all blocks are moved into the tensor map, assign NULL to `block._ptr`
+        # to prevent accessing the blocks from Python/double free
+        for block in blocks:
             block._ptr = ctypes.POINTER(eqs_block_t)()
 
         # keep a reference to the blocks in the tensor map in case they contain
@@ -281,7 +282,7 @@ class TensorMap:
     def _get_block_by_id(self, id) -> TensorBlock:
         block = ctypes.POINTER(eqs_block_t)()
         self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
-        return TensorBlock._from_ptr(block, parent=self, owning=False)
+        return TensorBlock._from_ptr(block, parent=self)
 
     def keys_to_properties(
         self,

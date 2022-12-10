@@ -64,20 +64,6 @@ def register_external_data_wrapper(origin, klass):
     _ADDITIONAL_ORIGINS[_register_origin(origin)] = klass
 
 
-def eqs_array_to_python_wrapper(eqs_array):
-    """
-    Convert a raw eqs_array to the corresponding Python ``ArrayWrapper``
-    instance.
-    """
-    origin = data_origin(eqs_array)
-    if _is_python_origin(origin):
-        return _object_from_ptr(eqs_array.ptr)
-    else:
-        raise ValueError(
-            f"unable to handle data coming from '{data_origin_name(origin)}'"
-        )
-
-
 def eqs_array_to_python_array(eqs_array, parent=None):
     """Convert a raw eqs_array to a Python ``Array``.
 
