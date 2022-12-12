@@ -516,7 +516,7 @@ private:
         for (size_t i=0; i<labels.size; i++) {
             auto size = std::strlen(labels.names[i]) + 1;
             auto new_name = static_cast<char*>(std::calloc(1, size));
-            std::strncpy(new_name, labels.names[i], size);
+            std::memcpy(new_name, labels.names[i], size);
             names_.push_back(new_name);
         }
     }
@@ -531,7 +531,7 @@ private:
             // allocate 1 extra char to NULL-terminate the string
             auto size = names[i].size() + 1;
             auto new_name = static_cast<char*>(std::calloc(1, size));
-            std::strncpy(new_name, names[i].data(), size);
+            std::memcpy(new_name, names[i].data(), size);
             names_[i] = new_name;
         }
     }
