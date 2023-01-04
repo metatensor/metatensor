@@ -124,7 +124,7 @@ def sum_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
             )
 
     blocks = []
-    for key, block in tensor:
+    for _, block in tensor:
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
@@ -158,7 +158,7 @@ def mean_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
             )
 
     blocks = []
-    for key, block in tensor:
+    for _, block in tensor:
         blocks.append(
             _reduce_over_samples_block(
                 block=block,

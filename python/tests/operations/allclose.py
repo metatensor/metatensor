@@ -136,7 +136,7 @@ class Testallclose(unittest.TestCase):
         )
         blocks = []
         blocks_e6 = []
-        for key, block in tensor1:
+        for _, block in tensor1:
             blocks.append(block.copy())
             be6 = block.copy()
             be6.values[:] += 1e-6

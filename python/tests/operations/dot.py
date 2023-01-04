@@ -62,7 +62,7 @@ class TestDot(unittest.TestCase):
 
         tensor2 = []
         n_samples = 42
-        for key, block1 in tensor1:
+        for _, block1 in tensor1:
             value2 = np.arange(n_samples * len(block1.properties)).reshape(
                 n_samples, len(block1.properties)
             )
