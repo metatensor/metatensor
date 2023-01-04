@@ -1,10 +1,9 @@
 import numpy as np
 
-from ..tensor import TensorMap
 from ..block import TensorBlock
-
+from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_same_keys, _check_same_gradients
+from ._utils import _check_same_gradients, _check_same_keys
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:

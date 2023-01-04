@@ -8,6 +8,7 @@ import equistore.io
 import equistore.operations as fn
 from equistore import Labels
 
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 TEST_FILE = "qm7-spherical-expansion.npz"
 

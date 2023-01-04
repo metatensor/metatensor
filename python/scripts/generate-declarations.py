@@ -5,6 +5,7 @@ import sys
 
 from pycparser import c_ast, parse_file
 
+
 ROOT = os.path.dirname(__file__)
 FAKE_INCLUDES = os.path.join(ROOT, "include")
 EQUISTORE_HEADER = os.path.relpath(os.path.join(ROOT, "..", "include", "equistore.h"))

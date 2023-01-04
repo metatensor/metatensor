@@ -5,6 +5,7 @@ import numpy as np
 from .._c_api import c_uintptr_t, eqs_array_t, eqs_data_origin_t
 from ..utils import catch_exceptions
 
+
 try:
     import torch
 

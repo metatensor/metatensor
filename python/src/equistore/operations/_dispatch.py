@@ -1,5 +1,6 @@
 import numpy as np
 
+
 try:
     import torch
     from torch import Tensor as TorchTensor

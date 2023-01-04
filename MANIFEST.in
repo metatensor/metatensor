@@ -1,0 +1,17 @@
+global-exclude *.pyc
+global-exclude .DS_Store
+
+prune docs
+
+recursive-include src *
+include Cargo.*
+include pyproject.toml
+include CMakeLists.txt
+recursive-include cmake *
+recursive-include include *
+
+prune python/tests
+prune python/*.egg-info
+
+
+exclude tox.ini

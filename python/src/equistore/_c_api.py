@@ -14,6 +14,7 @@ import enum
 import platform
 from ctypes import CFUNCTYPE, POINTER
 
+
 arch = platform.architecture()[0]
 if arch == "32bit":
     c_uintptr_t = ctypes.c_uint32
