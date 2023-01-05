@@ -14,9 +14,9 @@ For details, tutorials, and examples, please have a look at our `documentation`_
 
 .. _`documentation`: https://lab-cosmo.github.io/equistore/latest/
 
-.. |test| image:: https://github.com/lab-cosmos/equistore/actions/workflows/tests.yml/badge.svg
+.. |test| image:: https://github.com/lab-cosmo/equistore/actions/workflows/tests.yml/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: https://github.com/Luthaf/lab-cosmos/equistore/workflows/tests.yml
+   :target: https://github.com/lab-cosmo/equistore/actions/workflows/tests.yml
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation

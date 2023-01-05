@@ -46,7 +46,7 @@ jobs:
         env:
           RUST_BUILD_TARGET: ${{ matrix.rust-target }}
         run: |
-          pip install wheel
+          python -m pip install wheel
           python setup.py bdist_wheel --plat-name ${{ matrix.platform-name }}
       - uses: actions/upload-artifact@v2
         with:
@@ -101,7 +101,7 @@ jobs:
           python-version: 3.8
       - name: build sdist
         run: |
-          pip install wheel
+          python -m pip install wheel
           python setup.py sdist
       - uses: actions/upload-artifact@v2
         with:
