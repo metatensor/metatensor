@@ -8,6 +8,7 @@ from utils import test_tensor_map
 import equistore.io
 from equistore import EquistoreError, TensorMap
 
+
 ROOT = os.path.dirname(__file__)
 
 

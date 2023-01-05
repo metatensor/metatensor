@@ -1,8 +1,9 @@
 import os
 import unittest
 
-import equistore.operations as fn
 import equistore.io
+import equistore.operations as fn
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 

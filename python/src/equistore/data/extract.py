@@ -7,6 +7,7 @@ from .._c_api import c_uintptr_t, eqs_data_origin_t
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
 from .array import _object_from_ptr, _origin_numpy, _origin_pytorch, _register_origin
 
+
 try:
     import torch
 
@@ -18,27 +19,27 @@ except ImportError:
 if HAS_TORCH:
     # This NewType is only used for typechecking and documentation purposes
     Array = NewType("Array", Union[np.ndarray, torch.Tensor])
-    """
-    An ``Array`` contains the actual data stored in a
-    :py:class:`equistore.TensorBlock`.
-
-    This data is manipulated by ``equistore`` in a completely opaque way: this
-    library does not know what's inside the arrays appart from a small set of
-    constrains:
-
-    - array contains numeric data;
-    - they are stored as row-major, n-dimensional arrays with at least 2
-      dimensions;
-    - it is possible to create new arrays and move data from one array to
-      another.
-
-    The actual type of an ``Array`` depends on how the
-    :py:class:`equistore.TensorBlock` was created. Currently, numpy ``ndarray``
-    and torch ``Tensor`` are supported.
-    """
-
 else:
     Array = NewType("Array", np.ndarray)
+
+Array.__doc__ = """
+An ``Array`` contains the actual data stored in a
+:py:class:`equistore.TensorBlock`.
+
+This data is manipulated by ``equistore`` in a completely opaque way: this
+library does not know what's inside the arrays appart from a small set of
+constrains:
+
+- array contains numeric data;
+- they are stored as row-major, n-dimensional arrays with at least 2
+    dimensions;
+- it is possible to create new arrays and move data from one array to
+    another.
+
+The actual type of an ``Array`` depends on how the
+:py:class:`equistore.TensorBlock` was created. Currently, numpy ``ndarray``
+and torch ``Tensor`` are supported.
+"""
 
 
 _ADDITIONAL_ORIGINS = {}

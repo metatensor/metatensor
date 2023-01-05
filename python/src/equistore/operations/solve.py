@@ -1,10 +1,9 @@
 import numpy as np
 
-from ..tensor import TensorMap
 from ..block import TensorBlock
-
+from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_same_keys, _check_same_gradients
+from ._utils import _check_same_gradients, _check_same_keys
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -26,7 +25,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     """
     _check_same_keys(X, Y, "solve")
 
-    for key, X_block in X:
+    for _, X_block in X:
         shape = X_block.values.shape
         if len(shape) != 2 or (not (shape[0] == shape[1])):
             raise ValueError(

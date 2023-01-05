@@ -1,11 +1,11 @@
 import os
 import unittest
+
 import numpy as np
 
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
-from .utils import compare_blocks
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -66,15 +66,7 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
 
         Ydot = fn.dot(X, w)
-        self.assertTrue(np.all(Ydot.keys == Y.keys))
-        for key, expected_block in Ydot:
-            comparing_dict = compare_blocks(expected_block, Y.block(key), rtol=1e-3)
-            if not comparing_dict["general"]:
-                print(str(comparing_dict))
-            self.assertTrue(comparing_dict["general"])
-            self.assertTrue(
-                np.allclose(expected_block.values, Y.block(key).values, rtol=1e-13)
-            )
+        self.assertTrue(fn.allclose(Ydot, Y))
 
     def test_self_lstsq_grad(self):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
@@ -137,22 +129,7 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
         Ydot = fn.dot(X, w)
-        self.assertTrue(np.all(Ydot.keys == Y.keys))
-        for key, expected_block in Ydot:
-            comparing_dict = compare_blocks(expected_block, Y.block(key), rtol=1e-3)
-            if not comparing_dict["general"]:
-                print(str(comparing_dict))
-            self.assertTrue(comparing_dict["general"])
-            self.assertTrue(
-                np.allclose(expected_block.values, Y.block(key).values, rtol=1e-13)
-            )
-            self.assertTrue(
-                np.allclose(
-                    expected_block.gradient("positions").data,
-                    Y.block(key).gradient("positions").data,
-                    rtol=1e-13,
-                )
-            )
+        self.assertTrue(fn.allclose(Ydot, Y))
 
     def test_self_lstsq_grad_components(self):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
@@ -227,22 +204,7 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
 
         Ydot = fn.dot(X, w)
-        self.assertTrue(np.all(Ydot.keys == Y.keys))
-        for key, expected_block in Ydot:
-            comparing_dict = compare_blocks(expected_block, Y.block(key), rtol=1e-3)
-            if not comparing_dict["general"]:
-                print(str(comparing_dict))
-            self.assertTrue(comparing_dict["general"])
-            self.assertTrue(
-                np.allclose(expected_block.values, Y.block(key).values, rtol=1e-13)
-            )
-            self.assertTrue(
-                np.allclose(
-                    expected_block.gradient("positions").data,
-                    Y.block(key).gradient("positions").data,
-                    rtol=1e-13,
-                )
-            )
+        self.assertTrue(fn.allclose(Ydot, Y))
 
 
 def Xfun1(x, y, z):

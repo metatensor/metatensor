@@ -3,11 +3,17 @@
 Developer documentation
 #######################
 
+This developer documentation is divided into three parts:
 
-Guide through documentation
-===========================
+1. :ref:`devdoc-get-started` explains how you can start developing code and
+   documentation;
+2. In the :ref:`devdoc-explanations` section discusses key topics and concepts
+   at a fairly high level and provides useful explanations to expand your
+   knowledge about the architecture of equistore;
 
-The installation of Equistore comes with a copy of the documentation that you
-can build locally by following the steps below::
+.. toctree::
+   :maxdepth: 2
+   :hidden:
 
-    tox -e docs
+   get-started
+   explanations/index

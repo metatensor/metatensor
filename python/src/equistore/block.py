@@ -96,7 +96,7 @@ class TensorBlock:
             if self._owning:
                 self._lib.eqs_block_free(self._ptr)
 
-    def __deepcopy__(self, _memodict={}):
+    def __deepcopy__(self, _memodict):
         # Temporarily disable garbage collection to ensure the temporary
         # ArrayWrapper instance created in _eqs_array_copy will still be
         # available below

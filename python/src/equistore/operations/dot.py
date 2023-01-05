@@ -1,8 +1,7 @@
 import numpy as np
 
-from ..tensor import TensorMap
 from ..block import TensorBlock
-
+from ..tensor import TensorMap
 from . import _dispatch
 from ._utils import _check_same_keys
 

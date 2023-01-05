@@ -1,5 +1,5 @@
-Tensor Maps
-===========
+TensorMap
+=========
 
 .. doxygentypedef:: eqs_tensormap_t
 
