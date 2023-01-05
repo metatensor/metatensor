@@ -7,6 +7,7 @@ import equistore.io
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
@@ -135,7 +136,7 @@ class Testallclose(unittest.TestCase):
         )
         blocks = []
         blocks_e6 = []
-        for key, block in tensor1:
+        for _, block in tensor1:
             blocks.append(block.copy())
             be6 = block.copy()
             be6.values[:] += 1e-6

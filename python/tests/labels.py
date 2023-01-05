@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from utils import test_tensor_map
 
-from equistore import Labels, TensorBlock, EquistoreError
+from equistore import EquistoreError, Labels, TensorBlock
 
 
 class TestLabels(unittest.TestCase):

@@ -23,10 +23,11 @@ jobs:
           python-version: "3.10"
       - name: install dependencies
         run: |
-          pip install -r docs/requirements.txt
+          python -m pip install tox
           sudo apt install doxygen
       - name: build documentation
-        run: cd docs && make html
+        run: tox -e docs
+
       - name: put documentation in the website
         run: |
           git clone https://github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
@@ -41,6 +42,7 @@ jobs:
               rm -rf latest
               mv ../docs/build/html latest
           fi
+
       - name: deploy to gh-pages
         if: github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v3

@@ -7,6 +7,7 @@ import equistore.io
 import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
@@ -61,7 +62,7 @@ class TestDot(unittest.TestCase):
 
         tensor2 = []
         n_samples = 42
-        for key, block1 in tensor1:
+        for _, block1 in tensor1:
             value2 = np.arange(n_samples * len(block1.properties)).reshape(
                 n_samples, len(block1.properties)
             )

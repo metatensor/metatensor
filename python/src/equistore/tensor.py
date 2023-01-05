@@ -76,8 +76,8 @@ class TensorMap:
 
     def __iter__(self):
         keys = self.keys
-        for i, keys in enumerate(keys):
-            yield keys, self._get_block_by_id(i)
+        for i, key in enumerate(keys):
+            yield key, self._get_block_by_id(i)
 
     def __len__(self):
         return len(self.keys)

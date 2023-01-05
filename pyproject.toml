@@ -6,47 +6,10 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-
-[testenv:tests]
-# avoid rebuilding and installing all rust dependencies, this is especially
-# useful for local testing. Instead we manually build the wheel and install
-# it below, re-using the content of `build/cmake-build/target`
-skip_install = True
-
-passenv =
-    EQUISTORE_BUILD_TYPE
-    RUSTUP_HOME
-    CARGO*
-
-allowlist_externals =
-    bash
-
-deps =
-    discover
-    numpy
-
-commands =
-    bash -c "rm -rf ./dist/equistore-*.whl"
-    python setup.py --quiet bdist_wheel
-    bash -c "pip install --force-reinstall --no-deps ./dist/equistore-*.whl"
-
-    discover -p "*.py" -s python/tests
-
-[testenv:lint]
-skip_install = True
-passenv =
-    EQUISTORE_BUILD_TYPE
-    RUSTUP_HOME
-    CARGO*
-
-deps =
-    black
-    flake8
-
-commands =
-    black --check python
-    flake8 --max-line-length=88 --ignore=E203,W503 python
-"""
+[tool.isort]
+ profile = "black"
+ line_length = 88
+ indent = 4
+ include_trailing_comma = true
+ lines_after_imports = 2
+ known_first_party = "equistore"

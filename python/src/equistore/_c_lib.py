@@ -7,6 +7,7 @@ from ._c_api import setup_functions
 from .data import register_external_data_wrapper
 from .data.extract import _RustNDArray
 
+
 _HERE = os.path.realpath(os.path.dirname(__file__))
 
 EQUISTORE_LIBRARY_PATH = None

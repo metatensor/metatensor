@@ -7,3 +7,4 @@ Equistore documentation
 
    get-started/index
    reference/index
+   devdoc/index

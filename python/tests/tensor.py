@@ -18,7 +18,7 @@ class TestTensorMap(unittest.TestCase):
     def test_print(self):
         """
         Test routine for the print function of the TensorBlock.
-        It compare the reults with those in a file.
+        It compare the results with those in a file.
         """
         tensor = test_tensor_map()
         repr = tensor.__repr__()

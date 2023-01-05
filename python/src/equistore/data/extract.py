@@ -7,6 +7,7 @@ from .._c_api import c_uintptr_t, eqs_data_origin_t
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
 from .array import _object_from_ptr, _origin_numpy, _origin_pytorch, _register_origin
 
+
 try:
     import torch
 
