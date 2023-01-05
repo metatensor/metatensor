@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 
 from ..block import TensorBlock
@@ -12,11 +14,49 @@ def _check_same_keys(a: TensorMap, b: TensorMap, fname: str):
         raise ValueError(f"inputs to {fname} should have the same keys")
 
 
-def _check_same_gradients(a: TensorBlock, b: TensorBlock, fname: str):
-    grad_a = a.gradients_list()
-    grad_b = b.gradients_list()
+def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
+    """Check if a proprty is the same between two :py:class:`TensorBlock`s.
 
-    if len(grad_a) != len(grad_b) or (
-        not np.all([parameter in grad_b for parameter in grad_a])
-    ):
-        raise ValueError(f"inputs to {fname} should have the same gradients")
+    :param a: first :py:class:`TensorBlock` for check
+    :param b: second :py:class:`TensorBlock` for check
+    :param props: A list of strings containing the property to check.
+                 Allowed values are ``'properties'`` or ``'samples'``,
+                 ``'components'`` and ``'gradients'``.
+    """
+    for prop in props:
+        err_msg = f"inputs to {fname} should have the same {prop}"
+        if prop == "samples":
+            if not np.all(a.samples == b.samples):
+                raise ValueError(err_msg)
+        elif prop == "properties":
+            if not np.all(a.properties == b.properties):
+                raise ValueError(err_msg)
+        elif prop == "components":
+            if not np.all(a.components == b.components):
+                raise ValueError(err_msg)
+        elif prop == "gradients":
+            grads_a = a.gradients_list()
+            grads_b = b.gradients_list()
+
+            if len(grads_a) != len(grads_b) or (
+                not np.all([parameter in grads_b for parameter in grads_a])
+            ):
+                raise ValueError(err_msg)
+        else:
+            raise ValueError(
+                f"{prop} is not a valid property to check. "
+                "Choose from 'samples', 'properties', 'components' "
+                "or 'gradients'."
+            )
+
+
+def _check_same_gradients_components(a: TensorBlock, b: TensorBlock, fname: str):
+    for parameter, grad_a in a.gradients():
+        grad_b = b.gradient(parameter)
+        grad_comps_a = np.array(grad_a.components, dtype=object)
+        grad_comps_b = np.array(grad_b.components, dtype=object)
+
+        if not np.all(grad_comps_a == grad_comps_b):
+            raise ValueError(
+                f"input to {fname} should habe the same gradient components"
+            )

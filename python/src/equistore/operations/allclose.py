@@ -3,7 +3,7 @@ import numpy as np
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_same_gradients, _check_same_keys
+from ._utils import _check_blocks, _check_same_keys
 
 
 def allclose(
@@ -186,8 +186,7 @@ def allclose_block_raise(
             if not np.all(c1 == c2):
                 raise ValueError("components not the same or not in the same order")
 
-    if len(block1.gradients_list()) > 0:
-        _check_same_gradients(block1, block2, "allclose")
+    _check_blocks(block1, block2, ["gradients"], "allclose")
 
     for parameter, gradient1 in block1.gradients():
         gradient2 = block2.gradient(parameter)
