@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: "3.10"
       - name: build wheel
         env:
           RUST_BUILD_TARGET: ${{ matrix.rust-target }}
@@ -98,7 +98,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: "3.10"
       - name: build sdist
         run: |
           python -m pip install wheel
