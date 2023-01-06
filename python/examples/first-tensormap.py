@@ -1,40 +1,52 @@
 """
-.. _userdoc-tutorials-first-tensormap:
-
 Getting your first Tensormap
 ============================
 
-We will start by importing all the required packages: the classic numpy;
-``ase`` to load the data, and of course equistore.
+.. start-body
+
+Most of the time, users of equistore will not have to create
+:py:class:`equistore.TensorMap` themselves, but rather manipulate and use
+TensorMaps created by other software (for example atomic-scale representations
+computed by `rascaline <https://github.com/Luthaf/rascaline/>`_). However, for
+the sake of keeping the examples in equistore simple and only about equistore,
+we will show here how to create a TensorMap manually. This will also be useful
+if you would like to integrate your data with equistore to get access to all the
+corresponding models and operations.
+
+
+This example is written in Python, however the concepts are going to be the same
+in every programming language, with some small changes in API to adapt to each
+language capacities. Interested users should refer to the :ref:`API reference
+<userdoc-references>` for the language they would like to use.
+
+------------------
+
+TODO: link to dataset.xyz
+
+------------------
 """
+
+# %%
+#
+# We will start by importing all the required packages: the classic numpy;
+# ``ase`` to load the data, and of course equistore.
 
 from itertools import product
 
+import ase.io
 import numpy as np
-from ase.io import read
 
 from equistore import Labels, TensorBlock, TensorMap
 
 
-frames = []
 # Load the dataset
-
-# frames=[]
-# with Trajectory('dataset.xyz') as dataset:
-#     frames = [f for f in dataset]
-
-frames = read("dataset.xyz", ":10")
+frames = ase.io.read("dataset.xyz", ":10")
 
 # %%
 #
-# Equistore
-# ---------
-#
-# In this tutorial, we are going to use a new storage format, Equistore,
-# https://github.com/lab_cosmo/equistore.
-# %%
 # Creating your first TensorMap
-# --------------------------------
+# -----------------------------
+#
 # Let us start with the example of storing bond lengths as a TensorMap. We can think of
 # categorizing the data based on the chemical nature (atomic species) of the two atoms
 # involved in the pair. As not all species might be present in all the frames, this
@@ -55,15 +67,16 @@ for species1 in species:
 
 # %%
 #
-# For each species pairs, find the relevant samples, i.e. the list of all frames and
-# index of atoms in the frame that correspond to the species pair in block_samples
+# For each species pairs, find the relevant samples, i.e. the list of all frames
+# and index of atoms in the frame that correspond to the species pair in
+# block_samples
 block_samples = []
 for (a1, a2) in species_pairs:
     frame_samples = []
     for idx_frame, f in enumerate(frames):
-        # create tuples of the form (idx_frame, idx_i, idx_j)
-        # where idx_i is the index of atoms in the frame such that they have species =a1
-        # and idx_j is the index of atoms in the frame such that they have species =a2
+        # create tuples of the form (idx_frame, idx_i, idx_j) where idx_i is the
+        # index of atoms in the frame such that they have species =a1 and idx_j
+        # is the index of atoms in the frame such that they have species =a2
         idx_i, idx_j = np.where(f.numbers == a1)[0], np.where(f.numbers == a2)[0]
         frame_samples.append(list(product([idx_frame], idx_i, idx_j)))
 
@@ -77,19 +90,21 @@ sample_labels = Labels(
 )
 # %%
 #
-# Equistore uses Labels that describe or enumerate each column of the values being
-# considered. For example in the code snippet above, we used  labels to specify that
-# the array of sample indices has three columns the first column always holds the
-# structure index, whereas the two following columns have info about the atoms
+# Equistore uses Labels that describe or enumerate each column of the values
+# being considered. For example in the code snippet above, we used  labels to
+# specify that the array of sample indices has three columns the first column
+# always holds the structure index, whereas the two following columns have info
+# about the atoms
 
 # Labels((name1, name2, name3), [(value1, value2, value3),
 #                                (value1, value2, value3),
 #                                (value1, value2, value3)])
 
 # %%
+#
 # For this particular case, each row describes the corresponding row of
-# "TensorMap.values" that are called samples Now we need to find the corresponding
-# values of the bond length for each sample
+# "TensorMap.values" that are called samples Now we need to find the
+# corresponding values of the bond length for each sample
 
 block_values = []
 for (a1, a2) in species_pairs:
@@ -100,9 +115,9 @@ for (a1, a2) in species_pairs:
     block_values.append(np.vstack(frame_values))
 # %%
 #
-# We could have easily merged this operation with the loops above but for clarity we
-# are repeating them here. We use ASE's get_all_distances() function to calculate the
-# bond lengths
+# We could have easily merged this operation with the loops above but for
+# clarity we are repeating them here. We use ASE's get_all_distances() function
+# to calculate the bond lengths
 
 block_components = [Labels(["spherical_symmetry"], np.asarray([[0]], dtype=np.int32))]
 # spherical_symmetry has just one value = 0 to specify that this quantity is a scalar
@@ -115,12 +130,13 @@ block_components = [Labels(["spherical_symmetry"], np.asarray([[0]], dtype=np.in
 # number of **components** = (2 x *lambda* + 1) where lambda tags the behaviour
 # under the irreducible SO(3) group action.
 block_properties = Labels(["Angstrom"], np.asarray([(0,)], dtype=np.int32))
+
 # TODO
 # %%
 #
-# We have collected all the necessary ingredients to create our first TensorMap. Since
-# a TensorMap is a container that holds blocks of data - namely TensorBlocks, let us
-# transform our data to TensorBlock format
+# We have collected all the necessary ingredients to create our first TensorMap.
+# Since a TensorMap is a container that holds blocks of data - namely
+# TensorBlocks, let us transform our data to TensorBlock format
 blocks = []
 for block_idx, samples in enumerate(block_samples):
     blocks.append(
@@ -136,19 +152,20 @@ for block_idx, samples in enumerate(block_samples):
 
 # %%
 #
-# A TensorBlock is the fundamental constituent of a TensorMap. Each Tensorblock is
-# associated with "values" or data array with n-dimensions (here 3 dimensions), each
-# identified by a Label. The first dimension refers to the *samples*.
+# A TensorBlock is the fundamental constituent of a TensorMap. Each Tensorblock
+# is associated with "values" or data array with n-dimensions (here 3
+# dimensions), each identified by a Label. The first dimension refers to the
+# *samples*.
 #
-# The last dimension of the n-dimensional array is the one indexing the "properties" or
-# features of what we are describing in the TensorBlock.  These also usually correspond
-# to all the entries in the basis or :math: `<q|` when the object being represented
-# in mathematically expressed as :math: `<q|f>`.
-# For the given example, the property dimension is a dummy variable since we are just
-# storing one number corresponding to the bondlength(A). But for instance, we could have
-# chosen to project these values on a radial basis <n|r_{ij}>, then the properties
-# dimension would correspond to the radial channels or *n* going from 0 up to
-# :math:`n_max`.
+# The last dimension of the n-dimensional array is the one indexing the
+# "properties" or features of what we are describing in the TensorBlock.  These
+# also usually correspond to all the entries in the basis or :math: `<q|` when
+# the object being represented in mathematically expressed as :math: `<q|f>`.
+# For the given example, the property dimension is a dummy variable since we are
+# just storing one number corresponding to the bondlength(A). But for instance,
+# we could have chosen to project these values on a radial basis <n|r_{ij}>,
+# then the properties dimension would correspond to the radial channels or *n*
+# going from 0 up to :math:`n_max`.
 #
 # All intermediate dimensions of the array are referred to as *components* and
 # are used to describe vectorial or tensorial components of the data.
@@ -166,14 +183,16 @@ bond_lengths = TensorMap(
 # labels (this special class of labels for blocks are also called "keys")
 
 # %%
-# Storing potential targets as TensorMaps
-# -------------------------------------------
-# Before we use the bond lengths with models to predict the energies of the structure,
-# lets also briefly look at how potential targets such as energies or forces would be
-# stored as Equistore TensorMaps.
 #
-# Just like we did for the bond-lengths, we can create a TensorMap for energies of the
-# structures
+# Storing potential targets as TensorMaps
+# ---------------------------------------
+#
+# Before we use the bond lengths with models to predict the energies of the
+# structure, lets also briefly look at how potential targets such as energies or
+# forces would be stored as Equistore TensorMaps.
+#
+# Just like we did for the bond-lengths, we can create a TensorMap for energies
+# of the structures
 energies = np.array([f.info["energy"] for f in frames])
 
 energy_tmap = TensorMap(
@@ -191,8 +210,9 @@ energy_tmap = TensorMap(
     ],
 )
 # %%
-# we created a dummy index to address our block of the energy_tmap that just has one
-# tensorblock.
+#
+# we created a dummy index to address our block of the energy_tmap that just has
+# one tensorblock.
 force_values = []
 force_samples = []
 for idx_frame, f in enumerate(frames):
@@ -221,13 +241,15 @@ force_tmap = TensorMap(
 )
 
 # %%
-# Summary to building Tensormaps
-# ---------------------------------------------
 #
-# A TensorMap is simply obtained by collecting some Tensorblocks, each addressed by a
-# key value, into a common container. The TensorBlocks contain within them the actual
-# values (some n-dimensional array or tensor) you might be interested in working with,
-# but carry along the Labels specifying what each dimension corresponds to.
+# Summary to building Tensormaps
+# ------------------------------
+#
+# A TensorMap is simply obtained by collecting some Tensorblocks, each addressed
+# by a key value, into a common container. The TensorBlocks contain within them
+# the actual values (some n-dimensional array or tensor) you might be interested
+# in working with, but carry along the Labels specifying what each dimension
+# corresponds to.
 
 # list_of_blocks = []
 # list_of_blocks.append( TensorBlock(block.values = values,
@@ -240,41 +262,46 @@ force_tmap = TensorMap(
 # %%
 #
 # Accessing different Blocks of the Tensormap
-# ------------------------------------------------
+# -------------------------------------------
 #
-# There are multiple ways to access blocks on the TensorMap, either by specifying the
-# index value corresponding to the absolute position of the block in the TensorMap,
-# or by specifying the values of one or multiple keys of the TensorMap.
-# For instance, the first tensorblock can be accessed using TensorMap.block(0)
-# In the example above,
+# There are multiple ways to access blocks on the TensorMap, either by
+# specifying the index value corresponding to the absolute position of the block
+# in the TensorMap, or by specifying the values of one or multiple keys of the
+# TensorMap. For instance, the first tensorblock can be accessed using
+# TensorMap.block(0) In the example above,
 
 energy_tmap.block(0)
 
 # %%
+#
 # just returns the only block in the energy tensormap, whereas
 bond_lengths.block(1)
 
 # %%
-# returns the block corresponding to key = bond_lengths.keys[1] (that happens to be the
-# H-C block, i.e. species_1 = 1 and species_2 = 6)
 #
-# The second method involves specifying the values of the keys of the TensorBlock
-# directly, for instance if we are interested in the bond length block between H and C,
-# we can also get them
+# returns the block corresponding to key = bond_lengths.keys[1] (that happens to
+# be the H-C block, i.e. species_1 = 1 and species_2 = 6)
+#
+# The second method involves specifying the values of the keys of the
+# TensorBlock directly, for instance if we are interested in the bond length
+# block between H and C, we can also get them
 bond_lengths.block(species_1=1, species_2=6)
 
 # %%
-# If we are just interested in blocks that have the first atom as H irrespective of the
-# species of the second atom,
+#
+# If we are just interested in blocks that have the first atom as H irrespective
+# of the species of the second atom,
 bond_lengths.blocks(species_1=1)
+
 # %%
-# Notice that we use TensorMap.block**s** as more than one block satisfies the selection
-# criteria. This returns the list of relevant block. If one is interested in identifying
-# the
-# indices of these blocks in the TensorMap,
+#
+# Notice that we use TensorMap.block**s** as more than one block satisfies the
+# selection criteria. This returns the list of relevant block. If one is
+# interested in identifying the indices of these blocks in the TensorMap,
 bond_lengths.blocks_matching(species_1=1)
 
 # %%
+#
 # precisely returns the list of indices of all the blocks where species_1 = 1
 # (namely 0,1,2,3) and one can then use these indices to also identify the
 # corresponding keys
@@ -283,7 +310,7 @@ bond_lengths.keys[bond_lengths.blocks_matching(species_1=1)]
 # %%
 #
 # Simple operations on TensorMaps
-# -------------------------------------------
+# -------------------------------
 #
 # 1. Reshaping Blocks
 # 2. Reindexing Blocks
@@ -298,21 +325,22 @@ bond_lengths.keys[bond_lengths.blocks_matching(species_1=1)]
 # %%
 #
 # Training your first model using Equistore
-# ----------------------------------------------
-# To demonstrate the accessibility and flexiblity of Equistore, we are going to use
-# the polynomial features of the bond lengths, with a cutoff based on the
+# -----------------------------------------
+#
+# To demonstrate the accessibility and flexibility of Equistore, we are going to
+# use the polynomial features of the bond lengths, with a cutoff based on the
 # atomic number of the species involved, to predict the energy of the system.
 
 Cutoff = {1: 2, 6: 3, 7: 4, 8: 4}
 
 # %%
 #
-# As Equistore indexes features based on their metadata, it facillitates the
-# implementation of customizable feature engineering for different feature subsets.
-# In the following code block, we will build the polynomial features of the bond
-# lengths, with its corresponding cutoff. For instance,
-# the bond length of C-H will have its cutoff at :math:`3 + 2 = 5`, meaning that
-# we will take polynomial features of C-H up to degree 5.
+# As Equistore indexes features based on their metadata, it facilitates the
+# implementation of customizable feature engineering for different feature
+# subsets. In the following code block, we will build the polynomial features of
+# the bond lengths, with its corresponding cutoff. For instance, the bond length
+# of C-H will have its cutoff at :math:`3 + 2 = 5`, meaning that we will take
+# polynomial features of C-H up to degree 5.
 
 training_features = []
 
@@ -336,8 +364,8 @@ training_features = np.hstack(training_features)
 # %%
 #
 # Using these features, we can now build our model to predict the energy of the
-# system. For the sake of simplicity, we are going to use Sklearn's implementation
-# for Linear Regression.
+# system. For the sake of simplicity, we are going to use Sklearn's
+# implementation for Linear Regression.
 
 from sklearn.linear_model import LinearRegression  # noqa
 
@@ -346,3 +374,7 @@ model = LinearRegression().fit(training_features, energies)
 print(
     "The R2 score for our model is {}".format(model.score(training_features, energies))
 )
+
+# %%
+#
+# .. end-body

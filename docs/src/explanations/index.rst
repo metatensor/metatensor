@@ -3,10 +3,11 @@
 Explanations
 ============
 
-The explanation section discusses topics that broaden your knowledge of
-equistore. The theory behind the calculators and additional useful information
-are found here to give you more clarity and understanding of what equistore is
-all about.
+The explanation section discusses key topics and concepts at a fairly high level
+and provides useful explanations to expand your knowledge of equistore. It
+requires at least basic to intermediate knowledge of equistore If you are an
+absolute beginner, we recommend you start from the :ref:`userdoc-get-started`
+section of the documentation.
 
 .. toctree::
    :maxdepth: 2

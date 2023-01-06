@@ -6,6 +6,7 @@ from datetime import datetime
 
 import toml
 
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 sys.path.append(os.path.join(ROOT, "python", "src"))
@@ -86,8 +87,8 @@ sphinx_gallery_conf = {
     "gallery_dirs": ["examples"],
     "min_reported_time": 60,
     # Make the code snippet for equistore functions clickable
-    #"reference_url": {"equistore": None},
-    #"prefer_full_module": ["equistore"],
+    "reference_url": {"equistore": None},
+    "prefer_full_module": ["equistore"],
 }
 
 breathe_projects = {

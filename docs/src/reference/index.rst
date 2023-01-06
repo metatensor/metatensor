@@ -3,8 +3,10 @@
 Reference guides
 ----------------
 
-The reference guides describe how the equistore API 
-can be used from each language.
+The reference guides contains technical references for equistore's APIs. They
+describes the various functionalities provided by equistore. You can always
+refer to this section to learn more about classes, functions, modules, and other
+aspects of equistore's machinery you come across.
 
 
 .. toctree::

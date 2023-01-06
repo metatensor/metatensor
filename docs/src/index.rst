@@ -1,65 +1,50 @@
-Overview of Equistore's Documentation
-=====================================
+Equistore: data storage for atomistic machine learning
+======================================================
+
+Equistore is a specialized data storage format suited to all your atomistic
+machine learning needs and more. You can think of it like ``numpy.ndarray`` or
+``torch.Tensor``, but carrying extra metadata together with the data.
+
+This metadata can be about the nature of the **objects** being described, about
+**how** this object is being described, about **symmetry** properties of the
+data (this is especially relevant for equivariant machine learning), different
+**sparsity** linked to one-hot encoding of species or **components** of
+gradients of the above with respect to various parameters.
+
+For example, the object being described could be "one atom in a structure", or
+"a pair of atoms", while the how could be "using SOAP power spectrum features"
+or "Hamiltonian matrix elements".
+
+Equistore main concern is about representing and manipulating this metadata,
+while using other well established library handle the data itself. We currently
+support using arbitrary CPU arrays created by any language (including numpy
+arrays), as well as PyTorch Tensor --- including full support for GPU and
+automatic differentiation.
+
+.. TODO: the end goal is to create an ecosystem of inter-operable libraries for atomistic ML
+.. TODO: equistore does not create data, other libraries do
+.. TODO: add a figure
+
+--------------------------------------------------------------------------------
 
 This documentation covers everything you need to know about equistore.
 It comprises of the following five broad sections:
 
-- :ref:`userdoc-get-started`
-- :ref:`userdoc-how-to`
-- :ref:`userdoc-references`
-- :ref:`userdoc-explanations`
-- :ref:`devdoc`
-
-If you are new to equistore we recommend starting with the
-:ref:`userdoc-get-started` section. If you want to contribute to the development
-of the library please have a look at our :ref:`developer documentation
-<devdoc>`.
-
-
-Getting started
----------------
-
-If you are an absolute beginner, we recommend you to start with the get started
-pages to familiarize yourself with equistore and the equistore ecosystem.
-
-How-to guides
--------------
-
-This section comprises of guides that will take you through series of steps
-involved in addressing key problems and use-cases in equistore. It requires
-intermediate to advanced knowledge of how equistore works. If you are an
-absolute beginner, it is recommended you start from the
-:ref:`userdoc-get-started` section before going to the How to Guides.
-
-Reference guides
-----------------
-
-The Reference Guide contains technical references for equistore's APIs.
-It describes the various functionalities
-provided by equistore. You can always refer to this section to learn more about
-classes, functions, modules, and other aspects of equistore's machinery you come
-across.
-
-Explanations
-------------
-
-The explanation section discusses key topics and concepts at a fairly high level
-and provides useful explanations to expand your knowledge of equistore. It
-requires at least basic to intermediate knowledge of equistore If you are an
-absolute beginner, we recommend you start from the :ref:`userdoc-get-started`
-section of the documentation.
-
-Developer documentation
------------------------
-
-The developer guide introduces the aspects of how contributing to the code base
-or the documentation of equistore.
+- :ref:`userdoc-get-started`: familiarize yourself with equistore and it's
+  ecosystem;
+- :ref:`userdoc-tutorials`: step-by-step tutorials addressing key problems and
+  use-cases for equistore;
+- :ref:`userdoc-references`: technical description of all the functionalities
+  provided by equistore;
+- :ref:`userdoc-explanations`: high-level explanation of more advanced
+  functionalities;
+- :ref:`devdoc`: how to contribute to the code or the documentation of equistore.
 
 .. toctree::
    :hidden:
 
    get-started/index
-   how-to/index
+   tutorials/index
    reference/index
    explanations/index
    devdoc/index
