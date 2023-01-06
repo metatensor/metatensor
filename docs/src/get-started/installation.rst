@@ -1,14 +1,21 @@
 Installation
 ============
 
-You can install the latest version of equistore from one of the sources below.
+You can install equistore in the ways shown below depending
+on which language you plan to use. If you want to
+`build` equistore from the source code you will need a Rust compiler
+besides a language specific compiler. You can install Rust using
+`rustup <https://rustup.rs/>`_ or the package manager of your operating
+system.
 
 .. _install-python-lib:
 
 Installing the Python library
 -----------------------------
 
-From source:
+For building and using the Python package clone the repository
+using `git <https://git-scm.com>`_ and install equistore using
+`pip <https://pip.pypa.io>`_.
 
 .. code-block:: bash
 
@@ -16,7 +23,8 @@ From source:
     cd equistore
     pip install .
 
-Pre-built wheels:
+Equistore is also provided as prebuilt wheel which avoids the intermediate
+step of building the package with a Rust compiler from the source distribution.
 
 .. code-block:: bash
 
