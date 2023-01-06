@@ -23,8 +23,8 @@ class TestSumSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.sum_over_samples(tensor_se, sample_names=["structure"])
-        reduce_tensor_ps = fn.sum_over_samples(tensor_ps, sample_names=["structure"])
+        reduce_tensor_se = fn.sum_over_samples(tensor_se, group_by=["structure"])
+        reduce_tensor_ps = fn.sum_over_samples(tensor_ps, group_by="structure")
 
         self.assertTrue(
             np.all(
@@ -170,8 +170,8 @@ class TestSumSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.sum_over_samples(X, sample_names=["samples1", "samples2"])
-        reduce_X_23 = fn.sum_over_samples(X, sample_names=["samples2", "samples3"])
+        reduce_X_12 = fn.sum_over_samples(X, group_by=["samples1", "samples2"])
+        reduce_X_23 = fn.sum_over_samples(X, group_by=["samples2", "samples3"])
 
         self.assertTrue(
             np.all(
@@ -236,8 +236,8 @@ class TestMeanSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.mean_over_samples(tensor_se, sample_names=["structure"])
-        reduce_tensor_ps = fn.mean_over_samples(tensor_ps, sample_names=["structure"])
+        reduce_tensor_se = fn.mean_over_samples(tensor_se, group_by="structure")
+        reduce_tensor_ps = fn.mean_over_samples(tensor_ps, group_by=["structure"])
 
         self.assertTrue(
             np.all(
@@ -411,8 +411,8 @@ class TestMeanSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.mean_over_samples(X, sample_names=["samples1", "samples2"])
-        reduce_X_23 = fn.mean_over_samples(X, sample_names=["samples2", "samples3"])
+        reduce_X_12 = fn.mean_over_samples(X, group_by=["samples1", "samples2"])
+        reduce_X_23 = fn.mean_over_samples(X, group_by=["samples2", "samples3"])
 
         self.assertTrue(
             np.all(

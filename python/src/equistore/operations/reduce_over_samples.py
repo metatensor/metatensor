@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -8,23 +8,23 @@ from . import _dispatch
 
 
 def _reduce_over_samples_block(
-    block: TensorBlock, sample_names: List[str], reduction: str
+    block: TensorBlock, group_by: List[str], reduction: str
 ) -> TensorBlock:
     """Create a new :py:class:`TensorBlock` summing the ``properties`` among
     the selected ``samples``.
     The output :py:class:`TensorBlocks` have the same components of the input one.
     :param block: -> input block
-    :param sample_names: -> names of samples to sum
+    :param group_by: -> names of samples to sum
     """
 
     block_samples = block.samples
-    for sample in sample_names:
+    for sample in group_by:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean"]
 
     # get the indices of the selected sample
-    sample_selected = [block_samples.names.index(sample) for sample in sample_names]
+    sample_selected = [block_samples.names.index(sample) for sample in group_by]
     # reshaping the samples in a 2D array
     samples = block_samples.view(dtype=np.int32).reshape(block_samples.shape[0], -1)
     # get which samples will still be there after reduction
@@ -53,7 +53,7 @@ def _reduce_over_samples_block(
     result_block = TensorBlock(
         values=values_result,
         samples=Labels(
-            sample_names,
+            group_by,
             new_samples,
         ),
         components=block.components,
@@ -101,22 +101,29 @@ def _reduce_over_samples_block(
     return result_block
 
 
-def sum_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def _reduce_over_samples(
+    tensor: TensorMap, group_by: Union[List[str], str], reduction: str
+) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     summing the corresponding input :py:class:`TensorBlock` over the rows with
-    the same ``sample_names``.
+    the same ``group_by`` sample names.
 
-    For example if ``sample_name = ["structure"]``, the function sums over all
-    the sample with the same structure, and if ``sample_name = ["structure",
+    Both "sum" and "mean" reductions can be performed.
+
+    For example if ``group_by = "structure"``, the function reduces over all
+    the sample with the same structure, and if ``group_by = ["structure",
     "center"]`` it sums over all the rows with the same values for both
     ``"structure"`` and ``"center"`` samples.
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to sum over
+    :param group_by: names of samples to reduce over
+    :param reduction: how to reduce, only available values are "mean" or "sum"
     """
-    # We check that the names in sample_names are indeed presents in the block
-    for sample in sample_names:
+    if isinstance(group_by, str):
+        group_by = [group_by]
+
+    for sample in group_by:
         if sample not in tensor.sample_names:
             raise ValueError(
                 f"one of the requested sample name ({sample}) is not part of "
@@ -128,42 +135,47 @@ def sum_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
-                sample_names=sample_names,
-                reduction="sum",
+                group_by=group_by,
+                reduction=reduction,
             )
         )
     return TensorMap(tensor.keys, blocks)
 
 
-def mean_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def sum_over_samples(tensor: TensorMap, group_by: Union[List[str], str]) -> TensorMap:
+    """Create a new :py:class:`TensorMap` with the same keys as
+    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
+    summing the corresponding input :py:class:`TensorBlock` over the rows with
+    the same ``group_by``.
+
+    For example if ``group_by = ["structure"]``, the function sums over all
+    the sample with the same structure, and if ``group_by = ["structure",
+    "center"]`` it sums over all the rows with the same values for both
+    ``"structure"`` and ``"center"`` samples. If the list has only one element
+    a single string can be passed equivalentely, e.g. ``group_by = "structure"`` is
+    equivalent to ``group_by = ["structure"]``.
+
+    :param tensor: input :py:class:`TensorMap`
+    :param group_by: names of samples to sum over
+    """
+
+    return _reduce_over_samples(tensor=tensor, group_by=group_by, reduction="sum")
+
+
+def mean_over_samples(tensor: TensorMap, group_by: List[str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     averaging the corresponding input :py:class:`TensorBlock` over the rows with
-    the same ``sample_names``.
+    the same ``group_by``.
 
-    For example if ``sample_name = ["structure"]``, the function averages over
-    all the sample with the same structure, and if ``sample_name = ["structure",
+    For example if ``group_by = ["structure"]``, the function averages over
+    all the sample with the same structure, and if ``group_by = ["structure",
     "center"]`` it averages over all the rows with the same values for both
-    ``"structure"`` and ``"center"`` samples.
+    ``"structure"`` and ``"center"`` samples. If the list has only one element
+    a single string can be passed equivalentely, e.g. ``group_by = "structure"`` is
+    equivalent to ``group_by = ["structure"]``.
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to average over
+    :param group_by: names of samples to average over
     """
-    # We check that the names in sample_names are indeed presents in the block
-    for sample in sample_names:
-        if sample not in tensor.sample_names:
-            raise ValueError(
-                f"one of the requested sample name ({sample}) is not part of "
-                "this TensorMap"
-            )
-
-    blocks = []
-    for _, block in tensor:
-        blocks.append(
-            _reduce_over_samples_block(
-                block=block,
-                sample_names=sample_names,
-                reduction="mean",
-            )
-        )
-    return TensorMap(tensor.keys, blocks)
+    return _reduce_over_samples(tensor=tensor, group_by=group_by, reduction="mean")
