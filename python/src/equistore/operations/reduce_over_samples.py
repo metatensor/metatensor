@@ -106,15 +106,18 @@ def _reduce_over_samples(
 ) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    summing the corresponding input :py:class:`TensorBlock` over the rows with
-    the same ``group_by`` sample names.
+    summing the corresponding input :py:class:`TensorBlock` over the ``group_by``
+    indeces.
 
     Both "sum" and "mean" reductions can be performed.
 
-    For example if ``group_by = "structure"``, the function reduces over all
-    the sample with the same structure, and if ``group_by = ["structure",
-    "center"]`` it sums over all the rows with the same values for both
-    ``"structure"`` and ``"center"`` samples.
+    ``group_by`` tells over which indeces of the sparse matrix the reduction
+    is performed. It accept both a single string or a list of the string
+    with the sample_names corresponding to the directions along which the
+    reduction is performed.
+    Moreover if only one sample name is given both a single string or a list with
+    a string is allowed: ``group_by = ["center"]`` or equivalently
+    ``group_by = "center"``.
 
     :param tensor: input :py:class:`TensorMap`
     :param group_by: names of samples to reduce over
@@ -129,6 +132,8 @@ def _reduce_over_samples(
                 f"one of the requested sample name ({sample}) is not part of "
                 "this TensorMap"
             )
+
+    group_by = [s_name for s_name in tensor.sample_names if s_name not in group_by]
 
     blocks = []
     for _, block in tensor:
@@ -145,15 +150,15 @@ def _reduce_over_samples(
 def sum_over_samples(tensor: TensorMap, group_by: Union[List[str], str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    summing the corresponding input :py:class:`TensorBlock` over the rows with
-    the same ``group_by``.
+    summing the corresponding input :py:class:`TensorBlock` over the ``group_by``
+    indeces.
 
-    For example if ``group_by = ["structure"]``, the function sums over all
-    the sample with the same structure, and if ``group_by = ["structure",
-    "center"]`` it sums over all the rows with the same values for both
-    ``"structure"`` and ``"center"`` samples. If the list has only one element
-    a single string can be passed equivalentely, e.g. ``group_by = "structure"`` is
-    equivalent to ``group_by = ["structure"]``.
+    ``group_by`` tells over which indeces of the sparse matrix the sum is performed.
+    It accept both a single string or a list of the string with the sample_names
+    corresponding to the directions along which the sum is performed.
+    Moreover if only one sample name is given both a single string or a list with
+    a string is allowed: ``group_by = ["center"]`` or equivalently
+    ``group_by = "center"``.
 
     :param tensor: input :py:class:`TensorMap`
     :param group_by: names of samples to sum over
@@ -165,15 +170,15 @@ def sum_over_samples(tensor: TensorMap, group_by: Union[List[str], str]) -> Tens
 def mean_over_samples(tensor: TensorMap, group_by: List[str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    averaging the corresponding input :py:class:`TensorBlock` over the rows with
-    the same ``group_by``.
+    averaging the corresponding input :py:class:`TensorBlock` over the ``group_by``
+    indeces.
 
-    For example if ``group_by = ["structure"]``, the function averages over
-    all the sample with the same structure, and if ``group_by = ["structure",
-    "center"]`` it averages over all the rows with the same values for both
-    ``"structure"`` and ``"center"`` samples. If the list has only one element
-    a single string can be passed equivalentely, e.g. ``group_by = "structure"`` is
-    equivalent to ``group_by = ["structure"]``.
+    ``group_by`` tells over which indeces of the sparse matrix the mean is performed.
+    It accept both a single string or a list of the string with the sample_names
+    corresponding to the directions along which the mean is performed.
+    Moreover if only one sample name is given both a single string or a list with
+    a string is allowed: ``group_by = ["center"]`` or equivalently
+    ``group_by = "center"``.
 
     :param tensor: input :py:class:`TensorMap`
     :param group_by: names of samples to average over

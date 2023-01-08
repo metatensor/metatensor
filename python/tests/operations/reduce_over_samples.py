@@ -23,8 +23,10 @@ class TestSumSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.sum_over_samples(tensor_se, group_by=["structure"])
-        reduce_tensor_ps = fn.sum_over_samples(tensor_ps, group_by="structure")
+        # reduce_tensor_se = fn.sum_over_samples(tensor_se, group_by=["structure"])
+        # reduce_tensor_ps = fn.sum_over_samples(tensor_ps, group_by="structure")
+        reduce_tensor_se = fn.sum_over_samples(tensor_se, group_by=["center"])
+        reduce_tensor_ps = fn.sum_over_samples(tensor_ps, group_by="center")
 
         self.assertTrue(
             np.all(
@@ -170,8 +172,11 @@ class TestSumSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.sum_over_samples(X, group_by=["samples1", "samples2"])
-        reduce_X_23 = fn.sum_over_samples(X, group_by=["samples2", "samples3"])
+        # reduce_X_12 = fn.sum_over_samples(X, group_by=["samples1", "samples2"])
+        # reduce_X_23 = fn.sum_over_samples(X, group_by=["samples2", "samples3"])
+        reduce_X_12 = fn.sum_over_samples(X, group_by=["samples3"])
+        reduce_X_23 = fn.sum_over_samples(X, group_by=["samples1"])
+        reduce_X_2 = fn.sum_over_samples(X, group_by=["samples1", "samples3"])
 
         self.assertTrue(
             np.all(
@@ -204,6 +209,17 @@ class TestSumSamples(unittest.TestCase):
         self.assertTrue(np.all(X.block(0).values[2] == reduce_X_23.block(0).values[2]))
         self.assertTrue(np.all(X.block(0).values[4] == reduce_X_23.block(0).values[3]))
 
+        self.assertTrue(
+            np.all(
+                np.sum(X.block(0).values[[0, 1, 2, 7]], axis=0)
+                == reduce_X_2.block(0).values[0]
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.sum(X.block(0).values[3:7], axis=0) == reduce_X_2.block(0).values[1]
+            )
+        )
         # check metadata
         self.assertTrue(
             np.all(reduce_X_12.block(0).properties == X.block(0).properties)
@@ -211,6 +227,7 @@ class TestSumSamples(unittest.TestCase):
         self.assertTrue(
             np.all(reduce_X_23.block(0).properties == X.block(0).properties)
         )
+        self.assertTrue(np.all(reduce_X_2.block(0).properties == X.block(0).properties))
 
         samples_12 = Labels(
             names=["samples1", "samples2"],
@@ -220,8 +237,13 @@ class TestSumSamples(unittest.TestCase):
             names=["samples2", "samples3"],
             values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
         )
+        samples_2 = Labels(
+            names=["samples2"],
+            values=np.array([[0], [1]], dtype=np.int32),
+        )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
+        self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
 
 class TestMeanSamples(unittest.TestCase):
@@ -236,8 +258,10 @@ class TestMeanSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.mean_over_samples(tensor_se, group_by="structure")
-        reduce_tensor_ps = fn.mean_over_samples(tensor_ps, group_by=["structure"])
+        # reduce_tensor_se = fn.mean_over_samples(tensor_se, group_by="structure")
+        # reduce_tensor_ps = fn.mean_over_samples(tensor_ps, group_by=["structure"])
+        reduce_tensor_se = fn.mean_over_samples(tensor_se, group_by="center")
+        reduce_tensor_ps = fn.mean_over_samples(tensor_ps, group_by=["center"])
 
         self.assertTrue(
             np.all(
@@ -411,8 +435,11 @@ class TestMeanSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.mean_over_samples(X, group_by=["samples1", "samples2"])
-        reduce_X_23 = fn.mean_over_samples(X, group_by=["samples2", "samples3"])
+        # reduce_X_12 = fn.mean_over_samples(X, group_by=["samples1", "samples2"])
+        # reduce_X_23 = fn.mean_over_samples(X, group_by=["samples2", "samples3"])
+        reduce_X_12 = fn.mean_over_samples(X, group_by=["samples3"])
+        reduce_X_23 = fn.mean_over_samples(X, group_by=["samples1"])
+        reduce_X_2 = fn.mean_over_samples(X, group_by=["samples1", "samples3"])
 
         self.assertTrue(
             np.all(
@@ -453,6 +480,18 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(np.all(X.block(0).values[2] == reduce_X_23.block(0).values[2]))
         self.assertTrue(np.all(X.block(0).values[4] == reduce_X_23.block(0).values[3]))
 
+        self.assertTrue(
+            np.all(
+                np.mean(X.block(0).values[[0, 1, 2, 7]], axis=0)
+                == reduce_X_2.block(0).values[0]
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.mean(X.block(0).values[3:7], axis=0) == reduce_X_2.block(0).values[1]
+            )
+        )
+
         # check metadata
         self.assertTrue(
             np.all(reduce_X_12.block(0).properties == X.block(0).properties)
@@ -460,6 +499,7 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(
             np.all(reduce_X_23.block(0).properties == X.block(0).properties)
         )
+        self.assertTrue(np.all(reduce_X_2.block(0).properties == X.block(0).properties))
 
         samples_12 = Labels(
             names=["samples1", "samples2"],
@@ -469,8 +509,13 @@ class TestMeanSamples(unittest.TestCase):
             names=["samples2", "samples3"],
             values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
         )
+        samples_2 = Labels(
+            names=["samples2"],
+            values=np.array([[0], [1]], dtype=np.int32),
+        )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
+        self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
 
 # TODO: add tests with torch & torch scripting/tracing
