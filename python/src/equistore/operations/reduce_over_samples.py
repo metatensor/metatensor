@@ -15,7 +15,7 @@ def _reduce_over_samples_block(
     The output :py:class:`TensorBlocks` have the same components of the input one.
     Both "sum" and "mean" reductions can be performed.
     :param block: -> input block
-    :param samples_names: -> names of samples to reduce over
+    :param samples_names_to_reduce: -> names of samples to reduce over
     :param reduction: how to reduce, only available values are "mean" or "sum"
     """
 
