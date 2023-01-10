@@ -170,7 +170,7 @@ class TestSumSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.sum_over_samples(X, samples_names=["samples3"])
+        reduce_X_12 = fn.sum_over_samples(X, samples_names="samples3")
         reduce_X_23 = fn.sum_over_samples(X, samples_names=["samples1"])
         reduce_X_2 = fn.sum_over_samples(X, samples_names=["samples1", "samples3"])
 
@@ -430,7 +430,7 @@ class TestMeanSamples(unittest.TestCase):
         X = TensorMap(keys, [block_1])
 
         reduce_X_12 = fn.mean_over_samples(X, samples_names=["samples3"])
-        reduce_X_23 = fn.mean_over_samples(X, samples_names=["samples1"])
+        reduce_X_23 = fn.mean_over_samples(X, samples_names="samples1")
         reduce_X_2 = fn.mean_over_samples(X, samples_names=["samples1", "samples3"])
 
         self.assertTrue(

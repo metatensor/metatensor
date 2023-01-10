@@ -8,23 +8,27 @@ from . import _dispatch
 
 
 def _reduce_over_samples_block(
-    block: TensorBlock, samples_names: List[str], reduction: str
+    block: TensorBlock, samples_names_to_reduce: List[str], reduction: str
 ) -> TensorBlock:
-    """Create a new :py:class:`TensorBlock` summing the ``properties`` among
+    """Create a new :py:class:`TensorBlock` reducing the ``properties`` among
     the selected ``samples``.
     The output :py:class:`TensorBlocks` have the same components of the input one.
+    Both "sum" and "mean" reductions can be performed.
     :param block: -> input block
-    :param samples_names: -> names of samples to sum
+    :param samples_names: -> names of samples to reduce over
+    :param reduction: how to reduce, only available values are "mean" or "sum"
     """
 
     block_samples = block.samples
-    for sample in samples_names:
+    for sample in samples_names_to_reduce:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean"]
 
     # get the indices of the selected sample
-    sample_selected = [block_samples.names.index(sample) for sample in samples_names]
+    sample_selected = [
+        block_samples.names.index(sample) for sample in samples_names_to_reduce
+    ]
     # reshaping the samples in a 2D array
     samples = block_samples.view(dtype=np.int32).reshape(block_samples.shape[0], -1)
     # get which samples will still be there after reduction
@@ -53,7 +57,7 @@ def _reduce_over_samples_block(
     result_block = TensorBlock(
         values=values_result,
         samples=Labels(
-            samples_names,
+            samples_names_to_reduce,
             new_samples,
         ),
         components=block.components,
@@ -111,14 +115,6 @@ def _reduce_over_samples(
 
     Both "sum" and "mean" reductions can be performed.
 
-    ``samples_names`` tells over which indeces of the sparse matrix the reduction
-    is performed. It accept both a single string or a list of the string
-    with the sample_names corresponding to the directions along which the
-    reduction is performed.
-    Moreover if only one sample name is given both a single string or a list with
-    a string is allowed: ``samples_names = ["center"]`` or equivalently
-    ``samples_names = "center"``.
-
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to reduce over
     :param reduction: how to reduce, only available values are "mean" or "sum"
@@ -133,7 +129,7 @@ def _reduce_over_samples(
                 "this TensorMap"
             )
 
-    samples_names = [
+    samples_names_to_reduce = [
         s_name for s_name in tensor.sample_names if s_name not in samples_names
     ]
 
@@ -142,7 +138,7 @@ def _reduce_over_samples(
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
-                samples_names=samples_names,
+                samples_names_to_reduce=samples_names_to_reduce,
                 reduction=reduction,
             )
         )
@@ -157,12 +153,11 @@ def sum_over_samples(
     summing the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indeces.
 
-    ``samples_names`` tells over which indeces of the sparse matrix the sum is
-    performed. It accept both a single string or a list of the string with the
+    ``samples_names`` indicates over which variables in the samples the sum is
+    performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is performed.
-    Moreover if only one sample name is given both a single string or a list with
-    a string is allowed: ``samples_names = ["center"]`` or equivalently
-    ``samples_names = "center"``.
+    A single string is equivalent to a list with a single element:
+    `samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to sum over
@@ -179,12 +174,11 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indeces.
 
-    ``samples_names`` tells over which indeces of the sparse matrix the mean is
-    performed. It accept both a single string or a list of the string with the
+     ``samples_names`` indicates over which variables in the samples the mean is
+    performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
-    Moreover if only one sample name is given both a single string or a list with
-    a string is allowed: ``samples_names = ["center"]`` or equivalently
-    ``samples_names = "center"``.
+    A single string is equivalent to a list with a single element:
+    `samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to average over
