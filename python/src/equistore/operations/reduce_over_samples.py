@@ -8,26 +8,26 @@ from . import _dispatch
 
 
 def _reduce_over_samples_block(
-    block: TensorBlock, samples_names_to_reduce: List[str], reduction: str
+    block: TensorBlock, remaining_samples: List[str], reduction: str
 ) -> TensorBlock:
     """Create a new :py:class:`TensorBlock` reducing the ``properties`` among
     the selected ``samples``.
     The output :py:class:`TensorBlocks` have the same components of the input one.
     Both "sum" and "mean" reductions can be performed.
     :param block: -> input block
-    :param samples_names_to_reduce: -> names of samples to reduce over
+    :param remaining_samples: -> names of samples to reduce over
     :param reduction: how to reduce, only available values are "mean" or "sum"
     """
 
     block_samples = block.samples
-    for sample in samples_names_to_reduce:
+    for sample in remaining_samples:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean"]
 
     # get the indices of the selected sample
     sample_selected = [
-        block_samples.names.index(sample) for sample in samples_names_to_reduce
+        block_samples.names.index(sample) for sample in remaining_samples
     ]
     # reshaping the samples in a 2D array
     samples = block_samples.view(dtype=np.int32).reshape(block_samples.shape[0], -1)
@@ -57,7 +57,7 @@ def _reduce_over_samples_block(
     result_block = TensorBlock(
         values=values_result,
         samples=Labels(
-            samples_names_to_reduce,
+            remaining_samples,
             new_samples,
         ),
         components=block.components,
@@ -129,7 +129,7 @@ def _reduce_over_samples(
                 "this TensorMap"
             )
 
-    samples_names_to_reduce = [
+    remaining_samples = [
         s_name for s_name in tensor.sample_names if s_name not in samples_names
     ]
 
@@ -138,7 +138,7 @@ def _reduce_over_samples(
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
-                samples_names_to_reduce=samples_names_to_reduce,
+                remaining_samples=remaining_samples,
                 reduction=reduction,
             )
         )
@@ -157,7 +157,60 @@ def sum_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is performed.
     A single string is equivalent to a list with a single element:
-    `samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+
+    Consider the following example:
+
+    .. code-block:: python
+
+        block = TensorBlock(
+            values=np.array(
+                [
+                    [1, 2, 4],
+                    [3, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ]
+            ),
+            samples=Labels(
+                ["structure", "center"],
+                np.array(
+                    [
+                        [0, 0],
+                        [0, 1],
+                        [1, 0],
+                        [1, 1],
+                    ],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [2]], dtype=np.int32)
+            ),
+        )
+
+        keys = Labels(
+            names=["key"], values=np.array([[0]], dtype=np.int32)
+        )
+        tensor = TensorMap(keys, [block])
+
+        tensor_sum = sum_over_samples(tensor,samples_names="center")
+
+        print(tensor_sum.block(0))
+        TensorBlock
+            samples: ['structure']
+            component: []
+            properties: ['properties']
+            gradients: no
+
+        print(tensor_sum.block(0).values)
+        array([[ 4,  7, 10],
+               [17, 19, 21]])
+
+        print(tensor_sum.block(0).samples)
+        Labels([(0,), (1,)], dtype=[('structure', '<i4')])
+
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to sum over
@@ -178,7 +231,9 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    `samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+
+    For an usage example see the doc for ``sum_over_samples``.
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to average over
