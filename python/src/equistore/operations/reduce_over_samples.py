@@ -111,7 +111,7 @@ def _reduce_over_samples(
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     summing the corresponding input :py:class:`TensorBlock` over the ``samples_names``
-    indeces.
+    indices.
 
     Both "sum" and "mean" reductions can be performed.
 
@@ -151,7 +151,7 @@ def sum_over_samples(
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     summing the corresponding input :py:class:`TensorBlock` over the ``samples_names``
-    indeces.
+    indices.
 
     ``samples_names`` indicates over which variables in the samples the sum is
     performed. It accept either a single string or a list of the string with the
@@ -172,9 +172,9 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     """Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
-    indeces.
+    indices.
 
-     ``samples_names`` indicates over which variables in the samples the mean is
+    ``samples_names`` indicates over which variables in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
