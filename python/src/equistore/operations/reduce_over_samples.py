@@ -10,12 +10,15 @@ from . import _dispatch
 def _reduce_over_samples_block(
     block: TensorBlock, remaining_samples: List[str], reduction: str
 ) -> TensorBlock:
-    """Create a new :py:class:`TensorBlock` reducing the ``properties`` among
-    the selected ``samples``.
-    The output :py:class:`TensorBlocks` have the same components of the input one.
-    Both "sum" and "mean" reductions can be performed.
-    :param block: -> input block
-    :param remaining_samples: -> names of samples to reduce over
+    """
+    Create a new :py:class:`TensorBlock` reducing the ``properties`` among the
+    selected ``samples``.
+
+    The output :py:class:`TensorBlocks` have the same components of the input
+    one. Both "sum" and "mean" reductions can be performed.
+
+    :param block: input block
+    :param remaining_samples: names of samples to reduce over
     :param reduction: how to reduce, only available values are "mean" or "sum"
     """
 
@@ -108,9 +111,10 @@ def _reduce_over_samples_block(
 def _reduce_over_samples(
     tensor: TensorMap, samples_names: Union[List[str], str], reduction: str
 ) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
-    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    summing the corresponding input :py:class:`TensorBlock` over the ``samples_names``
+    """
+    Create a new :py:class:`TensorMap` with the same keys as as the input
+    ``tensor``, and each :py:class:`TensorBlock` is obtained summing the
+    corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
     Both "sum" and "mean" reductions can be performed.
@@ -148,68 +152,59 @@ def _reduce_over_samples(
 def sum_over_samples(
     tensor: TensorMap, samples_names: Union[List[str], str]
 ) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
-    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    summing the corresponding input :py:class:`TensorBlock` over the ``samples_names``
+    """
+    Create a new :py:class:`TensorMap` with the same keys as as the input
+    ``tensor``, and each :py:class:`TensorBlock` is obtained summing the
+    corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
     ``samples_names`` indicates over which variables in the samples the sum is
     performed. It accept either a single string or a list of the string with the
-    sample names corresponding to the directions along which the sum is performed.
-    A single string is equivalent to a list with a single element:
+    sample names corresponding to the directions along which the sum is
+    performed. A single string is equivalent to a list with a single element:
     ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
-    Consider the following example:
+    Here is an example using this function
 
-    .. code-block:: python
-
-        block = TensorBlock(
-            values=np.array(
-                [
-                    [1, 2, 4],
-                    [3, 5, 6],
-                    [7, 8, 9],
-                    [10, 11, 12],
-                ]
-            ),
-            samples=Labels(
-                ["structure", "center"],
-                np.array(
-                    [
-                        [0, 0],
-                        [0, 1],
-                        [1, 0],
-                        [1, 1],
-                    ],
-                    dtype=np.int32,
-                ),
-            ),
-            components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [2]], dtype=np.int32)
-            ),
-        )
-
-        keys = Labels(
-            names=["key"], values=np.array([[0]], dtype=np.int32)
-        )
-        tensor = TensorMap(keys, [block])
-
-        tensor_sum = sum_over_samples(tensor,samples_names="center")
-
-        print(tensor_sum.block(0))
-        TensorBlock
-            samples: ['structure']
-            component: []
-            properties: ['properties']
-            gradients: no
-
-        print(tensor_sum.block(0).values)
-        array([[ 4,  7, 10],
-               [17, 19, 21]])
-
-        print(tensor_sum.block(0).samples)
-        Labels([(0,), (1,)], dtype=[('structure', '<i4')])
+    >>> block = TensorBlock(
+    ...     values=np.array([
+    ...         [1, 2, 4],
+    ...         [3, 5, 6],
+    ...         [7, 8, 9],
+    ...         [10, 11, 12],
+    ...     ]),
+    ...     samples=Labels(
+    ...         ["structure", "center"],
+    ...         np.array([
+    ...             [0, 0],
+    ...             [0, 1],
+    ...             [1, 0],
+    ...             [1, 1],
+    ...         ]),
+    ...     ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...     ),
+    ... )
+    >>> keys = Labels(names=["key"], values=np.array([[0]]))
+    ...
+    >>> tensor = TensorMap(keys, [block])
+    ...
+    >>> tensor_sum = sum_over_samples(tensor, samples_names="center")
+    ...
+    >>> # only structure is left as a sample
+    >>> print(tensor_sum.block(0))
+    TensorBlock
+        samples: ['structure']
+        component: []
+        properties: ['properties']
+        gradients: no
+    >>> print(tensor_sum.block(0).samples)
+    [(0,) (1,)]
+    >>> print(tensor_sum.block(0).values)
+    [[ 4  7 10]
+     [17 19 21]]
 
 
     :param tensor: input :py:class:`TensorMap`
