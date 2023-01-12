@@ -270,7 +270,7 @@ class Gradient:
         self._name = name
 
     def __repr__(self) -> str:
-        s = "Gradient TensorBlock \n"
+        s = "Gradient TensorBlock\n"
         s += "parameter: '{}'\n".format(self._name)
         s += f"samples (len: {len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
