@@ -13,6 +13,7 @@ Operations
 
     allclose() <allclose>
     dot() <dot>
+    join() <join>
     lstsq() <lstsq>
     slice() <slice>
     solve() <solve>

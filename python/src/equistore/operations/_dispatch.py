@@ -154,6 +154,21 @@ def lstsq(X, Y, rcond, driver=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def hstack(arrays):
+    """Stack horizontally a group of arrays.
+
+    This function has the same behavior as ``numpy.hstack(arrays)``.
+    """
+    if isinstance(arrays[0], np.ndarray):
+        _check_all_same_type(arrays, np.ndarray)
+        return np.hstack(arrays)
+    elif isinstance(arrays[0], TorchTensor):
+        _check_all_same_type(arrays, TorchTensor)
+        return torch.hstack(arrays)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def vstack(arrays):
     """Stack vertically a group of arrays.
 

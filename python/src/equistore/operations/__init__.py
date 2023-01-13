@@ -14,6 +14,7 @@ from .allclose import (  # noqa
     allclose_raise,
 )
 from .dot import dot  # noqa
+from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
 from .remove_gradients import remove_gradients  # noqa
@@ -27,6 +28,7 @@ __all__ = [
     "allclose_block",
     "allclose_block_raise",
     "dot",
+    "join",
     "lstsq",
     "mean_over_samples",
     "remove_gradients",

@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_same_gradients, _check_same_keys
+from ._utils import _check_blocks, _check_same_keys
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
@@ -75,16 +75,15 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
 
-    if len(X.gradients_list()) > 0:
-        _check_same_gradients(X, Y, "lstsq")
+    _check_blocks(X, Y, ["gradients"], "lstsq")
 
-        for parameter, X_gradient in X.gradients():
-            X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)
-            X_values = _dispatch.vstack((X_values, X_gradient_data))
+    for parameter, X_gradient in X.gradients():
+        X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)
+        X_values = _dispatch.vstack((X_values, X_gradient_data))
 
-            Y_gradient = Y.gradient(parameter)
-            Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
-            Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
+        Y_gradient = Y.gradient(parameter)
+        Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
+        Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
 
     weights = _dispatch.lstsq(X_values, Y_values, rcond=rcond, driver=driver)
 
