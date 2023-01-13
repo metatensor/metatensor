@@ -193,12 +193,12 @@ def sum_over_samples(
     ...
     >>> tensor_sum = sum_over_samples(tensor, samples_names="center")
     ...
-    >>> # only structure is left as a sample
+    >>> # only 'structure' is left as a sample
     >>> print(tensor_sum.block(0))
     TensorBlock
-        samples: ['structure']
-        component: []
-        properties: ['properties']
+        samples (2): ['structure']
+        components (): []
+        properties (3): ['properties']
         gradients: no
     >>> print(tensor_sum.block(0).samples)
     [(0,) (1,)]

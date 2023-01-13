@@ -95,19 +95,21 @@ class TensorBlock:
 
     def __repr__(self) -> str:
         s = "TensorBlock\n"
-        s += "    samples: ["
+        s += f"    samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
-        s += "    component: ["
+        s += "    components ("
+        s += ", ".join([str(len(c)) for c in self.components])
+        s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
                 s += "'" + name + "', "
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += "    properties: ["
+        s += f"    properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
         s += "'" + self.properties.names[-1] + "']\n"
@@ -270,21 +272,23 @@ class Gradient:
         self._name = name
 
     def __repr__(self) -> str:
-        s = "Gradient TensorBlock \n"
+        s = "Gradient TensorBlock\n"
         s += "parameter: '{}'\n".format(self._name)
-        s += "samples: ["
+        s += f"samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
-        s += "component: ["
+        s += "components ("
+        s += ", ".join([str(len(c)) for c in self.components])
+        s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
                 s += "'" + name + "', "
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += "properties: ["
+        s += f"properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
         s += "'" + self.properties.names[-1] + "']"
