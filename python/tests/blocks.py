@@ -14,9 +14,9 @@ class TestBlocks(unittest.TestCase):
             properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
         expected = """TensorBlock
-    samples (len = 3): ['samples']
-    components (len = []): []
-    properties (len = 2): ['properties']
+    samples (3): ['samples']
+    components (): []
+    properties (2): ['properties']
     gradients: no"""
         self.assertTrue(block.__repr__() == expected)
 
@@ -54,9 +54,9 @@ class TestBlocks(unittest.TestCase):
             properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
         expected = """TensorBlock
-    samples (len = 3): ['samples']
-    components (len = [3, 2]): ['component_1', 'component_2']
-    properties (len = 2): ['properties']
+    samples (3): ['samples']
+    components (3, 2): ['component_1', 'component_2']
+    properties (2): ['properties']
     gradients: no"""
         self.assertTrue(block.__repr__() == expected)
 
@@ -111,9 +111,9 @@ class TestBlocks(unittest.TestCase):
         )
 
         expected = """TensorBlock
-    samples (len = 3): ['samples']
-    components (len = [3, 2]): ['component_1', 'component_2']
-    properties (len = 2): ['properties']
+    samples (3): ['samples']
+    components (3, 2): ['component_1', 'component_2']
+    properties (2): ['properties']
     gradients: ['parameter']"""
         self.assertTrue(block.__repr__() == expected)
 
@@ -126,9 +126,9 @@ class TestBlocks(unittest.TestCase):
 
         expected_grad = """Gradient TensorBlock
 parameter: 'parameter'
-samples (len = 2): ['sample', 'parameter']
-components (len = [3, 2]): ['component_1', 'component_2']
-properties (len = 2): ['properties']"""
+samples (2): ['sample', 'parameter']
+components (3, 2): ['component_1', 'component_2']
+properties (2): ['properties']"""
         self.assertTrue(gradient.__repr__() == expected_grad)
 
         self.assertEqual(gradient.samples.names, ("sample", "parameter"))

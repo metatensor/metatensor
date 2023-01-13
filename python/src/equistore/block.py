@@ -95,19 +95,21 @@ class TensorBlock:
 
     def __repr__(self) -> str:
         s = "TensorBlock\n"
-        s += f"    samples (len = {len(self.samples)}): ["
+        s += f"    samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
-        s += f"    components (len = {[len(c) for c in self.components]}): ["
+        s += "    components ("
+        s += f"{[len(c) for c in self.components]}"[1:-1]
+        s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
                 s += "'" + name + "', "
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"    properties (len = {len(self.properties)}): ["
+        s += f"    properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
         s += "'" + self.properties.names[-1] + "']\n"
@@ -272,19 +274,21 @@ class Gradient:
     def __repr__(self) -> str:
         s = "Gradient TensorBlock\n"
         s += "parameter: '{}'\n".format(self._name)
-        s += f"samples (len = {len(self.samples)}): ["
+        s += f"samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
-        s += f"components (len = {[len(c) for c in self.components]}): ["
+        s += "components ("
+        s += f"{[len(c) for c in self.components]}"[1:-1]
+        s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
                 s += "'" + name + "', "
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"properties (len = {len(self.properties)}): ["
+        s += f"properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
         s += "'" + self.properties.names[-1] + "']"
