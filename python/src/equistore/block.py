@@ -101,7 +101,7 @@ class TensorBlock:
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
         s += "    components ("
-        s += f"{[len(c) for c in self.components]}"[1:-1]
+        s += ", ".join([str(len(c)) for c in self.components])
         s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
@@ -280,7 +280,7 @@ class Gradient:
         s += "'" + self.samples.names[-1] + "']"
         s += "\n"
         s += "components ("
-        s += f"{[len(c) for c in self.components]}"[1:-1]
+        s += ", ".join([str(len(c)) for c in self.components])
         s += "): ["
         for ic in self.components:
             for name in ic.names[:]:
