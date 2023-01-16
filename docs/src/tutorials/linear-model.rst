@@ -1,0 +1,4 @@
+Equivariant Linear Model
+------------------------
+
+TBD

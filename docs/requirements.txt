@@ -1,10 +1,14 @@
 sphinx >=4.4
 sphinx_autodoc_typehints
-pygments >=2.9
-breathe >=4.33
-furo
+pygments >=2.9           # syntax highligthing
+breathe >=4.33           # C and C++ => sphinx through doxygen
+sphinx-gallery           # convert python files into nice documentation
+furo                     # sphinx theme
 toml
 
-# required for autodoc
-numpy
-torch
+# dependencies for the tutorials
+chemfiles
+ase
+matplotlib
+skcosmo
+scikit-learn

@@ -1,5 +1,5 @@
-IO
-==
+Input/Output
+============
 
 .. autofunction:: equistore.io.load
 
