@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 
 import toml
 
@@ -13,8 +14,8 @@ sys.path.append(os.path.join(ROOT, "python", "src"))
 # -- Project information -----------------------------------------------------
 
 project = "equistore"
-copyright = "2022, Guillaume Fraux"
-author = "Guillaume Fraux"
+author = ", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines())
+copyright = f"{datetime.now().date().year}, {author}"
 
 
 def load_version_from_cargo_toml():

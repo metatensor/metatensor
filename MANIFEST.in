@@ -7,6 +7,8 @@ recursive-include src *
 include Cargo.*
 include pyproject.toml
 include CMakeLists.txt
+include AUTHORS
+include LICENSE
 recursive-include cmake *
 recursive-include include *
 
