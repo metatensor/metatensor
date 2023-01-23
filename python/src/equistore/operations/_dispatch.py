@@ -206,7 +206,20 @@ def index_add(output_array, input_array, index):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def zeros_like(array, shape=None):
+def zeros(shape, array_type="numpy"):
+    """Create a `zeros_like` with the given input shape.
+
+    `array_type` can be `Numpy` or `torch`.
+    """
+    if array_type == "numpy":
+        return np.zeros(shape)
+    elif array_type == "torch":
+        return torch.zeros(shape)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def zeros_like(array, shape=None, requires_grad=False):
     """Create an zeros_like with the same size of array.
     if shape is not None it overrides the shape of the result.
 
@@ -219,7 +232,57 @@ def zeros_like(array, shape=None):
             shape = array.size()
 
         return torch.zeros(
-            shape, dtype=array.dtype, layout=array.layout, device=array.device
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+            requires_grad=requires_grad,
+        )
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def ones_like(array, shape=None, requires_grad=False):
+    """Create an ones_like with the same size of array.
+
+    :param shape: If not ``None`` override the shape with the given one
+    :param requires_grad: used only in torch
+    """
+    if isinstance(array, np.ndarray):
+        return np.ones_like(array, shape=shape)
+    elif isinstance(array, TorchTensor):
+        if shape is None:
+            shape = array.size()
+
+        return torch.ones_like(
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+            requires_grad=requires_grad,
+        )
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def empty_like(array, shape=None, requires_grad=False):
+    """Create an empty_like with the same size of array.
+    if shape is not None it overrides the shape of the result.
+
+    It is equivalent of np.empty_like(array, shape=shape).
+    requires_grad is used only in torch"""
+    if isinstance(array, np.ndarray):
+        return np.empty_like(array, shape=shape)
+    elif isinstance(array, TorchTensor):
+        if shape is None:
+            shape = array.size()
+
+        return torch.empty_like(
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+            requires_grad=requires_grad,
         )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)

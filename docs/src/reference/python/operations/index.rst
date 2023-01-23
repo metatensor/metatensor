@@ -13,10 +13,12 @@ Operations
 
     allclose() <allclose>
     dot() <dot>
+    empty_like() <empty_like>
     join() <join>
     lstsq() <lstsq>
+    ones_like() <ones_like>
     slice() <slice>
     solve() <solve>
-
     sum_over_samples() and mean_over_samples() <samples-reduction>
     remove_gradients() <remove-gradients>
+    zeros_like() <zeros_like>
