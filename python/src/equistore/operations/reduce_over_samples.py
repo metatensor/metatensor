@@ -15,11 +15,12 @@ def _reduce_over_samples_block(
     selected ``samples``.
 
     The output :py:class:`TensorBlocks` have the same components of the input
-    one. Both "sum" and "mean" reductions can be performed.
+    one. "sum", "mean", "std" or "variance" reductions can be performed.
 
     :param block: input block
     :param remaining_samples: names of samples to reduce over
-    :param reduction: how to reduce, only available values are "mean" or "sum"
+    :param reduction: how to reduce, only available values are "mean", "sum",
+    "std" or "variance"
     """
 
     block_samples = block.samples
@@ -51,11 +52,26 @@ def _reduce_over_samples_block(
         index,
     )
 
-    if reduction == "mean":
+    if reduction == "mean" or reduction == "std" or reduction == "variance":
         bincount = _dispatch.bincount(index)
         values_result = values_result / bincount.reshape(
             (-1,) + (1,) * len(other_shape)
         )
+        if reduction == "std" or reduction == "variance":
+            values_result2 = _dispatch.zeros_like(
+                block_values, shape=(new_samples.shape[0],) + other_shape
+            )
+            _dispatch.index_add(
+                values_result2,
+                block_values**2,
+                index,
+            )
+            values_result2 = values_result2 / bincount.reshape(
+                (-1,) + (1,) * len(other_shape)
+            )
+            values_result = values_result2 - values_result
+            if reduction == "std":
+                values_result = _dispatch.sqrt(values_result)
 
     # check if the reduce operation reduce all the samples
     if len(remaining_samples) == 0:
@@ -126,11 +142,12 @@ def _reduce_over_samples(
     corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
-    Both "sum" and "mean" reductions can be performed.
+    "sum", "mean", "std" or "variance" reductions can be performed.
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to reduce over
-    :param reduction: how to reduce, only available values are "mean" or "sum"
+    :param reduction: how to reduce, only available values are "mean", "sum",
+    "std" or "variance"
     """
     if isinstance(samples_names, str):
         samples_names = [samples_names]
@@ -244,4 +261,48 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     """
     return _reduce_over_samples(
         tensor=tensor, samples_names=samples_names, reduction="mean"
+    )
+
+
+def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
+    """Create a new :py:class:`TensorMap` with the same keys as
+    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
+    performing the std deviation of the corresponding input :py:class:`TensorBlock`
+    over the ``samples_names`` indices.
+
+    ``samples_names`` indicates over which variables in the samples the mean is
+    performed. It accept either a single string or a list of the string with the
+    sample names corresponding to the directions along which the mean is performed.
+    A single string is equivalent to a list with a single element:
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+
+    For an usage example see the doc for ``sum_over_samples``.
+
+    :param tensor: input :py:class:`TensorMap`
+    :param samples_names: names of samples to average over
+    """
+    return _reduce_over_samples(
+        tensor=tensor, samples_names=samples_names, reduction="std"
+    )
+
+
+def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
+    """Create a new :py:class:`TensorMap` with the same keys as
+    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
+    performing the variance of the corresponding input :py:class:`TensorBlock`
+    over the ``samples_names`` indices.
+
+    ``samples_names`` indicates over which variables in the samples the mean is
+    performed. It accept either a single string or a list of the string with the
+    sample names corresponding to the directions along which the mean is performed.
+    A single string is equivalent to a list with a single element:
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
+
+    For an usage example see the doc for ``sum_over_samples``.
+
+    :param tensor: input :py:class:`TensorMap`
+    :param samples_names: names of samples to average over
+    """
+    return _reduce_over_samples(
+        tensor=tensor, samples_names=samples_names, reduction="variance"
     )

@@ -130,6 +130,20 @@ def solve(X, Y):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def sqrt(array):
+    """Compute the square root  of the input array.
+
+    This calls the equivalent of ``np.sqrt(array)``, see this
+    function for more documentation.
+    """
+    if isinstance(array, np.ndarray):
+        return np.sqrt(array)
+    elif isinstance(array, TorchTensor):
+        return torch.sqrt(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def lstsq(X, Y, rcond, driver=None):
     """
     Computes a solution to the least squares problem of a system of linear
