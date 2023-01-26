@@ -3,7 +3,7 @@ from os import path
 
 import numpy as np
 
-import equistore.operations as eop
+import equistore.operations
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.io import load
 
@@ -41,11 +41,11 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_single_tensormap(self):
         """Test error raise if only one tensormap is provided."""
         with self.assertRaises(ValueError) as err:
-            eop.join(self.ps, axis="properties")
+            equistore.operations.join(self.ps, axis="properties")
         self.assertIn("provide at least two", str(err.exception))
 
         with self.assertRaises(ValueError) as err:
-            eop.join([self.ps], axis="properties")
+            equistore.operations.join([self.ps], axis="properties")
         self.assertIn("provide at least two", str(err.exception))
 
     def test_join_properties(self):
@@ -53,7 +53,9 @@ class TestJoinTensorMap(unittest.TestCase):
 
         We check for the values below."""
 
-        ps_joined = eop.join([self.ps, self.ps, self.ps], axis="properties")
+        ps_joined = equistore.operations.join(
+            [self.ps, self.ps, self.ps], axis="properties"
+        )
 
         # test property names
         names = self.ps.block(0).properties.names
@@ -65,7 +67,9 @@ class TestJoinTensorMap(unittest.TestCase):
 
     def test_join_samples(self):
         """Test public join function with three tensormaps along `samples`."""
-        ps_joined = eop.join([self.ps, self.ps, self.ps], axis="samples")
+        ps_joined = equistore.operations.join(
+            [self.ps, self.ps, self.ps], axis="samples"
+        )
 
         # test sample values
         self.assertEqual(
@@ -75,23 +79,29 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_join_error(self):
         """Test error with unknown `axis` keyword."""
         with self.assertRaises(ValueError) as err:
-            eop.join([self.ps, self.ps, self.ps], axis="foo")
+            equistore.operations.join([self.ps, self.ps, self.ps], axis="foo")
         self.assertIn("values for the `axis` parameter", str(err.exception))
 
     def test_join_properties_values(self):
         """Test values for joining along `properties`."""
-        ts_1 = eop.slice(self.ps, properties=self.first_block.properties[:1])
-        ts_2 = eop.slice(self.ps, properties=self.first_block.properties[1:])
+        ts_1 = equistore.operations.slice(
+            self.ps, properties=self.first_block.properties[:1]
+        )
+        ts_2 = equistore.operations.slice(
+            self.ps, properties=self.first_block.properties[1:]
+        )
 
-        ts_joined = eop.join([ts_1, ts_2], axis="properties")
-        self.assertTrue(eop.allclose(ts_joined, self.ps))
+        ts_joined = equistore.operations.join([ts_1, ts_2], axis="properties")
+        self.assertTrue(equistore.operations.allclose(ts_joined, self.ps))
 
     def test_join_properties_different_samples(self):
         """Test error raise if `samples` are not the same."""
-        ts = eop.slice(self.ps_first_block, samples=self.first_block.samples[:1])
+        tm = equistore.operations.slice(
+            self.ps_first_block, samples=self.first_block.samples[:1]
+        )
 
         with self.assertRaises(ValueError) as err:
-            eop.join([self.ps_first_block, ts], axis="properties")
+            equistore.operations.join([self.ps_first_block, tm], axis="properties")
         self.assertIn("samples", str(err.exception))
 
     def test_join_properties_different_components(self):
@@ -99,13 +109,13 @@ class TestJoinTensorMap(unittest.TestCase):
         self.se.components_to_properties(["spherical_harmonics_m"])
         se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
         with self.assertRaises(ValueError) as err:
-            eop.join([self.se, se], axis="properties")
+            equistore.operations.join([self.se, se], axis="properties")
         self.assertIn("components", str(err.exception))
 
     def test_join_properties_different_gradients(self):
         """Test error raise if `gradients` are not the same."""
         with self.assertRaises(ValueError) as err:
-            eop.join(
+            equistore.operations.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="properties"
             )
         self.assertIn("gradients", str(err.exception))
@@ -117,19 +127,21 @@ class TestJoinTensorMap(unittest.TestCase):
             values=np.array(self.ps.keys[0].tolist()).reshape(1, -1),
         )
 
-        ts = TensorMap(keys, [self.first_block.copy()])
-        ts_1 = eop.slice(ts, samples=self.first_block.samples[:1])
-        ts_2 = eop.slice(ts, samples=self.first_block.samples[1:])
+        tm = TensorMap(keys, [self.first_block.copy()])
+        ts_1 = equistore.operations.slice(tm, samples=self.first_block.samples[:1])
+        ts_2 = equistore.operations.slice(tm, samples=self.first_block.samples[1:])
 
-        ts_joined = eop.join([ts_1, ts_2], axis="samples")
-        self.assertTrue(eop.allclose(ts, ts_joined))
+        ts_joined = equistore.operations.join([ts_1, ts_2], axis="samples")
+        self.assertTrue(equistore.operations.allclose(tm, ts_joined))
 
     def test_join_samples_different_properties(self):
         """Test error raise if `proprties` are not the same."""
-        ts = eop.slice(self.ps_first_block, properties=self.first_block.properties[:1])
+        tm = equistore.operations.slice(
+            self.ps_first_block, properties=self.first_block.properties[:1]
+        )
 
         with self.assertRaises(ValueError) as err:
-            eop.join([self.ps_first_block, ts], axis="samples")
+            equistore.operations.join([self.ps_first_block, tm], axis="samples")
         self.assertIn("properties", str(err.exception))
 
     def test_join_samples_different_components(self):
@@ -137,13 +149,13 @@ class TestJoinTensorMap(unittest.TestCase):
         self.se.components_to_properties(["spherical_harmonics_m"])
         se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
         with self.assertRaises(ValueError) as err:
-            eop.join([self.se, se], axis="samples")
+            equistore.operations.join([self.se, se], axis="samples")
         self.assertIn("components", str(err.exception))
 
     def test_join_samples_different_gradients(self):
         """Test error raise if `gradients` are not the same."""
         with self.assertRaises(ValueError) as err:
-            eop.join(
+            equistore.operations.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="samples"
             )
         self.assertIn("gradients", str(err.exception))
@@ -169,10 +181,10 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels,
         )
 
-        ts = TensorMap(self.keys, [block])
-        joined_ts = eop.join([ts, ts], axis="properties")
+        tm = TensorMap(self.keys, [block])
+        joined_tm = equistore.operations.join([tm, tm], axis="properties")
 
-        joined_labels = joined_ts.block(0).properties
+        joined_labels = joined_tm.block(0).properties
 
         self.assertEqual(joined_labels.names, ("tensor",) + names)
 
@@ -215,12 +227,12 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels_2,
         )
 
-        joined_ts = eop.join(
+        joined_tm = equistore.operations.join(
             [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
             axis="properties",
         )
 
-        joined_labels = joined_ts.block(0).properties
+        joined_labels = joined_tm.block(0).properties
 
         self.assertEqual(joined_labels.names, ("structure", "prop_1"))
         self.assertTrue(
@@ -249,12 +261,61 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels_2,
         )
 
-        joined_ts = eop.join(
+        joined_tm = equistore.operations.join(
             [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
             axis="properties",
         )
 
-        joined_labels = joined_ts.block(0).properties
+        joined_labels = joined_tm.block(0).properties
+
+        self.assertEqual(joined_labels.names, ("tensor", "property"))
+
+        ref = np.array(
+            [
+                [0, 0],
+                [0, 1],
+                [0, 2],
+                [0, 3],
+                [0, 4],
+                [1, 0],
+                [1, 1],
+                [1, 2],
+                [1, 3],
+                [1, 4],
+            ]
+        )
+
+        self.assertTrue(np.equal(joined_labels.tolist(), ref).all())
+
+    def test_different_names_different_length(self):
+        """Test Label joining using labels with different names and different length."""
+        property_labels_1 = Labels(
+            ("structure", "prop_1"), np.vstack(2 * [np.arange(5)]).T
+        )
+        property_labels_2 = Labels(
+            ("structure", "prop_2", "prop_3"), np.vstack(3 * [np.arange(5)]).T
+        )
+
+        block_1 = TensorBlock(
+            values=np.zeros([2, 5]),
+            samples=self.sample_labels,
+            components=[],
+            properties=property_labels_1,
+        )
+
+        block_2 = TensorBlock(
+            values=np.zeros([2, 5]),
+            samples=self.sample_labels,
+            components=[],
+            properties=property_labels_2,
+        )
+
+        joined_tm = equistore.operations.join(
+            [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
+            axis="properties",
+        )
+
+        joined_labels = joined_tm.block(0).properties
 
         self.assertEqual(joined_labels.names, ("tensor", "property"))
 
