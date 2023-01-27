@@ -1,3 +1,5 @@
+import functools
+import operator
 from typing import List
 
 import numpy as np
@@ -9,31 +11,70 @@ from . import _dispatch
 from ._utils import _check_blocks, _check_same_gradients_components, _check_same_keys
 
 
-def join(tensormaps: List[TensorMap], axis: str):
+def join(tensor_maps: List[TensorMap], axis: str):
     """Join a sequence of :py:class:`TensorMap` along an axis.
 
-    The ``axis`` parameter specifies the type join.
-    For example, if ``axis='properties'`` it will be the joined along the
-    properties of the TensorMaps and if ``axis='samples'`` it will be the
-    along the samples.
+    The ``axis`` parameter specifies the type join. For example, if
+    ``axis='properties'`` it will be the joined along the properties of the
+    TensorMaps and if ``axis='samples'`` it will be the along the samples.
+
+    Possible clashes of the meta data like the property names are resolved by
+    one of the three following strategies:
+
+    1. If the names are the same and the values are unique we keep the names and
+       join the values vertically::
+
+        labels_1 = ["n"], [0, 2, 3] labels_2 = ["n"], [1, 4, 5]
+
+       will lead to::
+
+        joined_labels = ["n"],
+                       [0, 2, 3, 1, 4, 5]
+
+    2. If the names are the same but the values are not unique a new variable
+       ``"tensor"`` is added to the names::
+
+            labels_1 = ["n"], [0, 2, 3]
+            labels_2 = ["n"], [0, 2]
+
+       will lead to:
+
+            joined_labels = ["tensor", "n"],
+                            [[0, 0], [0, 2], [0, 3], [1, 0], [1, 2]]
+
+       In ``joined_labels`` the label values ``[0, 0], [0, 2], [0, 3]``
+       correspond to ``properties_1`` ``[1, 0], [1, 2]`` correspond to
+       ``properties_2``.
+
+    3. If names of the labels are different we change the names to ("tensor",
+       "property"). This case is only supposed to happen when joining in the
+       property dimension, hence the choice of names. For example::
+
+            properties_1 = ["a"], [0, 2, 3]
+            properties_2 = ["b", "c"], [[0, 0], [1, 2]]
+
+       will lead to:
+
+            joined_properties = ["tensor", "property"],
+                         [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]
 
     :param tensormaps: sequence of :py:class:`TensorMap` for join
-    :param axis: A string indicating how the tensormaps are stacked.
-                 Allowed values are ``'properties'`` or ``'samples'``.
+    :param axis: A string indicating how the tensormaps are stacked. Allowed
+                 values are ``'properties'`` or ``'samples'``.
 
-    :return: The stacked :py:class:`TensorMap` which has more properties or
-             samples than the input TensorMap.
+    :return: The stacked :py:class:`TensorMap` with more properties or samples
+             than the input TensorMap.
     """
 
-    if len(tensormaps) < 2 or type(tensormaps) not in [list, tuple]:
+    if len(tensor_maps) < 2 or not isinstance(tensor_maps, (list, tuple)):
         raise ValueError("provide at least two `TensorMap`s for joining")
 
-    for ts_to_join in tensormaps[1:]:
-        _check_same_keys(tensormaps[0], ts_to_join, "join")
+    for ts_to_join in tensor_maps[1:]:
+        _check_same_keys(tensor_maps[0], ts_to_join, "join")
 
     blocks = []
-    for key in tensormaps[0].keys:
-        blocks_to_join = [ts.block(key) for ts in tensormaps]
+    for key in tensor_maps[0].keys:
+        blocks_to_join = [ts.block(key) for ts in tensor_maps]
 
         if axis == "properties":
             blocks.append(_join_blocks_along_properties(blocks_to_join))
@@ -45,66 +86,43 @@ def join(tensormaps: List[TensorMap], axis: str):
                 "valid values for the `axis` parameter."
             )
 
-    return TensorMap(tensormaps[0].keys, blocks)
+    return TensorMap(tensor_maps[0].keys, blocks)
 
 
 def _join_labels(labels: List[Labels]) -> Labels:
-    """Join a sequence of :py:class:`Labels`
-
-    Possible name and value clashes are resolved by the following strategy:
-
-    1. If the names are the same and the values are unique we keep the names and
-       join the values vertically. In example::
-
-        labels_1 = ["n"], [0, 2, 3]
-        labels_2 = ["n"], [1, 4, 5]
-
-      will lead to::
-
-        properties = ["n"], [0, 2, 3, 1, 4, 5]
-
-    2. If the names are the same but the values are not unique a new variable
-       "tensor" is added to the names. In example::
-
-            properties_1 = ["n"], [0, 2, 3]
-            properties_2 = ["n"], [0, 2]
-
-        will lead to::
-            properties = ["tensor", "n"], [[0, 0], [0, 2], [0, 3], [1, 0], [1, 2]]
-
-    3. If names of the Labels are different we change the names two to
-       ("tensor", "property"). In example::
-
-            properties_1 = ["a"], [0, 2, 3]
-            properties_2 = ["b", "c], [[0, 0], [1, 2]]
-
-        will lead to::
-
-            properties = ["tensor", "q"], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]
-    """
-    names = [label.names for label in labels]
-    values = [label.tolist() for label in labels]
+    """Join a sequence of :py:class:`Labels`"""
+    names_list = [label.names for label in labels]
+    values_list = [label.tolist() for label in labels]
     tensor_values = np.repeat(
-        a=np.arange(len(values)), repeats=[len(value) for value in values]
+        a=np.arange(len(values_list)), repeats=[len(value) for value in values_list]
     )
 
-    unique_names = np.unique(names)
-    unique_values = np.unique(np.vstack(values), axis=0)
+    # We use functools to flatten a list of sublists::
+    #
+    #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
+    #
+    # A nested list with sublist of different shapes can not be handled by np.unique.
+    unique_names = np.unique(functools.reduce(operator.concat, names_list))
 
+    # Label names are unique: We can do an equal check only checking the lengths.
     names_are_same = np.all(
-        len(unique_names) == np.array([len(name) for name in names])
+        len(unique_names) == np.array([len(names) for names in names_list])
     )
-    values_are_unique = len(unique_values) == len(np.vstack(values))
 
-    if names_are_same and values_are_unique:
-        new_names = names[0]
-        new_values = np.vstack(values)
-    elif names_are_same and not values_are_unique:
-        new_names = ["tensor"] + list(names[0])
-        new_values = np.hstack([tensor_values.reshape(-1, 1), np.vstack(values)])
+    if names_are_same:
+        unique_values = np.unique(np.vstack(values_list), axis=0)
+        values_are_unique = len(unique_values) == len(np.vstack(values_list))
+        if values_are_unique:
+            new_names = names_list[0]
+            new_values = np.vstack(values_list)
+        else:
+            new_names = ["tensor"] + list(names_list[0])
+            new_values = np.hstack(
+                [tensor_values.reshape(-1, 1), np.vstack(values_list)]
+            )
     else:
         new_names = ["tensor", "property"]
-        property_values = np.hstack([np.arange(len(value)) for value in values])
+        property_values = np.hstack([np.arange(len(values)) for values in values_list])
         new_values = np.vstack([tensor_values, property_values]).T
 
     return Labels(names=new_names, values=new_values)
