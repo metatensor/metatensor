@@ -27,7 +27,7 @@ def _reduce_over_samples_block(
     for sample in remaining_samples:
         assert sample in block_samples.names
 
-    assert reduction in ["sum", "mean"]
+    assert reduction in ["sum", "mean", "variance", "std"]
 
     # get the indices of the selected sample
     sample_selected = [
@@ -69,6 +69,9 @@ def _reduce_over_samples_block(
             values_result2 = values_result2 / bincount.reshape(
                 (-1,) + (1,) * len(other_shape)
             )
+            # I need the mean values in the derivatives
+            if len(block.gradients()) > 0:
+                values_mean = values_result.copy()
             values_result = values_result2 - values_result
             if reduction == "std":
                 values_result = _dispatch.sqrt(values_result)
@@ -114,11 +117,34 @@ def _reduce_over_samples_block(
         )
         _dispatch.index_add(data_result, gradient_data, index_gradient)
 
-        if reduction == "mean":
+        if reduction == "mean" or reduction == "variance" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
             data_result = data_result / bincount.reshape(
                 (-1,) + (1,) * len(other_shape)
             )
+            if reduction == "std" or reduction == "variance":
+                values_times_data = _dispatch.zeros_like(gradient_data)
+                for i, s in enumerate(samples[:, 0]):
+                    values_times_data[i] = gradient_data[i] * block_values[s]
+
+                values_grad_result = _dispatch.zeros_like(
+                    gradient_data,
+                    shape=(new_gradient_samples.shape[0],) + other_shape,
+                )
+                _dispatch.index_add(
+                    values_grad_result,
+                    values_times_data,
+                    index_gradient,
+                )
+
+                values_grad_result = values_grad_result / bincount.reshape(
+                    (-1,) + (1,) * len(other_shape)
+                )
+                for i, s in enumerate(new_gradient_sample):
+                    data_result[i] = data_result[i] * values_mean[s[0]]
+                data_result = 2 * (values_grad_result - data_result)
+                if reduction == "std":
+                    data_result = 0.5 * data_result / values_result
 
         # no check for the len of the gradient sample is needed becouse there always
         # will be at least one sample in the gradient
@@ -278,8 +304,11 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
     For an usage example see the doc for ``sum_over_samples``.
 
+    The gradient is implemented as follow:
+    Grad[Std[X]] = 0.5 (Grad[Var[X]])/Std[X]= (E[X Grad[X]] - E[X]E[Grad[X]])/Std[X]
+
     :param tensor: input :py:class:`TensorMap`
-    :param samples_names: names of samples to average over
+    :param samples_names: names of samples to perform the standart deviation over
     """
     return _reduce_over_samples(
         tensor=tensor, samples_names=samples_names, reduction="std"
@@ -300,8 +329,11 @@ def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> Tensor
 
     For an usage example see the doc for ``sum_over_samples``.
 
+    The gradient is implemented as follow:
+    Grad[Var[X]] = 2(E[X Grad[X]] - E[X]E[Grad[X]])
+
     :param tensor: input :py:class:`TensorMap`
-    :param samples_names: names of samples to average over
+    :param samples_names: names of samples to perform the variance over
     """
     return _reduce_over_samples(
         tensor=tensor, samples_names=samples_names, reduction="variance"
