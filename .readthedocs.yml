@@ -11,7 +11,7 @@ build:
   apt_packages:
     - cmake
   tools:
-    python: "3.8"
+    python: "3.10"
     rust: "1.61"
 
 # Build documentation in the docs/ directory with Sphinx

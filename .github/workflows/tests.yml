@@ -28,7 +28,7 @@ jobs:
 
           # MSRV (Minimally Supported Rust Version)
           - os: ubuntu-20.04
-            rust-version: 1.56
+            rust-version: 1.59
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         if: "!matrix.container"
         with:
           python-version: "3.10"
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 

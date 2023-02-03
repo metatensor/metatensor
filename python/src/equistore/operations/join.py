@@ -146,7 +146,6 @@ def _join_blocks_along_properties(blocks: List[TensorBlock]) -> TensorBlock:
     )
 
     for parameter, first_gradient in first_block.gradients():
-
         # Different blocks might contain different gradient samples
         gradient_sample_values = np.unique(
             np.hstack([block.gradient(parameter).samples for block in blocks])
