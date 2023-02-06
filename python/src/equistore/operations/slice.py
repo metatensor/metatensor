@@ -320,7 +320,6 @@ def _slice_block(block: TensorBlock, samples=None, properties=None) -> TensorBlo
 
     # Slice each Gradient TensorBlock and add to the new_block.
     for parameter, gradient in block.gradients():
-
         new_grad_data = gradient.data
         new_grad_samples = gradient.samples
 

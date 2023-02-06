@@ -39,16 +39,16 @@ jobs:
           default: true
           target: ${{ matrix.rust-target }}
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: "3.10"
       - name: build wheel
         env:
           RUST_BUILD_TARGET: ${{ matrix.rust-target }}
         run: |
           python -m pip install wheel
           python setup.py bdist_wheel --plat-name ${{ matrix.platform-name }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist/*.whl
@@ -63,20 +63,20 @@ jobs:
   build-manylinux-wheels:
     runs-on: ubuntu-20.04
     # TODO: add other arch for linux?
-    name: x86_64 manylinux2010
+    name: x86_64 manylinux
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: build manylinux2010 with rust docker image
-        run: docker build -t manylinux2010-with-rust python/scripts/build-wheels
+      - name: build manylinux with rust docker image
+        run: docker build -t manylinux-with-rust python/scripts/build-wheels
       - name: build wheel in docker
-        run: docker run --rm -v $(pwd):/code manylinux2010-with-rust bash -c "cd /code && /opt/python/cp38-cp38/bin/python setup.py bdist_wheel"
+        run: docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "cd /code && /opt/python/cp38-cp38/bin/python setup.py bdist_wheel"
       - name: run auditwheel in docker
-        run: docker run --rm -v $(pwd):/code manylinux2010-with-rust bash -c "auditwheel repair /code/dist/*.whl -w /code/dist"
+        run: docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "auditwheel repair /code/dist/*.whl -w /code/dist"
       - name: remove wheel with wrong tag
         run: sudo rm dist/*linux_x86_64.whl
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist/*.whl
@@ -96,14 +96,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: "3.10"
       - name: build sdist
         run: |
           python -m pip install wheel
           python setup.py sdist
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist/*.tar.gz
