@@ -70,9 +70,9 @@ def _reduce_over_samples_block(
                 (-1,) + (1,) * len(other_shape)
             )
             # I need the mean values in the derivatives
-            if len(block.gradients()) > 0:
+            if len(block.gradients_list()) > 0:
                 values_mean = values_result.copy()
-            values_result = values_result2 - values_result
+            values_result = values_result2 - values_result**2
             if reduction == "std":
                 values_result = _dispatch.sqrt(values_result)
 
@@ -140,7 +140,7 @@ def _reduce_over_samples_block(
                 values_grad_result = values_grad_result / bincount.reshape(
                     (-1,) + (1,) * len(other_shape)
                 )
-                for i, s in enumerate(new_gradient_sample):
+                for i, s in enumerate(new_gradient_samples):
                     data_result[i] = data_result[i] * values_mean[s[0]]
                 data_result = 2 * (values_grad_result - data_result)
                 if reduction == "std":
