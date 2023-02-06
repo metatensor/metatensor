@@ -144,7 +144,16 @@ def _reduce_over_samples_block(
                     data_result[i] = data_result[i] * values_mean[s[0]]
                 data_result = 2 * (values_grad_result - data_result)
                 if reduction == "std":
-                    data_result = 0.5 * data_result / values_result
+                    v_shape = values_result.shape
+                    d_shape = data_result.shape
+                    v_shape_broadcast = (
+                        (v_shape[0],)
+                        + (1,) * len(d_shape[1 : -(len(v_shape) - 1)])
+                        + v_shape[1:]
+                    )
+                    data_result = (
+                        0.5 * data_result / values_result.reshape(v_shape_broadcast)
+                    )
 
         # no check for the len of the gradient sample is needed becouse there always
         # will be at least one sample in the gradient
