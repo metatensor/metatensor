@@ -6,7 +6,7 @@ models.
 These functions can handle data stored either in numpy arrays or Torch tensor,
 and automatically dispatch to the right function for a given TensorMap.
 """
-
+from .add import add  # noqa
 from .allclose import (  # noqa
     allclose,
     allclose_block,
@@ -17,6 +17,7 @@ from .dot import dot  # noqa
 from .empty_like import empty_like, empty_like_block  # noqa
 from .join import join  # noqa
 from .lstsq import lstsq  # noqa
+from .multiply import multiply  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
 from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
 from .remove_gradients import remove_gradients  # noqa
@@ -26,6 +27,7 @@ from .zeros_like import zeros_like, zeros_like_block  # noqa
 
 
 __all__ = [
+    "add",
     "allclose",
     "allclose_raise",
     "allclose_block",
@@ -36,6 +38,7 @@ __all__ = [
     "lstsq",
     "mean_over_samples",
     "ones_like",
+    "multiply",
     "remove_gradients",
     "slice",
     "slice_block",
