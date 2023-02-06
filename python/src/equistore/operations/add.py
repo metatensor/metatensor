@@ -14,7 +14,7 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     a :py:class:`TensorMap` as well.
 
     :param A: First :py:class:`TensorMap` for the addition.
-    :param B: Second instance for the addition. Parameter can be a scalar a array or a
+    :param B: Second instance for the addition. Parameter can be a scalar or a
               :py:class:`TensorMap`. In the latter case ``B`` must have the same
               metadata of ``A``.
 

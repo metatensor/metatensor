@@ -9,7 +9,7 @@ Operations
 .. and equistore-specific operations
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     creation/index
     linear_algebra/index
