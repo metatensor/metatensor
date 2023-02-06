@@ -60,3 +60,14 @@ def _check_same_gradients_components(a: TensorBlock, b: TensorBlock, fname: str)
             raise ValueError(
                 f"input to {fname} should habe the same gradient components"
             )
+
+
+def _check_parameters_in_gradient_block(
+    block: TensorBlock, parameters: List, fname: str
+):
+    for p in parameters:
+        if p not in block.gradients_list():
+            raise ValueError(
+                f"The requested parameter '{p}' in {fname} is not a valid parameter"
+                "for the TensorBlock"
+            )
