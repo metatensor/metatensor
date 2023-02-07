@@ -8,7 +8,7 @@ from ..block import TensorBlock
 from ..labels import Labels
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_same_gradients_components, _check_same_keys
+from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
 
 
 def join(tensor_maps: List[TensorMap], axis: str):
@@ -70,7 +70,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
         raise ValueError("provide at least two `TensorMap`s for joining")
 
     for ts_to_join in tensor_maps[1:]:
-        _check_same_keys(tensor_maps[0], ts_to_join, "join")
+        _check_maps(tensor_maps[0], ts_to_join, "join")
 
     blocks = []
     for key in tensor_maps[0].keys:

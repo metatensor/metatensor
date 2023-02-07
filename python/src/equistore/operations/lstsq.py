@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_same_keys
+from ._utils import _check_blocks, _check_maps
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
@@ -36,7 +36,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
             and might depend on the version you are using."
         )
 
-    _check_same_keys(X, Y, "lstsq")
+    _check_maps(X, Y, "lstsq")
 
     blocks = []
     for key, X_block in X:

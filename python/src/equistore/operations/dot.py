@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_same_keys
+from ._utils import _check_maps
 
 
 def dot(A: TensorMap, B: TensorMap) -> TensorMap:
@@ -28,7 +28,7 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
             ``sample`` of ``A``; the ``properties`` equal to the ``sample`` of
             ``B``; and the ``components`` equal to the ``components`` of ``A``
     """
-    _check_same_keys(A, B, "dot")
+    _check_maps(A, B, "dot")
 
     blocks = []
     for key, block1 in A:
