@@ -9,17 +9,20 @@ from ._utils import _check_blocks, _check_same_gradients_components, _check_same
 
 
 def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
-    """Return a new :class:`TensorMap` with the values being the element-wise
+    r"""Return a new :class:`TensorMap` with the values being the element-wise
     multiplication of ``A`` and ``B``.
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
-    If gradients are present in ``A`` a multiplication is only performed if ``B`` is
-    a :py:class:`TensorMap` as well. The multiplication is performed with the
-    rule of the derivatives.
+    If gradients are present in ``A`` a multiplication (:math:`*`) is only performed if
+    ``B`` is a :py:class:`TensorMap` as well. The multiplication is performed with the
+    rule of the derivatives:
+
+    .. math::
+        \nabla(A * B) = B * \nabla A + A * \nabla B
 
     :param A: First :py:class:`TensorMap` for the addition.
-    :param B: Second instance for the multiplication. Parameter can be a scalar a array
+    :param B: Second instance for the multiplication. Parameter can be a scalar
             or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
             metadata of ``A``.
 
