@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_same_keys
+from ._utils import _check_blocks, _check_maps
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -23,7 +23,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
             equal to the ``properties`` of ``Y``;
             and the ``properties`` equal to the ``properties`` of ``X``.
     """
-    _check_same_keys(X, Y, "solve")
+    _check_maps(X, Y, "solve")
 
     for _, X_block in X:
         shape = X_block.values.shape

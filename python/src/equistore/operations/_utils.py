@@ -6,16 +6,40 @@ from ..block import TensorBlock
 from ..tensor import TensorMap
 
 
-def _check_same_keys(a: TensorMap, b: TensorMap, fname: str):
-    keys_a = a.keys
-    keys_b = b.keys
+def _check_maps(a: TensorMap, b: TensorMap, fname: str):
+    """Check if metadata between two TensorMaps is consistent for an operation.
 
-    if len(keys_a) != len(keys_b) or (not np.all([key in keys_b for key in keys_a])):
-        raise ValueError(f"inputs to {fname} should have the same keys")
+    The functions verifies that
+
+    1. The key names are the same.
+    2. The number of blocks in the same
+    3. The block key indices are the same.
+
+    :param a: first :py:class:`TensorMap` for check
+    :param b: second :py:class:`TensorMap` for check
+    """
+
+    if a.keys.names != b.keys.names:
+        raise ValueError(
+            f"Inputs to {fname} should have the same keys. "
+            f"Got {a.keys.names} and {b.keys.names}."
+        )
+
+    if len(a.blocks()) != len(b.blocks()):
+        raise ValueError(
+            f"Inputs to {fname} should have the same number of blocks. "
+            f"Got {len(a.blocks())} and {len(b.blocks())}."
+        )
+
+    if not np.all([key in a.keys for key in b.keys]):
+        raise ValueError(f"Inputs to {fname} should have the same key indices.")
 
 
 def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
-    """Check if a proprty is the same between two :py:class:`TensorBlock`s.
+    """Check if metadata between two TensorBlocks is consistent for an operation.
+
+    The functions verifies that that the metadata of the given props is the same
+    (length and indices).
 
     :param a: first :py:class:`TensorBlock` for check
     :param b: second :py:class:`TensorBlock` for check
@@ -24,7 +48,7 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
                  ``'components'`` and ``'gradients'``.
     """
     for prop in props:
-        err_msg = f"inputs to {fname} should have the same {prop}"
+        err_msg = f"Inputs to {fname} should have the same {prop}."
         if prop == "samples":
             if not np.all(a.samples == b.samples):
                 raise ValueError(err_msg)
