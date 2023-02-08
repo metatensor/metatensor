@@ -56,7 +56,9 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
             if not np.all(a.properties == b.properties):
                 raise ValueError(err_msg)
         elif prop == "components":
-            if not np.all(a.components == b.components):
+            if len(a.components) != len(b.components) or (
+                not np.all([labels in b.components for labels in a.components])
+            ):
                 raise ValueError(err_msg)
         elif prop == "gradients":
             grads_a = a.gradients_list()
