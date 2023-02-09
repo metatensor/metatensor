@@ -4,6 +4,7 @@ import pkgutil
 import unittest
 
 import equistore
+import equistore.metaoperations
 import equistore.operations
 
 
