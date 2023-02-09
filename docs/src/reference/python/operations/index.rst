@@ -12,7 +12,7 @@ Operations
     :maxdepth: 2
 
     creation/index
-    linear_algebra/index
+    linear-algebra/index
     logic/index
     manipulation/index
     math/index
