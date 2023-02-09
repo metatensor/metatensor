@@ -16,4 +16,5 @@ provided in ``equistore`` can be grouped in four main groups:
     block
     data
     operations/index
+    meta-operations/index
     misc/index
