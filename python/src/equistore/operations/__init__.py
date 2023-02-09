@@ -23,6 +23,7 @@ from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
 from .remove_gradients import remove_gradients  # noqa
 from .slice import slice, slice_block  # noqa
 from .solve import solve  # noqa
+from .split import split, split_block  # nopa
 from .zeros_like import zeros_like, zeros_like_block  # noqa
 
 
@@ -43,6 +44,8 @@ __all__ = [
     "slice",
     "slice_block",
     "solve",
+    "split",
+    "split_block",
     "sum_over_samples",
     "zeros_like",
 ]
