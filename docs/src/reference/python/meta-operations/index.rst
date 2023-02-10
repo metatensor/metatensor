@@ -18,4 +18,3 @@ located in :ref:`python-operations`.
     :maxdepth: 2
 
     set/index
-    logic/index
