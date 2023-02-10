@@ -139,6 +139,18 @@ class TestUnique(unittest.TestCase):
         self.assertTrue(
             _labels_equal(target_properties, actual_properties, exact_order=True)
         )
+        # By definition the unique TensorBlock and Gradient block properties
+        # should be equivalent
+        actual_properties_tensorblock = fn.unique_block(
+            self.tensor2.block(1),
+            "properties",
+            pname,
+        )
+        self.assertTrue(
+            _labels_equal(
+                actual_properties_tensorblock, actual_properties, exact_order=True
+            )
+        )
         # Test case 3
         target_samples = Labels(
             names=["sample"], values=np.arange(0, 52).reshape(-1, 1)
