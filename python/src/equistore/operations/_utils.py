@@ -50,14 +50,30 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
     for prop in props:
         err_msg = f"Inputs to {fname} should have the same {prop}."
         if prop == "samples":
+            if not a.samples.names == b.samples.names:
+                raise ValueError(err_msg)
             if not np.all(a.samples == b.samples):
                 raise ValueError(err_msg)
         elif prop == "properties":
+            if not a.properties.names == b.properties.names:
+                raise ValueError(err_msg)
             if not np.all(a.properties == b.properties):
                 raise ValueError(err_msg)
         elif prop == "components":
-            if not np.all(a.components == b.components):
+            if len(a.components) != len(b.components):
                 raise ValueError(err_msg)
+
+            for ca in a.components:
+                flag = False
+                for cb in b.components:
+                    if ca.names == cb.names:
+                        flag = True
+                        if not np.all(ca == cb):
+                            raise ValueError(err_msg)
+                # if flag is False ca.names == cb.names has never been satisfied
+                if not flag:
+                    raise ValueError(err_msg)
+
         elif prop == "gradients":
             grads_a = a.gradients_list()
             grads_b = b.gradients_list()
