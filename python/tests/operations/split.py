@@ -189,6 +189,19 @@ class TestSplitSamples(unittest.TestCase):
         self._check_group_sizes_tensors(split_tensors[:2], grouped_idxs[:2])
         self._check_empty_tensor(self.tensor, split_tensors[2])
 
+    def test_split_block_(self):
+        # All indices present - block with key (2, 6, 6)
+        block = self.tensor.block(
+            spherical_harmonics_l=2, species_center=6, species_neighbor=6
+        )  # has structure samples 0 -> 9 (inc.)
+        grouped_idxs = [
+            Labels(names=["structure"], values=np.array([[0], [6], [7]])),
+            Labels(names=["structure"], values=np.array([[2], [6], [4]])),
+            Labels(names=["structure"], values=np.array([[1], [0], [6], [4]])),
+        ]
+        split_blocks = fn.split_block(block, "samples", grouped_idxs)
+        self._check_split_blocks(block, split_blocks, grouped_idxs)
+
 
 class TestSplitProperties(unittest.TestCase):
     """Splitting property dimension of TensorMap and TensorBlock"""
