@@ -6,6 +6,7 @@ import numpy as np
 import equistore.io
 import equistore.metaoperations as fn
 from equistore import Labels, TensorBlock, TensorMap
+from equistore.operations import slice_block
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -17,51 +18,252 @@ class TestUnique(unittest.TestCase):
     TensorBlock"""
 
     def setUp(self):
-        # Test case 1
-        self.tensor1 = test_tensor_map()
-        self.block1 = self.tensor1.block(3)
-        # Test case 2
-        self.tensor2 = test_large_tensor_map()
-        self.block2 = self.tensor2.block(0)
-        # Test case 3
-        self.tensor3 = equistore.io.load(
+        self.tensor1 = test_tensor_map()  # Test case 1
+        self.tensor2 = test_large_tensor_map()  # Test case 2
+        self.tensor3 = equistore.io.load(  # Test case 3
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
-        self.block3 = self.tensor3.block(0)
 
     def test_unique_block(self):
         # Test case 1
         samples = [0, 1, 2, 5]
-        target_idxs = Labels(names=["samples"], values=np.array([[s] for s in samples]))
-        actual_idxs = fn.unique_block(self.block1, "samples", "samples")
-        self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=True))
         properties = [0]
-        target_idxs = Labels(
+        target_samples = Labels(
+            names=["samples"], values=np.array([[s] for s in samples])
+        )
+        target_properties = Labels(
             names=["properties"], values=np.array([[p] for p in properties])
         )
-        actual_idxs = fn.unique_block(self.block1, "properties", "properties")
-        self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=True))
+        actual_samples = fn.unique_block(self.tensor1.block(3), "samples", "samples")
+        actual_properties = fn.unique_block(
+            self.tensor1.block(3), "properties", "properties"
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
         # Test case 2
         samples = [0, 2, 4]
-        target_idxs = Labels(names=["samples"], values=np.array([[s] for s in samples]))
-        actual_idxs = fn.unique_block(self.block2, "samples", "samples")
-        self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=True))
+        properties = [3, 4, 5]
+        target_samples = Labels(
+            names=["samples"], values=np.array([[s] for s in samples])
+        )
+        target_properties = Labels(
+            names=["properties"], values=np.array([[p] for p in properties])
+        )
+        actual_samples = fn.unique_block(self.tensor2.block(0), "samples", "samples")
+        actual_properties = fn.unique_block(
+            self.tensor2.block(1), "properties", "properties"
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
         # Test case 3
+        samples = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        properties = [0, 1, 2, 3]
+        target_samples = Labels(
+            names=["structure"], values=np.array([[s] for s in samples])
+        )
+        target_properties = Labels(
+            names=["n"], values=np.array([[p] for p in properties])
+        )
+        actual_samples = fn.unique_block(self.tensor3.block(0), "samples", "structure")
+        actual_properties = fn.unique_block(self.tensor3.block(0), "properties", "n")
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Slice block to zero along samples and check labels return is empty
+        # with correct names
+        target_samples = Labels(names=["structure"], values=np.array([[0]])[:0])
+        sliced_block = slice_block(
+            self.tensor3.block(0),
+            samples=Labels(names=["structure"], values=np.array([[-1]])),
+        )
+        actual_samples = fn.unique_block(sliced_block, "samples", "structure")
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(len(actual_samples) == 0)
+        # Slice block to zero along properties and check labels return is empty
+        # with correct names
+        target_properties = Labels(names=["n"], values=np.array([[0]])[:0])
+        sliced_block = slice_block(
+            self.tensor3.block(0),
+            properties=Labels(names=["n"], values=np.array([[-1]])),
+        )
+        actual_properties = fn.unique_block(sliced_block, "properties", "n")
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        self.assertTrue(len(actual_properties) == 0)
+
+        return
+
+    def test_unique_block_gradient(self):
+        # Test case 1
+        parameter = "parameter"
+        samples = [0, 2]
+        properties = [0]
+        target_samples = Labels(
+            names=["sample"], values=np.array([[s] for s in samples])
+        )
+        target_properties = Labels(
+            names=["properties"], values=np.array([[p] for p in properties])
+        )
+        actual_samples = fn.unique_block(
+            self.tensor1.block(0), "samples", "sample", parameter
+        )
+        actual_properties = fn.unique_block(
+            self.tensor1.block(0), "properties", "properties", parameter
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Test case 2
+        parameter = "parameter"
+        samples, sname = [[0, -2], [0, 3], [2, -2]], ["sample", "parameter"]
+        properties, pname = [[3], [4], [5]], ["properties"]
+        target_samples = Labels(names=sname, values=np.array([s for s in samples]))
+        target_properties = Labels(
+            names=pname, values=np.array([p for p in properties])
+        )
+        actual_samples = fn.unique_block(
+            self.tensor2.block(1), "samples", sname, parameter
+        )
+        actual_properties = fn.unique_block(
+            self.tensor2.block(1), "properties", pname, parameter
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Test case 3
+        target_samples = Labels(
+            names=["sample"], values=np.arange(0, 52).reshape(-1, 1)
+        )
+        target_properties = Labels(names=["n"], values=np.arange(0, 4).reshape(-1, 1))
+        actual_samples = fn.unique_block(
+            self.tensor3.block(1), "samples", "sample", "cell"
+        )
+        actual_properties = fn.unique_block(
+            self.tensor3.block(1), "properties", "n", "positions"
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Passing names as list
+        actual_properties = fn.unique_block(
+            self.tensor3.block(1), "properties", ["n"], "positions"
+        )
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Passing names as tuple
+        actual_properties = fn.unique_block(
+            self.tensor3.block(1), "properties", ("n",), "positions"
+        )
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Slice block to zero along samples and check labels return is empty
+        # with correct names
+        target_samples = Labels(names=["sample"], values=np.array([[0]])[:0])
+        sliced_block = slice_block(
+            self.tensor3.block(0),
+            samples=Labels(names=["structure"], values=np.array([[-1]])),
+        )
+        actual_samples = fn.unique_block(
+            sliced_block, "samples", "sample", gradient_param="cell"
+        )
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(len(actual_samples) == 0)
+        # Slice block to zero along properties and check labels return is empty
+        # with correct names
+        target_properties = Labels(names=["n"], values=np.array([[0]])[:0])
+        sliced_block = slice_block(
+            self.tensor3.block(0),
+            properties=Labels(names=["n"], values=np.array([[-1]])),
+        )
+        actual_properties = fn.unique_block(
+            sliced_block, "properties", "n", gradient_param="cell"
+        )
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        self.assertTrue(len(actual_properties) == 0)
         return
 
     def test_unique(self):
         samples = [0, 1, 2, 3, 4, 5, 6, 8]
-        target_idxs = Labels(names=["samples"], values=np.array([[s] for s in samples]))
+        properties = [0, 3, 4, 5]
+        target_samples = Labels(
+            names=["samples"], values=np.array([[s] for s in samples])
+        )
+        target_properties = Labels(
+            names=["properties"], values=np.array([[p] for p in properties])
+        )
         # Test case 1
-        actual_idxs = fn.unique(self.tensor1, "samples", "samples")
-        self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=True))
+        actual_samples = fn.unique(self.tensor1, "samples", "samples")
+        actual_properties = fn.unique(self.tensor1, "properties", "properties")
+        self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
         # Test case 2
-        actual_idxs = fn.unique(self.tensor2, "samples", "samples")
-        self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=True))
-        # Passing names as str
+        actual_samples = fn.unique(self.tensor2, "samples", "samples")
+        self.assertTrue(_labels_equal(actual_samples, target_samples, exact_order=True))
+        properties = [0, 1, 2, 3, 4, 5, 6, 7]
+        target_properties = Labels(
+            names=["properties"], values=np.array([[p] for p in properties])
+        )
+        actual_properties = fn.unique(self.tensor2, "properties", "properties")
+        self.assertTrue(_labels_equal(actual_samples, target_samples, exact_order=True))
         # Passing names as list
+        actual_properties = fn.unique(self.tensor2, "properties", ["properties"])
+        self.assertTrue(_labels_equal(actual_samples, target_samples, exact_order=True))
         # Passing names as tuple
+        actual_properties = fn.unique(self.tensor2, "properties", ("properties",))
+        self.assertTrue(_labels_equal(actual_samples, target_samples, exact_order=True))
+
+        return
+
+    def test_unique_gradients(self):
+        # Samples
+        parameter = "parameter"
+        samples = np.array([[0, -2], [0, 1], [0, 3], [1, -2], [2, -2], [2, 3], [3, 3]])
+        snames = ["sample", "parameter"]
+        target_samples = Labels(names=snames, values=samples)
+        actual_samples = fn.unique(self.tensor1, "samples", snames, parameter)
+        self.assertTrue(_labels_equal(actual_samples, target_samples, exact_order=True))
+        # Incorrect order samples - [1, -2] and [2, -2] switched around
+        samples = np.array([[0, -2], [0, 1], [0, 3], [2, -2], [1, -2], [2, 3], [3, 3]])
+        target_samples = Labels(names=snames, values=samples)
+        actual_samples = fn.unique(self.tensor1, "samples", snames, parameter)
+        self.assertFalse(
+            _labels_equal(actual_samples, target_samples, exact_order=True)
+        )
+        # Properties
+        properties, pnames = [0, 3, 4, 5], ["properties"]
+        target_properties = Labels(
+            names=pnames, values=np.array([[p] for p in properties])
+        )
+        actual_properties = fn.unique(self.tensor1, "properties", pnames, parameter)
+        self.assertTrue(
+            _labels_equal(target_properties, actual_properties, exact_order=True)
+        )
+        # Incorrect order properties
+        properties, pnames = [0, 4, 3, 5], ["properties"]
+        target_properties = Labels(
+            names=pnames, values=np.array([[p] for p in properties])
+        )
+        actual_properties = fn.unique(self.tensor1, "properties", pnames, parameter)
+        self.assertFalse(
+            _labels_equal(actual_samples, target_samples, exact_order=True)
+        )
+
         return
 
 
@@ -116,6 +318,18 @@ class TestUniqueErrors(unittest.TestCase):
             "the block(s) passed must have samples/properties"
             + " names that matches the one passed in ``names``",
         )
+        # TypeError gradient_param as float
+        with self.assertRaises(TypeError) as cm:
+            fn.unique_block(
+                self.block, "properties", ["structure"], gradient_param=3.14
+            )
+        self.assertEqual(str(cm.exception), "``gradient_param`` must be a str")
+        # ValueError gradient_param not a valid param for gradients
+        with self.assertRaises(TypeError) as cm:
+            fn.unique_block(
+                self.block, "properties", ["structure"], gradient_param=3.14
+            )
+        self.assertEqual(str(cm.exception), "``gradient_param`` must be a str")
 
     def test_unique(self):
         # TypeError with TB
@@ -155,19 +369,6 @@ class TestUniqueErrors(unittest.TestCase):
             "the block(s) passed must have samples/properties"
             + " names that matches the one passed in ``names``",
         )
-
-
-# def _searchable_labels(labels: Labels):
-#     """
-#     Returns the input Labels object but after being used to construct a
-#     TensorBlock, so that look-ups can be performed.
-#     """
-#     return TensorBlock(
-#         values=np.full((len(labels), 1), 0.0),
-#         samples=labels,
-#         components=[],
-#         properties=Labels(["p"], np.array([[0]], dtype=np.int32)),
-#     ).samples
 
 
 def _labels_equal(a: Labels, b: Labels, exact_order: bool):
