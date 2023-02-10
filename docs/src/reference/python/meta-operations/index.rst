@@ -1,13 +1,13 @@
-.. _python-operations:
+.. _python-meta-operations:
 
-Meta Operations
+Meta-Operations
 ===============
 
 List of operations that act on the *meta* data (i.e. Labels objects) of
 TensorMaps. Operations that act on the actual data values of TensorMaps are
 located in :ref:`python-operations`.
 
-.. automodule:: equistore.operations
+.. automodule:: equistore.metaoperations
     :undoc-members:
 
 
