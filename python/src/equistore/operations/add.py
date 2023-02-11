@@ -13,12 +13,12 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     If gradients are present in ``A``:
 
-    #.  ``B`` is a scalar:
+    *  ``B`` is a scalar:
 
        .. math::
             \nabla(A + B) = \nabla A
 
-    #. ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``:
+    * ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``:
 
        .. math::
             \nabla(A + B) = \nabla A + \nabla B

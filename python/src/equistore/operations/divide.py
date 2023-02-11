@@ -16,12 +16,12 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     If gradients are present in ``A``:
 
-    #.  ``B`` is a scalar then:
+    *  ``B`` is a scalar then:
 
        .. math::
             \nabla(A / B) =  \nabla A / B
 
-    #.  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
+    *  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
         The multiplication is performed with the rule of the derivatives:
 
        .. math::
