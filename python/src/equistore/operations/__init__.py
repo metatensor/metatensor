@@ -13,6 +13,7 @@ from .allclose import (  # noqa
     allclose_block_raise,
     allclose_raise,
 )
+from .divide import divide  # noqa
 from .dot import dot  # noqa
 from .empty_like import empty_like, empty_like_block  # noqa
 from .join import join  # noqa
@@ -34,6 +35,7 @@ __all__ = [
     "allclose_block",
     "allclose_block_raise",
     "empty_like",
+    "divide",
     "dot",
     "join",
     "lstsq",
@@ -44,6 +46,7 @@ __all__ = [
     "slice",
     "slice_block",
     "solve",
+    "subtract",
     "sum_over_samples",
     "zeros_like",
 ]
