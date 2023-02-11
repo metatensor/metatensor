@@ -452,8 +452,9 @@ class TestSplitErrors(unittest.TestCase):
             fn.split(self.tensor, axis="samples", grouped_idxs=grouped_idxs),
         self.assertEqual(
             str(cm.exception),
-            "a name passed in a Labels object at position 0 of ``grouped_idxs`` does"
-            + " not appear in the samples names of the input tensor",
+            "the name ``front and`` passed in a Labels object at position 0 of "
+            "``grouped_idxs`` does not appear in the ``samples`` names "
+            "of the input tensor",
         )
 
     def test_split_block_errors(self):

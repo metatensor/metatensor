@@ -202,10 +202,10 @@ def _check_args(
     # Check the names in grouped_idxs Labels are contained within the names for
     # the block
     names = block.samples.names if axis == "samples" else block.properties.names
-    for ref_name in ref_names:
+    for ref_i, ref_name in enumerate(ref_names):
         if ref_name not in names:
             raise ValueError(
-                f"a name passed in a Labels object at position {ref_i} of"
-                + f" ``grouped_idxs`` does not appear in the {axis} names"
+                f"the name ``{ref_name}`` passed in a Labels object at position {ref_i}"
+                + f" of ``grouped_idxs`` does not appear in the ``{axis}`` names"
                 + " of the input tensor"
             )
