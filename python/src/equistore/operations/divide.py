@@ -25,7 +25,7 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
         The multiplication is performed with the rule of the derivatives:
 
        .. math::
-            \nabla(A / B) =(B*\nablaA-A*\nablaB)/B^2
+            \nabla(A / B) =(B*\nabla A-A*\nabla B)/B^2
 
     :param A: First :py:class:`TensorMap` for the division.
     :param B: Second instance for the division. Parameter can be a scalar
