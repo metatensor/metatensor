@@ -23,6 +23,7 @@ from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
 from .remove_gradients import remove_gradients  # noqa
 from .slice import slice, slice_block  # noqa
 from .solve import solve  # noqa
+from .subtract import subtract  # noqa
 from .zeros_like import zeros_like, zeros_like_block  # noqa
 
 
