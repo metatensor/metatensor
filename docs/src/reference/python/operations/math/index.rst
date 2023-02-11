@@ -7,4 +7,5 @@ Mathematical functions
     add() <add>
     divide() <divide>
     multiply() <multiply>
+    pow() <pow>
     subtract() <subtract>

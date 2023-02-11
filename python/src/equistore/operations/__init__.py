@@ -20,6 +20,7 @@ from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
+from .pow import pow  # noqa
 from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
 from .remove_gradients import remove_gradients  # noqa
 from .slice import slice, slice_block  # noqa
@@ -42,6 +43,7 @@ __all__ = [
     "mean_over_samples",
     "ones_like",
     "multiply",
+    "pow",
     "remove_gradients",
     "slice",
     "slice_block",

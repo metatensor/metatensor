@@ -14,14 +14,20 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
-    If gradients are present in ``A`` a division (:math:`*`) is only performed if
-    ``B`` is a :py:class:`TensorMap` as well. The division is performed with the
-    rule of the derivatives:
+    If gradients are present in ``A``:
 
-    .. math::
-        \nabla(A * B) = B * \nabla A + A * \nabla B
+    #.  ``B`` is a scalar then:
 
-    :param A: First :py:class:`TensorMap` for the addition.
+       .. math::
+            \nabla(A / B) =  \nabla A / B
+
+    #.  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
+        The multiplication is performed with the rule of the derivatives:
+
+       .. math::
+            \nabla(A / B) =(B*\nablaA-A*\nablaB)/B^2
+
+    :param A: First :py:class:`TensorMap` for the division.
     :param B: Second instance for the division. Parameter can be a scalar
             or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
             metadata of ``A``.
