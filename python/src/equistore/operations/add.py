@@ -6,7 +6,8 @@ from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
-    r"""Return a new :class:`TensorMap` with the values being the sum of ``A`` and ``B``.
+    r"""Return a new :class:`TensorMap` with the values being the sum of
+    ``A`` and ``B``.
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
