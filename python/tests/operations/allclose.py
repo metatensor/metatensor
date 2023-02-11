@@ -211,14 +211,18 @@ class Testallclose(unittest.TestCase):
             fn.allclose_block_raise(block_1, block_2)
 
         self.assertEqual(
-            str(cm.exception), "samples names are not the same or not in the same order"
+            str(cm.exception),
+            "Inputs to 'allclose' should have the same samples:\n"
+            "samples names are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
             fn.allclose_block_raise(block_1, block_3)
 
         self.assertEqual(
-            str(cm.exception), "samples not the same or not in the same order"
+            str(cm.exception),
+            "Inputs to 'allclose' should have the same samples:\n"
+            "samples are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
@@ -231,7 +235,8 @@ class Testallclose(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            "components names are not the same or not in the same order",
+            "Inputs to 'allclose' should have the same components:\n"
+            "components names are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
@@ -239,7 +244,8 @@ class Testallclose(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            "samples not the same or not in the same order",
+            "Inputs to 'allclose' should have the same samples:\n"
+            "samples are not the same or not in the same order.",
         )
 
     def test_self_allclose_exceptions_gradient(self):
@@ -280,8 +286,9 @@ class Testallclose(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            'gradient ("parameter") samples names \
-are not the same or not in the same order',
+            "Inputs to allclose should have the same gradient:\n"
+            'gradient ("parameter") samples names are not the same'
+            " or not in the same order.",
         )
 
         block_3 = TensorBlock(
@@ -349,8 +356,9 @@ are not the same or not in the same order',
 
         self.assertEqual(
             str(cm.exception),
-            'gradient ("parameter") components \
-not the same or not in the same order',
+            "Inputs to allclose should have the same gradient:\n"
+            'gradient ("parameter") components are not the same'
+            " or not in the same order.",
         )
 
 

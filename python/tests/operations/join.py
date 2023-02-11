@@ -106,10 +106,10 @@ class TestJoinTensorMap(unittest.TestCase):
 
     def test_join_properties_different_components(self):
         """Test error raise if `components` are not the same."""
-        self.se.components_to_properties(["spherical_harmonics_m"])
+        se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
         se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.se, se], axis="properties")
+            equistore.operations.join([se_c2p, se], axis="properties")
         self.assertIn("components", str(err.exception))
 
     def test_join_properties_different_gradients(self):
@@ -118,7 +118,7 @@ class TestJoinTensorMap(unittest.TestCase):
             equistore.operations.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="properties"
             )
-        self.assertIn("gradients", str(err.exception))
+        self.assertIn("gradient", str(err.exception))
 
     def test_join_samples_values(self):
         """Test values for joining along `samples`."""
@@ -146,10 +146,10 @@ class TestJoinTensorMap(unittest.TestCase):
 
     def test_join_samples_different_components(self):
         """Test error raise if `components` are not the same."""
-        self.se.components_to_properties(["spherical_harmonics_m"])
+        se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
         se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.se, se], axis="samples")
+            equistore.operations.join([se_c2p, se], axis="samples")
         self.assertIn("components", str(err.exception))
 
     def test_join_samples_different_gradients(self):
@@ -158,7 +158,7 @@ class TestJoinTensorMap(unittest.TestCase):
             equistore.operations.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="samples"
             )
-        self.assertIn("gradients", str(err.exception))
+        self.assertIn("gradient", str(err.exception))
 
 
 class TestJoinLabels(unittest.TestCase):

@@ -2,7 +2,7 @@ from typing import Union
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
-from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
+from ._utils import _check_blocks, _check_maps, _check_same_gradients
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -39,10 +39,15 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
             _check_blocks(
                 blockA,
                 blockB,
-                props=["samples", "components", "properties", "gradients"],
+                props=["samples", "components", "properties"],
                 fname="add",
             )
-            _check_same_gradients_components(blockA, blockB, "add")
+            _check_same_gradients(
+                blockA,
+                blockB,
+                props=["samples", "components", "properties"],
+                fname="add",
+            )
             blocks.append(_add_block_block(block1=blockA, block2=blockB))
     else:
         # check if can be converted in float (so if it is a constant value)
