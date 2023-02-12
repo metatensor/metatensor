@@ -44,7 +44,9 @@ class TestSplitSamples(unittest.TestCase):
             # Check samples indices
             target_idxs = _searchable_labels(grouped_idxs[i])
             actual_idxs = _unique_indices(split_block, "samples", target_names)
-            self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
+            self.assertTrue(
+                fn._utils._labels_equal(actual_idxs, target_idxs, exact_order=False)
+            )
             # No properties split
             self.assertEqual(len(split_block.properties), p_size)
             # No components split
@@ -234,7 +236,9 @@ class TestSplitProperties(unittest.TestCase):
             # Check properties indices
             target_idxs = _searchable_labels(grouped_idxs[i])
             actual_idxs = _unique_indices(split_block, "properties", target_names)
-            self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
+            self.assertTrue(
+                fn._utils._labels_equal(actual_idxs, target_idxs, exact_order=False)
+            )
             # No samples split
             self.assertEqual(len(split_block.samples), s_size)
             # No components split
@@ -407,14 +411,15 @@ class TestSplitErrors(unittest.TestCase):
                 grouped_idxs=self.grouped_idxs,
             ),
         self.assertEqual(
-            str(cm.exception), "must pass ``axis`` as either 'samples' or 'properties'"
+            str(cm.exception),
+            "must pass ``axis`` as either 'samples' or 'properties'",
         )
         # grouped_idxs is Labels not list
         with self.assertRaises(TypeError) as cm:
             fn.split(self.tensor, axis="samples", grouped_idxs=self.grouped_idxs[0]),
         self.assertEqual(
             str(cm.exception),
-            "``axis`` should be passed as a ``list`` of equistore ``Labels``",
+            "``grouped_idxs`` should be passed as a ``list`` of equistore ``Labels``",
         )
         # grouped_idxs is list of str
         with self.assertRaises(TypeError) as cm:
@@ -516,22 +521,6 @@ def _searchable_labels(labels: Labels):
         components=[],
         properties=Labels(["p"], np.array([[0]], dtype=np.int32)),
     ).samples
-
-
-def _labels_equal(a: Labels, b: Labels, exact_order: bool):
-    """
-    For 2 :py:class:`Labels` objects ``a`` and ``b``, returns true if they are
-    exactly equivalent in names, values, and elemental positions. Assumes that
-    the Labels are already searchable, i.e. they belogn to a parent TensorBlock
-    or TensorMap.
-    """
-    # They can only be equivalent if the same length
-    if len(a) != len(b):
-        return False
-    if exact_order:
-        return np.all(np.array(a == b))
-    else:
-        return np.all([a_i in b for a_i in a])
 
 
 if __name__ == "__main__":

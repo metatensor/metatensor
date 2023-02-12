@@ -179,7 +179,7 @@ def _check_args(
         raise ValueError("must pass ``axis`` as either 'samples' or 'properties'")
     if not isinstance(grouped_idxs, list):
         raise TypeError(
-            "``axis`` should be passed as a ``list`` of equistore ``Labels``"
+            "``grouped_idxs`` should be passed as a ``list`` of equistore ``Labels``"
         )
     for idxs in grouped_idxs:
         if not isinstance(idxs, Labels):
