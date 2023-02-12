@@ -555,6 +555,7 @@ class TestStdSamples(unittest.TestCase):
         )
         # tensor_ps = fn.remove_gradients(tensor_ps)
         tensor_se = fn.remove_gradients(tensor_se)
+
         bl1 = tensor_ps[0]
 
         reduce_tensor_se = fn.std_over_samples(tensor_se, samples_names="center")
@@ -602,59 +603,79 @@ class TestStdSamples(unittest.TestCase):
         )
 
         # Test the gradients
-        gr1 = tensor_ps[0].gradient("positions").data
+        gr1 = tensor_ps[0].gradient("positions")
 
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[0, 4, 8, 12])
         self.assertTrue(
             np.all(
                 np.allclose(
-                    np.mean(gr1[[0, 4, 8, 12]], axis=0),
+                    (
+                        np.mean(XdX, axis=0)
+                        - np.mean(bl1.values[:4], axis=0)
+                        * np.mean(gr1.data[[0, 4, 8, 12]], axis=0)
+                    )
+                    / np.std(bl1.values[:4], axis=0),
                     reduce_tensor_ps.block(0).gradient("positions").data[0],
                     rtol=1e-13,
                 )
             )
         )
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[2, 6, 10, 14])
         self.assertTrue(
             np.all(
                 np.allclose(
-                    np.mean(gr1[[2, 6, 10, 14]], axis=0),
+                    (
+                        np.mean(XdX, axis=0)
+                        - np.mean(bl1.values[:4], axis=0)
+                        * np.mean(gr1.data[[2, 6, 10, 14]], axis=0)
+                    )
+                    / np.std(bl1.values[:4], axis=0),
                     reduce_tensor_ps.block(0).gradient("positions").data[2],
                 )
             )
         )
 
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[3, 7, 11, 15])
         self.assertTrue(
-            np.all(
-                np.mean(gr1[[3, 7, 11, 15]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[3]
-            )
-        )
-
-        self.assertTrue(
-            np.all(
-                np.allclose(
-                    np.mean(gr1[[96, 99, 102]], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[40],
-                    rtol=1e-13,
+            np.allclose(
+                (
+                    np.mean(XdX, axis=0)
+                    - np.mean(bl1.values[:4], axis=0)
+                    * np.mean(gr1.data[[3, 7, 11, 15]], axis=0)
                 )
+                / np.std(bl1.values[:4], axis=0),
+                reduce_tensor_ps.block(0).gradient("positions").data[3],
             )
         )
 
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[96, 99, 102])
+        idx = [
+            i
+            for i in range(len(bl1.samples))
+            if bl1.samples[i][0] == bl1.samples[gr1.samples[96][0]][0]
+        ]
+
         self.assertTrue(
-            np.all(
-                np.mean(gr1[-1], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[-1]
+            np.allclose(
+                (
+                    np.mean(XdX, axis=0)
+                    - np.mean(bl1.values[idx], axis=0)
+                    * np.mean(gr1.data[[96, 99, 102]], axis=0)
+                )
+                / np.std(bl1.values[idx], axis=0),
+                reduce_tensor_ps.block(0).gradient("positions").data[40],
+                rtol=1e-13,
             )
         )
 
         # The TensorBlock with key=(8,8,8) has nothing to be averaged over
+        values = reduce_tensor_ps.block(
+            species_center=8, species_neighbor_1=8, species_neighbor_2=8
+        ).values
         self.assertTrue(
             np.allclose(
-                tensor_ps.block(
-                    species_center=8, species_neighbor_1=8, species_neighbor_2=8
-                ).values,
-                reduce_tensor_ps.block(
-                    species_center=8, species_neighbor_1=8, species_neighbor_2=8
-                ).values,
+                np.zeros(values.shape),
+                values,
             )
         )
 
@@ -821,6 +842,13 @@ class TestStdSamples(unittest.TestCase):
 
 
 # TODO: add tests with torch & torch scripting/tracing
+def get_XdX(block, gradient, der_index):
+    XdX = []
+    for ig in der_index:
+        idx = gradient.samples[ig][0]
+        XdX.append(block.values[idx] * gradient.data[ig])
+    return np.stack(XdX)
+
 
 if __name__ == "__main__":
     unittest.main()
