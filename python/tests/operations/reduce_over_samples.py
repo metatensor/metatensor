@@ -553,7 +553,7 @@ class TestStdSamples(unittest.TestCase):
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )
-        tensor_ps = fn.remove_gradients(tensor_ps)
+        # tensor_ps = fn.remove_gradients(tensor_ps)
         tensor_se = fn.remove_gradients(tensor_se)
         bl1 = tensor_ps[0]
 
@@ -602,61 +602,61 @@ class TestStdSamples(unittest.TestCase):
         )
 
         # Test the gradients
-        # gr1 = tensor_ps[0].gradient("positions").data
+        gr1 = tensor_ps[0].gradient("positions").data
 
-        # self.assertTrue(
-        #     np.all(
-        #         np.allclose(
-        #             np.mean(gr1[[0, 4, 8, 12]], axis=0),
-        #             reduce_tensor_ps.block(0).gradient("positions").data[0],
-        #             rtol=1e-13,
-        #         )
-        #     )
-        # )
-        # self.assertTrue(
-        #     np.all(
-        #         np.allclose(
-        #             np.mean(gr1[[2, 6, 10, 14]], axis=0),
-        #             reduce_tensor_ps.block(0).gradient("positions").data[2],
-        #         )
-        #     )
-        # )
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.mean(gr1[[0, 4, 8, 12]], axis=0),
+                    reduce_tensor_ps.block(0).gradient("positions").data[0],
+                    rtol=1e-13,
+                )
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.mean(gr1[[2, 6, 10, 14]], axis=0),
+                    reduce_tensor_ps.block(0).gradient("positions").data[2],
+                )
+            )
+        )
 
-        # self.assertTrue(
-        #     np.all(
-        #         np.mean(gr1[[3, 7, 11, 15]], axis=0)
-        #         == reduce_tensor_ps.block(0).gradient("positions").data[3]
-        #     )
-        # )
+        self.assertTrue(
+            np.all(
+                np.mean(gr1[[3, 7, 11, 15]], axis=0)
+                == reduce_tensor_ps.block(0).gradient("positions").data[3]
+            )
+        )
 
-        # self.assertTrue(
-        #     np.all(
-        #         np.allclose(
-        #             np.mean(gr1[[96, 99, 102]], axis=0),
-        #             reduce_tensor_ps.block(0).gradient("positions").data[40],
-        #             rtol=1e-13,
-        #         )
-        #     )
-        # )
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.mean(gr1[[96, 99, 102]], axis=0),
+                    reduce_tensor_ps.block(0).gradient("positions").data[40],
+                    rtol=1e-13,
+                )
+            )
+        )
 
-        # self.assertTrue(
-        #     np.all(
-        #         np.mean(gr1[-1], axis=0)
-        #         == reduce_tensor_ps.block(0).gradient("positions").data[-1]
-        #     )
-        # )
+        self.assertTrue(
+            np.all(
+                np.mean(gr1[-1], axis=0)
+                == reduce_tensor_ps.block(0).gradient("positions").data[-1]
+            )
+        )
 
-        # # The TensorBlock with key=(8,8,8) has nothing to be averaged over
-        # self.assertTrue(
-        #     np.allclose(
-        #         tensor_ps.block(
-        #             species_center=8, species_neighbor_1=8, species_neighbor_2=8
-        #         ).values,
-        #         reduce_tensor_ps.block(
-        #             species_center=8, species_neighbor_1=8, species_neighbor_2=8
-        #         ).values,
-        #     )
-        # )
+        # The TensorBlock with key=(8,8,8) has nothing to be averaged over
+        self.assertTrue(
+            np.allclose(
+                tensor_ps.block(
+                    species_center=8, species_neighbor_1=8, species_neighbor_2=8
+                ).values,
+                reduce_tensor_ps.block(
+                    species_center=8, species_neighbor_1=8, species_neighbor_2=8
+                ).values,
+            )
+        )
 
         for ii, bl2 in enumerate(
             [tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]

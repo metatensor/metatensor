@@ -140,20 +140,32 @@ def _reduce_over_samples_block(
                 values_grad_result = values_grad_result / bincount.reshape(
                     (-1,) + (1,) * len(other_shape)
                 )
-                for i, s in enumerate(new_gradient_samples):
-                    data_result[i] = data_result[i] * values_mean[s[0]]
-                data_result = 2 * (values_grad_result - data_result)
-                if reduction == "std":
-                    v_shape = values_result.shape
-                    d_shape = data_result.shape
-                    v_shape_broadcast = (
-                        (v_shape[0],)
-                        + (1,) * len(d_shape[1 : -(len(v_shape) - 1)])
-                        + v_shape[1:]
-                    )
-                    data_result = (
-                        0.5 * data_result / values_result.reshape(v_shape_broadcast)
-                    )
+
+                if reduction == "variance":
+                    for i, s in enumerate(new_gradient_samples):
+                        data_result[i] = data_result[i] * values_mean[s[0]]
+                    data_result = 2 * (values_grad_result - data_result)
+                else:  # std
+                    for i, s in enumerate(new_gradient_samples):
+                        data_result[i] = (
+                            values_grad_result[i] - (data_result[i] * values_mean[s[0]])
+                        ) / values_result[s[0]]
+                # if reduction == "std":
+                #     v_shape = values_result.shape
+                #     d_shape = data_result.shape
+                #     v_shape_broadcast = (
+                #         (v_shape[0],)
+                #         + (1,) * len(d_shape[1 : -(len(v_shape) - 1)])
+                #         + v_shape[1:]
+                #     )
+                #     # values_grad = []
+                #     # print("l", data_result.shape, len(new_gradient_samples))
+                #     for i, s in enumerate(new_gradient_samples):
+                #         data_result[i] = data_result[i] / values_result[s[0]]
+                #     # print("d", len(values_grad), values_grad[0].shape)
+                #     # data_result = _dispatch.vstack(values_grad)
+                #     # print("k", data_result.shape)
+                #     data_result *= 0.5
 
         # no check for the len of the gradient sample is needed becouse there always
         # will be at least one sample in the gradient
@@ -300,7 +312,7 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
+    r"""Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the std deviation of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
@@ -314,7 +326,11 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     For an usage example see the doc for ``sum_over_samples``.
 
     The gradient is implemented as follow:
-    Grad[Std[X]] = 0.5 (Grad[Var[X]])/Std[X]= (E[X Grad[X]] - E[X]E[Grad[X]])/Std[X]
+
+    .. math::
+
+        \nabla[Std(X)] = 0.5(\nabla[Var(X)])/Std(X)
+        = (E[X \nabla X] - E[X]E[\nabla X])/Std(X)
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to perform the standart deviation over
@@ -325,7 +341,7 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
+    r"""Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the variance of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
@@ -339,7 +355,10 @@ def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> Tensor
     For an usage example see the doc for ``sum_over_samples``.
 
     The gradient is implemented as follow:
-    Grad[Var[X]] = 2(E[X Grad[X]] - E[X]E[Grad[X]])
+
+    .. math::
+
+        \nabla[Var(X)] = 2(E[X \nabla X] - E[X]E[\nabla X])
 
     :param tensor: input :py:class:`TensorMap`
     :param samples_names: names of samples to perform the variance over
