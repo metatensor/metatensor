@@ -11,8 +11,17 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
-    If gradients are present in ``A`` a subtract is only performed if ``B`` is
-    a :py:class:`TensorMap` as well.
+    If gradients are present in ``A``:
+
+    *  ``B`` is a scalar:
+
+       .. math::
+            \nabla(A - B) = \nabla A
+
+    * ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``:
+
+       .. math::
+            \nabla(A - B) = \nabla A - \nabla B
 
     :param A: First :py:class:`TensorMap` for the subtraction.
     :param B: Second instance for the subtraction. Parameter can be a scalar or a
