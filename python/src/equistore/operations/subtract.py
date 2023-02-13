@@ -6,7 +6,7 @@ from .add import add
 
 
 def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
-    """Return a new :class:`TensorMap` with the values being the subtract
+    r"""Return a new :class:`TensorMap` with the values being the subtract
     of ``A`` and ``B``.
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
