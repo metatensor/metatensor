@@ -44,7 +44,7 @@ def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 blockA,
                 blockB,
                 props=["samples", "components", "properties"],
-                fname="add",
+                fname="multiply",
             )
             _check_same_gradients(
                 blockA,
