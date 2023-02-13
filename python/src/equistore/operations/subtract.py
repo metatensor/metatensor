@@ -39,13 +39,12 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 B.block(key).gradient(parameter).data[:] = (
                     -B.block(key).gradient(parameter).data[:]
                 )
-        tensor_result = add(A=A, B=B)
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
-            float(B)
+            B = -float(B)
         except TypeError as e:
             raise TypeError("B should be a TensorMap or a scalar value. ") from e
-        tensor_result = add(A=A, B=-B)
+    tensor_result = add(A=A, B=B)
 
     return tensor_result
