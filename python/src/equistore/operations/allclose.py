@@ -99,9 +99,9 @@ def allclose_block(
     numpy-like ``allclose`` test with the provided ``rtol``, and ``atol``.
 
     If the :py:class:`TensorBlock` contains gradients, then the gradient must
-    also have same samples, components, properties and their data matrices must
-    pass the numpy-like ``allclose`` test with the provided ``rtol``, and
-    ``atol``.
+    also have same (and in the same order) samples, components, properties
+    and their data matrices must pass the numpy-like ``allclose`` test with the
+    provided ``rtol``, and ``atol``.
 
     In practice this function calls :py:func:`allclose_block_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.

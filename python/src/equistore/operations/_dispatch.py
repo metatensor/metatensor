@@ -23,6 +23,20 @@ def _check_all_same_type(arrays, expected_type):
             )
 
 
+def all(a, axis=None):
+    """Test whether all array elements along a given axis evaluate to True.
+
+    This function has the same behavior as
+    ``np.all(array,axis=axis)``.
+    """
+    if isinstance(a, np.ndarray):
+        return np.all(a=a, axis=axis)
+    elif isinstance(a, TorchTensor):
+        return torch.all(input=a, dim=axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def allclose(a, b, rtol, atol, equal_nan=False):
     """Compare two arrays using ``allclose``
 
