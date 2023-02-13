@@ -153,11 +153,9 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
 
                         if not np.all(c1 == c2):
                             raise ValueError(err_msg + err_msg_1)
-                elif prop == "parameters":
+                elif prop != "parameters":
                     # parameters are already checked at the begining but i want to give
                     # the opportunity to the 'user' to use it, without problems
-                    continue
-                else:
                     raise ValueError(
                         f"{prop} is not a valid property of the gradients to check. "
                         "Choose from 'parameters', 'samples', "
