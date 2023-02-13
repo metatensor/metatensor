@@ -88,7 +88,7 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
     """Check if metadata between two gradients's TensorBlocks is consistent
      for an operation.
 
-    The functions verifies that that the metadata of the given props is the same
+    The functions verifies that the metadata of the given props is the same
     (length, names, values).
 
     If props is None it only checks if the ``'parameters'`` are consistent.
