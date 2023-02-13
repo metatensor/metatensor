@@ -17,8 +17,9 @@ def allclose(
 
     This function returns ``True`` if the two tensors have the same keys
     (potentially in different order) and all the :py:class:`TensorBlock` have
-    the same samples, components, properties, and their values matrices pass the
-    numpy-like ``allclose`` test with the provided ``rtol``, and ``atol``.
+    the same (and in the same order) samples, components, properties,
+    and their values matrices pass the numpy-like ``allclose`` test with the provided
+    ``rtol``, and ``atol``.
 
     The :py:class:`TensorMap` contains gradient data, then this function only
     returns ``True`` if all the gradients also have the same samples,
