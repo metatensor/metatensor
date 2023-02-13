@@ -89,7 +89,7 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
      for an operation.
 
     The functions verifies that the metadata of the given props is the same
-    (length, names, values).
+    (length, names, values) and in the same order.
 
     If props is None it only checks if the ``'parameters'`` are consistent.
 
