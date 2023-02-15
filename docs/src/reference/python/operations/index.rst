@@ -16,3 +16,4 @@ Operations
     logic/index
     manipulation/index
     math/index
+    set/index
