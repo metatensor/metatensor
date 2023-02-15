@@ -1,4 +1,4 @@
-import warnings
+from typing import Optional, Union
 
 import numpy as np
 
@@ -7,7 +7,11 @@ from ..labels import Labels
 from ..tensor import TensorMap
 
 
-def slice(tensor: TensorMap, samples=None, properties=None) -> TensorMap:
+def slice(
+    tensor: TensorMap,
+    samples: Optional[Labels] = None,
+    properties: Optional[Labels] = None,
+) -> TensorMap:
     """
     Slices an input :py:class:`TensorMap` along the samples and/or properties
     dimension(s). ``samples`` and ``properties`` are
@@ -74,58 +78,21 @@ def slice(tensor: TensorMap, samples=None, properties=None) -> TensorMap:
     :return: a :py:class:`TensorMap` that corresponds to the sliced input
         tensor.
     """
-
-    # Perform input checks
+    # Check input args
     if not isinstance(tensor, TensorMap):
-        raise TypeError(
-            "the input tensor must be a `TensorMap` object, if you want to "
-            "to slice a `TensorBlock`, use `slice_block()` instead"
-        )
+        raise TypeError("``tensor`` should be an equistore ``TensorMap``")
+    _check_args(tensor, samples=samples, properties=properties)
 
-    _check_slice_types(
-        samples=samples,
-        properties=properties,
-        sample_names=tensor.sample_names,
-        property_names=tensor.property_names,
+    return TensorMap(
+        keys=tensor.keys,
+        blocks=[_slice_block(tensor[key], samples, properties) for key in tensor.keys],
     )
-
-    # Slice TensorMap
-    sliced_tensor = _slice_tensormap(
-        tensor,
-        samples=samples,
-        properties=properties,
-    )
-
-    # Calculate which blocks have been sliced to now be empty. True if any
-    # dimension of block.values is 0, False otherwise.
-    empty_blocks = np.array(
-        [np.any(np.array(block.values.shape) == 0) for _, block in sliced_tensor]
-    )
-
-    # Issue warnings if some or all of the blocks are now empty.
-    if np.any(empty_blocks):
-        if np.all(empty_blocks):
-            warnings.warn(
-                "All TensorBlocks in the sliced TensorMap are now empty, "
-                "based on your choice of samples and/or properties to slice by. ",
-                stacklevel=1,
-            )
-        else:
-            warnings.warn(
-                "Some TensorBlocks in the sliced TensorMap are now empty, "
-                "based on your choice of samples and/or properties to slice by. "
-                "The keys of the empty TensorBlocks are:\n "
-                f"{tensor.keys[empty_blocks]}",
-                stacklevel=1,
-            )
-
-    return sliced_tensor
 
 
 def slice_block(
     block: TensorBlock,
-    samples=None,
-    properties=None,
+    samples: Optional[Labels] = None,
+    properties: Optional[Labels] = None,
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
@@ -188,71 +155,23 @@ def slice_block(
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced
         input.
     """
-
-    # Perform input checks
+    # Check input args
     if not isinstance(block, TensorBlock):
-        raise TypeError(
-            "the input tensor must be a `TensorBlock` object, if you want to "
-            "to slice a `TensorMap`, use `slice()` instead"
-        )
+        raise TypeError("``block`` should be an equistore ``TensorBlock``")
+    _check_args(block, samples=samples, properties=properties)
 
-    _check_slice_types(
-        samples=samples,
-        properties=properties,
-        sample_names=block.samples.names,
-        property_names=block.properties.names,
-    )
-
-    # Slice TensorMap and issue warning if the output block is empty
-    sliced_block = _slice_block(
+    return _slice_block(
         block,
         samples=samples,
         properties=properties,
     )
-    if np.any(np.array(sliced_block.values.shape) == 0):
-        warnings.warn(
-            "Your input TensorBlock is now empty, based on your choice of samples "
-            "and/or properties to slice by. ",
-            stacklevel=1,
-        )
-
-    return sliced_block
 
 
-def _check_slice_types(
-    samples,
-    properties,
-    sample_names,
-    property_names,
-):
-    """Perform checks for samples/properties"""
-
-    if samples is None and properties is None:
-        raise ValueError(
-            "you must specify either samples or properties (or both) to slice by"
-        )
-
-    if samples is not None:
-        if not isinstance(samples, Labels):
-            raise TypeError("samples must be a `Labels` object")
-        for name in samples.names:
-            if name not in sample_names:
-                raise ValueError(
-                    f"invalid sample name '{name}' which is not part of the input"
-                )
-
-    if properties is not None:
-        if not isinstance(properties, Labels):
-            raise TypeError("properties must be a `Labels` object")
-
-        for name in properties.names:
-            if name not in property_names:
-                raise ValueError(
-                    f"invalid property name '{name}' which is not part of the input"
-                )
-
-
-def _slice_block(block: TensorBlock, samples=None, properties=None) -> TensorBlock:
+def _slice_block(
+    block: TensorBlock,
+    samples: Optional[Labels] = None,
+    properties: Optional[Labels] = None,
+) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
     dimension(s). ``samples`` and ``properties`` are
@@ -276,7 +195,7 @@ def _slice_block(block: TensorBlock, samples=None, properties=None) -> TensorBlo
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced
         input.
     """
-
+    # Store current values for later modification
     new_values = block.values
     new_samples = block.samples
     new_properties = block.properties
@@ -361,35 +280,37 @@ def _slice_block(block: TensorBlock, samples=None, properties=None) -> TensorBlo
     return new_block
 
 
-def _slice_tensormap(tensormap: TensorMap, samples=None, properties=None) -> TensorMap:
+def _check_args(
+    tensor: Union[TensorMap, TensorMap],
+    samples: Optional[Labels] = None,
+    properties: Optional[Labels] = None,
+):
     """
-    Slices an input :py:class:`TensorMap` along the samples and/or properties
-    dimension(s). ``samples`` and ``properties`` are
-    :py:class:`Labels` objects that specify the samples/properties
-    (respectively) names and indices that should be sliced, i.e. kept in the
-    output tensor.
-
-    Note that either ``samples`` or ``properties``, or both,
-    should be specified as input.
-
-    :param tensor: the input :py:class:`TensorMap` to be sliced.
-    :param samples: a :py:class:`Labels` object containing the names
-        and indices of samples to keep in the sliced :py:class:`TensorBlock`
-        output, or each of the sliced :py:class:`TensorBlock` objects of the
-        output :py:class:`TensorMap`. Default value of None indicates no slicing
-        along the samples dimension should occur.
-    :param properties: a :py:class:`Labels` object containing the names
-        and indices of properties to keep in the sliced :py:class:`TensorBlock`
-        output, or each of the sliced :py:class:`TensorBlock` objects of the
-        output :py:class:`TensorMap`. Default value of None indicates no slicing
-        along the properties dimension should occur.
-
-    :return: a :py:class:`TensorMap` that corresponds to the sliced input
-        tensor.
+    Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
     """
-
-    # Iterate over, and slice, each block (+ gradients) of the input TensorMap in turn.
-    return TensorMap(
-        keys=tensormap.keys,
-        blocks=[_slice_block(block, samples, properties) for _, block in tensormap],
-    )
+    # Get a single block
+    block = tensor.block(0) if isinstance(tensor, TensorMap) else tensor
+    # Check samples Labels if passed
+    if samples is not None:
+        # Check type
+        if not isinstance(samples, Labels):
+            raise TypeError("samples must be a `Labels` object")
+        # Check names
+        s_names = block.samples.names
+        for name in samples.names:
+            if name not in s_names:
+                raise ValueError(
+                    f"invalid sample name '{name}' which is not part of the input"
+                )
+    # Check properties Labels if passed
+    if properties is not None:
+        # Check type
+        if not isinstance(properties, Labels):
+            raise TypeError("properties must be a `Labels` object")
+        # Check names
+        p_names = block.properties.names
+        for name in properties.names:
+            if name not in p_names:
+                raise ValueError(
+                    f"invalid property name '{name}' which is not part of the input"
+                )

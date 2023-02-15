@@ -366,8 +366,25 @@ class TestSliceBoth(unittest.TestCase):
         expected = block.values[samples_filter][..., properties_filter]
         self.assertTrue(np.all(sliced_block.values == expected))
 
+    def test_no_slicing(self):
+        tensor = equistore.io.load(
+            os.path.join(DATA_ROOT, TEST_FILE),
+            use_numpy=True,
+        )
+        # Original tensor returned if no samples/properties to slice by are passed
+        self.assertTrue(
+            fn.equal_block(
+                fn.slice_block(tensor.block(0), samples=None, properties=None),
+                tensor.block(0),
+            )
+        )
+        # Original tensor returned if no samples/properties to slice by are passed
+        self.assertTrue(
+            fn.equal(fn.slice(tensor, samples=None, properties=None), tensor)
+        )
 
-class TestSliceErrorsWarnings(unittest.TestCase):
+
+class TestSliceErrors(unittest.TestCase):
     def setUp(self):
         self.tensor = equistore.io.load(
             os.path.join(DATA_ROOT, TEST_FILE),
@@ -386,8 +403,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            "the input tensor must be a `TensorMap` object, if you want to "
-            "to slice a `TensorBlock`, use `slice_block()` instead",
+            "``tensor`` should be an equistore ``TensorMap``",
         )
 
         # passing samples=np.array raises TypeError
@@ -425,9 +441,7 @@ class TestSliceErrorsWarnings(unittest.TestCase):
             fn.slice_block(self.tensor, samples=samples),
 
         self.assertEqual(
-            str(cm.exception),
-            "the input tensor must be a `TensorBlock` object, if you want to "
-            "to slice a `TensorMap`, use `slice()` instead",
+            str(cm.exception), "``block`` should be an equistore ``TensorBlock``"
         )
 
         block = self.tensor.block(0)
@@ -453,57 +467,6 @@ class TestSliceErrorsWarnings(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "properties must be a `Labels` object",
-        )
-
-    def test_warnings(self):
-        # ==== warning when some empty blocks produced
-        samples = Labels(
-            names=["structure"],
-            values=np.array([2]).reshape(-1, 1),
-        )
-
-        with self.assertWarns(UserWarning) as cm:
-            fn.slice(
-                self.tensor,
-                samples=samples,
-            )
-
-        self.assertIn(
-            "Some TensorBlocks in the sliced TensorMap are now empty",
-            str(cm.warning),
-        )
-
-        # ==== warning when only empty blocks are produced
-        samples = Labels(
-            names=["structure"],
-            values=np.array([-1]).reshape(-1, 1),
-        )
-
-        with self.assertWarns(UserWarning) as cm:
-            fn.slice(
-                self.tensor,
-                samples=samples,
-            )
-
-        self.assertIn(
-            "All TensorBlocks in the sliced TensorMap are now empty",
-            str(cm.warning),
-        )
-
-        properties = Labels(
-            names=["n"],
-            values=np.array([-1]).reshape(-1, 1),
-        )
-
-        with self.assertWarns(UserWarning) as cm:
-            fn.slice(
-                self.tensor,
-                properties=properties,
-            )
-
-        self.assertIn(
-            "All TensorBlocks in the sliced TensorMap are now empty",
-            str(cm.warning),
         )
 
 

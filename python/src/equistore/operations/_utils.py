@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 
 from ..block import TensorBlock
+from ..labels import Labels
 from ..tensor import TensorMap
 
 
@@ -172,3 +173,21 @@ def _check_parameters_in_gradient_block(
                 f"The requested parameter '{p}' in {fname} is not a valid parameter"
                 "for the TensorBlock"
             )
+
+
+def _labels_equal(a: Labels, b: Labels, exact_order: bool):
+    """
+    For 2 :py:class:`Labels` objects ``a`` and ``b``, returns true if they are
+    exactly equivalent in names, values, and elemental positions. Assumes that
+    the Labels are already searchable, i.e. they belong to a parent TensorBlock
+    or TensorMap.
+    """
+    # They can only be equivalent if the same length
+    if len(a) != len(b):
+        return False
+    # Check the names
+    if not np.all(a.names == b.names):
+        return False
+    if exact_order:
+        return np.all(np.array(a == b))
+    return np.all([a_i in b for a_i in a])
