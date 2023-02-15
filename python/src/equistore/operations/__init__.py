@@ -16,6 +16,7 @@ from .allclose import (  # noqa
 from .divide import divide  # noqa
 from .dot import dot  # noqa
 from .empty_like import empty_like, empty_like_block  # noqa
+from .equal import equal, equal_block, equal_block_raise, equal_raise  # noqa
 from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
@@ -35,9 +36,13 @@ __all__ = [
     "allclose_raise",
     "allclose_block",
     "allclose_block_raise",
-    "empty_like",
     "divide",
     "dot",
+    "empty_like",
+    "equal",
+    "equal_raise",
+    "equal_block",
+    "equal_block_raise",
     "join",
     "lstsq",
     "mean_over_samples",

@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
+from ._utils import _check_blocks, _check_maps, _check_same_gradients
 
 
 def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -43,10 +43,15 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
             _check_blocks(
                 blockA,
                 blockB,
-                props=["samples", "components", "properties", "gradients"],
+                props=["samples", "components", "properties"],
                 fname="divide",
             )
-            _check_same_gradients_components(blockA, blockB, "divide")
+            _check_same_gradients(
+                blockA,
+                blockB,
+                props=["samples", "components", "properties"],
+                fname="divide",
+            )
             blocks.append(_divide_block_block(block1=blockA, block2=blockB))
     else:
         # check if can be converted in float (so if it is a constant value)

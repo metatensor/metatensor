@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps
+from ._utils import _check_maps, _check_same_gradients
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -74,7 +74,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
 
-    _check_blocks(X, Y, ["gradients"], "solve")
+    _check_same_gradients(X, Y, props=None, fname="solve")
 
     for parameter, X_gradient in X.gradients():
         X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)

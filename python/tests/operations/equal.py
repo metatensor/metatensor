@@ -11,8 +11,8 @@ from equistore import Labels, TensorBlock, TensorMap
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
-class Testallclose(unittest.TestCase):
-    def test_allclose_nograd(self):
+class TestEqual(unittest.TestCase):
+    def test_equal_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]], dtype=np.float64),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
@@ -45,11 +45,11 @@ class Testallclose(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         X = TensorMap(keys, [block_1, block_2])
-        self.assertTrue(fn.allclose(X, X))
+        self.assertTrue(fn.equal(X, X))
         Y = TensorMap(keys, [block_3, block_4])
-        self.assertFalse(fn.allclose(X, Y))
+        self.assertFalse(fn.equal(X, Y))
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_raise(X, Y)
+            fn.equal_raise(X, Y)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 0) are different"
@@ -122,14 +122,12 @@ class Testallclose(unittest.TestCase):
         )
         X_c = TensorMap(keys, [block_1_c, block_2_c])
         X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
-        self.assertFalse(fn.allclose(X, X_c))
+        self.assertFalse(fn.equal(X, X_c))
 
-        self.assertTrue(fn.allclose(X_c, X_c))
-        self.assertFalse(fn.allclose(X_c, X_c_copy))
-        self.assertTrue(fn.allclose(X_c, X_c_copy, rtol=1e-5))
-        self.assertTrue(fn.allclose(X_c, X_c_copy, atol=1e-1))
+        self.assertTrue(fn.equal(X_c, X_c))
+        self.assertFalse(fn.equal(X_c, X_c_copy))
 
-    def test_self_allclose_grad(self):
+    def test_self_equal_grad(self):
         tensor1 = equistore.io.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
@@ -144,22 +142,22 @@ class Testallclose(unittest.TestCase):
 
         tensor1_copy = TensorMap(tensor1.keys, blocks)
         tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
-        self.assertTrue(fn.allclose(tensor1, tensor1_copy))
-        self.assertFalse(fn.allclose(tensor1, tensor1_e6))
-        self.assertTrue(fn.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5))
+        self.assertTrue(fn.equal(tensor1, tensor1_copy))
+        self.assertFalse(fn.equal(tensor1, tensor1_e6))
+        self.assertTrue(fn.equal(tensor1, tensor1_e6, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_raise(tensor1, tensor1_e6)
+            fn.equal_raise(tensor1, tensor1_e6)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 1, 1) are different"
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(tensor1.block(0), tensor1_e6.block(0))
-        self.assertEqual(str(cm.exception), "values are not allclose")
+            fn.equal_block_raise(tensor1.block(0), tensor1_e6.block(0))
+        self.assertEqual(str(cm.exception), "values are not equal")
 
-    def test_self_allclose_exceptions(self):
+    def test_self_equal_exceptions(self):
         block_1 = TensorBlock(
             values=np.array([[1], [2]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
@@ -205,50 +203,102 @@ class Testallclose(unittest.TestCase):
             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
         )
 
-        self.assertFalse(fn.allclose_block(block_1, block_2))
+        self.assertFalse(fn.equal_block(block_1, block_2))
+        self.assertFalse(fn.equal_block(block_1, block_2, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_2)
+            fn.equal_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to 'allclose' should have the same samples:\n"
+            "Inputs to 'equal' should have the same samples:\n"
             "samples names are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_3)
+            fn.equal_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to 'allclose' should have the same samples:\n"
+            "Inputs to 'equal' should have the same samples:\n"
             "samples are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_4)
+            fn.equal_block_raise(block_1, block_4)
 
         self.assertEqual(str(cm.exception), "values shapes are different")
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_5, block_4)
+            fn.equal_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to 'allclose' should have the same components:\n"
+            "Inputs to 'equal' should have the same components:\n"
             "components names are not the same or not in the same order.",
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_6, block_4)
+            fn.equal_block_raise(block_6, block_4)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to 'allclose' should have the same samples:\n"
+            "Inputs to 'equal' should have the same samples:\n"
             "samples are not the same or not in the same order.",
         )
 
-    def test_self_allclose_exceptions_gradient(self):
+        block_7 = TensorBlock(
+            values=np.ones((2, 2, 4, 1)),
+            samples=Labels(["samples"], np.array([[2], [0]], dtype=np.int32)),
+            components=[
+                Labels(["component1"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component2"], np.array([[0], [1], [2], [7]], dtype=np.int32)),
+            ],
+            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        )
+        block_8 = TensorBlock(
+            values=np.ones((2, 2, 4, 1)),
+            samples=Labels(["samples"], np.array([[2], [0]], dtype=np.int32)),
+            components=[
+                Labels(["component1"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component2"], np.array([[0], [8], [6], [7]], dtype=np.int32)),
+            ],
+            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        )
+        block_9 = TensorBlock(
+            values=np.ones((2, 2, 4, 1)) * 3,
+            samples=Labels(["samples"], np.array([[2], [0]], dtype=np.int32)),
+            components=[
+                Labels(["component1"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component2"], np.array([[0], [8], [6], [7]], dtype=np.int32)),
+            ],
+            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        )
+
+        self.assertFalse(fn.equal_block(block_7, block_8))
+        self.assertFalse(fn.equal_block(block_7, block_8, only_metadata=True))
+
+        self.assertFalse(fn.equal_block(block_8, block_9))
+        self.assertTrue(fn.equal_block(block_8, block_9, only_metadata=True))
+
+        with self.assertRaises(ValueError) as cm:
+            fn.equal_block_raise(block_7, block_8)
+
+        self.assertEqual(
+            str(cm.exception),
+            "Inputs to 'equal' should have the same components:\n"
+            "components are not the same or not in the same order.",
+        )
+
+        with self.assertRaises(ValueError) as cm:
+            fn.equal_block_raise(block_8, block_9)
+
+        self.assertEqual(
+            str(cm.exception),
+            "values are not equal",
+        )
+
+    def test_self_equal_exceptions_gradient(self):
         block_1 = TensorBlock(
             values=np.array([[1], [2]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
@@ -282,11 +332,11 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_2)
+            fn.equal_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to allclose should have the same gradient:\n"
+            "Inputs to equal should have the same gradient:\n"
             'gradient ("parameter") samples names are not the same'
             " or not in the same order.",
         )
@@ -308,11 +358,11 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_3)
+            fn.equal_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
-            'gradient ("parameter") data are not allclose',
+            'gradient ("parameter") data are not equal',
         )
 
         block_4 = TensorBlock(
@@ -352,13 +402,68 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_5, block_4)
+            fn.equal_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),
-            "Inputs to allclose should have the same gradient:\n"
+            "Inputs to equal should have the same gradient:\n"
             'gradient ("parameter") components are not the same'
             " or not in the same order.",
+        )
+
+        block_6 = TensorBlock(
+            values=np.array([[1], [2]]),
+            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        )
+
+        block_6.add_gradient(
+            "parameter",
+            data=np.full((2, 3, 1), 1.0),
+            samples=Labels(
+                ["sample", "parameter_1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+            ),
+            components=[
+                Labels(["component_1"], np.array([[-1], [6], [1]], dtype=np.int32))
+            ],
+        )
+        with self.assertRaises(ValueError) as cm:
+            fn.equal_block_raise(block_5, block_6)
+
+        self.assertEqual(
+            str(cm.exception),
+            "Inputs to equal should have the same gradient:\n"
+            'gradient ("parameter") samples names are not the same'
+            " or not in the same order.",
+        )
+
+        block_7 = TensorBlock(
+            values=np.array([[1], [2]]),
+            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        )
+
+        block_7.add_gradient(
+            "parameter",
+            data=np.full((2, 3, 1), 5.0),
+            samples=Labels(
+                ["sample", "parameter_1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+            ),
+            components=[
+                Labels(["component_1"], np.array([[-1], [6], [1]], dtype=np.int32))
+            ],
+        )
+        self.assertFalse(fn.equal_block(block_6, block_7))
+        self.assertTrue(fn.equal_block(block_6, block_7, only_metadata=True))
+
+        with self.assertRaises(ValueError) as cm:
+            fn.equal_block_raise(block_6, block_7)
+
+        self.assertEqual(
+            str(cm.exception),
+            'gradient ("parameter") data are not equal',
         )
 
 
