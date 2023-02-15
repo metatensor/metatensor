@@ -48,7 +48,10 @@ def save(path: str, tensor: TensorMap, use_numpy=False):
     """
     if not path.endswith(".npz"):
         path += ".npz"
-        warnings.warn(f"adding '.npz' extension, the file will be saved at '{path}'")
+        warnings.warn(
+            msg=f"adding '.npz' extension, the file will be saved at '{path}'",
+            stacklevel=1,
+        )
 
     if use_numpy:
         all_entries = _tensor_map_to_dict(tensor)

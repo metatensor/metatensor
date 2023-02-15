@@ -31,9 +31,10 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     """
     if rcond is None:
         warnings.warn(
-            "WARNING rcond is set to None, which will trigger the default \
-            behavior which is different between numpy and torch lstsq function, \
-            and might depend on the version you are using."
+            "WARNING rcond is set to None, which will trigger the default "
+            "behavior which is different between numpy and torch lstsq function, "
+            "and might depend on the version you are using.",
+            stacklevel=1,
         )
 
     _check_maps(X, Y, "lstsq")
