@@ -107,14 +107,16 @@ def slice(tensor: TensorMap, samples=None, properties=None) -> TensorMap:
         if np.all(empty_blocks):
             warnings.warn(
                 "All TensorBlocks in the sliced TensorMap are now empty, "
-                "based on your choice of samples and/or properties to slice by. "
+                "based on your choice of samples and/or properties to slice by. ",
+                stacklevel=1,
             )
         else:
             warnings.warn(
                 "Some TensorBlocks in the sliced TensorMap are now empty, "
                 "based on your choice of samples and/or properties to slice by. "
                 "The keys of the empty TensorBlocks are:\n "
-                f"{tensor.keys[empty_blocks]}"
+                f"{tensor.keys[empty_blocks]}",
+                stacklevel=1,
             )
 
     return sliced_tensor
@@ -210,7 +212,8 @@ def slice_block(
     if np.any(np.array(sliced_block.values.shape) == 0):
         warnings.warn(
             "Your input TensorBlock is now empty, based on your choice of samples "
-            + "and/or properties to slice by. "
+            "and/or properties to slice by. ",
+            stacklevel=1,
         )
 
     return sliced_block
