@@ -66,7 +66,10 @@ class Labels(np.ndarray):
             ``np.int32`` values
         """
         if isinstance(names, str):
-            names = [names]
+            if len(names) == 0:
+                names = []
+            else:
+                names = [names]
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 

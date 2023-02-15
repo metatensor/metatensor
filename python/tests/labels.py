@@ -39,6 +39,26 @@ class TestLabels(unittest.TestCase):
         self.assertTrue(np.all(labels.asarray() == np.array([[1]])))
         self.assertTrue(np.all(labels.asarray() == labels_str.asarray()))
 
+        # check empty arrays
+        labels = Labels(
+            names=[],
+            values=np.array([[]], dtype=np.int32),
+        )
+
+        labels_str = Labels(
+            names="",
+            values=np.array([[]], dtype=np.int32),
+        )
+
+        self.assertEqual(labels.names, [])
+        self.assertEqual(labels.names, labels_str.names)
+        self.assertEqual(len(labels), 1)
+        self.assertEqual(len(labels_str), 1)
+        self.assertEqual(tuple(labels_str[0]), tuple(labels[0]))
+
+        self.assertTrue(np.all(labels.asarray() == np.array([[]])))
+        self.assertTrue(np.all(labels.asarray() == labels_str.asarray()))
+
         # check that we can convert from more than strict 2D arrays of int32
         labels = Labels(
             names=["a", "b"],
