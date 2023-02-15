@@ -1,6 +1,6 @@
 import ctypes
 from collections import namedtuple
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -57,12 +57,16 @@ class Labels(np.ndarray):
             ...
     """
 
-    def __new__(cls, names: List[str], values: np.ndarray, **kwargs):
+    def __new__(cls, names: Union[List[str], str], values: np.ndarray, **kwargs):
         """
-        :param names: names of the variables in the new labels
+        :param names: names of the variables in the new labels, in the case of a single
+                      name also a single string can be given: ``names = ["name"]``
+                      is equivalent to ``names = "name"``
         :param values: values of the variables, this needs to be a 2D array of
             ``np.int32`` values
         """
+        if isinstance(names, str):
+            names = [names]
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 
