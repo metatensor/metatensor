@@ -60,23 +60,23 @@ class Labels(np.ndarray):
     def __new__(cls, names: Union[List[str], str], values: np.ndarray, **kwargs):
         """
         :param names: names of the variables in the new labels, in the case of a single
-                      name also a single string can be given: ``names = ["name"]``
-                      is equivalent to ``names = "name"``
+                      name also a single string can be given: ``names = "name"``
         :param values: values of the variables, this needs to be a 2D array of
             ``np.int32`` values
         """
-        if isinstance(names, str):
-            if len(names) == 0:
-                names = []
-            else:
-                names = [names]
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")
 
         if len(values.shape) != 2:
             raise ValueError("values parameter must be a 2D array")
 
-        names = tuple(str(n) for n in names)
+        if isinstance(names, str):
+            if len(names) == 0:
+                names = tuple()
+            else:
+                names = tuple(names)
+        else:
+            names = tuple(str(n) for n in names)
 
         if len(names) != values.shape[1]:
             raise ValueError(
