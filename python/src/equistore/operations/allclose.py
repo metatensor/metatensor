@@ -3,7 +3,7 @@ import numpy as np
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps
+from ._utils import _check_blocks, _check_maps, _check_same_gradients
 
 
 def allclose(
@@ -17,8 +17,9 @@ def allclose(
 
     This function returns ``True`` if the two tensors have the same keys
     (potentially in different order) and all the :py:class:`TensorBlock` have
-    the same samples, components, properties, and their values matrices pass the
-    numpy-like ``allclose`` test with the provided ``rtol``, and ``atol``.
+    the same (and in the same order) samples, components, properties,
+    and their values matrices pass the numpy-like ``allclose`` test with the provided
+    ``rtol``, and ``atol``.
 
     The :py:class:`TensorMap` contains gradient data, then this function only
     returns ``True`` if all the gradients also have the same samples,
@@ -98,9 +99,9 @@ def allclose_block(
     numpy-like ``allclose`` test with the provided ``rtol``, and ``atol``.
 
     If the :py:class:`TensorBlock` contains gradients, then the gradient must
-    also have same samples, components, properties and their data matrices must
-    pass the numpy-like ``allclose`` test with the provided ``rtol``, and
-    ``atol``.
+    also have same (and in the same order) samples, components, properties
+    and their data matrices must pass the numpy-like ``allclose`` test with the
+    provided ``rtol``, and ``atol``.
 
     In practice this function calls :py:func:`allclose_block_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.
@@ -158,74 +159,15 @@ def allclose_block_raise(
         equal_nan=equal_nan,
     ):
         raise ValueError("values are not allclose")
-
-    if not block1.samples.names == block2.samples.names:
-        raise ValueError("samples names are not the same or not in the same order")
-
-    if not np.all(block1.samples == block2.samples):
-        raise ValueError("samples not the same or not in the same order")
-
-    if not len(block1.properties) == len(block2.properties):
-        raise ValueError("properties not the same or not in the same order")
-    elif not block1.properties.names == block2.properties.names:
-        raise ValueError("properties names are not the same or not in the same order")
-    else:
-        for p1, p2 in zip(block1.properties, block2.properties):
-            if not np.all(p1 == p2):
-                raise ValueError("properties not the same or not in the same order")
-
-    if not (len(block1.components) == len(block2.components)):
-        raise ValueError("different number of components")
-    else:
-        for c1, c2 in zip(block1.components, block2.components):
-            if not (c1.names == c2.names):
-                raise ValueError(
-                    "components names are not the same or not in the same order"
-                )
-
-            if not np.all(c1 == c2):
-                raise ValueError("components not the same or not in the same order")
-
-    _check_blocks(block1, block2, ["gradients"], "allclose")
+    _check_blocks(
+        block1, block2, props=["samples", "properties", "components"], fname="allclose"
+    )
+    _check_same_gradients(
+        block1, block2, props=["samples", "properties", "components"], fname="allclose"
+    )
 
     for parameter, gradient1 in block1.gradients():
         gradient2 = block2.gradient(parameter)
-        if not (gradient1.samples.names == gradient2.samples.names):
-            raise ValueError(
-                f'gradient ("{parameter}") samples names are not the same or '
-                "not in the same order"
-            )
-
-        if len(gradient1.components) != len(gradient2.components):
-            raise ValueError(f'different number of gradient ("{parameter}") components')
-
-        for c1, c2 in zip(gradient1.components, gradient2.components):
-            if not (c1.names == c2.names):
-                raise ValueError(
-                    f'gradient ("{parameter}") components names '
-                    "are not the same or not in the same order"
-                )
-
-            if not np.all(c1 == c2):
-                raise ValueError(
-                    f'gradient ("{parameter}") components not the same or '
-                    "not in the same order"
-                )
-
-        if len(gradient1.properties) != len(gradient2.properties):
-            raise ValueError(f'different number of gradient ("{parameter}") properties')
-        elif not (gradient1.properties.names == gradient2.properties.names):
-            raise ValueError(
-                f'gradient ("{parameter}") properties names are '
-                "not the same or not in the same order"
-            )
-        else:
-            for p1, p2 in zip(gradient1.properties, gradient2.properties):
-                if not np.all(p1 == p2):
-                    raise ValueError(
-                        f'gradient ("{parameter}") properties not the same '
-                        "or not in the same order"
-                    )
 
         if not _dispatch.allclose(
             gradient1.data,

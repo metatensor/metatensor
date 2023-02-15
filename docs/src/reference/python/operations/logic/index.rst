@@ -5,3 +5,4 @@ Logic function
     :maxdepth: 1
 
     allclose() <allclose>
+    equal() <equal>

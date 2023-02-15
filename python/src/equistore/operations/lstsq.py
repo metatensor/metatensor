@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps
+from ._utils import _check_maps, _check_same_gradients
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
@@ -31,9 +31,10 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     """
     if rcond is None:
         warnings.warn(
-            "WARNING rcond is set to None, which will trigger the default \
-            behavior which is different between numpy and torch lstsq function, \
-            and might depend on the version you are using."
+            "WARNING rcond is set to None, which will trigger the default "
+            "behavior which is different between numpy and torch lstsq function, "
+            "and might depend on the version you are using.",
+            stacklevel=1,
         )
 
     _check_maps(X, Y, "lstsq")
@@ -75,7 +76,7 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
 
-    _check_blocks(X, Y, ["gradients"], "lstsq")
+    _check_same_gradients(X, Y, props=None, fname="lstsq")
 
     for parameter, X_gradient in X.gradients():
         X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)

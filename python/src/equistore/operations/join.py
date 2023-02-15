@@ -8,7 +8,7 @@ from ..block import TensorBlock
 from ..labels import Labels
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
+from ._utils import _check_blocks, _check_maps, _check_same_gradients
 
 
 def join(tensor_maps: List[TensorMap], axis: str):
@@ -134,8 +134,8 @@ def _join_blocks_along_properties(blocks: List[TensorBlock]) -> TensorBlock:
 
     fname = "_join_blocks_along_properties"
     for block in blocks[1:]:
-        _check_blocks(first_block, block, ["components", "samples", "gradients"], fname)
-        _check_same_gradients_components(first_block, block, fname)
+        _check_blocks(first_block, block, ["components", "samples"], fname)
+        _check_same_gradients(first_block, block, ["components", "samples"], fname)
 
     properties = _join_labels([block.properties for block in blocks])
     result_block = TensorBlock(
@@ -190,10 +190,8 @@ def _join_blocks_along_samples(blocks: List[TensorBlock]) -> TensorBlock:
 
     fname = "_join_blocks_along_samples"
     for block in blocks[1:]:
-        _check_blocks(
-            first_block, block, ["components", "properties", "gradients"], fname
-        )
-        _check_same_gradients_components(first_block, block, fname)
+        _check_blocks(first_block, block, ["components", "properties"], fname)
+        _check_same_gradients(first_block, block, ["components", "properties"], fname)
 
     result_block = TensorBlock(
         values=_dispatch.vstack([block.values for block in blocks]),

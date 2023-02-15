@@ -2,16 +2,26 @@ from typing import Union
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
-from ._utils import _check_blocks, _check_maps, _check_same_gradients_components
+from ._utils import _check_blocks, _check_maps, _check_same_gradients
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
-    """Return a new :class:`TensorMap` with the values being the sum of ``A`` and ``B``.
+    r"""Return a new :class:`TensorMap` with the values being the sum of
+    ``A`` and ``B``.
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
-    If gradients are present in ``A`` a sum is only performed if ``B`` is
-    a :py:class:`TensorMap` as well.
+    If gradients are present in ``A``:
+
+    *  ``B`` is a scalar:
+
+       .. math::
+            \nabla(A + B) = \nabla A
+
+    * ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``:
+
+       .. math::
+            \nabla(A + B) = \nabla A + \nabla B
 
     :param A: First :py:class:`TensorMap` for the addition.
     :param B: Second instance for the addition. Parameter can be a scalar or a
@@ -29,10 +39,15 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
             _check_blocks(
                 blockA,
                 blockB,
-                props=["samples", "components", "properties", "gradients"],
+                props=["samples", "components", "properties"],
                 fname="add",
             )
-            _check_same_gradients_components(blockA, blockB, "add")
+            _check_same_gradients(
+                blockA,
+                blockB,
+                props=["samples", "components", "properties"],
+                fname="add",
+            )
             blocks.append(_add_block_block(block1=blockA, block2=blockB))
     else:
         # check if can be converted in float (so if it is a constant value)
