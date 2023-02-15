@@ -288,11 +288,6 @@ def _check_args(
     """
     Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
     """
-    # Must pass either samples or properties or both
-    if samples is None and properties is None:
-        raise ValueError(
-            "you must specify either samples or properties (or both) to slice by"
-        )
     # Get a single block
     block = tensor.block(0) if isinstance(tensor, TensorMap) else tensor
     # Check samples Labels if passed

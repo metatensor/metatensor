@@ -181,6 +181,9 @@ def _check_args(
         raise TypeError(
             "``grouped_idxs`` should be passed as a ``list`` of equistore ``Labels``"
         )
+    # If passed as an empty list, return now
+    if len(grouped_idxs) == 0:
+        return
     for idxs in grouped_idxs:
         if not isinstance(idxs, Labels):
             raise TypeError(

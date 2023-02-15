@@ -204,6 +204,15 @@ class TestSplitSamples(unittest.TestCase):
         split_blocks = fn.split_block(block, "samples", grouped_idxs)
         self._check_split_blocks(block, split_blocks, grouped_idxs)
 
+    def test_no_splitting(self):
+        # Passing no groups of indices returns an empty list
+        # Block
+        self.assertEqual(
+            fn.split_block(self.tensor.block(0), axis="samples", grouped_idxs=[]), []
+        )
+        # TensorMap
+        self.assertEqual(fn.split(self.tensor, axis="samples", grouped_idxs=[]), [])
+
 
 class TestSplitProperties(unittest.TestCase):
     """Splitting property dimension of TensorMap and TensorBlock"""
@@ -377,6 +386,15 @@ class TestSplitProperties(unittest.TestCase):
             [split_tensors[0], split_tensors[2]], [grouped_idxs[0], grouped_idxs[2]]
         )
         self._check_empty_tensor(self.tensor, split_tensors[1])
+
+    def test_no_splitting(self):
+        # Passing no groups of indices returns an empty list
+        # Block
+        self.assertEqual(
+            fn.split_block(self.tensor.block(0), axis="properties", grouped_idxs=[]), []
+        )
+        # TensorMap
+        self.assertEqual(fn.split(self.tensor, axis="properties", grouped_idxs=[]), [])
 
 
 class TestSplitErrors(unittest.TestCase):

@@ -366,6 +366,23 @@ class TestSliceBoth(unittest.TestCase):
         expected = block.values[samples_filter][..., properties_filter]
         self.assertTrue(np.all(sliced_block.values == expected))
 
+    def test_no_slicing(self):
+        tensor = equistore.io.load(
+            os.path.join(DATA_ROOT, TEST_FILE),
+            use_numpy=True,
+        )
+        # Original tensor returned if no samples/properties to slice by are passed
+        self.assertTrue(
+            fn.equal_block(
+                fn.slice_block(tensor.block(0), samples=None, properties=None),
+                tensor.block(0),
+            )
+        )
+        # Original tensor returned if no samples/properties to slice by are passed
+        self.assertTrue(
+            fn.equal(fn.slice(tensor, samples=None, properties=None), tensor)
+        )
+
 
 class TestSliceErrors(unittest.TestCase):
     def setUp(self):
