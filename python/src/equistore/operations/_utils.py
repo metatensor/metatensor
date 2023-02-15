@@ -190,5 +190,4 @@ def _labels_equal(a: Labels, b: Labels, exact_order: bool):
         return False
     if exact_order:
         return np.all(np.array(a == b))
-    else:
-        return np.all([a_i in b for a_i in a])
+    return np.all([a_i in b for a_i in a])
