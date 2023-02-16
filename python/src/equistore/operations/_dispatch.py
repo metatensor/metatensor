@@ -182,6 +182,16 @@ def lstsq(X, Y, rcond, driver=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
+    """Equivalent to np.nan_to_num(X,nan,posinf, neginf)"""
+    if isinstance(X, np.ndarray):
+        return np.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
+    elif isinstance(X, TorchTensor):
+        return torch.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def hstack(arrays):
     """Stack horizontally a group of arrays.
 

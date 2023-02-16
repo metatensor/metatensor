@@ -147,9 +147,19 @@ def _reduce_over_samples_block(
                     data_result = 2 * (values_grad_result - data_result)
                 else:  # std
                     for i, s in enumerate(new_gradient_samples):
-                        data_result[i] = (
-                            values_grad_result[i] - (data_result[i] * values_mean[s[0]])
-                        ) / values_result[s[0]]
+                        # only numpy raise a warning for division by zero
+                        # so the statement catch that
+                        # for torch there is nothing to catch
+                        # both numpy and torch give inf for the division by zero
+                        with np.errstate(invalid="ignore"):
+                            data_result[i] = (
+                                values_grad_result[i]
+                                - (data_result[i] * values_mean[s[0]])
+                            ) / values_result[s[0]]
+
+                        data_result[i] = _dispatch.nan_to_num(
+                            data_result, nan=0.0, posinf=0.0, neginf=0.0
+                        )
 
         # no check for the len of the gradient sample is needed becouse there always
         # will be at least one sample in the gradient
