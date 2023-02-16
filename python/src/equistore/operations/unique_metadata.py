@@ -42,8 +42,8 @@ def unique_metadata(
             tensor, axis="samples", names=["structure"],
         )
 
-    To find the unique "atom" indices in the ``"samples"`` metadata present in
-    the ``"positions"`` gradient blocks of a given :py:class:`TensorMap`:
+    To find the unique ``"atom"`` indices in the ``"samples"`` metadata present
+    in the ``"positions"`` gradient blocks of a given :py:class:`TensorMap`:
 
     .. code-block:: python
 
@@ -117,8 +117,8 @@ def unique_metadata_block(
             block, axis="samples", names=["structure"],
         )
 
-    To find the unique ``"atom"`` indices along the "samples" axis present in
-    the ``"positions"`` gradient block of a given :py:class:`TensorBlock`:
+    To find the unique ``"atom"`` indices along the ``"samples"`` axis present
+    in the ``"positions"`` gradient block of a given :py:class:`TensorBlock`:
 
     .. code-block:: python
 
