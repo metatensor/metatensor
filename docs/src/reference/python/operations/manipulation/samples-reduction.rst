@@ -7,4 +7,4 @@ Reduction over samples
 
 .. autofunction:: equistore.operations.variance_over_samples
 
-    .. autofunction:: equistore.operations.std_over_samples
+.. autofunction:: equistore.operations.std_over_samples
