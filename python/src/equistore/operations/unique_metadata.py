@@ -60,8 +60,8 @@ def unique_metadata(
         for which the unique values should be found.
     :param gradient_param: a ``str`` corresponding to the gradient parameter
         name for the gradient blocks to find the unique indices for. If none
-        (default), the unique indices of the regular :py:class:`TensorBlock`s
-        will be calculated.
+        (default), the unique indices of the regular :py:class:`TensorBlock`
+        objects will be calculated.
 
     :return: a sorted :py:class:`Labels` object containing the unique metadata
         for the blocks of the input ``tensor`` or its gradient blocks for the
@@ -134,8 +134,8 @@ def unique_metadata_block(
         ``axis`` for which the unique indices should be found.
     :param gradient_param: a ``str`` corresponding to the gradient parameter
         name for the gradient blocks to find the unique metadata for. If none
-        (default), the unique metadata of the regular :py:class:`TensorBlock`s
-        will be calculated.
+        (default), the unique metadata of the regular :py:class:`TensorBlock`
+        objects will be calculated.
 
     :return: a sorted :py:class:`Labels` object containing the unique metadata
         for the input ``block`` or its gradient for the specified parameter.
