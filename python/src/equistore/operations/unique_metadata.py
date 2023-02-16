@@ -238,7 +238,7 @@ def _check_args(
         raise TypeError("`axis` must be a `str`, either `'samples'` or `'properties'`")
     if axis not in ["samples", "properties"]:
         raise ValueError(
-            "`axis` must be passsed as either `'samples'` or `'properties'`"
+            "`axis` must be passed as either `'samples'` or `'properties'`"
         )
     # Check names
     if not isinstance(names, list):

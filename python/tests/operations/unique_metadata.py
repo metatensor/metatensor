@@ -472,7 +472,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata_block(self.block, "ciao", ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be passsed as either `'samples'` or `'properties'`",
+            "`axis` must be passed as either `'samples'` or `'properties'`",
         )
         # ValueError names not in block
         with self.assertRaises(ValueError) as cm:
@@ -524,7 +524,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata(self.tensor, "ciao", ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be passsed as either `'samples'` or `'properties'`",
+            "`axis` must be passed as either `'samples'` or `'properties'`",
         )
         # ValueError names not in block
         with self.assertRaises(ValueError) as cm:
