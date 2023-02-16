@@ -210,7 +210,9 @@ def _check_args(
         # Check gradients
         if gradient_param is not None:
             if not isinstance(gradient_param, str):
-                raise TypeError("`gradient_param` must be a `str`")
+                raise TypeError(
+                    f"`gradient_param` must be a `str`, not {type(gradient_param)}"
+                )
             # Check all blocks have a gradient under the passed param
             if not np.all([block.has_gradient(gradient_param) for block in blocks]):
                 raise ValueError(
@@ -225,7 +227,9 @@ def _check_args(
         # Check gradients
         if gradient_param is not None:
             if not isinstance(gradient_param, str):
-                raise TypeError("`gradient_param` must be a `str`")
+                raise TypeError(
+                    f"`gradient_param` must be a `str`, not {type(gradient_param)}"
+                )
             # Check block has a gradient under the passed param
             if not tensor.has_gradient(gradient_param):
                 raise ValueError(
@@ -235,19 +239,25 @@ def _check_args(
             blocks = [tensor.gradient(gradient_param)]  # redefine blocks
     # Check axis
     if not isinstance(axis, str):
-        raise TypeError("`axis` must be a `str`, either `'samples'` or `'properties'`")
+        raise TypeError(
+            "`axis` must be a `str`, either `'samples'` or `'properties'`,"
+            + f" receieved type {type(axis)}"
+        )
     if axis not in ["samples", "properties"]:
         raise ValueError(
-            "`axis` must be passed as either `'samples'` or `'properties'`"
+            "`axis` must be passed as either `'samples'` or `'properties'`,"
+            + f" {axis} was passed"
         )
     # Check names
     if not isinstance(names, list):
         raise TypeError("`names` must be a `list` of `str`")
-    for block in blocks:
-        tmp_names = block.samples.names if axis == "samples" else block.properties.names
-        for name in names:
-            if name not in tmp_names:
-                raise ValueError(
-                    "the block(s) passed must have samples/properties"
-                    + " names that matches the one passed in `names`"
-                )
+    # Assumes samples/properties names are the same for every block in blocks
+    block_names = (
+        blocks[0].samples.names if axis == "samples" else blocks[0].properties.names
+    )
+    for name in names:
+        if name not in block_names:
+            raise ValueError(
+                f"the block(s) passed must have {axis} names that match those"
+                + f" passed in `names`. {names} were passed, {block_names} found."
+            )

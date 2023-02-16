@@ -452,7 +452,8 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata_block(self.block, 3.14, ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be a `str`, either `'samples'` or `'properties'`",
+            "`axis` must be a `str`, either `'samples'` or `'properties'`,"
+            + f" receieved type {type(3.14)}",
         )
         # TypeError names as float
         with self.assertRaises(TypeError) as cm:
@@ -463,7 +464,9 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata_block(
                 self.block, "properties", ["structure"], gradient_param=3.14
             )
-        self.assertEqual(str(cm.exception), "`gradient_param` must be a `str`")
+        self.assertEqual(
+            str(cm.exception), f"`gradient_param` must be a `str`, not {type(3.14)}"
+        )
 
     def test_unique_indices_block_value_errors(self):
         """tests raising of value errors"""
@@ -472,22 +475,33 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata_block(self.block, "ciao", ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be passed as either `'samples'` or `'properties'`",
+            "`axis` must be passed as either `'samples'` or `'properties'`,"
+            + " ciao was passed",
         )
-        # ValueError names not in block
+        # ValueError names not in block - samples
+        with self.assertRaises(ValueError) as cm:
+            fn.unique_metadata_block(self.block, "samples", ["ciao"])
+        self.assertEqual(
+            str(cm.exception),
+            "the block(s) passed must have samples names that match those passed"
+            + " in `names`. ['ciao'] were passed, ('structure', 'center') found.",
+        )
+        # ValueError names not in block - properties
         with self.assertRaises(ValueError) as cm:
             fn.unique_metadata_block(self.block, "properties", ["ciao"])
         self.assertEqual(
             str(cm.exception),
-            "the block(s) passed must have samples/properties"
-            + " names that matches the one passed in `names`",
+            "the block(s) passed must have properties names that match those"
+            + " passed in `names`. ['ciao'] were passed, ('n',) found.",
         )
         # ValueError gradient_param not a valid param for gradients
         with self.assertRaises(TypeError) as cm:
             fn.unique_metadata_block(
                 self.block, "properties", ["structure"], gradient_param=3.14
             )
-        self.assertEqual(str(cm.exception), "`gradient_param` must be a `str`")
+        self.assertEqual(
+            str(cm.exception), f"`gradient_param` must be a `str`, not {type(3.14)}"
+        )
 
     def test_unique_indices_block_no_errors(self):
         """tests no raising of errors"""
@@ -510,7 +524,8 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata(self.tensor, 3.14, ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be a `str`, either `'samples'` or `'properties'`",
+            "`axis` must be a `str`, either `'samples'` or `'properties'`,"
+            + f" receieved type {type(3.14)}",
         )
         # TypeError names as float
         with self.assertRaises(TypeError) as cm:
@@ -524,15 +539,24 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             fn.unique_metadata(self.tensor, "ciao", ["structure"])
         self.assertEqual(
             str(cm.exception),
-            "`axis` must be passed as either `'samples'` or `'properties'`",
+            "`axis` must be passed as either `'samples'` or `'properties'`,"
+            + " ciao was passed",
         )
-        # ValueError names not in block
+        # ValueError names not in block - samples
+        with self.assertRaises(ValueError) as cm:
+            fn.unique_metadata(self.tensor, "samples", ["ciao"])
+        self.assertEqual(
+            str(cm.exception),
+            "the block(s) passed must have samples names that match those passed"
+            + " in `names`. ['ciao'] were passed, ('structure', 'center') found.",
+        )
+        # ValueError names not in block - properties
         with self.assertRaises(ValueError) as cm:
             fn.unique_metadata(self.tensor, "properties", ["ciao"])
         self.assertEqual(
             str(cm.exception),
-            "the block(s) passed must have samples/properties"
-            + " names that matches the one passed in `names`",
+            "the block(s) passed must have properties names that match those"
+            + " passed in `names`. ['ciao'] were passed, ('n',) found.",
         )
 
     def test_unique_no_errors(self):
