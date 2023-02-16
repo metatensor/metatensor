@@ -18,22 +18,23 @@ def unique_metadata(
 ) -> Labels:
     """
     Returns a :py:class:`Labels` object containing the unique metadata across
-    all blocks of the input :py:class:`TensorMap`  ``tensor``, for the specified
-    ``axis`` (either "samples" or "properties") and metatdata ``names``.
+    all blocks of the input :py:class:`TensorMap`  ``tensor``. Unique Labels are
+    returned for the specified ``axis`` (either ``"samples"`` or
+    ``"properties"``) and metatdata ``names``.
 
-    Passing ``gradient_param`` as a str corresponding to a gradient parameter
-    (for instance "cell" or "positions") returns the unique indices only for the
-    gradient blocks associated with each block in the input ``tensor``,
-    according to the specified ``axis`` and ``names``. Note that gradient blocks
-    by definition have the same properties metadata as their parent
+    Passing ``gradient_param`` as a ``str`` corresponding to a gradient
+    parameter (for instance ``"cell"`` or ``"positions"``) returns the unique
+    indices only for the gradient blocks. Note that gradient blocks by
+    definition have the same properties metadata as their parent
     :py:class:`TensorBlock`.
 
-    If there are no indices in the (gradient) blocks of ``tensor`` corresponding
-    to the specified ``axis`` and ``names``, an empty Labels object with the
-    correct names as in the passed ``names`` is returned.
+    An empty :py:class:`Labels` object is returned if there are no indices in
+    the (gradient) blocks of ``tensor`` corresponding to the specified ``axis``
+    and ``names``. This will have length zero but the names will be the same as
+    passed in ``names``.
 
-    For example, to find the unique "structure" indices in the "samples"
-    metadata present in a given TensorMap:
+    For example, to find the unique ``"structure"`` indices in the ``"samples"``
+    metadata present in a given :py:class:`TensorMap`:
 
     .. code-block:: python
 
@@ -41,8 +42,8 @@ def unique_metadata(
             tensor, axis="samples", names=["structure"],
         )
 
-    To find the unique "atom" indices in the "samples" metadata present in the
-    "positions" gradient blocks of a given TensorMap:
+    To find the unique "atom" indices in the ``"samples"`` metadata present in
+    the ``"positions"`` gradient blocks of a given :py:class:`TensorMap`:
 
     .. code-block:: python
 
@@ -51,15 +52,16 @@ def unique_metadata(
         )
 
     :param tensor: the :py:class:`TensorMap` to find unique indices for.
-    :param axis: a str, either "samples" or "properties", corresponding to the
-        axis along which the named unique indices should be found.
-    :param names: a str, list of str, or tuple of str corresponding to the
-        name(s) of the indices along the specified ``axis`` for which the unique
-        values should be found.
-    :param gradient_param: a str corresponding to the gradient parameter name
-        for the gradient blocks to find the unique indices for. If none
-        (default), the unique indices of the regular TensorBlocks will be
-        calculated.
+    :param axis: a ``str``, either ``"samples"`` or ``"properties"``,
+        corresponding to the ``axis`` along which the named unique indices
+        should be found.
+    :param names: a ``str``, ``list`` of ``str``, or ``tuple`` of ``str``
+        corresponding to the name(s) of the indices along the specified ``axis``
+        for which the unique values should be found.
+    :param gradient_param: a ``str`` corresponding to the gradient parameter
+        name for the gradient blocks to find the unique indices for. If none
+        (default), the unique indices of the regular :py:class:`TensorBlock`s
+        will be calculated.
 
     :return: a sorted :py:class:`Labels` object containing the unique metadata
         for the blocks of the input ``tensor`` or its gradient blocks for the
@@ -68,7 +70,7 @@ def unique_metadata(
     """
     # Parse input args
     if not isinstance(tensor, TensorMap):
-        raise TypeError("``tensor`` must be an equistore TensorMap")
+        raise TypeError("`tensor` must be an equistore `TensorMap`")
     names = (
         [names]
         if isinstance(names, str)
@@ -93,20 +95,21 @@ def unique_metadata_block(
     """
     Returns a :py:class:`Labels` object containing the unique metadata in the
     input :py:class:`TensorBlock`  ``block``, for the specified ``axis`` (either
-    "samples" or "properties") and metatdata ``names``.
+    ``"samples"`` or ``"properties"``) and metatdata ``names``.
 
-    Passing ``gradient_param`` as a str corresponding to a gradient parameter
-    (for instance "cell" or "positions") returns the unique indices only for the
-    gradient block associated with the input ``block`` , according to the
-    specified ``axis`` and ``names``. Note that gradient blocks by definition
-    have the same properties metadata as their parent :py:class:`TensorBlock`.
+    Passing ``gradient_param`` as a ``str`` corresponding to a gradient
+    parameter (for instance ``"cell"`` or ``"positions"``) returns the unique
+    indices only for the gradient block associated with ``block``. Note that
+    gradient blocks by definition have the same properties metadata as their
+    parent :py:class:`TensorBlock`.
 
-    If there are no indices in the ``block`` (or its gradient) corresponding to
-    the specified ``axis`` and ``names``, an empty Labels object with the
-    correct names as in the passed ``names`` is returned.
+    An empty :py:class:`Labels` object is returned if there are no indices in
+    the (gradient) blocks of ``tensor`` corresponding to the specified ``axis``
+    and ``names``. This will have length zero but the names will be the same as
+    passed in ``names``.
 
-    For example, to find the unique "structure" indices in the "samples"
-    metadata present in a given TensorBlock:
+    For example, to find the unique ``"structure"`` indices in the ``"samples"``
+    metadata present in a given :py:class:`TensorBlock`:
 
     .. code-block:: python
 
@@ -114,8 +117,8 @@ def unique_metadata_block(
             block, axis="samples", names=["structure"],
         )
 
-    To find the unique "atom" indices along the "samples" axis present in the
-    "positions" gradient block of a given TensorBlock:
+    To find the unique ``"atom"`` indices along the "samples" axis present in
+    the ``"positions"`` gradient block of a given :py:class:`TensorBlock`:
 
     .. code-block:: python
 
@@ -124,24 +127,24 @@ def unique_metadata_block(
         )
 
     :param block: the :py:class:`TensorBlock` to find unique indices for.
-    :param axis: a str, either "samples" or "properties", corresponding to the
-        axis along which the named unique metadata should be found.
-    :param names: a str, list of str, or tuple of str corresponding to the
-        name(s) of the metadata along the specified ``axis`` for which the
-        unique indices should be found.
-    :param gradient_param: a str corresponding to the gradient parameter name
-        for the gradient blocks to find the unique metadata for. If none
-        (default), the unique metadata of the regular TensorBlocks will be
-        calculated.
+    :param axis: a str, either ``"samples"`` or ``"properties"``, corresponding
+        to the ``axis`` along which the named unique metadata should be found.
+    :param names: a ``str``, ``list`` of ``str``, or ``tuple`` of ``str``
+        corresponding to the name(s) of the metadata along the specified
+        ``axis`` for which the unique indices should be found.
+    :param gradient_param: a ``str`` corresponding to the gradient parameter
+        name for the gradient blocks to find the unique metadata for. If none
+        (default), the unique metadata of the regular :py:class:`TensorBlock`s
+        will be calculated.
 
     :return: a sorted :py:class:`Labels` object containing the unique metadata
         for the input ``block`` or its gradient for the specified parameter.
-        Each element in the returned :py:class:`Labels` object has len(names)
-        entries.
+        Each element in the returned :py:class:`Labels` object has
+        len(``names``) entries.
     """
     # Parse input args
     if not isinstance(block, TensorBlock):
-        raise TypeError("``block`` must be an equistore TensorBlock")
+        raise TypeError("`block` must be an equistore `TensorBlock`")
     names = (
         [names]
         if isinstance(names, str)
@@ -171,17 +174,18 @@ def _unique_from_blocks(
     # Extract indices from each block
     all_idxs = []
     for block in blocks:
-        idxs = block.samples[names] if axis == "samples" else block.properties[names]
-        for idx in idxs:
-            all_idxs.append(idx)
+        if axis == "samples":
+            idxs = block.samples[names]
+        else:  # "properties"
+            idxs = block.properties[names]
+        all_idxs += idxs.tolist()
 
     # If no matching indices across all blocks return a empty Labels w/ the
     # correct names
     if len(all_idxs) == 0:
         # Create Labels with single entry
-        labels = Labels(names=names, values=np.array([[i for i in range(len(names))]]))
-        # rslice to zero length
-        return labels[:0]
+        labels = Labels(names=names, values=np.arange(len(names)).reshape(-1, 1))
+        return labels[:0]  # Slice to zero length
 
     # Define the unique and sorted indices
     unique_idxs = np.unique(all_idxs, axis=0)
@@ -196,20 +200,22 @@ def _check_args(
     names: List[str],
     gradient_param: Optional[str] = None,
 ):
-    """Checks input args for :py:func:`unique_metadata` and
-    :py:func:`unique_metadata_block`."""
+    """
+    Checks input args for :py:func:`unique_metadata` and
+    :py:func:`unique_metadata_block`.
+    """
     # Check tensors
     if isinstance(tensor, TensorMap):
         blocks = tensor.blocks()
         # Check gradients
         if gradient_param is not None:
             if not isinstance(gradient_param, str):
-                raise TypeError("``gradient_param`` must be a str")
+                raise TypeError("`gradient_param` must be a `str`")
             # Check all blocks have a gradient under the passed param
             if not np.all([block.has_gradient(gradient_param) for block in blocks]):
                 raise ValueError(
                     "not all input blocks have a gradient under the"
-                    + f" passed ``gradient_param`` {gradient_param}"
+                    + f" passed `gradient_param` {gradient_param}"
                 )
             blocks = [
                 block.gradient(gradient_param) for block in blocks
@@ -219,27 +225,29 @@ def _check_args(
         # Check gradients
         if gradient_param is not None:
             if not isinstance(gradient_param, str):
-                raise TypeError("``gradient_param`` must be a str")
+                raise TypeError("`gradient_param` must be a `str`")
             # Check block has a gradient under the passed param
             if not tensor.has_gradient(gradient_param):
                 raise ValueError(
                     "input block does not have a gradient under the"
-                    + f" passed ``gradient_param`` {gradient_param}"
+                    + f" passed `gradient_param` {gradient_param}"
                 )
             blocks = [tensor.gradient(gradient_param)]  # redefine blocks
     # Check axis
     if not isinstance(axis, str):
-        raise TypeError("``axis`` must be a str, either 'samples' or 'properties'")
+        raise TypeError("`axis` must be a `str`, either `'samples'` or `'properties'`")
     if axis not in ["samples", "properties"]:
-        raise ValueError("``axis`` must be passsed as either 'samples' or 'properties'")
+        raise ValueError(
+            "`axis` must be passsed as either `'samples'` or `'properties'`"
+        )
     # Check names
     if not isinstance(names, list):
-        raise TypeError("``names`` must be a list of str")
+        raise TypeError("`names` must be a `list` of `str`")
     for block in blocks:
         tmp_names = block.samples.names if axis == "samples" else block.properties.names
         for name in names:
             if name not in tmp_names:
                 raise ValueError(
                     "the block(s) passed must have samples/properties"
-                    + " names that matches the one passed in ``names``"
+                    + " names that matches the one passed in `names`"
                 )
