@@ -277,7 +277,7 @@ class TestUniqueMetadata(unittest.TestCase):
         )
         self.assertTrue(len(actual_properties) == 0)
 
-    def test_unique_indices_samples(self):
+    def test_unique_metadata_samples(self):
         """Test unique on whole TensorMap along samples"""
         # Test case 1
         samples = [0, 1, 2, 3, 4, 5, 6, 8]
@@ -294,7 +294,7 @@ class TestUniqueMetadata(unittest.TestCase):
             fn._utils._labels_equal(actual_samples, target_samples, exact_order=True)
         )
 
-    def test_unique_indices_samples_different_types(self):
+    def test_unique_metadata_samples_different_types(self):
         """Passign names as different types"""
         samples = [0, 1, 2, 3, 4, 5, 6, 8]
         target_samples = Labels(
@@ -311,7 +311,7 @@ class TestUniqueMetadata(unittest.TestCase):
             fn._utils._labels_equal(target_samples, actual_samples, exact_order=True)
         )
 
-    def test_unique_indices_properties(self):
+    def test_unique_metadata_properties(self):
         """Test unique on whole TensorMap along samples"""
         # Test case 1
         properties = [0, 3, 4, 5]
@@ -336,7 +336,7 @@ class TestUniqueMetadata(unittest.TestCase):
             )
         )
 
-    def test_unique_indices_properties_different_types(self):
+    def test_unique_metadata_properties_different_types(self):
         """Passing names as different types"""
         properties = [0, 1, 2, 3, 4, 5, 6, 7]
         target_properties = Labels(
@@ -361,7 +361,7 @@ class TestUniqueMetadata(unittest.TestCase):
             )
         )
 
-    def test_unique_indices_gradients_samples(self):
+    def test_unique_metadata_gradients_samples(self):
         """Tests getting unique metadata of gradients on whole TensorMap along
         samples"""
         parameter = "parameter"
@@ -373,7 +373,7 @@ class TestUniqueMetadata(unittest.TestCase):
             fn._utils._labels_equal(actual_samples, target_samples, exact_order=True)
         )
 
-    def test_unique_indices_gradients_samples_incorrect_order(self):
+    def test_unique_metadata_gradients_samples_incorrect_order(self):
         """
         Tests false of getting unique metadata of gradients on whole TensorMap
         along samples with incorrect order
@@ -388,7 +388,7 @@ class TestUniqueMetadata(unittest.TestCase):
             fn._utils._labels_equal(actual_samples, target_samples, exact_order=True)
         )
 
-    def test_unique_indices_gradients_properties(self):
+    def test_unique_metadata_gradients_properties(self):
         """Tests getting unique metadata of gradients on whole TensorMap along
         properties"""
         parameter = "parameter"
@@ -405,7 +405,7 @@ class TestUniqueMetadata(unittest.TestCase):
             )
         )
 
-    def test_unique_indices_gradients_properties_incorrect_order(self):
+    def test_unique_metadata_gradients_properties_incorrect_order(self):
         """
         Tests false of getting unique metadata of gradients on whole TensorMap
         along properties with incorrect order
@@ -425,6 +425,44 @@ class TestUniqueMetadata(unittest.TestCase):
             )
         )
 
+    def test_unique_metadata_block_empty_labels(self):
+        """Tests empty labels returned when passing names not in block"""
+        names = ["ciao", "bonjour", "hello"]
+        target_labels = Labels(
+            names=names, values=np.arange(len(names)).reshape(1, -1)
+        )[:0]
+        # names not in block - samples
+        actual_labels = fn.unique_metadata_block(
+            self.tensor1.block(0), "samples", names=names
+        )
+        self.assertTrue(
+            fn._utils._labels_equal(target_labels, actual_labels, exact_order=True)
+        )
+        # names not in block - properties
+        actual_labels = fn.unique_metadata_block(
+            self.tensor1.block(0), "properties", names=names
+        )
+        self.assertTrue(
+            fn._utils._labels_equal(target_labels, actual_labels, exact_order=True)
+        )
+
+    def test_unique_metadata_empty_labels(self):
+        """Tests empty labels returned when passing names not in tensor"""
+        names = ["ciao", "bonjour", "hello"]
+        target_labels = Labels(
+            names=names, values=np.arange(len(names)).reshape(1, -1)
+        )[:0]
+        # names not in block - samples
+        actual_labels = fn.unique_metadata(self.tensor1, "samples", names=names)
+        self.assertTrue(
+            fn._utils._labels_equal(target_labels, actual_labels, exact_order=True)
+        )
+        # names not in block - properties
+        actual_labels = fn.unique_metadata(self.tensor1, "properties", names=names)
+        self.assertTrue(
+            fn._utils._labels_equal(target_labels, actual_labels, exact_order=True)
+        )
+
 
 class TestUniqueMetadataErrors(unittest.TestCase):
     """
@@ -439,7 +477,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
         )
         self.block = self.tensor.block(0)
 
-    def test_unique_indices_block_type_errors(self):
+    def test_unique_metadata_block_type_errors(self):
         # TypeError with TM
         with self.assertRaises(TypeError) as cm:
             fn.unique_metadata_block(self.tensor, "samples", ["structure"])
@@ -458,7 +496,18 @@ class TestUniqueMetadataErrors(unittest.TestCase):
         # TypeError names as float
         with self.assertRaises(TypeError) as cm:
             fn.unique_metadata_block(self.block, "properties", 3.14)
-        self.assertEqual(str(cm.exception), "`names` must be a `list` of `str`")
+        self.assertEqual(
+            str(cm.exception),
+            f"`names` must be a `list` of `str`, received {type(3.14)}",
+        )
+        # TypeError names as list of [str, float]
+        with self.assertRaises(TypeError) as cm:
+            fn.unique_metadata_block(self.block, "properties", ["structure", 3.14])
+        self.assertEqual(
+            str(cm.exception),
+            "`names` must be a `list` of `str`, received"
+            + f" {[type(name) for name in ['structure', 3.14]]}",
+        )
         # TypeError gradient_param as float
         with self.assertRaises(TypeError) as cm:
             fn.unique_metadata_block(
@@ -468,7 +517,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             str(cm.exception), f"`gradient_param` must be a `str`, not {type(3.14)}"
         )
 
-    def test_unique_indices_block_value_errors(self):
+    def test_unique_metadata_block_value_errors(self):
         """tests raising of value errors"""
         # ValueError axis not "samples" or "properties"
         with self.assertRaises(ValueError) as cm:
@@ -477,22 +526,6 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             str(cm.exception),
             "`axis` must be passed as either `'samples'` or `'properties'`,"
             + " ciao was passed",
-        )
-        # ValueError names not in block - samples
-        with self.assertRaises(ValueError) as cm:
-            fn.unique_metadata_block(self.block, "samples", ["ciao"])
-        self.assertEqual(
-            str(cm.exception),
-            "the block(s) passed must have samples names that match those passed"
-            + " in `names`. ['ciao'] were passed, ('structure', 'center') found.",
-        )
-        # ValueError names not in block - properties
-        with self.assertRaises(ValueError) as cm:
-            fn.unique_metadata_block(self.block, "properties", ["ciao"])
-        self.assertEqual(
-            str(cm.exception),
-            "the block(s) passed must have properties names that match those"
-            + " passed in `names`. ['ciao'] were passed, ('n',) found.",
         )
         # ValueError gradient_param not a valid param for gradients
         with self.assertRaises(TypeError) as cm:
@@ -503,7 +536,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
             str(cm.exception), f"`gradient_param` must be a `str`, not {type(3.14)}"
         )
 
-    def test_unique_indices_block_no_errors(self):
+    def test_unique_metadata_block_no_errors(self):
         """tests no raising of errors"""
         # No error names as str, list of str, or tuple of str
         fn.unique_metadata_block(self.block, "samples", "structure")
@@ -530,9 +563,20 @@ class TestUniqueMetadataErrors(unittest.TestCase):
         # TypeError names as float
         with self.assertRaises(TypeError) as cm:
             fn.unique_metadata(self.tensor, "properties", 3.14)
-        self.assertEqual(str(cm.exception), "`names` must be a `list` of `str`")
+        self.assertEqual(
+            str(cm.exception),
+            f"`names` must be a `list` of `str`, received {type(3.14)}",
+        )
+        # TypeError names as list of [str, float]
+        with self.assertRaises(TypeError) as cm:
+            fn.unique_metadata_block(self.block, "properties", ["structure", 3.14])
+        self.assertEqual(
+            str(cm.exception),
+            "`names` must be a `list` of `str`, received"
+            + f" {[type(name) for name in ['structure', 3.14]]}",
+        )
 
-    def test_unique_value_errors(self):
+    def test_unique_metadata_value_errors(self):
         """tests raising of value errors"""
         # ValueError axis not "samples" or "properties"
         with self.assertRaises(ValueError) as cm:
@@ -540,26 +584,10 @@ class TestUniqueMetadataErrors(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "`axis` must be passed as either `'samples'` or `'properties'`,"
-            + " ciao was passed",
-        )
-        # ValueError names not in block - samples
-        with self.assertRaises(ValueError) as cm:
-            fn.unique_metadata(self.tensor, "samples", ["ciao"])
-        self.assertEqual(
-            str(cm.exception),
-            "the block(s) passed must have samples names that match those passed"
-            + " in `names`. ['ciao'] were passed, ('structure', 'center') found.",
-        )
-        # ValueError names not in block - properties
-        with self.assertRaises(ValueError) as cm:
-            fn.unique_metadata(self.tensor, "properties", ["ciao"])
-        self.assertEqual(
-            str(cm.exception),
-            "the block(s) passed must have properties names that match those"
-            + " passed in `names`. ['ciao'] were passed, ('n',) found.",
+            + f" {'ciao'} was passed",
         )
 
-    def test_unique_no_errors(self):
+    def test_unique_metadata_no_errors(self):
         """tests no raising of errors"""
         # No error names as str, list of str, or tuple of str
         fn.unique_metadata(self.tensor, "properties", "n")

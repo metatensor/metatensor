@@ -38,17 +38,44 @@ def unique_metadata(
 
     .. code-block:: python
 
+        from equistore.operations import unique_metadata
+
         unique_structures = unique_metadata(
             tensor, axis="samples", names=["structure"],
         )
 
-    To find the unique ``"atom"`` indices in the ``"samples"`` metadata present
+    Or, to find the unique ``"atom"`` indices in the ``"samples"`` metadata present
     in the ``"positions"`` gradient blocks of a given :py:class:`TensorMap`:
 
     .. code-block:: python
 
         unique_grad_atoms = unique_metadata(
             tensor, axis="samples", names=["atom"], gradient_param="positions",
+        )
+
+    The unique indices can then be used to split the :py:class:`TensorMap`
+    into several smaller :py:class:`TensorMap` objects. Say, for example, that
+    the ``unique_structures`` from the example above are:
+
+    .. code-block:: python
+
+        Labels(
+            [(0,), (1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,)],
+            dtype=[('structure', '<i4')],
+        )
+
+    Then, the following code will split the :py:class:`TensorMap` into 2
+    :py:class:`TensorMap` objects, with first containing structure indices 0-3
+    and the second containing structure indices 4-9:
+
+    .. code-block:: python
+
+        from equistore.operations import split
+
+        [tensor_1, tensor_2] = split(
+            tensor,
+            axis="samples",
+            grouped_idxs=[unique_structures[:4], unique_structures[4:]]
         )
 
     :param tensor: the :py:class:`TensorMap` to find unique indices for.
@@ -170,21 +197,27 @@ def _unique_from_blocks(
     Finds the unique metadata of a list of blocks along the given ``axis`` and
     for the specified ``names``. If ``gradient_param`` is specified, only finds
     the unique indices for gradient blocks under the specified parameter name.
+    If the full list of names is not present in the metadata of any block, an
+    empty :py:class:`Labels` object is returned.
     """
     # Extract indices from each block
     all_idxs = []
     for block in blocks:
-        if axis == "samples":
-            idxs = block.samples[names]
-        else:  # "properties"
-            idxs = block.properties[names]
-        all_idxs += idxs.tolist()
+        try:
+            if axis == "samples":
+                idxs = block.samples[names]
+            else:  # "properties"
+                idxs = block.properties[names]
+            all_idxs += idxs.tolist()
+        except KeyError:
+            # If the block does not have the specified metadata, skip it
+            continue
 
     # If no matching indices across all blocks return a empty Labels w/ the
     # correct names
     if len(all_idxs) == 0:
         # Create Labels with single entry
-        labels = Labels(names=names, values=np.arange(len(names)).reshape(-1, 1))
+        labels = Labels(names=names, values=np.arange(len(names)).reshape(1, -1))
         return labels[:0]  # Slice to zero length
 
     # Define the unique and sorted indices
@@ -250,14 +283,19 @@ def _check_args(
         )
     # Check names
     if not isinstance(names, list):
-        raise TypeError("`names` must be a `list` of `str`")
+        raise TypeError(f"`names` must be a `list` of `str`, received {type(names)}")
+    if not np.all([isinstance(name, str) for name in names]):
+        raise TypeError(
+            "`names` must be a `list` of `str`, received"
+            + f" {[type(name) for name in names]}"
+        )
     # Assumes samples/properties names are the same for every block in blocks
-    block_names = (
-        blocks[0].samples.names if axis == "samples" else blocks[0].properties.names
-    )
-    for name in names:
-        if name not in block_names:
-            raise ValueError(
-                f"the block(s) passed must have {axis} names that match those"
-                + f" passed in `names`. {names} were passed, {block_names} found."
-            )
+    # block_names = (
+    #     blocks[0].samples.names if axis == "samples" else blocks[0].properties.names
+    # )
+    # for name in names:
+    #     if name not in block_names:
+    #         raise ValueError(
+    #             f"the block(s) passed must have {axis} names that match those"
+    #             + f" passed in `names`. {names} were passed, {block_names} found."
+    #         )
