@@ -867,6 +867,19 @@ class TestStdSamples(unittest.TestCase):
             ),
         )
 
+        block_1.add_gradient(
+            parameter="parameter",
+            data=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
+            samples=Labels(
+                ["sample", "samples2"],
+                np.array(
+                    [[0, 0], [1, 1], [2, 2]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+        )
+
         keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
         X = TensorMap(keys, [block_1])
 
@@ -885,6 +898,33 @@ class TestStdSamples(unittest.TestCase):
 
         self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].values))
         self.assertTrue(fn.equal(var_X, std_X))
+
+        # Gradients
+        grad_sample_label = Labels(
+            names=["sample", "samples2"],
+            values=np.array(
+                [[0, 0], [1, 1], [2, 2]],
+                dtype=np.int32,
+            ),
+        )
+        self.assertTrue(
+            std_X[0].gradient("parameter").samples.names == grad_sample_label.names
+        )
+        self.assertTrue(
+            np.all(std_X[0].gradient("parameter").samples == grad_sample_label)
+        )
+        self.assertTrue(
+            np.all(
+                X[0].gradient("parameter").data == add_X[0].gradient("parameter").data
+            )
+        )
+        self.assertTrue(
+            np.all(
+                X[0].gradient("parameter").data == mean_X[0].gradient("parameter").data
+            )
+        )
+        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].gradient("parameter").data))
+        self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").data))
 
 
 # TODO: add tests with torch & torch scripting/tracing

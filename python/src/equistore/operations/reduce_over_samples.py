@@ -151,7 +151,7 @@ def _reduce_over_samples_block(
                         # so the statement catch that
                         # for torch there is nothing to catch
                         # both numpy and torch give inf for the division by zero
-                        with np.errstate(invalid="ignore"):
+                        with np.errstate(divide="ignore", invalid="ignore"):
                             data_result[i] = (
                                 values_grad_result[i]
                                 - (data_result[i] * values_mean[s[0]])
