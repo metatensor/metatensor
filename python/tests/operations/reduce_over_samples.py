@@ -840,6 +840,38 @@ class TestStdSamples(unittest.TestCase):
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
         self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
+    def test_reduction_of_one_element(self):
+        block_1 = TensorBlock(
+            values=np.array([[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54]]),
+            samples=Labels(
+                ["samples"],
+                np.array(
+                    [[0], [1], [2]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+
+        keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
+        X = TensorMap(keys, [block_1])
+
+        add_X_12 = fn.sum_over_samples(X, samples_names=["samples"])
+        mean_X_12 = fn.mean_over_samples(X, samples_names=["samples"])
+        var_X_12 = fn.variance_over_samples(X, samples_names=["samples"])
+        std_X_12 = fn.std_over_samples(X, samples_names=["samples"])
+
+        self.assertTrue(fn.equal(X, add_X_12))
+        self.assertTrue(fn.equal(X, mean_X_12))
+        self.assertTrue(fn.equal(X, var_X_12, only_metadata=True))
+        self.assertTrue(fn.equal(X, std_X_12, only_metadata=True))
+
+        self.assertTrue(np.all(np.zeros(3, 3), std_X_12.values))
+        self.assertTrue(fn.equal(var_X_12, std_X_12))
+
 
 # TODO: add tests with torch & torch scripting/tracing
 def get_XdX(block, gradient, der_index):

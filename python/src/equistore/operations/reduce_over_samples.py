@@ -158,7 +158,7 @@ def _reduce_over_samples_block(
                             ) / values_result[s[0]]
 
                         data_result[i] = _dispatch.nan_to_num(
-                            data_result, nan=0.0, posinf=0.0, neginf=0.0
+                            data_result[i], nan=0.0, posinf=0.0, neginf=0.0
                         )
 
         # no check for the len of the gradient sample is needed becouse there always
