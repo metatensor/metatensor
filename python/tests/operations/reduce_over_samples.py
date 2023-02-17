@@ -509,6 +509,39 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
         self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
+    def test_reduction_allsamples(self):
+        block_1 = TensorBlock(
+            values=np.array(
+                [
+                    [1, 2, 4],
+                    [3, 5, 6],
+                    [-1.3, 26.7, 4.54],
+                ]
+            ),
+            samples=Labels(
+                ["samples"],
+                np.array(
+                    [[0], [1], [2]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+        keys = Labels(
+            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
+        )
+        X = TensorMap(keys, [block_1])
+
+        sum_X = fn.sum_over_samples(X, samples_names=["samples"])
+        mean_X = fn.mean_over_samples(X, samples_names=["samples"])
+        self.assertTrue(fn.equal(sum_X, mean_X, only_metadata=True))
+        self.assertTrue(sum_X[0].samples == Labels.single())
+        self.assertTrue(np.all(sum_X[0].values == np.sum(X[0].values, axis=0)))
+        self.assertTrue(np.all(mean_X[0].values == np.mean(X[0].values, axis=0)))
+
 
 # TODO: add tests with torch & torch scripting/tracing
 

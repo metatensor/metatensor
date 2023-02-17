@@ -57,12 +57,18 @@ def _reduce_over_samples_block(
             (-1,) + (1,) * len(other_shape)
         )
 
-    result_block = TensorBlock(
-        values=values_result,
-        samples=Labels(
+    # check if the reduce operation reduce all the samples
+    if len(remaining_samples) == 0:
+        samples_label = Labels.single()
+    else:
+        samples_label = Labels(
             remaining_samples,
             new_samples,
-        ),
+        )
+
+    result_block = TensorBlock(
+        values=values_result,
+        samples=samples_label,
         components=block.components,
         properties=block.properties,
     )
@@ -97,6 +103,9 @@ def _reduce_over_samples_block(
             data_result = data_result / bincount.reshape(
                 (-1,) + (1,) * len(other_shape)
             )
+
+        # no check for the len of the gradient sample is needed becouse there always
+        # will be at least one sample in the gradient
 
         result_block.add_gradient(
             parameter,
