@@ -509,6 +509,8 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
         self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
+
+class TestReductionAllSamples(unittest.TestCase):
     def test_reduction_allsamples(self):
         block_1 = TensorBlock(
             values=np.array(
@@ -537,10 +539,19 @@ class TestMeanSamples(unittest.TestCase):
 
         sum_X = fn.sum_over_samples(X, samples_names=["samples"])
         mean_X = fn.mean_over_samples(X, samples_names=["samples"])
+        var_X = fn.variance_over_samples(X, samples_names=["samples"])
+        std_X = fn.std_over_samples(X, samples_names=["samples"])
+
         self.assertTrue(fn.equal(sum_X, mean_X, only_metadata=True))
+        self.assertTrue(fn.equal(sum_X, std_X, only_metadata=True))
+        self.assertTrue(fn.equal(mean_X, var_X, only_metadata=True))
         self.assertTrue(sum_X[0].samples == Labels.single())
+        self.assertTrue(std_X[0].samples == Labels.single())
+
         self.assertTrue(np.all(sum_X[0].values == np.sum(X[0].values, axis=0)))
         self.assertTrue(np.all(mean_X[0].values == np.mean(X[0].values, axis=0)))
+        self.assertTrue(np.allclose(std_X[0].values, np.std(X[0].values, axis=0)))
+        self.assertTrue(np.allclose(var_X[0].values, np.var(X[0].values, axis=0)))
 
 
 class TestStdSamples(unittest.TestCase):
@@ -844,9 +855,9 @@ class TestStdSamples(unittest.TestCase):
         block_1 = TensorBlock(
             values=np.array([[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54]]),
             samples=Labels(
-                ["samples"],
+                ["samples1", "samples2"],
                 np.array(
-                    [[0], [1], [2]],
+                    [[0, 0], [1, 1], [2, 2]],
                     dtype=np.int32,
                 ),
             ),
@@ -859,18 +870,21 @@ class TestStdSamples(unittest.TestCase):
         keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
         X = TensorMap(keys, [block_1])
 
-        add_X_12 = fn.sum_over_samples(X, samples_names=["samples"])
-        mean_X_12 = fn.mean_over_samples(X, samples_names=["samples"])
-        var_X_12 = fn.variance_over_samples(X, samples_names=["samples"])
-        std_X_12 = fn.std_over_samples(X, samples_names=["samples"])
+        add_X = fn.sum_over_samples(X, samples_names=["samples1"])
+        mean_X = fn.mean_over_samples(X, samples_names=["samples1"])
+        var_X = fn.variance_over_samples(X, samples_names=["samples1"])
+        std_X = fn.std_over_samples(X, samples_names=["samples1"])
 
-        self.assertTrue(fn.equal(X, add_X_12))
-        self.assertTrue(fn.equal(X, mean_X_12))
-        self.assertTrue(fn.equal(X, var_X_12, only_metadata=True))
-        self.assertTrue(fn.equal(X, std_X_12, only_metadata=True))
+        # print(add_X[0])
+        # print(X[0].values, add_X[0].values)
+        self.assertTrue(np.all(X[0].values == add_X[0].values))
+        self.assertTrue(np.all(X[0].values == mean_X[0].values))
+        self.assertTrue(fn.equal(add_X, mean_X))
+        self.assertTrue(fn.equal(add_X, var_X, only_metadata=True))
+        self.assertTrue(fn.equal(mean_X, std_X, only_metadata=True))
 
-        self.assertTrue(np.all(np.zeros(3, 3), std_X_12.values))
-        self.assertTrue(fn.equal(var_X_12, std_X_12))
+        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].values))
+        self.assertTrue(fn.equal(var_X, std_X))
 
 
 # TODO: add tests with torch & torch scripting/tracing
