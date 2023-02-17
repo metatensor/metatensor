@@ -289,13 +289,3 @@ def _check_args(
             "`names` must be a `list` of `str`, received"
             + f" {[type(name) for name in names]}"
         )
-    # Assumes samples/properties names are the same for every block in blocks
-    # block_names = (
-    #     blocks[0].samples.names if axis == "samples" else blocks[0].properties.names
-    # )
-    # for name in names:
-    #     if name not in block_names:
-    #         raise ValueError(
-    #             f"the block(s) passed must have {axis} names that match those"
-    #             + f" passed in `names`. {names} were passed, {block_names} found."
-    #         )
