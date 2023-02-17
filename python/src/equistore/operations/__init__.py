@@ -28,6 +28,7 @@ from .slice import slice, slice_block  # noqa
 from .solve import solve  # noqa
 from .split import split, split_block  # nopa
 from .subtract import subtract  # noqa
+from .unique_metadata import unique_metadata, unique_metadata_block  # noqa
 from .zeros_like import zeros_like, zeros_like_block  # noqa
 
 
@@ -58,5 +59,7 @@ __all__ = [
     "split_block",
     "subtract",
     "sum_over_samples",
+    "unique_metadata",
+    "unique_metadata_block",
     "zeros_like",
 ]
