@@ -28,7 +28,7 @@ jobs:
 
           # MSRV (Minimally Supported Rust Version)
           - os: ubuntu-20.04
-            rust-version: 1.59
+            rust-version: 1.61
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
             cargo-build-flags: --all-features
