@@ -2,7 +2,7 @@ use std::ffi::{CString, CStr};
 
 
 /// An analog to `std::ffi::CString` that is immutable & can be shared between
-/// traits safely. This is used to store the columns names in a set of `Labels`
+/// threads safely. This is used to store the columns names in a set of `Labels`
 /// in a C-compatible way.
 #[repr(transparent)]
 pub struct ConstCString(*const std::os::raw::c_char);
