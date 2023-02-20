@@ -2,6 +2,7 @@
 name = "equistore"
 version = "0.0.0"
 edition = "2021"
+rust-version = "1.61"
 
 [lib]
 # when https://github.com/rust-lang/cargo/pull/8789 lands, use it here!
