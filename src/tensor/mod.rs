@@ -106,7 +106,7 @@ impl TensorMap {
 
 
             for block in &blocks {
-                check_labels_names(block.values(), &sample_names, &components_names, "".into())?;
+                check_labels_names(block.values(), &sample_names, &components_names, String::new())?;
 
                 if block.values().properties.names() != properties_names {
                     return Err(Error::InvalidParameter(format!(

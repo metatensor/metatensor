@@ -49,7 +49,7 @@ use self::labels::{read_npy_labels, write_npy_labels};
 ///                                                     /   data.npy
 /// ```
 pub fn load<R: std::io::Read + std::io::Seek>(reader: R) -> Result<TensorMap, Error> {
-    let mut archive = ZipArchive::new(reader).map_err(|e| ("".into(), e))?;
+    let mut archive = ZipArchive::new(reader).map_err(|e| (String::new(), e))?;
 
     let path = String::from("keys.npy");
     let keys = read_npy_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
@@ -163,7 +163,7 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
         }
     }
 
-    archive.finish().map_err(|e| ("".into(), e))?;
+    archive.finish().map_err(|e| (String::new(), e))?;
 
     return Ok(());
 }
