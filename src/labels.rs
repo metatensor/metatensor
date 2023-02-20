@@ -86,7 +86,7 @@ impl LabelValue {
 
     /// Get the integer value of this `LabelValue` as an i32
     pub fn i32(self) -> i32 {
-        self.0 as i32
+        self.0
     }
 }
 
