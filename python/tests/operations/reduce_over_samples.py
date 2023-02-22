@@ -509,6 +509,8 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
         self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
 
+
+class TestReductionAllSamples(unittest.TestCase):
     def test_reduction_allsamples(self):
         block_1 = TensorBlock(
             values=np.array(
@@ -537,13 +539,402 @@ class TestMeanSamples(unittest.TestCase):
 
         sum_X = fn.sum_over_samples(X, samples_names=["samples"])
         mean_X = fn.mean_over_samples(X, samples_names=["samples"])
+        var_X = fn.variance_over_samples(X, samples_names=["samples"])
+        std_X = fn.std_over_samples(X, samples_names=["samples"])
+
         self.assertTrue(fn.equal(sum_X, mean_X, only_metadata=True))
+        self.assertTrue(fn.equal(sum_X, std_X, only_metadata=True))
+        self.assertTrue(fn.equal(mean_X, var_X, only_metadata=True))
         self.assertTrue(sum_X[0].samples == Labels.single())
+        self.assertTrue(std_X[0].samples == Labels.single())
+
         self.assertTrue(np.all(sum_X[0].values == np.sum(X[0].values, axis=0)))
         self.assertTrue(np.all(mean_X[0].values == np.mean(X[0].values, axis=0)))
+        self.assertTrue(np.allclose(std_X[0].values, np.std(X[0].values, axis=0)))
+        self.assertTrue(np.allclose(var_X[0].values, np.var(X[0].values, axis=0)))
+
+
+class TestStdSamples(unittest.TestCase):
+    def test_std_samples_block(self):
+        tensor_se = equistore.io.load(
+            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
+            use_numpy=True,
+        )
+        tensor_ps = equistore.io.load(
+            os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
+            use_numpy=True,
+        )
+        # tensor_ps = fn.remove_gradients(tensor_ps)
+        tensor_se = fn.remove_gradients(tensor_se)
+
+        bl1 = tensor_ps[0]
+
+        reduce_tensor_se = fn.std_over_samples(tensor_se, samples_names="center")
+        reduce_tensor_ps = fn.std_over_samples(tensor_ps, samples_names=["center"])
+
+        self.assertTrue(
+            np.allclose(
+                np.std(bl1.values[:4], axis=0),
+                reduce_tensor_ps.block(0).values[0],
+                rtol=1e-13,
+            )
+        )
+
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.std(bl1.values[4:10], axis=0),
+                    reduce_tensor_ps.block(0).values[1],
+                    rtol=1e-13,
+                )
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                np.std(bl1.values[22:26], axis=0),
+                reduce_tensor_ps.block(0).values[5],
+                rtol=1e-13,
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                np.std(bl1.values[38:46], axis=0),
+                reduce_tensor_ps.block(0).values[8],
+                rtol=1e-13,
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.std(bl1.values[46:], axis=0),
+                    reduce_tensor_ps.block(0).values[9],
+                    rtol=1e-13,
+                )
+            )
+        )
+
+        # Test the gradients
+        gr1 = tensor_ps[0].gradient("positions")
+
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[0, 4, 8, 12])
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    (
+                        np.mean(XdX, axis=0)
+                        - np.mean(bl1.values[:4], axis=0)
+                        * np.mean(gr1.data[[0, 4, 8, 12]], axis=0)
+                    )
+                    / np.std(bl1.values[:4], axis=0),
+                    reduce_tensor_ps.block(0).gradient("positions").data[0],
+                    rtol=1e-13,
+                )
+            )
+        )
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[2, 6, 10, 14])
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    (
+                        np.mean(XdX, axis=0)
+                        - np.mean(bl1.values[:4], axis=0)
+                        * np.mean(gr1.data[[2, 6, 10, 14]], axis=0)
+                    )
+                    / np.std(bl1.values[:4], axis=0),
+                    reduce_tensor_ps.block(0).gradient("positions").data[2],
+                )
+            )
+        )
+
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[3, 7, 11, 15])
+        self.assertTrue(
+            np.allclose(
+                (
+                    np.mean(XdX, axis=0)
+                    - np.mean(bl1.values[:4], axis=0)
+                    * np.mean(gr1.data[[3, 7, 11, 15]], axis=0)
+                )
+                / np.std(bl1.values[:4], axis=0),
+                reduce_tensor_ps.block(0).gradient("positions").data[3],
+            )
+        )
+
+        XdX = get_XdX(block=tensor_ps[0], gradient=gr1, der_index=[96, 99, 102])
+        idx = [
+            i
+            for i in range(len(bl1.samples))
+            if bl1.samples[i][0] == bl1.samples[gr1.samples[96][0]][0]
+        ]
+
+        self.assertTrue(
+            np.allclose(
+                (
+                    np.mean(XdX, axis=0)
+                    - np.mean(bl1.values[idx], axis=0)
+                    * np.mean(gr1.data[[96, 99, 102]], axis=0)
+                )
+                / np.std(bl1.values[idx], axis=0),
+                reduce_tensor_ps.block(0).gradient("positions").data[40],
+                rtol=1e-13,
+            )
+        )
+
+        # The TensorBlock with key=(8,8,8) has nothing to be averaged over
+        values = reduce_tensor_ps.block(
+            species_center=8, species_neighbor_1=8, species_neighbor_2=8
+        ).values
+        self.assertTrue(
+            np.allclose(
+                np.zeros(values.shape),
+                values,
+            )
+        )
+
+        for ii, bl2 in enumerate(
+            [tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]
+        ):
+            self.assertTrue(
+                np.allclose(
+                    np.std(bl2.values[:4], axis=0),
+                    reduce_tensor_se.block(ii).values[0],
+                    rtol=1e-13,
+                )
+            )
+            self.assertTrue(
+                np.all(
+                    np.allclose(
+                        np.std(bl2.values[26:32], axis=0),
+                        reduce_tensor_se.block(ii).values[6],
+                        rtol=1e-13,
+                    )
+                )
+            )
+            self.assertTrue(
+                np.all(
+                    np.allclose(
+                        np.std(bl2.values[32:38], axis=0),
+                        reduce_tensor_se.block(ii).values[7],
+                        rtol=1e-13,
+                    )
+                )
+            )
+            self.assertTrue(
+                np.all(
+                    np.allclose(
+                        np.std(bl2.values[46:], axis=0),
+                        reduce_tensor_se.block(ii).values[9],
+                        rtol=1e-13,
+                    )
+                )
+            )
+
+    def test_reduction_block_two_samples(self):
+        block_1 = TensorBlock(
+            values=np.array(
+                [
+                    [1, 2, 4],
+                    [3, 5, 6],
+                    [-1.3, 26.7, 4.54],
+                    [3.5, 5.3, 6.87],
+                    [6.1, 35.2, 44.5],
+                    [7.3, -7.65, 6.45],
+                    [11, 276.0, 4.09],
+                    [33, 55.5, -5.6],
+                ]
+            ),
+            samples=Labels(
+                ["samples1", "samples2", "samples3"],
+                np.array(
+                    [
+                        [0, 0, 0],
+                        [0, 0, 1],
+                        [0, 0, 2],
+                        [0, 1, 1],
+                        [0, 1, 0],
+                        [2, 1, 1],
+                        [1, 1, 1],
+                        [1, 0, 0],
+                    ],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+
+        keys = Labels(
+            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
+        )
+        X = TensorMap(keys, [block_1])
+
+        reduce_X_12 = fn.std_over_samples(X, samples_names=["samples3"])
+        reduce_X_23 = fn.std_over_samples(X, samples_names="samples1")
+        reduce_X_2 = fn.std_over_samples(X, samples_names=["samples1", "samples3"])
+
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.std(X.block(0).values[:3], axis=0),
+                    reduce_X_12.block(0).values[0],
+                    rtol=1e-13,
+                )
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                np.std(X.block(0).values[3:5], axis=0),
+                reduce_X_12.block(0).values[1],
+                rtol=1e-13,
+            )
+        )
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_12.block(0).values[4]))
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_12.block(0).values[3]))
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_12.block(0).values[2]))
+
+        self.assertTrue(
+            np.all(
+                np.std(X.block(0).values[[0, 7]], axis=0)
+                == reduce_X_23.block(0).values[0]
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.allclose(
+                    np.std(X.block(0).values[[3, 5, 6]], axis=0),
+                    reduce_X_23.block(0).values[4],
+                    rtol=1e-13,
+                )
+            )
+        )
+
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_23.block(0).values[1]))
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_23.block(0).values[2]))
+        self.assertTrue(np.all(np.array([0.0]) == reduce_X_23.block(0).values[3]))
+
+        self.assertTrue(
+            np.allclose(
+                np.std(X.block(0).values[[0, 1, 2, 7]], axis=0),
+                reduce_X_2.block(0).values[0],
+                rtol=1e-13,
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.std(X.block(0).values[3:7], axis=0) == reduce_X_2.block(0).values[1]
+            )
+        )
+
+        # check metadata
+        self.assertTrue(
+            np.all(reduce_X_12.block(0).properties == X.block(0).properties)
+        )
+        self.assertTrue(
+            np.all(reduce_X_23.block(0).properties == X.block(0).properties)
+        )
+        self.assertTrue(np.all(reduce_X_2.block(0).properties == X.block(0).properties))
+
+        samples_12 = Labels(
+            names=["samples1", "samples2"],
+            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]], dtype=np.int32),
+        )
+        samples_23 = Labels(
+            names=["samples2", "samples3"],
+            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
+        )
+        samples_2 = Labels(
+            names=["samples2"],
+            values=np.array([[0], [1]], dtype=np.int32),
+        )
+        self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
+        self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
+        self.assertTrue(np.all(reduce_X_2.block(0).samples == samples_2))
+
+    def test_reduction_of_one_element(self):
+        block_1 = TensorBlock(
+            values=np.array([[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54]]),
+            samples=Labels(
+                ["samples1", "samples2"],
+                np.array(
+                    [[0, 0], [1, 1], [2, 2]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+
+        block_1.add_gradient(
+            parameter="parameter",
+            data=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
+            samples=Labels(
+                ["sample", "samples2"],
+                np.array(
+                    [[0, 0], [1, 1], [2, 2]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+        )
+
+        keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
+        X = TensorMap(keys, [block_1])
+
+        add_X = fn.sum_over_samples(X, samples_names=["samples1"])
+        mean_X = fn.mean_over_samples(X, samples_names=["samples1"])
+        var_X = fn.variance_over_samples(X, samples_names=["samples1"])
+        std_X = fn.std_over_samples(X, samples_names=["samples1"])
+
+        # print(add_X[0])
+        # print(X[0].values, add_X[0].values)
+        self.assertTrue(np.all(X[0].values == add_X[0].values))
+        self.assertTrue(np.all(X[0].values == mean_X[0].values))
+        self.assertTrue(fn.equal(add_X, mean_X))
+        self.assertTrue(fn.equal(add_X, var_X, only_metadata=True))
+        self.assertTrue(fn.equal(mean_X, std_X, only_metadata=True))
+
+        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].values))
+        self.assertTrue(fn.equal(var_X, std_X))
+
+        # Gradients
+        grad_sample_label = Labels(
+            names=["sample", "samples2"],
+            values=np.array(
+                [[0, 0], [1, 1], [2, 2]],
+                dtype=np.int32,
+            ),
+        )
+        self.assertTrue(
+            std_X[0].gradient("parameter").samples.names == grad_sample_label.names
+        )
+        self.assertTrue(
+            np.all(std_X[0].gradient("parameter").samples == grad_sample_label)
+        )
+        self.assertTrue(
+            np.all(
+                X[0].gradient("parameter").data == add_X[0].gradient("parameter").data
+            )
+        )
+        self.assertTrue(
+            np.all(
+                X[0].gradient("parameter").data == mean_X[0].gradient("parameter").data
+            )
+        )
+        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].gradient("parameter").data))
+        self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").data))
 
 
 # TODO: add tests with torch & torch scripting/tracing
+def get_XdX(block, gradient, der_index):
+    XdX = []
+    for ig in der_index:
+        idx = gradient.samples[ig][0]
+        XdX.append(block.values[idx] * gradient.data[ig])
+    return np.stack(XdX)
+
 
 if __name__ == "__main__":
     unittest.main()

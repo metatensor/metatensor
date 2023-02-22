@@ -22,7 +22,12 @@ from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
 from .pow import pow  # noqa
-from .reduce_over_samples import mean_over_samples, sum_over_samples  # noqa
+from .reduce_over_samples import (  # noqa
+    mean_over_samples,
+    std_over_samples,
+    sum_over_samples,
+    variance_over_samples,
+)
 from .remove_gradients import remove_gradients  # noqa
 from .slice import slice, slice_block  # noqa
 from .solve import solve  # noqa
@@ -54,6 +59,7 @@ __all__ = [
     "remove_gradients",
     "slice",
     "slice_block",
+    "std_over_samples",
     "solve",
     "split",
     "split_block",
@@ -61,5 +67,6 @@ __all__ = [
     "sum_over_samples",
     "unique_metadata",
     "unique_metadata_block",
+    "variance_over_samples",
     "zeros_like",
 ]
