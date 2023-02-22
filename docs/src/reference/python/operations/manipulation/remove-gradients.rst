@@ -1,4 +1,4 @@
 remove_gradients
 ================
 
-.. autofunction:: equistore.operations.remove_gradients
+.. autofunction:: equistore.remove_gradients

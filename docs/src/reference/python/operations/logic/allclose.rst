@@ -1,10 +1,10 @@
 allclose
 ========
 
-.. autofunction:: equistore.operations.allclose
+.. autofunction:: equistore.allclose
 
-.. autofunction:: equistore.operations.allclose_raise
+.. autofunction:: equistore.allclose_raise
 
-.. autofunction:: equistore.operations.allclose_block
+.. autofunction:: equistore.allclose_block
 
-.. autofunction:: equistore.operations.allclose_block_raise
+.. autofunction:: equistore.allclose_block_raise

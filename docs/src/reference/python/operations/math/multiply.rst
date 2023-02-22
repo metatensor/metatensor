@@ -1,4 +1,4 @@
 multiply
 ========
 
-.. autofunction:: equistore.operations.multiply
+.. autofunction:: equistore.multiply

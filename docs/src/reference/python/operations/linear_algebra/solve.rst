@@ -1,5 +1,5 @@
 solve
 =====
 
-.. autoclass:: equistore.operations.solve
+.. autoclass:: equistore.solve
     :members:

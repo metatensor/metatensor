@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -18,9 +18,9 @@ class TestDot(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        tensor2 = fn.remove_gradients(tensor1)
+        tensor2 = equistore.remove_gradients(tensor1)
 
-        dot_tensor = fn.dot(A=tensor1, B=tensor2)
+        dot_tensor = equistore.dot(A=tensor1, B=tensor2)
         self.assertTrue(np.all(tensor1.keys == dot_tensor.keys))
 
         for key, block1 in tensor1:
@@ -80,7 +80,7 @@ class TestDot(unittest.TestCase):
 
         tensor2 = TensorMap(tensor1.keys, tensor2)
 
-        dot_tensor = fn.dot(A=tensor1, B=tensor2)
+        dot_tensor = equistore.dot(A=tensor1, B=tensor2)
         self.assertTrue(np.all(tensor1.keys == dot_tensor.keys))
 
         for key, block1 in tensor1:

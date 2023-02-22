@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.operations as fn
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -45,7 +45,7 @@ class TestLstsq(unittest.TestCase):
 
         # Try to do with solve -> Raise Error
         with self.assertRaises(ValueError) as cm:
-            w = fn.solve(X, Y)
+            w = equistore.solve(X, Y)
 
         self.assertEqual(
             str(cm.exception),
@@ -53,7 +53,7 @@ class TestLstsq(unittest.TestCase):
         )
 
         # solve with least square
-        w = fn.lstsq(X, Y, rcond=1e-13)
+        w = equistore.lstsq(X, Y, rcond=1e-13)
 
         self.assertTrue(len(w) == 2)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -65,8 +65,8 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
 
-        Ydot = fn.dot(X, w)
-        self.assertTrue(fn.allclose(Ydot, Y))
+        Ydot = equistore.dot(X, w)
+        self.assertTrue(equistore.allclose(Ydot, Y))
 
     def test_self_lstsq_grad(self):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
@@ -116,7 +116,7 @@ class TestLstsq(unittest.TestCase):
 
         X = TensorMap(keys, [block_X])
         Y = TensorMap(keys, [block_Y])
-        w = fn.lstsq(X, Y, rcond=1e-13)
+        w = equistore.lstsq(X, Y, rcond=1e-13)
 
         self.assertTrue(len(w) == 1)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -128,8 +128,8 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
             self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
-        Ydot = fn.dot(X, w)
-        self.assertTrue(fn.allclose(Ydot, Y))
+        Ydot = equistore.dot(X, w)
+        self.assertTrue(equistore.allclose(Ydot, Y))
 
     def test_self_lstsq_grad_components(self):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
@@ -191,7 +191,7 @@ class TestLstsq(unittest.TestCase):
 
         X = TensorMap(keys, [block_X])
         Y = TensorMap(keys, [block_Y])
-        w = fn.lstsq(X, Y, rcond=1e-13)
+        w = equistore.lstsq(X, Y, rcond=1e-13)
 
         self.assertTrue(len(w) == 1)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -203,8 +203,8 @@ class TestLstsq(unittest.TestCase):
             self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
 
-        Ydot = fn.dot(X, w)
-        self.assertTrue(fn.allclose(Ydot, Y))
+        Ydot = equistore.dot(X, w)
+        self.assertTrue(equistore.allclose(Ydot, Y))
 
 
 def Xfun1(x, y, z):

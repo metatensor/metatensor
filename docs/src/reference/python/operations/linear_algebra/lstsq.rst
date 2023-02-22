@@ -1,4 +1,4 @@
 lstsq
 ======
 
-.. autofunction:: equistore.operations.lstsq
+.. autofunction:: equistore.lstsq

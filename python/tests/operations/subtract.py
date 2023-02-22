@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.operations as fn
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -54,10 +54,10 @@ class TestSubtract(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
-        tensor_sum = fn.subtract(A, B)
+        tensor_sum = equistore.subtract(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
 
     def test_self_subtract_tensors_gradient(self):
         block_1 = TensorBlock(
@@ -181,10 +181,10 @@ class TestSubtract(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
-        tensor_sum = fn.subtract(A, B)
+        tensor_sum = equistore.subtract(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
 
     def test_self_subtract_scalar_gradient(self):
         block_1 = TensorBlock(
@@ -266,12 +266,12 @@ class TestSubtract(unittest.TestCase):
         B = -5.1
         C = np.array([-5.1])
 
-        tensor_sum = fn.subtract(A, B)
-        tensor_sum_array = fn.subtract(A, C)
+        tensor_sum = equistore.subtract(A, B)
+        tensor_sum_array = equistore.subtract(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum_array))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
 
     def test_self_subtract_error(self):
         block_1 = TensorBlock(
@@ -287,7 +287,7 @@ class TestSubtract(unittest.TestCase):
         B = np.ones((3, 4))
 
         with self.assertRaises(TypeError) as cm:
-            keys = fn.subtract(A, B)
+            keys = equistore.subtract(A, B)
         self.assertEqual(
             str(cm.exception),
             "B should be a TensorMap or a scalar value. ",

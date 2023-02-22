@@ -1,6 +1,6 @@
 split
 ======
 
-.. autofunction:: equistore.operations.split
+.. autofunction:: equistore.split
     
-.. autofunction:: equistore.operations.split_block
+.. autofunction:: equistore.split_block

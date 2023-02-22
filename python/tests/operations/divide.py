@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.operations as fn
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -54,10 +54,10 @@ class TestDivide(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
-        tensor_sum = fn.divide(A, B)
+        tensor_sum = equistore.divide(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
 
     def test_self_divide_tensors_gradient(self):
         block_1 = TensorBlock(
@@ -195,10 +195,10 @@ class TestDivide(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
-        tensor_sum = fn.divide(A, B)
+        tensor_sum = equistore.divide(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
         self.assertTrue(
-            fn.allclose(
+            equistore.allclose(
                 tensor_result,
                 tensor_sum,
                 atol=1e-8,
@@ -300,12 +300,12 @@ class TestDivide(unittest.TestCase):
         B = 5.1
         C = np.array([5.1])
 
-        tensor_sum = fn.divide(A, B)
-        tensor_sum_array = fn.divide(A, C)
+        tensor_sum = equistore.divide(A, B)
+        tensor_sum_array = equistore.divide(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum, rtol=1e-8))
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum_array, rtol=1e-8))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum, rtol=1e-8))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array, rtol=1e-8))
 
     def test_self_divide_error(self):
         block_1 = TensorBlock(
@@ -321,7 +321,7 @@ class TestDivide(unittest.TestCase):
         B = np.ones((3, 4))
 
         with self.assertRaises(TypeError) as cm:
-            keys = fn.divide(A, B)
+            keys = equistore.divide(A, B)
         self.assertEqual(
             str(cm.exception),
             "B should be a TensorMap or a scalar value. ",

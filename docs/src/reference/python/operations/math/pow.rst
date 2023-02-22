@@ -1,4 +1,4 @@
 pow
 ===
 
-.. autofunction:: equistore.operations.pow
+.. autofunction:: equistore.pow

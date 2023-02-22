@@ -1,8 +1,8 @@
 import os
 import unittest
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -18,7 +18,7 @@ class TestRemoveGradients(unittest.TestCase):
 
         self.assertEqual(tensor.block(0).gradients_list(), ["cell", "positions"])
 
-        tensor = fn.remove_gradients(tensor)
+        tensor = equistore.remove_gradients(tensor)
         self.assertEqual(tensor.block(0).gradients_list(), [])
 
     def test_remove_subset(self):
@@ -30,7 +30,7 @@ class TestRemoveGradients(unittest.TestCase):
 
         self.assertEqual(tensor.block(0).gradients_list(), ["cell", "positions"])
 
-        tensor = fn.remove_gradients(tensor, ["positions"])
+        tensor = equistore.remove_gradients(tensor, ["positions"])
         self.assertEqual(tensor.block(0).gradients_list(), ["cell"])
 
 

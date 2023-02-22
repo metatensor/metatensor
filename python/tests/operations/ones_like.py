@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -17,7 +17,7 @@ class TestOnes_like(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        ones_tensor = fn.ones_like(tensor)
+        ones_tensor = equistore.ones_like(tensor)
 
         self.assertTrue(np.all(tensor.keys == ones_tensor.keys))
         for key, ones_block in ones_tensor:
@@ -60,8 +60,8 @@ class TestOnes_like(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        ones_tensor = fn.ones_like(tensor)
-        ones_tensor_positions = fn.ones_like(tensor, parameters="positions")
+        ones_tensor = equistore.ones_like(tensor)
+        ones_tensor_positions = equistore.ones_like(tensor, parameters="positions")
 
         self.assertTrue(np.all(tensor.keys == ones_tensor.keys))
         self.assertTrue(np.all(tensor.keys == ones_tensor_positions.keys))
@@ -128,7 +128,7 @@ class TestOnes_like(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            tensor = fn.ones_like(tensor, parameters=["positions", "err"])
+            tensor = equistore.ones_like(tensor, parameters=["positions", "err"])
         self.assertEqual(
             str(cm.exception),
             "The requested parameter 'err' in ones_like_block "

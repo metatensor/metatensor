@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.operations as fn
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -41,7 +41,7 @@ class TestSolve(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1, block_2])
         Y = TensorMap(keys, [block_3, block_4])
-        w = fn.solve(X, Y)
+        w = equistore.solve(X, Y)
 
         self.assertTrue(len(w) == 2)
         self.assertTrue(np.all(w.keys == X.keys))
@@ -55,8 +55,8 @@ class TestSolve(unittest.TestCase):
             self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
             self.assertTrue(np.all(blockw.properties == X.block(key).properties))
 
-        Ydot = fn.dot(X, w)
-        self.assertTrue(fn.allclose(Ydot, Y))
+        Ydot = equistore.dot(X, w)
+        self.assertTrue(equistore.allclose(Ydot, Y))
 
 
 # TODO: add tests with torch & torch scripting/tracing

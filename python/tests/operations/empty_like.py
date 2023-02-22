@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -17,7 +17,7 @@ class TestEmpty_like(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        empty_tensor = fn.empty_like(tensor)
+        empty_tensor = equistore.empty_like(tensor)
 
         self.assertTrue(np.all(tensor.keys == empty_tensor.keys))
         for key, empty_block in empty_tensor:
@@ -63,8 +63,8 @@ class TestEmpty_like(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        empty_tensor = fn.empty_like(tensor)
-        empty_tensor_positions = fn.empty_like(tensor, parameters="positions")
+        empty_tensor = equistore.empty_like(tensor)
+        empty_tensor_positions = equistore.empty_like(tensor, parameters="positions")
 
         self.assertTrue(np.all(tensor.keys == empty_tensor.keys))
         self.assertTrue(np.all(tensor.keys == empty_tensor_positions.keys))
@@ -131,7 +131,7 @@ class TestEmpty_like(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            tensor = fn.empty_like(tensor, parameters=["positions", "err"])
+            tensor = equistore.empty_like(tensor, parameters=["positions", "err"])
         self.assertEqual(
             str(cm.exception),
             "The requested parameter 'err' in empty_like_block "

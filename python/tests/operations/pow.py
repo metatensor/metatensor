@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.operations as fn
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -120,12 +120,12 @@ class TestPow(unittest.TestCase):
 
         C = np.array([2.0])
 
-        tensor_sum = fn.pow(A, B)
-        tensor_sum_array = fn.pow(A, C)
+        tensor_sum = equistore.pow(A, B)
+        tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum_array))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
 
     def test_self_pow_scalar_sqrt_gradient(self):
         b1_s0 = np.array([1, 2])
@@ -236,12 +236,12 @@ class TestPow(unittest.TestCase):
 
         C = np.array([0.5])
 
-        tensor_sum = fn.pow(A, B)
-        tensor_sum_array = fn.pow(A, C)
+        tensor_sum = equistore.pow(A, B)
+        tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum))
-        self.assertTrue(fn.allclose(tensor_result, tensor_sum_array))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
 
     def test_self_pow_error(self):
         block_1 = TensorBlock(
@@ -257,7 +257,7 @@ class TestPow(unittest.TestCase):
         B = np.ones((3, 4))
 
         with self.assertRaises(TypeError) as cm:
-            keys = fn.pow(A, B)
+            keys = equistore.pow(A, B)
         self.assertEqual(
             str(cm.exception),
             "B should be a scalar value. ",
