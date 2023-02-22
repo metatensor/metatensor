@@ -1,3 +1,5 @@
+.. _python-api-array:
+
 Data arrays
 ===========
 

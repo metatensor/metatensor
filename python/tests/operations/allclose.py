@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore.io
-import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -45,11 +44,11 @@ class Testallclose(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         X = TensorMap(keys, [block_1, block_2])
-        self.assertTrue(fn.allclose(X, X))
+        self.assertTrue(equistore.allclose(X, X))
         Y = TensorMap(keys, [block_3, block_4])
-        self.assertFalse(fn.allclose(X, Y))
+        self.assertFalse(equistore.allclose(X, Y))
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_raise(X, Y)
+            equistore.allclose_raise(X, Y)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 0) are different"
@@ -122,12 +121,12 @@ class Testallclose(unittest.TestCase):
         )
         X_c = TensorMap(keys, [block_1_c, block_2_c])
         X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
-        self.assertFalse(fn.allclose(X, X_c))
+        self.assertFalse(equistore.allclose(X, X_c))
 
-        self.assertTrue(fn.allclose(X_c, X_c))
-        self.assertFalse(fn.allclose(X_c, X_c_copy))
-        self.assertTrue(fn.allclose(X_c, X_c_copy, rtol=1e-5))
-        self.assertTrue(fn.allclose(X_c, X_c_copy, atol=1e-1))
+        self.assertTrue(equistore.allclose(X_c, X_c))
+        self.assertFalse(equistore.allclose(X_c, X_c_copy))
+        self.assertTrue(equistore.allclose(X_c, X_c_copy, rtol=1e-5))
+        self.assertTrue(equistore.allclose(X_c, X_c_copy, atol=1e-1))
 
     def test_self_allclose_grad(self):
         tensor1 = equistore.io.load(
@@ -144,19 +143,19 @@ class Testallclose(unittest.TestCase):
 
         tensor1_copy = TensorMap(tensor1.keys, blocks)
         tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
-        self.assertTrue(fn.allclose(tensor1, tensor1_copy))
-        self.assertFalse(fn.allclose(tensor1, tensor1_e6))
-        self.assertTrue(fn.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5))
+        self.assertTrue(equistore.allclose(tensor1, tensor1_copy))
+        self.assertFalse(equistore.allclose(tensor1, tensor1_e6))
+        self.assertTrue(equistore.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5))
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_raise(tensor1, tensor1_e6)
+            equistore.allclose_raise(tensor1, tensor1_e6)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 1, 1) are different"
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(tensor1.block(0), tensor1_e6.block(0))
+            equistore.allclose_block_raise(tensor1.block(0), tensor1_e6.block(0))
         self.assertEqual(str(cm.exception), "values are not allclose")
 
     def test_self_allclose_exceptions(self):
@@ -205,10 +204,10 @@ class Testallclose(unittest.TestCase):
             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
         )
 
-        self.assertFalse(fn.allclose_block(block_1, block_2))
+        self.assertFalse(equistore.allclose_block(block_1, block_2))
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_2)
+            equistore.allclose_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
@@ -217,7 +216,7 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_3)
+            equistore.allclose_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
@@ -226,12 +225,12 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_4)
+            equistore.allclose_block_raise(block_1, block_4)
 
         self.assertEqual(str(cm.exception), "values shapes are different")
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_5, block_4)
+            equistore.allclose_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),
@@ -240,7 +239,7 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_6, block_4)
+            equistore.allclose_block_raise(block_6, block_4)
 
         self.assertEqual(
             str(cm.exception),
@@ -282,7 +281,7 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_2)
+            equistore.allclose_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
@@ -308,7 +307,7 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_1, block_3)
+            equistore.allclose_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
@@ -352,7 +351,7 @@ class Testallclose(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.allclose_block_raise(block_5, block_4)
+            equistore.allclose_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),

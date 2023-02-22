@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -23,8 +23,10 @@ class TestSumSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.sum_over_samples(tensor_se, samples_names=["center"])
-        reduce_tensor_ps = fn.sum_over_samples(tensor_ps, samples_names="center")
+        reduce_tensor_se = equistore.sum_over_samples(
+            tensor_se, samples_names=["center"]
+        )
+        reduce_tensor_ps = equistore.sum_over_samples(tensor_ps, samples_names="center")
 
         self.assertTrue(
             np.all(
@@ -170,9 +172,11 @@ class TestSumSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.sum_over_samples(X, samples_names="samples3")
-        reduce_X_23 = fn.sum_over_samples(X, samples_names=["samples1"])
-        reduce_X_2 = fn.sum_over_samples(X, samples_names=["samples1", "samples3"])
+        reduce_X_12 = equistore.sum_over_samples(X, samples_names="samples3")
+        reduce_X_23 = equistore.sum_over_samples(X, samples_names=["samples1"])
+        reduce_X_2 = equistore.sum_over_samples(
+            X, samples_names=["samples1", "samples3"]
+        )
 
         self.assertTrue(
             np.all(
@@ -254,8 +258,12 @@ class TestMeanSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.mean_over_samples(tensor_se, samples_names="center")
-        reduce_tensor_ps = fn.mean_over_samples(tensor_ps, samples_names=["center"])
+        reduce_tensor_se = equistore.mean_over_samples(
+            tensor_se, samples_names="center"
+        )
+        reduce_tensor_ps = equistore.mean_over_samples(
+            tensor_ps, samples_names=["center"]
+        )
 
         self.assertTrue(
             np.all(
@@ -429,9 +437,11 @@ class TestMeanSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.mean_over_samples(X, samples_names=["samples3"])
-        reduce_X_23 = fn.mean_over_samples(X, samples_names="samples1")
-        reduce_X_2 = fn.mean_over_samples(X, samples_names=["samples1", "samples3"])
+        reduce_X_12 = equistore.mean_over_samples(X, samples_names=["samples3"])
+        reduce_X_23 = equistore.mean_over_samples(X, samples_names="samples1")
+        reduce_X_2 = equistore.mean_over_samples(
+            X, samples_names=["samples1", "samples3"]
+        )
 
         self.assertTrue(
             np.all(
@@ -537,14 +547,14 @@ class TestReductionAllSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        sum_X = fn.sum_over_samples(X, samples_names=["samples"])
-        mean_X = fn.mean_over_samples(X, samples_names=["samples"])
-        var_X = fn.variance_over_samples(X, samples_names=["samples"])
-        std_X = fn.std_over_samples(X, samples_names=["samples"])
+        sum_X = equistore.sum_over_samples(X, samples_names=["samples"])
+        mean_X = equistore.mean_over_samples(X, samples_names=["samples"])
+        var_X = equistore.variance_over_samples(X, samples_names=["samples"])
+        std_X = equistore.std_over_samples(X, samples_names=["samples"])
 
-        self.assertTrue(fn.equal(sum_X, mean_X, only_metadata=True))
-        self.assertTrue(fn.equal(sum_X, std_X, only_metadata=True))
-        self.assertTrue(fn.equal(mean_X, var_X, only_metadata=True))
+        self.assertTrue(equistore.equal(sum_X, mean_X, only_metadata=True))
+        self.assertTrue(equistore.equal(sum_X, std_X, only_metadata=True))
+        self.assertTrue(equistore.equal(mean_X, var_X, only_metadata=True))
         self.assertTrue(sum_X[0].samples == Labels.single())
         self.assertTrue(std_X[0].samples == Labels.single())
 
@@ -564,13 +574,15 @@ class TestStdSamples(unittest.TestCase):
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )
-        # tensor_ps = fn.remove_gradients(tensor_ps)
-        tensor_se = fn.remove_gradients(tensor_se)
+        # tensor_ps = equistore.remove_gradients(tensor_ps)
+        tensor_se = equistore.remove_gradients(tensor_se)
 
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = fn.std_over_samples(tensor_se, samples_names="center")
-        reduce_tensor_ps = fn.std_over_samples(tensor_ps, samples_names=["center"])
+        reduce_tensor_se = equistore.std_over_samples(tensor_se, samples_names="center")
+        reduce_tensor_ps = equistore.std_over_samples(
+            tensor_ps, samples_names=["center"]
+        )
 
         self.assertTrue(
             np.allclose(
@@ -769,9 +781,11 @@ class TestStdSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = fn.std_over_samples(X, samples_names=["samples3"])
-        reduce_X_23 = fn.std_over_samples(X, samples_names="samples1")
-        reduce_X_2 = fn.std_over_samples(X, samples_names=["samples1", "samples3"])
+        reduce_X_12 = equistore.std_over_samples(X, samples_names=["samples3"])
+        reduce_X_23 = equistore.std_over_samples(X, samples_names="samples1")
+        reduce_X_2 = equistore.std_over_samples(
+            X, samples_names=["samples1", "samples3"]
+        )
 
         self.assertTrue(
             np.all(
@@ -883,21 +897,21 @@ class TestStdSamples(unittest.TestCase):
         keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
         X = TensorMap(keys, [block_1])
 
-        add_X = fn.sum_over_samples(X, samples_names=["samples1"])
-        mean_X = fn.mean_over_samples(X, samples_names=["samples1"])
-        var_X = fn.variance_over_samples(X, samples_names=["samples1"])
-        std_X = fn.std_over_samples(X, samples_names=["samples1"])
+        add_X = equistore.sum_over_samples(X, samples_names=["samples1"])
+        mean_X = equistore.mean_over_samples(X, samples_names=["samples1"])
+        var_X = equistore.variance_over_samples(X, samples_names=["samples1"])
+        std_X = equistore.std_over_samples(X, samples_names=["samples1"])
 
         # print(add_X[0])
         # print(X[0].values, add_X[0].values)
         self.assertTrue(np.all(X[0].values == add_X[0].values))
         self.assertTrue(np.all(X[0].values == mean_X[0].values))
-        self.assertTrue(fn.equal(add_X, mean_X))
-        self.assertTrue(fn.equal(add_X, var_X, only_metadata=True))
-        self.assertTrue(fn.equal(mean_X, std_X, only_metadata=True))
+        self.assertTrue(equistore.equal(add_X, mean_X))
+        self.assertTrue(equistore.equal(add_X, var_X, only_metadata=True))
+        self.assertTrue(equistore.equal(mean_X, std_X, only_metadata=True))
 
         self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].values))
-        self.assertTrue(fn.equal(var_X, std_X))
+        self.assertTrue(equistore.equal(var_X, std_X))
 
         # Gradients
         grad_sample_label = Labels(

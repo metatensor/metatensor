@@ -1,4 +1,4 @@
 add
 ===
 
-.. autofunction:: equistore.operations.add
+.. autofunction:: equistore.add

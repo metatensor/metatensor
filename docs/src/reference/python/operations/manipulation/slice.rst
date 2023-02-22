@@ -1,6 +1,6 @@
 slice
 ======
 
-.. autofunction:: equistore.operations.slice
+.. autofunction:: equistore.slice
     
-.. autofunction:: equistore.operations.slice_block
+.. autofunction:: equistore.slice_block

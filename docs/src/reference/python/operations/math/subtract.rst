@@ -1,4 +1,4 @@
 subtract
 ========
 
-.. autofunction:: equistore.operations.subtract
+.. autofunction:: equistore.subtract

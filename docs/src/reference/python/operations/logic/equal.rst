@@ -1,10 +1,10 @@
 equal
 =====
 
-.. autofunction:: equistore.operations.equal
+.. autofunction:: equistore.equal
 
-.. autofunction:: equistore.operations.equal_raise
+.. autofunction:: equistore.equal_raise
 
-.. autofunction:: equistore.operations.equal_block
+.. autofunction:: equistore.equal_block
 
-.. autofunction:: equistore.operations.equal_block_raise
+.. autofunction:: equistore.equal_block_raise

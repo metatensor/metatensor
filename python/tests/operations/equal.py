@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -45,11 +45,11 @@ class TestEqual(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         X = TensorMap(keys, [block_1, block_2])
-        self.assertTrue(fn.equal(X, X))
+        self.assertTrue(equistore.equal(X, X))
         Y = TensorMap(keys, [block_3, block_4])
-        self.assertFalse(fn.equal(X, Y))
+        self.assertFalse(equistore.equal(X, Y))
         with self.assertRaises(ValueError) as cm:
-            fn.equal_raise(X, Y)
+            equistore.equal_raise(X, Y)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 0) are different"
@@ -122,10 +122,10 @@ class TestEqual(unittest.TestCase):
         )
         X_c = TensorMap(keys, [block_1_c, block_2_c])
         X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
-        self.assertFalse(fn.equal(X, X_c))
+        self.assertFalse(equistore.equal(X, X_c))
 
-        self.assertTrue(fn.equal(X_c, X_c))
-        self.assertFalse(fn.equal(X_c, X_c_copy))
+        self.assertTrue(equistore.equal(X_c, X_c))
+        self.assertFalse(equistore.equal(X_c, X_c_copy))
 
     def test_self_equal_grad(self):
         tensor1 = equistore.io.load(
@@ -142,19 +142,19 @@ class TestEqual(unittest.TestCase):
 
         tensor1_copy = TensorMap(tensor1.keys, blocks)
         tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
-        self.assertTrue(fn.equal(tensor1, tensor1_copy))
-        self.assertFalse(fn.equal(tensor1, tensor1_e6))
-        self.assertTrue(fn.equal(tensor1, tensor1_e6, only_metadata=True))
+        self.assertTrue(equistore.equal(tensor1, tensor1_copy))
+        self.assertFalse(equistore.equal(tensor1, tensor1_e6))
+        self.assertTrue(equistore.equal(tensor1, tensor1_e6, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_raise(tensor1, tensor1_e6)
+            equistore.equal_raise(tensor1, tensor1_e6)
 
         self.assertEqual(
             str(cm.exception), "The TensorBlocks with key = (0, 1, 1) are different"
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(tensor1.block(0), tensor1_e6.block(0))
+            equistore.equal_block_raise(tensor1.block(0), tensor1_e6.block(0))
         self.assertEqual(str(cm.exception), "values are not equal")
 
     def test_self_equal_exceptions(self):
@@ -203,11 +203,11 @@ class TestEqual(unittest.TestCase):
             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
         )
 
-        self.assertFalse(fn.equal_block(block_1, block_2))
-        self.assertFalse(fn.equal_block(block_1, block_2, only_metadata=True))
+        self.assertFalse(equistore.equal_block(block_1, block_2))
+        self.assertFalse(equistore.equal_block(block_1, block_2, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_1, block_2)
+            equistore.equal_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
@@ -216,7 +216,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_1, block_3)
+            equistore.equal_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
@@ -225,12 +225,12 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_1, block_4)
+            equistore.equal_block_raise(block_1, block_4)
 
         self.assertEqual(str(cm.exception), "values shapes are different")
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_5, block_4)
+            equistore.equal_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),
@@ -239,7 +239,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_6, block_4)
+            equistore.equal_block_raise(block_6, block_4)
 
         self.assertEqual(
             str(cm.exception),
@@ -275,14 +275,14 @@ class TestEqual(unittest.TestCase):
             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
         )
 
-        self.assertFalse(fn.equal_block(block_7, block_8))
-        self.assertFalse(fn.equal_block(block_7, block_8, only_metadata=True))
+        self.assertFalse(equistore.equal_block(block_7, block_8))
+        self.assertFalse(equistore.equal_block(block_7, block_8, only_metadata=True))
 
-        self.assertFalse(fn.equal_block(block_8, block_9))
-        self.assertTrue(fn.equal_block(block_8, block_9, only_metadata=True))
+        self.assertFalse(equistore.equal_block(block_8, block_9))
+        self.assertTrue(equistore.equal_block(block_8, block_9, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_7, block_8)
+            equistore.equal_block_raise(block_7, block_8)
 
         self.assertEqual(
             str(cm.exception),
@@ -291,7 +291,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_8, block_9)
+            equistore.equal_block_raise(block_8, block_9)
 
         self.assertEqual(
             str(cm.exception),
@@ -332,7 +332,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_1, block_2)
+            equistore.equal_block_raise(block_1, block_2)
 
         self.assertEqual(
             str(cm.exception),
@@ -358,7 +358,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_1, block_3)
+            equistore.equal_block_raise(block_1, block_3)
 
         self.assertEqual(
             str(cm.exception),
@@ -402,7 +402,7 @@ class TestEqual(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_5, block_4)
+            equistore.equal_block_raise(block_5, block_4)
 
         self.assertEqual(
             str(cm.exception),
@@ -429,7 +429,7 @@ class TestEqual(unittest.TestCase):
             ],
         )
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_5, block_6)
+            equistore.equal_block_raise(block_5, block_6)
 
         self.assertEqual(
             str(cm.exception),
@@ -455,11 +455,11 @@ class TestEqual(unittest.TestCase):
                 Labels(["component_1"], np.array([[-1], [6], [1]], dtype=np.int32))
             ],
         )
-        self.assertFalse(fn.equal_block(block_6, block_7))
-        self.assertTrue(fn.equal_block(block_6, block_7, only_metadata=True))
+        self.assertFalse(equistore.equal_block(block_6, block_7))
+        self.assertTrue(equistore.equal_block(block_6, block_7, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
-            fn.equal_block_raise(block_6, block_7)
+            equistore.equal_block_raise(block_6, block_7)
 
         self.assertEqual(
             str(cm.exception),

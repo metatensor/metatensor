@@ -3,9 +3,9 @@ from os import path
 
 import numpy as np
 
-import equistore.operations
+import equistore
+import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.io import load
 
 
 DATA_ROOT = path.join(path.dirname(__file__), "..", "data")
@@ -13,8 +13,10 @@ DATA_ROOT = path.join(path.dirname(__file__), "..", "data")
 
 class TestJoinTensorMap(unittest.TestCase):
     def setUp(self):
-        self.ps = load(path.join(DATA_ROOT, "qm7-power-spectrum.npz"), use_numpy=True)
-        self.se = load(
+        self.ps = equistore.io.load(
+            path.join(DATA_ROOT, "qm7-power-spectrum.npz"), use_numpy=True
+        )
+        self.se = equistore.io.load(
             path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
         )
         self.first_block = self.ps.block(0)
@@ -41,11 +43,11 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_single_tensormap(self):
         """Test error raise if only one tensormap is provided."""
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join(self.ps, axis="properties")
+            equistore.join(self.ps, axis="properties")
         self.assertIn("provide at least two", str(err.exception))
 
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.ps], axis="properties")
+            equistore.join([self.ps], axis="properties")
         self.assertIn("provide at least two", str(err.exception))
 
     def test_join_properties(self):
@@ -53,9 +55,7 @@ class TestJoinTensorMap(unittest.TestCase):
 
         We check for the values below."""
 
-        ps_joined = equistore.operations.join(
-            [self.ps, self.ps, self.ps], axis="properties"
-        )
+        ps_joined = equistore.join([self.ps, self.ps, self.ps], axis="properties")
 
         # test property names
         names = self.ps.block(0).properties.names
@@ -67,9 +67,7 @@ class TestJoinTensorMap(unittest.TestCase):
 
     def test_join_samples(self):
         """Test public join function with three tensormaps along `samples`."""
-        ps_joined = equistore.operations.join(
-            [self.ps, self.ps, self.ps], axis="samples"
-        )
+        ps_joined = equistore.join([self.ps, self.ps, self.ps], axis="samples")
 
         # test sample values
         self.assertEqual(
@@ -79,43 +77,39 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_join_error(self):
         """Test error with unknown `axis` keyword."""
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.ps, self.ps, self.ps], axis="foo")
+            equistore.join([self.ps, self.ps, self.ps], axis="foo")
         self.assertIn("values for the `axis` parameter", str(err.exception))
 
     def test_join_properties_values(self):
         """Test values for joining along `properties`."""
-        ts_1 = equistore.operations.slice(
-            self.ps, properties=self.first_block.properties[:1]
-        )
-        ts_2 = equistore.operations.slice(
-            self.ps, properties=self.first_block.properties[1:]
-        )
+        ts_1 = equistore.slice(self.ps, properties=self.first_block.properties[:1])
+        ts_2 = equistore.slice(self.ps, properties=self.first_block.properties[1:])
 
-        ts_joined = equistore.operations.join([ts_1, ts_2], axis="properties")
-        self.assertTrue(equistore.operations.allclose(ts_joined, self.ps))
+        ts_joined = equistore.join([ts_1, ts_2], axis="properties")
+        self.assertTrue(equistore.allclose(ts_joined, self.ps))
 
     def test_join_properties_different_samples(self):
         """Test error raise if `samples` are not the same."""
-        tm = equistore.operations.slice(
-            self.ps_first_block, samples=self.first_block.samples[:1]
-        )
+        tm = equistore.slice(self.ps_first_block, samples=self.first_block.samples[:1])
 
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.ps_first_block, tm], axis="properties")
+            equistore.join([self.ps_first_block, tm], axis="properties")
         self.assertIn("samples", str(err.exception))
 
     def test_join_properties_different_components(self):
         """Test error raise if `components` are not the same."""
         se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
-        se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
+        se = equistore.io.load(
+            path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
+        )
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([se_c2p, se], axis="properties")
+            equistore.join([se_c2p, se], axis="properties")
         self.assertIn("components", str(err.exception))
 
     def test_join_properties_different_gradients(self):
         """Test error raise if `gradients` are not the same."""
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join(
+            equistore.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="properties"
             )
         self.assertIn("gradient", str(err.exception))
@@ -128,34 +122,36 @@ class TestJoinTensorMap(unittest.TestCase):
         )
 
         tm = TensorMap(keys, [self.first_block.copy()])
-        ts_1 = equistore.operations.slice(tm, samples=self.first_block.samples[:1])
-        ts_2 = equistore.operations.slice(tm, samples=self.first_block.samples[1:])
+        ts_1 = equistore.slice(tm, samples=self.first_block.samples[:1])
+        ts_2 = equistore.slice(tm, samples=self.first_block.samples[1:])
 
-        ts_joined = equistore.operations.join([ts_1, ts_2], axis="samples")
-        self.assertTrue(equistore.operations.allclose(tm, ts_joined))
+        ts_joined = equistore.join([ts_1, ts_2], axis="samples")
+        self.assertTrue(equistore.allclose(tm, ts_joined))
 
     def test_join_samples_different_properties(self):
         """Test error raise if `proprties` are not the same."""
-        tm = equistore.operations.slice(
+        tm = equistore.slice(
             self.ps_first_block, properties=self.first_block.properties[:1]
         )
 
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([self.ps_first_block, tm], axis="samples")
+            equistore.join([self.ps_first_block, tm], axis="samples")
         self.assertIn("properties", str(err.exception))
 
     def test_join_samples_different_components(self):
         """Test error raise if `components` are not the same."""
         se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
-        se = load(path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True)
+        se = equistore.io.load(
+            path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
+        )
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join([se_c2p, se], axis="samples")
+            equistore.join([se_c2p, se], axis="samples")
         self.assertIn("components", str(err.exception))
 
     def test_join_samples_different_gradients(self):
         """Test error raise if `gradients` are not the same."""
         with self.assertRaises(ValueError) as err:
-            equistore.operations.join(
+            equistore.join(
                 [self.ps_first_block, self.ps_first_block_extra_grad], axis="samples"
             )
         self.assertIn("gradient", str(err.exception))
@@ -182,7 +178,7 @@ class TestJoinLabels(unittest.TestCase):
         )
 
         tm = TensorMap(self.keys, [block])
-        joined_tm = equistore.operations.join([tm, tm], axis="properties")
+        joined_tm = equistore.join([tm, tm], axis="properties")
 
         joined_labels = joined_tm.block(0).properties
 
@@ -227,7 +223,7 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels_2,
         )
 
-        joined_tm = equistore.operations.join(
+        joined_tm = equistore.join(
             [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
             axis="properties",
         )
@@ -261,7 +257,7 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels_2,
         )
 
-        joined_tm = equistore.operations.join(
+        joined_tm = equistore.join(
             [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
             axis="properties",
         )
@@ -310,7 +306,7 @@ class TestJoinLabels(unittest.TestCase):
             properties=property_labels_2,
         )
 
-        joined_tm = equistore.operations.join(
+        joined_tm = equistore.join(
             [TensorMap(self.keys, [block_1]), TensorMap(self.keys, [block_2])],
             axis="properties",
         )

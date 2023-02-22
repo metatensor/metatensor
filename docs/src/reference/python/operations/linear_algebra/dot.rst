@@ -1,4 +1,4 @@
 dot
 ===
 
-.. autofunction:: equistore.operations.dot
+.. autofunction:: equistore.dot

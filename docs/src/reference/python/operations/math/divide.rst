@@ -1,4 +1,4 @@
 divide
 ======
 
-.. autofunction:: equistore.operations.divide
+.. autofunction:: equistore.divide

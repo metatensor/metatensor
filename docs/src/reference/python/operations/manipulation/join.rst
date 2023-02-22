@@ -1,4 +1,4 @@
 join
 ====
 
-.. autofunction:: equistore.operations.join
+.. autofunction:: equistore.join

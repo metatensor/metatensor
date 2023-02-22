@@ -4,8 +4,8 @@ import warnings
 
 import numpy as np
 
+import equistore
 import equistore.io
-import equistore.operations as fn
 from equistore import Labels
 
 
@@ -100,7 +100,7 @@ class TestSliceSamples(unittest.TestCase):
             values=structures_to_keep,
         )
         block = self.tensor.block(0)
-        sliced_block = fn.slice_block(
+        sliced_block = equistore.slice_block(
             block,
             samples=samples,
         )
@@ -115,7 +115,7 @@ class TestSliceSamples(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            sliced_block = fn.slice_block(
+            sliced_block = equistore.slice_block(
                 block,
                 samples=samples,
             )
@@ -129,7 +129,7 @@ class TestSliceSamples(unittest.TestCase):
             names=["structure"],
             values=structures_to_keep,
         )
-        sliced_tensor = fn.slice(
+        sliced_tensor = equistore.slice(
             self.tensor,
             samples=samples,
         )
@@ -150,7 +150,7 @@ class TestSliceSamples(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            sliced_tensor = fn.slice(
+            sliced_tensor = equistore.slice(
                 self.tensor,
                 samples=samples,
             )
@@ -246,7 +246,7 @@ class TestSliceProperties(unittest.TestCase):
         )
 
         block = self.tensor.block(0)
-        sliced_block = fn.slice_block(
+        sliced_block = equistore.slice_block(
             block,
             properties=properties,
         )
@@ -261,7 +261,7 @@ class TestSliceProperties(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            sliced_block = fn.slice_block(
+            sliced_block = equistore.slice_block(
                 block,
                 properties=properties,
             )
@@ -276,7 +276,7 @@ class TestSliceProperties(unittest.TestCase):
             values=radial_to_keep,
         )
 
-        sliced_tensor = fn.slice(
+        sliced_tensor = equistore.slice(
             self.tensor,
             properties=properties,
         )
@@ -297,7 +297,7 @@ class TestSliceProperties(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            sliced_tensor = fn.slice(
+            sliced_tensor = equistore.slice(
                 self.tensor,
                 properties=properties,
             )
@@ -328,7 +328,7 @@ class TestSliceBoth(unittest.TestCase):
             values=channels_to_keep,
         )
 
-        sliced_block = fn.slice_block(
+        sliced_block = equistore.slice_block(
             block,
             samples=samples,
             properties=properties,
@@ -373,14 +373,16 @@ class TestSliceBoth(unittest.TestCase):
         )
         # Original tensor returned if no samples/properties to slice by are passed
         self.assertTrue(
-            fn.equal_block(
-                fn.slice_block(tensor.block(0), samples=None, properties=None),
+            equistore.equal_block(
+                equistore.slice_block(tensor.block(0), samples=None, properties=None),
                 tensor.block(0),
             )
         )
         # Original tensor returned if no samples/properties to slice by are passed
         self.assertTrue(
-            fn.equal(fn.slice(tensor, samples=None, properties=None), tensor)
+            equistore.equal(
+                equistore.slice(tensor, samples=None, properties=None), tensor
+            )
         )
 
 
@@ -399,7 +401,7 @@ class TestSliceErrors(unittest.TestCase):
         )
 
         with self.assertRaises(TypeError) as cm:
-            fn.slice(self.tensor.block(0), samples=samples),
+            equistore.slice(self.tensor.block(0), samples=samples),
 
         self.assertEqual(
             str(cm.exception),
@@ -408,7 +410,7 @@ class TestSliceErrors(unittest.TestCase):
 
         # passing samples=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
-            fn.slice(
+            equistore.slice(
                 self.tensor,
                 samples=np.array([[5], [6]]),
             )
@@ -420,7 +422,7 @@ class TestSliceErrors(unittest.TestCase):
 
         # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
-            fn.slice(
+            equistore.slice(
                 self.tensor,
                 properties=np.array([[5], [6]]),
             )
@@ -438,7 +440,7 @@ class TestSliceErrors(unittest.TestCase):
         )
 
         with self.assertRaises(TypeError) as cm:
-            fn.slice_block(self.tensor, samples=samples),
+            equistore.slice_block(self.tensor, samples=samples),
 
         self.assertEqual(
             str(cm.exception), "``block`` should be an equistore ``TensorBlock``"
@@ -447,7 +449,7 @@ class TestSliceErrors(unittest.TestCase):
         block = self.tensor.block(0)
         # passing samples=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
-            fn.slice_block(
+            equistore.slice_block(
                 block,
                 samples=np.array([[5], [6]]),
             )
@@ -459,7 +461,7 @@ class TestSliceErrors(unittest.TestCase):
 
         # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
-            fn.slice_block(
+            equistore.slice_block(
                 block,
                 properties=np.array([[5], [6]]),
             )

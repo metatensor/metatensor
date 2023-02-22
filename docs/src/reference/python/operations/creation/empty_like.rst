@@ -1,6 +1,6 @@
 empty_like
 ==========
 
-.. autofunction:: equistore.operations.empty_like
+.. autofunction:: equistore.empty_like
 
-.. autofunction:: equistore.operations.empty_like_block
+.. autofunction:: equistore.empty_like_block
