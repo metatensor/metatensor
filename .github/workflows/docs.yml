@@ -51,37 +51,7 @@ jobs:
           publish_dir: ./gh-pages/
           force_orphan: true
 
-      - name: post link to RTD
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+      - name: Post link to RTD
+        uses: readthedocs/actions/preview@v1
         with:
-          script: |
-            async function insertUpdateComment(owner, repo, issue_number, purpose, body) {
-                const {data: comments} = await github.rest.issues.listComments(
-                    {owner, repo, issue_number}
-                );
-                const marker = `<!-- bot: ${purpose} -->`;
-                body = marker + "\n" + body;
-                const existing = comments.filter((c) => c.body.includes(marker));
-                if (existing.length > 0) {
-                    const last = existing[existing.length - 1];
-                    core.info(`Updating comment ${last.id}`);
-                    await github.rest.issues.updateComment({
-                        owner, repo,
-                        body,
-                        comment_id: last.id,
-                    });
-                } else {
-                    core.info(`Creating a comment in issue / PR #${issue_number}`);
-                    await github.rest.issues.createComment({issue_number, body, owner, repo});
-                }
-            }
-
-            const {owner, repo} = context.repo;
-            const pr = ${{ toJSON(github.event.pull_request) }};
-
-            let body = 'The documentation for this pull request is (or will soon be) available on readthedocs: ';
-            body += `https://equistore--${pr.number}.org.readthedocs.build/en/${pr.number}/`;
-            core.info("Review thread message body:", body);
-
-            await insertUpdateComment(owner, repo, pr.number, "link-to-PR-docs", body);
+          project-slug: "equistore"
