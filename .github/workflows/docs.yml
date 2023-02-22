@@ -51,7 +51,8 @@ jobs:
           publish_dir: ./gh-pages/
           force_orphan: true
 
-      - name: Post link to RTD
+      - if: github.event_name == 'pull_request'
+        name: Post link to RTD
         uses: readthedocs/actions/preview@v1
         with:
           project-slug: "equistore"
