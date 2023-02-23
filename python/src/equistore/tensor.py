@@ -50,7 +50,7 @@ class TensorMap:
         # all blocks are moved into the tensor map, assign NULL to `block._ptr`
         # to prevent accessing the blocks from Python/double free
         for block in blocks:
-            block._ptr = ctypes.POINTER(eqs_block_t)()
+            block._move_ptr()
 
         self._ptr = self._lib.eqs_tensormap(
             keys._as_eqs_labels_t(), blocks_array, len(blocks)
