@@ -54,14 +54,14 @@ class TensorBlock:
 
         values = ArrayWrapper(values)
 
-        self._ptr = self._lib.eqs_block(
+        self._actual_ptr = self._lib.eqs_block(
             values.into_eqs_array(),
             samples._as_eqs_labels_t(),
             components_array,
             len(components_array),
             properties._as_eqs_labels_t(),
         )
-        _check_pointer(self._ptr)
+        _check_pointer(self._actual_ptr)
 
     @staticmethod
     def _from_ptr(ptr, parent):
@@ -72,21 +72,33 @@ class TensorBlock:
         _check_pointer(ptr)
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
-        obj._ptr = ptr
+        obj._actual_ptr = ptr
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from beeing garbage-collected & removing this block
         obj._parent = parent
         return obj
 
+    @property
+    def _ptr(self):
+        if self._actual_ptr is None:
+            raise ValueError(
+                "this block has been moved inside a TensorMap and can no longer be used"
+            )
+
+        return self._actual_ptr
+
+    def _move_ptr(self):
+        self._actual_ptr = None
+
     def __del__(self):
         if (
             hasattr(self, "_lib")
             and self._lib is not None
-            and hasattr(self, "_ptr")
+            and hasattr(self, "_actual_ptr")
             and hasattr(self, "_parent")
         ):
             if self._parent is None:
-                self._lib.eqs_block_free(self._ptr)
+                self._lib.eqs_block_free(self._actual_ptr)
 
     def __deepcopy__(self, _memodict):
         new_ptr = self._lib.eqs_block_copy(self._ptr)
