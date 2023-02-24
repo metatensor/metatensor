@@ -124,6 +124,16 @@ class TensorBlock:
 
         return s
 
+    def __eq__(self, other):
+        from equistore.operations import equal_block
+
+        return equal_block(self, other)
+
+    def __ne__(self, other):
+        from equistore.operations import equal_block
+
+        return not equal_block(self, other)
+
     @property
     def values(self) -> Array:
         """

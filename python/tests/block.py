@@ -6,19 +6,21 @@ from equistore import Labels, TensorBlock
 
 
 class TestBlocks(unittest.TestCase):
-    def test_repr(self):
-        block = TensorBlock(
+    def setUp(self):
+        self.block = TensorBlock(
             values=np.full((3, 2), -1.0),
             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
         )
+
+    def test_repr(self):
         expected = """TensorBlock
     samples (3): ['samples']
     components (): []
     properties (2): ['properties']
     gradients: no"""
-        self.assertTrue(block.__repr__() == expected)
+        self.assertTrue(self.block.__repr__() == expected)
 
     def test_block_no_components(self):
         block = TensorBlock(
@@ -160,6 +162,12 @@ properties (2): ['properties']"""
         self.assertEqual(tuple(copy.samples[0]), (0,))
         self.assertEqual(tuple(copy.samples[1]), (2,))
         self.assertEqual(tuple(copy.samples[2]), (4,))
+
+    def test_eq(self):
+        self.assertTrue(self.block == self.block)
+
+    def test_neq(self):
+        self.assertFalse(self.block != self.block)
 
 
 if __name__ == "__main__":

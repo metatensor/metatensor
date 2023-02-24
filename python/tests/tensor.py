@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 from utils import test_large_tensor_map, test_tensor_map
 
+import equistore
+
 
 class TestTensorMap(unittest.TestCase):
     def test_keys(self):
@@ -338,6 +340,90 @@ keys: ['key_1' 'key_2']
         self.assertEqual(tuple(block.properties[0]), (0, 0))
         self.assertEqual(tuple(block.properties[1]), (1, 0))
         self.assertEqual(tuple(block.properties[2]), (2, 0))
+
+    def test_eq(self):
+        self.assertTrue(test_tensor_map() == test_tensor_map())
+
+    def test_neq(self):
+        self.assertFalse(test_tensor_map() != test_tensor_map())
+
+    # TODO: check that this is the same as the method.
+    def test_add(self):
+        test_tensor_map() + 1
+
+    def test_sub(self):
+        test_tensor_map() - 1
+
+    def test_mul(self):
+        test_tensor_map() * 1
+
+    def test_matmul(self):
+        tm = test_tensor_map()
+        tm = tm.components_to_properties("components")
+        tm = equistore.remove_gradients(tm)
+        tm @ tm
+
+    def test_truediv(self):
+        test_tensor_map() / 2
+
+    def test_pow(self):
+        test_tensor_map() ** 2
+
+    def test_iadd(self):
+        tm = test_tensor_map()
+        tm += 1
+
+    def test_isub(self):
+        tm = test_tensor_map()
+        tm -= 1
+
+    def test_imul(self):
+        tm = test_tensor_map()
+        tm *= 1
+
+    def test_imatmul(self):
+        tm = test_tensor_map()
+        tm = tm.components_to_properties("components")
+        tm = equistore.remove_gradients(tm)
+        tm @= tm
+
+    def test_itruediv(self):
+        tm = test_tensor_map()
+        tm /= 1
+
+    def test_ipow(self):
+        tm = test_tensor_map()
+        tm **= 1
+
+    def test_neg(self):
+        -test_tensor_map()
+
+    def test_pos(self):
+        +test_tensor_map()
+
+    def test_remove_gradient(self):
+        test_tensor_map().remove_gradients()
+
+    def test_dot(self):
+        pass
+
+    def test_sum_over_samples(self):
+        pass
+
+    def test_mean_over_samples(self):
+        pass
+
+    def test_std_over_samples(self):
+        pass
+
+    def test_variance_over_samples(self):
+        pass
+
+    def test_slice(self):
+        pass
+
+    def test_split(self):
+        pass
 
 
 if __name__ == "__main__":

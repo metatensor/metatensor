@@ -1,5 +1,5 @@
 import ctypes
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -104,6 +104,84 @@ class TensorMap:
                 f"only one non-keyword argument is supported, {len(args[0])} are given"
             )
         return self.block(*args)
+
+    def __eq__(self, other):
+        from equistore.operations import equal
+
+        return equal(self, other)
+
+    def __ne__(self, other):
+        from equistore.operations import equal
+
+        return not equal(self, other)
+
+    def __add__(self, other):
+        from equistore.operations import add
+
+        return add(self, other)
+
+    def __sub__(self, other):
+        from equistore.operations import subtract
+
+        return subtract(self, other)
+
+    def __mul__(self, other):
+        from equistore.operations import multiply
+
+        return multiply(self, -other)
+
+    def __matmul__(self, other):
+        from equistore.operations import dot
+
+        return dot(self, other)
+
+    def __truediv__(self, other):
+        from equistore.operations import divide
+
+        return divide(self, other)
+
+    def __pow__(self, other):
+        from equistore.operations import pow
+
+        return pow(self, other)
+
+    def __iadd__(self, other):
+        from equistore.operations import add
+
+        return add(self, other)
+
+    def __isub__(self, other):
+        from equistore.operations import add
+
+        return add(self, -other)
+
+    def __imul__(self, other):
+        from equistore.operations import multiply
+
+        return multiply(self, other)
+
+    def __imatmul__(self, other):
+        from equistore.operations import dot
+
+        return dot(self, other)
+
+    def __itruediv__(self, other):
+        from equistore.operations import divide
+
+        return divide(self, other)
+
+    def __ipow__(self, other):
+        from equistore.operations import pow
+
+        return pow(self, other)
+
+    def __neg__(self):
+        from equistore.operations import multiply
+
+        return multiply(self, -1)
+
+    def __pos__(self):
+        return self
 
     @property
     def keys(self) -> Labels:
@@ -393,6 +471,138 @@ class TensorMap:
     def property_names(self) -> List[str]:
         """Names of the property labels for all blocks in this tensor map"""
         return self.block(0).properties.names
+
+    def remove_gradients(self, remove: Optional[List[str]] = None) -> None:
+        """Remove some or all of the gradients.
+
+        :param remove:
+            which gradients should be excluded from the new tensor map.
+            If this is set to ``None`` (this is the default), all the gradients will
+            be removed.
+        """
+        from equistore.operations import remove_gradients
+
+        return remove_gradients(self, remove)
+
+    def dot(self, other: "TensorMap") -> "TensorMap":
+        """Computes the dot product with another :py:class:`TensorMap`.
+
+        The given :py:class:`TensorMap` must have the same ``keys``.
+
+        :py:class:`TensorBlocks` corresponding to the same key must have the same
+        ``properties``. The resulting :py:class:`TensorBlocks` of the dot product of
+        two :py:class:`TensorBlocks` has ``result_block.values = block1.values @
+        block2.values.T``
+
+        :param other:
+            :py:class:`TensorMap` to multiply
+
+        :return: dot product
+        """
+        from equistore.operations import dot
+
+        return dot(self, other)
+
+    def _reduce_over_samples(
+        self, samples_names: Union[List[str], str], reduction: str
+    ) -> "TensorMap":
+        from equistore.operations.reduce_over_samples import _reduce_over_samples
+
+        return _reduce_over_samples(self, samples_names, reduction)
+
+    def sum_over_samples(self, samples_names: List[str]) -> "TensorMap":
+        """Aaverage over the indices of the given ``samples_names`` .
+
+        :param samples_names:
+            names of samples to sum over
+        """
+        return self._reduce_over_samples(samples_names, "sum")
+
+    def mean_over_samples(self, samples_names: List[str]) -> "TensorMap":
+        """Aaverage over the indices of the given ``samples_names`` .
+
+        For details refer to :ref:`python-api-operations-sample-reduction`.
+
+        :param samples_names:
+            names of samples to average over
+        """
+        return self._reduce_over_samples(samples_names, "mean")
+
+    def std_over_samples(self, samples_names: List[str]) -> "TensorMap":
+        """Standard deviation over the indices of the given ``samples_names``.
+
+        For details refer to :ref:`python-api-operations-sample-reduction`.
+
+        :param samples_names:
+            names of samples to perform the standart deviation over
+        """
+        return self._reduce_over_samples(samples_names, "std")
+
+    def variance_over_samples(self, samples_names: List[str]) -> "TensorMap":
+        r"""Variance over the indices of the given ``samples_names``.
+
+        For details refer to :ref:`python-api-operations-sample-reduction`.
+
+        :param samples_names:
+            names of samples to perform the variance over
+        """
+        self._reduce_over_samples(samples_names, "variance")
+
+    def slice(
+        self, samples: Optional[Labels] = None, properties: Optional[Labels] = None
+    ) -> "TensorMap":
+        r"""Slices along the samples and/or properties dimension(s).
+
+        For details refer to :ref:`python-api-operations-slice`.
+
+        :param samples:
+            a :py:class:`Labels` object containing the names
+            and indices of samples to keep in the each of the sliced
+            :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
+            value of None indicates no slicing along the samples dimension should
+            occur.
+        :param properties:
+            a :py:class:`Labels` object containing the names
+            and indices of properties to keep in each of the sliced
+            :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
+            value of None indicates no slicing along the properties dimension should
+            occur.
+
+        :return: a :py:class:`TensorMap` that corresponds to the sliced input
+            tensor.
+        """
+        from equistore.operations import slice
+
+        return slice(samples, properties)
+
+    def split(
+        self,
+        axis: str,
+        grouped_idxs: List[Labels],
+    ) -> List["TensorMap"]:
+        """Splits into mutliple :py:class:`TensorMap`.
+
+         For details refer to :ref:`python-api-operations-split`.
+
+        :param axis:
+            a str, either "samples" or "properties", that indicates the
+            :py:class:`TensorBlock` axis along which the named index (or indices) in
+            ``grouped_idxs`` belongs. Each :py:class:`TensorBlock` in each returned
+            :py:class:`TensorMap` could have a reduced dimension along this axis,
+            but the other axes will remain the same size.
+        :param grouped_idxs:
+            a list of :py:class:`Labels` containing the names and
+            values of the indices along the specified ``axis`` which should be in
+            each respective output :py:class:`TensorMap`.
+
+        :return:
+            a list of:py:class:`TensorMap` that corresponds to the split input
+            ``tensor``. Each tensor in the returned list contains only the named
+            indices in the respective py:class:`Labels` object of ``grouped_idxs``.
+        """
+        from equistore.operations import split
+
+        return split(axis, grouped_idxs)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
