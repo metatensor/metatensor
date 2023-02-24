@@ -139,45 +139,44 @@ looks like the following.
 .. code-block:: python
 
     def func(value_1: float, value_2: int) -> float:
-      r"""A one line summary sentence of the function.
+        r"""A one line summary sentence of the function.
 
-      Extensive multi-line summary of what is going in. Use single 
-      backticks for parameters of the function like `width` and two ticks for
-      values ``67``. You can link to classes :py:class:`equistore.Labels`. This
-      also works for other classes and functions like :py:obj:`True`.
+        Extensive multi-line summary of what is going in. Use single 
+        backticks for parameters of the function like `width` and two ticks for
+        values ``67``. You can link to classes :py:class:`equistore.Labels`. This
+        also works for other classes and functions like :py:obj:`True`.
 
-      Inline Math is also possible with :math:`\mathsf{R}`. Or as a math block.
+        Inline Math is also possible with :math:`\mathsf{R}`. Or as a math block.
 
-      .. math::
+        .. math::
 
-          \mathbf{x}' = \mathsf{R}\mathbf{x}
+            \mathbf{x}' = \mathsf{R}\mathbf{x}
 
 
-      :param value_1:
-          The first parameter of the function, a :py:class:`float`.
-      :param value_2:
-          The second parameter of the function, an :py:class:`int`.
+        :param value_1:
+            The first parameter of the function, a :py:class:`float`.
+        :param value_2:
+            The second parameter of the function, an :py:class:`int`.
 
-      :returns result:
-          The result of the calculation, a :py:class:`float`.
+        :returns result:
+            The result of the calculation, a :py:class:`float`.
 
-      :raises ValueError:
-          if the value is not a float
+        :raises TypeError:
+            If `value_1` is not a :py:class:`float` or `value_2` is not a :py:class:`int`.
+        :raises ValueError:
+            If `value_1` is not greater than zero.
 
-      Examples
-      --------
+        Examples
+        --------
 
-      This is an example
+        This is an example
 
-      >>> from equistore import func
-      >>> a = np.array(
-      ...    [1, 2, 3, 4]
-      ... )
-      >>> func(1, 1)
-      42
-    """
-    ...
-    return result
+        >>> from equistore import func
+        >>> func(1, 1)
+        42
+      """
+      ...
+      return result
 
 Guidelines for writing Python doc strings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -205,9 +204,17 @@ Guidelines for writing Python doc strings
   2. `Inline interpreted text or phrase reference start-string without end string`
 
 * The examples are tested with `doctest`_. Therefore, please make sure that they are
-  complete and functioning (with all required imports). As given in the example above 
-  use the ``>>>`` syntax for inputs (followed by ``...`` for multiline inputs) and no
+  complete and functioning (with all required imports).
+  Use the ``>>>`` syntax for inputs (followed by ``...`` for multiline inputs) and no
   indentation for outputs for the examples.
+
+  .. code-block:: python
+
+      """"
+      >>> a = np.array(
+      ...    [1, 2, 3, 4]
+      ... )
+      """"
 
 .. _`sphinx format` : https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 .. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
