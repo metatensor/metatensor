@@ -151,9 +151,9 @@ class TensorMap:
         return add(self, other)
 
     def __isub__(self, other):
-        from equistore.operations import add
+        from equistore.operations import subtract
 
-        return add(self, -other)
+        return subtract(self, other)
 
     def __imul__(self, other):
         from equistore.operations import multiply
