@@ -501,7 +501,7 @@ class TensorMap:
     def sum_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Aaverage over the indices of the given ``samples_names`` .
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
@@ -512,7 +512,7 @@ class TensorMap:
     def mean_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Aaverage over the indices of the given ``samples_names`` .
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
@@ -523,7 +523,7 @@ class TensorMap:
     def std_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Standard deviation over the indices of the given ``samples_names``.
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
@@ -534,7 +534,7 @@ class TensorMap:
     def variance_over_samples(self, samples_names: List[str]) -> "TensorMap":
         r"""Variance over the indices of the given ``samples_names``.
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
@@ -547,7 +547,7 @@ class TensorMap:
     ) -> "TensorMap":
         r"""Slices along the samples and/or properties dimension(s).
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-slice`.
 
         :param samples:
@@ -577,7 +577,7 @@ class TensorMap:
     ) -> List["TensorMap"]:
         """Splits into mutliple :py:class:`TensorMap`.
 
-        For addiotional details refer to the reference page of
+        For additional details refer to the reference page of
         the :ref:`python-api-operations-split` function.
 
         :param axis:
