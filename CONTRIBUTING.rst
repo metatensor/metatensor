@@ -168,12 +168,12 @@ looks like the following.
 
         Examples
         --------
-          >>> from equistore import func
-          >>> func(1, 1)
-          42
-      """
-      ...
-      return result
+        >>> from equistore import func
+        >>> func(1, 1)
+        42
+        """
+        ...
+        return result
 
 Guidelines for writing Python doc strings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,11 +207,11 @@ Guidelines for writing Python doc strings
 
   .. code-block:: python
 
-      """"
+      """
       >>> a = np.array(
       ...    [1, 2, 3, 4]
       ... )
-      """"
+      """
 
 .. _`sphinx format` : https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 .. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
