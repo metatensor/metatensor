@@ -146,34 +146,22 @@ class TensorMap:
         return pow(self, other)
 
     def __iadd__(self, other):
-        from equistore.operations import add
-
-        return add(self, other)
+        return self + other
 
     def __isub__(self, other):
-        from equistore.operations import subtract
-
-        return subtract(self, other)
+        return self - other
 
     def __imul__(self, other):
-        from equistore.operations import multiply
-
-        return multiply(self, other)
+        return self * other
 
     def __imatmul__(self, other):
-        from equistore.operations import dot
-
-        return dot(self, other)
+        return self @ other
 
     def __itruediv__(self, other):
-        from equistore.operations import divide
-
-        return divide(self, other)
+        return self / other
 
     def __ipow__(self, other):
-        from equistore.operations import pow
-
-        return pow(self, other)
+        return self**other
 
     def __neg__(self):
         from equistore.operations import multiply
