@@ -168,12 +168,9 @@ looks like the following.
 
         Examples
         --------
-
-        This is an example
-
-        >>> from equistore import func
-        >>> func(1, 1)
-        42
+          >>> from equistore import func
+          >>> func(1, 1)
+          42
       """
       ...
       return result
