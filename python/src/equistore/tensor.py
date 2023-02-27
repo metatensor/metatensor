@@ -128,7 +128,7 @@ class TensorMap:
     def __mul__(self, other):
         from equistore.operations import multiply
 
-        return multiply(self, -other)
+        return multiply(self, other)
 
     def __matmul__(self, other):
         from equistore.operations import dot
@@ -513,6 +513,9 @@ class TensorMap:
     def sum_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Aaverage over the indices of the given ``samples_names`` .
 
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-sample-reduction` functions.
+
         :param samples_names:
             names of samples to sum over
         """
@@ -521,7 +524,8 @@ class TensorMap:
     def mean_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Aaverage over the indices of the given ``samples_names`` .
 
-        For details refer to :ref:`python-api-operations-sample-reduction`.
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
             names of samples to average over
@@ -531,7 +535,8 @@ class TensorMap:
     def std_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Standard deviation over the indices of the given ``samples_names``.
 
-        For details refer to :ref:`python-api-operations-sample-reduction`.
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
             names of samples to perform the standart deviation over
@@ -541,19 +546,21 @@ class TensorMap:
     def variance_over_samples(self, samples_names: List[str]) -> "TensorMap":
         r"""Variance over the indices of the given ``samples_names``.
 
-        For details refer to :ref:`python-api-operations-sample-reduction`.
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-sample-reduction` functions.
 
         :param samples_names:
             names of samples to perform the variance over
         """
-        self._reduce_over_samples(samples_names, "variance")
+        return self._reduce_over_samples(samples_names, "variance")
 
     def slice(
         self, samples: Optional[Labels] = None, properties: Optional[Labels] = None
     ) -> "TensorMap":
         r"""Slices along the samples and/or properties dimension(s).
 
-        For details refer to :ref:`python-api-operations-slice`.
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-slice`.
 
         :param samples:
             a :py:class:`Labels` object containing the names
@@ -573,7 +580,7 @@ class TensorMap:
         """
         from equistore.operations import slice
 
-        return slice(samples, properties)
+        return slice(self, samples, properties)
 
     def split(
         self,
@@ -582,7 +589,8 @@ class TensorMap:
     ) -> List["TensorMap"]:
         """Splits into mutliple :py:class:`TensorMap`.
 
-         For details refer to :ref:`python-api-operations-split`.
+        For addiotional details refer to the reference page of
+        the :ref:`python-api-operations-split` function.
 
         :param axis:
             a str, either "samples" or "properties", that indicates the
@@ -602,7 +610,7 @@ class TensorMap:
         """
         from equistore.operations import split
 
-        return split(axis, grouped_idxs)
+        return split(self, axis, grouped_idxs)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
