@@ -1,44 +1,3 @@
-By contributing to equistore, you accept and agree to the following terms and
-conditions for your present and future contributions submitted to equistore.
-Except for the license granted herein to equistore and recipients of software
-distributed by equistore, you reserve all right, title, and interest in and to
-your contributions.
-
-Code of Conduct
----------------
-
-As contributors and maintainers of equistore, we pledge to respect all people
-who contribute through reporting issues, posting feature requests, updating
-documentation, submitting merge requests or patches, and other activities.
-
-We are committed to making participation in this project a harassment-free
-experience for everyone, regardless of level of experience, gender, gender
-identity and expression, sexual orientation, disability, personal appearance,
-body size, race, ethnicity, age, or religion.
-
-Examples of unacceptable behavior by participants include the use of sexual
-language or imagery, derogatory comments or personal attacks, trolling, public
-or private harassment, insults, or other unprofessional conduct.
-
-Project maintainers have the right and responsibility to remove, edit, or reject
-comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct. Project maintainers who do not follow the
-Code of Conduct may be removed from the project team.
-
-This code of Conduct applies both within project spaces and in public spaces
-when an individual is representing the project or its community.
-
-.. Instances of abusive, harassing, or otherwise unacceptable behavior can be
-.. reported by emailing xxx@xxx.org.
-
-This Code of Conduct is adapted from the `Contributor Covenant`_, version 1.1.0,
-available at https://contributor-covenant.org/version/1/1/0/
-
-.. _`Contributor Covenant` : https://contributor-covenant.org
-
-Getting involved
-----------------
-
 Contribution via merge requests are always welcome. Source code is available
 from `Github`_. Before submitting a merge request, please open an issue to
 discuss your changes. Use the only `master` branch for submitting your requests.
@@ -155,14 +114,14 @@ Contributing to the documentation
 
 The documentation of equistore is written in reStructuredText (rst) and uses the
 `sphinx`_ documentation generator. In order to modify the documentation, first
-create a local version of the code your machine as described above. Then, you
+create a local version of the code on your machine as described above. Then, you
 can build the documentation with:
 
 .. code-block:: bash
 
     tox -e docs
 
-You can visualise the local documentation with your favorite browser (here
+You can visualize the local documentation with your favorite browser (here
 Mozilla Firefox is used)
 
 .. code-block:: bash
@@ -170,3 +129,90 @@ Mozilla Firefox is used)
     firefox docs/build/html/index.html
 
 .. _`sphinx` : https://www.sphinx-doc.org/en/master/
+
+Python doc strings
+~~~~~~~~~~~~~~~~~~
+
+Our docstring format follows the `sphinx format`_ and a typical function doc string
+looks like the following.
+
+.. code-block:: python
+
+    def func(value_1: float, value_2: int) -> float:
+        r"""A one line summary sentence of the function.
+
+        Extensive multi-line summary of what is going in. Use single 
+        backticks for parameters of the function like `width` and two ticks for
+        values ``67``. You can link to classes :py:class:`equistore.Labels`. This
+        also works for other classes and functions like :py:obj:`True`.
+
+        Inline Math is also possible with :math:`\mathsf{R}`. Or as a math block.
+
+        .. math::
+
+            \mathbf{x}' = \mathsf{R}\mathbf{x}
+
+
+        :param value_1:
+            The first parameter of the function, a :py:class:`float`.
+        :param value_2:
+            The second parameter of the function, an :py:class:`int`.
+
+        :returns result:
+            The result of the calculation, a :py:class:`float`.
+
+        :raises TypeError:
+            If `value_1` is not a :py:class:`float` or `value_2` is not a :py:class:`int`.
+        :raises ValueError:
+            If `value_1` is not greater than zero.
+
+        Examples
+        --------
+        >>> from equistore import func
+        >>> func(1, 1)
+        42
+        """
+        ...
+        return result
+
+Guidelines for writing Python doc strings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Use Python typing in the function arguments, indicate return types.
+
+* Start the description after each ``:param:`` or ``:return:`` in a new line and add an
+  empty line between the parameter and return block.
+
+* Emphasize function and class parameters with a single backtick i.e ```param``` and
+  general variables should be double backticked . i.e. ````my_variable````
+
+* If you include any maths, make the string a
+  `raw string`_ by prefixing with ``r``, e.g.,
+
+  .. code-block:: python
+
+    r"""Some math like :math:`\nu^2 / \rho` with backslashes."""
+
+  Otherwise the ``\n`` and ``\r`` will be rendered as ASCII escape sequences that break
+  lines without you noticing it or you will get either one of the following two
+  errors message
+
+  1. `Explicit markup ends without a blank line; unexpected unindent`
+  2. `Inline interpreted text or phrase reference start-string without end string`
+
+* The examples are tested with `doctest`_. Therefore, please make sure that they are
+  complete and functioning (with all required imports).
+  Use the ``>>>`` syntax for inputs (followed by ``...`` for multiline inputs) and no
+  indentation for outputs for the examples.
+
+  .. code-block:: python
+
+      """
+      >>> a = np.array(
+      ...    [1, 2, 3, 4]
+      ... )
+      """
+
+.. _`sphinx format` : https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
+.. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
+.. _`doctest` : https://docs.python.org/3/library/doctest.html
