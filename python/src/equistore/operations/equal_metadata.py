@@ -14,9 +14,9 @@ def equal_metadata(
     Checks if two :py:class:`TensorMap` objects have the same metadata,
     returning a bool.
 
-    The equivalence of the keys of the two :py:class:`TensorMap` objects is always
-    checked. If `check` is none (the default), all metadata (i.e. the samples, 
-    components, and properties of each block) is checked to contain the 
+    The equivalence of the keys of the two :py:class:`TensorMap` objects is
+    always checked. If `check` is none (the default), all metadata (i.e. the
+    samples, components, and properties of each block) is checked to contain the
     same values in the same order.
 
     Passing `check` as a list of strings will only check the metadata specified.
