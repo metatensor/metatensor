@@ -28,6 +28,9 @@ def equal_metadata(
         check. If none, all metadata is checked. Allowed values are "samples",
         "components", and "properties".
 
+    :return: True if the metadata of the two :py:class:`TensorMap` objects are
+        equal, False otherwise.
+
     Examples
     --------
     >>> import numpy as np
