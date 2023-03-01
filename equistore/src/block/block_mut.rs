@@ -14,22 +14,6 @@ pub struct TensorBlockRefMut<'a> {
     data: TensorBlockRef<'a>,
 }
 
-impl<'a> std::ops::Deref for TensorBlockRefMut<'a> {
-    type Target = TensorBlockRef<'a>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl<'a> std::ops::DerefMut for TensorBlockRefMut<'a> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
-    }
-}
-
 /// Mutable version of [`BasicBlock`](crate::BasicBlock)
 #[derive(Debug)]
 pub struct BasicBlockMut<'a> {
@@ -63,7 +47,16 @@ impl<'a> TensorBlockRefMut<'a> {
 
     /// Get the underlying (mutable) raw pointer
     pub(super) fn as_mut_ptr(&mut self) -> *mut eqs_block_t {
-        self.as_ptr() as *mut _
+        self.data.as_ptr() as *mut _
+    }
+
+    /// Get a reference to this owned block, with a lifetime of `'self`.
+    pub fn as_ref(&self) -> TensorBlockRef<'_> {
+        // This is not implemented with `std::ops::Deref`, because the lifetime
+        // of the resulting TensorBlockRef should not be `'static` but `'self`.
+        unsafe {
+            TensorBlockRef::from_raw(self.data.as_ptr())
+        }
     }
 
     /// Get a mutable reference to the values data and metadata in this block
@@ -73,7 +66,7 @@ impl<'a> TensorBlockRefMut<'a> {
         let array = block_array(self.as_mut_ptr(), values).expect("failed to get values");
 
         let shape_len = array.shape().expect("failed to get the data shape").len();
-        let (samples, components, properties) = block_metadata(self.as_ptr(), shape_len, values);
+        let (samples, components, properties) = block_metadata(self.as_mut_ptr(), shape_len, values);
 
         BasicBlockMut {
             data: unsafe { ArrayRefMut::new(array) },
@@ -92,7 +85,7 @@ impl<'a> TensorBlockRefMut<'a> {
 
         if let Some(array) = array {
             let shape_len = array.shape().expect("failed to get the data shape").len();
-            let (samples, components, properties) = block_metadata(self.as_ptr(), shape_len, &parameter);
+            let (samples, components, properties) = block_metadata(self.as_mut_ptr(), shape_len, &parameter);
 
             Some(BasicBlockMut {
                 data: unsafe { ArrayRefMut::new(array) },
@@ -110,8 +103,8 @@ impl<'a> TensorBlockRefMut<'a> {
     #[inline]
     pub fn gradients_mut(&mut self) -> GradientsMutIter<'_> {
         GradientsMutIter {
-            parameters: self.gradient_list().into_iter(),
-            block: self.as_ptr() as *mut eqs_block_t,
+            parameters: self.as_ref().gradient_list().into_iter(),
+            block: self.data.as_ptr() as *mut _,
         }
     }
 }

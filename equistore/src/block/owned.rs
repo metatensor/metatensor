@@ -1,6 +1,6 @@
 use crate::c_api::eqs_block_t;
 use crate::errors::check_status;
-use crate::{Array, Labels, Error};
+use crate::{Array, Labels, Error, TensorBlockRef};
 
 use super::TensorBlockRefMut;
 
@@ -12,25 +12,11 @@ pub struct TensorBlock {
     pub(super) data: TensorBlockRefMut<'static>
 }
 
-impl std::ops::Deref for TensorBlock {
-    type Target = TensorBlockRefMut<'static>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl std::ops::DerefMut for TensorBlock {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
-    }
-}
-
 impl std::ops::Drop for TensorBlock {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
         unsafe {
-            crate::c_api::eqs_block_free(self.as_mut_ptr());
+            crate::c_api::eqs_block_free(self.as_ref_mut().as_mut_ptr());
         }
     }
 }
@@ -47,6 +33,24 @@ impl TensorBlock {
     /// to a block from inside a [`TensorMap`](crate::TensorMap).
     pub(crate) unsafe fn from_raw(ptr: *mut eqs_block_t) -> TensorBlock {
         TensorBlock { data: TensorBlockRefMut::from_raw(ptr) }
+    }
+
+    /// Get a reference to this owned block, with a lifetime of `'self`.
+    pub fn as_ref(&self) -> TensorBlockRef<'_> {
+        // This is not implemented with `std::ops::Deref`, because the lifetime
+        // of the resulting TensorBlockRef should not be `'static` but `'self`.
+        unsafe {
+            TensorBlockRef::from_raw(self.data.as_ref().as_ptr())
+        }
+    }
+
+    /// Get a mutable reference to this block, with a lifetime of `'self`.
+    pub fn as_ref_mut(&mut self) -> TensorBlockRefMut<'_> {
+        // This is not implemented with `std::ops::DerefMut`, because the lifetime
+        // of the resulting TensorBlockRefMut should not be `'static` but `'self`.
+        unsafe {
+            TensorBlockRefMut::from_raw(self.data.as_mut_ptr())
+        }
     }
 
     /// Create a new [`TensorBlock`] containing the given data, described by the
@@ -105,7 +109,7 @@ impl TensorBlock {
         let mut data = (Box::new(data) as Box<dyn Array>).into();
         unsafe {
             check_status(crate::c_api::eqs_block_add_gradient(
-                self.as_mut_ptr(),
+                self.as_ref_mut().as_mut_ptr(),
                 parameter.as_ptr().cast(),
                 data,
                 samples.as_eqs_labels_t(),
