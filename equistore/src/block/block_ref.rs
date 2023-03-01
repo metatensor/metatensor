@@ -10,7 +10,7 @@ use crate::{ArrayRef, Labels, Error};
 use super::TensorBlock;
 
 /// Reference to a [`TensorBlock`]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct TensorBlockRef<'a> {
     ptr: *const eqs_block_t,
@@ -136,8 +136,13 @@ pub(super) fn block_array(block: *mut eqs_block_t, values_gradient: &CStr) -> Op
 
 impl<'a> TensorBlockRef<'a> {
     /// Get the values data and metadata in this block
+
+    // SAFETY: we can return a basic block with lifetime `'a` (instead of
+    // `'self`) (which allows to get multiple references to the BasicBlock
+    // simultaneously), because there is no way to also get a mutable reference
+    // to the block at the same time.
     #[inline]
-    pub fn values(&self) -> BasicBlock<'_> {
+    pub fn values(&self) -> BasicBlock<'a> {
         let values = unsafe { CStr::from_bytes_with_nul_unchecked(b"values\0") };
 
         // the cast to mut pointer is fine since we are only returning a non-mut
@@ -156,8 +161,12 @@ impl<'a> TensorBlockRef<'a> {
     }
 
     /// Get the full list of gradients in this block
+
+    // SAFETY: we can return strings with the `'a` lifetime (instead of
+    // `'self`), because there is no way to also get a mutable reference
+    // to the gradient parameters at the same time.
     #[inline]
-    pub fn gradient_list(&self) -> Vec<&str> {
+    pub fn gradient_list(&self) -> Vec<&'a str> {
         let mut parameters_ptr = std::ptr::null();
         let mut parameters_count = 0;
         unsafe {
@@ -178,8 +187,11 @@ impl<'a> TensorBlockRef<'a> {
 
     /// Get the data and metadata for the gradient with respect to the given
     /// parameter in this block, if it exists.
+
+    // SAFETY: we can return a basic block with lifetime `'a` (instead of
+    // `'self`) for the same reasons as in the `values` function.
     #[inline]
-    pub fn gradient(&self, parameter: &str) -> Option<BasicBlock<'_>> {
+    pub fn gradient(&self, parameter: &str) -> Option<BasicBlock<'a>> {
         let parameter = CString::new(parameter).expect("invalid C string");
 
         // the cast to mut pointer is fine since we are only returning a non-mut
