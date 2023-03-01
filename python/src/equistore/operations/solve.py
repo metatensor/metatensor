@@ -6,7 +6,14 @@ from . import _dispatch
 from ._utils import _check_maps, _check_same_gradients
 
 
-def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
+def solve(
+    X: TensorMap,
+    Y: TensorMap,
+    solver: str = "numpy",
+    lower: bool = False,
+    check_finite: bool = True,
+    assume_a: str = "gen",
+) -> TensorMap:
     """
     Solve a linear system among two :py:class:`TensorMap`.
     Solve the linear equation set
@@ -17,6 +24,19 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
+    :param solver: Used only if X and Y store data as ndarray's, decides if numpy's or scipy's solver are used
+    :param lower: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
+        scipy.linalg.solve, otherwise it is ignored. See
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
+        for a full description of the parameter
+    :param check_finite: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
+        scipy.linalg.solve, otherwise it is ignored. See
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
+        for a full description of the parameter
+    :param assume_a: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
+        scipy.linalg.solve, otherwise it is ignored. See
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
+        for a full description of the parameter
 
     :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``,
             and where each :py:class:`TensorBlock` has: the ``sample``
@@ -35,12 +55,28 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     blocks = []
     for key, X_block in X:
         Y_block = Y.block(key)
-        blocks.append(_solve_block(X_block, Y_block))
+        blocks.append(
+            _solve_block(
+                X_block,
+                Y_block,
+                solver=solver,
+                lower=lower,
+                check_finite=check_finite,
+                assume_a=assume_a,
+            )
+        )
 
     return TensorMap(X.keys, blocks)
 
 
-def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
+def _solve_block(
+    X: TensorBlock,
+    Y: TensorBlock,
+    solver: str = "numpy",
+    lower: bool = False,
+    check_finite: bool = True,
+    assume_a: str = "gen",
+) -> TensorBlock:
     """
     Solve a linear system among two :py:class:`TensorBlock`.
     Solve the linear equation set X * w = Y for the unknown w.
@@ -84,7 +120,14 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
         Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
         Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
 
-    weights = _dispatch.solve(X_values, Y_values)
+    weights = _dispatch.solve(
+        X_values,
+        Y_values,
+        solver=solver,
+        lower=lower,
+        check_finite=check_finite,
+        assume_a=assume_a,
+    )
 
     return TensorBlock(
         values=weights.T,

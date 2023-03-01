@@ -112,7 +112,7 @@ def dot(A, B):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def solve(X, Y):
+def solve(X, Y, solver="numpy", lower=None, check_finite=True, assume_a="gen"):
     """
     Computes the solution of a square system of linear equations with a unique
     solution.
@@ -121,7 +121,17 @@ def solve(X, Y):
     """
     if isinstance(X, np.ndarray):
         _check_all_same_type([Y], np.ndarray)
-        return np.linalg.solve(X, Y)
+        if solver == "scipy":
+            return scipy.linalg.solve(
+                X, Y, lower=lower, check_finite=check_finite, assume_a=assume_
+            )
+        elif solver == "numpy":
+            return np.linalg.solve(X, Y)
+        else:
+            raise ValueError(
+                "solver '{ndarray_solver}' for ndarrays is not known. 'scipy' and 'numpy' are supported."
+            )
+
     elif isinstance(X, TorchTensor):
         _check_all_same_type([Y], TorchTensor)
         result = torch.linalg.solve(X, Y)
