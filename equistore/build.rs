@@ -1,14 +1,19 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-#[cfg(feature = "static")]
-fn build_shared_lib() -> &'static str { "OFF" }
-
-#[cfg(not(feature = "static"))]
-fn build_shared_lib() -> &'static str { "ON" }
-
+fn rustc_version_at_least(version: &str) -> bool {
+    rustc_version::version().unwrap() >= rustc_version::Version::parse(version).unwrap()
+}
 
 fn main() {
+    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
+        // We actually only need rustc>=1.63 for tests (because of
+        // https://github.com/rust-lang/rust/issues/100066), but there is no way
+        // to check if we are building for tests in a build script, so we
+        // unconditionally disable the feature for older rustc.
+        panic!("'static' feature requires rustc>=1.63");
+    }
+
     let mut equistore_core = PathBuf::from("equistore-core");
 
     let mut cargo_toml = equistore_core.clone();
@@ -51,7 +56,6 @@ fn main() {
 
     let build = cmake::Config::new(equistore_core)
         .define("CARGO_EXE", env!("CARGO"))
-        .define("BUILD_SHARED_LIBS", build_shared_lib())
         .build();
 
     println!("cargo:rustc-link-search=native={}/lib", build.display());

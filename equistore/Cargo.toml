@@ -28,3 +28,4 @@ static = []
 cmake = "=0.1.45"
 which = "4"
 glob = "0.3"
+rustc_version = "0.4"

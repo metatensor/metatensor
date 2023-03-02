@@ -14,12 +14,13 @@ jobs:
     strategy:
       matrix:
         include:
-          # test without any feature
+          # test without any feature (i.e shared build)
           - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
 
+          # test without any feature (i.e static build + ndarray)
           - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
@@ -31,7 +32,7 @@ jobs:
             rust-version: 1.61
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
-            cargo-build-flags: --all-features
+            cargo-build-flags: --features=rayon
 
           # check the build on a stock Ubuntu 18.04, including cmake 3.10
           - os: ubuntu-20.04
