@@ -10,6 +10,14 @@ except ImportError:
         pass
 
 
+try:
+    import scipy
+
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+
+
 UNKNOWN_ARRAY_TYPE = (
     "unknown array type, only numpy arrays and torch tensors are supported"
 )
@@ -122,9 +130,15 @@ def solve(X, Y, solver="numpy", lower=None, check_finite=True, assume_a="gen"):
     if isinstance(X, np.ndarray):
         _check_all_same_type([Y], np.ndarray)
         if solver == "scipy":
-            return scipy.linalg.solve(
-                X, Y, lower=lower, check_finite=check_finite, assume_a=assume_
-            )
+            if HAS_SCIPY:
+                return scipy.linalg.solve(
+                    X, Y, lower=lower, check_finite=check_finite, assume_a=assume_
+                )
+            else:
+                raise ImportError(
+                    "In `solve` scipy solver was specified, but scipy module not \
+                     found. Please install it and reimport equistore."
+                )
         elif solver == "numpy":
             return np.linalg.solve(X, Y)
         else:

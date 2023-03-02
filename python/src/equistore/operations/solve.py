@@ -24,17 +24,18 @@ def solve(
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
-    :param solver: Used only if X and Y store data as ndarray's, decides if numpy's or scipy's solver are used
-    :param lower: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
-        scipy.linalg.solve, otherwise it is ignored. See
+    :param solver: Used only if X and Y store data as ndarray's, determines if numpy's
+        or scipy's solver are used
+    :param lower: Used only if X and Y store data as ndarray's and solver is 'scipy',
+        argument passed to scipy.linalg.solve, otherwise it is ignored. See
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
         for a full description of the parameter
-    :param check_finite: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
-        scipy.linalg.solve, otherwise it is ignored. See
+    :param check_finite: Used only if X and Y store data as ndarray's and solver is
+        'scipy', argument passed to scipy.linalg.solve, otherwise it is ignored. See
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
         for a full description of the parameter
-    :param assume_a: Used only if X and Y store data as ndarray's and solver is 'scipy', argument passed to
-        scipy.linalg.solve, otherwise it is ignored. See
+    :param assume_a: Used only if X and Y store data as ndarray's and solver is
+        'scipy', argument passed to scipy.linalg.solve, otherwise it is ignored. See
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve.html
         for a full description of the parameter
 
