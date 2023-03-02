@@ -143,7 +143,8 @@ def solve(X, Y, solver="numpy", lower=None, check_finite=True, assume_a="gen"):
             return np.linalg.solve(X, Y)
         else:
             raise ValueError(
-                "solver '{ndarray_solver}' for ndarrays is not known. 'scipy' and 'numpy' are supported."
+                "solver '{ndarray_solver}' for ndarrays is not known. 'scipy' and \
+                'numpy' are supported."
             )
 
     elif isinstance(X, TorchTensor):
