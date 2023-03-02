@@ -132,7 +132,7 @@ def solve(X, Y, solver="numpy", lower=None, check_finite=True, assume_a="gen"):
         if solver == "scipy":
             if HAS_SCIPY:
                 return scipy.linalg.solve(
-                    X, Y, lower=lower, check_finite=check_finite, assume_a=assume_
+                    X, Y, lower=lower, check_finite=check_finite, assume_a=assume_a
                 )
             else:
                 raise ImportError(
