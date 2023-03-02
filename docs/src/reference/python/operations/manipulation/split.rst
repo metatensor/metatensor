@@ -1,5 +1,3 @@
-.. _python-api-operations-split:
-
 split
 ======
 

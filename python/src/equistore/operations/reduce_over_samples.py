@@ -219,7 +219,8 @@ def _reduce_over_samples(
 def sum_over_samples(
     tensor: TensorMap, samples_names: Union[List[str], str]
 ) -> TensorMap:
-    """
+    """Sum over the indices of the given ``samples_names``.
+
     Create a new :py:class:`TensorMap` with the same keys as as the input
     ``tensor``, and each :py:class:`TensorBlock` is obtained summing the
     corresponding input :py:class:`TensorBlock` over the ``samples_names``
@@ -284,7 +285,9 @@ def sum_over_samples(
 
 
 def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
+    """Mean over the indices of the given ``samples_names``.
+
+    Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
@@ -306,7 +309,9 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Create a new :py:class:`TensorMap` with the same keys as
+    r"""Standard deviation over the indices of the given ``samples_names``.
+
+    Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the std deviation of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
@@ -335,7 +340,9 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Create a new :py:class:`TensorMap` with the same keys as
+    r"""Variance over the indices of the given ``samples_names``.
+
+    Create a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the variance of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.

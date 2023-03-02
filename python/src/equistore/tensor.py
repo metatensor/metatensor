@@ -145,24 +145,6 @@ class TensorMap:
 
         return pow(self, other)
 
-    def __iadd__(self, other):
-        return self + other
-
-    def __isub__(self, other):
-        return self - other
-
-    def __imul__(self, other):
-        return self * other
-
-    def __imatmul__(self, other):
-        return self @ other
-
-    def __itruediv__(self, other):
-        return self / other
-
-    def __ipow__(self, other):
-        return self**other
-
     def __neg__(self):
         from equistore.operations import multiply
 
@@ -463,29 +445,16 @@ class TensorMap:
     def remove_gradients(self, remove: Optional[List[str]] = None) -> None:
         """Remove some or all of the gradients.
 
-        :param remove:
-            which gradients should be excluded from the new tensor map.
-            If this is set to ``None`` (this is the default), all the gradients will
-            be removed.
+        Refer to :py:func:`equistore.remove_gradients` for full documentation.
         """
         from equistore.operations import remove_gradients
 
         return remove_gradients(self, remove)
 
     def dot(self, other: "TensorMap") -> "TensorMap":
-        """Computes the dot product with another :py:class:`TensorMap`.
+        """Compute the dot product with another :py:class:`TensorMap`.
 
-        The given :py:class:`TensorMap` must have the same ``keys``.
-
-        :py:class:`TensorBlocks` corresponding to the same key must have the same
-        ``properties``. The resulting :py:class:`TensorBlocks` of the dot product of
-        two :py:class:`TensorBlocks` has ``result_block.values = block1.values @
-        block2.values.T``
-
-        :param other:
-            :py:class:`TensorMap` to multiply
-
-        :return: dot product
+        Refer to :py:func:`equistore.dot` for full documentation.
         """
         from equistore.operations import dot
 
@@ -499,72 +468,39 @@ class TensorMap:
         return _reduce_over_samples(self, samples_names, reduction)
 
     def sum_over_samples(self, samples_names: List[str]) -> "TensorMap":
-        """Aaverage over the indices of the given ``samples_names`` .
+        """Sum over the indices of the given ``samples_names``.
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-sample-reduction` functions.
-
-        :param samples_names:
-            names of samples to sum over
+        Refer to :py:func:`equistore.sum_over_samples` for full documentation.
         """
         return self._reduce_over_samples(samples_names, "sum")
 
     def mean_over_samples(self, samples_names: List[str]) -> "TensorMap":
-        """Aaverage over the indices of the given ``samples_names`` .
+        """Average over the indices of the given ``samples_names``.
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-sample-reduction` functions.
-
-        :param samples_names:
-            names of samples to average over
+        Refer to :py:func:`equistore.mean_over_samples` for full documentation.
         """
         return self._reduce_over_samples(samples_names, "mean")
 
     def std_over_samples(self, samples_names: List[str]) -> "TensorMap":
         """Standard deviation over the indices of the given ``samples_names``.
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-sample-reduction` functions.
-
-        :param samples_names:
-            names of samples to perform the standart deviation over
+        Refer to :py:func:`equistore.std_over_samples` for full documentation.
         """
         return self._reduce_over_samples(samples_names, "std")
 
     def variance_over_samples(self, samples_names: List[str]) -> "TensorMap":
         r"""Variance over the indices of the given ``samples_names``.
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-sample-reduction` functions.
-
-        :param samples_names:
-            names of samples to perform the variance over
+        Refer to :py:func:`equistore.variance_over_samples` for full documentation.
         """
         return self._reduce_over_samples(samples_names, "variance")
 
     def slice(
         self, samples: Optional[Labels] = None, properties: Optional[Labels] = None
     ) -> "TensorMap":
-        r"""Slices along the samples and/or properties dimension(s).
+        r"""Slice along the samples and/or properties dimension(s).
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-slice`.
-
-        :param samples:
-            a :py:class:`Labels` object containing the names
-            and indices of samples to keep in the each of the sliced
-            :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
-            value of None indicates no slicing along the samples dimension should
-            occur.
-        :param properties:
-            a :py:class:`Labels` object containing the names
-            and indices of properties to keep in each of the sliced
-            :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
-            value of None indicates no slicing along the properties dimension should
-            occur.
-
-        :return: a :py:class:`TensorMap` that corresponds to the sliced input
-            tensor.
+        Refer to :py:func:`equistore.slice` for full documentation.
         """
         from equistore.operations import slice
 
@@ -575,26 +511,9 @@ class TensorMap:
         axis: str,
         grouped_idxs: List[Labels],
     ) -> List["TensorMap"]:
-        """Splits into mutliple :py:class:`TensorMap`.
+        """Split into mutliple :py:class:`TensorMap`.
 
-        For additional details refer to the reference page of
-        the :ref:`python-api-operations-split` function.
-
-        :param axis:
-            a str, either "samples" or "properties", that indicates the
-            :py:class:`TensorBlock` axis along which the named index (or indices) in
-            ``grouped_idxs`` belongs. Each :py:class:`TensorBlock` in each returned
-            :py:class:`TensorMap` could have a reduced dimension along this axis,
-            but the other axes will remain the same size.
-        :param grouped_idxs:
-            a list of :py:class:`Labels` containing the names and
-            values of the indices along the specified ``axis`` which should be in
-            each respective output :py:class:`TensorMap`.
-
-        :return:
-            a list of:py:class:`TensorMap` that corresponds to the split input
-            ``tensor``. Each tensor in the returned list contains only the named
-            indices in the respective py:class:`Labels` object of ``grouped_idxs``.
+        Refer to :py:func:`equistore.split` for full documentation.
         """
         from equistore.operations import split
 

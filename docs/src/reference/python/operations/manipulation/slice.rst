@@ -1,5 +1,3 @@
-.. _python-api-operations-slice:
-
 slice
 ======
 
