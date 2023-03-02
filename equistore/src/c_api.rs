@@ -4,7 +4,8 @@
 //! This module is exported for advanced users of the equistore crate, but
 //! should not be needed by most.
 
-#[link(name="equistore")]
+#[cfg_attr(feature="static", link(name="equistore", kind = "static", modifiers = "-whole-archive"))]
+#[cfg_attr(not(feature="static"), link(name="equistore", kind = "dylib"))]
 extern "C" {}
 
 pub const EQS_SUCCESS: i32 = 0;
