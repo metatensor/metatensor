@@ -115,6 +115,20 @@ impl TensorMap {
         return ptr;
     }
 
+    /// Clone this `TensorMap`, cloning all the data and metadata contained inside.
+    ///
+    /// This can fail if the external data held inside an `eqs_array_t` can not
+    /// be cloned.
+    #[inline]
+    pub fn try_clone(&self) -> Result<TensorMap, Error> {
+        let ptr = unsafe {
+            crate::c_api::eqs_tensormap_copy(self.ptr)
+        };
+        crate::errors::check_ptr(ptr)?;
+
+        return Ok(unsafe { TensorMap::from_raw(ptr) });
+    }
+
     /// Get the keys defined in this `TensorMap`
     #[inline]
     pub fn keys(&self) -> &Labels {

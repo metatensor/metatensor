@@ -1,3 +1,4 @@
+import copy
 import ctypes
 from typing import List, Union
 
@@ -70,6 +71,17 @@ class TensorMap:
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
             self._lib.eqs_tensormap_free(self._ptr)
+
+    def __deepcopy__(self, _memodict):
+        new_ptr = self._lib.eqs_tensormap_copy(self._ptr)
+        return TensorMap._from_ptr(new_ptr)
+
+    def copy(self) -> "TensorMap":
+        """
+        Get a deep copy of this TensorMap, including all the (potentially
+        non Python-owned) data and metadata
+        """
+        return copy.deepcopy(self)
 
     def __iter__(self):
         keys = self.keys

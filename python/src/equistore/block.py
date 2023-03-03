@@ -106,7 +106,8 @@ class TensorBlock:
 
     def copy(self) -> "TensorBlock":
         """
-        Get a deep copy of this block
+        Get a deep copy of this block, including all the (potentially non
+        Python-owned) data and metadata
         """
         return copy.deepcopy(self)
 

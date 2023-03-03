@@ -440,6 +440,8 @@ extern "C" {
     #[must_use]
     #[doc = " Free the memory associated with a `tensor` previously created with\n `eqs_tensormap`.\n\n If `tensor` is `NULL`, this function does nothing.\n\n @param tensor pointer to an existing tensor map, or `NULL`\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
     pub fn eqs_tensormap_free(tensor: *mut eqs_tensormap_t) -> eqs_status_t;
+    #[doc = " Make a copy of an `eqs_tensormap_t`.\n\n The memory allocated by this function and the blocks should be released\n using `eqs_tensormap_free`.\n\n @param tensor existing tensor to copy\n\n @returns A pointer to the newly allocated tensor, or a `NULL` pointer in\n          case of error. In case of error, you can use `eqs_last_error()`\n          to get the error message."]
+    pub fn eqs_tensormap_copy(tensor: *const eqs_tensormap_t) -> *mut eqs_tensormap_t;
     #[must_use]
     #[doc = " Get the keys for the given `tensor` map.\n\n This function allocates memory for `keys` which must be released\n `eqs_labels_free` when you don't need it anymore.\n\n @param tensor pointer to an existing tensor map\n @param keys pointer to be filled with the keys of the tensor map\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
     pub fn eqs_tensormap_keys(

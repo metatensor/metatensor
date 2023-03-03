@@ -161,6 +161,40 @@ TEST_CASE("TensorMap") {
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
     }
+
+    SECTION("clone") {
+        auto blocks = std::vector<TensorBlock>();
+        blocks.push_back(TensorBlock(
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            {},
+            Labels({"properties"}, {{5}, {3}})
+        ));
+        auto tensor = TensorMap(Labels({"keys"}, {{0}}), std::move(blocks));
+
+        // This should be fine
+        auto clone = tensor.clone();
+
+        class BrokenDataArray: public equistore::SimpleDataArray {
+        public:
+            BrokenDataArray(std::vector<size_t> shape): equistore::SimpleDataArray(shape) {}
+
+            std::unique_ptr<DataArrayBase> copy() const override {
+                throw std::runtime_error("can not copy this!");
+            }
+        };
+
+        blocks = std::vector<TensorBlock>();
+        blocks.push_back(TensorBlock(
+            std::unique_ptr<BrokenDataArray>(new BrokenDataArray({3, 2})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            {},
+            Labels({"properties"}, {{5}, {3}})
+        ));
+        tensor = TensorMap(Labels({"keys"}, {{0}}), std::move(blocks));
+
+        CHECK_THROWS_WITH(tensor.clone(), "external error: calling eqs_array_t.create failed (status -1)");
+    }
 }
 
 

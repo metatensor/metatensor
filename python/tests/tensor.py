@@ -5,6 +5,17 @@ from utils import test_large_tensor_map, test_tensor_map
 
 
 class TestTensorMap(unittest.TestCase):
+    def test_copy(self):
+        tensor = test_tensor_map()
+        copy = tensor.copy()
+        block_1_values_id = id(tensor.block(0).values)
+
+        del tensor
+
+        self.assertNotEqual(id(copy.block(0).values), block_1_values_id)
+
+        self.assertTrue(np.all(copy.block(0).values == np.full((3, 1, 1), 1.0)))
+
     def test_keys(self):
         tensor = test_tensor_map()
         self.assertEqual(tensor.keys.names, ("key_1", "key_2"))

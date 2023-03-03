@@ -1470,9 +1470,9 @@ public:
         eqs_tensormap_free(tensor_);
     }
 
-    /// TensorMap can not be copy constructed
+    /// TensorMap can NOT be copy constructed, use TensorMap::clone instead
     TensorMap(const TensorMap&) = delete;
-    /// TensorMap can not be copy assigned
+    /// TensorMap can not be copy assigned, use TensorMap::clone instead
     TensorMap& operator=(const TensorMap&) = delete;
 
     /// TensorMap can be move constructed
@@ -1488,6 +1488,13 @@ public:
         other.tensor_ = nullptr;
 
         return *this;
+    }
+
+    /// Make a copy of this `TensorMap`, including all the data contained inside
+    TensorMap clone() const {
+        auto copy = eqs_tensormap_copy(this->tensor_);
+        details::check_pointer(copy);
+        return TensorMap(copy);
     }
 
     /// Get the set of keys labeling the blocks in this tensor map
