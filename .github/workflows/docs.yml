@@ -7,6 +7,10 @@ on:
   pull_request:
     # Check all PR
 
+# We need write permission on PR to post the RTD link
+permissions:
+  pull-requests: write
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-20.04
