@@ -1,6 +1,7 @@
 import ctypes
 import functools
 import operator
+import os
 
 import numpy as np
 
@@ -54,3 +55,9 @@ def _ptr_to_const_ndarray(ptr, shape, dtype):
     array = _ptr_to_ndarray(ptr, shape, dtype)
     array.flags["WRITEABLE"] = False
     return array
+
+
+cmake_prefix_path = os.path.join(os.path.dirname(__file__), "lib", "cmake")
+"""
+Path containing the CMake configuration files for the underlying C library
+"""

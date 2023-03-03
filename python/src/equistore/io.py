@@ -81,7 +81,7 @@ def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap
     This is an advanced functionality, which should not be needed by most users.
 
     This function allows to specify the kind of array to use when loading the
-    data through the create_array callback. This callback should take three
+    data through the `create_array` callback. This callback should take three
     arguments: a pointer to the shape, the number of elements in the shape, and
     a pointer to the ``eqs_array_t`` to be filled.
 
