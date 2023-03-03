@@ -31,7 +31,7 @@
 
 pub mod c_api;
 
-mod errors;
+pub mod errors;
 pub use self::errors::Error;
 
 mod data;
