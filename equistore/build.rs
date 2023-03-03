@@ -56,6 +56,7 @@ fn main() {
 
     let build = cmake::Config::new(equistore_core)
         .define("CARGO_EXE", env!("CARGO"))
+        .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
         .build();
 
     println!("cargo:rustc-link-search=native={}/lib", build.display());
