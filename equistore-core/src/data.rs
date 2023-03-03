@@ -200,19 +200,6 @@ impl Drop for eqs_array_t {
     }
 }
 
-impl Clone for eqs_array_t {
-    fn clone(&self) -> eqs_array_t {
-        if let Some(function) = self.copy {
-            let mut new_array = eqs_array_t::null();
-            let status  = unsafe { function(self.ptr, &mut new_array) };
-            assert!(status.is_success(), "calling eqs_array_t.copy failed");
-            return new_array;
-        } else {
-            panic!("function eqs_array_t.copy is not set")
-        }
-    }
-}
-
 impl eqs_array_t {
     /// make a raw (member by member) copy of the array. Contrary to
     /// `eqs_array_t::clone`, the returned array refers to the same
@@ -423,6 +410,25 @@ impl eqs_array_t {
         }
 
         return Ok(data_storage);
+    }
+
+    /// Try to copy this `eqs_array_t`. This can fail if the external data can
+    /// not be copied for some reason
+    pub fn try_clone(&self) -> Result<eqs_array_t, Error> {
+        let function = self.copy.expect("eqs_array_t.copy function is NULL");
+
+        let mut new_array = eqs_array_t::null();
+        let status = unsafe {
+            function(self.ptr, &mut new_array)
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling eqs_array_t.create failed".into()
+            });
+        }
+
+        return Ok(new_array);
     }
 
     /// Set entries in `self` (the current array) taking data from the `input`

@@ -30,7 +30,7 @@ impl<'a, T> IntoIterator for &'a ImmutableVec<T> {
 }
 
 /// Single data array with the corresponding metadata inside a `TensorBlock`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BasicBlock {
     pub data: eqs_array_t,
     pub samples: Arc<Labels>,
@@ -167,11 +167,24 @@ impl BasicBlock {
 
         Ok(())
     }
+
+    /// Try to copy this `BasicBlock`. This can fail if we are unable to copy
+    /// the underlying `eqs_array_t` data array
+    pub fn try_clone(&self) -> Result<BasicBlock, Error> {
+        let data = self.data.try_clone()?;
+
+        Ok(BasicBlock {
+            data,
+            samples: Arc::clone(&self.samples),
+            components: self.components.clone(),
+            properties: Arc::clone(&self.properties),
+        })
+    }
 }
 
 /// A single block in a `TensorMap`, containing both values & optionally
 /// gradients of these values w.r.t. any relevant quantity.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TensorBlock {
     values: BasicBlock,
     gradients: HashMap<String, BasicBlock>,
@@ -194,6 +207,23 @@ impl TensorBlock {
             gradients: HashMap::new(),
             gradient_parameters: Vec::new(),
         })
+    }
+
+    /// Try to copy this `TensorBlock`. This can fail if we are unable to copy
+    /// one of the underlying `eqs_array_t` data arrays
+    pub fn try_clone(&self) -> Result<TensorBlock, Error> {
+        let values = self.values.try_clone()?;
+        let mut gradients = HashMap::new();
+        for (parameter, basic_block) in &self.gradients {
+            gradients.insert(parameter.clone(), basic_block.try_clone()?);
+        }
+        let gradient_parameters = self.gradient_parameters.clone();
+
+        return Ok(TensorBlock {
+            values,
+            gradients,
+            gradient_parameters
+        });
     }
 
     /// Get the values data and metadata in this block
