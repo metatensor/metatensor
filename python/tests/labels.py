@@ -158,6 +158,25 @@ class TestLabels(unittest.TestCase):
             "invalid parameter: 'not an ident' is not a valid label name",
         )
 
+    def test_zero_length_label(self):
+        label = Labels(["sample", "structure", "atom"], np.array([]))
+        self.assertEqual(len(label), 0)
+
+    def test_labels_single(self):
+        label = Labels.single()
+        self.assertEqual(label.names, ("_",))
+        self.assertEqual(label.shape, (1,))
+
+    def test_labels_empty(self):
+        names = (
+            "foo",
+            "bar",
+            "baz",
+        )
+        label = Labels.empty(names)
+        self.assertEqual(label.names, names)
+        self.assertEqual(len(label), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

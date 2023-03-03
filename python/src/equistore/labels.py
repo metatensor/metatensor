@@ -69,12 +69,6 @@ class Labels(np.ndarray):
             if key != "_eqs_labels_t":
                 raise ValueError(f"unexpected kwarg to Labels: {key}")
 
-        if not isinstance(values, np.ndarray):
-            raise ValueError("values parameter must be a numpy ndarray")
-
-        if len(values.shape) != 2:
-            raise ValueError("values parameter must be a 2D array")
-
         if isinstance(names, str):
             if len(names) == 0:
                 names = tuple()
@@ -82,6 +76,15 @@ class Labels(np.ndarray):
                 names = tuple(names)
         else:
             names = tuple(str(n) for n in names)
+
+        if not isinstance(values, np.ndarray):
+            raise ValueError("values parameter must be a numpy ndarray")
+
+        if len(values) == 0:
+            # if empty array of values we use the required correct 2d shape
+            values = np.zeros((0, len(names)), dtype=np.int32)
+        elif len(values.shape) != 2:
+            raise ValueError("values parameter must be a 2D array")
 
         if len(names) != values.shape[1]:
             raise ValueError(
@@ -150,6 +153,15 @@ class Labels(np.ndarray):
         contains a single block).
         """
         return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
+
+    @staticmethod
+    def empty(names) -> "Labels":
+        """Label with given names but no values.
+
+        :param names: names of the variables in the new labels, in the case of a single
+                      name also a single string can be given: ``names = "name"``
+        """
+        return Labels(names=names, values=np.array([]))
 
     def as_namedtuples(self):
         """
