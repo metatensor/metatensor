@@ -152,7 +152,7 @@ add_custom_target(cargo-build-equistore ALL
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
-    COMMENT "Building ${EQUISTORE_LIB_NAME} with cargo"
+    COMMENT "Building ${EQUISTORE_SHARED_LIB_NAME} and ${EQUISTORE_STATIC_LIB_NAME} with cargo"
 )
 
 add_custom_command(TARGET cargo-build-equistore
