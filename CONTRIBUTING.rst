@@ -1,6 +1,7 @@
 Contribution via merge requests are always welcome. Source code is available
 from `Github`_. Before submitting a merge request, please open an issue to
-discuss your changes. Use the only `master` branch for submitting your requests.
+discuss your changes. Use the only `master` as reference branch for submitting
+your requests.
 
 .. _`Github` : https://github.com/lab-cosmo/equistore
 
