@@ -19,7 +19,7 @@ mod keys_to_properties;
 /// It provides functions to merge blocks together by moving some of these keys
 /// to the samples or properties labels of the blocks, transforming the sparse
 /// representation of the data to a dense one.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TensorMap {
     keys: Arc<Labels>,
     blocks: Vec<TensorBlock>,
@@ -144,6 +144,20 @@ impl TensorMap {
         })
     }
 
+    /// Try to copy this `TensorMap`. This can fail if we are unable to copy the
+    /// underlying `eqs_array_t` data array
+    pub fn try_clone(&self) -> Result<TensorMap, Error> {
+        let mut blocks = Vec::new();
+        for block in &self.blocks {
+            blocks.push(block.try_clone()?);
+        }
+
+        return Ok(TensorMap {
+            keys: Arc::clone(&self.keys),
+            blocks
+        });
+    }
+
     /// Get the list of blocks in this `TensorMap`
     pub fn blocks(&self) -> &[TensorBlock] {
         &self.blocks
@@ -214,7 +228,7 @@ impl TensorMap {
     /// Move the given variables from the component labels to the property labels
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&self, variables: &[&str]) -> Result<TensorMap, Error> {
-        let mut clone = self.clone();
+        let mut clone = self.try_clone()?;
 
         if variables.is_empty() {
             return Ok(clone);

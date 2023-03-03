@@ -134,7 +134,7 @@ pub unsafe extern fn eqs_block_copy(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         check_pointers!(block);
-        let new_block = (*block).clone();
+        let new_block = (*block).try_clone()?;
         let boxed = Box::new(eqs_block_t(new_block));
 
         // force the closure to capture the full unwind_wrapper, not just

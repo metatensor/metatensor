@@ -125,7 +125,6 @@ pub unsafe extern fn eqs_tensormap_free(tensor: *mut eqs_tensormap_t) -> eqs_sta
     })
 }
 
-
 /// Get the keys for the given `tensor` map.
 ///
 /// This function allocates memory for `keys` which must be released
