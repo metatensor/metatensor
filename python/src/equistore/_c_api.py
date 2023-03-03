@@ -196,6 +196,11 @@ def setup_functions(lib):
     ]
     lib.eqs_tensormap_free.restype = _check_status
 
+    lib.eqs_tensormap_copy.argtypes = [
+        POINTER(eqs_tensormap_t),
+    ]
+    lib.eqs_tensormap_copy.restype = POINTER(eqs_tensormap_t)
+
     lib.eqs_tensormap_keys.argtypes = [
         POINTER(eqs_tensormap_t),
         POINTER(eqs_labels_t),

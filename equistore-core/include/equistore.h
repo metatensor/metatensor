@@ -531,6 +531,20 @@ struct eqs_tensormap_t *eqs_tensormap(struct eqs_labels_t keys,
 eqs_status_t eqs_tensormap_free(struct eqs_tensormap_t *tensor);
 
 /**
+ * Make a copy of an `eqs_tensormap_t`.
+ *
+ * The memory allocated by this function and the blocks should be released
+ * using `eqs_tensormap_free`.
+ *
+ * @param tensor existing tensor to copy
+ *
+ * @returns A pointer to the newly allocated tensor, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `eqs_last_error()`
+ *          to get the error message.
+ */
+struct eqs_tensormap_t *eqs_tensormap_copy(const struct eqs_tensormap_t *tensor);
+
+/**
  * Get the keys for the given `tensor` map.
  *
  * This function allocates memory for `keys` which must be released

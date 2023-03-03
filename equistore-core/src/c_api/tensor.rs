@@ -125,6 +125,42 @@ pub unsafe extern fn eqs_tensormap_free(tensor: *mut eqs_tensormap_t) -> eqs_sta
     })
 }
 
+/// Make a copy of an `eqs_tensormap_t`.
+///
+/// The memory allocated by this function and the blocks should be released
+/// using `eqs_tensormap_free`.
+///
+/// @param tensor existing tensor to copy
+///
+/// @returns A pointer to the newly allocated tensor, or a `NULL` pointer in
+///          case of error. In case of error, you can use `eqs_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern fn eqs_tensormap_copy(
+    tensor: *const eqs_tensormap_t,
+) -> *mut eqs_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers!(tensor);
+        let new_tensor = (*tensor).try_clone()?;
+        let boxed = Box::new(eqs_tensormap_t(new_tensor));
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+
 /// Get the keys for the given `tensor` map.
 ///
 /// This function allocates memory for `keys` which must be released

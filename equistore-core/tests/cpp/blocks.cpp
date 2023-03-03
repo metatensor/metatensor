@@ -50,7 +50,6 @@ TEST_CASE("Blocks") {
         CHECK(block.properties() == Labels({"properties"}, {{5}, {3}}));
     }
 
-
     SECTION("gradients") {
         auto components = std::vector<Labels>();
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
@@ -96,5 +95,36 @@ TEST_CASE("Blocks") {
             block.gradient("not there").data(),
             "invalid parameter: can not find gradients with respect to 'not there' in this block"
         );
+    }
+
+    SECTION("clone") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            {},
+            Labels({"properties"}, {{5}, {3}})
+        );
+
+        // This should be fine
+        auto clone = block.clone();
+
+
+        class BrokenDataArray: public equistore::SimpleDataArray {
+        public:
+            BrokenDataArray(std::vector<size_t> shape): equistore::SimpleDataArray(shape) {}
+
+            std::unique_ptr<DataArrayBase> copy() const override {
+                throw std::runtime_error("can not copy this!");
+            }
+        };
+
+        block = TensorBlock(
+            std::unique_ptr<BrokenDataArray>(new BrokenDataArray({3, 2})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            {},
+            Labels({"properties"}, {{5}, {3}})
+        );
+
+        CHECK_THROWS_WITH(block.clone(), "external error: calling eqs_array_t.create failed (status -1)");
     }
 }

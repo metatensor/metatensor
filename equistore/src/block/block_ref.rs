@@ -215,9 +215,6 @@ impl<'a> TensorBlockRef<'a> {
     ///
     /// This can fail if the external data held inside an `eqs_array_t` can not
     /// be cloned.
-    ///
-    /// This can not use `std::convert::TryClone` since the output is not a
-    /// `TensorBlockRef`.
     #[inline]
     pub fn try_clone(&self) -> Result<TensorBlock, Error> {
         let ptr = unsafe {
