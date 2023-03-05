@@ -3,7 +3,7 @@ import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
 
 
-def test_tensor_map():
+def tensor_map():
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
@@ -81,12 +81,12 @@ def test_tensor_map():
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
 
 
-def test_large_tensor_map():
+def large_tensor_map():
     """
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    tensor = test_tensor_map()
+    tensor = tensor_map()
     block_list = [block.copy() for _, block in tensor]
 
     for i in range(8):
