@@ -44,7 +44,7 @@ def _reduce_over_samples_block(
 
         samples_label = Labels(
             remaining_samples,
-            np.empty((0, len(remaining_samples)), dtype=np.int32),
+            np.zeros((0, len(remaining_samples)), dtype=np.int32),
         )
 
         result_block = TensorBlock(
@@ -132,13 +132,12 @@ def _reduce_over_samples_block(
             # For any function of the TensorBlock values x(t):
             # f(x(t))-> df(x(t))/dx * dx/dt
             # and dx/dt == 0.
-            for parameter, gradient in block.gradients():
-                result_block.add_gradient(
-                    parameter,
-                    gradient.data,
-                    gradient.samples,
-                    gradient.components,
-                )
+            result_block.add_gradient(
+                parameter,
+                gradient.data,
+                gradient.samples,
+                gradient.components,
+            )
             return result_block
 
         gradient_samples = gradient.samples

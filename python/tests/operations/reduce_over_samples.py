@@ -962,13 +962,13 @@ class TestZeroSamples(unittest.TestCase):
 
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_sqrt = equistore.std_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
         tensor_variance = equistore.variance_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
         self.assertTrue(equistore.equal(result_tensor, tensor_variance))
-        self.assertTrue(equistore.equal(result_tensor, tensor_sqrt))
+        self.assertTrue(equistore.equal(result_tensor, tensor_std))
 
         block = TensorBlock(
             values=np.zeros([0, 1]),
@@ -989,21 +989,15 @@ class TestZeroSamples(unittest.TestCase):
 
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_sqrt = equistore.std_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
         tensor_variance = equistore.variance_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
         self.assertTrue(equistore.equal(result_tensor, tensor_variance))
-        self.assertTrue(equistore.equal(result_tensor, tensor_sqrt))
+        self.assertTrue(equistore.equal(result_tensor, tensor_std))
 
     def test_zeros_sample_block_gradient(self):
-        # block = TensorBlock(
-        #     values=np.zeros([2, 1]),
-        #     properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-        #     samples=Labels(["structure"], np.array([[0], [1]])),
-        #     components=[],
-        # )
         block = TensorBlock(
             values=np.array(
                 [[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54], [3.5, 5.3, 6.87]]
@@ -1029,7 +1023,9 @@ class TestZeroSamples(unittest.TestCase):
         block.add_gradient(
             parameter="positions",
             data=np.zeros((0, 3)),
-            samples=Labels(["sample", "structure"], np.empty((0, 2), dtype=np.int32)),
+            samples=Labels(
+                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
+            ),
             components=[],
         )
 
@@ -1051,7 +1047,9 @@ class TestZeroSamples(unittest.TestCase):
         sum_block.add_gradient(
             parameter="positions",
             data=np.zeros((0, 3)),
-            samples=Labels(["sample", "structure"], np.empty((0, 2), dtype=np.int32)),
+            samples=Labels(
+                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
+            ),
             components=[],
         )
 
@@ -1060,7 +1058,7 @@ class TestZeroSamples(unittest.TestCase):
 
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_sqrt = equistore.std_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
         tensor_variance = equistore.variance_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.allclose(tensor_sum_result, tensor_sum, atol=1e-14))
@@ -1068,7 +1066,7 @@ class TestZeroSamples(unittest.TestCase):
         self.assertTrue(
             equistore.equal(tensor_sum, tensor_variance, only_metadata=True)
         )
-        self.assertTrue(equistore.equal(tensor_sum, tensor_sqrt, only_metadata=True))
+        self.assertTrue(equistore.equal(tensor_sum, tensor_std, only_metadata=True))
 
 
 # TODO: add tests with torch & torch scripting/tracing
