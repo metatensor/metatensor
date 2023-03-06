@@ -28,11 +28,43 @@ def _reduce_over_samples_block(
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean", "variance", "std"]
-
     # get the indices of the selected sample
     sample_selected = [
         block_samples.names.index(sample) for sample in remaining_samples
     ]
+
+    # checks if it is a zero sample TensorBlock
+    if block.samples.shape[0] == 0:
+        # Here is different from the general case where we use Labels.single() if
+        # if len(remaining_samples) == 0
+        # Labels.single() cannot be used because Labels.single() has not
+        # an np.empty() array as values but has one values, it has dimension (1,...)
+        # we want (0,...).
+        # here if len(remaining_samples) == 0 -> Labels([], shape=(0, 0), dtype=int32)
+
+        samples_label = Labels(
+            remaining_samples,
+            np.zeros((0, len(remaining_samples)), dtype=np.int32),
+        )
+
+        result_block = TensorBlock(
+            values=block.values,
+            samples=samples_label,
+            components=block.components,
+            properties=block.properties,
+        )
+        # The Gradient does not change because the only that matters for the gradients
+        # are the samples to which they are connected, but in this case there are no
+        # samples in the TensorBlock
+        for parameter, gradient in block.gradients():
+            result_block.add_gradient(
+                parameter,
+                gradient.data,
+                gradient.samples,
+                gradient.components,
+            )
+        return result_block
+
     # reshaping the samples in a 2D array
     samples = block_samples.view(dtype=np.int32).reshape(block_samples.shape[0], -1)
     # get which samples will still be there after reduction
@@ -93,6 +125,21 @@ def _reduce_over_samples_block(
     )
 
     for parameter, gradient in block.gradients():
+        # check if all gradients are zeros
+        if gradient.samples.shape[0] == 0:
+            # The Gradient does not change because, if they are all zeros, also the
+            # gradients of a reduce operation is zero.
+            # For any function of the TensorBlock values x(t):
+            # f(x(t))-> df(x(t))/dx * dx/dt
+            # and dx/dt == 0.
+            result_block.add_gradient(
+                parameter,
+                gradient.data,
+                gradient.samples,
+                gradient.components,
+            )
+            return result_block
+
         gradient_samples = gradient.samples
         # here we need to copy because we want to modify the samples array
         samples = (
