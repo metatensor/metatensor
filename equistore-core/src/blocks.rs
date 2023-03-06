@@ -96,7 +96,7 @@ fn check_component_labels(components: &[Arc<Labels>]) -> Result<(), Error> {
     for (i, component) in components.iter().enumerate() {
         if component.size() != 1 {
             return Err(Error::InvalidParameter(format!(
-                "component labels must have a single variable, got {}: [{}] for component {}",
+                "component labels must have a single dimension, got {}: [{}] for component {}",
                 component.size(), component.names().join(", "), i
             )));
         }
@@ -121,19 +121,19 @@ impl BasicBlock {
         return Ok(BasicBlock { data, samples, components, properties });
     }
 
-    fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
-        debug_assert!(!variables.is_empty());
+    fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
+        debug_assert!(!dimensions.is_empty());
 
         let mut component_axis = None;
         for (component_i, component) in self.components.iter().enumerate() {
-            if component.names() == variables {
+            if component.names() == dimensions {
                 component_axis = Some(component_i);
                 break;
             }
         }
 
         let component_axis = component_axis.ok_or_else(|| Error::InvalidParameter(format!(
-            "unable to find [{}] in the components ", variables.join(", ")
+            "unable to find [{}] in the components ", dimensions.join(", ")
         )))?;
 
         let moved_component = self.components.0.remove(component_axis);
@@ -297,13 +297,13 @@ impl TensorBlock {
 
         if samples.size() == 0 {
             return Err(Error::InvalidParameter(
-                "gradients samples must have at least a 'sample' variable, we got none".into()
+                "gradients samples must have at least one dimension named 'sample', we got none".into()
             ))
         }
 
         if samples.size() < 1 || samples.names()[0] != "sample" {
             return Err(Error::InvalidParameter(format!(
-                "'{}' is not valid for the first variable in the gradients \
+                "'{}' is not valid for the first dimension in the gradients \
                 samples labels. It must must be 'sample'", samples.names()[0])
             ))
         }
@@ -348,14 +348,14 @@ impl TensorBlock {
         return Ok(())
     }
 
-    pub(crate) fn components_to_properties(&mut self, variables: &[&str]) -> Result<(), Error> {
-        if variables.is_empty() {
+    pub(crate) fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
+        if dimensions.is_empty() {
             return Ok(());
         }
 
-        self.values.components_to_properties(variables)?;
+        self.values.components_to_properties(dimensions)?;
         for gradient in self.gradients.values_mut() {
-            gradient.components_to_properties(variables)?;
+            gradient.components_to_properties(dimensions)?;
         }
 
         Ok(())
@@ -461,7 +461,7 @@ mod tests {
         let result = TensorBlock::new(data, samples, vec![Arc::new(components.finish())], properties);
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: component labels must have a single variable, \
+            "invalid parameter: component labels must have a single dimension, \
             got 2: [component_1, component_2] for component 0"
         );
     }

@@ -17,8 +17,8 @@ class TestBlocks:
 
         with pytest.raises(
             equistore.status.EquistoreError,
-            match="""invalid parameter: gradients samples must have at least a """
-            """'sample' variable, we got none""",
+            match="""invalid parameter: gradients samples must have at least """
+            """one dimension named 'sample', we got none""",
         ):
             block.add_gradient(
                 "parameter",

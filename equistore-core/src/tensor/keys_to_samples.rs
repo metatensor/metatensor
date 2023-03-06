@@ -6,14 +6,14 @@ use crate::{Error, TensorBlock};
 use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
-use super::utils::{KeyAndBlock, remove_variables_from_keys, merge_samples, merge_gradient_samples};
+use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
 
 impl TensorMap {
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// samples axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the sample labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the sample labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the sample axis.
     ///
     /// `keys_to_move` must be empty (`keys_to_move.count() == 0`), and the new
@@ -37,7 +37,7 @@ impl TensorMap {
         }
 
         let names_to_move = keys_to_move.names();
-        let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
+        let splitted_keys = remove_dimensions_from_keys(&self.keys, &names_to_move)?;
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
@@ -46,7 +46,7 @@ impl TensorMap {
                 .zip(&self.blocks)
                 .map(|(key, block)| {
                     let mut moved_key = Vec::new();
-                    for &i in &splitted_keys.variables_positions {
+                    for &i in &splitted_keys.dimensions_positions {
                         moved_key.push(key[i]);
                     }
 
@@ -71,7 +71,7 @@ impl TensorMap {
                         let block = &self.blocks[i];
                         let key = &self.keys[i];
                         let mut moved_key = Vec::new();
-                        for &i in &splitted_keys.variables_positions {
+                        for &i in &splitted_keys.dimensions_positions {
                             moved_key.push(key[i]);
                         }
 

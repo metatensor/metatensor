@@ -14,8 +14,8 @@ class Labels(np.ndarray):
     A set of labels used to carry metadata associated with a tensor map.
 
     This is similar to a list of ``n_entries`` named tuples, but stored as a 2D
-    array of shape ``(n_entries, n_variables)``, with a set of names associated
-    with the columns of this array (often called *variables*). Each row/entry in
+    array of shape ``(n_entries, n_dimensions)``, with a set of names associated
+    with the columns of this array (often called *dimensions*). Each row/entry in
     this array is unique, and they are often (but not always) sorted in
     lexicographic order.
 
@@ -59,9 +59,9 @@ class Labels(np.ndarray):
 
     def __new__(cls, names: Union[List[str], str], values: np.ndarray, **kwargs):
         """
-        :param names: names of the variables in the new labels, in the case of a single
+        :param names: names of the dimensions in the new labels, in the case of a single
                       name also a single string can be given: ``names = "name"``
-        :param values: values of the variables, this needs to be a 2D array of
+        :param values: values of the dimensions, this needs to be a 2D array of
             ``np.int32`` values
         """
 
@@ -126,7 +126,7 @@ class Labels(np.ndarray):
 
     def __array_finalize__(self, obj):
         # do not keep the Rust pointer around around, since one could be taking only a
-        # subset of the variables (`samples[["structure", "center"]]`) and this
+        # subset of the dimensions (`samples[["structure", "center"]]`) and this
         # would break `position` and `__contains__`
         self._eqs_labels_t = None
 
@@ -142,7 +142,7 @@ class Labels(np.ndarray):
 
     @property
     def names(self) -> List[str]:
-        """Names of the columns/variables used for these labels"""
+        """Names of the columns/dimensions used for these labels"""
         return self.dtype.names or []
 
     @staticmethod
@@ -158,7 +158,7 @@ class Labels(np.ndarray):
     def empty(names) -> "Labels":
         """Label with given names but no values.
 
-        :param names: names of the variables in the new labels, in the case of a single
+        :param names: names of the dimensions in the new labels, in the case of a single
                       name also a single string can be given: ``names = "name"``
         """
         return Labels(names=names, values=np.array([]))

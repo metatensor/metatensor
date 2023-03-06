@@ -192,7 +192,7 @@ impl TensorMap {
     /// Get the index of blocks matching the given selection.
     ///
     /// The selection must contains a single entry, defining the requested key
-    /// or keys. If the selection contains only a subset of the variables of the
+    /// or keys. If the selection contains only a subset of the dimensions of the
     /// keys, there can be multiple matching blocks.
     #[inline]
     pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
@@ -279,11 +279,11 @@ impl TensorMap {
         return blocks;
     }
 
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// samples axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the sample labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the sample labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the sample axis.
     ///
     /// `keys_to_move` must be empty (`keys_to_move.count() == 0`), and the new
@@ -312,11 +312,11 @@ impl TensorMap {
         return Ok(unsafe { TensorMap::from_raw(ptr) });
     }
 
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the property labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the property labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the property axis.
     ///
     /// If `keys_to_move` does not contains any entries (`keys_to_move.count()
@@ -352,15 +352,15 @@ impl TensorMap {
         return Ok(unsafe { TensorMap::from_raw(ptr) });
     }
 
-    /// Move the given variables from the component labels to the property
+    /// Move the given dimensions from the component labels to the property
     /// labels for each block in this `TensorMap`.
     #[inline]
-    pub fn components_to_properties(&self, variables: &[&str]) -> Result<TensorMap, Error> {
-        let variables_c = variables.iter()
+    pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
+        let dimensions_c = dimensions.iter()
             .map(|&v| CString::new(v).expect("unexpected NULL byte"))
             .collect::<Vec<_>>();
 
-        let variables_ptr = variables_c.iter()
+        let dimensions_ptr = dimensions_c.iter()
             .map(|v| v.as_ptr())
             .collect::<Vec<_>>();
 
@@ -368,8 +368,8 @@ impl TensorMap {
         let ptr = unsafe {
             crate::c_api::eqs_tensormap_components_to_properties(
                 self.ptr,
-                variables_ptr.as_ptr(),
-                variables.len(),
+                dimensions_ptr.as_ptr(),
+                dimensions.len(),
             )
         };
 

@@ -272,7 +272,7 @@ def sum_over_samples(
     corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
-    ``samples_names`` indicates over which variables in the samples the sum is
+    ``samples_names`` indicates over which dimensions in the samples the sum is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
@@ -336,7 +336,7 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
-    ``samples_names`` indicates over which variables in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
@@ -358,7 +358,7 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
     performing the std deviation of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
 
-    ``samples_names`` indicates over which variables in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
@@ -387,7 +387,7 @@ def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> Tensor
     performing the variance of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
 
-    ``samples_names`` indicates over which variables in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:

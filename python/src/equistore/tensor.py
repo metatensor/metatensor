@@ -299,11 +299,11 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys variables along the
+        Merge blocks with the same value for selected keys dimensions along the
         samples axis.
 
-        The variables (names) of ``keys_to_move`` will be moved from the keys to
-        the sample labels, and blocks with the same remaining keys variables
+        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
+        the sample labels, and blocks with the same remaining keys dimensions
         will be merged together along the sample axis.
 
         If ``keys_to_move`` is a set of :py:class:`Labels`, it must be empty
@@ -329,17 +329,19 @@ class TensorMap:
         )
         return TensorMap._from_ptr(ptr)
 
-    def components_to_properties(self, variables: Union[str, List[str]]) -> "TensorMap":
+    def components_to_properties(
+        self, dimensions: Union[str, List[str]]
+    ) -> "TensorMap":
         """
-        Move the given variables from the component labels to the property labels
+        Move the given dimensions from the component labels to the property labels
         for each block.
 
-        :param variables: name of the component variables to move to the properties
+        :param dimensions: name of the component dimensions to move to the properties
         """
-        c_variables = _list_or_str_to_array_c_char(variables)
+        c_dimensions = _list_or_str_to_array_c_char(dimensions)
 
         ptr = self._lib.eqs_tensormap_components_to_properties(
-            self._ptr, c_variables, c_variables._length_
+            self._ptr, c_dimensions, c_dimensions._length_
         )
         return TensorMap._from_ptr(ptr)
 
@@ -350,11 +352,11 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys variables along the
+        Merge blocks with the same value for selected keys dimensions along the
         property axis.
 
-        The variables (names) of ``keys_to_move`` will be moved from the keys to
-        the property labels, and blocks with the same remaining keys variables
+        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
+        the property labels, and blocks with the same remaining keys dimensions
         will be merged together along the property axis.
 
         If ``keys_to_move`` does not contains any entries (i.e.

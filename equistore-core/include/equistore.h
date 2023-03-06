@@ -75,7 +75,7 @@ typedef int32_t eqs_status_t;
  *
  * This is similar to a list of `count` named tuples, but stored as a 2D array
  * of shape `(count, size)`, with a set of names associated with the columns of
- * this array (often called *variables*). Each row/entry in this array is
+ * this array (often called *dimensions*). Each row/entry in this array is
  * unique, and they are often (but not always) sorted in lexicographic order.
  *
  * `eqs_labels_t` with a non-NULL `internal_ptr_` correspond to a
@@ -88,19 +88,19 @@ typedef struct eqs_labels_t {
    */
   void *internal_ptr_;
   /**
-   * Names of the variables composing this set of labels. There are `size`
+   * Names of the dimensions composing this set of labels. There are `size`
    * elements in this array, each being a NULL terminated UTF-8 string.
    */
   const char *const *names;
   /**
    * Pointer to the first element of a 2D row-major array of 32-bit signed
-   * integer containing the values taken by the different variables in
+   * integer containing the values taken by the different dimensions in
    * `names`. Each row has `size` elements, and there are `count` rows in
    * total.
    */
   const int32_t *values;
   /**
-   * Number of variables/size of a single entry in the set of labels
+   * Number of dimensions/size of a single entry in the set of labels
    */
   uintptr_t size;
   /**
@@ -581,7 +581,7 @@ eqs_status_t eqs_tensormap_block_by_id(struct eqs_tensormap_t *tensor,
 
 /**
  * Get indices of the blocks in this `tensor` corresponding to the given
- * `selection`. The `selection` should have a subset of the names/variables of
+ * `selection`. The `selection` should have a subset of the names/dimensions of
  * the keys for this tensor map, and only one entry, describing the requested
  * blocks.
  *
@@ -606,11 +606,11 @@ eqs_status_t eqs_tensormap_blocks_matching(const struct eqs_tensormap_t *tensor,
                                            struct eqs_labels_t selection);
 
 /**
- * Merge blocks with the same value for selected keys variables along the
+ * Merge blocks with the same value for selected keys dimensions along the
  * property axis.
  *
- * The variables (names) of `keys_to_move` will be moved from the keys to
- * the property labels, and blocks with the same remaining keys variables
+ * The dimensions (names) of `keys_to_move` will be moved from the keys to
+ * the property labels, and blocks with the same remaining keys dimensions
  * will be merged together along the property axis.
  *
  * If `keys_to_move` does not contains any entries (`keys_to_move.count
@@ -649,30 +649,30 @@ struct eqs_tensormap_t *eqs_tensormap_keys_to_properties(const struct eqs_tensor
                                                          bool sort_samples);
 
 /**
- * Move the given variables from the component labels to the property labels
+ * Move the given dimensions from the component labels to the property labels
  * for each block in this tensor map.
  *
- * `variables` must be an array of `variables_count` NULL-terminated strings,
+ * `dimensions` must be an array of `dimensions_count` NULL-terminated strings,
  * encoded as UTF-8.
  *
  * @param tensor pointer to an existing tensor map
- * @param variables names of the key variables to move to the properties
- * @param variables_count number of entries in the `variables` array
+ * @param dimensions names of the key dimensions to move to the properties
+ * @param dimensions_count number of entries in the `dimensions` array
  *
  * @returns The status code of this operation. If the status is not
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
 struct eqs_tensormap_t *eqs_tensormap_components_to_properties(struct eqs_tensormap_t *tensor,
-                                                               const char *const *variables,
-                                                               uintptr_t variables_count);
+                                                               const char *const *dimensions,
+                                                               uintptr_t dimensions_count);
 
 /**
- * Merge blocks with the same value for selected keys variables along the
+ * Merge blocks with the same value for selected keys dimensions along the
  * samples axis.
  *
- * The variables (names) of `keys_to_move` will be moved from the keys to
- * the sample labels, and blocks with the same remaining keys variables
+ * The dimensions (names) of `keys_to_move` will be moved from the keys to
+ * the sample labels, and blocks with the same remaining keys dimensions
  * will be merged together along the sample axis.
  *
  * `keys_to_move` must be empty (`keys_to_move.count == 0`), and the new
