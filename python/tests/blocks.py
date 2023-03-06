@@ -53,7 +53,7 @@ class TestBlocks:
     components (): []
     properties (2): ['properties']
     gradients: no"""
-        self.assertTrue(block.__repr__() == expected)
+        assert block.__repr__() == expected
 
     def test_repr_zero_samples_gradient(self):
         block = TensorBlock(
@@ -75,7 +75,7 @@ class TestBlocks:
     properties (2): ['properties']
     gradients: ['parameter']"""
 
-        self.assertTrue(block.__repr__() == expected_block)
+        assert block.__repr__() == expected_block
 
         expected_grad = """Gradient TensorBlock
 parameter: 'parameter'
@@ -84,7 +84,7 @@ components (): []
 properties (2): ['properties']"""
 
         gradient = block.gradient("parameter")
-        self.assertTrue(gradient.__repr__() == expected_grad)
+        assert gradient.__repr__() == expected_grad
 
     def test_block_no_components(self):
         block = TensorBlock(
