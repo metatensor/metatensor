@@ -1,10 +1,32 @@
 import numpy as np
+import pytest
 from numpy.testing import assert_equal
 
+import equistore.status
 from equistore import Labels, TensorBlock
 
 
 class TestBlocks:
+    def test_gradient_no_sample_error(self):
+        block = TensorBlock(
+            values=np.full((3, 2), -1.0),
+            samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+        )
+
+        with pytest.raises(
+            equistore.status.EquistoreError,
+            match="""invalid parameter: gradients samples must have at least a """
+            """'sample' variable, we got none""",
+        ):
+            block.add_gradient(
+                "parameter",
+                data=np.zeros((0, 2)),
+                samples=Labels([], np.empty((0, 2), dtype=np.int32)),
+                components=[],
+            )
+
     def test_repr(self):
         block = TensorBlock(
             values=np.full((3, 2), -1.0),
