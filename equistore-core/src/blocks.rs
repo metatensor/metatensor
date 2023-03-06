@@ -295,6 +295,12 @@ impl TensorBlock {
             ))
         }
 
+        if samples.size() == 0 {
+            return Err(Error::InvalidParameter(
+                "gradients samples must have at least a 'sample' variable, we got none".into()
+            ))
+        }
+
         if samples.size() < 1 || samples.names()[0] != "sample" {
             return Err(Error::InvalidParameter(format!(
                 "'{}' is not valid for the first variable in the gradients \
