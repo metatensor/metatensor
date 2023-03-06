@@ -41,6 +41,51 @@ class TestBlocks:
     gradients: no"""
         assert block.__repr__() == expected
 
+    def test_repr_zero_samples(self):
+        block = TensorBlock(
+            values=np.zeros((0, 2)),
+            samples=Labels([], np.empty((0, 2), dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+        )
+        expected = """TensorBlock
+    samples (0): []
+    components (): []
+    properties (2): ['properties']
+    gradients: no"""
+        self.assertTrue(block.__repr__() == expected)
+
+    def test_repr_zero_samples_gradient(self):
+        block = TensorBlock(
+            values=np.full((3, 2), -1.0),
+            samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+        )
+        block.add_gradient(
+            "parameter",
+            data=np.zeros((0, 2)),
+            samples=Labels(["sample"], np.empty((0, 2), dtype=np.int32)),
+            components=[],
+        )
+
+        expected_block = """TensorBlock
+    samples (3): ['samples']
+    components (): []
+    properties (2): ['properties']
+    gradients: ['parameter']"""
+
+        self.assertTrue(block.__repr__() == expected_block)
+
+        expected_grad = """Gradient TensorBlock
+parameter: 'parameter'
+samples (0): ['sample']
+components (): []
+properties (2): ['properties']"""
+
+        gradient = block.gradient("parameter")
+        self.assertTrue(gradient.__repr__() == expected_grad)
+
     def test_block_no_components(self):
         block = TensorBlock(
             values=np.full((3, 2), -1.0),

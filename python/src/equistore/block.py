@@ -116,7 +116,9 @@ class TensorBlock:
         s += f"    samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        if len(self.samples.names) > 0:
+            s += "'" + self.samples.names[-1] + "'"
+        s += "]"
         s += "\n"
         s += "    components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -130,7 +132,9 @@ class TensorBlock:
         s += f"    properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']\n"
+        if len(self.properties.names) > 0:
+            s += "'" + self.properties.names[-1] + "'"
+        s += "]\n"
         s += "    gradients: "
         if len(self.gradients_list()) > 0:
             s += "["
@@ -295,7 +299,9 @@ class Gradient:
         s += f"samples ({len(self.samples)}): ["
         for sname in self.samples.names[:-1]:
             s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        if len(self.samples.names) > 0:
+            s += "'" + self.samples.names[-1] + "'"
+        s += "]"
         s += "\n"
         s += "components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -309,7 +315,9 @@ class Gradient:
         s += f"properties ({len(self.properties)}): ["
         for name in self.properties.names[:-1]:
             s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']"
+        if len(self.properties.names) > 0:
+            s += "'" + self.properties.names[-1] + "'"
+        s += "]"
 
         return s
 
