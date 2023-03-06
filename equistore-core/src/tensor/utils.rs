@@ -10,32 +10,32 @@ use crate::{Error, TensorBlock, eqs_sample_mapping_t};
 /// `keys_to_xxx` functions
 pub type KeyAndBlock<'a> = (Vec<LabelValue>, &'a TensorBlock);
 
-/// Result of the `remove_variables_from_keys` function
+/// Result of the `remove_dimensions_from_keys` function
 #[derive(Debug, Clone)]
-pub struct RemovedVariablesKeys {
-    /// keys without the variables
+pub struct RemovedDimensionsKeys {
+    /// keys without the dimensions
     pub(super) new_keys: Labels,
-    /// positions of the moved variables in the original keys
-    pub(super) variables_positions: Vec<usize>,
+    /// positions of the moved dimensions in the original keys
+    pub(super) dimensions_positions: Vec<usize>,
 }
 
-/// Remove the given variables from these keys, returning the updated set of
-/// keys and the positions of the removed variables in the initial keys
-pub fn remove_variables_from_keys(keys: &Labels, variables: &[&str]) -> Result<RemovedVariablesKeys, Error> {
+/// Remove the given dimensions from these keys, returning the updated set of
+/// keys and the positions of the removed dimensions in the initial keys
+pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result<RemovedDimensionsKeys, Error> {
     let names = keys.names();
-    for variable in variables {
-        if !names.contains(variable) {
+    for dimension in dimensions {
+        if !names.contains(dimension) {
             return Err(Error::InvalidParameter(format!(
                 "'{}' is not part of the keys for this tensor map",
-                variable
+                dimension
             )));
         }
     }
 
     let mut extracted_i = Vec::new();
-    for &variable in variables {
+    for &dimension in dimensions {
         for (i, &name) in names.iter().enumerate() {
-            if variable == name {
+            if dimension == name {
                 extracted_i.push(i);
             }
         }
@@ -71,9 +71,9 @@ pub fn remove_variables_from_keys(keys: &Labels, variables: &[&str]) -> Result<R
         remaining_keys_builder.finish()
     };
 
-    return Ok(RemovedVariablesKeys {
+    return Ok(RemovedDimensionsKeys {
         new_keys: remaining_keys,
-        variables_positions: extracted_i,
+        dimensions_positions: extracted_i,
     });
 }
 

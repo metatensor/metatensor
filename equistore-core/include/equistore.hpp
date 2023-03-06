@@ -384,7 +384,7 @@ namespace details {
 ///
 /// This is similar to an array of named tuples, but stored as a 2D array
 /// of shape `(count, size)`, with a set of names associated with the columns of
-/// this array (often called *variables*). Each row/entry in this array is
+/// this array (often called *dimensions*). Each row/entry in this array is
 /// unique, and they are often (but not always) sorted in lexicographic order.
 class Labels final: public NDArray<int32_t> {
 public:
@@ -438,7 +438,7 @@ public:
         return *this;
     }
 
-    /// Get the names of the variables used in these `Labels`.
+    /// Get the names of the dimensions used in these `Labels`.
     const std::vector<const char*>& names() const {
         return names_;
     }
@@ -450,7 +450,7 @@ public:
         return this->shape()[0];
     }
 
-    /// Get the number of variables in this set of Labels.
+    /// Get the number of dimensions in this set of Labels.
     ///
     /// This is the same as `shape()[1]` for the corresponding values array
     size_t size() const {
@@ -1536,11 +1536,11 @@ public:
         return TensorBlock::unsafe_view_from_ptr(block);
     }
 
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the property labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the property labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the property axis.
     ///
     /// If `keys_to_move` does not contains any entries (i.e.
@@ -1578,22 +1578,22 @@ public:
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
-    /// with the variables defined in `keys_to_move`
+    /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_properties(const std::vector<std::string>& keys_to_move, bool sort_samples = true) const {
         return keys_to_properties(Labels(keys_to_move), sort_samples);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
-    /// with a single variable: `key_to_move`
+    /// with a single dimension: `key_to_move`
     TensorMap keys_to_properties(const std::string& key_to_move, bool sort_samples = true) const {
         return keys_to_properties(std::vector<std::string>{key_to_move}, sort_samples);
     }
 
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// samples axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the sample labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the sample labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the sample axis.
     ///
     /// If `keys_to_move` must be an empty set of `Labels`
@@ -1623,40 +1623,40 @@ public:
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
-    /// with the variables defined in `keys_to_move`
+    /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_samples(const std::vector<std::string>& keys_to_move, bool sort_samples = true) const {
         return keys_to_samples(Labels(keys_to_move), sort_samples);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
-    /// with a single variable: `key_to_move`
+    /// with a single dimension: `key_to_move`
     TensorMap keys_to_samples(const std::string& key_to_move, bool sort_samples = true) const {
         return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
     }
 
-    /// Move the given `variables` from the component labels to the property
+    /// Move the given `dimensions` from the component labels to the property
     /// labels for each block.
     ///
-    /// @param variables name of the component variables to move to the
+    /// @param dimensions name of the component dimensions to move to the
     ///                  properties
-    TensorMap  components_to_properties(const std::vector<std::string>& variables) const {
-        auto c_variables = std::vector<const char*>();
-        for (const auto& v: variables) {
-            c_variables.push_back(v.c_str());
+    TensorMap  components_to_properties(const std::vector<std::string>& dimensions) const {
+        auto c_dimensions = std::vector<const char*>();
+        for (const auto& v: dimensions) {
+            c_dimensions.push_back(v.c_str());
         }
 
         auto ptr = eqs_tensormap_components_to_properties(
             tensor_,
-            c_variables.data(),
-            c_variables.size()
+            c_dimensions.data(),
+            c_dimensions.size()
         );
         details::check_pointer(ptr);
         return TensorMap(ptr);
     }
 
-    /// Call `components_to_properties` with a single variable
-    TensorMap components_to_properties(const std::string& variable) const {
-        const char* c_str = variable.c_str();
+    /// Call `components_to_properties` with a single dimension
+    TensorMap components_to_properties(const std::string& dimension) const {
+        const char* c_str = dimension.c_str();
         auto ptr = eqs_tensormap_components_to_properties(
             tensor_,
             &c_str,

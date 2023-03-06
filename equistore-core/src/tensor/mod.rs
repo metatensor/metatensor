@@ -176,7 +176,7 @@ impl TensorMap {
     /// Get the index of blocks matching the given selection.
     ///
     /// The selection must contains a single entry, defining the requested key
-    /// or keys. If the selection contains only a subset of the variables of the
+    /// or keys. If the selection contains only a subset of the dimensions of the
     /// keys, there can be multiple matching blocks.
     pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
         if selection.size() == 0 {
@@ -190,11 +190,11 @@ impl TensorMap {
             )));
         }
 
-        let mut variables = Vec::new();
+        let mut dimensions = Vec::new();
         'outer: for requested in selection.names() {
             for (i, &name) in self.keys.names().iter().enumerate() {
                 if requested == name {
-                    variables.push(i);
+                    dimensions.push(i);
                     continue 'outer;
                 }
             }
@@ -210,7 +210,7 @@ impl TensorMap {
 
         for (block_i, labels) in self.keys.iter().enumerate() {
             let mut selected = true;
-            for (&requested_i, &value) in variables.iter().zip(selection) {
+            for (&requested_i, &value) in dimensions.iter().zip(selection) {
                 if labels[requested_i] != value {
                     selected = false;
                     break;
@@ -225,17 +225,17 @@ impl TensorMap {
         return Ok(matching);
     }
 
-    /// Move the given variables from the component labels to the property labels
+    /// Move the given dimensions from the component labels to the property labels
     /// for each block in this `TensorMap`.
-    pub fn components_to_properties(&self, variables: &[&str]) -> Result<TensorMap, Error> {
+    pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
         let mut clone = self.try_clone()?;
 
-        if variables.is_empty() {
+        if dimensions.is_empty() {
             return Ok(clone);
         }
 
         for block in &mut clone.blocks {
-            block.components_to_properties(variables)?;
+            block.components_to_properties(dimensions)?;
         }
 
         return Ok(clone);

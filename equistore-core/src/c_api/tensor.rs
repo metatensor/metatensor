@@ -223,7 +223,7 @@ pub unsafe extern fn eqs_tensormap_block_by_id(
 
 
 /// Get indices of the blocks in this `tensor` corresponding to the given
-/// `selection`. The `selection` should have a subset of the names/variables of
+/// `selection`. The `selection` should have a subset of the names/dimensions of
 /// the keys for this tensor map, and only one entry, describing the requested
 /// blocks.
 ///
@@ -271,11 +271,11 @@ pub unsafe extern fn eqs_tensormap_blocks_matching(
 }
 
 
-/// Merge blocks with the same value for selected keys variables along the
+/// Merge blocks with the same value for selected keys dimensions along the
 /// property axis.
 ///
-/// The variables (names) of `keys_to_move` will be moved from the keys to
-/// the property labels, and blocks with the same remaining keys variables
+/// The dimensions (names) of `keys_to_move` will be moved from the keys to
+/// the property labels, and blocks with the same remaining keys dimensions
 /// will be merged together along the property axis.
 ///
 /// If `keys_to_move` does not contains any entries (`keys_to_move.count
@@ -338,15 +338,15 @@ pub unsafe extern fn eqs_tensormap_keys_to_properties(
 }
 
 
-/// Move the given variables from the component labels to the property labels
+/// Move the given dimensions from the component labels to the property labels
 /// for each block in this tensor map.
 ///
-/// `variables` must be an array of `variables_count` NULL-terminated strings,
+/// `dimensions` must be an array of `dimensions_count` NULL-terminated strings,
 /// encoded as UTF-8.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param variables names of the key variables to move to the properties
-/// @param variables_count number of entries in the `variables` array
+/// @param dimensions names of the key dimensions to move to the properties
+/// @param dimensions_count number of entries in the `dimensions` array
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -354,23 +354,23 @@ pub unsafe extern fn eqs_tensormap_keys_to_properties(
 #[no_mangle]
 pub unsafe extern fn eqs_tensormap_components_to_properties(
     tensor: *mut eqs_tensormap_t,
-    variables: *const *const c_char,
-    variables_count: usize,
+    dimensions: *const *const c_char,
+    dimensions_count: usize,
 ) -> *mut eqs_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers!(tensor, variables);
+        check_pointers!(tensor, dimensions);
 
-        let mut rust_variables = Vec::new();
-        for &variable in std::slice::from_raw_parts(variables, variables_count) {
-            check_pointers!(variable);
-            let variable = CStr::from_ptr(variable).to_str().expect("invalid utf8");
-            rust_variables.push(variable);
+        let mut rust_dimensions = Vec::new();
+        for &dimension in std::slice::from_raw_parts(dimensions, dimensions_count) {
+            check_pointers!(dimension);
+            let dimension = CStr::from_ptr(dimension).to_str().expect("invalid utf8");
+            rust_dimensions.push(dimension);
         }
 
-        let moved = (*tensor).components_to_properties(&rust_variables)?;
+        let moved = (*tensor).components_to_properties(&rust_dimensions)?;
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -387,11 +387,11 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
     return result;
 }
 
-/// Merge blocks with the same value for selected keys variables along the
+/// Merge blocks with the same value for selected keys dimensions along the
 /// samples axis.
 ///
-/// The variables (names) of `keys_to_move` will be moved from the keys to
-/// the sample labels, and blocks with the same remaining keys variables
+/// The dimensions (names) of `keys_to_move` will be moved from the keys to
+/// the sample labels, and blocks with the same remaining keys dimensions
 /// will be merged together along the sample axis.
 ///
 /// `keys_to_move` must be empty (`keys_to_move.count == 0`), and the new

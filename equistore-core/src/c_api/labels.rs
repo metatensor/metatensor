@@ -9,7 +9,7 @@ use super::status::{eqs_status_t, catch_unwind};
 ///
 /// This is similar to a list of `count` named tuples, but stored as a 2D array
 /// of shape `(count, size)`, with a set of names associated with the columns of
-/// this array (often called *variables*). Each row/entry in this array is
+/// this array (often called *dimensions*). Each row/entry in this array is
 /// unique, and they are often (but not always) sorted in lexicographic order.
 ///
 /// `eqs_labels_t` with a non-NULL `internal_ptr_` correspond to a
@@ -24,15 +24,15 @@ pub struct eqs_labels_t {
     /// internal: pointer to the rust `Labels` struct if any, null otherwise
     pub internal_ptr_: *mut c_void,
 
-    /// Names of the variables composing this set of labels. There are `size`
+    /// Names of the dimensions composing this set of labels. There are `size`
     /// elements in this array, each being a NULL terminated UTF-8 string.
     pub names: *const *const c_char,
     /// Pointer to the first element of a 2D row-major array of 32-bit signed
-    /// integer containing the values taken by the different variables in
+    /// integer containing the values taken by the different dimensions in
     /// `names`. Each row has `size` elements, and there are `count` rows in
     /// total.
     pub values: *const i32,
-    /// Number of variables/size of a single entry in the set of labels
+    /// Number of dimensions/size of a single entry in the set of labels
     pub size: usize,
     /// Number entries in the set of labels
     pub count: usize,

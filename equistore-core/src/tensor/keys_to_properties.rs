@@ -8,15 +8,15 @@ use crate::{Error, TensorBlock};
 use crate::data::eqs_sample_mapping_t;
 
 use super::TensorMap;
-use super::utils::{KeyAndBlock, remove_variables_from_keys, merge_samples, merge_gradient_samples};
+use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
 
 
 impl TensorMap {
-    /// Merge blocks with the same value for selected keys variables along the
+    /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
     ///
-    /// The variables (names) of `keys_to_move` will be moved from the keys to
-    /// the property labels, and blocks with the same remaining keys variables
+    /// The dimensions (names) of `keys_to_move` will be moved from the keys to
+    /// the property labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the property axis.
     ///
     /// If `keys_to_move` does not contains any entries (`keys_to_move.count()
@@ -40,7 +40,7 @@ impl TensorMap {
     /// they appear in the blocks.
     pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
         let names_to_move = keys_to_move.names();
-        let splitted_keys = remove_variables_from_keys(&self.keys, &names_to_move)?;
+        let splitted_keys = remove_dimensions_from_keys(&self.keys, &names_to_move)?;
 
         let keys_to_move = if keys_to_move.count() == 0 {
             None
@@ -55,7 +55,7 @@ impl TensorMap {
                 .zip(&self.blocks)
                 .map(|(key, block)| {
                     let mut moved_key = Vec::new();
-                    for &i in &splitted_keys.variables_positions {
+                    for &i in &splitted_keys.dimensions_positions {
                         moved_key.push(key[i]);
                     }
 
@@ -81,7 +81,7 @@ impl TensorMap {
                         let block = &self.blocks[i];
                         let key = &self.keys[i];
                         let mut moved_key = Vec::new();
-                        for &i in &splitted_keys.variables_positions {
+                        for &i in &splitted_keys.dimensions_positions {
                             moved_key.push(key[i]);
                         }
 
