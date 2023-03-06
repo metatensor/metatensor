@@ -113,10 +113,7 @@ class TensorBlock:
 
     def __repr__(self) -> str:
         s = "TensorBlock\n"
-        s += f"    samples ({len(self.samples)}): ["
-        for sname in self.samples.names[:-1]:
-            s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
         s += "\n"
         s += "    components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -127,16 +124,11 @@ class TensorBlock:
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"    properties ({len(self.properties)}): ["
-        for name in self.properties.names[:-1]:
-            s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']\n"
+        s += f"    properties ({len(self.properties)}): "
+        s += f"{str(list(self.properties.names))}\n"
         s += "    gradients: "
         if len(self.gradients_list()) > 0:
-            s += "["
-            for gr in self.gradients_list()[:-1]:
-                s += "'{}', ".format(gr)
-            s += "'{}']".format(self.gradients_list()[-1])
+            s += f"{str(list(self.gradients_list()))}"
         else:
             s += "no"
 
@@ -292,10 +284,7 @@ class Gradient:
     def __repr__(self) -> str:
         s = "Gradient TensorBlock\n"
         s += "parameter: '{}'\n".format(self._name)
-        s += f"samples ({len(self.samples)}): ["
-        for sname in self.samples.names[:-1]:
-            s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        s += f"samples ({len(self.samples)}): {str(list(self.samples.names))}"
         s += "\n"
         s += "components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -306,10 +295,7 @@ class Gradient:
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"properties ({len(self.properties)}): ["
-        for name in self.properties.names[:-1]:
-            s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']"
+        s += f"properties ({len(self.properties)}): {str(list(self.properties.names))}"
 
         return s
 
