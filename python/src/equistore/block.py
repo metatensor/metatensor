@@ -88,6 +88,7 @@ class TensorBlock:
         return self._actual_ptr
 
     def _move_ptr(self):
+        assert self._parent is None
         self._actual_ptr = None
 
     def __del__(self):
