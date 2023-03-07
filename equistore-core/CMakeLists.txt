@@ -29,6 +29,7 @@ project(equistore
     LANGUAGES C # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
 )
 
+option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
 set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
@@ -112,18 +113,18 @@ file(GLOB_RECURSE ALL_RUST_SOURCES
 )
 
 
-add_library(equistore SHARED IMPORTED GLOBAL)
-set(EQUISTORE_SHARED_CORE_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore_core${CMAKE_SHARED_LIBRARY_SUFFIX}")
+add_library(equistore::shared SHARED IMPORTED GLOBAL)
+set(EQUISTORE_CORE_SHARED_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore_core${CMAKE_SHARED_LIBRARY_SUFFIX}")
 set(EQUISTORE_SHARED_LIB_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}equistore${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 add_library(equistore::static STATIC IMPORTED GLOBAL)
-set(EQUISTORE_STATIC_CORE_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore_core${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(EQUISTORE_CORE_STATIC_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore_core${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(EQUISTORE_STATIC_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}equistore${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-get_filename_component(EQUISTORE_SHARED_DIRECTORY ${EQUISTORE_SHARED_CORE_LOCATION} DIRECTORY)
+get_filename_component(EQUISTORE_SHARED_DIRECTORY ${EQUISTORE_CORE_SHARED_LOCATION} DIRECTORY)
 set(EQUISTORE_SHARED_LOCATION "${EQUISTORE_SHARED_DIRECTORY}/${EQUISTORE_SHARED_LIB_NAME}")
 
-get_filename_component(EQUISTORE_STATIC_DIRECTORY ${EQUISTORE_STATIC_CORE_LOCATION} DIRECTORY)
+get_filename_component(EQUISTORE_STATIC_DIRECTORY ${EQUISTORE_CORE_STATIC_LOCATION} DIRECTORY)
 set(EQUISTORE_STATIC_LOCATION "${EQUISTORE_STATIC_DIRECTORY}/${EQUISTORE_STATIC_LIB_NAME}")
 
 # We need to add some metadata to the shared library to enable linking to it
@@ -157,12 +158,12 @@ add_custom_target(cargo-build-equistore ALL
 
 add_custom_command(TARGET cargo-build-equistore
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_SHARED_CORE_LOCATION} ${EQUISTORE_SHARED_LOCATION}
-    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_STATIC_CORE_LOCATION} ${EQUISTORE_STATIC_LOCATION}
+    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_SHARED_LOCATION} ${EQUISTORE_SHARED_LOCATION}
+    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_STATIC_LOCATION} ${EQUISTORE_STATIC_LOCATION}
     DEPENDS cargo-build-equistore
 )
 
-add_dependencies(equistore cargo-build-equistore)
+add_dependencies(equistore::shared cargo-build-equistore)
 add_dependencies(equistore::static cargo-build-equistore)
 set(EQUISTORE_HEADERS
     "${PROJECT_SOURCE_DIR}/include/equistore.h"
@@ -170,7 +171,7 @@ set(EQUISTORE_HEADERS
 )
 set(EQUISTORE_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/)
 
-set_target_properties(equistore PROPERTIES
+set_target_properties(equistore::shared PROPERTIES
     IMPORTED_LOCATION ${EQUISTORE_SHARED_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
 )
@@ -179,6 +180,23 @@ set_target_properties(equistore::static PROPERTIES
     IMPORTED_LOCATION ${EQUISTORE_STATIC_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
 )
+
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
+    if (BUILD_SHARED_LIBS)
+        add_library(equistore ALIAS equistore::shared)
+    else()
+        add_library(equistore ALIAS equistore::static)
+    endif()
+else()
+    # CMake 3.10 (default on Ubuntu 20.04) does not support ALIAS for IMPORTED
+    # libraries
+    add_library(equistore INTERFACE)
+    if (BUILD_SHARED_LIBS)
+        target_link_libraries(equistore INTERFACE equistore::shared)
+    else()
+        target_link_libraries(equistore INTERFACE equistore::static)
+    endif()
+endif()
 
 #------------------------------------------------------------------------------#
 # Installation configuration
