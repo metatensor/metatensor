@@ -6,14 +6,6 @@ fn rustc_version_at_least(version: &str) -> bool {
 }
 
 fn main() {
-    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
-        // We actually only need rustc>=1.63 for tests (because of
-        // https://github.com/rust-lang/rust/issues/100066), but there is no way
-        // to check if we are building for tests in a build script, so we
-        // unconditionally disable the feature for older rustc.
-        panic!("'static' feature requires rustc>=1.63");
-    }
-
     let mut equistore_core = PathBuf::from("equistore-core");
 
     let mut cargo_toml = equistore_core.clone();
@@ -62,4 +54,8 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib", build.display());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=equistore-core");
+
+    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
+        println!("cargo:rustc-cfg=static_and_rustc_older_1_63");
+    }
 }
