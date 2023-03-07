@@ -1,0 +1,4 @@
+abs
+===
+
+.. autofunction:: equistore.abs
