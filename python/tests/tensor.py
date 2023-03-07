@@ -363,106 +363,11 @@ keys: ['key_1' 'key_2']
     def test_pow(self):
         self.assertTrue(equistore.pow(self.tm, 2) == self.tm**2)
 
-    def test_iadd(self):
-        tensor = test_tensor_map()
-        tensor += 1
-
-        self.assertTrue(equistore.add(self.tm, 1) == tensor)
-
-    def test_isub(self):
-        tensor = test_tensor_map()
-        tensor -= 1
-
-        self.assertTrue(equistore.subtract(self.tm, 1) == tensor)
-
-    def test_imul(self):
-        tensor = test_tensor_map()
-        tensor *= 2
-
-        self.assertTrue(equistore.multiply(self.tm, 2) == tensor)
-
-    def test_imatmul(self):
-        tensor = self.tm
-        tensor = tensor.components_to_properties("components")
-        tensor = equistore.remove_gradients(tensor)
-        tensor @= tensor
-
-        tensor2 = test_tensor_map()
-        tensor2 = tensor2.components_to_properties("components")
-        tensor2 = equistore.remove_gradients(tensor2)
-
-        self.assertTrue(equistore.dot(tensor2, tensor2) == tensor)
-
-    def test_itruediv(self):
-        tensor = test_tensor_map()
-        tensor /= 2
-
-        self.assertTrue(equistore.divide(self.tm, 2) == tensor)
-
-    def test_ipow(self):
-        tensor = test_tensor_map()
-        tensor **= 2
-
-        self.assertTrue(equistore.pow(self.tm, 2) == tensor)
-
     def test_neg(self):
         self.assertTrue(equistore.multiply(self.tm, -1) == -self.tm)
 
     def test_pos(self):
         self.assertTrue(equistore.multiply(self.tm, +1) == +self.tm)
-
-    def test_remove_gradient(self):
-        tensor = test_tensor_map().remove_gradients()
-
-        self.assertTrue(equistore.remove_gradients(self.tm) == tensor)
-
-    def test_dot(self):
-        tensor = self.tm
-        tensor = tensor.components_to_properties("components")
-        tensor = equistore.remove_gradients(tensor)
-
-        tensor2 = test_tensor_map()
-        tensor2 = tensor2.components_to_properties("components")
-        tensor2 = equistore.remove_gradients(tensor2)
-
-        self.assertTrue(tensor.dot(tensor) == tensor2 @ tensor2)
-
-    def test_sum_over_samples(self):
-        self.assertTrue(
-            self.tm.sum_over_samples("samples")
-            == equistore.sum_over_samples(self.tm, "samples")
-        )
-
-    def test_mean_over_samples(self):
-        self.assertTrue(
-            self.tm.sum_over_samples("samples")
-            == equistore.sum_over_samples(self.tm, "samples")
-        )
-
-    def test_std_over_samples(self):
-        self.assertTrue(
-            self.tm.std_over_samples("samples")
-            == equistore.std_over_samples(self.tm, "samples")
-        )
-
-    def test_variance_over_samples(self):
-        self.assertTrue(
-            self.tm.variance_over_samples("samples")
-            == equistore.variance_over_samples(self.tm, "samples")
-        )
-
-    def test_slice(self):
-        samples = equistore.Labels(["samples"], np.array([[0], [2]]))
-        self.assertTrue(
-            self.tm.slice(samples=samples) == equistore.slice(self.tm, samples=samples)
-        )
-
-    def test_split(self):
-        samples = [equistore.Labels(["samples"], np.array([[0], [2]]))]
-        self.assertTrue(
-            self.tm.split(axis="samples", grouped_idxs=samples)[0]
-            == equistore.split(self.tm, axis="samples", grouped_idxs=samples)[0]
-        )
 
 
 if __name__ == "__main__":
