@@ -7,7 +7,7 @@ def remove_gradients(
     tensor: TensorMap,
     remove: Optional[List[str]] = None,
 ) -> TensorMap:
-    """Remove some or all of the gradients.
+    """Remove some or all of the gradients from a :py:class:`TensorMap`.
 
     :param tensor: input :py:class:`TensorMap`, with gradients to remove
     :param remove: which gradients should be excluded from the new tensor map.
