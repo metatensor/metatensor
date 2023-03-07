@@ -47,12 +47,11 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
     _shape += (len(block.properties),)
 
     for parameter, gradient in block.gradients():
-        # Iterate over the numeric indices of corresponding samples in the
-        # parent TensorBlock
-        diff_components = len(gradient.components)-len(block.components)
-        new_grad = gradient.data[:] * sign_values[gradient.samples["sample"]].reshape((-1,)+(1,)*diff_components+_shape)
+        diff_components = len(gradient.components) - len(block.components)
+        new_grad = gradient.data[:] * sign_values[gradient.samples["sample"]].reshape(
+            (-1,) + (1,) * diff_components + _shape
+        )
 
-        
         result_block.add_gradient(
             parameter,
             new_grad,
