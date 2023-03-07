@@ -15,7 +15,7 @@ The API also includes more advanced functionalities like
 :ref:`actual array format <python-api-array>` for storing data.
 """
 
-from ._c_lib import _set_equistore_library_path  # noqa
+from .version import __version__  # noqa
 from .block import TensorBlock  # noqa
 from .labels import Labels  # noqa
 from .status import EquistoreError  # noqa

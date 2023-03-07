@@ -54,14 +54,14 @@ class TensorBlock:
 
         values = ArrayWrapper(values)
 
-        self._ptr = self._lib.eqs_block(
+        self._actual_ptr = self._lib.eqs_block(
             values.into_eqs_array(),
             samples._as_eqs_labels_t(),
             components_array,
             len(components_array),
             properties._as_eqs_labels_t(),
         )
-        _check_pointer(self._ptr)
+        _check_pointer(self._actual_ptr)
 
     @staticmethod
     def _from_ptr(ptr, parent):
@@ -72,16 +72,34 @@ class TensorBlock:
         _check_pointer(ptr)
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
-        obj._ptr = ptr
+        obj._actual_ptr = ptr
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from beeing garbage-collected & removing this block
         obj._parent = parent
         return obj
 
+    @property
+    def _ptr(self):
+        if self._actual_ptr is None:
+            raise ValueError(
+                "this block has been moved inside a TensorMap and can no longer be used"
+            )
+
+        return self._actual_ptr
+
+    def _move_ptr(self):
+        assert self._parent is None
+        self._actual_ptr = None
+
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr") and hasattr(self, "_parent"):
+        if (
+            hasattr(self, "_lib")
+            and self._lib is not None
+            and hasattr(self, "_actual_ptr")
+            and hasattr(self, "_parent")
+        ):
             if self._parent is None:
-                self._lib.eqs_block_free(self._ptr)
+                self._lib.eqs_block_free(self._actual_ptr)
 
     def __deepcopy__(self, _memodict):
         new_ptr = self._lib.eqs_block_copy(self._ptr)
@@ -89,16 +107,14 @@ class TensorBlock:
 
     def copy(self) -> "TensorBlock":
         """
-        Get a deep copy of this block
+        Get a deep copy of this block, including all the (potentially non
+        Python-owned) data and metadata
         """
         return copy.deepcopy(self)
 
     def __repr__(self) -> str:
         s = "TensorBlock\n"
-        s += f"    samples ({len(self.samples)}): ["
-        for sname in self.samples.names[:-1]:
-            s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
         s += "\n"
         s += "    components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -109,16 +125,11 @@ class TensorBlock:
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"    properties ({len(self.properties)}): ["
-        for name in self.properties.names[:-1]:
-            s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']\n"
+        s += f"    properties ({len(self.properties)}): "
+        s += f"{str(list(self.properties.names))}\n"
         s += "    gradients: "
         if len(self.gradients_list()) > 0:
-            s += "["
-            for gr in self.gradients_list()[:-1]:
-                s += "'{}', ".format(gr)
-            s += "'{}']".format(self.gradients_list()[-1])
+            s += f"{str(list(self.gradients_list()))}"
         else:
             s += "no"
 
@@ -187,7 +198,7 @@ class TensorBlock:
     def _labels(self, axis) -> Labels:
         result = eqs_labels_t()
         self._lib.eqs_block_labels(self._ptr, "values".encode("utf8"), axis, result)
-        return Labels._from_eqs_labels_t(result, parent=self)
+        return Labels._from_eqs_labels_t(result)
 
     def gradient(self, parameter: str) -> "Gradient":
         """
@@ -284,10 +295,7 @@ class Gradient:
     def __repr__(self) -> str:
         s = "Gradient TensorBlock\n"
         s += "parameter: '{}'\n".format(self._name)
-        s += f"samples ({len(self.samples)}): ["
-        for sname in self.samples.names[:-1]:
-            s += "'" + sname + "', "
-        s += "'" + self.samples.names[-1] + "']"
+        s += f"samples ({len(self.samples)}): {str(list(self.samples.names))}"
         s += "\n"
         s += "components ("
         s += ", ".join([str(len(c)) for c in self.components])
@@ -298,10 +306,7 @@ class Gradient:
         if len(self.components) > 0:
             s = s[:-2]
         s += "]\n"
-        s += f"properties ({len(self.properties)}): ["
-        for name in self.properties.names[:-1]:
-            s += "'" + name + "', "
-        s += "'" + self.properties.names[-1] + "']"
+        s += f"properties ({len(self.properties)}): {str(list(self.properties.names))}"
 
         return s
 
@@ -360,7 +365,7 @@ class Gradient:
         self._lib.eqs_block_labels(
             self._block._ptr, self._name.encode("utf8"), axis, result
         )
-        return Labels._from_eqs_labels_t(result, parent=self._block)
+        return Labels._from_eqs_labels_t(result)
 
 
 def _get_raw_array(lib, block_ptr, name) -> eqs_array_t:

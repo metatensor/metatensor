@@ -1,9 +1,9 @@
 import gc
 import os
-import unittest
 import weakref
 
 import numpy as np
+from numpy.testing import assert_equal
 
 
 try:
@@ -28,19 +28,16 @@ def free_eqs_array(array):
     array.destroy(array.ptr)
 
 
-class TestArrayWrapperMixin:
+class ArrayWrapperMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
         wrapper = data.ArrayWrapper(array)
         eqs_array = wrapper.into_eqs_array()
 
-        self.assertEqual(
-            id(data.eqs_array_to_python_array(eqs_array)),
-            id(array),
-        )
+        assert id(data.eqs_array_to_python_array(eqs_array)) == id(array)
 
         origin = data.data_origin(eqs_array)
-        self.assertEqual(data.data_origin_name(origin), self.expected_origin())
+        assert data.data_origin_name(origin) == self.expected_origin()
 
         free_eqs_array(eqs_array)
 
@@ -49,13 +46,13 @@ class TestArrayWrapperMixin:
         wrapper = data.ArrayWrapper(array)
         eqs_array = wrapper.into_eqs_array()
 
-        self.assertEqual(_get_shape(eqs_array, self), [2, 3, 4])
+        assert _get_shape(eqs_array, self) == [2, 3, 4]
 
         new_shape = ctypes.ARRAY(c_uintptr_t, 4)(2, 3, 2, 2)
         status = eqs_array.reshape(eqs_array.ptr, new_shape, len(new_shape))
-        self.assertEqual(status, EQS_SUCCESS)
+        assert status == EQS_SUCCESS
 
-        self.assertEqual(_get_shape(eqs_array, self), [2, 3, 2, 2])
+        assert _get_shape(eqs_array, self) == [2, 3, 2, 2]
 
         free_eqs_array(eqs_array)
 
@@ -65,7 +62,7 @@ class TestArrayWrapperMixin:
         eqs_array = wrapper.into_eqs_array()
 
         eqs_array.swap_axes(eqs_array.ptr, 1, 3)
-        self.assertEqual(_get_shape(eqs_array, self), [2, 23, 18, 3])
+        assert _get_shape(eqs_array, self) == [2, 23, 18, 3]
 
         free_eqs_array(eqs_array)
 
@@ -81,25 +78,25 @@ class TestArrayWrapperMixin:
         status = eqs_array.create(
             eqs_array.ptr, new_shape, len(new_shape), new_eqs_array
         )
-        self.assertEqual(status, EQS_SUCCESS)
+        assert status == EQS_SUCCESS
 
         new_array = data.eqs_array_to_python_array(new_eqs_array)
-        self.assertNotEqual(id(new_array), id(array))
+        assert id(new_array) != id(array)
 
-        self.assertTrue(np.all(np.array(new_array) == np.zeros((18, 4))))
+        assert_equal(new_array, np.zeros((18, 4)))
 
         del array
         del wrapper
         gc.collect()
 
         # there is still one reference to the array through eqs_array
-        self.assertIsNotNone(array_ref())
+        assert array_ref() is not None
 
         free_eqs_array(eqs_array)
         del eqs_array
         gc.collect()
 
-        self.assertIsNone(array_ref())
+        assert array_ref() is None
 
         free_eqs_array(new_eqs_array)
 
@@ -112,12 +109,12 @@ class TestArrayWrapperMixin:
 
         copy = eqs_array_t()
         status = eqs_array.copy(eqs_array.ptr, copy)
-        self.assertEqual(status, EQS_SUCCESS)
+        assert status == EQS_SUCCESS
 
         array_copy = data.eqs_array_to_python_array(copy)
-        self.assertNotEqual(id(array_copy), id(array))
+        assert id(array_copy) != id(array)
 
-        self.assertTrue(np.all(np.array(array_copy) == np.array(array)))
+        assert_equal(np.array(array_copy), np.array(array))
 
         free_eqs_array(eqs_array)
         free_eqs_array(copy)
@@ -160,13 +157,13 @@ class TestArrayWrapperMixin:
                 ],
             ]
         )
-        self.assertTrue(np.all(np.array(array) == expected))
+        assert_equal(array, expected)
 
         free_eqs_array(eqs_array)
         free_eqs_array(eqs_array_other)
 
 
-class TestNumpyData(unittest.TestCase, TestArrayWrapperMixin):
+class TestNumpyData(ArrayWrapperMixin):
     def expected_origin(self):
         return "equistore.data.array.numpy"
 
@@ -176,7 +173,7 @@ class TestNumpyData(unittest.TestCase, TestArrayWrapperMixin):
 
 if HAS_TORCH:
 
-    class TestTorchData(unittest.TestCase, TestArrayWrapperMixin):
+    class TestTorchData(ArrayWrapperMixin):
         def expected_origin(self):
             return "equistore.data.array.torch"
 
@@ -189,7 +186,7 @@ def _get_shape(eqs_array, test):
     shape_count = c_uintptr_t()
     status = eqs_array.shape(eqs_array.ptr, shape_ptr, shape_count)
 
-    test.assertEqual(status, EQS_SUCCESS)
+    assert status == EQS_SUCCESS
 
     shape = []
     for i in range(shape_count.value):
@@ -198,38 +195,60 @@ def _get_shape(eqs_array, test):
     return shape
 
 
-class TestRustData(unittest.TestCase):
+TEST_ORIGIN = equistore.data.array._register_origin("python.test-origin")
+equistore.data.register_external_data_wrapper(
+    "python.test-origin",
+    equistore.data.extract.ExternalCpuArray,
+)
+
+
+@equistore.utils.catch_exceptions
+def create_test_array(shape_ptr, shape_count, array):
+    shape = []
+    for i in range(shape_count):
+        shape.append(shape_ptr[i])
+
+    data = np.zeros(shape)
+    wrapper = equistore.data.array.ArrayWrapper(data)
+    eqs_array = wrapper.into_eqs_array()
+
+    @equistore.utils.catch_exceptions
+    def test_origin(this, origin):
+        origin[0] = TEST_ORIGIN
+
+    eqs_array.origin = eqs_array.origin.__class__(test_origin)
+
+    array[0] = eqs_array
+
+
+class TestRustData:
     def test_parent_keepalive(self):
-        path = os.path.join(ROOT, "..", "..", "tests", "data.npz")
-        tensor = equistore.io.load(path, use_numpy=False)
+        path = os.path.join(ROOT, "..", "..", "equistore-core", "tests", "data.npz")
+        tensor = equistore.io.load_custom_array(path, create_test_array)
 
         values = tensor.block(0).values
-        self.assertTrue(isinstance(values, equistore.data.extract._RustNDArray))
-        self.assertIsNotNone(values._parent)
+        assert isinstance(values, equistore.data.extract.ExternalCpuArray)
+        assert values._parent is not None
 
         tensor_ref = weakref.ref(tensor)
         del tensor
         gc.collect()
 
         # values should keep the tensor alive
-        self.assertIsNotNone(tensor_ref())
+        assert tensor_ref() is not None
 
         view = values[::2]
         del values
         gc.collect()
 
         # view should keep the tensor alive
-        self.assertIsNotNone(tensor_ref())
+        assert tensor_ref() is not None
 
         transformed = np.sum(view)
         del view
         gc.collect()
 
         # transformed should NOT keep the tensor alive
-        self.assertIsNone(tensor_ref())
+        assert tensor_ref() is None
 
-        self.assertTrue(np.isclose(transformed, 1.1596965632269784))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert np.isclose(transformed, 1.1596965632269784)

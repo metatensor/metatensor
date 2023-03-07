@@ -25,6 +25,9 @@ you to do use ``equistore`` like this (after installation):
     # Links equistore with MyExecutable, this makes the header accessible
     target_link_libraries(MyExecutable equistore)
 
+    # alternatively, use the static build of equistore
+    # target_link_libraries(MyExecutable equistore::static)
+
 The functions and types provided in ``equistore.h`` can be grouped in five
 main groups:
 

@@ -1,29 +1,30 @@
-# -* coding: utf-8 -*
 import os
 import sys
 from ctypes import cdll
 
+from pkg_resources import parse_version
+
 from ._c_api import setup_functions
-from .data import register_external_data_wrapper
-from .data.extract import _RustNDArray
+from .data.extract import ExternalCpuArray, register_external_data_wrapper
+from .version import __version__
 
 
 _HERE = os.path.realpath(os.path.dirname(__file__))
 
-EQUISTORE_LIBRARY_PATH = None
 
+def _compatible_versions(actual, minimal):
+    actual = parse_version(actual)
+    minimal = parse_version(minimal)
 
-def _set_equistore_library_path(path):
-    """
-    Set the path of the shared library exporting the equistore functions.
+    # Different major version are not compatible
+    if actual.major != minimal.major:
+        return False
 
-    This is an advanced functionality most users should not need. There can only
-    be one call to this function, before trying to create any equistore object.
-    """
-    global EQUISTORE_LIBRARY_PATH
-    if EQUISTORE_LIBRARY_PATH is not None:
-        raise ValueError("Trying to set the EQUISTORE library path twice")
-    EQUISTORE_LIBRARY_PATH = str(path)
+    # If the major version is 0, different minor version are not compatible
+    if actual.major == 0 and actual.minor != minimal.minor:
+        return False
+
+    return True
 
 
 class LibraryFinder(object):
@@ -40,16 +41,22 @@ class LibraryFinder(object):
             # the error will be transformed to a Python exception anyway
             self._cached_dll.eqs_disable_panic_printing()
 
-            register_external_data_wrapper("rust.ndarray", _RustNDArray)
+            version = self._cached_dll.eqs_version().decode("utf8")
+            if not _compatible_versions(version, __version__):
+                self._cached_dll = None
+                raise RuntimeError(
+                    f"wrong version for libequistore, we want {__version__}, "
+                    f"but we got {version} in '{path}'"
+                )
+
+            # Register the origin used by the Rust API as an external CPU array
+            register_external_data_wrapper("rust.Box<dyn Array>", ExternalCpuArray)
 
         return self._cached_dll
 
 
 def _lib_path():
-    global EQUISTORE_LIBRARY_PATH
-    if EQUISTORE_LIBRARY_PATH is not None:
-        return EQUISTORE_LIBRARY_PATH
-    elif sys.platform.startswith("darwin"):
+    if sys.platform.startswith("darwin"):
         windows = False
         name = "libequistore.dylib"
     elif sys.platform.startswith("linux"):
@@ -62,7 +69,6 @@ def _lib_path():
         raise ImportError("Unknown platform. Please edit this file")
 
     path = os.path.join(os.path.join(_HERE, "lib"), name)
-    EQUISTORE_LIBRARY_PATH = path
 
     if os.path.isfile(path):
         if windows:

@@ -6,10 +6,10 @@ import sys
 from pycparser import c_ast, parse_file
 
 
-ROOT = os.path.dirname(__file__)
-FAKE_INCLUDES = os.path.join(ROOT, "include")
+ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+FAKE_INCLUDES = os.path.join(ROOT, "python", "scripts", "include")
 EQUISTORE_HEADER = os.path.relpath(
-    os.path.join(ROOT, "..", "..", "include", "equistore.h")
+    os.path.join(ROOT, "equistore-core", "include", "equistore.h")
 )
 
 
@@ -230,11 +230,10 @@ def generate_functions(file, functions):
 def generate_declarations():
     data = parse(EQUISTORE_HEADER)
 
-    outpath = os.path.join(ROOT, "..", "src", "equistore", "_c_api.py")
+    outpath = os.path.join(ROOT, "python", "src", "equistore", "_c_api.py")
     with open(outpath, "w") as file:
         file.write(
-            """# -*- coding: utf-8 -*-
-# fmt: off
+            """# fmt: off
 # flake8: noqa
 \"\"\"
 This file declares the C-API corresponding to equistore.h, in a way compatible
@@ -249,6 +248,7 @@ import enum
 import platform
 from ctypes import CFUNCTYPE, POINTER
 
+
 arch = platform.architecture()[0]
 if arch == "32bit":
     c_uintptr_t = ctypes.c_uint32
@@ -262,10 +262,19 @@ elif arch == "64bit":
         file.write("\n\n")
 
         for name, c_type in data.types.items():
+            if name == "eqs_create_array_callback_t":
+                # will be generated below, it depends on the structs
+                continue
             file.write(f"{name} = {type_to_ctypes(c_type)}\n")
 
         generate_enums(file, data.enums)
         generate_structs(file, data.structs)
+
+        file.write("\n\n")
+        file.write(
+            f"eqs_create_array_callback_t = {type_to_ctypes(data.types['eqs_create_array_callback_t'])}\n"
+        )
+
         generate_functions(file, data.functions)
 
 

@@ -31,7 +31,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
         joined_labels = ["n"],
                        [0, 2, 3, 1, 4, 5]
 
-    2. If the names are the same but the values are not unique a new variable
+    2. If the names are the same but the values are not unique a new dimension
        ``"tensor"`` is added to the names::
 
             labels_1 = ["n"], [0, 2, 3]
@@ -166,9 +166,7 @@ def _join_blocks_along_properties(blocks: List[TensorBlock]) -> TensorBlock:
 
             # find the correct sample position to put the data
             for i_grad, sample_grad in enumerate(gradient.samples):
-                # TODO: once C-API is changed replace by:
-                # i_sample = gradient_samples.position(sample_grad)`
-                i_sample = np.where(gradient_samples == sample_grad)[0][0]
+                i_sample = gradient_samples.position(sample_grad)
                 gradient_data[
                     i_sample,
                     ...,
@@ -209,7 +207,7 @@ def _join_blocks_along_samples(blocks: List[TensorBlock]) -> TensorBlock:
             gradient_data.append(gradient.data)
 
             samples = np.array(gradient.samples.tolist())
-            # update the "sample" variable in gradient samples
+            # update the "sample" dimension in gradient samples
             samples[:, 0] += 1 + gradient_samples[-1][:, 0].max()
             gradient_samples.append(samples)
 

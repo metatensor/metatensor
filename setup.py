@@ -39,7 +39,7 @@ class cmake_ext(build_ext):
     """
 
     def run(self):
-        source_dir = ROOT
+        source_dir = os.path.join(ROOT, "equistore-core")
         build_dir = os.path.join(ROOT, "build", "cmake-build")
         install_dir = os.path.join(os.path.realpath(self.build_lib), "equistore")
 
@@ -53,7 +53,6 @@ class cmake_ext(build_ext):
             f"-DCMAKE_BUILD_TYPE={EQUISTORE_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
             "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
-            "-DEQUISTORE_SERIALIZATION=ON",
         ]
 
         if RUST_BUILD_TARGET is not None:
@@ -98,7 +97,7 @@ def get_version():
     """
 
     # read version from Cargo.toml
-    with open("Cargo.toml") as fd:
+    with open("equistore-core/Cargo.toml") as fd:
         for line in fd:
             if line.startswith("version"):
                 _, version = line.split(" = ")

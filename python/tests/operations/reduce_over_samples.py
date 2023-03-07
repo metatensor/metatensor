@@ -941,6 +941,134 @@ class TestStdSamples(unittest.TestCase):
         self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").data))
 
 
+class TestZeroSamples(unittest.TestCase):
+    def test_zeros_sample_block(self):
+        block = TensorBlock(
+            values=np.zeros([0, 1]),
+            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["structure"], np.empty((0, 1), dtype=np.int32)),
+            components=[],
+        )
+
+        result_block = TensorBlock(
+            values=np.zeros([0, 1]),
+            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
+            samples=Labels([], np.empty((0, 0), dtype=np.int32)),
+            components=[],
+        )
+
+        tensor = TensorMap(Labels.single(), [block])
+        result_tensor = TensorMap(Labels.single(), [result_block])
+
+        tensor_sum = equistore.sum_over_samples(tensor, "structure")
+        tensor_mean = equistore.mean_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
+        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+
+        self.assertTrue(equistore.equal(result_tensor, tensor_sum))
+        self.assertTrue(equistore.equal(result_tensor, tensor_mean))
+        self.assertTrue(equistore.equal(result_tensor, tensor_variance))
+        self.assertTrue(equistore.equal(result_tensor, tensor_std))
+
+        block = TensorBlock(
+            values=np.zeros([0, 1]),
+            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["structure", "s1"], np.empty((0, 1), dtype=np.int32)),
+            components=[],
+        )
+
+        result_block = TensorBlock(
+            values=np.zeros([0, 1]),
+            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["s1"], np.empty((0, 1), dtype=np.int32)),
+            components=[],
+        )
+
+        tensor = TensorMap(Labels.single(), [block])
+        result_tensor = TensorMap(Labels.single(), [result_block])
+
+        tensor_sum = equistore.sum_over_samples(tensor, "structure")
+        tensor_mean = equistore.mean_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
+        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+
+        self.assertTrue(equistore.equal(result_tensor, tensor_sum))
+        self.assertTrue(equistore.equal(result_tensor, tensor_mean))
+        self.assertTrue(equistore.equal(result_tensor, tensor_variance))
+        self.assertTrue(equistore.equal(result_tensor, tensor_std))
+
+    def test_zeros_sample_block_gradient(self):
+        block = TensorBlock(
+            values=np.array(
+                [[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54], [3.5, 5.3, 6.87]]
+            ),
+            samples=Labels(
+                ["structure", "samples1"],
+                np.array(
+                    [
+                        [0, 0],
+                        [0, 1],
+                        [1, 0],
+                        [1, 1],
+                    ],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+
+        block.add_gradient(
+            parameter="positions",
+            data=np.zeros((0, 3)),
+            samples=Labels(
+                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
+            ),
+            components=[],
+        )
+
+        sum_block = TensorBlock(
+            values=np.array([[-0.3, 28.7, 8.54], [6.5, 10.3, 12.87]]),
+            samples=Labels(
+                ["samples1"],
+                np.array(
+                    [[0], [1]],
+                    dtype=np.int32,
+                ),
+            ),
+            components=[],
+            properties=Labels(
+                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
+            ),
+        )
+
+        sum_block.add_gradient(
+            parameter="positions",
+            data=np.zeros((0, 3)),
+            samples=Labels(
+                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
+            ),
+            components=[],
+        )
+
+        tensor = TensorMap(Labels.single(), [block])
+        tensor_sum_result = TensorMap(Labels.single(), [sum_block])
+
+        tensor_sum = equistore.sum_over_samples(tensor, "structure")
+        tensor_mean = equistore.mean_over_samples(tensor, "structure")
+        tensor_std = equistore.std_over_samples(tensor, "structure")
+        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+
+        self.assertTrue(equistore.allclose(tensor_sum_result, tensor_sum, atol=1e-14))
+        self.assertTrue(equistore.equal(tensor_sum, tensor_mean, only_metadata=True))
+        self.assertTrue(
+            equistore.equal(tensor_sum, tensor_variance, only_metadata=True)
+        )
+        self.assertTrue(equistore.equal(tensor_sum, tensor_std, only_metadata=True))
+
+
 # TODO: add tests with torch & torch scripting/tracing
 def get_XdX(block, gradient, der_index):
     XdX = []

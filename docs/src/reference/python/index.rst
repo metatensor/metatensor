@@ -14,4 +14,4 @@ Python API reference
     block
     operations/index
     data
-    misc/index
+    misc

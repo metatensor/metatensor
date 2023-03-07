@@ -1,23 +1,23 @@
-import unittest
-
 import numpy as np
-from utils import test_tensor_map
+import pytest
+from numpy.testing import assert_equal
+from utils import tensor_map
 
-from equistore import EquistoreError, Labels, TensorBlock
+from equistore import EquistoreError, Labels
 
 
-class TestLabels(unittest.TestCase):
+class TestLabels:
     def test_python_labels(self):
         labels = Labels(
             names=["a", "b"],
             values=np.array([[0, 0]], dtype=np.int32),
         )
 
-        self.assertEqual(labels.names, ("a", "b"))
-        self.assertEqual(len(labels), 1)
-        self.assertEqual(tuple(labels[0]), (0, 0))
+        assert labels.names == ("a", "b")
+        assert len(labels) == 1
+        assert tuple(labels[0]) == (0, 0)
 
-        self.assertTrue(np.all(labels.asarray() == np.array([[0, 0]])))
+        assert_equal(labels.asarray(), np.array([[0, 0]]))
 
         # check we can use single str for single name
         labels = Labels(
@@ -29,15 +29,15 @@ class TestLabels(unittest.TestCase):
             values=np.array([[1]], dtype=np.int32),
         )
 
-        self.assertEqual(labels.names, ("a",))
-        self.assertEqual(labels.names, labels_str.names)
-        self.assertEqual(len(labels), 1)
-        self.assertEqual(len(labels_str), 1)
-        self.assertEqual(tuple(labels_str[0]), (1,))
-        self.assertEqual(tuple(labels_str[0]), tuple(labels[0]))
+        assert labels.names == ("a",)
+        assert labels.names == labels_str.names
+        assert len(labels) == 1
+        assert len(labels_str) == 1
+        assert tuple(labels_str[0]) == (1,)
+        assert tuple(labels_str[0]) == tuple(labels[0])
 
-        self.assertTrue(np.all(labels.asarray() == np.array([[1]])))
-        self.assertTrue(np.all(labels.asarray() == labels_str.asarray()))
+        assert_equal(labels.asarray(), np.array([[1]]))
+        assert_equal(labels.asarray(), labels_str.asarray())
 
         # check empty arrays
         labels = Labels(
@@ -50,14 +50,14 @@ class TestLabels(unittest.TestCase):
             values=np.array([[]], dtype=np.int32),
         )
 
-        self.assertEqual(labels.names, [])
-        self.assertEqual(labels.names, labels_str.names)
-        self.assertEqual(len(labels), 1)
-        self.assertEqual(len(labels_str), 1)
-        self.assertEqual(tuple(labels_str[0]), tuple(labels[0]))
+        assert labels.names == []
+        assert labels.names == labels_str.names
+        assert len(labels) == 1
+        assert len(labels_str) == 1
+        assert tuple(labels_str[0]) == tuple(labels[0])
 
-        self.assertTrue(np.all(labels.asarray() == np.array([[]])))
-        self.assertTrue(np.all(labels.asarray() == labels_str.asarray()))
+        assert_equal(labels.asarray(), np.array([[]]))
+        assert_equal(labels.asarray(), labels_str.asarray())
 
         # check that we can convert from more than strict 2D arrays of int32
         labels = Labels(
@@ -70,26 +70,23 @@ class TestLabels(unittest.TestCase):
             values=np.array([[0, 0]], dtype=np.int64),
         )
 
-        with self.assertRaises(TypeError) as cm:
+        with pytest.raises(
+            TypeError, match="Labels values must be convertible to integers"
+        ):
             labels = Labels(
-                names=["a", "b"],
-                values=np.array([[0, 0]], dtype=np.float64),
+                names=["a", "b"], values=np.array([[0, 0]], dtype=np.float64)
             )
-        self.assertEqual(
-            str(cm.exception),
-            "Labels values must be convertible to integers",
-        )
 
     def test_native_labels(self):
-        tensor = test_tensor_map()
+        tensor = tensor_map()
         labels = tensor.keys
 
-        self.assertEqual(labels.names, ("key_1", "key_2"))
-        self.assertEqual(len(labels), 4)
-        self.assertEqual(tuple(labels[0]), (0, 0))
-        self.assertEqual(tuple(labels[1]), (1, 0))
-        self.assertEqual(tuple(labels[2]), (2, 2))
-        self.assertEqual(tuple(labels[3]), (2, 3))
+        assert labels.names == ("key_1", "key_2")
+        assert len(labels) == 4
+        assert tuple(labels[0]) == (0, 0)
+        assert tuple(labels[1]) == (1, 0)
+        assert tuple(labels[2]) == (2, 2)
+        assert tuple(labels[3]) == (2, 3)
 
         expected = np.array(
             [
@@ -99,72 +96,78 @@ class TestLabels(unittest.TestCase):
                 [2, 3],
             ]
         )
-        self.assertTrue(np.all(labels.asarray() == expected))
+        assert_equal(labels.asarray(), expected)
 
     def test_position(self):
-        tensor = test_tensor_map()
+        tensor = tensor_map()
         labels = tensor.keys
 
-        self.assertEqual(labels.position((0, 0)), 0)
-        self.assertEqual(labels.position((2, 3)), 3)
-        self.assertEqual(labels.position((2, -1)), None)
+        assert labels.position((0, 0)) == 0
+        assert labels.position((2, 3)) == 3
+        assert labels.position((2, -1)) is None
 
     def test_contains(self):
-        tensor = test_tensor_map()
+        tensor = tensor_map()
         labels = tensor.keys
 
-        self.assertTrue((0, 0) in labels)
-        self.assertTrue((2, 3) in labels)
-        self.assertFalse((2, -1) in labels)
+        assert (0, 0) in labels
+        assert (2, 3) in labels
+        assert (2, -1) not in labels
 
     def test_named_tuples(self):
-        tensor = test_tensor_map()
+        tensor = tensor_map()
         labels = tensor.keys
 
         iterator = labels.as_namedtuples()
         first = next(iterator)
 
-        self.assertTrue(isinstance(first, tuple))
-        self.assertTrue(hasattr(first, "_fields"))
+        assert isinstance(first, tuple)
+        assert hasattr(first, "_fields")
 
-        self.assertEqual(first.key_1, 0)
-        self.assertEqual(first.key_2, 0)
-        self.assertEqual(first.as_dict(), {"key_1": 0, "key_2": 0})
+        assert first.key_1 == 0
+        assert first.key_2 == 0
+        assert first.as_dict() == {"key_1": 0, "key_2": 0}
 
-        self.assertEqual(first, (0, 0))
-        self.assertEqual(next(iterator), (1, 0))
-        self.assertEqual(next(iterator), (2, 2))
-        self.assertEqual(next(iterator), (2, 3))
+        assert first == (0, 0)
+        assert next(iterator) == (1, 0)
+        assert next(iterator) == (2, 2)
+        assert next(iterator) == (2, 3)
 
-        self.assertRaises(StopIteration, next, iterator)
+        with pytest.raises(StopIteration):
+            next(iterator)
 
     def test_not_writeable(self):
-        tensor = test_tensor_map()
+        tensor = tensor_map()
         labels = tensor.keys
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError, match="assignment destination is read-only"):
             labels[0][0] = 4
 
-        self.assertEqual(str(cm.exception), "assignment destination is read-only")
-
     def test_invalid_names(self):
-        samples = Labels(
-            names=["not an ident"],
-            values=np.array([[0]], dtype=np.int32),
-        )
-
-        with self.assertRaises(EquistoreError) as cm:
-            _ = TensorBlock(
-                values=np.empty((1, 1)),
-                samples=samples,
-                components=[],
-                properties=Labels.single(),
+        with pytest.raises(
+            EquistoreError,
+            match="invalid parameter: 'not an ident' is not a valid label name",
+        ):
+            _ = Labels(
+                names=["not an ident"],
+                values=np.array([[0]], dtype=np.int32),
             )
-        self.assertEqual(
-            str(cm.exception),
-            "invalid parameter: 'not an ident' is not a valid label name",
+
+    def test_zero_length_label(self):
+        label = Labels(["sample", "structure", "atom"], np.array([]))
+        assert len(label) == 0
+
+    def test_labels_single(self):
+        label = Labels.single()
+        assert label.names == ("_",)
+        assert label.shape == (1,)
+
+    def test_labels_empty(self):
+        names = (
+            "foo",
+            "bar",
+            "baz",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()
+        label = Labels.empty(names)
+        assert label.names == names
+        assert len(label) == 0

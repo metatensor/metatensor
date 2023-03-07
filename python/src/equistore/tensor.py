@@ -1,3 +1,4 @@
+import copy
 import ctypes
 from typing import List, Optional, Union
 
@@ -50,11 +51,7 @@ class TensorMap:
         # all blocks are moved into the tensor map, assign NULL to `block._ptr`
         # to prevent accessing the blocks from Python/double free
         for block in blocks:
-            block._ptr = ctypes.POINTER(eqs_block_t)()
-
-        # keep a reference to the blocks in the tensor map in case they contain
-        # a Python-allocated array that we need to keep alive
-        self._blocks = blocks
+            block._move_ptr()
 
         self._ptr = self._lib.eqs_tensormap(
             keys._as_eqs_labels_t(), blocks_array, len(blocks)
@@ -72,8 +69,19 @@ class TensorMap:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and hasattr(self, "_ptr"):
+        if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
             self._lib.eqs_tensormap_free(self._ptr)
+
+    def __deepcopy__(self, _memodict):
+        new_ptr = self._lib.eqs_tensormap_copy(self._ptr)
+        return TensorMap._from_ptr(new_ptr)
+
+    def copy(self) -> "TensorMap":
+        """
+        Get a deep copy of this TensorMap, including all the (potentially
+        non Python-owned) data and metadata
+        """
+        return copy.deepcopy(self)
 
     def __iter__(self):
         keys = self.keys
@@ -158,7 +166,7 @@ class TensorMap:
         """The set of keys labeling the blocks in this tensor map."""
         result = eqs_labels_t()
         self._lib.eqs_tensormap_keys(self._ptr, result)
-        return Labels._from_eqs_labels_t(result, parent=self)
+        return Labels._from_eqs_labels_t(result)
 
     def block(self, *args, **kwargs) -> TensorBlock:
         """
@@ -339,11 +347,11 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys variables along the
+        Merge blocks with the same value for selected keys dimensions along the
         samples axis.
 
-        The variables (names) of ``keys_to_move`` will be moved from the keys to
-        the sample labels, and blocks with the same remaining keys variables
+        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
+        the sample labels, and blocks with the same remaining keys dimensions
         will be merged together along the sample axis.
 
         If ``keys_to_move`` is a set of :py:class:`Labels`, it must be empty
@@ -369,17 +377,19 @@ class TensorMap:
         )
         return TensorMap._from_ptr(ptr)
 
-    def components_to_properties(self, variables: Union[str, List[str]]) -> "TensorMap":
+    def components_to_properties(
+        self, dimensions: Union[str, List[str]]
+    ) -> "TensorMap":
         """
-        Move the given variables from the component labels to the property labels
+        Move the given dimensions from the component labels to the property labels
         for each block.
 
-        :param variables: name of the component variables to move to the properties
+        :param dimensions: name of the component dimensions to move to the properties
         """
-        c_variables = _list_or_str_to_array_c_char(variables)
+        c_dimensions = _list_or_str_to_array_c_char(dimensions)
 
         ptr = self._lib.eqs_tensormap_components_to_properties(
-            self._ptr, c_variables, c_variables._length_
+            self._ptr, c_dimensions, c_dimensions._length_
         )
         return TensorMap._from_ptr(ptr)
 
@@ -390,11 +400,11 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys variables along the
+        Merge blocks with the same value for selected keys dimensions along the
         property axis.
 
-        The variables (names) of ``keys_to_move`` will be moved from the keys to
-        the property labels, and blocks with the same remaining keys variables
+        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
+        the property labels, and blocks with the same remaining keys dimensions
         will be merged together along the property axis.
 
         If ``keys_to_move`` does not contains any entries (i.e.

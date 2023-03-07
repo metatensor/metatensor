@@ -470,21 +470,22 @@ class TestSplitErrors(unittest.TestCase):
         # a name in grouped_idxs not in the tensor
         grouped_idxs = [
             Labels(
-                names=["front and", "center"], values=np.array([[0, 1], [6, 7], [7, 4]])
+                names=["front_and", "center"], values=np.array([[0, 1], [6, 7], [7, 4]])
             ),
             Labels(
-                names=["front and", "center"], values=np.array([[2, 4], [3, 3], [4, 7]])
+                names=["front_and", "center"], values=np.array([[2, 4], [3, 3], [4, 7]])
             ),
             Labels(
-                names=["front and", "center"],
+                names=["front_and", "center"],
                 values=np.array([[1, 5], [5, 3], [8, 10]]),
             ),
         ]
         with self.assertRaises(ValueError) as cm:
             equistore.split(self.tensor, axis="samples", grouped_idxs=grouped_idxs),
+
         self.assertEqual(
             str(cm.exception),
-            "the name ``front and`` passed in a Labels object at position 0 of "
+            "the name ``front_and`` passed in a Labels object at position 0 of "
             "``grouped_idxs`` does not appear in the ``samples`` names "
             "of the input tensor",
         )
