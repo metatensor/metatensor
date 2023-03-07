@@ -7,13 +7,12 @@ import equistore
 
 
 class TestTensorMap:
-
     @pytest.fixture
-    def tensor(self, tensor): 
+    def tensor(self):
         return tensor_map()
 
     @pytest.fixture
-    def large_tensor():
+    def large_tensor(self):
         return large_tensor_map()
 
     def test_copy(self, tensor):
@@ -225,7 +224,7 @@ keys: ['key_1' 'key_2']
 
         assert_equal(block.values, np.full((4, 3, 1), 4.0))
 
-    def test_keys_to_samples(self, tensor): 
+    def test_keys_to_samples(self, tensor):
         tensor = tensor_map().keys_to_samples("key_2", sort_samples=True)
 
         assert tensor.keys.names == ("key_1",)
@@ -335,29 +334,28 @@ keys: ['key_1' 'key_2']
         assert tuple(block.properties[2]) == (2, 0)
 
     def test_eq(self, tensor):
-        assert tensor == tensor
+        assert equistore.equal(tensor, tensor) == (tensor == tensor)
 
-    def test_neq(self, tensor): 
-        self.assertFalse(tensor != tensor)
+    def test_neq(self, tensor, large_tensor):
+        assert equistore.equal(tensor, large_tensor) == (tensor == large_tensor)
 
-    def test_add(self, tensor): 
-        assert equistore.add(tensor, 1) == tensor + 1
+    def test_add(self, tensor):
+        assert equistore.add(tensor, 1) == (tensor + 1)
 
-    def test_sub(self, tensor): 
-        assert equistore.subtract(tensor, 1) == tensor - 1
+    def test_sub(self, tensor):
+        assert equistore.subtract(tensor, 1) == (tensor - 1)
 
-    def test_mul(self, tensor): 
-        assert equistore.multiply(tensor, 2) == tensor * 2
+    def test_mul(self, tensor):
+        assert equistore.multiply(tensor, 2) == (tensor * 2)
 
-    def test_matmul(self, tensor): 
-        tensor = tensor
+    def test_matmul(self, tensor):
         tensor = tensor.components_to_properties("components")
         tensor = equistore.remove_gradients(tensor)
 
-        assert equistore.dot(tensor, tensor) == tensor @ tensor
+        assert equistore.dot(tensor, tensor) == (tensor @ tensor)
 
-    def test_truediv(self, tensor): 
-        assert equistore.divide(tensor, 2) == tensor / 2
+    def test_truediv(self, tensor):
+        assert equistore.divide(tensor, 2) == (tensor / 2)
 
-    def test_pow(self, tensor): 
-        assert equistore.pow(tensor, 2) == tensor**2
+    def test_pow(self, tensor):
+        assert equistore.pow(tensor, 2) == (tensor**2)

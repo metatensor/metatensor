@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
+import equistore
 import equistore.status
 from equistore import Labels, TensorBlock
 
 
 class TestBlocks:
-
     @pytest.fixture
     def block(self):
         b = TensorBlock(
@@ -209,7 +209,9 @@ properties (2): ['properties']"""
         assert tuple(copy.samples[2]) == (4,)
 
     def test_eq(self, block):
-        assert self.block == self.block
+        assert equistore.equal_block(block, block) == (block == block)
 
-    def test_neq(self, block):
-        assert self.block != self.block
+    def test_neq(self, block, block_components):
+        assert equistore.equal_block(block, block_components) == (
+            block == block_components
+        )

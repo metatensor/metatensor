@@ -1,6 +1,6 @@
 import copy
 import ctypes
-from typing import List, Optional, Union
+from typing import List, Union
 
 import numpy as np
 
@@ -451,6 +451,7 @@ class TensorMap:
     def property_names(self) -> List[str]:
         """Names of the property labels for all blocks in this tensor map"""
         return self.block(0).properties.names
+
 
 def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
     if isinstance(keys_to_move, str):

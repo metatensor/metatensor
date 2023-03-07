@@ -332,7 +332,8 @@ def sum_over_samples(
 
 
 def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    """Compute the mean of a :py:class:`TensorMap`, grouping samples according to ``samples_names``.
+    """Compute the mean of a :py:class:`TensorMap`, grouping samples according to
+    ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
@@ -356,7 +357,8 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Compute the standard deviation of a :py:class:`TensorMap`, grouping samples according to ``samples_names``.
+    r"""Compute the standard deviation of a :py:class:`TensorMap`, grouping samples
+    according to ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
@@ -387,7 +389,8 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Compute the variance of a :py:class:`TensorMap`, grouping samples according to ``samples_names``.
+    r"""Compute the variance of a :py:class:`TensorMap`, grouping samples according to
+    ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
