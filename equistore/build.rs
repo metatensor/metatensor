@@ -6,15 +6,11 @@ fn rustc_version_at_least(version: &str) -> bool {
 }
 
 fn main() {
-    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
-        // We actually only need rustc>=1.63 for tests (because of
-        // https://github.com/rust-lang/rust/issues/100066), but there is no way
-        // to check if we are building for tests in a build script, so we
-        // unconditionally disable the feature for older rustc.
-        panic!("'static' feature requires rustc>=1.63");
-    }
+    let mut equistore_core = PathBuf::from("../equistore-core");
 
-    let mut equistore_core = PathBuf::from("equistore-core");
+    // setting DESTDIR when building with make will cause the install to be in a
+    // different directory than the expected one ($OUT_DIR/lib)
+    std::env::remove_var("DESTDIR");
 
     let mut cargo_toml = equistore_core.clone();
     cargo_toml.push("Cargo.toml");
@@ -54,12 +50,19 @@ fn main() {
         equistore_core.push(splitted[..splitted.len() - 1].join("."));
     }
 
-    let build = cmake::Config::new(equistore_core)
+    let mut install_dir = cmake::Config::new(equistore_core)
         .define("CARGO_EXE", env!("CARGO"))
         .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
         .build();
 
-    println!("cargo:rustc-link-search=native={}/lib", build.display());
+    install_dir.push("lib");
+    assert!(install_dir.is_dir(), "installation of equistore-core failed");
+
+    println!("cargo:rustc-link-search=native={}", install_dir.display());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=equistore-core");
+
+    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
+        println!("cargo:rustc-cfg=static_and_rustc_older_1_63");
+    }
 }
