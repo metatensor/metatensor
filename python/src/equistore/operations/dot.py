@@ -7,8 +7,7 @@ from ._utils import _check_maps
 
 
 def dot(A: TensorMap, B: TensorMap) -> TensorMap:
-    """
-    Computes the dot product of two :py:class:`TensorMap`.
+    """Compute the dot product of two :py:class:`TensorMap`.
 
     The two :py:class:`TensorMap` must have the same ``keys``. The resulting
     :py:class:`TensorMap` will have the same keys as the input and each block

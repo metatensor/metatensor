@@ -113,6 +113,54 @@ class TensorMap:
             )
         return self.block(*args)
 
+    def __eq__(self, other):
+        from equistore.operations import equal
+
+        return equal(self, other)
+
+    def __ne__(self, other):
+        from equistore.operations import equal
+
+        return not equal(self, other)
+
+    def __add__(self, other):
+        from equistore.operations import add
+
+        return add(self, other)
+
+    def __sub__(self, other):
+        from equistore.operations import subtract
+
+        return subtract(self, other)
+
+    def __mul__(self, other):
+        from equistore.operations import multiply
+
+        return multiply(self, other)
+
+    def __matmul__(self, other):
+        from equistore.operations import dot
+
+        return dot(self, other)
+
+    def __truediv__(self, other):
+        from equistore.operations import divide
+
+        return divide(self, other)
+
+    def __pow__(self, other):
+        from equistore.operations import pow
+
+        return pow(self, other)
+
+    def __neg__(self):
+        from equistore.operations import multiply
+
+        return multiply(self, -1)
+
+    def __pos__(self):
+        return self
+
     @property
     def keys(self) -> Labels:
         """The set of keys labeling the blocks in this tensor map."""

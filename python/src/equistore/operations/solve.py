@@ -7,8 +7,8 @@ from ._utils import _check_maps, _check_same_gradients
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
-    """
-    Solve a linear system among two :py:class:`TensorMap`.
+    """Solve a linear system among two :py:class:`TensorMap`.
+
     Solve the linear equation set
     ``Y = X * w`` for the unknown ``w``.
     Where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`.

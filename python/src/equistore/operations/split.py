@@ -11,9 +11,9 @@ def split(
     axis: str,
     grouped_idxs: List[Labels],
 ) -> List[TensorMap]:
-    """
-    Splits an input :py:class:`TensorMap` into mutliple :py:class:`TensorMap`
-    objects based on some specified groups of indices, along either the
+    """Split a :py:class:`TensorMap` into multiple :py:class:`TensorMap`.
+
+    The operation is based on some specified groups of indices, along either the
     "samples" or "properties" ``axis``. The number of returned
     :py:class:`TensorMap`s is equal to the number of :py:class:`Labels` objects
     passed in ``grouped_idxs``. Each returned :py:class`TensorMap` will have the

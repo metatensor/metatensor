@@ -12,12 +12,11 @@ def slice(
     samples: Optional[Labels] = None,
     properties: Optional[Labels] = None,
 ) -> TensorMap:
-    """
-    Slices an input :py:class:`TensorMap` along the samples and/or properties
-    dimension(s). ``samples`` and ``properties`` are
-    :py:class:`Labels` objects that specify the samples/properties
-    (respectively) names and indices that should be sliced, i.e. kept in the
-    output tensor.
+    """Slice a :py:class:`TensorMap` along the samples and/or properties dimension(s).
+
+    ``samples`` and ``properties`` are :py:class:`Labels` objects that specify the
+    samples/properties (respectively) names and indices that should be sliced, i.e.
+    kept in the output tensor.
 
     Note that either ``samples`` or ``properties``, or both,
     should be specified as input.

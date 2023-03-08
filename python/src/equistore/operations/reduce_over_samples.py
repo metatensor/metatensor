@@ -266,8 +266,9 @@ def _reduce_over_samples(
 def sum_over_samples(
     tensor: TensorMap, samples_names: Union[List[str], str]
 ) -> TensorMap:
-    """
-    Create a new :py:class:`TensorMap` with the same keys as as the input
+    """Sum a :py:class:`TensorMap`, grouping samples according to ``samples_names``.
+
+    This function creates a new :py:class:`TensorMap` with the same keys as as the input
     ``tensor``, and each :py:class:`TensorBlock` is obtained summing the
     corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
@@ -331,7 +332,10 @@ def sum_over_samples(
 
 
 def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    """Create a new :py:class:`TensorMap` with the same keys as
+    """Compute the mean of a :py:class:`TensorMap`, grouping samples according to
+    ``samples_names``.
+
+    This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
@@ -353,7 +357,10 @@ def mean_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Create a new :py:class:`TensorMap` with the same keys as
+    r"""Compute the standard deviation of a :py:class:`TensorMap`, grouping samples
+    according to ``samples_names``.
+
+    This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the std deviation of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
@@ -382,7 +389,10 @@ def std_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
 
 
 def variance_over_samples(tensor: TensorMap, samples_names: List[str]) -> TensorMap:
-    r"""Create a new :py:class:`TensorMap` with the same keys as
+    r"""Compute the variance of a :py:class:`TensorMap`, grouping samples according to
+    ``samples_names``.
+
+    This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the variance of the corresponding input :py:class:`TensorBlock`
     over the ``samples_names`` indices.
