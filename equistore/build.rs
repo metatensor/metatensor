@@ -6,7 +6,7 @@ fn rustc_version_at_least(version: &str) -> bool {
 }
 
 fn main() {
-    let mut equistore_core = PathBuf::from("equistore-core");
+    let mut equistore_core = PathBuf::from("../equistore-core");
 
     // setting DESTDIR when building with make will cause the install to be in a
     // different directory than the expected one ($OUT_DIR/lib)
