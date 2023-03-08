@@ -16,6 +16,7 @@ from .allclose import (  # noqa
 )
 from .divide import divide  # noqa
 from .dot import dot  # noqa
+from .drop_blocks import drop_blocks
 from .empty_like import empty_like, empty_like_block  # noqa
 from .equal import equal, equal_block, equal_block_raise, equal_raise  # noqa
 from .join import join  # noqa
@@ -46,6 +47,7 @@ __all__ = [
     "allclose_block_raise",
     "divide",
     "dot",
+    "drop_blocks",
     "empty_like",
     "empty_like_block",
     "equal",
