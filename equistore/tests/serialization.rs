@@ -1,6 +1,6 @@
 #[test]
 fn load_file() {
-    let tensor = equistore::io::load("equistore-core/tests/data.npz").unwrap();
+    let tensor = equistore::io::load("../equistore-core/tests/data.npz").unwrap();
 
     assert_eq!(tensor.keys().names(), ["spherical_harmonics_l", "center_species", "neighbor_species"]);
     assert_eq!(tensor.keys().count(), 27);

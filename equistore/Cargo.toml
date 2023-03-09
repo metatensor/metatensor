@@ -24,8 +24,8 @@ default = []
 static = []
 
 [build-dependencies]
-# we need to pin cmake to an older version to have it work on rust 1.56
-cmake = "=0.1.45"
+# we want a recent version of the cmake crate
+cmake = "0.1.49"
 which = "4"
 glob = "0.3"
 rustc_version = "0.4"
