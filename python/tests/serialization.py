@@ -5,7 +5,7 @@ import pytest
 from numpy.testing import assert_equal
 from utils import tensor_map
 
-import equistore.io
+import equistore
 from equistore import TensorMap
 
 
@@ -15,7 +15,7 @@ ROOT = os.path.dirname(__file__)
 class TestIo:
     @pytest.mark.parametrize("use_numpy", (True, False))
     def test_load(self, use_numpy):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(ROOT, "..", "..", "equistore-core", "tests", "data.npz"),
             use_numpy=use_numpy,
         )
@@ -45,7 +45,7 @@ class TestIo:
         tmpfile = "serialize-test.npz"
 
         with tmpdir.as_cwd():
-            equistore.io.save(tmpfile, tensor, use_numpy=use_numpy)
+            equistore.save(tmpfile, tensor, use_numpy=use_numpy)
             data = np.load(tmpfile)
 
         assert len(data.keys()) == 29

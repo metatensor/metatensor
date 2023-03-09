@@ -4,7 +4,6 @@ from os import path
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -13,10 +12,10 @@ DATA_ROOT = path.join(path.dirname(__file__), "..", "data")
 
 class TestJoinTensorMap(unittest.TestCase):
     def setUp(self):
-        self.ps = equistore.io.load(
+        self.ps = equistore.load(
             path.join(DATA_ROOT, "qm7-power-spectrum.npz"), use_numpy=True
         )
-        self.se = equistore.io.load(
+        self.se = equistore.load(
             path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
         )
         self.first_block = self.ps.block(0)
@@ -99,7 +98,7 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_join_properties_different_components(self):
         """Test error raise if `components` are not the same."""
         se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
-        se = equistore.io.load(
+        se = equistore.load(
             path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
         )
         with self.assertRaises(ValueError) as err:
@@ -141,7 +140,7 @@ class TestJoinTensorMap(unittest.TestCase):
     def test_join_samples_different_components(self):
         """Test error raise if `components` are not the same."""
         se_c2p = self.se.components_to_properties(["spherical_harmonics_m"])
-        se = equistore.io.load(
+        se = equistore.load(
             path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
         )
         with self.assertRaises(ValueError) as err:

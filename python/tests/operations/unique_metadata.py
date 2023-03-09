@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations._utils import _labels_equal
 
@@ -20,7 +19,7 @@ class TestUniqueMetadata(unittest.TestCase):
     def setUp(self):
         self.tensor1 = tensor_map()  # Test case 1
         self.tensor2 = large_tensor_map()  # Test case 2
-        self.tensor3 = equistore.io.load(  # Test case 3
+        self.tensor3 = equistore.load(  # Test case 3
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -422,7 +421,7 @@ class TestUniqueMetadataErrors(unittest.TestCase):
     """
 
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )

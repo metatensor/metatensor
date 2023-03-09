@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -13,7 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 class TestDot(unittest.TestCase):
     def test_self_dot_no_components(self):
-        tensor1 = equistore.io.load(
+        tensor1 = equistore.load(
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
@@ -55,7 +54,7 @@ class TestDot(unittest.TestCase):
                 )
 
     def test_self_dot_components(self):
-        tensor1 = equistore.io.load(
+        tensor1 = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )

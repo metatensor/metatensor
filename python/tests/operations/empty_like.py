@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore
-import equistore.io
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -12,7 +11,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 class TestEmpty_like(unittest.TestCase):
     def test_empty_like_nocomponent(self):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
@@ -58,7 +57,7 @@ class TestEmpty_like(unittest.TestCase):
                 )
 
     def test_empty_component(self):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
@@ -124,7 +123,7 @@ class TestEmpty_like(unittest.TestCase):
                 )
 
     def test_empty_error(self):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
