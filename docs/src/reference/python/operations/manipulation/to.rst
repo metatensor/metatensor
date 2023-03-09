@@ -1,0 +1,4 @@
+to
+==
+
+.. autofunction:: equistore.to
