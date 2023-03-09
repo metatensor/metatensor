@@ -16,7 +16,6 @@ except ImportError:
 import ctypes
 
 import equistore
-import equistore.io
 from equistore import data
 from equistore._c_api import EQS_SUCCESS, c_uintptr_t, eqs_array_t, eqs_sample_mapping_t
 

@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -13,11 +12,11 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 class TestSumSamples(unittest.TestCase):
     def test_sum_samples_block(self):
-        tensor_se = equistore.io.load(
+        tensor_se = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )
-        tensor_ps = equistore.io.load(
+        tensor_ps = equistore.load(
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )
@@ -248,11 +247,11 @@ class TestSumSamples(unittest.TestCase):
 
 class TestMeanSamples(unittest.TestCase):
     def test_mean_samples_block(self):
-        tensor_se = equistore.io.load(
+        tensor_se = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )
-        tensor_ps = equistore.io.load(
+        tensor_ps = equistore.load(
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )
@@ -566,11 +565,11 @@ class TestReductionAllSamples(unittest.TestCase):
 
 class TestStdSamples(unittest.TestCase):
     def test_std_samples_block(self):
-        tensor_se = equistore.io.load(
+        tensor_se = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )
-        tensor_ps = equistore.io.load(
+        tensor_ps = equistore.load(
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )

@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations._utils import _labels_equal
 
@@ -19,7 +18,7 @@ class TestSplitSamples(unittest.TestCase):
     """Splitting samples dimension of TensorMap and TensorBlock"""
 
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             # Use the sph. exp. TensorMap - it has components
             os.path.join(DATA_ROOT, TEST_FILE_1),
             use_numpy=True,
@@ -222,7 +221,7 @@ class TestSplitProperties(unittest.TestCase):
     """Splitting property dimension of TensorMap and TensorBlock"""
 
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             # Use the pow. spectrum TensorMap - it has no components but
             # mutliple properties
             os.path.join(DATA_ROOT, TEST_FILE_2),
@@ -406,7 +405,7 @@ class TestSplitProperties(unittest.TestCase):
 
 class TestSplitErrors(unittest.TestCase):
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE_1),
             use_numpy=True,
         )

@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import equistore.io
+import equistore
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -129,7 +129,7 @@ class Testallclose(unittest.TestCase):
         self.assertTrue(equistore.allclose(X_c, X_c_copy, atol=1e-1))
 
     def test_self_allclose_grad(self):
-        tensor1 = equistore.io.load(
+        tensor1 = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )

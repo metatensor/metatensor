@@ -13,9 +13,9 @@ Error handling
 Serialization
 ^^^^^^^^^^^^^
 
-.. autofunction:: equistore.io.load
+.. autofunction:: equistore.load
 
-.. autofunction:: equistore.io.save
+.. autofunction:: equistore.save
 
 --------------------------------------------------------------------------------
 
