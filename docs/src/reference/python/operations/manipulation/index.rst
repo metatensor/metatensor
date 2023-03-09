@@ -4,7 +4,7 @@ Manipulation operations
 .. toctree::
     :maxdepth: 1
 
-    drop_blocks() <drop_blocks>
+    drop_blocks() <drop-blocks>
     join() <join>
     slice() <slice>
     split() <split>
