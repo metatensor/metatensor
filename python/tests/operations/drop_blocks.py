@@ -23,6 +23,8 @@ def test_tensor_map() -> TensorMap:
 
 class TestDropBlock:
     def test_drop_all(self, test_tensor_map):
+        # test the behavior when all the keys are dropped
+        # expected behavior: empty TensorMap
         keys = test_tensor_map.keys
         tensor = equistore.drop_blocks(test_tensor_map, keys)
         empty_tensor = TensorMap(keys=Labels.empty(keys.names), blocks=[])
@@ -31,6 +33,7 @@ class TestDropBlock:
         )  # TODO: reverse this once #175 is fixed
 
     def test_drop_first(self, test_tensor_map):
+        # test the behavior when the first key is dropped
         ref_keys = test_tensor_map.keys[1:]
         ref_blocks = [test_tensor_map[key].copy() for key in ref_keys]
         ref_tensor = TensorMap(ref_keys, ref_blocks)
@@ -41,6 +44,7 @@ class TestDropBlock:
         check_consistency(test_tensor_map, new_tensor)
 
     def test_drop_last(self, test_tensor_map):
+        # test the behavior when the last key is dropped
         ref_keys = test_tensor_map.keys[:-1]
         ref_blocks = [test_tensor_map[key].copy() for key in ref_keys]
         ref_tensor = TensorMap(ref_keys, ref_blocks)
@@ -51,6 +55,7 @@ class TestDropBlock:
         check_consistency(test_tensor_map, new_tensor)
 
     def test_drop_random(self, test_tensor_map):
+        # test the behavior when an existing  random key is dropped
         number_blocks = len(test_tensor_map.blocks())
         index_to_remove = np.random.randint(1, number_blocks - 1)
 
@@ -74,6 +79,7 @@ class TestDropBlock:
         check_consistency(test_tensor_map, new_tensor)
 
     def test_drop_two_random_keys(self, test_tensor_map):
+        # test the behavior when two random keys are dropped
         number_blocks = len(test_tensor_map.blocks())
         indices_to_drop = np.random.randint(0, number_blocks, 2)
         keys_to_drop = test_tensor_map.keys[indices_to_drop]
@@ -87,11 +93,13 @@ class TestDropBlock:
         check_consistency(test_tensor_map, new_tensor)
 
     def test_drop_nothing(self, test_tensor_map):
+        # test when an emty key is dropped
         empty_key = Labels.empty(test_tensor_map.keys.names)
         new_tensor = equistore.drop_blocks(test_tensor_map, empty_key)
         assert new_tensor == test_tensor_map
 
     def test_not_existent(self, test_tensor_map):
+        # test when keys that don't appear in the TensorMap are dropped
         non_existent_key = Labels(
             test_tensor_map.keys.names, np.array([[-1, -1, -1], [0, 0, 0]])
         )
@@ -104,6 +112,7 @@ class TestDropBlock:
 
 
 def check_consistency(tensor1: TensorMap, tensor2: TensorMap):
+    # check if two TensorMaps contain the same information
     if tensor1.keys.names != tensor2.keys.names:
         raise ValueError("the two tensors have different key names")
 

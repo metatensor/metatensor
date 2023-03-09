@@ -25,9 +25,6 @@ def drop_blocks(tensor: TensorMap, keys: Labels) -> TensorMap:
             "some keys in `keys` are not present in `tensor`."
             f" Non-existent keys: {diff}"
         )
-    # for key in keys:
-    #     if not (key in tensor.keys):
-    #         raise ValueError(f"passed key {key} does not exist in `tensor`")
     new_keys = np.setdiff1d(tensor.keys, keys)
     new_blocks = [tensor[key].copy() for key in new_keys]
     return TensorMap(keys=new_keys, blocks=new_blocks)
