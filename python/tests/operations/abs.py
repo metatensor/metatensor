@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 
-
 import equistore
 import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
@@ -98,7 +97,7 @@ class TestAbs:
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array([[[-6, -1], [-7, 2]], [[8, -3], [9, 4]]]),
+            data=np.array([[[-6, 1], [7, 2]], [[8, -3], [9, 4]]]),
             samples=Labels(
                 ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
             ),
@@ -117,8 +116,8 @@ class TestAbs:
             data=np.array(
                 [
                     [[10, -11], [12, -13]],
-                    [[14, 15], [10, -11]],
-                    [[-12, -13], [-14, 15]],
+                    [[14, -15], [-10, -11]],
+                    [[-12, 13], [14, 15]],
                 ]
             ),
             samples=Labels(
@@ -136,4 +135,5 @@ class TestAbs:
         tensor_abs = equistore.abs(A)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
+        equistore.equal_raise(tensor_result, tensor_abs)
         assert equistore.equal(tensor_result, tensor_abs)

@@ -37,7 +37,7 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         components=block.components,
         properties=block.properties,
     )
-    if not block.has_gradient():
+    if len(block.gradients_list()) == 0:
         return result_block
 
     sign_values = _dispatch.sign(block.values)
