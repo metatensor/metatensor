@@ -29,7 +29,20 @@ project(equistore
     LANGUAGES C # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
 )
 
-option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
+
+# We follow the standard CMake convention of using BUILD_SHARED_LIBS to provide
+# either a shared or static library as a default target. But since cargo always
+# builds both versions by default, we also install both versions by default.
+# `EQUISTORE_INSTALL_BOTH_STATIC_SHARED=OFF` allow to disable this behavior, and
+# only install the file corresponding to `BUILD_SHARED_LIBS=ON/OFF`.
+#
+# BUILD_SHARED_LIBS controls the `equistore` cmake target, making it an alias of
+# either `equistore::static` or `equistore::shared`. This is mainly relevant
+# when using equistore from another cmake project, either as a submodule or from
+# an installed library (see cmake/equistore-config.cmake)
+option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
+option(EQUISTORE_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
+
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
 set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
@@ -141,7 +154,8 @@ else()
     set(CARGO_RUSTC_ARGS "")
 endif()
 
-if (EQUISTORE_BUILD_FOR_PYTHON AND ${CARGO_VERSION} VERSION_GREATER "1.59")
+# TODO: introduce a generic RUST_FLAGS variable and use that instead
+if (EQUISTORE_BUILD_FOR_PYTHON)
     # strip dynamic library for smaller wheels to download/install
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};-Cstrip=symbols")
 endif()
@@ -216,8 +230,15 @@ configure_file(
 )
 
 install(FILES ${EQUISTORE_HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR})
-install(FILES ${EQUISTORE_SHARED_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
-install(FILES ${EQUISTORE_STATIC_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+
+if (EQUISTORE_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
+    install(FILES ${EQUISTORE_SHARED_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+endif()
+
+if (EQUISTORE_INSTALL_BOTH_STATIC_SHARED OR NOT BUILD_SHARED_LIBS)
+    install(FILES ${EQUISTORE_STATIC_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+endif()
+
 install(FILES
     ${PROJECT_BINARY_DIR}/equistore-config-version.cmake
     ${PROJECT_BINARY_DIR}/equistore-config.cmake

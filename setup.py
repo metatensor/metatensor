@@ -52,6 +52,7 @@ class cmake_ext(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_BUILD_TYPE={EQUISTORE_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
+            "-DEQUISTORE_INSTALL_BOTH_STATIC_SHARED=OFF",
             "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
         ]
 
