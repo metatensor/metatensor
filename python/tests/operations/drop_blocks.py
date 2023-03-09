@@ -1,9 +1,11 @@
 import os
+import re
 
 import numpy as np
 import pytest
 
 import equistore
+import equistore.io
 from equistore import Labels, TensorMap
 
 
@@ -20,12 +22,14 @@ def test_tensor_map() -> TensorMap:
 
 
 class TestDropBlock:
-    # this test will fail for now because of issue #175
+    # This test will fail for now because of issue #175
     def test_drop_all(self, test_tensor_map):
         keys = test_tensor_map.keys
         tensor = equistore.drop_blocks(test_tensor_map, keys)
         empty_tensor = TensorMap(keys=Labels.empty(keys.names), blocks=[])
-        assert equistore.equal(tensor, empty_tensor)
+        error_msg = ""
+        with pytest.raises(ValueError, match=re.escape(error_msg)):
+            equistore.equal(tensor, empty_tensor)
 
     def test_drop_first(self, test_tensor_map):
         ref_keys = test_tensor_map.keys[1:]
@@ -89,8 +93,14 @@ class TestDropBlock:
         assert new_tensor == test_tensor_map
 
     def test_not_existent(self, test_tensor_map):
-        non_existent_key = Labels(test_tensor_map.keys.names, np.array([[0, 0, 0]]))
-        with pytest.raises(ValueError):
+        non_existent_key = Labels(
+            test_tensor_map.keys.names, np.array([[-1, -1, -1], [0, 0, 0]])
+        )
+        error_msg = (
+            "some keys in `keys` are not present in `tensor`."
+            f" Non-existent keys: {non_existent_key}"
+        )
+        with pytest.raises(ValueError, match=re.escape(error_msg)):
             equistore.drop_blocks(test_tensor_map, non_existent_key)
 
 

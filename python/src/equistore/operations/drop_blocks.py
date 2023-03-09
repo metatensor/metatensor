@@ -17,11 +17,17 @@ def drop_blocks(tensor: TensorMap, keys: Labels) -> TensorMap:
     if not np.all(tensor.keys.names == keys.names):
         raise ValueError(
             "The input tensor's keys must have the same names as the specified"
-            + f" keys to drop. Should be {tensor.keys.names} but got {keys.names}"
+            f" keys to drop. Should be {tensor.keys.names} but got {keys.names}"
         )
-    for key in keys:
-        if not (key in tensor.keys):
-            raise ValueError(f"{key} key does not exist in {tensor}")
+    diff = np.setdiff1d(keys, tensor.keys)
+    if len(diff) > 0:
+        raise ValueError(
+            "some keys in `keys` are not present in `tensor`."
+            f" Non-existent keys: {diff}"
+        )
+    # for key in keys:
+    #     if not (key in tensor.keys):
+    #         raise ValueError(f"passed key {key} does not exist in `tensor`")
     new_keys = np.setdiff1d(tensor.keys, keys)
     new_blocks = [tensor[key].copy() for key in new_keys]
     return TensorMap(keys=new_keys, blocks=new_blocks)
