@@ -338,3 +338,17 @@ def abs(array):
         return torch.abs(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def sign(array):
+    """
+    Returns an indication of the sign of the elements in the array.
+
+    It is equivalent of np.sign(array) and torch.sign(tensor)
+    """
+    if isinstance(array, np.ndarray):
+        return np.sign(array)
+    elif isinstance(array, TorchTensor):
+        return torch.sign(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
