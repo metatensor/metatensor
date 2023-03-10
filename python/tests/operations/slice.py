@@ -5,7 +5,6 @@ import warnings
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels
 
 
@@ -17,7 +16,7 @@ class TestSliceSamples(unittest.TestCase):
     """Slicing samples dimension of TensorMap and TensorBlock"""
 
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -164,7 +163,7 @@ class TestSliceProperties(unittest.TestCase):
     """Slicing property dimension of TensorMap and TensorBlock"""
 
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -309,7 +308,7 @@ class TestSliceProperties(unittest.TestCase):
 
 class TestSliceBoth(unittest.TestCase):
     def test_slice_block(self):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -367,7 +366,7 @@ class TestSliceBoth(unittest.TestCase):
         self.assertTrue(np.all(sliced_block.values == expected))
 
     def test_no_slicing(self):
-        tensor = equistore.io.load(
+        tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
@@ -388,7 +387,7 @@ class TestSliceBoth(unittest.TestCase):
 
 class TestSliceErrors(unittest.TestCase):
     def setUp(self):
-        self.tensor = equistore.io.load(
+        self.tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )

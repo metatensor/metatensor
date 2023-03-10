@@ -138,7 +138,7 @@ def _array_to_numpy(array):
     elif _is_torch_array(array):
         return array.cpu().numpy()
     else:
-        raise ValueError("unknown array type passed to `equistore.io.save`")
+        raise ValueError("unknown array type passed to `equistore.save`")
 
 
 def _tensor_map_to_dict(tensor_map):

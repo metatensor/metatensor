@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -128,7 +127,7 @@ class TestEqual(unittest.TestCase):
         self.assertFalse(equistore.equal(X_c, X_c_copy))
 
     def test_self_equal_grad(self):
-        tensor1 = equistore.io.load(
+        tensor1 = equistore.load(
             os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
             use_numpy=True,
         )
