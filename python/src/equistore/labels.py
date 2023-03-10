@@ -262,7 +262,12 @@ def _eqs_labels_view(array):
     labels.internal_ptr_ = None
     labels.names = names
     labels.size = len(array.names)
-    labels.values = array.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+
+    # We need to make sure the data is C-contiguous to take a pointer to it
+    contiguous = np.ascontiguousarray(array)
+    ptr = contiguous.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+
+    labels.values = ptr
     labels.count = array.shape[0]
 
     return labels

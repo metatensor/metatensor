@@ -171,3 +171,18 @@ class TestLabels:
         label = Labels.empty(names)
         assert label.names == names
         assert len(label) == 0
+
+    def test_labels_contiguous(self):
+        labels = Labels(
+            names=["a", "b"],
+            values=np.arange(32, dtype=np.int32).reshape(-1, 2),
+        )
+
+        labels = labels[::-1]
+        ptr = labels._as_eqs_labels_t().values
+
+        shape = (len(labels), len(labels.names))
+        array = np.ctypeslib.as_array(ptr, shape=shape)
+        array = array.view(dtype=labels.dtype).reshape(-1)
+
+        assert np.all(array == labels)
