@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 
 import equistore
-import equistore.io
 from equistore import Labels, TensorMap
 
 
