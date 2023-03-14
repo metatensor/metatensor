@@ -138,7 +138,7 @@ class TestRandomLike(unittest.TestCase):
             )
         self.assertEqual(
             str(cm.exception),
-            "The requested parameter 'err' in ones_like_block "
+            "The requested parameter 'err' in random_uniform_like_block "
             "is not a valid parameterfor the TensorBlock",
         )
 

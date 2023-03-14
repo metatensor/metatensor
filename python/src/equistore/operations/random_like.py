@@ -51,7 +51,7 @@ def random_uniform_like_block(
         parameters = block.gradients_list()
     else:
         _check_parameters_in_gradient_block(
-            block=block, parameters=parameters, fname="random_like_block"
+            block=block, parameters=parameters, fname="random_uniform_like_block"
         )
 
     for parameter in parameters:
