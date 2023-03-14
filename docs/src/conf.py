@@ -58,6 +58,7 @@ needs_sphinx = "4.0.0"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
     "breathe",
 ]
 
@@ -75,6 +76,9 @@ autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"
 
+intersphinx_mapping = {
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+}
 
 breathe_projects = {
     "equistore": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),

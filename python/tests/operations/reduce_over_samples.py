@@ -23,9 +23,17 @@ class TestSumSamples(unittest.TestCase):
         bl1 = tensor_ps[0]
 
         reduce_tensor_se = equistore.sum_over_samples(
-            tensor_se, samples_names=["center"]
+            tensor_se, sample_names=["center"]
         )
-        reduce_tensor_ps = equistore.sum_over_samples(tensor_ps, samples_names="center")
+        reduce_tensor_ps = equistore.sum_over_samples(tensor_ps, sample_names="center")
+
+        # checks that reduction over a block is the same as the tensormap operation
+        reduce_block_se = equistore.sum_over_samples_block(
+            tensor_se.block(0), sample_names="center"
+        )
+        self.assertTrue(
+            np.allclose(reduce_block_se.values, reduce_tensor_se.block(0).values)
+        )
 
         self.assertTrue(
             np.all(
@@ -171,10 +179,10 @@ class TestSumSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = equistore.sum_over_samples(X, samples_names="samples3")
-        reduce_X_23 = equistore.sum_over_samples(X, samples_names=["samples1"])
+        reduce_X_12 = equistore.sum_over_samples(X, sample_names="samples3")
+        reduce_X_23 = equistore.sum_over_samples(X, sample_names=["samples1"])
         reduce_X_2 = equistore.sum_over_samples(
-            X, samples_names=["samples1", "samples3"]
+            X, sample_names=["samples1", "samples3"]
         )
 
         self.assertTrue(
@@ -257,11 +265,9 @@ class TestMeanSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = equistore.mean_over_samples(
-            tensor_se, samples_names="center"
-        )
+        reduce_tensor_se = equistore.mean_over_samples(tensor_se, sample_names="center")
         reduce_tensor_ps = equistore.mean_over_samples(
-            tensor_ps, samples_names=["center"]
+            tensor_ps, sample_names=["center"]
         )
 
         self.assertTrue(
@@ -436,10 +442,10 @@ class TestMeanSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = equistore.mean_over_samples(X, samples_names=["samples3"])
-        reduce_X_23 = equistore.mean_over_samples(X, samples_names="samples1")
+        reduce_X_12 = equistore.mean_over_samples(X, sample_names=["samples3"])
+        reduce_X_23 = equistore.mean_over_samples(X, sample_names="samples1")
         reduce_X_2 = equistore.mean_over_samples(
-            X, samples_names=["samples1", "samples3"]
+            X, sample_names=["samples1", "samples3"]
         )
 
         self.assertTrue(
@@ -546,10 +552,10 @@ class TestReductionAllSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        sum_X = equistore.sum_over_samples(X, samples_names=["samples"])
-        mean_X = equistore.mean_over_samples(X, samples_names=["samples"])
-        var_X = equistore.variance_over_samples(X, samples_names=["samples"])
-        std_X = equistore.std_over_samples(X, samples_names=["samples"])
+        sum_X = equistore.sum_over_samples(X, sample_names=["samples"])
+        mean_X = equistore.mean_over_samples(X, sample_names=["samples"])
+        var_X = equistore.var_over_samples(X, sample_names=["samples"])
+        std_X = equistore.std_over_samples(X, sample_names=["samples"])
 
         self.assertTrue(equistore.equal(sum_X, mean_X, only_metadata=True))
         self.assertTrue(equistore.equal(sum_X, std_X, only_metadata=True))
@@ -578,9 +584,9 @@ class TestStdSamples(unittest.TestCase):
 
         bl1 = tensor_ps[0]
 
-        reduce_tensor_se = equistore.std_over_samples(tensor_se, samples_names="center")
+        reduce_tensor_se = equistore.std_over_samples(tensor_se, sample_names="center")
         reduce_tensor_ps = equistore.std_over_samples(
-            tensor_ps, samples_names=["center"]
+            tensor_ps, sample_names=["center"]
         )
 
         self.assertTrue(
@@ -780,10 +786,10 @@ class TestStdSamples(unittest.TestCase):
         )
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = equistore.std_over_samples(X, samples_names=["samples3"])
-        reduce_X_23 = equistore.std_over_samples(X, samples_names="samples1")
+        reduce_X_12 = equistore.std_over_samples(X, sample_names=["samples3"])
+        reduce_X_23 = equistore.std_over_samples(X, sample_names="samples1")
         reduce_X_2 = equistore.std_over_samples(
-            X, samples_names=["samples1", "samples3"]
+            X, sample_names=["samples1", "samples3"]
         )
 
         self.assertTrue(
@@ -896,10 +902,10 @@ class TestStdSamples(unittest.TestCase):
         keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
         X = TensorMap(keys, [block_1])
 
-        add_X = equistore.sum_over_samples(X, samples_names=["samples1"])
-        mean_X = equistore.mean_over_samples(X, samples_names=["samples1"])
-        var_X = equistore.variance_over_samples(X, samples_names=["samples1"])
-        std_X = equistore.std_over_samples(X, samples_names=["samples1"])
+        add_X = equistore.sum_over_samples(X, sample_names=["samples1"])
+        mean_X = equistore.mean_over_samples(X, sample_names=["samples1"])
+        var_X = equistore.var_over_samples(X, sample_names=["samples1"])
+        std_X = equistore.std_over_samples(X, sample_names=["samples1"])
 
         # print(add_X[0])
         # print(X[0].values, add_X[0].values)
@@ -962,11 +968,11 @@ class TestZeroSamples(unittest.TestCase):
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
         tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+        tensor_var = equistore.var_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
-        self.assertTrue(equistore.equal(result_tensor, tensor_variance))
+        self.assertTrue(equistore.equal(result_tensor, tensor_var))
         self.assertTrue(equistore.equal(result_tensor, tensor_std))
 
         block = TensorBlock(
@@ -989,11 +995,11 @@ class TestZeroSamples(unittest.TestCase):
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
         tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+        tensor_var = equistore.var_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
-        self.assertTrue(equistore.equal(result_tensor, tensor_variance))
+        self.assertTrue(equistore.equal(result_tensor, tensor_var))
         self.assertTrue(equistore.equal(result_tensor, tensor_std))
 
     def test_zeros_sample_block_gradient(self):
@@ -1058,13 +1064,11 @@ class TestZeroSamples(unittest.TestCase):
         tensor_sum = equistore.sum_over_samples(tensor, "structure")
         tensor_mean = equistore.mean_over_samples(tensor, "structure")
         tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_variance = equistore.variance_over_samples(tensor, "structure")
+        tensor_var = equistore.var_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.allclose(tensor_sum_result, tensor_sum, atol=1e-14))
         self.assertTrue(equistore.equal(tensor_sum, tensor_mean, only_metadata=True))
-        self.assertTrue(
-            equistore.equal(tensor_sum, tensor_variance, only_metadata=True)
-        )
+        self.assertTrue(equistore.equal(tensor_sum, tensor_var, only_metadata=True))
         self.assertTrue(equistore.equal(tensor_sum, tensor_std, only_metadata=True))
 
 
