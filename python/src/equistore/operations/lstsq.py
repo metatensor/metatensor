@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 
+from ..labels import Labels
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
@@ -15,6 +16,57 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     Return the least-squares solution to a linear equation ``Y = X * w`` solving
     for ``w``, where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`. ``Y``
     and ``X`` must have the same ``keys``.
+
+    .. note::
+      The values of ``w`` differ from the output of numpy or torch in that they
+      are already transposed. Be aware of that if you want to manually access
+      values of ``w`` (see also the example below).
+
+    Here is an example using this function:
+
+    >>> values_X = np.array([
+    ...     [1.0, 2.0],
+    ...     [3.0, 1.0],
+    ... ])
+    ...
+    >>> values_Y = np.array([
+    ...     [1.0, 0.0],
+    ...     [0.0, 1.0],
+    ... ])
+    ...
+    >>> samples = Labels(
+    ...     ["structure"],
+    ...     np.array([[0], [1]]),
+    ... )
+    ...
+    >>> components = []
+    ...
+    >>> properties = Labels(
+    ...     ["properties"],
+    ...     np.array([[0], [1]])
+    ... )
+    ...
+    >>> keys = Labels(names=["key"], values=np.array([[0]]))
+    ...
+    >>> block_X = TensorBlock(
+    ...     values_X, samples, components, properties,
+    ... )
+    ...
+    >>> block_Y = TensorBlock(
+    ...     values_Y, samples, components, properties,
+    ... )
+    ...
+    >>> X = TensorMap(keys, [block_X])
+    ...
+    >>> Y = TensorMap(keys, [block_Y])
+    ...
+    >>> w = lstsq(X, Y, rcond=1e-10)
+    ...
+    >>> # Note: we take the transpose here
+    >>> print(X.block(0).values @ w.block(0).values.T)
+    [[ 1.00000000e+00 -2.22044605e-16]
+     [-3.33066907e-16  1.00000000e+00]]
+
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
