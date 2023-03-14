@@ -6,8 +6,9 @@ from . import _dispatch
 from ._utils import _check_parameters_in_gradient_block
 
 
-def random_uniform_like(tensor: TensorMap,
-                        parameters: Union[List[str], str] = None) -> TensorMap:
+def random_uniform_like(
+    tensor: TensorMap, parameters: Union[List[str], str] = None
+) -> TensorMap:
     """Return a new :py:class:`TensorMap` with the same metadata as tensor, and all
     values randomly sampled from the uniform distribution between 0 and 1.
     :param tensor: Input tensor from which the metadata is taken.
@@ -19,14 +20,13 @@ def random_uniform_like(tensor: TensorMap,
     """
     blocks = []
     for block in tensor.blocks():
-        blocks.append(
-            random_uniform_like_block(block=block, parameters=parameters)
-        )
+        blocks.append(random_uniform_like_block(block=block, parameters=parameters))
     return TensorMap(tensor.keys, blocks)
 
 
-def random_uniform_like_block(block: TensorBlock,
-                              parameters: Union[List[str], str] = None) -> TensorBlock:
+def random_uniform_like_block(
+    block: TensorBlock, parameters: Union[List[str], str] = None
+) -> TensorBlock:
     """Return a new :py:class:`TensorBlock` with the same metadata as block, and all
     values randomly sampled from the uniform distribution between 0 and 1.
     :param block: Input block from which the metadata is taken.
