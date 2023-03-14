@@ -1,6 +1,11 @@
 # Use manylinux docker image as a base
 FROM quay.io/pypa/manylinux2010_x86_64
 
+# Use the repositories from archive.kernel.org, the ones from vault.centos.org
+# are returning 403 errors
+RUN rm -f /etc/yum.repos.d/CentOS-{Debuginfo,fasttrack,Media,Vault,SCLo-scl,SCLo-scl-rh}.repo && \
+    sed -i "s|vault.centos.org/centos/\$releasever|archive.kernel.org/centos-vault/6.9|g" /etc/yum.repos.d/CentOS-Base.repo
+
 RUN yum install git -y
 RUN git config --global --add safe.directory /code
 
