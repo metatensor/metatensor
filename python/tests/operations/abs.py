@@ -135,5 +135,41 @@ class TestAbs:
         tensor_abs = equistore.abs(A)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        equistore.equal_raise(tensor_result, tensor_abs)
+        assert equistore.equal(tensor_result, tensor_abs)
+
+    def test_self_abs_tensor_components(self):
+        A = equistore.load(
+            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
+        )
+
+        tensor_abs = equistore.abs(A)
+
+        abs_blocks = []
+        for _, block in A:
+            new_block = TensorBlock(
+                samples=block.samples,
+                components=block.components,
+                properties=block.properties,
+                values=np.abs(block.values),
+            )
+            sign_values = np.sign(block.values)
+            shape = ()
+            for c in block.components:
+                shape += (len(c),)
+            shape += (len(block.properties),)
+            for parameter, gradient in block.gradients():
+                diff_components = len(gradient.components) - len(block.components)
+                new_grad = gradient.data[:] * sign_values[
+                    gradient.samples["sample"]
+                ].reshape((-1,) + (1,) * diff_components + shape)
+                new_block.add_gradient(
+                    parameter,
+                    new_grad,
+                    gradient.samples,
+                    gradient.components,
+                )
+
+            abs_blocks.append(new_block)
+
+        tensor_result = TensorMap(A.keys, abs_blocks)
         assert equistore.equal(tensor_result, tensor_abs)
