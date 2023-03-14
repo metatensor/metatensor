@@ -18,6 +18,53 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
     ``properties``. The resulting :py:class:`TensorBlocks` of the dot product of
     two :py:class:`TensorBlocks` has ``result_block.values = block1.values @
     block2.values.T``
+    >>> block1 = TensorBlock(
+    ...     values=np.array([
+    ...         [1, 2, 3],
+    ...         [4, 5, 6],
+    ...     ]),
+    ...     samples=Labels(
+    ...         ["structure"],
+    ...         np.array([[0],[1]])
+    ...     ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...     ),
+    ... )
+    >>> block2 = TensorBlock(
+    ...     values=np.array([
+    ...         [1, 2, 3],
+    ...         [4, 5, 6],
+    ...     ]),
+    ...     samples=Labels(
+    ...         ["structure"],
+    ...         np.array([[0],[1]])
+    ...     ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...     ),
+    ... )
+    >>> keys = Labels(names=["key"], values=np.array([[0]]))
+    ...
+    >>> A = TensorMap(keys, [block1])
+    >>> B = TensorMap(keys, [block2])
+    ...
+    >>> tensor_dot = dot(A,B)
+    ...
+    >>> print(tensor_dot.block(0))
+    TensorBlock
+        samples (2): ['structure']
+        components (): []
+        properties (3): ['structure']
+    >>> print(tensor_dot.block(0).samples)
+    [(0,) (1,)]
+    >>> print(tensor_sum.block(0).values)
+    [[14,32]
+     [32,47]]
+
+    
 
     :param A: first :py:class:`TensorMap` to multiply
     :param B: second :py:class:`TensorMap` to multiply
@@ -26,6 +73,7 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
             where each :py:class:`TensorBlock` has: the ``sample`` equal to the
             ``sample`` of ``A``; the ``properties`` equal to the ``sample`` of
             ``B``; and the ``components`` equal to the ``components`` of ``A``
+
     """
     _check_maps(A, B, "dot")
 
