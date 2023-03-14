@@ -8,3 +8,9 @@ allclose
 .. autofunction:: equistore.allclose_block
 
 .. autofunction:: equistore.allclose_block_raise
+
+Examples
+--------
+
+.. literalinclude:: allclose_example.py 
+   :language: python
