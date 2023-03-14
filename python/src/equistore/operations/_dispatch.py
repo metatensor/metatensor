@@ -324,3 +324,17 @@ def empty_like(array, shape=None, requires_grad=False):
         )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def random_uniform(array):
+    """Creates an array with the same size of the given array and
+    all values randomly sampled from the uniform distribution.
+    :param shape: If not ``None`` override the shape with the given one
+    :param requires_grad: used only in torch
+    """
+    if isinstance(array, np.ndarray):
+        return np.random.rand(*array.shape)
+    elif isinstance(array, TorchTensor):
+        return torch.rand_like(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
