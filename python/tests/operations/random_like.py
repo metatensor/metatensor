@@ -16,46 +16,46 @@ class TestRandomLike(unittest.TestCase):
             # the npz is using DEFLATE compression, equistore only supports STORED
             use_numpy=True,
         )
-        random_uniform_tensor = equistore.random_uniform_like(tensor)
+        rand_tensor = equistore.random_uniform_like(tensor)
 
-        self.assertTrue(np.all(tensor.keys == random_uniform_tensor.keys))
-        for key, random_uniform_block in random_uniform_tensor:
+        self.assertTrue(np.all(tensor.keys == rand_tensor.keys))
+        for key, rand_block in rand_tensor:
             block = tensor.block(key)
-            self.assertTrue(np.all(random_uniform_block.samples == block.samples))
-            self.assertTrue(np.all(random_uniform_block.properties == block.properties))
+            self.assertTrue(np.all(rand_block.samples == block.samples))
+            self.assertTrue(np.all(rand_block.properties == block.properties))
             self.assertEqual(
-                len(random_uniform_block.components), len(block.components)
+                len(rand_block.components), len(block.components)
             )
             self.assertTrue(
                 np.all(
                     [
                         np.all(
-                            random_uniform_block.components[i] == block.components[i]
+                            rand_block.components[i] == block.components[i]
                         )
                         for i in range(len(block.components))
                     ]
                 )
             )
-            self.assertTrue(np.all(random_uniform_block.values >= 0))
-            self.assertTrue(np.all(random_uniform_block.values <= 1))
-            for ones_parameter, ones_gradient in random_uniform_block.gradients():
-                gradient = block.gradient(ones_parameter)
-                self.assertTrue(np.all(ones_gradient.samples == gradient.samples))
+            self.assertTrue(np.all(rand_block.values >= 0))
+            self.assertTrue(np.all(rand_block.values <= 1))
+            for rand_parameter, rand_gradient in rand_block.gradients():
+                gradient = block.gradient(rand_parameter)
+                self.assertTrue(np.all(rand_gradient.samples == gradient.samples))
                 self.assertEqual(
-                    len(ones_gradient.components), len(gradient.components)
+                    len(rand_gradient.components), len(gradient.components)
                 )
                 self.assertTrue(
                     np.all(
                         [
                             np.all(
-                                ones_gradient.components[i] == gradient.components[i]
+                                rand_gradient.components[i] == gradient.components[i]
                             )
                             for i in range(len(gradient.components))
                         ]
                     )
                 )
-                self.assertTrue(np.all(ones_gradient.data >= 0))
-                self.assertTrue(np.all(ones_gradient.data <= 1))
+                self.assertTrue(np.all(rand_gradient.data >= 0))
+                self.assertTrue(np.all(rand_gradient.data <= 1))
 
     def test_random_uniform_like_component(self):
         tensor = equistore.load(
