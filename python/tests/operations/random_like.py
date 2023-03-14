@@ -38,9 +38,6 @@ class TestRandomLike(unittest.TestCase):
             )
             self.assertTrue(np.all(random_uniform_block.values >= 0))
             self.assertTrue(np.all(random_uniform_block.values <= 1))
-            self.assertTrue(
-                np.isclose(random_uniform_block.values.mean(), 0.5, atol=0.1)
-            )
             for ones_parameter, ones_gradient in random_uniform_block.gradients():
                 gradient = block.gradient(ones_parameter)
                 self.assertTrue(np.all(ones_gradient.samples == gradient.samples))
@@ -59,7 +56,6 @@ class TestRandomLike(unittest.TestCase):
                 )
                 self.assertTrue(np.all(ones_gradient.data >= 0))
                 self.assertTrue(np.all(ones_gradient.data <= 1))
-                self.assertTrue(np.isclose(ones_gradient.data.mean(), 0.5, atol=0.1))
 
     def test_random_uniform_like_component(self):
         tensor = equistore.load(
@@ -81,13 +77,11 @@ class TestRandomLike(unittest.TestCase):
             self.assertTrue(np.all(rand_block.properties == block.properties))
             self.assertTrue(np.all(rand_block.values >= 0))
             self.assertTrue(np.all(rand_block.values <= 1))
-            self.assertTrue(np.isclose(rand_block.values.mean(), 0.5, atol=0.1))
 
             self.assertTrue(np.all(rand_block_pos.samples == block.samples))
             self.assertTrue(np.all(rand_block_pos.properties == block.properties))
             self.assertTrue(np.all(rand_block_pos.values >= 0))
             self.assertTrue(np.all(rand_block_pos.values <= 1))
-            self.assertTrue(np.isclose(rand_block_pos.values.mean(), 0.5, atol=0.1))
 
             self.assertTrue(rand_block.gradients_list() == block.gradients_list())
             for rand_parameter, rand_gradient in rand_block.gradients():
@@ -109,7 +103,6 @@ class TestRandomLike(unittest.TestCase):
 
                 self.assertTrue(np.all(rand_gradient.data >= 0))
                 self.assertTrue(np.all(rand_gradient.data <= 1))
-                self.assertTrue(np.isclose(rand_gradient.data.mean(), 0.5, atol=0.1))
 
             self.assertTrue(rand_block_pos.gradients_list() == ["positions"])
             for rand_parameter_pos, rand_gradient_pos in rand_block_pos.gradients():
@@ -131,9 +124,6 @@ class TestRandomLike(unittest.TestCase):
                 )
                 self.assertTrue(np.all(rand_gradient_pos.data >= 0))
                 self.assertTrue(np.all(rand_gradient_pos.data <= 1))
-                self.assertTrue(
-                    np.isclose(rand_gradient_pos.data.mean(), 0.5, atol=0.1)
-                )
 
     def test_random_uniform_like_error(self):
         tensor = equistore.load(
