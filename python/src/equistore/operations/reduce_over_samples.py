@@ -285,7 +285,7 @@ def sum_over_samples_block(
     according to ``sample_names``.
 
     This function creates a new :py:class:`TensorBlock` in which each sample is
-    obtained averaging over the ``sample_names`` indices, so that the resulting
+    obtained summing over the ``sample_names`` indices, so that the resulting
     :py:class:`TensorBlock` does not have those indices.
 
     ``sample_names`` indicates over which dimensions in the samples the sum is
