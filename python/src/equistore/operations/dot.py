@@ -1,4 +1,5 @@
 import numpy as np
+from ..labels import Labels
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
@@ -57,12 +58,13 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
     TensorBlock
         samples (2): ['structure']
         components (): []
-        properties (3): ['structure']
+        properties (2): ['structure']
+        gradients: no
     >>> print(tensor_dot.block(0).samples)
     [(0,) (1,)]
-    >>> print(tensor_sum.block(0).values)
-    [[14,32]
-     [32,47]]
+    >>> print(tensor_dot.block(0).values)
+    [[14 32]
+     [32 77]]
 
     
 
