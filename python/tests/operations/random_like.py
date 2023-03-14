@@ -23,15 +23,11 @@ class TestRandomLike(unittest.TestCase):
             block = tensor.block(key)
             self.assertTrue(np.all(rand_block.samples == block.samples))
             self.assertTrue(np.all(rand_block.properties == block.properties))
-            self.assertEqual(
-                len(rand_block.components), len(block.components)
-            )
+            self.assertEqual(len(rand_block.components), len(block.components))
             self.assertTrue(
                 np.all(
                     [
-                        np.all(
-                            rand_block.components[i] == block.components[i]
-                        )
+                        np.all(rand_block.components[i] == block.components[i])
                         for i in range(len(block.components))
                     ]
                 )
