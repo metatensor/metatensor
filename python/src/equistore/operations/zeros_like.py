@@ -1,7 +1,7 @@
 from typing import List, Union
 
-from equistore import TensorBlock, TensorMap
-
+from equistore import TensorBlock, Labels, TensorMap
+import numpy as np
 from . import _dispatch
 from ._utils import _check_parameters_in_gradient_block
 
@@ -20,6 +20,87 @@ def zeros_like(
                        If empty list ``[]`` no gradients information are copied.
     :param requires_grad: If autograd should record operations for the returned tensor.
                           This option is only relevant for torch.
+
+    >>> block = TensorBlock(
+    ...     values=np.array([
+    ...         [1, 2, 4],
+    ...         [3, 5, 6],
+    ...         [7, 8, 9],
+    ...         [10, 11, 12],
+    ...     ]),
+    ...     samples=Labels(
+    ...         ["structure", "center"],
+    ...    np.array([
+    ...         [0, 0],
+    ...         [0, 1],
+    ...         [1, 0],
+    ...         [1, 1],
+    ...    ]),
+    ... ),
+    ... components=[],
+    ... properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...         ),
+    ...         )
+    ...
+    >>> block.add_gradient(
+    ...    parameter="positions",
+    ...    data=np.zeros((2, 3, 3)),
+    ...    samples=Labels(
+    ...        ["sample", "atom"],
+    ...        np.array([
+    ...            [0, 0],
+    ...            [0, 2],
+    ...        ]),
+    ...    ),
+    ...    components=[
+    ...        Labels(["direction"], np.array([[0], [1], [2]])),
+    ...    ]
+    ... )
+    ...
+    >>> block.add_gradient(
+    ...    parameter="alpha",
+    ...    data=np.ones((2, 3, 3)),
+    ...    samples=Labels(
+    ...        ["sample", "atom"],
+    ...        np.array([
+    ...            [0, 0],
+    ...            [0, 2],
+    ...        ]),
+    ...    ),
+    ...    components=[
+    ...        Labels(["direction"], np.array([[0], [1], [2]])),
+    ...    ]
+    ... )
+    ...
+    ...
+    >>> keys = Labels(names=["key"], values=np.array([[0]]))
+    ...
+    >>> tensor = TensorMap(keys, [block])
+    ...
+    >>> print(tensor.block(0).gradient('alpha').data)
+    [[[1. 1. 1.]
+      [1. 1. 1.]
+      [1. 1. 1.]]
+    <BLANKLINE>
+     [[1. 1. 1.]
+      [1. 1. 1.]
+      [1. 1. 1.]]]
+    >>> tensor_zeros = zeros_like(tensor, parameters='alpha')
+    ...
+    >>> print(tensor_zeros.block(0).values)
+    [[0 0 0]
+     [0 0 0]
+     [0 0 0]
+     [0 0 0]]
+    >>> print(tensor_zeros.block(0).gradient('alpha').data)
+    [[[0. 0. 0.]
+      [0. 0. 0.]
+      [0. 0. 0.]]
+    <BLANKLINE>
+     [[0. 0. 0.]
+      [0. 0. 0.]
+      [0. 0. 0.]]]
     """
 
     blocks = []
