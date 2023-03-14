@@ -17,18 +17,24 @@ Whenever gradients are present, the reduction is performed also on the gradients
 See also :py:func:`equistore.sum_over_samples_block` and :py:func:`equistore.sum_over_samples`  for 
 a detailed discussion with examples.
 
-.. autofunction:: equistore.sum_over_samples_block
+TensorMap operations
+--------------------
 
 .. autofunction:: equistore.sum_over_samples
 
-.. autofunction:: equistore.mean_over_samples_block
-
 .. autofunction:: equistore.mean_over_samples
-
-.. autofunction:: equistore.var_over_samples_block
 
 .. autofunction:: equistore.var_over_samples
 
-.. autofunction:: equistore.std_over_samples_block
-
 .. autofunction:: equistore.std_over_samples    
+
+TensorBlock operations
+----------------------
+
+.. autofunction:: equistore.sum_over_samples_block
+
+.. autofunction:: equistore.mean_over_samples_block
+
+.. autofunction:: equistore.var_over_samples_block
+
+.. autofunction:: equistore.std_over_samples_block
