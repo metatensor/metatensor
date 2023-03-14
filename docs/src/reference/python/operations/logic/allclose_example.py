@@ -51,6 +51,13 @@ allclose_block(block1, block2)
 # False
 ### This fails because allclose_block checks that the properties of two blocks are equal too
 
+# Using allclose_block_raise raises a ValueError when the check fails, and provides additional information
+# as to why it fails
+allclose_block_raise(block1, block2)
+#Output:
+# ValueError: Inputs to 'allclose' should have the same properties:
+# properties names are not the same or not in the same order.
+
 # Recreate block1, but change first value in the block from 1 to 1.00001
 block3 = TensorBlock(
     values=np.array([
