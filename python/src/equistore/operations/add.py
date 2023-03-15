@@ -35,8 +35,8 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     if isinstance(B, TensorMap):
         _check_maps(A, B, "add")
         for key in A.keys:
-            blockA = A[key].copy()
-            blockB = B[key].copy()
+            blockA = A[key]
+            blockB = B[key]
             _check_blocks(
                 blockA,
                 blockB,
@@ -57,7 +57,7 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
         except TypeError as e:
             raise TypeError("B should be a TensorMap or a scalar value. ") from e
         for blockA in A.blocks():
-            blocks.append(_add_block_constant(block=blockA.copy(), constant=B))
+            blocks.append(_add_block_constant(block=blockA, constant=B))
 
     return TensorMap(A.keys, blocks)
 

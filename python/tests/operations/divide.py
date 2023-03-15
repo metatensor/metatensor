@@ -53,11 +53,15 @@ class TestDivide(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         A = TensorMap(keys, [block_1, block_2])
+        A_copy = A.copy()
         B = TensorMap(keys, [block_3, block_4])
+        B_copy = B.copy()
         tensor_sum = equistore.divide(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_divide_tensors_gradient(self):
         block_1 = TensorBlock(
@@ -194,7 +198,9 @@ class TestDivide(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         A = TensorMap(keys, [block_1, block_2])
+        A_copy = A.copy()
         B = TensorMap(keys, [block_3, block_4])
+        B_copy = B.copy()
         tensor_sum = equistore.divide(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
         self.assertTrue(
@@ -204,6 +210,8 @@ class TestDivide(unittest.TestCase):
                 atol=1e-8,
             )
         )
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_divide_scalar_gradient(self):
         block_1 = TensorBlock(
@@ -325,41 +333,6 @@ class TestDivide(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "B should be a TensorMap or a scalar value. ",
-        )
-
-    def test_divide_no_inplace_modifications(self):
-        tensor = TensorMap(
-            keys=Labels(names=("_",), values=np.array([[0]])),
-            blocks=[
-                TensorBlock(
-                    values=np.full((3, 1, 1), -1.0),
-                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
-                    components=[Labels(["components"], np.array([[0]]))],
-                    properties=Labels(["properties"], np.array([[0]])),
-                )
-            ],
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
-        )
-        new_tensor = equistore.divide(tensor, tensor)
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
-        )
-        new_tensor2 = equistore.divide(tensor, new_tensor)
-        self.assertTrue(
-            np.all(
-                new_tensor2.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]])
-            )
-        )
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
         )
 
 

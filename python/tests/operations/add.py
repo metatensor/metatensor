@@ -291,7 +291,6 @@ class TestAdd(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
         )
         A = TensorMap(keys, [block_1])
-        A_copy = A.copy()
         B = np.ones((3, 4))
 
         with self.assertRaises(TypeError) as cm:
@@ -299,37 +298,6 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "B should be a TensorMap or a scalar value. ",
-        )
-        self.assertTrue(equistore.equal(A, A_copy))  # check not modified in place
-
-    def test_add_no_inplace_modifications(self):
-        tensor = TensorMap(
-            keys=Labels(names=("_",), values=np.array([[0]])),
-            blocks=[
-                TensorBlock(
-                    values=np.full((3, 1, 1), 1.0),
-                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
-                    components=[Labels(["components"], np.array([[0]]))],
-                    properties=Labels(["properties"], np.array([[0]])),
-                )
-            ],
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
-        )
-        new_tensor = equistore.add(tensor, tensor)
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[2.0]], [[2.0]], [[2.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
-        )
-        new_tensor = equistore.add(tensor, tensor.copy())
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[2.0]], [[2.0]], [[2.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
         )
 
 

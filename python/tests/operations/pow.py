@@ -68,6 +68,7 @@ class TestPow(unittest.TestCase):
         rvalues1 = block_1.values[:] ** B
         rvalues2 = block_2.values[:] ** B
         A = TensorMap(keys, [block_1, block_2])
+        A_copy = A.copy()
 
         block_res1 = TensorBlock(
             values=rvalues1,
@@ -126,6 +127,8 @@ class TestPow(unittest.TestCase):
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        # Check not modified in place
+        self.assertTrue(equistore.equal(A, A_copy))
 
     def test_self_pow_scalar_sqrt_gradient(self):
         b1_s0 = np.array([1, 2])
@@ -261,52 +264,6 @@ class TestPow(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "B should be a scalar value. ",
-        )
-
-    def test_pow_no_inplace_modifications(self):
-        # test case 2
-        tensor = TensorMap(
-            keys=Labels(names=("_",), values=np.array([[0]])),
-            blocks=[
-                TensorBlock(
-                    values=np.full((3, 1, 1), -1.0),
-                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
-                    components=[Labels(["components"], np.array([[0]]))],
-                    properties=Labels(["properties"], np.array([[0]])),
-                )
-            ],
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
-        )
-        new_tensor = equistore.pow(tensor, 2)
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
-        )
-        # test case 2
-        tensor = TensorMap(
-            keys=Labels(names=("_",), values=np.array([[0]])),
-            blocks=[
-                TensorBlock(
-                    values=np.full((3, 1, 1), -2.0),
-                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
-                    components=[Labels(["components"], np.array([[0]]))],
-                    properties=Labels(["properties"], np.array([[0]])),
-                )
-            ],
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-2.0]], [[-2.0]], [[-2.0]]]))
-        )
-        new_tensor = equistore.pow(tensor, 2)
-        self.assertTrue(
-            np.all(new_tensor.block(0).values == np.array([[[4.0]], [[4.0]], [[4.0]]]))
-        )
-        self.assertTrue(
-            np.all(tensor.block(0).values == np.array([[[-2.0]], [[-2.0]], [[-2.0]]]))
         )
 
 
