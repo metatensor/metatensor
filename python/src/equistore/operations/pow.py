@@ -1,5 +1,3 @@
-import numpy as np
-
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
@@ -45,16 +43,25 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         components=block.components,
         properties=block.properties,
     )
+    if len(block.gradients_list()) == 0:
+        return result_block
+
+    _shape = ()
+    for c in block.components:
+        _shape += (len(c),)
+    _shape += (len(block.properties),)
 
     for parameter, gradient in block.gradients():
         values_grad = []
-        for isample in range(len(block.samples)):
-            isample_grad1 = np.where(gradient.samples["sample"] == isample)[0]
-            values_grad.append(
-                constant
-                * gradient.data[isample_grad1]
-                * block.values[isample] ** (constant - 1)
+        diff_components = len(gradient.components) - len(block.components)
+        values_grad.append(
+            constant
+            * gradient.data[:]
+            * block.values[gradient.samples["sample"]].reshape(
+                (-1,) + (1,) * diff_components + _shape
             )
+            ** (constant - 1)
+        )
         values_grad = _dispatch.vstack(values_grad)
 
         result_block.add_gradient(
