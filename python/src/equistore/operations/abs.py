@@ -26,7 +26,7 @@ def abs(A: TensorMap) -> TensorMap:
 
 def _abs_block(block: TensorBlock) -> TensorBlock:
     """
-    Returns a TensorBlock with the absolute values of the block values and
+    Returns a :py:class:`TensorBlock` with the absolute values of the block values and
     associated gradient data.
     """
     values = _dispatch.abs(block.values)
@@ -48,6 +48,9 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
 
     for parameter, gradient in block.gradients():
         diff_components = len(gradient.components) - len(block.components)
+        # The sign_values have the same dimensions as that of the block.values.
+        # To multiply with gradient.data it is reshaped to have same dimensions
+        # as that of the gradient.data.
         new_grad = gradient.data[:] * sign_values[gradient.samples["sample"]].reshape(
             (-1,) + (1,) * diff_components + _shape
         )
