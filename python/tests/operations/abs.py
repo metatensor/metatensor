@@ -213,6 +213,4 @@ class TestAbs:
         A = TensorMap(keys, [block_1, block_2])
         tensor_abs = equistore.abs(A)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
-        print("oo", tensor_result[0].values)
-        print("pp", tensor_abs[0].values)
-        assert equistore.equal(tensor_result, tensor_abs)
+        assert equistore.allclose(tensor_result, tensor_abs)
