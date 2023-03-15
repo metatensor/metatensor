@@ -1,7 +1,7 @@
 import os
-import unittest
 
 import numpy as np
+import pytest
 
 import equistore
 from equistore import Labels, TensorBlock, TensorMap
@@ -10,7 +10,7 @@ from equistore import Labels, TensorBlock, TensorMap
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
-class TestPow(unittest.TestCase):
+class TestPow:
     def test_self_pow_scalar_gradient(self):
         b1_s0 = np.array([1, 2])
         b1_s2 = np.array([3, 5])
@@ -125,8 +125,8 @@ class TestPow(unittest.TestCase):
         tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        assert equistore.allclose(tensor_result, tensor_sum)
+        assert equistore.allclose(tensor_result, tensor_sum_array)
         # Check not modified in place
         self.assertTrue(equistore.equal(A, A_copy))
 
@@ -243,8 +243,8 @@ class TestPow(unittest.TestCase):
         tensor_pow_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res1])
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_pow))
-        self.assertTrue(equistore.allclose(tensor_result, tensor_pow_array))
+        assert equistore.allclose(tensor_result, tensor_pow)
+        assert equistore.allclose(tensor_result, tensor_pow_array)
 
     def test_self_pow_scalar_sqrt_gradient(self):
         b1_s0 = np.array([1, 2])
@@ -359,8 +359,8 @@ class TestPow(unittest.TestCase):
         tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        assert equistore.allclose(tensor_result, tensor_sum)
+        assert equistore.allclose(tensor_result, tensor_sum_array)
 
     def test_self_pow_error(self):
         block_1 = TensorBlock(
@@ -375,15 +375,8 @@ class TestPow(unittest.TestCase):
         A = TensorMap(keys, [block_1])
         B = np.ones((3, 4))
 
-        with self.assertRaises(TypeError) as cm:
+        with pytest.raises(TypeError, match="B should be a scalar value. "):
             keys = equistore.pow(A, B)
-        self.assertEqual(
-            str(cm.exception),
-            "B should be a scalar value. ",
-        )
 
 
 # TODO: pow tests with torch & torch scripting/tracing
-
-if __name__ == "__main__":
-    unittest.main()
