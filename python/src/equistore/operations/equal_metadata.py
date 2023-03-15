@@ -142,7 +142,7 @@ def equal_metadata(
             raise TypeError(
                 f"`check` must be a list of strings, got list of {type(metadata)}"
             )
-        if metadata not in ["keys", "samples", "components", "properties"]:
+        if metadata not in ["samples", "components", "properties"]:
             raise ValueError(f"Invalid metadata to check: {metadata}")
     # Check equivalence in keys
     try:
