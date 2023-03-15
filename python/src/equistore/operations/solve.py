@@ -30,9 +30,10 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> from equistore import TensorBlock, TensorMap, Labels
     ...
     >>> X_values = np.random.rand(100, 2)
-    >>> y_values = (X_values @ np.array([10.0, 42.0]) + 0.1*np.random.normal(size=(100,))).reshape((100, 1))
+    >>> true_c = np.array([10.0, 42.0])
+    >>> y_values = (X_values @ true_c + np.random.normal(size=(100,))).reshape((100, 1))
     ...
-    >>> covariance = X_values.T @ X_values 
+    >>> covariance = X_values.T @ X_values
     >>> y_regression = X_values.T @ y_values
     ...
     >>> X = TensorMap(
