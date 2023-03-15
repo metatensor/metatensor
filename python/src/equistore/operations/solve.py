@@ -30,8 +30,11 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> from equistore import TensorBlock, TensorMap, Labels
     ...
     >>> np.random.seed(0)
+    >>> # We construct two independent variables, each sampled at 100 random points
     >>> X_values = np.random.rand(100, 2)
     >>> true_c = np.array([10.0, 42.0])
+    >>> # Build a linear function of the two variables, with coefficients defined
+    >>> # in the true_c array, and add some random noise
     >>> y_values = (X_values @ true_c + np.random.normal(size=(100,))).reshape((100, 1))
     ...
     >>> covariance = X_values.T @ X_values
@@ -77,9 +80,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...
     >>> c = equistore.solve(X, y)
     ...
+    >>> # c should now be close to true_c
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]
-
     """
     _check_maps(X, Y, "solve")
 
