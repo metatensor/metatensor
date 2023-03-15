@@ -211,7 +211,6 @@ def allclose_raise(
     ... # difference between the first values of the blocks of the two tensors
     ... # is within the rtol limit of 1e-5
     >>>  allclose_raise(tensor1, tensor2, equal_nan=True, rtol=1e-5)
-
     """
     _check_maps(tensor1, tensor2, "allclose")
 
@@ -303,7 +302,6 @@ def allclose_block(
     ... # the difference in the first value between the two blocks is within the tolerance limit
     >>> allclose_block(block1, block2, rtol=1e-5)
     True
-
     """
     try:
         allclose_block_raise(
@@ -316,7 +314,6 @@ def allclose_block(
         return True
     except ValueError:
         return False
-
 
 
 def allclose_block_raise(
@@ -387,7 +384,6 @@ def allclose_block_raise(
     >>> allclose_block_raise(block1, block2)
     ValueError: Inputs to 'allclose' should have the same properties:
     properties names are not the same or not in the same order.
-    
     """
 
     if not np.all(block1.values.shape == block2.values.shape):
