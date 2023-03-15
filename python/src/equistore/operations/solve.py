@@ -29,6 +29,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     ...
+    >>> np.random.seed(0)
     >>> X_values = np.random.rand(100, 2)
     >>> true_c = np.array([10.0, 42.0])
     >>> y_values = (X_values @ true_c + np.random.normal(size=(100,))).reshape((100, 1))
@@ -77,7 +78,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> c = equistore.solve(X, y)
     ...
     >>> print(c.block().values)
-    [[ 9.98104199 41.99906203]]
+    [[ 9.67680334 42.12534656]]
 
     """
     _check_maps(X, Y, "solve")
