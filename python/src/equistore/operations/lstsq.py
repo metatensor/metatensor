@@ -77,9 +77,12 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     >>> w = lstsq(X, Y, rcond=1e-10)
     ...
     >>> # Note: we take the transpose here
-    >>> print(X.block(0).values @ w.block(0).values.T)
-    [[ 1.00000000e+00 -2.22044605e-16]
-     [-3.33066907e-16  1.00000000e+00]]
+    >>> y = X.block(0).values @ w.block(0).values.T
+    >>> y[np.abs(y) < 1e-15] = 0.0
+    >>> print(y)
+    [[1. 0.]
+     [0. 1.]]
+
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
