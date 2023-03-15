@@ -8,4 +8,3 @@ allclose
 .. autofunction:: equistore.allclose_block
 
 .. autofunction:: equistore.allclose_block_raise
-
