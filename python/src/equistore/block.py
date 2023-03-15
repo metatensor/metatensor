@@ -7,7 +7,7 @@ from ._c_lib import _get_library
 from .data import Array, ArrayWrapper, eqs_array_to_python_array
 from .labels import Labels
 from .status import _check_pointer
-import numpy as np
+
 
 class TensorBlock:
     """
@@ -211,17 +211,22 @@ class TensorBlock:
         the given ``parameter``.
 
         Here is an example of how to use this method:
-        
+        >>> import numpy as np
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
-        ...             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
-        ...             components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        ...             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        ...             samples=Labels(
+        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...             ),
+        ...             components=[Labels(
+        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...             ],
+        ...             properties=Labels(
+        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
         ...         )
         >>> block_1.add_gradient(
         ...     "parameter1",
         ...     samples=Labels(
-        ...         ["sample", "parameter1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...        ["sample", "parameter1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ...     ),
         ...     data=np.full((2, 1, 1), 11.0),
         ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
@@ -229,13 +234,13 @@ class TensorBlock:
         >>> block_1.add_gradient(
         ...     "parameter2",
         ...     samples=Labels(
-        ...         ["sample", "parameter2"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...        ["sample", "parameter2"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ...     ),
         ...     data=np.full((2, 1, 1), 15.0),
         ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
         ... )
 
-        >>> grad_wrt_parameter1 = block_1.gradient("parameter1")            
+        >>> grad_wrt_parameter1 = block_1.gradient("parameter1")
         >>> print(grad_wrt_parameter1)
         Gradient TensorBlock
         parameter: 'parameter1'
@@ -244,7 +249,7 @@ class TensorBlock:
         properties (1): ['properties']
 
         >>> grad_wrt_parameter2 = block_1.gradient("parameter2")
-        >>> print (grad_wrt_parameter2)            
+        >>> print (grad_wrt_parameter2)
         Gradient TensorBlock
         parameter: 'parameter2'
         samples (2): ['sample', 'parameter2']
@@ -271,22 +276,27 @@ class TensorBlock:
         Add a set of gradients with respect to ``parameters`` in this block.
 
         Here is an example of how to use this method:
-
+        >>> import numpy as np
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
-        ...             samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
-        ...             components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        ...             properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        ...             samples=Labels(
+        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...             ),
+        ...             components=[Labels(
+        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...             ],
+        ...             properties=Labels(
+        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
         ...         )
         >>> block_1.add_gradient(
         ...     "parameter1",
         ...     samples=Labels(
-        ...         ["sample", "parameter1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...        ["sample", "parameter1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ...     ),
         ...     data=np.full((2, 1, 1), 11.0),
         ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
         ... )
-        >>> print(block_1)            
+        >>> print(block_1)
         TensorBlock
             samples (3): ['samples']
             components (1): ['components']
