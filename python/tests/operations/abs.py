@@ -173,3 +173,45 @@ class TestAbs:
 
         tensor_result = TensorMap(A.keys, abs_blocks)
         assert equistore.equal(tensor_result, tensor_abs)
+
+    def test_self_abs_tensor_complex(self):
+        block_1 = TensorBlock(
+            values=np.array([[1 + 2j, -2j], [5 - 3j, -5 + 5j]]),
+            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        )
+        block_2 = TensorBlock(
+            values=np.array([[-1 + 1j, -2 + 6j], [4 - 3j, -4], [5j, 3]]),
+            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        )
+
+        block_res1 = TensorBlock(
+            values=np.array(
+                [
+                    [np.sqrt(1 + 2**2), 2],
+                    [np.sqrt(5**2 + 3**2), np.sqrt(5**2 + 5**2)],
+                ]
+            ),
+            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        )
+        block_res2 = TensorBlock(
+            values=np.array(
+                [[np.sqrt(1 + 1), np.sqrt(2**2 + 6**2)], [5, 4], [5, 3]]
+            ),
+            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            components=[],
+            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        )
+        keys = Labels(
+            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
+        )
+        A = TensorMap(keys, [block_1, block_2])
+        tensor_abs = equistore.abs(A)
+        tensor_result = TensorMap(keys, [block_res1, block_res2])
+
+        assert equistore.equal(tensor_result, tensor_abs)
