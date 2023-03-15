@@ -28,12 +28,6 @@ def allclose(
 
     In practice this function calls :py:func:`allclose_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.
-
-    :param tensor1: first :py:class:`TensorMap`.
-    :param tensor2: second :py:class:`TensorMap`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     
     Here are examples using this function:
 
@@ -118,6 +112,12 @@ def allclose(
     ... # the tolerance limit
     >>> allclose(tensor1, tensor3, rtol=1e-5)
     True
+
+    :param tensor1: first :py:class:`TensorMap`.
+    :param tensor2: second :py:class:`TensorMap`.
+    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
+    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
+    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     try:
         allclose_raise(
@@ -147,12 +147,6 @@ def allclose_raise(
     on where the two :py:class:`TensorMap` differ. See :py:func:`allclose` for
     more information on which :py:class:`TensorMap` are considered equal.
 
-    :param tensor1: first :py:class:`TensorMap`.
-    :param tensor2: second :py:class:`TensorMap`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
-    
     Here are examples using this function:
 
     >>> #Create simple block, with one np.nan value
@@ -211,6 +205,12 @@ def allclose_raise(
     ... # difference between the first values of the blocks of the two tensors
     ... # is within the rtol limit of 1e-5
     >>>  allclose_raise(tensor1, tensor2, equal_nan=True, rtol=1e-5)
+    
+    :param tensor1: first :py:class:`TensorMap`.
+    :param tensor2: second :py:class:`TensorMap`.
+    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
+    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
+    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False. 
     """
     _check_maps(tensor1, tensor2, "allclose")
 
@@ -248,12 +248,6 @@ def allclose_block(
 
     In practice this function calls :py:func:`allclose_block_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.
-
-    :param block1: first :py:class:`TensorBlock`.
-    :param block2: second :py:class:`TensorBlock`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     
     Here are some exmaples using this function:
     >>> #Create simple block
@@ -302,6 +296,12 @@ def allclose_block(
     ... # the difference in the first value between the two blocks is within the tolerance limit
     >>> allclose_block(block1, block2, rtol=1e-5)
     True
+
+    :param block1: first :py:class:`TensorBlock`.
+    :param block2: second :py:class:`TensorBlock`.
+    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
+    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
+    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     try:
         allclose_block_raise(
@@ -331,12 +331,6 @@ def allclose_block_raise(
     on where the two :py:class:`TensorBlock` differ. See
     :py:func:`allclose_block` for more information on which
     :py:class:`TensorBlock` are considered equal.
-
-    :param block1: first :py:class:`TensorBlock`.
-    :param block2: second :py:class:`TensorBlock`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     
     Here is an example using this function:
     
@@ -384,6 +378,12 @@ def allclose_block_raise(
     >>> allclose_block_raise(block1, block2)
     ValueError: Inputs to 'allclose' should have the same properties:
     properties names are not the same or not in the same order.
+
+    :param block1: first :py:class:`TensorBlock`.
+    :param block2: second :py:class:`TensorBlock`.
+    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
+    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
+    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
 
     if not np.all(block1.values.shape == block2.values.shape):
