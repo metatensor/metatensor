@@ -298,10 +298,10 @@ class TensorBlock:
         ... )
         >>> print(block_1)
         TensorBlock
-            samples (3): ['samples']
-            components (1): ['components']
-            properties (1): ['properties']
-            gradients: ['parameter1']
+        ... samples (3): ['samples']
+        ... components (1): ['components']
+        ... properties (1): ['properties']
+        ... gradients: ['parameter1']
 
         :param parameter: add gradients with respect to this ``parameter`` (e.g.
             ``positions``, ``cell``, ...)
