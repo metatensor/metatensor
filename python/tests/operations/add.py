@@ -181,10 +181,15 @@ class TestAdd(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.add(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check the tensors haven't be modified in place
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_add_scalar_gradient(self):
         block_1 = TensorBlock(
@@ -265,6 +270,7 @@ class TestAdd(unittest.TestCase):
         A = TensorMap(keys, [block_1, block_2])
         B = 5.1
         C = np.array([5.1])
+        A_copy = A.copy()
 
         tensor_sum = equistore.add(A, B)
         tensor_sum_array = equistore.add(A, C)
@@ -272,6 +278,7 @@ class TestAdd(unittest.TestCase):
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        self.assertTrue(equistore.equal(A, A_copy))  # check not modified in place
 
     def test_self_add_error(self):
         block_1 = TensorBlock(
@@ -284,6 +291,7 @@ class TestAdd(unittest.TestCase):
             names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
         )
         A = TensorMap(keys, [block_1])
+        A_copy = A.copy()
         B = np.ones((3, 4))
 
         with self.assertRaises(TypeError) as cm:
@@ -291,6 +299,37 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "B should be a TensorMap or a scalar value. ",
+        )
+        self.assertTrue(equistore.equal(A, A_copy))  # check not modified in place
+
+    def test_add_no_inplace_modifications(self):
+        tensor = TensorMap(
+            keys=Labels(names=("_",), values=np.array([[0]])),
+            blocks=[
+                TensorBlock(
+                    values=np.full((3, 1, 1), 1.0),
+                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
+                    components=[Labels(["components"], np.array([[0]]))],
+                    properties=Labels(["properties"], np.array([[0]])),
+                )
+            ],
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
+        )
+        new_tensor = equistore.add(tensor, tensor)
+        self.assertTrue(
+            np.all(new_tensor.block(0).values == np.array([[[2.0]], [[2.0]], [[2.0]]]))
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
+        )
+        new_tensor = equistore.add(tensor, tensor.copy())
+        self.assertTrue(
+            np.all(new_tensor.block(0).values == np.array([[[2.0]], [[2.0]], [[2.0]]]))
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
         )
 
 

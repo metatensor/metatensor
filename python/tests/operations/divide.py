@@ -327,6 +327,41 @@ class TestDivide(unittest.TestCase):
             "B should be a TensorMap or a scalar value. ",
         )
 
+    def test_divide_no_inplace_modifications(self):
+        tensor = TensorMap(
+            keys=Labels(names=("_",), values=np.array([[0]])),
+            blocks=[
+                TensorBlock(
+                    values=np.full((3, 1, 1), -1.0),
+                    samples=Labels(["samples"], np.array([[0], [2], [4]])),
+                    components=[Labels(["components"], np.array([[0]]))],
+                    properties=Labels(["properties"], np.array([[0]])),
+                )
+            ],
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
+        )
+        new_tensor = equistore.divide(tensor, tensor)
+        self.assertTrue(
+            np.all(new_tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
+        )
+        new_tensor2 = equistore.divide(tensor, new_tensor)
+        self.assertTrue(
+            np.all(
+                new_tensor2.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]])
+            )
+        )
+        self.assertTrue(
+            np.all(new_tensor.block(0).values == np.array([[[1.0]], [[1.0]], [[1.0]]]))
+        )
+        self.assertTrue(
+            np.all(tensor.block(0).values == np.array([[[-1.0]], [[-1.0]], [[-1.0]]]))
+        )
+
 
 # TODO: divide tests with torch & torch scripting/tracing
 

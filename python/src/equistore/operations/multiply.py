@@ -34,10 +34,11 @@ def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-
+    A = A.copy()
     blocks = []
     if isinstance(B, TensorMap):
         _check_maps(A, B, "multiply")
+        B = B.copy()
         for key, blockA in A:
             blockB = B.block(key)
             _check_blocks(

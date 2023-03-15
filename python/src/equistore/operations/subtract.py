@@ -30,9 +30,10 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-
+    A = A.copy()
     if isinstance(B, TensorMap):
         _check_maps(A, B, "subtract")
+        B = B.copy()
         for key, blockB in B:
             B.block(key).values[:] = -1 * B.block(key).values[:]
             for parameter in blockB.gradients_list():
