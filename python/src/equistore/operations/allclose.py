@@ -28,10 +28,10 @@ def allclose(
 
     In practice this function calls :py:func:`allclose_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.
-    
+
     Here are examples using this function:
 
-    >>> #Create simple block
+    >>> # Create simple block
     ... block1 = TensorBlock(
     ...    values=np.array([
     ...         [1, 2, 4],
@@ -49,9 +49,9 @@ def allclose(
     ...        ["properties"], np.array([[0], [1], [2]])
     ...     ),
     ... )
-    ... 
-    ... 
-    ... #Create a second block that is equivalent to block1
+    ...
+    ...
+    ... # Create a second block that is equivalent to block1
     ... block2 = TensorBlock(
     ...     values=np.array([
     ...          [1, 2, 4],
@@ -69,18 +69,20 @@ def allclose(
     ...         ["properties"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
-    ... #Create tensors from blocks, using keys with different names
+    ...
+    ... # Create tensors from blocks, using keys with different names
     ... keys1 = Labels(names=["key1"], values=np.array([[0]]))
     ... keys2 = Labels(names=["key2"], values=np.array([[0]]))
-    ... 
+    ...
     ... tensor1 = TensorMap(keys1, [block1])
     ... tensor2 = TensorMap(keys2, [block2])
     ...
-    >>> # Call allclose, which should fail as the blocks have different keys associated with them
+    >>> # Call allclose, which should fail as the blocks have different keys
+    ... # associated with them
     >>> allclose(tensor1, tensor2)
     False
-    >>> #Create a third tensor, which differs from tensor1 only by 1e-5 in a single block value
+    >>> # Create a third tensor, which differs from tensor1 only by 1e-5 in a
+    ... # single block value
     ... block3 = TensorBlock(
     ...     values=np.array([
     ...          [1+1e-5, 2, 4],
@@ -98,18 +100,19 @@ def allclose(
     ...         ["property_1"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
+    ...
     ... #Create tensors from blocks, using key with same name as block1
     ... keys3 = Labels(names=["key1"], values=np.array([[0]]))
-    ... 
+    ...
     ... tensor3 = TensorMap(keys3, [block3])
-    >>> # Call allclose, which should return False because the default rtol is 1e-13, and 
-    ... # the difference in the first value between the blocks of the two tensors is 1e-5
+    >>> # Call allclose, which should return False because the default rtol
+    ... # is 1e-13, and the difference in the first value between the blocks
+    ... # of the two tensors is 1e-5
     >>> allclose(tensor1, tensor3)
     False
-    >>> # Calling allclose again with the optional argument rtol=1e-5 should return True, as
-    ... # the difference in the first value between the blocks of the two tensors is within
-    ... # the tolerance limit
+    >>> # Calling allclose again with the optional argument rtol=1e-5 should
+    ... # return True, as the difference in the first value between the blocks
+    ... # of the two tensors is within the tolerance limit
     >>> allclose(tensor1, tensor3, rtol=1e-5)
     True
 
@@ -149,7 +152,7 @@ def allclose_raise(
 
     Here are examples using this function:
 
-    >>> #Create simple block, with one np.nan value
+    >>> # Create simple block, with one np.nan value
     ... block1 = TensorBlock(
     ...     values=np.array([
     ...          [1, 2, 4],
@@ -167,8 +170,9 @@ def allclose_raise(
     ...         ["properties"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
-    ... #Create a second block that differs from block1 by 1e-5 in its first value
+    ...
+    ... # Create a second block that differs from block1 by 1e-5 in its
+    ... # first value
     ... block2 = TensorBlock(
     ...     values=np.array([
     ...          [1+1e-5, 2, 4],
@@ -186,31 +190,31 @@ def allclose_raise(
     ...         ["properties"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
+    ...
     ... #Create tensors from blocks, using same keys
     ... keys = Labels(names=["key"], values=np.array([[0]]))
-    ... 
+    ...
     ... tensor1 = TensorMap(keys, [block1])
     ... tensor2 = TensorMap(keys, [block2])
-    ... 
+    ...
     >>> # Call allclose_raise, which should return two ValueErrors because:
     ... # 1. The two NaNs are not considered equal of the two tensors is 1e-5,
     ... # 2. The difference between the first value in the blocks
     ... #    which is greater than the default rtol of 1e-13
     >>> allclose_raise(tensor1, tensor2)
     ValueError: values are not allclose
-    ... 
+    ...
     >>> # Call allclose_raise again, but use equal_nan=True and rtol=1e-5
     ... # This passes, as the two NaNs are now considered equal, and the
     ... # difference between the first values of the blocks of the two tensors
     ... # is within the rtol limit of 1e-5
     >>>  allclose_raise(tensor1, tensor2, equal_nan=True, rtol=1e-5)
-    
+
     :param tensor1: first :py:class:`TensorMap`.
     :param tensor2: second :py:class:`TensorMap`.
     :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False. 
+    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     _check_maps(tensor1, tensor2, "allclose")
 
@@ -248,9 +252,9 @@ def allclose_block(
 
     In practice this function calls :py:func:`allclose_block_raise`, returning
     ``True`` if no exception is rased, `False` otherwise.
-    
+
     Here are some exmaples using this function:
-    >>> #Create simple block
+    >>> # Create simple block
     ... block1 = TensorBlock(
     ...     values=np.array([
     ...          [1, 2, 4],
@@ -268,8 +272,8 @@ def allclose_block(
     ...         ["property_1"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
-    ... #Recreate block1, but change first value in the block from 1 to 1.00001
+    ...
+    ... # Recreate block1, but change first value in the block from 1 to 1.00001
     ... block2 = TensorBlock(
     ...     values=np.array([
     ...          [1+1e-5, 2, 4],
@@ -287,13 +291,15 @@ def allclose_block(
     ...         ["property_1"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
-    >>> # Call allclose_block, which should return False because the default rtol is 1e-13,
-    ... # and the difference in the first value between the two blocks is 1e-5
+    ...
+    >>> # Call allclose_block, which should return False because the default
+    ... # rtol is 1e-13, and the difference in the first value between the
+    ... # two blocks is 1e-5
     >>> allclose_block(block1, block2)
     False
-    >>> #Calling allclose_block with the optional argument rtol=1e-5 should return True, as
-    ... # the difference in the first value between the two blocks is within the tolerance limit
+    >>> # Calling allclose_block with the optional argument rtol=1e-5 should
+    ... # return True, as the difference in the first value between the two
+    ... # blocks is within the tolerance limit
     >>> allclose_block(block1, block2, rtol=1e-5)
     True
 
@@ -331,9 +337,9 @@ def allclose_block_raise(
     on where the two :py:class:`TensorBlock` differ. See
     :py:func:`allclose_block` for more information on which
     :py:class:`TensorBlock` are considered equal.
-    
+
     Here is an example using this function:
-    
+
     >>> #Create simple block
     ... block1 = TensorBlock(
     ...     values=np.array([
@@ -353,7 +359,7 @@ def allclose_block_raise(
     ...      ),
     ... )
     ... keys = Labels(names=["key"], values=np.array([[0]]))
-    ... 
+    ...
     ... #Recreate block1, but rename properties label 'property_1' to 'property_2'
     ... block2 = TensorBlock(
     ...     values=np.array([
@@ -372,7 +378,7 @@ def allclose_block_raise(
     ...         ["property_2"], np.array([[0], [1], [2]])
     ...      ),
     ... )
-    ... 
+    ...
     >>> # Call allclose_block_raise, which should raise a ValueError because the
     ... # properties of the two blocks are not equal
     >>> allclose_block_raise(block1, block2)
