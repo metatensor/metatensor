@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 
-from ..labels import Labels
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
@@ -10,20 +9,35 @@ from .equal_metadata import _check_maps, _check_same_gradients
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
-    """
+    r"""
     Solve a linear system using two :py:class:`TensorMap`.
 
-    Return the least-squares solution to a linear equation ``Y = X * w`` solving
-    for ``w``, where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`. ``Y``
-    and ``X`` must have the same ``keys``.
+    The least-squares solution ``w_b`` for the linear system
+    :math:`X_b w_b = Y_b` is solved for all blocks :math:`b` in ``X``
+    and ``Y``. ``X`` and ``Y`` must have the same keys.
+    The returned :py:class:`TensorMap` ``w`` has the same keys as ``X`` and
+    ``Y``, and stores in each block the least-squares solutions :math:`w_b`.
+
+    If a block has multiple components, they are moved to the "samples" axis
+    before solving the linear system.
+
+    If gradients are present, they must be present in both ``X`` and ``Y``.
+    Gradients are concatenated with the block values along the "samples" axis,
+    :math:`A_b = [X_b, {\nabla} X_b]`, :math:`B_b = [Y_b, {\nabla} Y_b]`, and the
+    linear system :math:`A_b w_b = B_b` is solved for :math:`w_b` using
+    least-squares.
 
     .. note::
-      The values of ``w`` differ from the output of numpy or torch in that they
+      The solutions :math:`w_b` differ from the output of numpy or torch in that they
       are already transposed. Be aware of that if you want to manually access
-      values of ``w`` (see also the example below).
+      the values of blocks of ``w`` (see also the example below).
 
     Here is an example using this function:
 
+    >>> import numpy as np
+    >>> from equistore import Labels, TensorBlock, TensorMap
+    >>> from equistore import lstsq
+    ...
     >>> values_X = np.array([
     ...     [1.0, 2.0],
     ...     [3.0, 1.0],
@@ -67,11 +81,13 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     [[ 1.00000000e+00 -2.22044605e-16]
      [-3.33066907e-16  1.00000000e+00]]
 
-
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
-    :param rcond: Cut-off ratio for small singular values of a. None chose the
-                default value for numpy or PyTorch
+    :param rcond: Cut-off ratio for small singular values of a. The singular value
+                :math:`{\sigma}_i` is treated as zero if smaller than
+                :math:`r_{cond}{\sigma}_1`, where :math:`{\sigma}_1` is the
+                biggest singular value of :math:`X_b`. None choses the
+                default value for numpy or PyTorch.
     :param driver: Used only in torch (ignored if numpy is used), see
         https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html
         for a full description
@@ -80,6 +96,10 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
             where each :py:class:`TensorBlock` has: the ``sample`` equal to the
             ``properties`` of ``Y``; and the ``properties`` equal to the
             ``properties`` of ``X``.
+
+    :raises ValueError: if the order in the samples or components does not
+                      match between ``X`` and ``Y``.
+
     """
     if rcond is None:
         warnings.warn(
