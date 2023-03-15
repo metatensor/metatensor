@@ -255,6 +255,55 @@ def allclose_block(
     :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
     :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
+    
+    Here are some exmaples using this function:
+    >>> #Create simple block
+    ... block1 = TensorBlock(
+    ...     values=np.array([
+    ...          [1, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["property_1"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    ... #Recreate block1, but change first value in the block from 1 to 1.00001
+    ... block2 = TensorBlock(
+    ...     values=np.array([
+    ...          [1+1e-5, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["property_1"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    >>> # Call allclose_block, which should return False because the default rtol is 1e-13,
+    ... # and the difference in the first value between the two blocks is 1e-5
+    >>> allclose_block(block1, block2)
+    False
+    >>> #Calling allclose_block with the optional argument rtol=1e-5 should return True, as
+    ... # the difference in the first value between the two blocks is within the tolerance limit
+    >>> allclose_block(block1, block2, rtol=1e-5)
+    True
+
     """
     try:
         allclose_block_raise(
@@ -267,6 +316,7 @@ def allclose_block(
         return True
     except ValueError:
         return False
+
 
 
 def allclose_block_raise(
@@ -290,6 +340,54 @@ def allclose_block_raise(
     :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
     :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
+    
+    Here is an example using this function:
+    
+    >>> #Create simple block
+    ... block1 = TensorBlock(
+    ...     values=np.array([
+    ...          [1, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["property_1"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... keys = Labels(names=["key"], values=np.array([[0]]))
+    ... 
+    ... #Recreate block1, but rename properties label 'property_1' to 'property_2'
+    ... block2 = TensorBlock(
+    ...     values=np.array([
+    ...          [1, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["property_2"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    >>> # Call allclose_block_raise, which should raise a ValueError because the
+    ... # properties of the two blocks are not equal
+    >>> allclose_block_raise(block1, block2)
+    ValueError: Inputs to 'allclose' should have the same properties:
+    properties names are not the same or not in the same order.
+    
     """
 
     if not np.all(block1.values.shape == block2.values.shape):
