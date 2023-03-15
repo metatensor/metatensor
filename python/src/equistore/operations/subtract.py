@@ -33,7 +33,7 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     """
     if isinstance(B, TensorMap):
         _check_maps(A, B, "subtract")
-        B = multiply(A=B, B=-1)
+        B = multiply(B, -1)
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
