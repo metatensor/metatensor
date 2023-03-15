@@ -34,6 +34,90 @@ def allclose(
     :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
     :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
+    
+    Here are examples using this function:
+
+    >>> #Create simple block
+    ... block1 = TensorBlock(
+    ...    values=np.array([
+    ...         [1, 2, 4],
+    ...         [3, 5, 6],
+    ...     ]),
+    ...    samples=Labels(
+    ...         ["structure", "center"],
+    ...         np.array([
+    ...             [0, 0],
+    ...             [0, 1],
+    ...         ]),
+    ...     ),
+    ...    components=[],
+    ...    properties=Labels(
+    ...        ["properties"], np.array([[0], [1], [2]])
+    ...     ),
+    ... )
+    ... 
+    ... 
+    ... #Create a second block that is equivalent to block1
+    ... block2 = TensorBlock(
+    ...     values=np.array([
+    ...          [1, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    ... #Create tensors from blocks, using keys with different names
+    ... keys1 = Labels(names=["key1"], values=np.array([[0]]))
+    ... keys2 = Labels(names=["key2"], values=np.array([[0]]))
+    ... 
+    ... tensor1 = TensorMap(keys1, [block1])
+    ... tensor2 = TensorMap(keys2, [block2])
+    ...
+    >>> # Call allclose, which should fail as the blocks have different keys associated with them
+    >>> allclose(tensor1, tensor2)
+    False
+    >>> #Create a third tensor, which differs from tensor1 only by 1e-5 in a single block value
+    ... block3 = TensorBlock(
+    ...     values=np.array([
+    ...          [1+1e-5, 2, 4],
+    ...          [3, 5, 6],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["property_1"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    ... #Create tensors from blocks, using key with same name as block1
+    ... keys3 = Labels(names=["key1"], values=np.array([[0]]))
+    ... 
+    ... tensor3 = TensorMap(keys3, [block3])
+    >>> # Call allclose, which should return False because the default rtol is 1e-13, and 
+    ... # the difference in the first value between the blocks of the two tensors is 1e-5
+    >>> allclose(tensor1, tensor3)
+    False
+    >>> # Calling allclose again with the optional argument rtol=1e-5 should return True, as
+    ... # the difference in the first value between the blocks of the two tensors is within
+    ... # the tolerance limit
+    >>> allclose(tensor1, tensor3, rtol=1e-5)
+    True
     """
     try:
         allclose_raise(
@@ -68,6 +152,66 @@ def allclose_raise(
     :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
     :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
+    
+    Here are examples using this function:
+
+    >>> #Create simple block, with one np.nan value
+    ... block1 = TensorBlock(
+    ...     values=np.array([
+    ...          [1, 2, 4],
+    ...          [3, 5, np.nan],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    ... #Create a second block that differs from block1 by 1e-5 in its first value
+    ... block2 = TensorBlock(
+    ...     values=np.array([
+    ...          [1+1e-5, 2, 4],
+    ...          [3, 5, np.nan],
+    ...      ]),
+    ...     samples=Labels(
+    ...          ["structure", "center"],
+    ...          np.array([
+    ...              [0, 0],
+    ...              [0, 1],
+    ...          ]),
+    ...      ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["properties"], np.array([[0], [1], [2]])
+    ...      ),
+    ... )
+    ... 
+    ... #Create tensors from blocks, using same keys
+    ... keys = Labels(names=["key"], values=np.array([[0]]))
+    ... 
+    ... tensor1 = TensorMap(keys, [block1])
+    ... tensor2 = TensorMap(keys, [block2])
+    ... 
+    >>> # Call allclose_raise, which should return two ValueErrors because:
+    ... # 1. The two NaNs are not considered equal of the two tensors is 1e-5,
+    ... # 2. The difference between the first value in the blocks
+    ... #    which is greater than the default rtol of 1e-13
+    >>> allclose_raise(tensor1, tensor2)
+    ValueError: values are not allclose
+    ... 
+    >>> # Call allclose_raise again, but use equal_nan=True and rtol=1e-5
+    ... # This passes, as the two NaNs are now considered equal, and the
+    ... # difference between the first values of the blocks of the two tensors
+    ... # is within the rtol limit of 1e-5
+    >>>  allclose_raise(tensor1, tensor2, equal_nan=True, rtol=1e-5)
+
     """
     _check_maps(tensor1, tensor2, "allclose")
 
