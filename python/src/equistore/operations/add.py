@@ -34,8 +34,9 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     blocks = []
     if isinstance(B, TensorMap):
         _check_maps(A, B, "add")
-        for key, blockA in A:
-            blockB = B.block(key)
+        for key in A.keys:
+            blockA = A[key]
+            blockB = B[key]
             _check_blocks(
                 blockA,
                 blockB,
@@ -73,17 +74,16 @@ def _add_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
 
     for parameter, gradient in block.gradients():
         result_block.add_gradient(
-            parameter,
-            gradient.data,
-            gradient.samples,
-            gradient.components,
+            parameter=parameter,
+            data=gradient.data,
+            samples=gradient.samples,
+            components=gradient.components,
         )
 
     return result_block
 
 
 def _add_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
-    # values = block1.values @ block2.values.T
     values = block1.values + block2.values
 
     result_block = TensorBlock(
@@ -95,10 +95,10 @@ def _add_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
 
     for parameter1, gradient1 in block1.gradients():
         result_block.add_gradient(
-            parameter1,
-            gradient1.data + block2.gradient(parameter1).data,
-            gradient1.samples,
-            gradient1.components,
+            parameter=parameter1,
+            data=gradient1.data + block2.gradient(parameter1).data,
+            samples=gradient1.samples,
+            components=gradient1.components,
         )
 
     return result_block

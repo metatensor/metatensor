@@ -68,6 +68,7 @@ class TestPow(unittest.TestCase):
         rvalues1 = block_1.values[:] ** B
         rvalues2 = block_2.values[:] ** B
         A = TensorMap(keys, [block_1, block_2])
+        A_copy = A.copy()
 
         block_res1 = TensorBlock(
             values=rvalues1,
@@ -126,6 +127,8 @@ class TestPow(unittest.TestCase):
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        # Check not modified in place
+        self.assertTrue(equistore.equal(A, A_copy))
 
     def test_self_pow_scalar_sqrt_gradient(self):
         b1_s0 = np.array([1, 2])
