@@ -13,7 +13,7 @@ def abs(A: TensorMap) -> TensorMap:
     values of `A`.
 
     ..math::
-    
+
         \nabla(|A|) = (A/|A|)*\nabla A
 
     :param A: input :py:class:`TensorMap` whose absolute values are needed.
