@@ -1,8 +1,8 @@
 from typing import Union
 
 from ..tensor import TensorMap
-from ._utils import _check_maps
 from .add import add
+from .equal_metadata import _check_maps
 from .multiply import multiply
 
 

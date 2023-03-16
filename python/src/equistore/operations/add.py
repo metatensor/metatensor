@@ -2,7 +2,7 @@ from typing import Union
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
-from ._utils import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
