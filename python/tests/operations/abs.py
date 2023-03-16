@@ -141,7 +141,7 @@ class TestAbs:
 
     def test_self_abs_tensor_components(self):
         A = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
+            os.path.join(DATA_ROOT, TEST_FILE), use_numpy=True
         )
 
         tensor_abs = equistore.abs(A)
