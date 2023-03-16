@@ -19,9 +19,10 @@ def abs(A: TensorMap) -> TensorMap:
         absolute values of ``A``.
     """
     blocks = []
-    for key in A.keys:
+    keys = A.keys
+    for key in keys:
         blocks.append(_abs_block(block=A[key]))
-    return TensorMap(A.keys, blocks)
+    return TensorMap(keys, blocks)
 
 
 def _abs_block(block: TensorBlock) -> TensorBlock:
