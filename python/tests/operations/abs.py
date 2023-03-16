@@ -12,6 +12,10 @@ TEST_FILE = "qm7-spherical-expansion.npz"
 
 
 class TestAbs:
+    """
+    Unit tests for the :py:func:`equistore.abs` function.
+    """
+
     def test_self_abs_tensor_nogradient(self):
         block_1 = TensorBlock(
             values=np.array([[1, -2], [-3, -5]]),
@@ -140,9 +144,7 @@ class TestAbs:
         assert equistore.equal(tensor_result, tensor_abs)
 
     def test_self_abs_tensor_components(self):
-        A = equistore.load(
-            os.path.join(DATA_ROOT, TEST_FILE), use_numpy=True
-        )
+        A = equistore.load(os.path.join(DATA_ROOT, TEST_FILE), use_numpy=True)
 
         tensor_abs = equistore.abs(A)
 
