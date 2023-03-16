@@ -43,8 +43,6 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         components=block.components,
         properties=block.properties,
     )
-    if len(block.gradients_list()) == 0:
-        return result_block
 
     _shape = ()
     for c in block.components:
@@ -53,10 +51,12 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
 
     for parameter, gradient in block.gradients():
         values_grad = []
-        diff_components = len(gradient.components) - len(block.components)
+        gradient_data = gradient.data
+        # diff_components = len(gradient.components) - len(block.components)
+        diff_components = len(gradient_data.shape) - len(block.values.shape)
         values_grad.append(
             constant
-            * gradient.data[:]
+            * gradient_data
             * block.values[gradient.samples["sample"]].reshape(
                 (-1,) + (1,) * diff_components + _shape
             )
