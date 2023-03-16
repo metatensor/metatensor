@@ -8,7 +8,7 @@ from ..block import TensorBlock
 from ..labels import Labels
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
 
 
 def join(tensor_maps: List[TensorMap], axis: str):

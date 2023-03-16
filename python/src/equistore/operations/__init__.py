@@ -19,6 +19,7 @@ from .dot import dot  # noqa
 from .drop_blocks import drop_blocks
 from .empty_like import empty_like, empty_like_block  # noqa
 from .equal import equal, equal_block, equal_block_raise, equal_raise  # noqa
+from .equal_metadata import equal_metadata  # noqa
 from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
@@ -54,6 +55,7 @@ __all__ = [
     "equal_raise",
     "equal_block",
     "equal_block_raise",
+    "equal_metadata",
     "join",
     "lstsq",
     "mean_over_samples",
