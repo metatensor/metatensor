@@ -128,7 +128,7 @@ class TestPow:
         assert equistore.allclose(tensor_result, tensor_sum)
         assert equistore.allclose(tensor_result, tensor_sum_array)
         # Check not modified in place
-        self.assertTrue(equistore.equal(A, A_copy))
+        assert equistore.equal(A, A_copy)
 
     def test_self_pow_components_scalar_gradient(self):
         b1_s0_c00 = np.array([1, 2])
