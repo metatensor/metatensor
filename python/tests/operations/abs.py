@@ -42,10 +42,12 @@ class TestAbs:
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
         A = TensorMap(keys, [block_1, block_2])
+        A_copy = A.copy()
         tensor_abs = equistore.abs(A)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         assert equistore.equal(tensor_result, tensor_abs)
+        assert equistore.equal(A, A_copy)
 
     def test_self_abs_tensor_gradient(self):
         block_1 = TensorBlock(
