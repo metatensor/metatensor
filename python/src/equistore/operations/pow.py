@@ -16,7 +16,8 @@ def pow(A: TensorMap, B: float) -> TensorMap:
 
     :param A: :py:class:`TensorMap` to be elevated at the power of B.
     :param B: The power to which we want to elevate ``A``.
-               Parameter can be a scalar
+               Parameter can only be a scalar or something that can be converted to a
+               scalar.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
