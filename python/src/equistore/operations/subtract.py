@@ -3,6 +3,7 @@ from typing import Union
 from ..tensor import TensorMap
 from ._utils import _check_maps
 from .add import add
+from .multiply import multiply
 
 
 def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -30,15 +31,9 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-
     if isinstance(B, TensorMap):
         _check_maps(A, B, "subtract")
-        for key, blockB in B:
-            B.block(key).values[:] = -1 * B.block(key).values[:]
-            for parameter in blockB.gradients_list():
-                B.block(key).gradient(parameter).data[:] = (
-                    -B.block(key).gradient(parameter).data[:]
-                )
+        B = multiply(B, -1)
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
