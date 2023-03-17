@@ -1,15 +1,12 @@
 import os
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 
 import toml
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-sys.path.append(os.path.join(ROOT, "python", "src"))
 
 # -- Project information -----------------------------------------------------
 
@@ -57,6 +54,7 @@ needs_sphinx = "4.0.0"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "breathe",
 ]

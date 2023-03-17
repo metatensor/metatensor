@@ -181,10 +181,15 @@ class TestAdd(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.add(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check the tensors haven't be modified in place
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_add_scalar_gradient(self):
         block_1 = TensorBlock(
@@ -265,6 +270,7 @@ class TestAdd(unittest.TestCase):
         A = TensorMap(keys, [block_1, block_2])
         B = 5.1
         C = np.array([5.1])
+        A_copy = A.copy()
 
         tensor_sum = equistore.add(A, B)
         tensor_sum_array = equistore.add(A, C)
@@ -272,6 +278,7 @@ class TestAdd(unittest.TestCase):
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
+        self.assertTrue(equistore.equal(A, A_copy))  # check not modified in place
 
     def test_self_add_error(self):
         block_1 = TensorBlock(

@@ -54,10 +54,15 @@ class TestMultiply(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.multiply(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check not modified in place
+        self.assertTrue(equistore.allclose(A, A_copy))
+        self.assertTrue(equistore.allclose(B, B_copy))
 
     def test_self_multiply_tensors_gradient(self):
         block_1 = TensorBlock(
@@ -183,10 +188,15 @@ class TestMultiply(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.multiply(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check not modified in place
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_multiply_scalar_gradient(self):
         block_1 = TensorBlock(

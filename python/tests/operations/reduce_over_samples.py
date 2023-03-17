@@ -551,9 +551,9 @@ class TestReductionAllSamples(unittest.TestCase):
         var_X = equistore.variance_over_samples(X, samples_names=["samples"])
         std_X = equistore.std_over_samples(X, samples_names=["samples"])
 
-        self.assertTrue(equistore.equal(sum_X, mean_X, only_metadata=True))
-        self.assertTrue(equistore.equal(sum_X, std_X, only_metadata=True))
-        self.assertTrue(equistore.equal(mean_X, var_X, only_metadata=True))
+        self.assertTrue(equistore.equal_metadata(sum_X, mean_X))
+        self.assertTrue(equistore.equal_metadata(sum_X, std_X))
+        self.assertTrue(equistore.equal_metadata(mean_X, var_X))
         self.assertTrue(sum_X[0].samples == Labels.single())
         self.assertTrue(std_X[0].samples == Labels.single())
 
@@ -906,8 +906,8 @@ class TestStdSamples(unittest.TestCase):
         self.assertTrue(np.all(X[0].values == add_X[0].values))
         self.assertTrue(np.all(X[0].values == mean_X[0].values))
         self.assertTrue(equistore.equal(add_X, mean_X))
-        self.assertTrue(equistore.equal(add_X, var_X, only_metadata=True))
-        self.assertTrue(equistore.equal(mean_X, std_X, only_metadata=True))
+        self.assertTrue(equistore.equal_metadata(add_X, var_X))
+        self.assertTrue(equistore.equal_metadata(mean_X, std_X))
 
         self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].values))
         self.assertTrue(equistore.equal(var_X, std_X))
@@ -1061,11 +1061,9 @@ class TestZeroSamples(unittest.TestCase):
         tensor_variance = equistore.variance_over_samples(tensor, "structure")
 
         self.assertTrue(equistore.allclose(tensor_sum_result, tensor_sum, atol=1e-14))
-        self.assertTrue(equistore.equal(tensor_sum, tensor_mean, only_metadata=True))
-        self.assertTrue(
-            equistore.equal(tensor_sum, tensor_variance, only_metadata=True)
-        )
-        self.assertTrue(equistore.equal(tensor_sum, tensor_std, only_metadata=True))
+        self.assertTrue(equistore.equal_metadata(tensor_sum, tensor_mean))
+        self.assertTrue(equistore.equal_metadata(tensor_sum, tensor_variance))
+        self.assertTrue(equistore.equal_metadata(tensor_sum, tensor_std))
 
 
 # TODO: add tests with torch & torch scripting/tracing
