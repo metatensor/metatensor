@@ -67,9 +67,13 @@ def bincount(input, weights=None, minlength=0):
                                         Defaults to 0.
     """
     if isinstance(input, np.ndarray):
+        if weights is not None:
+            _check_all_same_type([weights], np.ndarray)
         return np.bincount(input, weights=weights, minlength=minlength)
     elif isinstance(input, TorchTensor):
-        return torch.bincount(input, weights=weights.device(input), minlength=minlength)
+        if weights is not None:
+            _check_all_same_type([weights], TorchTensor)
+        return torch.bincount(input, weights=weights, minlength=minlength)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
