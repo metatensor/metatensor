@@ -15,8 +15,6 @@ def random_uniform_like(
     :param parameters: Which gradient parameter to copy. If ``None`` (default)
                        all gradient of ``tensor`` are present in the new tensor.
                        If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned tensor.
-                          This option is only relevant for torch.
     """
     blocks = []
     for block in tensor.blocks():
@@ -33,8 +31,6 @@ def random_uniform_like_block(
     :param parameters: Which gradient parameter to copy. If ``None`` (default)
                        all gradient of ``tensor`` are present in the new tensor.
                        If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned tensor.
-                          This option is only relevant for torch.
     """
     values = _dispatch.random_uniform(block.values)
     result_block = TensorBlock(
