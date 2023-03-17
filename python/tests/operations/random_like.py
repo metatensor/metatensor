@@ -21,7 +21,7 @@ class TestRandomLike:
 
     def test_random_uniform_like_nocomponent(self, tensor):
         rand_tensor = equistore.random_uniform_like(tensor)
-        assert equistore.equal(tensor, rand_tensor, only_metadata=True)
+        assert equistore.equal_metadata(tensor, rand_tensor)
 
         for _, rand_block in rand_tensor:
             assert np.all(rand_block.values >= 0)
@@ -36,8 +36,8 @@ class TestRandomLike:
             tensor, parameters="positions"
         )
 
-        assert equistore.equal(tensor, rand_tensor, only_metadata=True)
-        assert equistore.equal(tensor, rand_tensor_positions, only_metadata=True)
+        assert equistore.equal_metadata(tensor, rand_tensor)
+        assert equistore.equal_metadata(tensor, rand_tensor_positions)
 
         for key, rand_block in rand_tensor:
             rand_block_pos = rand_tensor_positions.block(key)
