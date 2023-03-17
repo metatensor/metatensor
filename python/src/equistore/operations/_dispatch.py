@@ -69,7 +69,7 @@ def bincount(input, weights=None, minlength=0):
     if isinstance(input, np.ndarray):
         return np.bincount(input, weights=weights, minlength=minlength)
     elif isinstance(input, TorchTensor):
-        return torch.bincount(input, weights=weights, minlength=minlength)
+        return torch.bincount(input, weights=weights.device(input), minlength=minlength)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
