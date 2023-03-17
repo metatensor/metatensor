@@ -54,10 +54,15 @@ class TestSubtract(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.subtract(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check that the original tensors are not modified
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_subtract_tensors_gradient(self):
         block_1 = TensorBlock(
@@ -181,10 +186,15 @@ class TestSubtract(unittest.TestCase):
         )
         A = TensorMap(keys, [block_1, block_2])
         B = TensorMap(keys, [block_3, block_4])
+        A_copy = A.copy()
+        B_copy = B.copy()
         tensor_sum = equistore.subtract(A, B)
         tensor_result = TensorMap(keys, [block_res1, block_res2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
+        # Check that the original tensors are not modified
+        self.assertTrue(equistore.equal(A, A_copy))
+        self.assertTrue(equistore.equal(B, B_copy))
 
     def test_self_subtract_scalar_gradient(self):
         block_1 = TensorBlock(

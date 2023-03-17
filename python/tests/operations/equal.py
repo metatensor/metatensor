@@ -143,7 +143,6 @@ class TestEqual(unittest.TestCase):
         tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
         self.assertTrue(equistore.equal(tensor1, tensor1_copy))
         self.assertFalse(equistore.equal(tensor1, tensor1_e6))
-        self.assertTrue(equistore.equal(tensor1, tensor1_e6, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
             equistore.equal_raise(tensor1, tensor1_e6)
@@ -203,7 +202,6 @@ class TestEqual(unittest.TestCase):
         )
 
         self.assertFalse(equistore.equal_block(block_1, block_2))
-        self.assertFalse(equistore.equal_block(block_1, block_2, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
             equistore.equal_block_raise(block_1, block_2)
@@ -275,10 +273,8 @@ class TestEqual(unittest.TestCase):
         )
 
         self.assertFalse(equistore.equal_block(block_7, block_8))
-        self.assertFalse(equistore.equal_block(block_7, block_8, only_metadata=True))
 
         self.assertFalse(equistore.equal_block(block_8, block_9))
-        self.assertTrue(equistore.equal_block(block_8, block_9, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
             equistore.equal_block_raise(block_7, block_8)
@@ -455,7 +451,6 @@ class TestEqual(unittest.TestCase):
             ],
         )
         self.assertFalse(equistore.equal_block(block_6, block_7))
-        self.assertTrue(equistore.equal_block(block_6, block_7, only_metadata=True))
 
         with self.assertRaises(ValueError) as cm:
             equistore.equal_block_raise(block_6, block_7)

@@ -1,5 +1,3 @@
-import numpy as np
-
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
@@ -18,7 +16,8 @@ def pow(A: TensorMap, B: float) -> TensorMap:
 
     :param A: :py:class:`TensorMap` to be elevated at the power of B.
     :param B: The power to which we want to elevate ``A``.
-               Parameter can be a scalar
+               Parameter can only be a scalar or something that can be converted to a
+               scalar.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
@@ -46,15 +45,25 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         properties=block.properties,
     )
 
+    _shape = ()
+    for c in block.components:
+        _shape += (len(c),)
+    _shape += (len(block.properties),)
+
     for parameter, gradient in block.gradients():
         values_grad = []
-        for isample in range(len(block.samples)):
-            isample_grad1 = np.where(gradient.samples["sample"] == isample)[0]
-            values_grad.append(
-                constant
-                * gradient.data[isample_grad1]
-                * block.values[isample] ** (constant - 1)
+        gradient_data = gradient.data
+        # I want the difference between the number of components of the gradients and
+        # the values
+        diff_components = len(gradient_data.shape) - len(block.values.shape)
+        values_grad.append(
+            constant
+            * gradient_data
+            * block.values[gradient.samples["sample"]].reshape(
+                (-1,) + (1,) * diff_components + _shape
             )
+            ** (constant - 1)
+        )
         values_grad = _dispatch.vstack(values_grad)
 
         result_block.add_gradient(
