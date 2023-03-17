@@ -8,7 +8,7 @@ from . import _dispatch
 
 
 def abs(A: TensorMap) -> TensorMap:
-    """
+    r"""
     Return a new :py:class:`TensorMap` with the same metadata as A and absolute
     values of ``A``.
 
