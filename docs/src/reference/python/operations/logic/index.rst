@@ -6,3 +6,4 @@ Logic function
 
     allclose() <allclose>
     equal() <equal>
+    equal_metadata() <equal_metadata>

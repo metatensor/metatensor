@@ -3,7 +3,7 @@ from typing import List, Union
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_parameters_in_gradient_block
+from .equal_metadata import _check_parameters_in_gradient_block
 
 
 def ones_like(
