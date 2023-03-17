@@ -67,8 +67,12 @@ def bincount(input, weights=None, minlength=0):
                                         Defaults to 0.
     """
     if isinstance(input, np.ndarray):
+        if weights is not None:
+            _check_all_same_type([weights], np.ndarray)
         return np.bincount(input, weights=weights, minlength=minlength)
     elif isinstance(input, TorchTensor):
+        if weights is not None:
+            _check_all_same_type([weights], TorchTensor)
         return torch.bincount(input, weights=weights, minlength=minlength)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -239,7 +243,9 @@ def index_add(output_array, input_array, index):
         np.add.at(output_array, index, input_array)
     elif isinstance(input_array, TorchTensor):
         _check_all_same_type([output_array], TorchTensor)
-        output_array.index_add_(0, torch.tensor(index), input_array)
+        output_array.index_add_(
+            0, torch.tensor(index, device=input_array.device), input_array
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
