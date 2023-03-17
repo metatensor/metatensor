@@ -211,7 +211,7 @@ def _join_blocks_along_samples(blocks: List[TensorBlock]) -> TensorBlock:
             samples[:, 0] += 1 + gradient_samples[-1][:, 0].max()
             gradient_samples.append(samples)
 
-        gradient_data = np.vstack(gradient_data)
+        gradient_data = _dispatch.vstack(gradient_data)
         gradient_samples = np.vstack(gradient_samples)
 
         gradients_samples = Labels(first_gradient.samples.names, gradient_samples)
