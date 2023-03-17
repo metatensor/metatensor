@@ -11,13 +11,18 @@ def abs(A: TensorMap) -> TensorMap:
     r"""
     Return a new :py:class:`TensorMap` with the same metadata as A and absolute
     values of ``A``.
-
+    
     .. math::
-        \nabla(\vert A \vert) = (A/\vert A \vert)*\nabla A
+        A \rightarrow = \vert A \vert
 
-    :param A: input :py:class:`TensorMap` whose absolute values are needed.
+    If gradients are present in ``A``:
+    
+    .. math::
+        \nabla(A) \rightarrow \nabla(\vert A \vert) = (A/\vert A \vert)*\nabla A
 
-    :return: New :py:class:`TensorMap` with the same metadata as ``A`` and
+    :param A: the input :py:class:`TensorMap`.
+
+    :return: a new :py:class:`TensorMap` with the same metadata as ``A`` and
         absolute values of ``A``.
     """
     blocks = []
