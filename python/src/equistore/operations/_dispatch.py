@@ -239,7 +239,9 @@ def index_add(output_array, input_array, index):
         np.add.at(output_array, index, input_array)
     elif isinstance(input_array, TorchTensor):
         _check_all_same_type([output_array], TorchTensor)
-        output_array.index_add_(0, torch.tensor(index), input_array)
+        output_array.index_add_(
+            0, torch.tensor(index, device=input_array.device), input_array
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
