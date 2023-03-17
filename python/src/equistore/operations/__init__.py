@@ -7,6 +7,7 @@ models.
 These functions can handle data stored either in numpy arrays or Torch tensor,
 and automatically dispatch to the right function for a given TensorMap.
 """
+from .abs import abs  # noqa
 from .add import add  # noqa
 from .allclose import (  # noqa
     allclose,
@@ -41,6 +42,7 @@ from .zeros_like import zeros_like, zeros_like_block  # noqa
 
 
 __all__ = [
+    "abs",
     "add",
     "allclose",
     "allclose_raise",

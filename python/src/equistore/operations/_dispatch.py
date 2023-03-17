@@ -324,3 +324,31 @@ def empty_like(array, shape=None, requires_grad=False):
         )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def abs(array):
+    """
+    Returns the absolute value of the elements in the array.
+
+    It is equivalent of np.abs(array) and torch.abs(tensor)
+    """
+    if isinstance(array, np.ndarray):
+        return np.abs(array)
+    elif isinstance(array, TorchTensor):
+        return torch.abs(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def sign(array):
+    """
+    Returns an indication of the sign of the elements in the array.
+
+    It is equivalent of np.sign(array) and torch.sign(tensor)
+    """
+    if isinstance(array, np.ndarray):
+        return np.sign(array)
+    elif isinstance(array, TorchTensor):
+        return torch.sign(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
