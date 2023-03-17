@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_maps
+from .equal_metadata import _check_maps
 
 
 def dot(A: TensorMap, B: TensorMap) -> TensorMap:

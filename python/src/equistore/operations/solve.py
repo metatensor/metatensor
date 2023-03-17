@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from ._utils import _check_maps, _check_same_gradients
+from .equal_metadata import _check_maps, _check_same_gradients
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:

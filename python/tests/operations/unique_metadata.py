@@ -5,7 +5,7 @@ import numpy as np
 
 import equistore
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations._utils import _labels_equal
+from equistore.operations.equal_metadata import _labels_equal
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
