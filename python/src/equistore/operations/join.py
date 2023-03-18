@@ -67,11 +67,13 @@ def join(tensor_maps: List[TensorMap], axis: str):
     """
 
     if not isinstance(tensor_maps, (list, tuple)):
-        raise TypeError("the `TensorMap`s to join must be provided as a list or a tuple")
+        raise TypeError(
+            "the `TensorMap`s to join must be provided as a list or a tuple"
+        )
 
     if len(tensor_maps) < 1:
         raise ValueError("provide at least one `TensorMap` for joining")
-    
+
     if len(tensor_maps) == 1:
         return tensor_maps[0]
 
