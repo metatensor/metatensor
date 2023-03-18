@@ -11,6 +11,7 @@ def random_uniform_like(
 ) -> TensorMap:
     """Return a new :py:class:`TensorMap` with the same metadata as tensor, and all
     values randomly sampled from the uniform distribution between 0 and 1.
+
     :param tensor: Input tensor from which the metadata is taken.
     :param parameters: Which gradient parameter to copy. If ``None`` (default)
                        all gradient of ``tensor`` are present in the new tensor.
@@ -27,6 +28,7 @@ def random_uniform_like_block(
 ) -> TensorBlock:
     """Return a new :py:class:`TensorBlock` with the same metadata as block, and all
     values randomly sampled from the uniform distribution between 0 and 1.
+
     :param block: Input block from which the metadata is taken.
     :param parameters: Which gradient parameter to copy. If ``None`` (default)
                        all gradient of ``tensor`` are present in the new tensor.
