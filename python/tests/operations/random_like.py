@@ -19,6 +19,11 @@ class TestRandomLike:
         )
         return tensor
 
+    @pytest.fixture
+    def tensor_positions(self, tensor):
+        tensor_positions = equistore.remove_gradients(tensor, "cell")
+        return tensor_positions
+
     def test_random_uniform_like_nocomponent(self, tensor):
         rand_tensor = equistore.random_uniform_like(tensor)
         assert equistore.equal_metadata(tensor, rand_tensor)
@@ -30,14 +35,14 @@ class TestRandomLike:
                 assert np.all(rand_gradient.data >= 0)
                 assert np.all(rand_gradient.data <= 1)
 
-    def test_random_uniform_like_component(self, tensor):
+    def test_random_uniform_like_component(self, tensor, tensor_positions):
         rand_tensor = equistore.random_uniform_like(tensor)
         rand_tensor_positions = equistore.random_uniform_like(
             tensor, parameters="positions"
         )
 
         assert equistore.equal_metadata(tensor, rand_tensor)
-        assert equistore.equal_metadata(tensor, rand_tensor_positions)
+        assert equistore.equal_metadata(tensor_positions, rand_tensor_positions)
 
         for key, rand_block in rand_tensor:
             rand_block_pos = rand_tensor_positions.block(key)
@@ -57,7 +62,7 @@ class TestRandomLike:
             "The requested parameter 'err' in random_uniform_like_block "
             + "is not a valid parameterfor the TensorBlock"
         )
-        with pytest.raises(TypeError, match=msg):
+        with pytest.raises(ValueError, match=msg):
             tensor = equistore.random_uniform_like(
                 tensor, parameters=["positions", "err"]
             )
