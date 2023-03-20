@@ -341,7 +341,7 @@ fn bindgen_test_layout_eqs_array_t() {
         )
     );
 }
-#[doc = " Function pointer to create a new `eqs_array_t` when de-serializing tensor\n maps.\n\n This function gets the `shape` of the array (the `shape` contains\n `shape_count` elements) and should return a new valid `eqs_array_t` or a\n non-zero `eqs_status_t`.\n\n The newly created array should contains 64-bit floating points (`double`)\n data, and live on CPU, since equistore will use `eqs_array_t.data` to get\n the data pointer and write to it."]
+#[doc = " Function pointer to create a new `eqs_array_t` when de-serializing tensor\n maps.\n\n This function gets the `shape` of the array (the `shape` contains\n `shape_count` elements) and should fill `array` with a new valid\n `eqs_array_t` or return non-zero `eqs_status_t`.\n\n The newly created array should contains 64-bit floating points (`double`)\n data, and live on CPU, since equistore will use `eqs_array_t.data` to get\n the data pointer and write to it."]
 pub type eqs_create_array_callback_t = ::std::option::Option<
     unsafe extern "C" fn(
         shape: *const usize,
