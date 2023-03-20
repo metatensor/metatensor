@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 from datetime import datetime
 
@@ -25,30 +24,25 @@ def load_version_from_cargo_toml():
 release = load_version_from_cargo_toml()
 
 
-def build_cargo_docs():
-    subprocess.run(["cargo", "doc", "--no-deps", "--package", "equistore"])
-    output_dir = os.path.join(ROOT, "docs", "build", "html", "reference", "rust")
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    shutil.copytree(
-        os.path.join(ROOT, "target", "doc"),
-        output_dir,
-    )
-
-
 def build_doxygen_docs():
-    # we need to run a build to make sure the header is up to date
+    try:
+        os.mkdir(os.path.join(ROOT, "docs", "build"))
+    except OSError:
+        pass
+
+    # we need to run a cargo build to make sure the header is up to date
     subprocess.run(["cargo", "build"])
     subprocess.run(["doxygen", "Doxyfile"], cwd=os.path.join(ROOT, "docs"))
 
 
-build_cargo_docs()
 build_doxygen_docs()
 
 
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "4.0.0"
+
+python_use_unqualified_type_names = True
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
