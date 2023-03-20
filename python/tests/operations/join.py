@@ -5,7 +5,8 @@ import pytest
 from numpy.testing import assert_equal
 
 import equistore
-from equistore import Labels, TensorBlock, TensorMap
+from equistore import Labels, TensorMap
+from equistore.status import EquistoreError
 
 
 DATA_ROOT = path.join(path.dirname(__file__), "..", "data")
@@ -28,8 +29,7 @@ class TestJoinTensorMap:
     @pytest.fixture
     def components_tensor(self):
         components_tensor = equistore.load(
-            path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-            use_numpy=True,
+            path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
         )
 
         # Test if Tensormaps have at least one gradient. This avoids dropping gradient
@@ -39,21 +39,16 @@ class TestJoinTensorMap:
         return components_tensor
 
     @pytest.fixture
-    def first_block(self, tensor):
-        return tensor.block(0)
-
-    @pytest.fixture
-    def tensor_first_block(self, tensor, first_block):
+    def tensor_single_block(self, tensor):
         keys_first_block = Labels(
             names=tensor.keys.names,
             values=np.array(tensor.keys[0].tolist()).reshape(1, -1),
         )
-
-        return TensorMap(keys_first_block, [first_block.copy()])
+        return TensorMap(keys_first_block, [tensor[0].copy()])
 
     @pytest.fixture
-    def tensor_first_block_extra_grad(self, tensor, first_block):
-        block_extra_grad = first_block.copy()
+    def tensor_single_block_extra_grad(self, tensor):
+        block_extra_grad = tensor[0].copy()
         gradient = tensor.block(0).gradient("positions")
         block_extra_grad.add_gradient(
             "foo", gradient.data, gradient.samples, gradient.components
@@ -97,6 +92,21 @@ class TestJoinTensorMap:
         tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
         assert set(tensor_prop) == set((0, 1, 2))
 
+    def test_join_properties_with_different_props(self, tensor, components_tensor):
+            """Test public join function with three tensormaps along `properties`.
+
+            We check for the values below."""
+
+            tensor_joined = equistore.join([tensor, tensor, tensor], axis="properties")
+
+            # test property names
+            names = tensor.block(0).properties.names
+            assert tensor_joined.block(0).properties.names == ("tensor",) + names
+
+            # test property values
+            tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
+            assert set(tensor_prop) == set((0, 1, 2))
+
     def test_join_samples(self, tensor):
         """Test public join function with three tensormaps along `samples`."""
         tensor_joined = equistore.join([tensor, tensor, tensor], axis="samples")
@@ -109,77 +119,64 @@ class TestJoinTensorMap:
         with pytest.raises(ValueError, match="values for the `axis` parameter"):
             equistore.join([tensor, tensor, tensor], axis="foo")
 
-    def test_join_properties_values(self, tensor, first_block):
+    def test_join_properties_values(self, tensor):
         """Test values for joining along `properties`."""
-        ts_1 = equistore.slice(tensor, properties=first_block.properties[:1])
-        ts_2 = equistore.slice(tensor, properties=first_block.properties[1:])
+        ts_1 = equistore.slice(tensor, properties=tensor[0].properties[:1])
+        ts_2 = equistore.slice(tensor, properties=tensor[0].properties[1:])
 
-        ts_joined = equistore.join([ts_1, ts_2], axis="properties")
-        (equistore.allclose_raise(ts_joined, tensor))
+        tensor_joined = equistore.join([ts_1, ts_2], axis="properties")
+        for i, block_tensor in tensor:
+            block_tensor_joined = tensor_joined[i]
 
-    def test_join_properties_different_samples(self, tensor_first_block, first_block):
-        """Test error raise if `samples` are not the same."""
-        tm = equistore.slice(tensor_first_block, samples=first_block.samples[:1])
-
-        with pytest.raises(ValueError, match="samples"):
-            equistore.join([tensor_first_block, tm], axis="properties")
-
-    def test_join_properties_different_components(self, components_tensor):
-        """Test error raise if `components` are not the same."""
-        components_tensor_c2p = components_tensor.copy().components_to_properties(
-            ["spherical_harmonics_m"]
-        )
-        with pytest.raises(ValueError, match="components"):
-            equistore.join(
-                [components_tensor_c2p, components_tensor], axis="properties"
-            )
+            assert_equal(block_tensor_joined.values, block_tensor.values)
 
     def test_join_properties_different_gradients(
-        self, tensor_first_block, tensor_first_block_extra_grad
+        self, tensor_single_block, tensor_single_block_extra_grad
     ):
         """Test error raise if `gradients` are not the same."""
-        with pytest.raises(ValueError, match="gradient"):
+        with pytest.raises(EquistoreError, match="gradient"):
             equistore.join(
-                [tensor_first_block, tensor_first_block_extra_grad], axis="properties"
+                [tensor_single_block, tensor_single_block_extra_grad], axis="properties"
             )
 
-    def test_join_samples_values(self, tensor, first_block):
+    def test_join_samples_values(self, tensor):
         """Test values for joining along `samples`."""
         keys = Labels(
             names=tensor.keys.names,
             values=np.array(tensor.keys[0].tolist()).reshape(1, -1),
         )
 
-        tm = TensorMap(keys, [first_block.copy()])
-        ts_1 = equistore.slice(tm, samples=first_block.samples[:1])
-        ts_2 = equistore.slice(tm, samples=first_block.samples[1:])
+        tm = TensorMap(keys, [tensor[0].copy()])
+        ts_1 = equistore.slice(tm, samples=tensor[0].samples[:1])
+        ts_2 = equistore.slice(tm, samples=tensor[0].samples[1:])
 
-        ts_joined = equistore.join([ts_1, ts_2], axis="samples")
-        equistore.allclose_raise(tm, ts_joined)
+        tensor_joined = equistore.join([ts_1, ts_2], axis="samples")
+        for i, block_tensor in tm:
+            block_tensor_joined = tensor_joined[i]
 
-    def test_join_samples_different_properties(self, tensor_first_block, first_block):
-        """Test error raise if `proprties` are not the same."""
-        tm = equistore.slice(tensor_first_block, properties=first_block.properties[:1])
+            assert_equal(block_tensor_joined.values, block_tensor.values)
 
-        with pytest.raises(ValueError, match="properties"):
-            equistore.join([tensor_first_block, tm], axis="samples")
-
-    def test_join_samples_different_components(self, components_tensor):
+    @pytest.mark.parametrize("axis", ["samples", "properties"])
+    def test_join_samples_different_components(self, components_tensor, axis):
         """Test error raise if `components` are not the same."""
         components_tensor_c2p = components_tensor.copy().components_to_properties(
             ["spherical_harmonics_m"]
         )
 
-        with pytest.raises(ValueError, match="components"):
-            equistore.join([components_tensor_c2p, components_tensor], axis="samples")
+        with pytest.raises(EquistoreError, match="components"):
+            equistore.join([components_tensor_c2p, components_tensor], axis=axis)
 
+    @pytest.mark.parametrize("axis", ["samples", "properties"])
     def test_join_samples_different_gradients(
-        self, tensor_first_block, tensor_first_block_extra_grad
+        self,
+        tensor_single_block,
+        tensor_single_block_extra_grad,
+        axis,
     ):
         """Test error raise if `gradients` are not the same."""
-        with pytest.raises(ValueError, match="gradient"):
+        with pytest.raises(EquistoreError, match="gradient"):
             equistore.join(
-                [tensor_first_block, tensor_first_block_extra_grad], axis="samples"
+                [tensor_single_block, tensor_single_block_extra_grad], axis=axis
             )
 
 
