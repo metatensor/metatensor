@@ -196,32 +196,23 @@ def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def hstack(arrays):
-    """Stack horizontally a group of arrays.
+def concatenate(arrays, axis):
+    """
+    Concatenate a group of arrays along a given axis.
 
-    This function has the same behavior as ``numpy.hstack(arrays)``.
+    This function has the same behavior as ``numpy.concatenate(arrays, axis)``
+    and ``torch.concatenate(arrays, axis)``.
+
+    Passing `axis` as ``0`` is equivalent to :py:func:`numpy.vstack`, ``1`` to
+    :py:func:`numpy.hstack`, and ``2`` to :py:func:`numpy.dstack`, though any
+    axis index > 0 is valid.
     """
     if isinstance(arrays[0], np.ndarray):
         _check_all_same_type(arrays, np.ndarray)
-        return np.hstack(arrays)
+        return np.concatenate(arrays, axis)
     elif isinstance(arrays[0], TorchTensor):
         _check_all_same_type(arrays, TorchTensor)
-        return torch.hstack(arrays)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def vstack(arrays):
-    """Stack vertically a group of arrays.
-
-    This function has the same behavior as ``numpy.vstack(arrays)``.
-    """
-    if isinstance(arrays[0], np.ndarray):
-        _check_all_same_type(arrays, np.ndarray)
-        return np.vstack(arrays)
-    elif isinstance(arrays[0], TorchTensor):
-        _check_all_same_type(arrays, TorchTensor)
-        return torch.vstack(arrays)
+        return torch.concatenate(arrays, axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

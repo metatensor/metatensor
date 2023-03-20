@@ -144,11 +144,11 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
 
     for parameter, X_gradient in X.gradients():
         X_gradient_data = X_gradient.data.reshape(-1, X_n_properties)
-        X_values = _dispatch.vstack((X_values, X_gradient_data))
+        X_values = _dispatch.concatenate((X_values, X_gradient_data), axis=0)
 
         Y_gradient = Y.gradient(parameter)
         Y_gradient_data = Y_gradient.data.reshape(-1, Y_n_properties)
-        Y_values = _dispatch.vstack((Y_values, Y_gradient_data))
+        Y_values = _dispatch.concatenate((Y_values, Y_gradient_data), axis=0)
 
     weights = _dispatch.solve(X_values, Y_values)
 

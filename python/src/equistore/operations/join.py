@@ -147,7 +147,7 @@ def _join_blocks_along_properties(blocks: List[TensorBlock]) -> TensorBlock:
 
     properties = _join_labels([block.properties for block in blocks])
     result_block = TensorBlock(
-        values=_dispatch.hstack([block.values for block in blocks]),
+        values=_dispatch.concatenate([block.values for block in blocks], axis=1),
         samples=first_block.samples,
         components=first_block.components,
         properties=properties,
@@ -200,7 +200,7 @@ def _join_blocks_along_samples(blocks: List[TensorBlock]) -> TensorBlock:
         _check_same_gradients(first_block, block, ["components", "properties"], fname)
 
     result_block = TensorBlock(
-        values=_dispatch.vstack([block.values for block in blocks]),
+        values=_dispatch.concatenate([block.values for block in blocks], axis=0),
         samples=_join_labels([block.samples for block in blocks]),
         components=first_block.components,
         properties=first_block.properties,
@@ -219,7 +219,7 @@ def _join_blocks_along_samples(blocks: List[TensorBlock]) -> TensorBlock:
             samples[:, 0] += 1 + gradient_samples[-1][:, 0].max()
             gradient_samples.append(samples)
 
-        gradient_data = _dispatch.vstack(gradient_data)
+        gradient_data = _dispatch.concatenate(gradient_data, axis=0)
         gradient_samples = np.vstack(gradient_samples)
 
         gradients_samples = Labels(first_gradient.samples.names, gradient_samples)
