@@ -85,7 +85,6 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
         components (): []
         properties (2): ['properties_for_regression']
         gradients: no
-    ...
     >>> # c should now be close to true_c
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]
