@@ -3,16 +3,15 @@ Equistore
 
 |test| |docs|
 
-Equistore is a specialized data storage format suited to all your atomistic
-machine learning needs and more. Think of an NumPy "ndarray" or a pytorch "Tensor"
-carrying extra metadata for atomistic systems.
+Equistore is a specialized data storage format for all your atomistic machine
+learning needs, and more. Think numpy ``ndarray`` or pytorch ``Tensor`` equipped
+with extra metadata for atomic — and other particles — systems. The core of this
+library is written in Rust and we provide API for C, C++, and Python.
 
-The core functionality of equistore is its "TensorMap" data structure.
-Along with the format equistore also provides a collection of mathematical, logical
-as well as utility operations to make the work with TensorMaps convenient.
-
-A main part of the library is written in Rust and we provide APIs for C/C++ and
-Python as well.
+The main class of equistore is the ``TensorMap`` data structure, defining a
+custom block-sparse data format. If you are using equistore from Python, we
+additionally provide a collection of mathematical, logical and other utility
+operations to make working with TensorMaps more convenient.
 
 Documentation
 -------------
