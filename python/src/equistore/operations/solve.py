@@ -52,7 +52,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...         ),
     ...         components = [],
     ...         properties = Labels(
-    ...             names = ["property"],
+    ...             names = ["properties_for_regression"],
     ...             values = np.arange(0, 2).reshape(2, 1)
     ...         ),
     ...         values = covariance
@@ -71,7 +71,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...         ),
     ...         components = [],
     ...         properties = Labels(
-    ...             names = ["property"],
+    ...             names = ["property_to_regress"],
     ...             values = np.arange(0, 1).reshape(1, 1)
     ...         ),
     ...         values = y_regression
@@ -79,6 +79,12 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ... )
     ...
     >>> c = equistore.solve(X, y)
+    >>> print(c.block())
+    TensorBlock
+        samples (1): ['property_to_regress']
+        components (): []
+        properties (2): ['properties_for_regression']
+        gradients: no
     ...
     >>> # c should now be close to true_c
     >>> print(c.block().values)
