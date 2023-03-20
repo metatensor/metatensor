@@ -39,15 +39,26 @@ class TestJoinTensorMap(unittest.TestCase):
         )
         self.ps_first_block_extra_grad = TensorMap(keys_first_block, [block_extra_grad])
 
-    def test_single_tensormap(self):
-        """Test error raise if only one tensormap is provided."""
-        with self.assertRaises(ValueError) as err:
+    def test_wrong_type(self):
+        """Test if a wrong type (e.g., TensorMap) is provided."""
+        with self.assertRaises(TypeError) as err:
             equistore.join(self.ps, axis="properties")
-        self.assertIn("provide at least two", str(err.exception))
+        self.assertIn("list", str(err.exception))
+        self.assertIn("tuple", str(err.exception))
 
+    def test_single_tensormap(self):
+        """Test if only one TensorMap is provided."""
+        ps_joined = equistore.join([self.ps], axis="properties")
+        assert ps_joined is self.ps
+
+    def test_no_tensormaps(self):
+        """Test if an empty list or tuple is provided."""
         with self.assertRaises(ValueError) as err:
-            equistore.join([self.ps], axis="properties")
-        self.assertIn("provide at least two", str(err.exception))
+            equistore.join([], axis="properties")
+        self.assertIn("provide at least one", str(err.exception))
+        with self.assertRaises(ValueError) as err:
+            equistore.join((), axis="properties")
+        self.assertIn("provide at least one", str(err.exception))
 
     def test_join_properties(self):
         """Test public join function with three tensormaps along `properties`.
