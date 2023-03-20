@@ -31,7 +31,7 @@ def random_uniform_like_block(
 
     :param block: Input block from which the metadata is taken.
     :param parameters: Which gradient parameter to copy. If ``None`` (default)
-                       all gradient of ``tensor`` are present in the new tensor.
+                       all gradients of ``block`` are present in the new block.
                        If empty list ``[]`` no gradients information are copied.
     """
     values = _dispatch.random_uniform(block.values)
