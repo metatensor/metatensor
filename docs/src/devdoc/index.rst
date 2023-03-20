@@ -13,7 +13,6 @@ This developer documentation is divided as follow:
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
 
    get-started
    architecture

@@ -24,8 +24,7 @@ else:
     Array = NewType("Array", np.ndarray)
 
 Array.__doc__ = """
-An ``Array`` contains the actual data stored in a
-:py:class:`equistore.TensorBlock`.
+An ``Array`` contains the actual data stored in a :py:class:`TensorBlock`.
 
 This data is manipulated by ``equistore`` in a completely opaque way: this
 library does not know what's inside the arrays appart from a small set of
@@ -37,9 +36,8 @@ constrains:
 - it is possible to create new arrays and move data from one array to
     another.
 
-The actual type of an ``Array`` depends on how the
-:py:class:`equistore.TensorBlock` was created. Currently, numpy ``ndarray``
-and torch ``Tensor`` are supported.
+The actual type of an ``Array`` depends on how the :py:class:`TensorBlock` was
+created. Currently, numpy ``ndarray`` and torch ``Tensor`` are supported.
 """
 
 

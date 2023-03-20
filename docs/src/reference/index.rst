@@ -8,4 +8,4 @@ API reference
     operations/index
     cxx/index
     c/index
-    rust
+    rust/index

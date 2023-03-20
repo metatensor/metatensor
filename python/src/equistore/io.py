@@ -48,12 +48,12 @@ def create_torch_array(shape_ptr, shape_count, array):
 
 def load(path: str, use_numpy=False) -> TensorMap:
     """
-    Load a previously saved :py:class:`equistore.TensorMap` from the given path.
+    Load a previously saved :py:class:`TensorMap` from the given path.
 
-    :py:class:`equistore.TensorMap` are serialized using numpy's ``.npz``
-    format, i.e. a ZIP file without compression (storage method is ``STORED``),
-    where each file is stored as a ``.npy`` array. See the C API documentation
-    for more information on the format.
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
+    ZIP file without compression (storage method is ``STORED``), where each file
+    is stored as a ``.npy`` array. See the C API documentation for more
+    information on the format.
 
     :param path: path of the file to load
     :param use_numpy: should we use numpy or the native implementation? Numpy
@@ -75,8 +75,8 @@ CreateArrayCallback = Callable[
 # TODO: type hints on create_array
 def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap:
     """
-    Load a previously saved :py:class:`equistore.TensorMap` from the given path
-    using a custom array creation callback.
+    Load a previously saved :py:class:`TensorMap` from the given path using a
+    custom array creation callback.
 
     This is an advanced functionality, which should not be needed by most users.
 
@@ -103,12 +103,12 @@ def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap
 
 
 def save(path: str, tensor: TensorMap, use_numpy=False):
-    """Save the given :py:class:`equistore.TensorMap` to a file at ``path``.
+    """Save the given :py:class:`TensorMap` to a file at ``path``.
 
-    :py:class:`equistore.TensorMap` are serialized using numpy's ``.npz``
-    format, i.e. a ZIP file without compression (storage method is ``STORED``),
-    where each file is stored as a ``.npy`` array. See the C API documentation
-    for more information on the format.
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
+    ZIP file without compression (storage method is ``STORED``), where each file
+    is stored as a ``.npy`` array. See the C API documentation for more
+    information on the format.
 
     :param path: path of the file where to save the data
     :param tensor: tensor to save
