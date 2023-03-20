@@ -22,6 +22,72 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
             and where each :py:class:`TensorBlock` has: the ``sample``
             equal to the ``properties`` of ``Y``;
             and the ``properties`` equal to the ``properties`` of ``X``.
+
+    Here is an example using this function:
+
+    >>> import numpy as np
+    >>> import equistore
+    >>> from equistore import TensorBlock, TensorMap, Labels
+    ...
+    >>> np.random.seed(0)
+    >>> # We construct two independent variables, each sampled at 100 random points
+    >>> X_values = np.random.rand(100, 2)
+    >>> true_c = np.array([10.0, 42.0])
+    >>> # Build a linear function of the two variables, with coefficients defined
+    >>> # in the true_c array, and add some random noise
+    >>> y_values = (X_values @ true_c + np.random.normal(size=(100,))).reshape((100, 1))
+    ...
+    >>> covariance = X_values.T @ X_values
+    >>> y_regression = X_values.T @ y_values
+    ...
+    >>> X = TensorMap(
+    ...     keys = Labels(
+    ...         names = ["dummy"],
+    ...         values = np.array([[0]])
+    ...     ),
+    ...     blocks = [TensorBlock(
+    ...         samples = Labels(
+    ...             names = ["sample"],
+    ...             values = np.arange(0, 2).reshape(2, 1)
+    ...         ),
+    ...         components = [],
+    ...         properties = Labels(
+    ...             names = ["properties_for_regression"],
+    ...             values = np.arange(0, 2).reshape(2, 1)
+    ...         ),
+    ...         values = covariance
+    ...     )]
+    ... )
+    ...
+    >>> y = TensorMap(
+    ...     keys = Labels(
+    ...         names = ["dummy"],
+    ...         values = np.array([[0]])
+    ...     ),
+    ...     blocks = [TensorBlock(
+    ...         samples = Labels(
+    ...             names = ["sample"],
+    ...             values = np.arange(0, 2).reshape(2, 1)
+    ...         ),
+    ...         components = [],
+    ...         properties = Labels(
+    ...             names = ["property_to_regress"],
+    ...             values = np.arange(0, 1).reshape(1, 1)
+    ...         ),
+    ...         values = y_regression
+    ...     )]
+    ... )
+    ...
+    >>> c = equistore.solve(X, y)
+    >>> print(c.block())
+    TensorBlock
+        samples (1): ['property_to_regress']
+        components (): []
+        properties (2): ['properties_for_regression']
+        gradients: no
+    >>> # c should now be close to true_c
+    >>> print(c.block().values)
+    [[ 9.67680334 42.12534656]]
     """
     _check_maps(X, Y, "solve")
 
