@@ -116,7 +116,7 @@ class TestJoinTensorMap:
         """Test join function with tensormaps of different `property` names."""
         keys = Labels(["frame_a"], np.zeros([1, 1], dtype=np.int32))
         values = np.zeros([1, 1])
-        samples = Labels(names=["idx"], values=np.zeros([1,1], dtype=np.int32))
+        samples = Labels(names=["idx"], values=np.zeros([1, 1], dtype=np.int32))
 
         tensor_map_a = TensorMap(
             keys=keys,
@@ -125,7 +125,7 @@ class TestJoinTensorMap:
                     values=values,
                     samples=samples,
                     components=[],
-                    properties=Labels(["prop1"], np.zeros([1,1], dtype=np.int32)),
+                    properties=Labels(["prop1"], np.zeros([1, 1], dtype=np.int32)),
                 )
             ],
         )
@@ -137,13 +137,14 @@ class TestJoinTensorMap:
                     values=np.zeros([1, 1]),
                     samples=samples,
                     components=[],
-                    properties=Labels(["prop2"], np.zeros([1,1], dtype=np.int32)),
+                    properties=Labels(["prop2"], np.zeros([1, 1], dtype=np.int32)),
                 )
             ],
         )
 
         tensor_joined = equistore.join([tensor_map_a, tensor_map_b], axis="properties")
         assert tensor_joined.property_names == ("tensor", "property")
+        assert len(tensor_joined[0].properties) == 2
 
     def test_join_samples(self, tensor):
         """Test join function with three tensormaps along `samples`."""

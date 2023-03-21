@@ -56,8 +56,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
     # If this is not the case we have to change unify the corresponding labels later.
     if axis == "samples":
         names_list = [tensor.sample_names for tensor in tensor_maps]
-
-    elif axis == "properties":
+    else:
         names_list = [tensor.property_names for tensor in tensor_maps]
 
     # We use functools to flatten a list of sublists::
