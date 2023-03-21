@@ -58,7 +58,12 @@ class TestJoinTensorMap:
         tensor_joined = equistore.join([tensor], axis="properties")
         assert tensor_joined is tensor
 
-    def test_join_properties(self, tensor):
+    @pytest.mark.parametrize("axis", ["samples", "properties"])
+    def test_join_components(self, components_tensor, axis):
+        """Test join for tensors with components."""
+        equistore.join([components_tensor, components_tensor], axis=axis)
+
+    def test_join_properties_metadata(self, tensor):
         """Test join function with three tensormaps along `properties`.
 
         We check for the values below."""
@@ -77,6 +82,24 @@ class TestJoinTensorMap:
         assert sorted(tensor_joined[0].gradients_list()) == sorted(
             tensor[0].gradients_list()
         )
+
+    def test_join_properties_values(self, tensor):
+        """Test values for joining along `properties`."""
+        ts_1 = equistore.slice(tensor, properties=tensor[0].properties[:1])
+        ts_2 = equistore.slice(tensor, properties=tensor[0].properties[1:])
+
+        tensor_joined = equistore.join([ts_1, ts_2], axis="properties")
+
+        # We can not use #equistore.equal_raise for the checks because the meta data
+        # differs by the tensor entry.
+        for i, block_tensor in tensor:
+            block_tensor_joined = tensor_joined[i]
+
+            assert_equal(block_tensor_joined.values, block_tensor.values)
+
+            for parameter, gradient_tensor in block_tensor.gradients():
+                gradient_tensor_joined = block_tensor_joined.gradient(parameter)
+                assert_equal(gradient_tensor_joined.data, gradient_tensor.data)
 
     def test_join_properties_with_same_property_names(self, tensor):
         """Test join function with three tensormaps along `properties`.
@@ -132,7 +155,7 @@ class TestJoinTensorMap:
         assert tensor_joined.property_names == ("tensor", "property")
         assert len(tensor_joined[0].properties) == 2
 
-    def test_join_samples(self, tensor):
+    def test_join_samples_metadata(self, tensor):
         """Test join function with three tensormaps along `samples`."""
         tensor_joined = equistore.join([tensor, tensor, tensor], axis="samples")
 
@@ -143,24 +166,6 @@ class TestJoinTensorMap:
         assert sorted(tensor_joined[0].gradients_list()) == sorted(
             tensor[0].gradients_list()
         )
-
-    def test_join_properties_values(self, tensor):
-        """Test values for joining along `properties`."""
-        ts_1 = equistore.slice(tensor, properties=tensor[0].properties[:1])
-        ts_2 = equistore.slice(tensor, properties=tensor[0].properties[1:])
-
-        tensor_joined = equistore.join([ts_1, ts_2], axis="properties")
-
-        # We can not use #equistore.equal_raise for the checks because the meta data
-        # differs by the tensor entry.
-        for i, block_tensor in tensor:
-            block_tensor_joined = tensor_joined[i]
-
-            assert_equal(block_tensor_joined.values, block_tensor.values)
-
-            for parameter, gradient_tensor in block_tensor.gradients():
-                gradient_tensor_joined = block_tensor_joined.gradient(parameter)
-                assert_equal(gradient_tensor_joined.data, gradient_tensor.data)
 
     def test_join_samples_values(self, tensor):
         """Test values for joining along `samples`."""
@@ -186,7 +191,35 @@ class TestJoinTensorMap:
                 gradient_tensor_joined = block_tensor_joined.gradient(parameter)
                 assert_equal(gradient_tensor_joined.data, gradient_tensor.data)
 
-    @pytest.mark.parametrize("axis", ["samples", "properties"])
-    def test_join_components(self, components_tensor, axis):
-        """Test join for tensors with components"""
-        equistore.join([components_tensor, components_tensor], axis=axis)
+    def test_join_samples_with_different_sample_names(self):
+        """Test join function raises an error with different `sample` names."""
+        keys = Labels(["frame_a"], np.zeros([1, 1], dtype=np.int32))
+        values = np.zeros([1, 1])
+        properties = Labels(names=["idx"], values=np.zeros([1, 1], dtype=np.int32))
+
+        tensor_map_a = TensorMap(
+            keys=keys,
+            blocks=[
+                TensorBlock(
+                    values=values,
+                    samples=Labels(["prop1"], np.zeros([1, 1], dtype=np.int32)),
+                    components=[],
+                    properties=properties,
+                )
+            ],
+        )
+
+        tensor_map_b = TensorMap(
+            keys=keys,
+            blocks=[
+                TensorBlock(
+                    values=np.zeros([1, 1]),
+                    samples=Labels(["prop2"], np.zeros([1, 1], dtype=np.int32)),
+                    components=[],
+                    properties=properties,
+                )
+            ],
+        )
+
+        with pytest.raises(ValueError, match="Sample names are not the same!"):
+            equistore.join([tensor_map_a, tensor_map_b], axis="samples")

@@ -71,6 +71,13 @@ def join(tensor_maps: List[TensorMap], axis: str):
         len(unique_names) == np.array([len(names) for names in names_list])
     )
 
+    # It's fine to loose metadata on the property axis, less so on the sample axis!
+    if axis == "samples" and not names_are_same:
+        raise ValueError(
+            "Sample names are not the same! Joining along samples with unequal sample "
+            "names can lead to severre error."
+        )
+
     keys_names = ("tensor",) + tensor_maps[0].keys.names
     keys_values = []
     blocks = []
@@ -82,15 +89,10 @@ def join(tensor_maps: List[TensorMap], axis: str):
             samples = block.samples
             properties = block.properties
 
-            if not names_are_same:
-                if axis == "samples":
-                    samples = Labels(
-                        ["property"], np.arange(len(samples)).reshape(-1, 1)
-                    )
-                else:
-                    properties = Labels(
-                        ["property"], np.arange(len(properties)).reshape(-1, 1)
-                    )
+            if axis == "properties" and not names_are_same:
+                properties = Labels(
+                    ["property"], np.arange(len(properties)).reshape(-1, 1)
+                )
 
             new_block = TensorBlock(block.values, samples, block.components, properties)
 
