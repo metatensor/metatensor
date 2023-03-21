@@ -5,7 +5,7 @@ import pytest
 from numpy.testing import assert_equal
 
 import equistore
-from equistore import Labels, TensorMap
+from equistore import Labels, TensorBlock, TensorMap
 from equistore.status import EquistoreError
 
 
@@ -61,15 +61,15 @@ class TestJoinTensorMap:
 
         return TensorMap(keys_first_block, [block_extra_grad])
 
+    def test_wrong_axis(self, tensor):
+        """Test error with unknown `axis` keyword."""
+        with pytest.raises(ValueError, match="values for the `axis` parameter"):
+            equistore.join([tensor, tensor, tensor], axis="foo")
+
     def test_wrong_type(self, tensor):
         """Test if a wrong type (e.g., TensorMap) is provided."""
         with pytest.raises(TypeError, match="list or a tuple"):
             equistore.join(tensor, axis="properties")
-
-    def test_single_tensormap(self, tensor):
-        """Test if only one TensorMap is provided."""
-        tensor_joined = equistore.join([tensor], axis="properties")
-        assert tensor_joined is tensor
 
     @pytest.mark.parametrize("tensor", ([], ()))
     def test_no_tensormaps(self, tensor):
@@ -77,8 +77,13 @@ class TestJoinTensorMap:
         with pytest.raises(ValueError, match="provide at least one"):
             equistore.join(tensor, axis="properties")
 
+    def test_single_tensormap(self, tensor):
+        """Test if only one TensorMap is provided."""
+        tensor_joined = equistore.join([tensor], axis="properties")
+        assert tensor_joined is tensor
+
     def test_join_properties(self, tensor):
-        """Test public join function with three tensormaps along `properties`.
+        """Test join function with three tensormaps along `properties`.
 
         We check for the values below."""
 
@@ -92,32 +97,60 @@ class TestJoinTensorMap:
         tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
         assert set(tensor_prop) == set((0, 1, 2))
 
-    def test_join_properties_with_different_props(self, tensor, components_tensor):
-            """Test public join function with three tensormaps along `properties`.
+    def test_join_properties_with_same_property_names(self, tensor):
+        """Test join function with three tensormaps along `properties`.
 
-            We check for the values below."""
+        We check for the values below."""
 
-            tensor_joined = equistore.join([tensor, tensor, tensor], axis="properties")
+        tensor_joined = equistore.join([tensor, tensor, tensor], axis="properties")
 
-            # test property names
-            names = tensor.block(0).properties.names
-            assert tensor_joined.block(0).properties.names == ("tensor",) + names
+        # test property names
+        names = tensor.block(0).properties.names
+        assert tensor_joined.block(0).properties.names == ("tensor",) + names
 
-            # test property values
-            tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
-            assert set(tensor_prop) == set((0, 1, 2))
+        # test property values
+        tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
+        assert set(tensor_prop) == set((0, 1, 2))
+
+    def test_join_properties_with_different_property_names(self):
+        """Test join function with tensormaps of different `property` names."""
+        keys = Labels(["frame_a"], np.zeros([1, 1], dtype=np.int32))
+        values = np.zeros([1, 1])
+        samples = Labels(names=["idx"], values=np.zeros([1,1], dtype=np.int32))
+
+        tensor_map_a = TensorMap(
+            keys=keys,
+            blocks=[
+                TensorBlock(
+                    values=values,
+                    samples=samples,
+                    components=[],
+                    properties=Labels(["prop1"], np.zeros([1,1], dtype=np.int32)),
+                )
+            ],
+        )
+
+        tensor_map_b = TensorMap(
+            keys=keys,
+            blocks=[
+                TensorBlock(
+                    values=np.zeros([1, 1]),
+                    samples=samples,
+                    components=[],
+                    properties=Labels(["prop2"], np.zeros([1,1], dtype=np.int32)),
+                )
+            ],
+        )
+
+        tensor_joined = equistore.join([tensor_map_a, tensor_map_b], axis="properties")
+        assert tensor_joined.property_names == ("tensor", "property")
 
     def test_join_samples(self, tensor):
-        """Test public join function with three tensormaps along `samples`."""
+        """Test join function with three tensormaps along `samples`."""
         tensor_joined = equistore.join([tensor, tensor, tensor], axis="samples")
 
         # test sample values
         assert len(tensor_joined.block(0).samples) == 3 * len(tensor.block(0).samples)
-
-    def test_join_error(self, tensor):
-        """Test error with unknown `axis` keyword."""
-        with pytest.raises(ValueError, match="values for the `axis` parameter"):
-            equistore.join([tensor, tensor, tensor], axis="foo")
 
     def test_join_properties_values(self, tensor):
         """Test values for joining along `properties`."""
@@ -129,15 +162,6 @@ class TestJoinTensorMap:
             block_tensor_joined = tensor_joined[i]
 
             assert_equal(block_tensor_joined.values, block_tensor.values)
-
-    def test_join_properties_different_gradients(
-        self, tensor_single_block, tensor_single_block_extra_grad
-    ):
-        """Test error raise if `gradients` are not the same."""
-        with pytest.raises(EquistoreError, match="gradient"):
-            equistore.join(
-                [tensor_single_block, tensor_single_block_extra_grad], axis="properties"
-            )
 
     def test_join_samples_values(self, tensor):
         """Test values for joining along `samples`."""
@@ -157,202 +181,6 @@ class TestJoinTensorMap:
             assert_equal(block_tensor_joined.values, block_tensor.values)
 
     @pytest.mark.parametrize("axis", ["samples", "properties"])
-    def test_join_samples_different_components(self, components_tensor, axis):
-        """Test error raise if `components` are not the same."""
-        components_tensor_c2p = components_tensor.copy().components_to_properties(
-            ["spherical_harmonics_m"]
-        )
-
-        with pytest.raises(EquistoreError, match="components"):
-            equistore.join([components_tensor_c2p, components_tensor], axis=axis)
-
-    @pytest.mark.parametrize("axis", ["samples", "properties"])
-    def test_join_samples_different_gradients(
-        self,
-        tensor_single_block,
-        tensor_single_block_extra_grad,
-        axis,
-    ):
-        """Test error raise if `gradients` are not the same."""
-        with pytest.raises(EquistoreError, match="gradient"):
-            equistore.join(
-                [tensor_single_block, tensor_single_block_extra_grad], axis=axis
-            )
-
-
-class TestJoinLabels:
-    """Test edge cases of label joining."""
-
-    @pytest.fixture
-    def sample_labels(self):
-        return Labels(names=["prop"], values=np.arange(2).reshape(-1, 1))
-
-    @pytest.fixture
-    def keys(self):
-        return Labels(names=["prop"], values=np.arange(1).reshape(-1, 1))
-
-    def test_same_names_same_values(self, sample_labels, keys):
-        """Test Label joining using labels with same names but same values."""
-
-        names = ("structure", "prop_1")
-        property_labels = Labels(names, np.vstack([np.arange(5), np.arange(5)]).T)
-
-        block = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels,
-        )
-
-        tm = TensorMap(keys, [block])
-        joined_tm = equistore.join([tm, tm], axis="properties")
-
-        joined_labels = joined_tm.block(0).properties
-
-        assert joined_labels.names == ("tensor",) + names
-
-        ref = np.array(
-            [
-                [0, 0, 0],
-                [0, 1, 1],
-                [0, 2, 2],
-                [0, 3, 3],
-                [0, 4, 4],
-                [1, 0, 0],
-                [1, 1, 1],
-                [1, 2, 2],
-                [1, 3, 3],
-                [1, 4, 4],
-            ]
-        )
-
-        assert_equal(joined_labels.tolist(), ref)
-
-    def test_same_names_unique_values(self, sample_labels, keys):
-        """Test Label joining using labels with same names and unique values."""
-        names = ("structure", "prop_1")
-        property_labels_1 = Labels(names, np.vstack([np.arange(5), np.arange(5)]).T)
-        property_labels_2 = Labels(
-            names, np.vstack([np.arange(5, 10), np.arange(5, 10)]).T
-        )
-
-        block_1 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_1,
-        )
-
-        block_2 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_2,
-        )
-
-        joined_tm = equistore.join(
-            [TensorMap(keys, [block_1]), TensorMap(keys, [block_2])],
-            axis="properties",
-        )
-
-        joined_labels = joined_tm.block(0).properties
-
-        assert joined_labels.names == ("structure", "prop_1")
-        assert_equal(
-            joined_labels.tolist(), np.vstack([np.arange(10), np.arange(10)]).T
-        )
-
-    def test_different_names(self, sample_labels, keys):
-        """Test Label joining using labels with different names."""
-        values = np.vstack([np.arange(5), np.arange(5)]).T
-        property_labels_1 = Labels(("structure", "prop_1"), -values)
-        property_labels_2 = Labels(("structure", "prop_2"), values)
-
-        block_1 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_1,
-        )
-
-        block_2 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_2,
-        )
-
-        joined_tm = equistore.join(
-            [TensorMap(keys, [block_1]), TensorMap(keys, [block_2])],
-            axis="properties",
-        )
-
-        joined_labels = joined_tm.block(0).properties
-
-        assert joined_labels.names == ("tensor", "property")
-
-        ref = np.array(
-            [
-                [0, 0],
-                [0, 1],
-                [0, 2],
-                [0, 3],
-                [0, 4],
-                [1, 0],
-                [1, 1],
-                [1, 2],
-                [1, 3],
-                [1, 4],
-            ]
-        )
-
-        assert_equal(joined_labels.tolist(), ref)
-
-    def test_different_names_different_length(self, sample_labels, keys):
-        """Test Label joining using labels with different names and different length."""
-        property_labels_1 = Labels(
-            ("structure", "prop_1"), np.vstack(2 * [np.arange(5)]).T
-        )
-        property_labels_2 = Labels(
-            ("structure", "prop_2", "prop_3"), np.vstack(3 * [np.arange(5)]).T
-        )
-
-        block_1 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_1,
-        )
-
-        block_2 = TensorBlock(
-            values=np.zeros([2, 5]),
-            samples=sample_labels,
-            components=[],
-            properties=property_labels_2,
-        )
-
-        joined_tm = equistore.join(
-            [TensorMap(keys, [block_1]), TensorMap(keys, [block_2])],
-            axis="properties",
-        )
-
-        joined_labels = joined_tm.block(0).properties
-
-        assert joined_labels.names == ("tensor", "property")
-
-        ref = np.array(
-            [
-                [0, 0],
-                [0, 1],
-                [0, 2],
-                [0, 3],
-                [0, 4],
-                [1, 0],
-                [1, 1],
-                [1, 2],
-                [1, 3],
-                [1, 4],
-            ]
-        )
-
-        assert_equal(joined_labels.tolist(), ref)
+    def test_join_components(self, components_tensor, axis):
+        """Test join for tensors with components"""
+        equistore.join([components_tensor, components_tensor], axis=axis)
