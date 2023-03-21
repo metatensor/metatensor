@@ -101,6 +101,11 @@ class TensorBlock:
             if self._parent is None:
                 self._lib.eqs_block_free(self._actual_ptr)
 
+    def __copy__(self):
+        raise ValueError(
+            "shallow copies of TensorBlock are not possible, use a deepcopy instead"
+        )
+
     def __deepcopy__(self, _memodict):
         new_ptr = self._lib.eqs_block_copy(self._ptr)
         return TensorBlock._from_ptr(new_ptr, parent=None)

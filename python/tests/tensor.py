@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
@@ -16,14 +18,28 @@ class TestTensorMap:
         return large_tensor_map()
 
     def test_copy(self, tensor):
-        copy = tensor.copy()
+        # Using TensorMap.copy
+        clone = tensor.copy()
         block_1_values_id = id(tensor.block(0).values)
 
         del tensor
 
-        assert id(copy.block(0).values) != block_1_values_id
+        assert id(clone.block(0).values) != block_1_values_id
+        assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
 
-        assert_equal(copy.block(0).values, np.full((3, 1, 1), 1.0))
+        # Using copy.deepcopy
+        other_clone = copy.deepcopy(clone)
+        block_1_values_id = id(clone.block(0).values)
+
+        del clone
+
+        assert id(other_clone.block(0).values) != block_1_values_id
+        assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
+
+    def test_shallow_copy_error(self, tensor):
+        msg = "shallow copies of TensorMap are not possible, use a deepcopy instead"
+        with pytest.raises(ValueError, match=msg):
+            copy.copy(tensor)
 
     def test_keys(self, tensor):
         assert tensor.keys.names == ("key_1", "key_2")
