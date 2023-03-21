@@ -92,8 +92,14 @@ def join(tensor_maps: List[TensorMap], axis: str):
                         ["property"], np.arange(len(properties)).reshape(-1, 1)
                     )
 
-            block = TensorBlock(block.values, samples, block.components, properties)
-            blocks.append(block)
+            new_block = TensorBlock(block.values, samples, block.components, properties)
+
+            for parameter, gradient in block.gradients():
+                new_block.add_gradient(
+                    parameter, gradient.data, gradient.samples, gradient.components
+                )
+
+            blocks.append(new_block)
 
     keys = Labels(names=keys_names, values=np.array(keys_values))
     tensor = TensorMap(keys=keys, blocks=blocks)
