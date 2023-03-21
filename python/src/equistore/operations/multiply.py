@@ -106,7 +106,7 @@ def _multiply_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlo
                 block1.values[isample] * gradient2.data[isample_grad2]
                 + gradient1.data[isample_grad1] * block2.values[isample]
             )
-        values_grad = _dispatch.vstack(values_grad)
+        values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
             parameter1,

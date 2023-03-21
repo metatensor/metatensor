@@ -108,7 +108,7 @@ def _divide_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock
                 / block2.values[isample] ** 2
                 + gradient1.data[isample_grad1] / block2.values[isample]
             )
-        values_grad = _dispatch.vstack(values_grad)
+        values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
             parameter1,

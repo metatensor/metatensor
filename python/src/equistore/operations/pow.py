@@ -64,7 +64,7 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
             )
             ** (constant - 1)
         )
-        values_grad = _dispatch.vstack(values_grad)
+        values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
             parameter,
