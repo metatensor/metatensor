@@ -86,19 +86,28 @@ def join(tensor_maps: List[TensorMap], axis: str):
         keys_values += [(i,) + value for value in tensor.keys.tolist()]
 
         for _, block in tensor:
-            samples = block.samples
-            properties = block.properties
-
-            if axis == "properties" and not names_are_same:
+            # We would already raised an error if `axis == "samples"`. Therefore, we can
+            # neglect the check for `axis == "properties"`.
+            if names_are_same:
+                properties = block.properties
+            else:
                 properties = Labels(
-                    ["property"], np.arange(len(properties)).reshape(-1, 1)
+                    ["property"], np.arange(len(block.properties)).reshape(-1, 1)
                 )
 
-            new_block = TensorBlock(block.values, samples, block.components, properties)
+            new_block = TensorBlock(
+                values=block.values,
+                samples=block.samples,
+                components=block.components,
+                properties=properties,
+            )
 
             for parameter, gradient in block.gradients():
                 new_block.add_gradient(
-                    parameter, gradient.data, gradient.samples, gradient.components
+                    parameter=parameter,
+                    data=gradient.data,
+                    samples=gradient.samples,
+                    components=gradient.components,
                 )
 
             blocks.append(new_block)
