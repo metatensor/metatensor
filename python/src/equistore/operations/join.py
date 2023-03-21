@@ -74,8 +74,8 @@ def join(tensor_maps: List[TensorMap], axis: str):
     # It's fine to loose metadata on the property axis, less so on the sample axis!
     if axis == "samples" and not names_are_same:
         raise ValueError(
-            "Sample names are not the same! Joining along samples with unequal sample "
-            "names can lead to severre error."
+            "Sample names are not the same! Joining along samples with different sample "
+            "names will loose information and is not supported"
         )
 
     keys_names = ("tensor",) + tensor_maps[0].keys.names
