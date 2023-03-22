@@ -12,6 +12,5 @@ Python API reference
     tensor
     labels
     block
-    operations/index
     data
     misc
