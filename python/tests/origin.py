@@ -25,4 +25,4 @@ class TestOrigin:
             properties=Labels.single(),
         )
         with pytest.raises(equistore.status.EquistoreError, match="different origins"):
-            tensor_map = TensorMap(keys=keys, blocks=[block_numpy, block_torch])
+            _ = TensorMap(keys=keys, blocks=[block_numpy, block_torch])
