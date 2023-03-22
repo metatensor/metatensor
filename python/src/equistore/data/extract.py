@@ -1,5 +1,5 @@
 import ctypes
-from typing import NewType, Union
+from typing import Any, NewType, Union
 
 import numpy as np
 
@@ -24,20 +24,20 @@ else:
     Array = NewType("Array", np.ndarray)
 
 Array.__doc__ = """
-An ``Array`` contains the actual data stored in a :py:class:`TensorBlock`.
+An ``Array`` contains the actual data stored in a
+:py:class:`equistore.TensorBlock`.
 
 This data is manipulated by ``equistore`` in a completely opaque way: this
 library does not know what's inside the arrays appart from a small set of
 constrains:
 
 - array contains numeric data;
-- they are stored as row-major, n-dimensional arrays with at least 2
-    dimensions;
-- it is possible to create new arrays and move data from one array to
-    another.
+- they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
+- it is possible to create new arrays and move data from one array to another.
 
-The actual type of an ``Array`` depends on how the :py:class:`TensorBlock` was
-created. Currently, numpy ``ndarray`` and torch ``Tensor`` are supported.
+The actual type of an ``Array`` depends on how the
+:py:class:`equistore.TensorBlock` was created. Currently,
+:py:class:`numpy.ndarray` and :py:class:`torch.Tensor` are supported.
 """
 
 
@@ -49,8 +49,11 @@ def register_external_data_wrapper(origin, klass):
     Register a non-Python data origin and the corresponding class wrapper.
 
     The wrapper class constructor must take two arguments (raw ``eqs_array`` and
-    python ``parent`` object) and return a subclass of either ``numpy.ndarray``
-    or ``torch.Tensor``, which keeps ``parent`` alive.
+    python ``parent`` object) and return a subclass of either
+    :py:class:`numpy.ndarray` or :py:class:`torch.Tensor`, which keeps
+    ``parent`` alive. The :py:class:`equistore.data.ExternalCpuArray` class
+    should provide the right behavior for data living in CPU memory, and can
+    serve as an example for more advanced custom arrays.
 
     :param origin: new origin to register as a string
     :param klass: wrapper class to use for this origin
@@ -123,7 +126,13 @@ class ExternalCpuArray(np.ndarray):
     ndarray, while making sure the memory owner is kept around for long enough.
     """
 
-    def __new__(cls, eqs_array: eqs_array_t, parent):
+    def __new__(cls, eqs_array: eqs_array_t, parent: Any):
+        """
+        :param eqs_array: raw array to wrap in a Python-compatible class
+        :param parent: owner of the raw array, we will keep a reference to this
+            python object
+        """
+
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
         status = eqs_array.shape(eqs_array.ptr, shape_ptr, shape_count)
