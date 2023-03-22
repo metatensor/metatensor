@@ -1,6 +1,7 @@
 from .array import ArrayWrapper  # noqa
 from .extract import (  # noqa
     Array,
+    ExternalCpuArray,
     data_origin,
     data_origin_name,
     eqs_array_to_python_array,

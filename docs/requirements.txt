@@ -1,10 +1,9 @@
 sphinx >=4.4
-sphinx_autodoc_typehints
-sphinx-toggleprompt
-pygments >=2.9
-breathe >=4.33
-furo
-toml
+sphinx-toggleprompt # hide the prompt (>>>) in python doctests
+pygments >=2.11     # syntax highligthing
+breathe >=4.33      # C and C++ => sphinx through doxygen
+furo                # sphinx theme
+toml                # to extract version number out of Cargo.toml
 
 # required for autodoc
 numpy

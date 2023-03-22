@@ -7,16 +7,16 @@ with extra metadata for atomic — and other particles — systems. The core of 
 library is written in Rust and we provide API for C, C++, and Python.
 
 The main class of equistore is the :py:class:`equistore.TensorMap` data
-structure. This class defines a block-sparse data format, where each
-:py:class:`block <equistore.TensorBlock>` is stored using `coordinate-sparse`_
-storage. The schematic below represents a TensorMap made of multiple
-TensorBlocks, and the overall data format is explained further in the
+structure, illustrated below. This class defines a block-sparse data format,
+where each :py:class:`block <equistore.TensorBlock>` is stored using
+`coordinate`_ sparse storage. The schematic below represents a TensorMap made of
+multiple TensorBlocks, and the overall data format is explained further in the
 :ref:`getting started <userdoc-core-concepts>` section of this documentation. If
 you are using equistore from Python, we additionally provide a collection of
 mathematical, logical and other utility :ref:`operations
 <python-api-operations>` to make working with TensorMaps more convenient.
 
-.. _coordinate-sparse: https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)
+.. _coordinate: https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)
 
 .. image:: ../static/images/TensorMap.*
     :width: 400px
