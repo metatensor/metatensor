@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::{TensorBlock, BasicBlock};
 use crate::{Labels, Error};
+use crate::get_data_origin;
 
 mod utils;
 
@@ -65,6 +66,26 @@ fn check_labels_names(
     Ok(())
 }
 
+fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
+
+    if blocks.is_empty() {
+        return Ok(());
+    }
+    let first_origin = blocks[0].values().data.origin()?;
+    for block in blocks.iter().skip(1) {
+        let block_origin = block.values().data.origin()?;
+        if first_origin != block_origin {
+            return Err(Error::InvalidParameter(format!(
+                "tried to build a TensorMap from blocks with different origins: at least ('{}') and ('{}') were detected",
+                get_data_origin(first_origin),
+                get_data_origin(block_origin),
+            )));
+        }
+    }
+
+    Ok(())
+}
+
 impl TensorMap {
     /// Create a new `TensorMap` with the given keys and blocks.
     ///
@@ -80,6 +101,8 @@ impl TensorMap {
                 keys.count(), blocks.len()
             )))
         }
+        
+        check_origin(&blocks)?;
 
         if !blocks.is_empty() {
             // make sure all blocks have the same kind of samples, components &
