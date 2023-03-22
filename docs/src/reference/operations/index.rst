@@ -1,7 +1,7 @@
 .. _python-api-operations:
 
-Operations
-==========
+Python operations reference
+===========================
 
 .. automodule:: equistore.operations
     :undoc-members:
