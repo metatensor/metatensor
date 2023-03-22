@@ -35,7 +35,9 @@ def build_doxygen_docs():
     subprocess.run(["doxygen", "Doxyfile"], cwd=os.path.join(ROOT, "docs"))
 
 
-build_doxygen_docs()
+def setup(app):
+    build_doxygen_docs()
+    app.add_css_file("css/equistore.css")
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,7 +72,7 @@ autodoc_typehints = "both"
 autodoc_typehints_format = "short"
 
 intersphinx_mapping = {
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    "numpy": ("http://docs.scipy.org/doc/numpy/", None),
 }
 
 breathe_projects = {
@@ -79,6 +81,12 @@ breathe_projects = {
 breathe_default_project = "equistore"
 breathe_domain_by_extension = {
     "h": "c",
+}
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -91,4 +99,4 @@ html_theme = "furo"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["../static"]
