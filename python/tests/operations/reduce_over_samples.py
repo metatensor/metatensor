@@ -22,6 +22,7 @@ class TestSumSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
+        # check both passing a list and a single string for sample_names
         reduce_tensor_se = equistore.sum_over_samples(
             tensor_se, sample_names=["center"]
         )
@@ -265,6 +266,7 @@ class TestMeanSamples(unittest.TestCase):
         )
         bl1 = tensor_ps[0]
 
+        # check both passing a list and a single string for sample_names
         reduce_tensor_se = equistore.mean_over_samples(tensor_se, sample_names="center")
         reduce_tensor_ps = equistore.mean_over_samples(
             tensor_ps, sample_names=["center"]
@@ -579,11 +581,11 @@ class TestStdSamples(unittest.TestCase):
             os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
             use_numpy=True,
         )
-        # tensor_ps = equistore.remove_gradients(tensor_ps)
         tensor_se = equistore.remove_gradients(tensor_se)
 
         bl1 = tensor_ps[0]
 
+        # check both passing a list and a single string for sample_names
         reduce_tensor_se = equistore.std_over_samples(tensor_se, sample_names="center")
         reduce_tensor_ps = equistore.std_over_samples(
             tensor_ps, sample_names=["center"]
