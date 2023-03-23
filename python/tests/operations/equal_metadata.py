@@ -287,20 +287,26 @@ class TestEqualMetaData:
         new_blocks = []
         for key in tensor_map.keys:
             block = tensor_map[key].copy()
-            components = [comp[:-1] for comp in block.components]
-            new_block = TensorBlock(
-                values=block.values[:, :-1],
-                samples=block.samples,
-                properties=block.properties,
-                components=components,
-            )
-            for param, obj in block.gradients():
-                new_block.add_gradient(
-                    parameter=param,
-                    samples=obj.samples,
+
+            can_remove = np.all([len(c) > 2 for c in block.components])
+
+            if can_remove:
+                components = [c[:-1] for c in block.components]
+                new_block = TensorBlock(
+                    values=block.values[:, :-1],
+                    samples=block.samples,
+                    properties=block.properties,
                     components=components,
-                    data=obj.data[:, :-1],
                 )
+                for parameter, gradient in block.gradients():
+                    new_block.add_gradient(
+                        parameter=parameter,
+                        data=gradient.data[:, :-1],
+                        samples=gradient.samples,
+                        components=components,
+                    )
+            else:
+                new_block = block.copy()
             new_blocks.append(new_block)
 
         new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
