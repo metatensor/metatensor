@@ -70,22 +70,23 @@ fn check_data_and_labels(
         )));
     }
 
-    let mut dimension = 1;
+    let mut axis = 1;
     for component in components {
-        if shape[dimension] != component.count() {
+        if shape[axis] != component.count() {
             return Err(Error::InvalidParameter(format!(
                 "{}: the array shape along axis {} is {} but we have {} entries \
                 for the corresponding component",
-                context, dimension, shape[dimension], component.count(),
+                context, axis, shape[axis], component.count(),
             )));
         }
-        dimension += 1;
+
+        axis += 1;
     }
 
-    if shape[dimension] != properties.count() {
+    if shape[axis] != properties.count() {
         return Err(Error::InvalidParameter(format!(
             "{}: the array shape along axis {} is {} but we have {} properties labels",
-            context, dimension, shape[dimension], properties.count()
+            context, axis, shape[axis], properties.count()
         )));
     }
 
@@ -98,6 +99,13 @@ fn check_component_labels(components: &[Arc<Labels>]) -> Result<(), Error> {
             return Err(Error::InvalidParameter(format!(
                 "component labels must have a single dimension, got {}: [{}] for component {}",
                 component.size(), component.names().join(", "), i
+            )));
+        }
+
+        if component.is_empty() {
+            return Err(Error::InvalidParameter(format!(
+                "component '{}' must contain at least one entry, got 0",
+                component.names()[0]
             )));
         }
     }
