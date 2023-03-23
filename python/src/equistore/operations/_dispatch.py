@@ -241,19 +241,6 @@ def index_add(output_array, input_array, index):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def zeros(shape, array_type="numpy"):
-    """Create a `zeros_like` with the given input shape.
-
-    `array_type` can be `Numpy` or `torch`.
-    """
-    if array_type == "numpy":
-        return np.zeros(shape)
-    elif array_type == "torch":
-        return torch.zeros(shape)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
 def zeros_like(array, shape=None, requires_grad=False):
     """Create an zeros_like with the same size of array.
     if shape is not None it overrides the shape of the result.
@@ -261,7 +248,7 @@ def zeros_like(array, shape=None, requires_grad=False):
     It is equivalent of np.zeros_like(array, shape=shape).
     requires_grad is used only in torch"""
     if isinstance(array, np.ndarray):
-        return np.zeros_like(array, shape=shape)
+        return np.zeros_like(array, shape=shape, subok=False)
     elif isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
@@ -284,7 +271,7 @@ def ones_like(array, shape=None, requires_grad=False):
     :param requires_grad: used only in torch
     """
     if isinstance(array, np.ndarray):
-        return np.ones_like(array, shape=shape)
+        return np.ones_like(array, shape=shape, subok=False)
     elif isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
@@ -307,7 +294,7 @@ def empty_like(array, shape=None, requires_grad=False):
     It is equivalent of np.empty_like(array, shape=shape).
     requires_grad is used only in torch"""
     if isinstance(array, np.ndarray):
-        return np.empty_like(array, shape=shape)
+        return np.empty_like(array, shape=shape, subok=False)
     elif isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
