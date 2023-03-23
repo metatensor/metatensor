@@ -240,6 +240,9 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
                 if not (c1.names == c2.names):
                     raise ValueError(err_msg + err_msg_names)
 
+                if not (len(c1) == len(c2)):
+                    raise ValueError(err_msg + err_msg_1)
+
                 if not np.all(c1 == c2):
                     raise ValueError(err_msg + err_msg_1)
 
