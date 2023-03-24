@@ -1,7 +1,7 @@
 import os
-import unittest
 
 import numpy as np
+import pytest
 
 import equistore
 from equistore import Labels, TensorBlock, TensorMap
@@ -10,62 +10,23 @@ from equistore import Labels, TensorBlock, TensorMap
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
-class TestAdd(unittest.TestCase):
-    def test_self_add_tensors_nogradient(self):
-        block_1 = TensorBlock(
-            values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_2 = TensorBlock(
-            values=np.array([[1, 2], [3, 4], [5, 6]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_3 = TensorBlock(
-            values=np.array([[1.5, 2.1], [6.7, 10.2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_4 = TensorBlock(
-            values=np.array([[10, 200.8], [3.76, 4.432], [545, 26]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-
-        block_res1 = TensorBlock(
-            values=np.array([[2.5, 4.1], [9.7, 15.2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_res2 = TensorBlock(
-            values=np.array([[11, 202.8], [6.76, 8.432], [550, 32]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
+class TestAdd:
+    @pytest.fixture
+    def keys(self):
         keys = Labels(
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
-        A = TensorMap(keys, [block_1, block_2])
-        B = TensorMap(keys, [block_3, block_4])
-        tensor_sum = equistore.add(A, B)
-        tensor_result = TensorMap(keys, [block_res1, block_res2])
+        return keys
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-
-    def test_self_add_tensors_gradient(self):
+    @pytest.fixture
+    def tensor_A(self, keys):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
+
         block_1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
@@ -83,6 +44,7 @@ class TestAdd(unittest.TestCase):
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
+
         block_2.add_gradient(
             "parameter",
             data=np.array(
@@ -97,13 +59,18 @@ class TestAdd(unittest.TestCase):
             ],
         )
 
-        block_3 = TensorBlock(
+        return TensorMap(keys, [block_1, block_2])
+
+    @pytest.fixture
+    def tensor_B(self, keys):
+        block_1 = TensorBlock(
             values=np.array([[1.5, 2.1], [6.7, 10.2]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
-        block_3.add_gradient(
+
+        block_1.add_gradient(
             "parameter",
             data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
             samples=Labels(
@@ -113,13 +80,15 @@ class TestAdd(unittest.TestCase):
                 Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
             ],
         )
-        block_4 = TensorBlock(
+
+        block_2 = TensorBlock(
             values=np.array([[10, 200.8], [3.76, 4.432], [545, 26]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
-        block_4.add_gradient(
+
+        block_2.add_gradient(
             "parameter",
             data=np.array(
                 [
@@ -137,13 +106,18 @@ class TestAdd(unittest.TestCase):
             ],
         )
 
-        block_res1 = TensorBlock(
+        return TensorMap(keys, [block_1, block_2])
+
+    @pytest.fixture
+    def tensor_res_1(self, keys):
+        block_1 = TensorBlock(
             values=np.array([[2.5, 4.1], [9.7, 15.2]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
-        block_res1.add_gradient(
+
+        block_1.add_gradient(
             "parameter",
             data=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
             samples=Labels(
@@ -153,13 +127,15 @@ class TestAdd(unittest.TestCase):
                 Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
             ],
         )
-        block_res2 = TensorBlock(
+
+        block_2 = TensorBlock(
             values=np.array([[11, 202.8], [6.76, 8.432], [550, 32]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
         )
-        block_res2.add_gradient(
+
+        block_2.add_gradient(
             "parameter",
             data=np.array(
                 [
@@ -179,21 +155,13 @@ class TestAdd(unittest.TestCase):
         keys = Labels(
             names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
         )
-        A = TensorMap(keys, [block_1, block_2])
-        B = TensorMap(keys, [block_3, block_4])
-        A_copy = A.copy()
-        B_copy = B.copy()
-        tensor_sum = equistore.add(A, B)
-        tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-        # Check the tensors haven't be modified in place
-        self.assertTrue(equistore.equal(A, A_copy))
-        self.assertTrue(equistore.equal(B, B_copy))
+        return TensorMap(keys, [block_1, block_2])
 
-    def test_self_add_scalar_gradient(self):
+    @pytest.fixture
+    def tensor_res_2(self, keys):
         block_1 = TensorBlock(
-            values=np.array([[1, 2], [3, 5]]),
+            values=np.array([[6.1, 7.1], [8.1, 10.1]]),
             samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
@@ -209,7 +177,7 @@ class TestAdd(unittest.TestCase):
             ],
         )
         block_2 = TensorBlock(
-            values=np.array([[11, 12], [13, 14], [15, 16]]),
+            values=np.array([[6.1, 7.1], [8.1, 9.1], [10.1, 11.1]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
@@ -228,80 +196,38 @@ class TestAdd(unittest.TestCase):
             ],
         )
 
-        block_res1 = TensorBlock(
-            values=np.array([[6.1, 7.1], [8.1, 10.1]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_res1.add_gradient(
-            "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-            samples=Labels(
-                ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
-            ),
-            components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
-            ],
-        )
-        block_res2 = TensorBlock(
-            values=np.array([[16.1, 17.1], [18.1, 19.1], [20.1, 21.1]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        block_res2.add_gradient(
-            "parameter",
-            data=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
-            ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]], dtype=np.int32),
-            ),
-            components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
-            ],
-        )
+        return TensorMap(keys, [block_1, block_2])
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
-        A = TensorMap(keys, [block_1, block_2])
-        B = 5.1
-        C = np.array([5.1])
-        A_copy = A.copy()
+    def test_self_add_tensors_nogradient(self, tensor_A, tensor_B, tensor_res_1):
+        tensor_A = equistore.remove_gradients(tensor_A)
+        tensor_B = equistore.remove_gradients(tensor_B)
+        tensor_res_1 = equistore.remove_gradients(tensor_res_1)
 
-        tensor_sum = equistore.add(A, B)
-        tensor_sum_array = equistore.add(A, C)
-        tensor_result = TensorMap(keys, [block_res1, block_res2])
+        tensor_A_copy = tensor_A.copy()
+        tensor_B_copy = tensor_B.copy()
 
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
-        self.assertTrue(equistore.equal(A, A_copy))  # check not modified in place
+        equistore.allclose_raise(equistore.add(tensor_A, tensor_B), tensor_res_1)
 
-    def test_self_add_error(self):
-        block_1 = TensorBlock(
-            values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
-            components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
-        )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
-        A = TensorMap(keys, [block_1])
-        B = np.ones((3, 4))
+        # Check the tensors haven't be modified in place
+        equistore.equal_raise(tensor_A, tensor_A_copy)
+        equistore.equal_raise(tensor_B, tensor_B_copy)
 
-        with self.assertRaises(TypeError) as cm:
-            keys = equistore.add(A, B)
-        self.assertEqual(
-            str(cm.exception),
-            "B should be a TensorMap or a scalar value. ",
-        )
+    def test_self_add_tensors_gradient(self, tensor_A, tensor_B, tensor_res_1):
+        equistore.allclose_raise(equistore.add(tensor_A, tensor_B), tensor_res_1)
+
+    @pytest.mark.parametrize("tensor_B", [5.1, np.array([5.1])])
+    def test_self_add_scalar_gradient(self, tensor_A, tensor_B, tensor_res_2):
+        tensor_A_copy = tensor_A.copy()
+
+        equistore.allclose_raise(equistore.add(tensor_A, tensor_B), tensor_res_2)
+
+        # Check the tensors haven't be modified in place
+        equistore.equal_raise(tensor_A, tensor_A_copy)
+
+    def test_self_add_error(self, tensor_A):
+        msg = "B should be a TensorMap or a scalar value."
+        with pytest.raises(TypeError, match=msg):
+            equistore.add(tensor_A, np.ones((3, 4)))
 
 
 # TODO: add tests with torch & torch scripting/tracing
-
-if __name__ == "__main__":
-    unittest.main()
