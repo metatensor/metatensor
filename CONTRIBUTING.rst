@@ -18,7 +18,7 @@ on equistore:
   use a version provided by your operating system. We need at least Rust version
   1.61 to build equistore.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
-  We require a Python version of at least 3.6.
+  We require a Python version of at least 3.7.
 - **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
   can install tox with ``pip install tox``.
 

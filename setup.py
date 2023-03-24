@@ -24,7 +24,7 @@ class universal_wheel(bdist_wheel):
     # When building the wheel, the `wheel` package assumes that if we have a
     # binary extension then we are linking to `libpython.so`; and thus the wheel
     # is only usable with a single python version. This is not the case for
-    # here, and the wheel will be compatible with any Python >=3.6. This is
+    # here, and the wheel will be compatible with any Python >=3.7. This is
     # tracked in https://github.com/pypa/wheel/issues/185, but until then we
     # manually override the wheel tag.
     def get_tag(self):
