@@ -1,5 +1,6 @@
 sphinx >=4.4
 sphinx_autodoc_typehints
+sphinx-toggleprompt
 pygments >=2.9
 breathe >=4.33
 furo
