@@ -89,42 +89,36 @@ keys: ['key_1' 'key_2']
 
         # More arguments than needed: two integers
         # by index
-        with pytest.raises(
-            ValueError, match="only one non-keyword argument is supported, 2 are given"
-        ):
+        msg = "only one non-keyword argument is supported, 2 are given"
+        with pytest.raises(ValueError, match=msg):
             tensor.block(3, 4)
 
         # 4 input with the first as integer by __getitem__
-        with pytest.raises(
-            ValueError, match="only one non-keyword argument is supported, 4 are given"
-        ):
+        msg = "only one non-keyword argument is supported, 4 are given"
+        with pytest.raises(ValueError, match=msg):
             tensor[3, 4, 7.0, "r"]
 
         # More arguments than needed: 3 Labels
-        with pytest.raises(
-            ValueError, match="only one non-keyword argument is supported, 3 are given"
-        ):
+        msg = "only one non-keyword argument is supported, 3 are given"
+        with pytest.raises(ValueError, match=msg):
             tensor.block(tensor.keys[0], tensor.keys[1], tensor.keys[3])
 
         # by __getitem__
-        with pytest.raises(
-            ValueError, match="only one non-keyword argument is supported, 2 are given"
-        ):
+        msg = "only one non-keyword argument is supported, 2 are given"
+        with pytest.raises(ValueError, match=msg):
             tensor[tensor.keys[1], 4]
 
         # 0 blocks matching criteria
-        with pytest.raises(
-            ValueError,
-            match="Couldn't find any block matching the selection 'key_1 = 3'",
-        ):
+        msg = "Couldn't find any block matching the selection 'key_1 = 3'"
+        with pytest.raises(ValueError, match=msg):
             tensor.block(key_1=3)
 
         # more than one block matching criteria
-        with pytest.raises(
-            ValueError,
-            match="more than one block matched 'key_2 = 0', use `TensorMap.blocks` "
-            "if you want to get all of them",
-        ):
+        msg = (
+            "more than one block matched 'key_2 = 0', use `TensorMap.blocks` "
+            "if you want to get all of them"
+        )
+        with pytest.raises(ValueError, match=msg):
             tensor.block(key_2=0)
 
     def test_blocks(self, tensor):

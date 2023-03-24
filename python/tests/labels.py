@@ -70,9 +70,8 @@ class TestLabels:
             values=np.array([[0, 0]], dtype=np.int64),
         )
 
-        with pytest.raises(
-            TypeError, match="Labels values must be convertible to integers"
-        ):
+        msg = "Labels values must be convertible to integers"
+        with pytest.raises(TypeError, match=msg):
             labels = Labels(
                 names=["a", "b"], values=np.array([[0, 0]], dtype=np.float64)
             )
@@ -144,10 +143,8 @@ class TestLabels:
             labels[0][0] = 4
 
     def test_invalid_names(self):
-        with pytest.raises(
-            EquistoreError,
-            match="invalid parameter: 'not an ident' is not a valid label name",
-        ):
+        msg = "invalid parameter: 'not an ident' is not a valid label name"
+        with pytest.raises(EquistoreError, match=msg):
             _ = Labels(
                 names=["not an ident"],
                 values=np.array([[0]], dtype=np.int32),
