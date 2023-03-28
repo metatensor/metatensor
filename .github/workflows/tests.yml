@@ -20,12 +20,13 @@ jobs:
             rust-target: x86_64-unknown-linux-gnu
             build-type: debug
 
-          # test without any feature (i.e static build + ndarray)
+          # test with all features (i.e static build + ndarray)
           - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             build-type: release
             cargo-build-flags: --release --all-features
+            do-valgrind: true
 
           # MSRV (Minimally Supported Rust Version)
           - os: ubuntu-20.04
@@ -75,6 +76,12 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
           default: true
           target: ${{ matrix.rust-target }}
+
+      - name: install valgrind
+        if: matrix.do-valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
 
       - name: install tests dependencies
         run: |
