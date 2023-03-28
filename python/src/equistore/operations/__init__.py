@@ -25,6 +25,7 @@ from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
+from .random_like import random_uniform_like, random_uniform_like_block  # noqa
 from .pow import pow  # noqa
 from .reduce_over_samples import (  # noqa
     mean_over_samples,
@@ -67,6 +68,8 @@ __all__ = [
     "mean_over_samples_block",
     "ones_like",
     "ones_like_block",
+    "random_uniform_like",
+    "random_uniform_like_block",
     "multiply",
     "pow",
     "remove_gradients",

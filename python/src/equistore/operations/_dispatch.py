@@ -336,3 +336,15 @@ def sign(array):
         return torch.sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def random_uniform(array):
+    """Creates an array with the same size of the given array and
+    all values randomly sampled from the uniform distribution.
+    """
+    if isinstance(array, np.ndarray):
+        return np.random.rand(*array.shape)
+    elif isinstance(array, TorchTensor):
+        return torch.rand_like(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)

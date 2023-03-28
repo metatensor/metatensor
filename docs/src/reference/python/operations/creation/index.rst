@@ -7,3 +7,4 @@ Creation operations
     empty_like() <empty_like>
     ones_like() <ones_like>
     zeros_like() <zeros_like>
+    random_like() <random_like>
