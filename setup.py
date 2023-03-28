@@ -84,7 +84,8 @@ class bdist_egg_disabled(bdist_egg):
         sys.exit(
             "Aborting implicit building of eggs. "
             + "Use `pip install .` or `python setup.py bdist_wheel && pip "
-            + "install dist/equistore-*.whl` to install from source."
+            + "uninstall equistore -y && pip install dist/equistore-*.whl` "
+            + "to install from source."
         )
 
 
