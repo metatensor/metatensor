@@ -82,8 +82,13 @@ workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
 - ``cargo test --test=<test-name>`` to run only the tests in ``tests/<test-name>.rs``;
-    - ``cargo test --test=python-api`` (or ``tox`` directly) to run Python tests only;
-    - ``cargo test --test=cpp-api`` to run the C/C++ API tests only;
+    - ``cargo test --test=python-api`` (or ``tox`` directly, see below) to run
+      Python tests only;
+    - ``cargo test --test=c-api-tests`` to run the C/C++ API tests only. For these
+      tests, if `valgrind`_ is installed, it will be used to check for memory
+      errors. You can disable this by setting the `EQUISTORE_DISABLE_VALGRIND`
+      environment variable to 1 (`export EQUISTORE_DISABLE_VALGRIND=1` for most
+      Linux/macOS shells);
 - ``cargo test --lib`` to run unit tests;
 - ``cargo test --doc`` to run documentation tests;
 - ``cargo bench --test`` compiles and run the benchmarks once, to quickly ensure
@@ -109,6 +114,7 @@ The latter command ``tox -e format`` will use tox to do actual formatting
 instead of just testing it.
 
 .. _`cargo` : https://doc.rust-lang.org/cargo/
+.. _valgrind: https://valgrind.org/
 
 Contributing to the documentation
 ---------------------------------
@@ -142,7 +148,7 @@ looks like the following.
     def func(value_1: float, value_2: int) -> float:
         r"""A one line summary sentence of the function.
 
-        Extensive multi-line summary of what is going in. Use single 
+        Extensive multi-line summary of what is going in. Use single
         backticks for parameters of the function like `width` and two ticks for
         values ``67``. You can link to classes :py:class:`equistore.Labels`. This
         also works for other classes and functions like :py:obj:`True`.
