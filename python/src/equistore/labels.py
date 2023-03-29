@@ -251,6 +251,30 @@ class Labels(np.ndarray):
     def __contains__(self, label):
         return self.position(label) is not None
 
+    def arange(*args, name="name"):
+        """Description"""
+
+        args_len = len(args)
+        if args_len == 0:
+            raise ValueError(
+                "please provide at least one integer for `Labels.arange()`"
+            )
+        if args_len > 3:
+            raise ValueError(
+                f"the maximum number of integer arguments accepted by `Labels.arange()` is 3. {args_len} were provided"
+            )
+        for arg in args:
+            if not np.issubdtype(type(arg), np.integer):
+                raise ValueError(
+                    "all numbers provided to `Labels.arange()` must be integers"
+                )
+
+        labels = Labels(
+            names=[name], values=np.arange(*args, dtype=np.int32).reshape(-1, 1)
+        )
+
+        return labels
+
 
 def _eqs_labels_view(array):
     """Create a new eqs_label_t where the values are a view inside the array"""

@@ -183,3 +183,36 @@ class TestLabels:
         array = array.view(dtype=labels.dtype).reshape(-1)
 
         assert np.all(array == labels)
+
+    def test_arange_one_argument(self):
+        labels_arange = Labels.arange(10)
+        assert labels_arange.asarray().shape[0] == 10
+        assert labels_arange.asarray().shape[1] == 1
+        assert labels_arange.names == ("name",)
+        assert np.array_equal(labels_arange.asarray().reshape((-1,)), np.arange(10))
+
+    def test_arange_two_arguments(self):
+        labels_arange = Labels.arange(10, 42, name="dummy")
+        assert labels_arange.names == ("dummy",)
+        assert np.array_equal(labels_arange.asarray().reshape((-1,)), np.arange(10, 42))
+
+    def test_arange_three_arguments(self):
+        labels_arange = Labels.arange(0, 10, 2, name="samples")
+        assert labels_arange.names == ("samples",)
+        assert np.array_equal(
+            labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2)
+        )
+
+    def test_arange_incorrect_arguments(self):
+        with pytest.raises(ValueError, match="3"):
+            _ = Labels.arange(0, 10, 2, 4, name="dummy")
+        with pytest.raises(ValueError, match="at least"):
+            _ = Labels.arange(name="dummy")
+        with pytest.raises(ValueError, match="3"):
+            _ = Labels.arange(0, 10, 2, 4)
+        with pytest.raises(ValueError, match="at least"):
+            _ = Labels.arange()
+        with pytest.raises(ValueError, match="integer"):
+            _ = Labels.arange(0.0, 1.0, 2)
+        with pytest.raises(ValueError, match="integer"):
+            _ = Labels.arange(0, 5, 0.2, name="dummy")
