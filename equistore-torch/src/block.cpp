@@ -17,6 +17,6 @@ TensorBlockHolder::TensorBlockHolder(
     TorchLabels samples,
     std::vector<TorchLabels> components,
     TorchLabels properties
-): block_(std::make_unique<TorchDataArray>(TorchDataArray(std::move(data))), samples->get(), components_from_torch(std::move(components)), properties->get()) {
+): block_(std::make_unique<TorchDataArray>(TorchDataArray(std::move(data))), samples->as_equistore(), components_from_torch(std::move(components)), properties->as_equistore()) {
     throw std::runtime_error("not implemented");
 }

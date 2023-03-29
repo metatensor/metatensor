@@ -13,7 +13,7 @@ TensorMapHolder::TensorMapHolder(
     TorchLabels keys,
     std::vector<TorchTensorBlock> blocks
 ):
-    tensor_(keys->get(), blocks_from_torch(std::move(blocks)))
+    tensor_(keys->as_equistore(), blocks_from_torch(std::move(blocks)))
 {
     throw std::runtime_error("not implemented");
 }

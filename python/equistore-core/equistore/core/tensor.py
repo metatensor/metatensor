@@ -517,7 +517,7 @@ class TensorMap:
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]):
     if isinstance(keys_to_move, str):
-        keys_to_move = [keys_to_move]
+        keys_to_move = (keys_to_move,)
 
     if not isinstance(keys_to_move, Labels):
         for key in keys_to_move:
