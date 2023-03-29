@@ -108,10 +108,15 @@ specific functionalities, for example:
     tox -e tests         # unit tests
     tox -e lint          # code style
     tox -e build-python  # python packaging
+
     tox -e format        # format all files
 
-The latter command ``tox -e format`` will use tox to do actual formatting
-instead of just testing it.
+The last command ``tox -e format`` will use tox to do actual formatting instead
+of just checking it.
+
+You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
+replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
+``tox -e tests -- python/tests/operations/abs.py``.
 
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/
