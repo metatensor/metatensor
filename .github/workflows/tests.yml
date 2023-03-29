@@ -156,4 +156,4 @@ jobs:
           python -m pip install tox
 
       - name: python build tests
-        run: tox -e build-python
+        run: tox -e check-python-build

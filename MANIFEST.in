@@ -1,19 +1,6 @@
-global-exclude *.pyc
-global-exclude .DS_Store
-
-prune docs
-
 recursive-include equistore-core *
 prune equistore-core/tests
-exclude Cargo.toml
-exclude Cargo.lock
 
 include pyproject.toml
 include AUTHORS
 include LICENSE
-
-prune python/tests
-prune python/*.egg-info
-
-
-exclude tox.ini
