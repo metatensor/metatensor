@@ -254,7 +254,7 @@ class Labels(np.ndarray):
     @staticmethod
     def arange(name, *args):
         """
-        Creates a very simple `Labels` object.
+        A `Labels` instance with evenly spaced values within a given interval.
 
         The resulting `Labels` only contain one label, whose name
         is `name`, unless otherwise specified. The values of the
