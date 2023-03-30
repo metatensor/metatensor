@@ -280,7 +280,7 @@ class TensorBlock:
         Add a set of gradients with respect to ``parameters`` in this block.
 
         Here is an example of how to use this method:
-        
+
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
         >>> block_1 = TensorBlock(
