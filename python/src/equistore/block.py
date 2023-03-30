@@ -280,6 +280,7 @@ class TensorBlock:
         Add a set of gradients with respect to ``parameters`` in this block.
 
         Here is an example of how to use this method:
+        
         >>> import numpy as np
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
