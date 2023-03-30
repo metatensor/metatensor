@@ -282,6 +282,7 @@ class TensorBlock:
         Here is an example of how to use this method:
         
         >>> import numpy as np
+        >>> from equistore import TensorBlock, Labels
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
         ...             samples=Labels(
