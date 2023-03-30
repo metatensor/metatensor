@@ -198,7 +198,7 @@ def allclose_raise(
     >>> tensor2 = TensorMap(keys, [block2])
     ...
     >>> # Call allclose_raise, which should return a ValueError because:
-    >>> # 1. The two NaNs are not considered equal of the two tensors is 1e-5,
+    >>> # 1. The two NaNs are not considered equal,
     >>> # 2. The difference between the first value in the blocks
     >>> # is greater than the default rtol of 1e-13
     >>> # If this is executed yourself, you will see a nested exception
