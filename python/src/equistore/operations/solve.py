@@ -61,7 +61,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...     blocks = [TensorBlock(
     ...         samples = Labels.arange(2, name="sample"),
     ...         components = [],
-    ...         properties = Labels(1, name="property_to_regress"),
+    ...         properties = Labels.arange(1, name="property_to_regress"),
     ...         values = y_regression
     ...     )]
     ... )
