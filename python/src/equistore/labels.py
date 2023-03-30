@@ -264,11 +264,11 @@ class Labels(np.ndarray):
 
         :param `start`: (Optional) Lower bound of the range. If not specified,
             it defaults to zero
-        :param `stop`: Upper bound of the range.
+        :param `stop`: Upper bound of the range
         :param `step`: (Optional) Spacing within the range of values. If not
             specified, it defaults to one
 
-        :returns: New :py:class:`Labels` object with the provided name and
+        :returns: A new :py:class:`Labels` object with the provided name and
             values corresponding to the specified range bounds and step.
         """
 
