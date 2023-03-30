@@ -144,9 +144,7 @@ class TestUniqueMetadata(unittest.TestCase):
         )
         self.assertTrue(_labels_equal(target_samples, actual_samples, exact_order=True))
         # Test case 3
-        target_samples = Labels(
-            names=["sample"], values=np.arange(0, 52).reshape(-1, 1)
-        )
+        target_samples = Labels.arange(52, "sample")
         actual_samples = equistore.unique_metadata_block(
             self.tensor3.block(1), "samples", "sample", "cell"
         )
@@ -206,7 +204,7 @@ class TestUniqueMetadata(unittest.TestCase):
             )
         )
         # Test case 3
-        target_properties = Labels(names=["n"], values=np.arange(0, 4).reshape(-1, 1))
+        target_properties = Labels.arange(4, "n")
         actual_properties = equistore.unique_metadata_block(
             self.tensor3.block(1), "properties", "n", "positions"
         )
