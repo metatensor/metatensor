@@ -93,7 +93,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     :param rcond: Cut-off ratio for small singular values of a. The singular
         value :math:`{\sigma}_i` is treated as zero if smaller than
         :math:`r_{cond}{\sigma}_1`, where :math:`{\sigma}_1` is the biggest
-        singular value of :math:`X_b`. None choses the default value for numpy
+        singular value of :math:`X_b`. ``None`` choses the default value for numpy
         or PyTorch.
     :param driver: Used only in torch (ignored if numpy is used), see
         https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html for a
