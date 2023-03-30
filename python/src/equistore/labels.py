@@ -254,14 +254,22 @@ class Labels(np.ndarray):
     @staticmethod
     def arange(name, *args):
         """
-        A `Labels` instance with evenly spaced values within a given interval.
+        A `Labels` instance with evenly spaced integers within a given interval.
 
         The resulting `Labels` only contain one label, whose name
-        is `name`, unless otherwise specified. The values of the
-        labels depend on a set of integer arguments, whose
-        meaning is the same as those of the `numpy.arange` function.
-        As a result, this function only accepts one to three such
-        integer parameters.
+        must be specified. The values of the labels depend on a set of
+        integer arguments, whose meaning is the same as those of the
+        `numpy.arange` function.
+        In particular:
+
+        :param `start`: (Optional) Lower bound of the range. If not specified,
+            it defaults to zero
+        :param `stop`: Upper bound of the range.
+        :param `step`: (Optional) Spacing within the range of values. If not
+            specified, it defaults to one
+
+        :returns: New :py:class:`Labels` object with the provided name and
+            values corresponding to the specified range bounds and step.
         """
 
         args_len = len(args)
