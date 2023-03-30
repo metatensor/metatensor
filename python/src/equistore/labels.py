@@ -252,7 +252,7 @@ class Labels(np.ndarray):
         return self.position(label) is not None
 
     @staticmethod
-    def arange(*args, name="name"):
+    def arange(name, *args):
         """
         Creates a very simple `Labels` object.
 

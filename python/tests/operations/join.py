@@ -123,9 +123,9 @@ class TestJoinTensorMap:
 
     def test_join_properties_with_different_property_names(self):
         """Test join function with tensormaps of different `property` names."""
-        keys = Labels.arange(1, name="frame_a")
+        keys = Labels.arange("frame_a", 1)
         values = np.zeros([1, 1])
-        samples = Labels.arange(1, name="idx")
+        samples = Labels.arange("idx", 1)
 
         tensor_map_a = TensorMap(
             keys=keys,
@@ -134,7 +134,7 @@ class TestJoinTensorMap:
                     values=values,
                     samples=samples,
                     components=[],
-                    properties=Labels.arange(1, name="prop1"),
+                    properties=Labels.arange("prop1", 1),
                 )
             ],
         )
@@ -146,7 +146,7 @@ class TestJoinTensorMap:
                     values=np.zeros([1, 1]),
                     samples=samples,
                     components=[],
-                    properties=Labels.arange(1, name="prop2"),
+                    properties=Labels.arange("prop2", 1),
                 )
             ],
         )
@@ -193,16 +193,16 @@ class TestJoinTensorMap:
 
     def test_join_samples_with_different_sample_names(self):
         """Test join function raises an error with different `sample` names."""
-        keys = Labels.arange(1, name="frame_a")
+        keys = Labels.arange("frame_a", 1)
         values = np.zeros([1, 1])
-        properties = Labels.arange(1, name="idx")
+        properties = Labels.arange("idx", 1)
 
         tensor_map_a = TensorMap(
             keys=keys,
             blocks=[
                 TensorBlock(
                     values=values,
-                    samples=Labels.arange(1, name="samp1"),
+                    samples=Labels.arange("samp1", 1),
                     components=[],
                     properties=properties,
                 )
@@ -214,7 +214,7 @@ class TestJoinTensorMap:
             blocks=[
                 TensorBlock(
                     values=np.zeros([1, 1]),
-                    samples=Labels.arange(1, name="samp2"),
+                    samples=Labels.arange("samp2", 1),
                     components=[],
                     properties=properties,
                 )
