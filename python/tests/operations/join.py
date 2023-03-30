@@ -123,9 +123,9 @@ class TestJoinTensorMap:
 
     def test_join_properties_with_different_property_names(self):
         """Test join function with tensormaps of different `property` names."""
-        keys = Labels(["frame_a"], np.zeros([1, 1], dtype=np.int32))
+        keys = Labels.arange(1, name="frame_a")
         values = np.zeros([1, 1])
-        samples = Labels(names=["idx"], values=np.zeros([1, 1], dtype=np.int32))
+        samples = Labels.arange(1, name="idx")
 
         tensor_map_a = TensorMap(
             keys=keys,
@@ -134,7 +134,7 @@ class TestJoinTensorMap:
                     values=values,
                     samples=samples,
                     components=[],
-                    properties=Labels(["prop1"], np.zeros([1, 1], dtype=np.int32)),
+                    properties=Labels.arange(1, name="prop1"),
                 )
             ],
         )
@@ -146,7 +146,7 @@ class TestJoinTensorMap:
                     values=np.zeros([1, 1]),
                     samples=samples,
                     components=[],
-                    properties=Labels(["prop2"], np.zeros([1, 1], dtype=np.int32)),
+                    properties=Labels.arange(1, name="prop2"),
                 )
             ],
         )
@@ -193,16 +193,16 @@ class TestJoinTensorMap:
 
     def test_join_samples_with_different_sample_names(self):
         """Test join function raises an error with different `sample` names."""
-        keys = Labels(["frame_a"], np.zeros([1, 1], dtype=np.int32))
+        keys = Labels.arange(1, name="frame_a")
         values = np.zeros([1, 1])
-        properties = Labels(names=["idx"], values=np.zeros([1, 1], dtype=np.int32))
+        properties = Labels.arange(1, name="idx")
 
         tensor_map_a = TensorMap(
             keys=keys,
             blocks=[
                 TensorBlock(
                     values=values,
-                    samples=Labels(["prop1"], np.zeros([1, 1], dtype=np.int32)),
+                    samples=Labels.arange(1, name="samp1"),
                     components=[],
                     properties=properties,
                 )
@@ -214,7 +214,7 @@ class TestJoinTensorMap:
             blocks=[
                 TensorBlock(
                     values=np.zeros([1, 1]),
-                    samples=Labels(["prop2"], np.zeros([1, 1], dtype=np.int32)),
+                    samples=Labels.arange(1, name="samp2"),
                     components=[],
                     properties=properties,
                 )

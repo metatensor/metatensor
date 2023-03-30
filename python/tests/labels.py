@@ -10,7 +10,7 @@ class TestLabels:
     def test_python_labels(self):
         labels = Labels(
             names=["a", "b"],
-            values=np.array([[0, 0]], dtype=np.int32),
+            values=np.array([[0, 0]]),
         )
 
         assert labels.names == ("a", "b")
@@ -22,11 +22,11 @@ class TestLabels:
         # check we can use single str for single name
         labels = Labels(
             names=["a"],
-            values=np.array([[1]], dtype=np.int32),
+            values=np.array([[1]]),
         )
         labels_str = Labels(
             names="a",
-            values=np.array([[1]], dtype=np.int32),
+            values=np.array([[1]]),
         )
 
         assert labels.names == ("a",)
@@ -147,7 +147,7 @@ class TestLabels:
         with pytest.raises(EquistoreError, match=msg):
             _ = Labels(
                 names=["not an ident"],
-                values=np.array([[0]], dtype=np.int32),
+                values=np.array([[0]]),
             )
 
     def test_zero_length_label(self):
@@ -172,7 +172,7 @@ class TestLabels:
     def test_labels_contiguous(self):
         labels = Labels(
             names=["a", "b"],
-            values=np.arange(32, dtype=np.int32).reshape(-1, 2),
+            values=np.arange(32).reshape(-1, 2),
         )
 
         labels = labels[::-1]

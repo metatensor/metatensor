@@ -280,9 +280,7 @@ class Labels(np.ndarray):
                     "all numbers provided to `Labels.arange()` must be integers"
                 )
 
-        labels = Labels(
-            names=[name], values=np.arange(*args, dtype=np.int32).reshape(-1, 1)
-        )
+        labels = Labels(names=[name], values=np.arange(*args).reshape(-1, 1))
 
         return labels
 

@@ -13,36 +13,32 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 class TestAdd:
     @pytest.fixture
     def keys(self):
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         return keys
 
     @pytest.fixture
     def tensor_A(self, keys):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-            samples=Labels(
-                ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_2.add_gradient(
@@ -52,10 +48,10 @@ class TestAdd:
             ),
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 
@@ -65,27 +61,25 @@ class TestAdd:
     def tensor_B(self, keys):
         block_1 = TensorBlock(
             values=np.array([[1.5, 2.1], [6.7, 10.2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_1.add_gradient(
             "parameter",
             data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
-            samples=Labels(
-                ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 
         block_2 = TensorBlock(
             values=np.array([[10, 200.8], [3.76, 4.432], [545, 26]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_2.add_gradient(
@@ -99,10 +93,10 @@ class TestAdd:
             ),
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 
@@ -112,27 +106,25 @@ class TestAdd:
     def tensor_res_1(self, keys):
         block_1 = TensorBlock(
             values=np.array([[2.5, 4.1], [9.7, 15.2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_1.add_gradient(
             "parameter",
             data=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
-            samples=Labels(
-                ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 
         block_2 = TensorBlock(
             values=np.array([[11, 202.8], [6.76, 8.432], [550, 32]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_2.add_gradient(
@@ -146,15 +138,13 @@ class TestAdd:
             ),
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
         return TensorMap(keys, [block_1, block_2])
 
@@ -162,25 +152,23 @@ class TestAdd:
     def tensor_res_2(self, keys):
         block_1 = TensorBlock(
             values=np.array([[6.1, 7.1], [8.1, 10.1]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-            samples=Labels(
-                ["sample", "positions"], np.array([[0, 1], [1, 1]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
         block_2 = TensorBlock(
             values=np.array([[6.1, 7.1], [8.1, 9.1], [10.1, 11.1]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_2.add_gradient(
             "parameter",
@@ -189,10 +177,10 @@ class TestAdd:
             ),
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]], dtype=np.int32)),
+                Labels(["components"], np.array([[0], [1]])),
             ],
         )
 

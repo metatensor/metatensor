@@ -12,9 +12,9 @@ class TestBlocks:
     def block(self):
         b = TensorBlock(
             values=np.full((3, 2), -1.0),
-            samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [4]])),
             components=[],
-            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]])),
         )
 
         return b
@@ -28,7 +28,7 @@ class TestBlocks:
             block.add_gradient(
                 "parameter",
                 data=np.zeros((0, 2)),
-                samples=Labels([], np.empty((0, 2), dtype=np.int32)),
+                samples=Labels([], np.empty((0, 2))),
                 components=[],
             )
 
@@ -43,9 +43,9 @@ class TestBlocks:
     def test_repr_zero_samples(self):
         block = TensorBlock(
             values=np.zeros((0, 2)),
-            samples=Labels([], np.empty((0, 2), dtype=np.int32)),
+            samples=Labels([], np.empty((0, 2))),
             components=[],
-            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]])),
         )
         expected = """TensorBlock
     samples (0): []
@@ -58,7 +58,7 @@ class TestBlocks:
         block.add_gradient(
             "parameter",
             data=np.zeros((0, 2)),
-            samples=Labels(["sample"], np.empty((0, 2), dtype=np.int32)),
+            samples=Labels(["sample"], np.empty((0, 2))),
             components=[],
         )
 
@@ -99,12 +99,12 @@ properties (2): ['properties']"""
     def block_components(self):
         b = TensorBlock(
             values=np.full((3, 3, 2, 2), -1.0),
-            samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [4]])),
             components=[
-                Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
-                Labels(["component_2"], np.array([[-4], [1]], dtype=np.int32)),
+                Labels(["component_1"], np.array([[-1], [0], [1]])),
+                Labels(["component_2"], np.array([[-4], [1]])),
             ],
-            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]])),
         )
 
         return b
@@ -148,12 +148,10 @@ properties (2): ['properties']"""
         block_components.add_gradient(
             "parameter",
             data=np.full((2, 3, 2, 2), 11.0),
-            samples=Labels(
-                ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[
-                Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
-                Labels(["component_2"], np.array([[-4], [1]], dtype=np.int32)),
+                Labels(["component_1"], np.array([[-1], [0], [1]])),
+                Labels(["component_2"], np.array([[-4], [1]])),
             ],
         )
 
@@ -188,11 +186,11 @@ properties (2): ['properties']"""
     def test_copy(self):
         block = TensorBlock(
             values=np.full((3, 3, 2), 2.0),
-            samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [4]])),
             components=[
-                Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32)),
+                Labels(["component_1"], np.array([[-1], [0], [1]])),
             ],
-            properties=Labels(["properties"], np.array([[5], [3]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[5], [3]])),
         )
         copy = block.copy()
         block_values_id = id(block.values)

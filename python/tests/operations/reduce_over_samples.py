@@ -170,14 +170,10 @@ class TestSumSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
         reduce_X_12 = equistore.sum_over_samples(X, sample_names="samples3")
@@ -239,15 +235,15 @@ class TestSumSamples(unittest.TestCase):
 
         samples_12 = Labels(
             names=["samples1", "samples2"],
-            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
         )
         samples_23 = Labels(
             names=["samples2", "samples3"],
-            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
         )
         samples_2 = Labels(
             names=["samples2"],
-            values=np.array([[0], [1]], dtype=np.int32),
+            values=np.array([[0], [1]]),
         )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
@@ -434,14 +430,10 @@ class TestMeanSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
         reduce_X_12 = equistore.mean_over_samples(X, sample_names=["samples3"])
@@ -512,15 +504,15 @@ class TestMeanSamples(unittest.TestCase):
 
         samples_12 = Labels(
             names=["samples1", "samples2"],
-            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
         )
         samples_23 = Labels(
             names=["samples2", "samples3"],
-            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
         )
         samples_2 = Labels(
             names=["samples2"],
-            values=np.array([[0], [1]], dtype=np.int32),
+            values=np.array([[0], [1]]),
         )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
@@ -545,13 +537,9 @@ class TestReductionAllSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
         sum_X = equistore.sum_over_samples(X, sample_names=["samples"])
@@ -778,14 +766,10 @@ class TestStdSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
         reduce_X_12 = equistore.std_over_samples(X, sample_names=["samples3"])
@@ -858,15 +842,15 @@ class TestStdSamples(unittest.TestCase):
 
         samples_12 = Labels(
             names=["samples1", "samples2"],
-            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
         )
         samples_23 = Labels(
             names=["samples2", "samples3"],
-            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]], dtype=np.int32),
+            values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
         )
         samples_2 = Labels(
             names=["samples2"],
-            values=np.array([[0], [1]], dtype=np.int32),
+            values=np.array([[0], [1]]),
         )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
         self.assertTrue(np.all(reduce_X_23.block(0).samples == samples_23))
@@ -883,9 +867,7 @@ class TestStdSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
         block_1.add_gradient(
@@ -901,7 +883,7 @@ class TestStdSamples(unittest.TestCase):
             components=[],
         )
 
-        keys = Labels(names=["key_1"], values=np.array([[0]], dtype=np.int32))
+        keys = Labels(names=["key_1"], values=np.array([[0]]))
         X = TensorMap(keys, [block_1])
 
         add_X = equistore.sum_over_samples(X, sample_names=["samples1"])
@@ -953,14 +935,14 @@ class TestZeroSamples(unittest.TestCase):
         block = TensorBlock(
             values=np.zeros([0, 1]),
             properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["structure"], np.empty((0, 1), dtype=np.int32)),
+            samples=Labels(["structure"], np.empty((0, 1))),
             components=[],
         )
 
         result_block = TensorBlock(
             values=np.zeros([0, 1]),
             properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels([], np.empty((0, 0), dtype=np.int32)),
+            samples=Labels([], np.empty((0, 0))),
             components=[],
         )
 
@@ -980,14 +962,14 @@ class TestZeroSamples(unittest.TestCase):
         block = TensorBlock(
             values=np.zeros([0, 1]),
             properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["structure", "s1"], np.empty((0, 1), dtype=np.int32)),
+            samples=Labels(["structure", "s1"], np.empty((0, 1))),
             components=[],
         )
 
         result_block = TensorBlock(
             values=np.zeros([0, 1]),
             properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["s1"], np.empty((0, 1), dtype=np.int32)),
+            samples=Labels(["s1"], np.empty((0, 1))),
             components=[],
         )
 
@@ -1022,17 +1004,13 @@ class TestZeroSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
         block.add_gradient(
             parameter="positions",
             data=np.zeros((0, 3)),
-            samples=Labels(
-                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
-            ),
+            samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
             components=[],
         )
 
@@ -1046,17 +1024,13 @@ class TestZeroSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(
-                ["properties"], np.array([[0], [1], [5]], dtype=np.int32)
-            ),
+            properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
 
         sum_block.add_gradient(
             parameter="positions",
             data=np.zeros((0, 3)),
-            samples=Labels(
-                ["sample", "structure", "atom"], np.empty((0, 3), dtype=np.int32)
-            ),
+            samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
             components=[],
         )
 

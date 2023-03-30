@@ -14,35 +14,33 @@ class Testallclose(unittest.TestCase):
     def test_allclose_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]], dtype=np.float64),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
             samples=Labels(
                 ["samples"],
-                np.array([[0], [1], [2], [3], [4], [5]], dtype=np.int32),
+                np.array([[0], [1], [2], [3], [4], [5]]),
             ),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
         block_4 = TensorBlock(
             values=np.array([[23], [53], [83]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[6]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[6]])),
         )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         X = TensorMap(keys, [block_1, block_2])
         self.assertTrue(equistore.allclose(X, X))
         Y = TensorMap(keys, [block_3, block_4])
@@ -70,21 +68,21 @@ class Testallclose(unittest.TestCase):
                 ],
                 dtype=np.float64,
             ),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["c1"], np.array([[0], [1], [2]], dtype=np.int32)),
-                Labels(["c2"], np.array([[0], [1], [2]], dtype=np.int32)),
+                Labels(["c1"], np.array([[0], [1], [2]])),
+                Labels(["c2"], np.array([[0], [1], [2]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_1_c_copy = TensorBlock(
             values=block_1_c.values + 0.1e-6,
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["c1"], np.array([[0], [1], [2]], dtype=np.int32)),
-                Labels(["c2"], np.array([[0], [1], [2]], dtype=np.int32)),
+                Labels(["c1"], np.array([[0], [1], [2]])),
+                Labels(["c2"], np.array([[0], [1], [2]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_2_c = TensorBlock(
@@ -99,25 +97,25 @@ class Testallclose(unittest.TestCase):
             ),
             samples=Labels(
                 ["samples"],
-                np.array([[0], [1], [2], [3], [4]], dtype=np.int32),
+                np.array([[0], [1], [2], [3], [4]]),
             ),
             components=[
-                Labels(["c1"], np.array([[3], [5]], dtype=np.int32)),
-                Labels(["c2"], np.array([[6], [8]], dtype=np.int32)),
+                Labels(["c1"], np.array([[3], [5]])),
+                Labels(["c2"], np.array([[6], [8]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_2_c_copy = TensorBlock(
             values=block_2_c.values + 0.1e-6,
             samples=Labels(
                 ["samples"],
-                np.array([[0], [1], [2], [3], [4]], dtype=np.int32),
+                np.array([[0], [1], [2], [3], [4]]),
             ),
             components=[
-                Labels(["c1"], np.array([[3], [5]], dtype=np.int32)),
-                Labels(["c2"], np.array([[6], [8]], dtype=np.int32)),
+                Labels(["c1"], np.array([[3], [5]])),
+                Labels(["c2"], np.array([[6], [8]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         X_c = TensorMap(keys, [block_1_c, block_2_c])
         X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
@@ -161,47 +159,47 @@ class Testallclose(unittest.TestCase):
     def test_self_allclose_exceptions(self):
         block_1 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
         block_2 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples_5"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples_5"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [6]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [6]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_4 = TensorBlock(
             values=np.array([[[1], [4]], [[44], [2]]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["component"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component"], np.array([[0], [6]])),
             ],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
         block_5 = TensorBlock(
             values=np.array([[[1], [4]], [[44], [2]]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["component1"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component1"], np.array([[0], [6]])),
             ],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_6 = TensorBlock(
             values=np.array([[[1], [4]], [[44], [2]]]),
-            samples=Labels(["samples"], np.array([[2], [0]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[2], [0]])),
             components=[
-                Labels(["component"], np.array([[0], [6]], dtype=np.int32)),
+                Labels(["component"], np.array([[0], [6]])),
             ],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         self.assertFalse(equistore.allclose_block(block_1, block_2))
@@ -250,33 +248,29 @@ class Testallclose(unittest.TestCase):
     def test_self_allclose_exceptions_gradient(self):
         block_1 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_1.add_gradient(
             "parameter",
             data=np.full((2, 1), 11.0),
-            samples=Labels(
-                ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
 
         block_2 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_2.add_gradient(
             "parameter",
             data=np.full((2, 1), 11.0),
-            samples=Labels(
-                ["sample", "parameter1"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "parameter1"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
 
@@ -292,17 +286,15 @@ class Testallclose(unittest.TestCase):
 
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_3.add_gradient(
             "parameter",
             data=np.full((2, 1), 1.0),
-            samples=Labels(
-                ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
+            samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
 
@@ -316,38 +308,30 @@ class Testallclose(unittest.TestCase):
 
         block_4 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_4.add_gradient(
             "parameter",
             data=np.full((2, 3, 1), 1.0),
-            samples=Labels(
-                ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
-            components=[
-                Labels(["component_1"], np.array([[-1], [0], [1]], dtype=np.int32))
-            ],
+            samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["component_1"], np.array([[-1], [0], [1]]))],
         )
 
         block_5 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
 
         block_5.add_gradient(
             "parameter",
             data=np.full((2, 3, 1), 1.0),
-            samples=Labels(
-                ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-            ),
-            components=[
-                Labels(["component_1"], np.array([[-1], [6], [1]], dtype=np.int32))
-            ],
+            samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["component_1"], np.array([[-1], [6], [1]]))],
         )
 
         with self.assertRaises(ValueError) as cm:

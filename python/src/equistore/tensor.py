@@ -191,7 +191,7 @@ class TensorMap:
             # with Labels containing a single entry
             labels = Labels(
                 names=["key", "symmetric"],
-                values=np.array([[-3, 4]], dtype=np.int32)
+                values=np.array([[-3, 4]])
             )
             block = tensor.block(labels)
         """
@@ -252,7 +252,7 @@ class TensorMap:
             # with Labels containing a single entry
             labels = Labels(
                 names=["key"],
-                values=np.array([[-3]], dtype=np.int32)
+                values=np.array([[-3]])
             )
             blocks = tensor.blocks(labels)
         """

@@ -14,32 +14,30 @@ class TestLstsq(unittest.TestCase):
     def test_self_lstsq_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
 
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0]])),
         )
         block_4 = TensorBlock(
             values=np.array([[23], [53], [83]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[6]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[6]])),
         )
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         X = TensorMap(keys, [block_1, block_2])
         Y = TensorMap(keys, [block_3, block_4])
 
@@ -72,47 +70,37 @@ class TestLstsq(unittest.TestCase):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
         block_X = TensorBlock(
             values=Xval,
-            samples=Labels(
-                ["samples"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
-            ),
+            samples=Labels(["samples"], np.array([[0], [1], [2], [3], [4]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[0], [1]])),
         )
         block_X.add_gradient(
             "positions",
             data=Xgradval,
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
             ),
-            components=[
-                Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))
-            ],
+            components=[Labels(["components"], np.array([[0], [1], [2]]))],
         )
 
         block_Y = TensorBlock(
             values=Yval,
-            samples=Labels(
-                ["samples"], np.array([[0], [1], [2], [3], [4]], dtype=np.int32)
-            ),
+            samples=Labels(["samples"], np.array([[0], [1], [2], [3], [4]])),
             components=[],
-            properties=Labels(["properties"], np.array([[2]], dtype=np.int32)),
+            properties=Labels(["properties"], np.array([[2]])),
         )
         block_Y.add_gradient(
             "positions",
             data=Ygradval,
             samples=Labels(
                 ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]], dtype=np.int32),
+                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
             ),
-            components=[
-                Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))
-            ],
+            components=[Labels(["components"], np.array([[0], [1], [2]]))],
         )
 
-        keys = Labels(
-            names=["key_1", "key_2"], values=np.array([[0, 0]], dtype=np.int32)
-        )
+        keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
 
         X = TensorMap(keys, [block_X])
         Y = TensorMap(keys, [block_Y])

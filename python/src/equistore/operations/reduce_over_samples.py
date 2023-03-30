@@ -101,7 +101,7 @@ def _reduce_over_samples_block(
 
         samples_label = Labels(
             remaining_samples,
-            np.zeros((0, len(remaining_samples)), dtype=np.int32),
+            np.zeros((0, len(remaining_samples))),
         )
 
         result_block = TensorBlock(
