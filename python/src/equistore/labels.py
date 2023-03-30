@@ -251,8 +251,18 @@ class Labels(np.ndarray):
     def __contains__(self, label):
         return self.position(label) is not None
 
+    @staticmethod
     def arange(*args, name="name"):
-        """Description"""
+        """
+        Creates a very simple `Labels` object.
+
+        The resulting `Labels` only contain one label, whose name
+        is `name`, unless otherwise specified. The values of the
+        labels depend on a set of integer arguments, whose
+        meaning is the same as those of the `numpy.arange` function.
+        As a result, this function only accepts one to three such
+        integer parameters.
+        """
 
         args_len = len(args)
         if args_len == 0:
@@ -261,7 +271,8 @@ class Labels(np.ndarray):
             )
         if args_len > 3:
             raise ValueError(
-                f"the maximum number of integer arguments accepted by `Labels.arange()` is 3. {args_len} were provided"
+                f"the maximum number of integer arguments accepted by \
+                `Labels.arange()` is 3. {args_len} were provided"
             )
         for arg in args:
             if not np.issubdtype(type(arg), np.integer):
