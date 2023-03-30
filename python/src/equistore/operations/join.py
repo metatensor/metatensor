@@ -91,7 +91,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
             if names_are_same:
                 properties = block.properties
             else:
-                properties = Labels.arange(len(block.properties), "properties")
+                properties = Labels.arange(len(block.properties), "property")
 
             new_block = TensorBlock(
                 values=block.values,
