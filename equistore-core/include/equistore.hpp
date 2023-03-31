@@ -25,6 +25,7 @@
 
 namespace equistore_torch {
     class LabelsHolder;
+    class TensorBlockHolder;
 }
 
 namespace equistore {
@@ -1205,7 +1206,7 @@ public:
     ///
     /// @param parameter check for gradients with respect to this `parameter`
     ///                  (e.g. `"positions"`, `"cell"`, ...)
-    TensorBlock gradient(std::string parameter) const {
+    TensorBlock gradient(const std::string& parameter) const {
         eqs_block_t* gradient_block = nullptr;
         details::check_status(
             eqs_block_gradient(block_, parameter.c_str(), &gradient_block)
@@ -1318,6 +1319,7 @@ private:
     }
 
     friend class TensorMap;
+    friend class equistore_torch::TensorBlockHolder;
 
     eqs_block_t* block_;
     bool is_view_;

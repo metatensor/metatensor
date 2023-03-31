@@ -26,18 +26,21 @@ using TorchLabels = torch::intrusive_ptr<LabelsHolder>;
 /// devices if needed.
 class EQUISTORE_TORCH_EXPORT LabelsHolder: public torch::CustomClassHolder {
 public:
-    /// Construct `Labels` from a set of names and the corresponding values
+    /// Construct `LabelsHolder` from a set of names and the corresponding values
     ///
     /// The names should be either a single string or a list/tuple of strings;
     /// and the values should be a 2D tensor of integers.
     LabelsHolder(torch::IValue names, torch::Tensor values);
 
-    /// Convenience constructor for building `Labels` in C++, similar to
+    /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `equistore::Labels`.
     static TorchLabels create(
         const std::vector<std::string>& names,
         std::vector<std::initializer_list<int32_t>> values
     );
+
+    /// Create a `LabelsHolder` from a pre-existing `equistore::Labels`
+    LabelsHolder(equistore::Labels labels);
 
     LabelsHolder(const LabelsHolder&) = default;
     LabelsHolder& operator=(const LabelsHolder&) = default;
