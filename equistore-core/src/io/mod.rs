@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use byteorder::{LittleEndian, BigEndian, ReadBytesExt, WriteBytesExt, NativeEndian};
-use py_literal::Value as PyValue;
 use zip::{ZipArchive, ZipWriter, DateTime};
 
 use crate::{TensorMap, Error, TensorBlock, eqs_array_t};
 
 
 mod npy_header;
-pub use self::npy_header::Header;
+pub use self::npy_header::{Header, DataType};
 
 mod labels;
 use self::labels::{read_npy_labels, write_npy_labels};
@@ -186,10 +185,10 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(eqs_array_t, Vec<
     let mut array = create_array(shape.clone())?;
 
     match header.type_descriptor {
-        PyValue::String(s) if s == "<f8" => {
+        DataType::Scalar(s) if s == "<f8" => {
             reader.read_f64_into::<LittleEndian>(array.data_mut()?)?;
         }
-        PyValue::String(s) if s == ">f8" => {
+        DataType::Scalar(s) if s == ">f8" => {
             reader.read_f64_into::<BigEndian>(array.data_mut()?)?;
         }
         _ => {
@@ -218,13 +217,13 @@ fn check_for_extra_bytes<R: std::io::Read>(reader: &mut R) -> Result<(), Error> 
 // Write an array to the given writer, using numpy's NPY format
 fn write_data<W: std::io::Write>(writer: &mut W, array: &eqs_array_t) -> Result<(), Error> {
     let type_descriptor = if cfg!(target_endian = "little") {
-        "'<f8'"
+        "<f8"
     } else {
-        "'>f8'"
+        ">f8"
     };
 
     let header = Header {
-        type_descriptor: type_descriptor.parse().expect("invalid dtype"),
+        type_descriptor: DataType::Scalar(type_descriptor.into()),
         fortran_order: false,
         shape: array.shape()?.to_vec(),
     };
