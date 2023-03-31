@@ -207,8 +207,58 @@ class TensorBlock:
 
     def gradient(self, parameter: str) -> "Gradient":
         """
-        Get the gradient of the ``values`` in this block with respect to
-        the given ``parameter``.
+        Get the gradient of the block ``values``  with respect to the
+        given ``parameter``.
+
+        Here is an example of how to use this method:
+        >>> import numpy as np
+        >>> from equistore import TensorBlock, Labels
+        >>> block_1 = TensorBlock(
+        ...             values=np.full((3, 1, 1), 1.0),
+        ...             samples=Labels(
+        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...             ),
+        ...             components=[Labels(
+        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...             ],
+        ...             properties=Labels(
+        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
+        ...         )
+        >>> block_1.add_gradient(
+        ...     "position",
+        ...     samples=Labels(
+        ...        ["sample", "position"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...     ),
+        ...     data=np.full((2, 1, 1), 11.0),
+        ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        ... )
+        >>> block_1.add_gradient(
+        ...     "cell",
+        ...     data=np.full((2, 6, 1, 1), 15.0),
+        ...     samples=Labels(
+        ...        ["sample"], np.array([[0], [2]], dtype=np.int32)
+        ...     ),
+        ...     components=[Labels(["cell"],
+        ...                 np.array([[0], [1], [2], [3], [4], [5]], dtype=np.int32)),
+        ...                 Labels(["components"],
+        ...                 np.array([[0]], dtype=np.int32))],
+        ... )
+
+        >>> grad_wrt_position = block_1.gradient("position")
+        >>> print(grad_wrt_position)
+        Gradient TensorBlock
+        parameter: 'position'
+        samples (2): ['sample', 'position']
+        components (1): ['components']
+        properties (1): ['properties']
+
+        >>> grad_wrt_cell = block_1.gradient("cell")
+        >>> print (grad_wrt_cell)
+        Gradient TensorBlock
+        parameter: 'cell'
+        samples (2): ['sample']
+        components (6, 1): ['cell', 'components']
+        properties (1): ['properties']
 
         :param parameter: check for gradients with respect to this ``parameter``
             (e.g. ``positions``, ``cell``, ...)
@@ -228,6 +278,36 @@ class TensorBlock:
     ):
         """
         Add a set of gradients with respect to ``parameters`` in this block.
+
+        Here is an example of how to use this method:
+
+        >>> import numpy as np
+        >>> from equistore import TensorBlock, Labels
+        >>> block_1 = TensorBlock(
+        ...             values=np.full((3, 1, 1), 1.0),
+        ...             samples=Labels(
+        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...             ),
+        ...             components=[Labels(
+        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...             ],
+        ...             properties=Labels(
+        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
+        ...         )
+        >>> block_1.add_gradient(
+        ...     "position",
+        ...     samples=Labels(
+        ...        ["sample", "position"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...     ),
+        ...     data=np.full((2, 1, 1), 11.0),
+        ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        ... )
+        >>> print(block_1)
+        TensorBlock
+            samples (3): ['samples']
+            components (1): ['components']
+            properties (1): ['properties']
+            gradients: ['position']
 
         :param parameter: add gradients with respect to this ``parameter`` (e.g.
             ``positions``, ``cell``, ...)
