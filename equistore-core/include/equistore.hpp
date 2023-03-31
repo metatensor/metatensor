@@ -1240,7 +1240,7 @@ public:
     eqs_block_t* release() {
          if (is_view_) {
             throw Error(
-                "can not call non-const TensorBlock::release on this "
+                "can not call TensorBlock::release on this "
                 "block since it is a view inside a TensorMap"
             );
         }
@@ -1318,7 +1318,6 @@ private:
         return array;
     }
 
-    friend class TensorMap;
     friend class equistore_torch::TensorBlockHolder;
 
     eqs_block_t* block_;
@@ -1347,10 +1346,9 @@ public:
     TensorMap(Labels keys, std::vector<TensorBlock> blocks) {
         auto c_blocks = std::vector<eqs_block_t*>();
         for (auto& block: blocks) {
-            c_blocks.push_back(block.as_eqs_block_t());
-            // We will move the data inside the new map, let's put the
-            // TensorBLock in its moved-from state now
-            block.block_ = nullptr;
+            // We will move the data inside the new map, let's release the
+            // pointers out of the TensorBlock now
+            c_blocks.push_back(block.release());
         }
 
         tensor_ = eqs_tensormap(
@@ -1518,13 +1516,13 @@ public:
         return TensorMap(ptr);
     }
 
-    /// This function calls `keys_to_properties` with an empty set of `Labels`
+    /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_samples(const std::vector<std::string>& keys_to_move, bool sort_samples = true) const {
         return keys_to_samples(Labels(keys_to_move), sort_samples);
     }
 
-    /// This function calls `keys_to_properties` with an empty set of `Labels`
+    /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_samples(const std::string& key_to_move, bool sort_samples = true) const {
         return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
@@ -1535,7 +1533,7 @@ public:
     ///
     /// @param dimensions name of the component dimensions to move to the
     ///                  properties
-    TensorMap  components_to_properties(const std::vector<std::string>& dimensions) const {
+    TensorMap components_to_properties(const std::vector<std::string>& dimensions) const {
         auto c_dimensions = std::vector<const char*>();
         for (const auto& v: dimensions) {
             c_dimensions.push_back(v.c_str());
