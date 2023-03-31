@@ -11,7 +11,7 @@ TEST_CASE("TensorMap") {
         CHECK(tensor.keys() == Labels({"key_1", "key_2"}, {{0, 0}, {1, 0}, {2, 2}, {2, 3}}));
     }
 
-    SECTION("get block") {
+    SECTION("get blocks") {
         auto tensor = test_tensor_map();
 
         // block by index
