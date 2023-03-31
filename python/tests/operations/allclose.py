@@ -16,16 +16,13 @@ class Testallclose(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]], dtype=np.float64),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
-            samples=Labels(
-                ["samples"],
-                np.array([[0], [1], [2], [3], [4], [5]]),
-            ),
+            samples=Labels.arange("samples", 6),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
 
         block_3 = TensorBlock(
@@ -70,19 +67,19 @@ class Testallclose(unittest.TestCase):
             ),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["c1"], np.array([[0], [1], [2]])),
-                Labels(["c2"], np.array([[0], [1], [2]])),
+                Labels.arange("c1", 3),
+                Labels.arange("c2", 3),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_1_c_copy = TensorBlock(
             values=block_1_c.values + 0.1e-6,
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["c1"], np.array([[0], [1], [2]])),
-                Labels(["c2"], np.array([[0], [1], [2]])),
+                Labels.arange("c1", 3),
+                Labels.arange("c2", 3),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
 
         block_2_c = TensorBlock(
@@ -95,27 +92,21 @@ class Testallclose(unittest.TestCase):
                     [[[1, 2], [17.7, 27.7]], [[77.1, 22.2], [1.11, 3.42]]],
                 ]
             ),
-            samples=Labels(
-                ["samples"],
-                np.array([[0], [1], [2], [3], [4]]),
-            ),
+            samples=Labels.arange("samples", 5),
             components=[
                 Labels(["c1"], np.array([[3], [5]])),
                 Labels(["c2"], np.array([[6], [8]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2_c_copy = TensorBlock(
             values=block_2_c.values + 0.1e-6,
-            samples=Labels(
-                ["samples"],
-                np.array([[0], [1], [2], [3], [4]]),
-            ),
+            samples=Labels.arange("samples", 5),
             components=[
                 Labels(["c1"], np.array([[3], [5]])),
                 Labels(["c2"], np.array([[6], [8]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         X_c = TensorMap(keys, [block_1_c, block_2_c])
         X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
@@ -317,7 +308,7 @@ class Testallclose(unittest.TestCase):
             "parameter",
             data=np.full((2, 3, 1), 1.0),
             samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
-            components=[Labels(["component_1"], np.array([[-1], [0], [1]]))],
+            components=[Labels.arange("component_1", -1, 2)],
         )
 
         block_5 = TensorBlock(

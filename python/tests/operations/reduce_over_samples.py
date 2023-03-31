@@ -529,13 +529,7 @@ class TestReductionAllSamples(unittest.TestCase):
                     [-1.3, 26.7, 4.54],
                 ]
             ),
-            samples=Labels(
-                ["samples"],
-                np.array(
-                    [[0], [1], [2]],
-                    dtype=np.int32,
-                ),
-            ),
+            samples = Labels.arange("samples", 3),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )
@@ -1016,13 +1010,7 @@ class TestZeroSamples(unittest.TestCase):
 
         sum_block = TensorBlock(
             values=np.array([[-0.3, 28.7, 8.54], [6.5, 10.3, 12.87]]),
-            samples=Labels(
-                ["samples1"],
-                np.array(
-                    [[0], [1]],
-                    dtype=np.int32,
-                ),
-            ),
+            samples = Labels.arange("samples1", 2),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1], [5]])),
         )

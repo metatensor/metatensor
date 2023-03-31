@@ -30,21 +30,21 @@ class TestPow:
             values=np.vstack([b1_s0, b1_s2]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_1.add_gradient(
             "parameter",
             data=np.vstack([[b1grad_s01], [b1grad_s11]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_2 = TensorBlock(
             values=np.vstack([b2_s0, b2_s2, b2_s7]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2.add_gradient(
             "parameter",
@@ -54,7 +54,7 @@ class TestPow:
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -70,7 +70,7 @@ class TestPow:
             values=rvalues1,
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res1.add_gradient(
             "parameter",
@@ -82,14 +82,14 @@ class TestPow:
             ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_res2 = TensorBlock(
             values=rvalues2,
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res2.add_gradient(
             "parameter",
@@ -105,7 +105,7 @@ class TestPow:
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -141,10 +141,10 @@ class TestPow:
             ),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["component1"], np.array([[0], [1]])),
+                Labels.arange("components_1", 2),
                 Labels(["component2"], np.array([[0]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
 
         block_1.add_gradient(
@@ -165,8 +165,8 @@ class TestPow:
             ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["grad_components"], np.array([[0], [1]])),
-                Labels(["component1"], np.array([[0], [1]])),
+                Labels.arange("grad_components", 2),
+                Labels.arange("components_1", 2),
                 Labels(["component2"], np.array([[0]])),
             ],
         )
@@ -181,10 +181,10 @@ class TestPow:
             values=rvalues1,
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[
-                Labels(["component1"], np.array([[0], [1]])),
+                Labels.arange("components_1", 2),
                 Labels(["component2"], np.array([[0]])),
             ],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res1.add_gradient(
             "parameter",
@@ -218,8 +218,8 @@ class TestPow:
             ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["grad_components"], np.array([[0], [1]])),
-                Labels(["component1"], np.array([[0], [1]])),
+                Labels.arange("grad_components", 2),
+                Labels.arange("components_1", 2),
                 Labels(["component2"], np.array([[0]])),
             ],
         )
@@ -253,21 +253,21 @@ class TestPow:
             values=np.vstack([b1_s0, b1_s2]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_1.add_gradient(
             "parameter",
             data=np.vstack([[b1grad_s01], [b1grad_s11]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_2 = TensorBlock(
             values=np.vstack([b2_s0, b2_s2, b2_s7]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2.add_gradient(
             "parameter",
@@ -277,7 +277,7 @@ class TestPow:
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -292,7 +292,7 @@ class TestPow:
             values=rvalues1,
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res1.add_gradient(
             "parameter",
@@ -304,14 +304,14 @@ class TestPow:
             ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_res2 = TensorBlock(
             values=rvalues2,
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res2.add_gradient(
             "parameter",
@@ -327,7 +327,7 @@ class TestPow:
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -347,7 +347,7 @@ class TestPow:
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         A = TensorMap(keys, [block_1])

@@ -66,7 +66,7 @@ def tensor_map() -> TensorMap:
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
         samples=Labels(["samples"], np.array([[0], [3], [6], [8]])),
-        components=[Labels(["components"], np.array([[0], [1], [2]]))],
+        components=[Labels.arange("components", 3)],
         properties=Labels(["properties"], np.array([[0]])),
     )
     block_3.add_gradient(
@@ -76,13 +76,13 @@ def tensor_map() -> TensorMap:
             ["sample", "parameter"],
             np.array([[1, -2]]),
         ),
-        components=[Labels(["components"], np.array([[0], [1], [2]]))],
+        components=[Labels.arange("components", 3)],
     )
 
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
         samples=Labels(["samples"], np.array([[0], [1], [2], [5]])),
-        components=[Labels(["components"], np.array([[0], [1], [2]]))],
+        components=[Labels.arange("components", 3)],
         properties=Labels(["properties"], np.array([[0]])),
     )
     block_4.add_gradient(
@@ -92,7 +92,7 @@ def tensor_map() -> TensorMap:
             ["sample", "parameter"],
             np.array([[0, 1], [3, 3]]),
         ),
-        components=[Labels(["components"], np.array([[0], [1], [2]]))],
+        components=[Labels.arange("components", 3)],
     )
 
     # TODO: different number of components?

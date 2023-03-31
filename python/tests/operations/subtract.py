@@ -16,38 +16,38 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_3 = TensorBlock(
             values=np.array([[1.5, 2.1], [6.7, 10.2]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_4 = TensorBlock(
             values=np.array([[10, 200.8], [3.76, 4.432], [545, 26]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
 
         block_res1 = TensorBlock(
             values=np.array([[-0.5, -0.1], [-3.7, -5.2]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res2 = TensorBlock(
             values=np.array([[-9, -198.8], [-0.76, -0.432], [-540, -20]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         A = TensorMap(keys, [block_1, block_2])
@@ -67,14 +67,14 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -82,7 +82,7 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[-1, -2], [-3, -4], [5, 6]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2.add_gradient(
             "parameter",
@@ -94,7 +94,7 @@ class TestSubtract(unittest.TestCase):
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -102,21 +102,21 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[1.5, 2.1], [6.7, 10.2]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_3.add_gradient(
             "parameter",
             data=np.array([[[-1, -0.1], [-2, -0.2]], [[-3, -0.3], [-4.5, -0.4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_4 = TensorBlock(
             values=np.array([[10, 200.8], [3.76, 4.432], [-545, -26]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_4.add_gradient(
             "parameter",
@@ -132,7 +132,7 @@ class TestSubtract(unittest.TestCase):
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -140,21 +140,21 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[-0.5, -0.1], [-3.7, -5.2]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res1.add_gradient(
             "parameter",
             data=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_res2 = TensorBlock(
             values=np.array([[-11, -202.8], [-6.76, -8.432], [550, 32]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res2.add_gradient(
             "parameter",
@@ -170,7 +170,7 @@ class TestSubtract(unittest.TestCase):
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
@@ -191,21 +191,21 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_2 = TensorBlock(
             values=np.array([[11, 12], [13, 14], [15, 16]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_2.add_gradient(
             "parameter",
@@ -217,7 +217,7 @@ class TestSubtract(unittest.TestCase):
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -225,21 +225,21 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[6.1, 7.1], [8.1, 10.1]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res1.add_gradient(
             "parameter",
             data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
         block_res2 = TensorBlock(
             values=np.array([[16.1, 17.1], [18.1, 19.1], [20.1, 21.1]]),
             samples=Labels(["samples"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         block_res2.add_gradient(
             "parameter",
@@ -251,7 +251,7 @@ class TestSubtract(unittest.TestCase):
                 np.array([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
-                Labels(["components"], np.array([[0], [1]])),
+                Labels.arange("components", 2),
             ],
         )
 
@@ -272,7 +272,7 @@ class TestSubtract(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["samples"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1]])),
+            properties=Labels.arange("properties", 2),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         A = TensorMap(keys, [block_1])

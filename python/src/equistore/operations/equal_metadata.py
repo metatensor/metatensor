@@ -52,10 +52,7 @@ def equal_metadata(
     ...                 np.array([[0], [1], [4], [5]])
     ...             ),
     ...             components=[
-    ...                 Labels(
-    ...                     ["components"],
-    ...                     np.array([[0], [1], [2]])
-    ...                 )
+    ...                 Labels.arange("components", 3)
     ...             ],
     ...             properties=Labels(
     ...                 ["p_1", "p_2"],
@@ -69,10 +66,7 @@ def equal_metadata(
     ...                 np.array([[0], [1], [4], [5]])
     ...             ),
     ...             components=[
-    ...                 Labels(
-    ...                     ["components"],
-    ...                     np.array([[0], [1], [2]])
-    ...                 )
+    ...                 Labels.arange("components", 3)
     ...             ],
     ...             properties=Labels(
     ...                 ["p_1", "p_2"],
@@ -93,10 +87,7 @@ def equal_metadata(
     ...                 ["samples"],
     ...                 np.array([[0], [1], [4], [5]])),
     ...             components=[
-    ...                 Labels(
-    ...                     ["components"],
-    ...                     np.array([[0], [1], [2]])
-    ...                 )
+    ...                 Labels.arange("components", 3)
     ...             ],
     ...             properties=Labels(
     ...                 ["p_3", "p_4"],
@@ -110,10 +101,7 @@ def equal_metadata(
     ...                 np.array([[0], [1], [4], [5]])
     ...             ),
     ...             components=[
-    ...                 Labels(
-    ...                     ["components"],
-    ...                     np.array([[0], [1], [2]])
-    ...                 )
+    ...                 Labels.arange("components", 3)
     ...             ],
     ...             properties=Labels(
     ...                 ["p_3", "p_4"],
