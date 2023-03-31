@@ -50,7 +50,32 @@ TORCH_LIBRARY(equistore, m) {
         ;
 
     m.class_<TensorMapHolder>("TensorMap")
-        .def(torch::init<TorchLabels, std::vector<TorchTensorBlock>>())
+        .def(
+            torch::init<TorchLabels, std::vector<TorchTensorBlock>>(), DOCSTRING,
+            {torch::arg("keys"), torch::arg("blocks")}
+        )
+        .def("copy", &TensorMapHolder::copy)
+        .def_property("keys", &TensorMapHolder::keys)
+        .def("__len__", [](const TorchTensorMap& tensor){ return tensor->keys()->count(); })
+        .def("blocks_matching", &TensorMapHolder::blocks_matching, DOCSTRING,
+            {torch::arg("selection")}
+        )
+        .def("block_by_id", &TensorMapHolder::block_by_id, DOCSTRING,
+            {torch::arg("index")}
+        )
+        .def("keys_to_samples", &TensorMapHolder::keys_to_samples, DOCSTRING,
+            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true}
+        )
+        .def("keys_to_properties", &TensorMapHolder::keys_to_properties, DOCSTRING,
+            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true}
+        )
+        .def("components_to_properties", &TensorMapHolder::components_to_properties, DOCSTRING,
+            {torch::arg("dimensions")}
+        )
+        .def_property("sample_names", &TensorMapHolder::sample_names)
+        .def_property("components_names", &TensorMapHolder::components_names)
+        .def_property("property_names", &TensorMapHolder::property_names)
+        // TODO
         // .def_pickle(
         //     // __getstate__
         //     [](const torch::intrusive_ptr<TorchTensorMap>& self) -> std::string {
