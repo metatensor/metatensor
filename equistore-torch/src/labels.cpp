@@ -114,6 +114,32 @@ eqs_labels_t labels_from_torch(const torch::IValue& names, const torch::Tensor& 
     return labels;
 }
 
+static torch::IValue names_from_equistore(const equistore::Labels& labels) {
+    auto names = std::vector<torch::IValue>();
+    for (const auto name: labels.names()) {
+        names.push_back(std::string(name));
+    }
+    return c10::ivalue::Tuple::create(names);
+}
+
+
+static torch::Tensor values_from_equistore(const equistore::Labels& labels) {
+    auto sizes = std::vector<int64_t>();
+    for (auto dim: labels.shape()) {
+        sizes.push_back(static_cast<int64_t>(dim));
+    }
+
+    return torch::from_blob(
+        // Unfortunately, we can not prevent writing to this tensor since torch
+        // does not support read-only tensor:
+        // https://github.com/pytorch/pytorch/issues/44027
+        //
+        // TODO: should we make a copy here instead?
+        const_cast<int32_t*>(labels.data()),
+        sizes,
+        torch::TensorOptions().dtype(torch::kInt32)
+    );
+}
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     names_(normalize_names(names)),
@@ -131,6 +157,13 @@ TorchLabels LabelsHolder::create(
         initializer_list_to_tensor(values, names.size())
     );
 }
+
+LabelsHolder::LabelsHolder(equistore::Labels labels):
+    names_(names_from_equistore(labels)),
+    values_(values_from_equistore(labels)),
+    labels_(std::move(labels))
+{}
+
 
 torch::IValue LabelsHolder::position(torch::IValue entry) const {
     int64_t position = -1;
