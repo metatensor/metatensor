@@ -1,5 +1,4 @@
 import numpy as np
-from ..labels import Labels
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
@@ -19,6 +18,8 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
     ``properties``. The resulting :py:class:`TensorBlocks` of the dot product of
     two :py:class:`TensorBlocks` has ``result_block.values = block1.values @
     block2.values.T``
+
+    >>> from equistore import Labels
     >>> block1 = TensorBlock(
     ...     values=np.array([
     ...         [1, 2, 3],
@@ -66,8 +67,6 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
     [[14 32]
      [32 77]]
 
-    
-
     :param A: first :py:class:`TensorMap` to multiply
     :param B: second :py:class:`TensorMap` to multiply
 
@@ -110,7 +109,6 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     for parameter, gradient in block1.gradients():
         # gradient_data = gradient.data @ block2.values.T
         gradient_data = _dispatch.dot(gradient.data, block2.values)
-
         result_block.add_gradient(
             parameter,
             gradient_data,
