@@ -36,6 +36,11 @@ public:
         return tensor_;
     }
 
+    /// Get the underlying tensor
+    const torch::Tensor& tensor() const {
+        return tensor_;
+    }
+
     /*========================================================================*/
     /*          Functions to implement equistore::DataArrayBase               */
     /*========================================================================*/
@@ -62,6 +67,11 @@ public:
     ) override;
 
 private:
+    // cache the array shape as a vector of unsigned integers (as expected by
+    // equistore) instead of signed integer (as stored in torch::Tensor::sizes)
+    std::vector<uintptr_t> shape_;
+    void update_shape();
+
     // the actual data
     torch::Tensor tensor_;
 };
