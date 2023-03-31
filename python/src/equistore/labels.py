@@ -262,6 +262,7 @@ class Labels(np.ndarray):
         `numpy.arange` function.
         In particular:
 
+        :param `name`: Name of the resulting labels
         :param `start`: (Optional) Lower bound of the range. If not specified,
             it defaults to zero
         :param `stop`: Upper bound of the range
