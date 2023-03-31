@@ -1,14 +1,12 @@
-// This file was taken from https://github.com/jturner314/ndarray-npy, version
-// 0.8.1. It is Copyright 2018–2021 Jim Turner and ndarray-npy developers,
-// released under MIT and Apache Licenses.
-
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use num_traits::ToPrimitive;
-use py_literal::{
-    FormatError as PyValueFormatError, ParseError as PyValueParseError, Value as PyValue,
-};
+// This file was initially taken from https://github.com/jturner314/ndarray-npy,
+// version 0.8.1. It is Copyright 2018–2021 Jim Turner and ndarray-npy
+// developers, released under MIT and Apache Licenses.
 use std::convert::TryFrom;
 use std::error::Error;
+use std::fmt::Write as FmtWrite;
+use std::io::Write as IoWrite;
+
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 
 /// Magic string to indicate npy format.
 const MAGIC_STRING: &[u8] = b"\x93NUMPY";
@@ -35,31 +33,18 @@ pub enum ParseHeaderError {
     /// .npy format versions 1.0 and 2.0, which require the array format string
     /// to be ASCII.
     Utf8Parse(std::str::Utf8Error),
-    UnknownKey(PyValue),
-    MissingKey(String),
-    IllegalValue {
-        key: String,
-        value: PyValue,
-    },
-    DictParse(PyValueParseError),
-    MetaNotDict(PyValue),
-    MissingNewline,
+    InvalidHeader(String),
 }
 
 impl Error for ParseHeaderError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             ParseHeaderError::Utf8Parse(err) => Some(err),
-            ParseHeaderError::DictParse(err) => Some(err),
             ParseHeaderError::MagicString |
             ParseHeaderError::Version { .. } |
             ParseHeaderError::HeaderLengthOverflow(_) |
             ParseHeaderError::NonAscii |
-            ParseHeaderError::UnknownKey(_) |
-            ParseHeaderError::MissingKey(_) |
-            ParseHeaderError::IllegalValue { .. } |
-            ParseHeaderError::MetaNotDict(_) |
-            ParseHeaderError::MissingNewline => None,
+            ParseHeaderError::InvalidHeader(_) => None,
         }
     }
 }
@@ -72,12 +57,7 @@ impl std::fmt::Display for ParseHeaderError {
             ParseHeaderError::HeaderLengthOverflow(header_len) => write!(f, "HEADER_LEN {} does not fit in `usize`", header_len),
             ParseHeaderError::NonAscii => write!(f, "non-ascii in array format string; this is not supported in .npy format versions 1.0 and 2.0"),
             ParseHeaderError::Utf8Parse(err) => write!(f, "error parsing array format string as UTF-8: {}", err),
-            ParseHeaderError::UnknownKey(key) => write!(f, "unknown key: {}", key),
-            ParseHeaderError::MissingKey(key) => write!(f, "missing key: {}", key),
-            ParseHeaderError::IllegalValue { key, value } => write!(f, "illegal value for key {}: {}", key, value),
-            ParseHeaderError::DictParse(err) => write!(f, "error parsing metadata dict: {}", err),
-            ParseHeaderError::MetaNotDict(value) => write!(f, "metadata is not a dict: {}", value),
-            ParseHeaderError::MissingNewline => write!(f, "newline missing at end of header"),
+            ParseHeaderError::InvalidHeader(value) => write!(f, "invalid header in file: {}", value),
         }
     }
 }
@@ -88,9 +68,9 @@ impl From<std::str::Utf8Error> for ParseHeaderError {
     }
 }
 
-impl From<PyValueParseError> for ParseHeaderError {
-    fn from(err: PyValueParseError) -> ParseHeaderError {
-        ParseHeaderError::DictParse(err)
+impl From<std::num::ParseIntError> for ParseHeaderError {
+    fn from(e: std::num::ParseIntError) -> Self {
+        ParseHeaderError::InvalidHeader(format!("failed to parse an integer: {}", e))
     }
 }
 
@@ -247,48 +227,16 @@ struct HeaderLengthInfo {
 }
 
 #[derive(Debug)]
-pub enum FormatHeaderError {
-    PyValue(PyValueFormatError),
-    /// The total header length overflows `usize`, or `HEADER_LEN` exceeds the
-    /// maximum encodable value.
-    HeaderTooLong,
-}
-
-impl Error for FormatHeaderError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            FormatHeaderError::PyValue(err) => Some(err),
-            FormatHeaderError::HeaderTooLong => None,
-        }
-    }
-}
-
-impl std::fmt::Display for FormatHeaderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            FormatHeaderError::PyValue(err) => write!(f, "error formatting Python value: {}", err),
-            FormatHeaderError::HeaderTooLong => write!(f, "the header is too long"),
-        }
-    }
-}
-
-impl From<PyValueFormatError> for FormatHeaderError {
-    fn from(err: PyValueFormatError) -> FormatHeaderError {
-        FormatHeaderError::PyValue(err)
-    }
-}
-
-#[derive(Debug)]
 pub enum WriteHeaderError {
     Io(std::io::Error),
-    Format(FormatHeaderError),
+    Format(String),
 }
 
 impl Error for WriteHeaderError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             WriteHeaderError::Io(err) => Some(err),
-            WriteHeaderError::Format(err) => Some(err),
+            WriteHeaderError::Format(_) => None,
         }
     }
 }
@@ -308,79 +256,269 @@ impl From<std::io::Error> for WriteHeaderError {
     }
 }
 
-impl From<FormatHeaderError> for WriteHeaderError {
-    fn from(err: FormatHeaderError) -> WriteHeaderError {
-        WriteHeaderError::Format(err)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DataType {
+    Scalar(String),
+    Compound(Vec<(String, String)>),
+}
+
+impl std::fmt::Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataType::Scalar(v) => write!(f, "'{}'", v),
+            DataType::Compound(list) => {
+                write!(f, "[")?;
+                for (k, v) in list {
+                    write!(f, "('{}', '{}'), ", k, v)?;
+                }
+                write!(f, "]")
+            }
+        }
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Header {
-    pub type_descriptor: PyValue,
+    pub type_descriptor: DataType,
     pub fortran_order: bool,
     pub shape: Vec<usize>,
 }
 
-impl std::fmt::Display for Header {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.to_py_value())
+struct HeaderParser {
+    data: Vec<char>,
+    position: usize,
+}
+
+impl HeaderParser {
+    fn done(&self) -> bool {
+        return self.position >= self.data.len();
+    }
+
+    fn current(&self) -> char {
+        return self.data[self.position];
+    }
+
+    fn advance(&mut self) -> char {
+        let value = self.current();
+        self.position += 1;
+        return value;
+    }
+
+    fn expects(&mut self, c: char) -> Result<(), ParseHeaderError> {
+        if self.current() == c {
+            self.advance();
+            return Ok(());
+        } else {
+            return Err(ParseHeaderError::InvalidHeader(format!(
+                "expected '{}', got '{}'", c, self.current()
+            )));
+        }
+    }
+
+    fn skip_whitespaces(&mut self) {
+        let mut c = self.current();
+        while !self.done() && (c == ' ' || c == '\t' || c == '\x0C') {
+            self.advance();
+            c = self.current();
+        }
+    }
+
+    fn parse_string(&mut self) -> Result<String, ParseHeaderError> {
+        let mut value = String::new();
+        if self.current() == '\'' {
+            self.advance();
+            while self.current() != '\'' {
+                value.push(self.advance());
+            }
+            self.advance();
+
+        } else if self.current() == '"' {
+            self.advance();
+            while self.current() != '"' {
+                value.push(self.advance());
+            }
+            self.advance();
+        } else {
+            return Err(ParseHeaderError::InvalidHeader(format!(
+                "expected a string, got '{}'", self.current()
+            )));
+        }
+
+        return Ok(value);
+    }
+
+    fn parse_integer(&mut self) -> Result<usize, ParseHeaderError> {
+        let mut value = String::new();
+        loop {
+            if self.current().is_ascii_digit() {
+                value.push(self.advance());
+            } else {
+                break;
+            }
+        }
+
+        if value.is_empty() {
+            return Err(ParseHeaderError::InvalidHeader(format!(
+                "expected an integer, got '{}'", self.current()
+            )));
+        }
+
+        return Ok(value.parse()?);
+    }
+
+    fn parse_data_type(&mut self) -> Result<DataType, ParseHeaderError> {
+        if self.current() == '\'' || self.current() == '"' {
+            let value = self.parse_string()?;
+            return Ok(DataType::Scalar(value));
+        } else if self.current() == '[' {
+            self.advance();
+
+            let mut data_type = Vec::new();
+            loop {
+                self.skip_whitespaces();
+                self.expects('(')?;
+                self.skip_whitespaces();
+
+                let name = self.parse_string()?;
+
+                self.skip_whitespaces();
+                self.expects(',')?;
+                self.skip_whitespaces();
+
+                let value = self.parse_string()?;
+
+                self.skip_whitespaces();
+                self.expects(')')?;
+                self.skip_whitespaces();
+
+                data_type.push((name, value));
+
+                if self.current() == ',' {
+                    self.advance();
+                    self.skip_whitespaces();
+                } else {
+                    self.expects(']')?;
+                    break;
+                }
+
+                if self.current() == ']' {
+                    self.advance();
+                    break;
+                }
+            }
+
+            return Ok(DataType::Compound(data_type));
+        } else {
+            return Err(ParseHeaderError::InvalidHeader(format!(
+                "expected a string or a list, got '{}'", self.current()
+            )));
+        }
+    }
+
+    fn parse_bool(&mut self) -> Result<bool, ParseHeaderError> {
+        if self.current() == 'T' {
+            self.advance();
+            self.expects('r')?;
+            self.expects('u')?;
+            self.expects('e')?;
+            return Ok(true);
+        } else if self.current() == 'F' {
+            self.advance();
+            self.expects('a')?;
+            self.expects('l')?;
+            self.expects('s')?;
+            self.expects('e')?;
+            return Ok(false);
+        } else {
+            return Err(ParseHeaderError::InvalidHeader(format!(
+                "expected a bool, got '{}'", self.current()
+            )));
+        }
+    }
+
+    fn parse_shape(&mut self) -> Result<Vec<usize>, ParseHeaderError> {
+        let mut shape = Vec::new();
+        self.expects('(')?;
+        loop {
+            self.skip_whitespaces();
+            shape.push(self.parse_integer()?);
+            self.skip_whitespaces();
+
+
+            if self.current() == ',' {
+                self.advance();
+                self.skip_whitespaces();
+            } else {
+                self.expects(')')?;
+                break;
+            }
+
+            if self.current() == ')' {
+                self.advance();
+                break;
+            }
+        }
+
+        return Ok(shape);
+    }
+
+    fn parse(&mut self) -> Result<Header, ParseHeaderError> {
+        let mut type_descriptor: Option<DataType> = None;
+        let mut fortran_order: Option<bool> = None;
+        let mut shape: Option<Vec<usize>> = None;
+
+        self.skip_whitespaces();
+        self.expects('{')?;
+        loop {
+            let key = self.parse_string()?;
+            self.skip_whitespaces();
+            self.expects(':')?;
+            self.skip_whitespaces();
+
+            if key == "descr" {
+                type_descriptor = Some(self.parse_data_type()?);
+            } else if key == "fortran_order" {
+                fortran_order = Some(self.parse_bool()?);
+            } else if key == "shape" {
+                shape = Some(self.parse_shape()?);
+            } else {
+                return Err(ParseHeaderError::InvalidHeader(format!(
+                    "unknown key: '{}'", key
+                )));
+            }
+
+            self.skip_whitespaces();
+            if self.current() == ',' {
+                self.advance();
+                self.skip_whitespaces();
+            } else {
+                self.expects('}')?;
+                break;
+            }
+
+            if self.current() == '}' {
+                self.advance();
+                break;
+            }
+        }
+
+        match (type_descriptor, fortran_order, shape) {
+            (Some(type_descriptor), Some(fortran_order), Some(shape)) => Ok(Header {
+                type_descriptor,
+                fortran_order,
+                shape,
+            }),
+            (None, _, _) => Err(ParseHeaderError::InvalidHeader("missing 'descr' key".into())),
+            (_, None, _) => Err(ParseHeaderError::InvalidHeader("missing 'fortran_order' key".into())),
+            (_, _, None) => Err(ParseHeaderError::InvalidHeader("missing 'shape' key".into())),
+        }
     }
 }
 
 impl Header {
-    fn from_py_value(value: PyValue) -> Result<Self, ParseHeaderError> {
-        if let PyValue::Dict(dict) = value {
-            let mut type_descriptor: Option<PyValue> = None;
-            let mut fortran_order: Option<bool> = None;
-            let mut shape: Option<Vec<usize>> = None;
-            for (key, value) in dict {
-                match key {
-                    PyValue::String(ref k) if k == "descr" => {
-                        type_descriptor = Some(value);
-                    }
-                    PyValue::String(ref k) if k == "fortran_order" => {
-                        if let PyValue::Boolean(b) = value {
-                            fortran_order = Some(b);
-                        } else {
-                            return Err(ParseHeaderError::IllegalValue {
-                                key: "fortran_order".to_owned(),
-                                value,
-                            });
-                        }
-                    }
-                    PyValue::String(ref k) if k == "shape" => {
-                        fn parse_shape(value: &PyValue) -> Option<Vec<usize>> {
-                            value
-                                .as_tuple()?
-                                .iter()
-                                .map(|elem| elem.as_integer()?.to_usize())
-                                .collect()
-                        }
-                        if let Some(s) = parse_shape(&value) {
-                            shape = Some(s);
-                        } else {
-                            return Err(ParseHeaderError::IllegalValue {
-                                key: "shape".to_owned(),
-                                value,
-                            });
-                        }
-                    }
-                    k => return Err(ParseHeaderError::UnknownKey(k)),
-                }
-            }
-            match (type_descriptor, fortran_order, shape) {
-                (Some(type_descriptor), Some(fortran_order), Some(shape)) => Ok(Header {
-                    type_descriptor,
-                    fortran_order,
-                    shape,
-                }),
-                (None, _, _) => Err(ParseHeaderError::MissingKey("descr".to_owned())),
-                (_, None, _) => Err(ParseHeaderError::MissingKey("fortran_order".to_owned())),
-                (_, _, None) => Err(ParseHeaderError::MissingKey("shaper".to_owned())),
-            }
-        } else {
-            Err(ParseHeaderError::MetaNotDict(value))
-        }
+    fn from_str(value: &str) -> Result<Self, ParseHeaderError> {
+        let mut parser = HeaderParser { data: value.chars().collect(), position: 0 };
+        return parser.parse();
     }
 
     pub fn from_reader<R: std::io::Read>(reader: &mut R) -> Result<Self, ReadHeaderError> {
@@ -404,7 +542,7 @@ impl Header {
         reader.read_exact(&mut buf)?;
         let without_newline = match buf.split_last() {
             Some((&b'\n', rest)) => rest,
-            Some(_) | None => return Err(ParseHeaderError::MissingNewline.into()),
+            Some(_) | None => return Err(ParseHeaderError::InvalidHeader("missing new line".into()))?,
         };
         let header_str = match version {
             Version::V1_0 | Version::V2_0 => {
@@ -419,43 +557,41 @@ impl Header {
                 std::str::from_utf8(without_newline).map_err(ParseHeaderError::from)?
             }
         };
-        let arr_format: PyValue = header_str.parse().map_err(ParseHeaderError::from)?;
-        Ok(Header::from_py_value(arr_format)?)
+        // let arr_format: PyValue = header_str.parse().map_err(ParseHeaderError::from)?;
+        Ok(Header::from_str(header_str)?)
     }
 
-    fn to_py_value(&self) -> PyValue {
-        PyValue::Dict(vec![
-            (
-                PyValue::String("descr".into()),
-                self.type_descriptor.clone(),
-            ),
-            (
-                PyValue::String("fortran_order".into()),
-                PyValue::Boolean(self.fortran_order),
-            ),
-            (
-                PyValue::String("shape".into()),
-                PyValue::Tuple(
-                    self.shape
-                        .iter()
-                        .map(|&elem| PyValue::Integer(elem.into()))
-                        .collect(),
-                ),
-            ),
-        ])
+    fn to_dict_literal(&self) -> String {
+        let mut result = String::new();
+        write!(&mut result, "{{ 'descr': {}, ", self.type_descriptor).expect("failed to write");
+
+        let order = if self.fortran_order {
+            "True"
+        } else {
+            "False"
+        };
+        write!(&mut result, "'fortran_order': {}, ", order).expect("failed to write");
+
+        write!(&mut result, "'shape': (").expect("failed to write");
+        for s in &self.shape {
+            write!(&mut result, "{}, ", s).expect("failed to write");
+        }
+        write!(&mut result, ") }}").expect("failed to write");
+        return result;
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, FormatHeaderError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, WriteHeaderError> {
         // Metadata describing array's format as ASCII string.
         let mut arr_format = Vec::new();
-        self.to_py_value().write_ascii(&mut arr_format)?;
+
+        write!(&mut arr_format, "{}", self.to_dict_literal())?;
 
         // Determine appropriate version based on header length, and compute
         // length information.
         let (version, length_info) = [Version::V1_0, Version::V2_0]
             .iter()
             .find_map(|&version| Some((version, version.compute_lengths(&arr_format)?)))
-            .ok_or(FormatHeaderError::HeaderTooLong)?;
+            .ok_or_else(|| WriteHeaderError::Format("header too long".into()))?;
 
         // Write the header.
         let mut out = Vec::with_capacity(length_info.total_len);
@@ -496,7 +632,34 @@ impl From<WriteHeaderError> for crate::Error {
     fn from(error: WriteHeaderError) -> Self {
         match error {
             WriteHeaderError::Io(e) => crate::Error::Io(e),
-            WriteHeaderError::Format(e) => crate::Error::Serialization(e.to_string()),
+            WriteHeaderError::Format(e) => crate::Error::Serialization(e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn npy_header_parsing() {
+        let header = "  \t{'descr': [('a', '<i4'),('b', '<i4'),], 'fortran_order':False, 'shape': (27, 3), }";
+
+        let header = Header::from_str(header).unwrap();
+
+        assert_eq!(header.type_descriptor, DataType::Compound(
+            vec![("a".into(), "<i4".into()), ("b".into(), "<i4".into())]
+        ));
+        assert!(!header.fortran_order);
+        assert_eq!(header.shape, [27, 3]);
+
+        assert_eq!(header.to_dict_literal(), "{ 'descr': [('a', '<i4'), ('b', '<i4'), ], 'fortran_order': False, 'shape': (27, 3, ) }");
+
+        let header = Header {
+            type_descriptor: DataType::Scalar("<f8".into()),
+            fortran_order: true,
+            shape: vec![3],
+        };
+        assert_eq!(header.to_dict_literal(), "{ 'descr': '<f8', 'fortran_order': True, 'shape': (3, ) }");
     }
 }
