@@ -18,7 +18,7 @@ on equistore:
   use a version provided by your operating system. We need at least Rust version
   1.61 to build equistore.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
-  We require a Python version of at least 3.6.
+  We require a Python version of at least 3.7.
 - **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
   can install tox with ``pip install tox``.
 
@@ -108,10 +108,15 @@ specific functionalities, for example:
     tox -e tests         # unit tests
     tox -e lint          # code style
     tox -e build-python  # python packaging
+
     tox -e format        # format all files
 
-The latter command ``tox -e format`` will use tox to do actual formatting
-instead of just testing it.
+The last command ``tox -e format`` will use tox to do actual formatting instead
+of just checking it.
+
+You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
+replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
+``tox -e tests -- python/tests/operations/abs.py``.
 
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/

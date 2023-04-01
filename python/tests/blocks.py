@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
@@ -192,19 +194,35 @@ properties (2): ['properties']"""
             ],
             properties=Labels(["properties"], np.array([[5], [3]])),
         )
-        copy = block.copy()
+
+        # using TensorBlock.copy
+        clone = block.copy()
         block_values_id = id(block.values)
 
         del block
 
-        assert id(copy.values) != block_values_id
+        assert id(clone.values) != block_values_id
 
-        assert_equal(copy.values, np.full((3, 3, 2), 2.0))
-        assert copy.samples.names == ("samples",)
-        assert len(copy.samples) == 3
-        assert tuple(copy.samples[0]) == (0,)
-        assert tuple(copy.samples[1]) == (2,)
-        assert tuple(copy.samples[2]) == (4,)
+        assert_equal(clone.values, np.full((3, 3, 2), 2.0))
+        assert clone.samples.names == ("samples",)
+        assert len(clone.samples) == 3
+        assert tuple(clone.samples[0]) == (0,)
+        assert tuple(clone.samples[1]) == (2,)
+        assert tuple(clone.samples[2]) == (4,)
+
+        # using copy.deepcopy
+        other_clone = clone.copy()
+        block_values_id = id(clone.values)
+
+        del clone
+
+        assert id(other_clone.values) != block_values_id
+        assert_equal(other_clone.values, np.full((3, 3, 2), 2.0))
+
+    def test_shallow_copy_error(self, block):
+        msg = "shallow copies of TensorBlock are not possible, use a deepcopy instead"
+        with pytest.raises(ValueError, match=msg):
+            copy.copy(block)
 
     def test_eq(self, block):
         assert equistore.equal_block(block, block) == (block == block)
