@@ -70,7 +70,7 @@ class TestDot(unittest.TestCase):
                 values=value2,
                 samples=Labels(
                     ["samples"],
-                    np.array([[i] for i in range(n_samples)], dtype=np.int32),
+                    np.array([[i] for i in range(n_samples)]),
                 ),
                 components=[],
                 properties=block1.properties,

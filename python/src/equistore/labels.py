@@ -171,7 +171,7 @@ class Labels(np.ndarray):
 
             labels = Labels(
                 names=["structure", "atom", "center_species"],
-                values=np.array([[0, 2, 4]], dtype=np.int32),
+                values=np.array([[0, 2, 4]]),
             )
 
             for label in labels.as_namedtuples():
@@ -250,6 +250,48 @@ class Labels(np.ndarray):
 
     def __contains__(self, label):
         return self.position(label) is not None
+
+    @staticmethod
+    def arange(name, *args):
+        """
+        A `Labels` instance with evenly spaced integers within a given interval.
+
+        The resulting `Labels` only contain one label, whose name
+        must be specified. The values of the labels depend on a set of
+        integer arguments, whose meaning is the same as those of the
+        `numpy.arange` function.
+        In particular:
+
+        :param `name`: Name of the resulting labels
+        :param `start`: (Optional) Lower bound of the range. If not specified,
+            it defaults to zero
+        :param `stop`: Upper bound of the range
+        :param `step`: (Optional) Spacing within the range of values. If not
+            specified, it defaults to one
+
+        :returns: A new :py:class:`Labels` object with the provided name and
+            values corresponding to the specified range bounds and step.
+        """
+
+        args_len = len(args)
+        if args_len == 0:
+            raise ValueError(
+                "please provide at least one integer for `Labels.arange()`"
+            )
+        if args_len > 3:
+            raise ValueError(
+                f"the maximum number of integer arguments accepted by \
+                `Labels.arange()` is 3. {args_len} were provided"
+            )
+        for arg in args:
+            if not np.issubdtype(type(arg), np.integer):
+                raise ValueError(
+                    "all numbers provided to `Labels.arange()` must be integers"
+                )
+
+        labels = Labels(names=[name], values=np.arange(*args).reshape(-1, 1))
+
+        return labels
 
 
 def _eqs_labels_view(array):

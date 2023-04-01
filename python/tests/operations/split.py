@@ -548,7 +548,7 @@ def _searchable_labels(labels: Labels):
         values=np.full((len(labels), 1), 0.0),
         samples=labels,
         components=[],
-        properties=Labels(["p"], np.array([[0]], dtype=np.int32)),
+        properties=Labels(["p"], np.array([[0]])),
     ).samples
 
 

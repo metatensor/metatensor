@@ -11,7 +11,7 @@ class TestOrigin:
         """Test that an error is thrown when attempting
         to initialize a TensorMap with TensorBlocks
         with different origins"""
-        keys = Labels(names=["dummy"], values=np.array([[0], [1]]))
+        keys = Labels.arange("dummy", 2)
         block_numpy = TensorBlock(
             values=np.array([[0.0]]),
             samples=Labels.single(),
@@ -25,4 +25,4 @@ class TestOrigin:
             properties=Labels.single(),
         )
         with pytest.raises(equistore.status.EquistoreError, match="different origins"):
-            _ = TensorMap(keys=keys, blocks=[block_numpy, block_torch])
+            TensorMap(keys=keys, blocks=[block_numpy, block_torch])

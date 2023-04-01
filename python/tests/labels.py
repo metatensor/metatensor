@@ -10,7 +10,7 @@ class TestLabels:
     def test_python_labels(self):
         labels = Labels(
             names=["a", "b"],
-            values=np.array([[0, 0]], dtype=np.int32),
+            values=np.array([[0, 0]]),
         )
 
         assert labels.names == ("a", "b")
@@ -22,11 +22,11 @@ class TestLabels:
         # check we can use single str for single name
         labels = Labels(
             names=["a"],
-            values=np.array([[1]], dtype=np.int32),
+            values=np.array([[1]]),
         )
         labels_str = Labels(
             names="a",
-            values=np.array([[1]], dtype=np.int32),
+            values=np.array([[1]]),
         )
 
         assert labels.names == ("a",)
@@ -145,9 +145,9 @@ class TestLabels:
     def test_invalid_names(self):
         msg = "invalid parameter: 'not an ident' is not a valid label name"
         with pytest.raises(EquistoreError, match=msg):
-            _ = Labels(
+            Labels(
                 names=["not an ident"],
-                values=np.array([[0]], dtype=np.int32),
+                values=np.array([[0]]),
             )
 
     def test_zero_length_label(self):
@@ -172,7 +172,7 @@ class TestLabels:
     def test_labels_contiguous(self):
         labels = Labels(
             names=["a", "b"],
-            values=np.arange(32, dtype=np.int32).reshape(-1, 2),
+            values=np.arange(32).reshape(-1, 2),
         )
 
         labels = labels[::-1]
@@ -183,3 +183,35 @@ class TestLabels:
         array = array.view(dtype=labels.dtype).reshape(-1)
 
         assert np.all(array == labels)
+
+    def test_arange_one_argument(self):
+        labels_arange = Labels.arange("name", 10)
+        assert labels_arange.asarray().shape == (10, 1)
+        assert labels_arange.names == ("name",)
+        np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10))
+
+    def test_arange_two_arguments(self):
+        labels_arange = Labels.arange("dummy", 10, 42)
+        assert labels_arange.names == ("dummy",)
+        np.testing.assert_equal(
+            labels_arange.asarray().reshape((-1,)), np.arange(10, 42)
+        )
+
+    def test_arange_three_arguments(self):
+        labels_arange = Labels.arange("samples", 0, 10, 2)
+        assert labels_arange.names == ("samples",)
+        np.testing.assert_equal(
+            labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2)
+        )
+
+    def test_arange_incorrect_arguments(self):
+        with pytest.raises(ValueError, match="3"):
+            Labels.arange("dummy", 0, 10, 2, 4)
+        with pytest.raises(ValueError, match="at least"):
+            Labels.arange("dummy")
+        with pytest.raises(EquistoreError, match="label name"):
+            Labels.arange(0, 1, 2)
+        with pytest.raises(ValueError, match="integer"):
+            Labels.arange(0.0, 1.0, 2)
+        with pytest.raises(ValueError, match="integer"):
+            Labels.arange("dummy", 0, 5, 0.2)

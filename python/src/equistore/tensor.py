@@ -196,7 +196,7 @@ class TensorMap:
             # with Labels containing a single entry
             labels = Labels(
                 names=["key", "symmetric"],
-                values=np.array([[-3, 4]], dtype=np.int32)
+                values=np.array([[-3, 4]])
             )
             block = tensor.block(labels)
         """
@@ -257,7 +257,7 @@ class TensorMap:
             # with Labels containing a single entry
             labels = Labels(
                 names=["key"],
-                values=np.array([[-3]], dtype=np.int32)
+                values=np.array([[-3]])
             )
             blocks = tensor.blocks(labels)
         """
@@ -468,7 +468,7 @@ def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
 
         keys_to_move = Labels(
             names=keys_to_move,
-            values=np.zeros((0, len(keys_to_move)), dtype=np.int32),
+            values=np.zeros((0, len(keys_to_move))),
         )
 
     assert isinstance(keys_to_move, Labels)

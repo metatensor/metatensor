@@ -46,15 +46,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...         values = np.array([[0]])
     ...     ),
     ...     blocks = [TensorBlock(
-    ...         samples = Labels(
-    ...             names = ["sample"],
-    ...             values = np.arange(0, 2).reshape(2, 1)
-    ...         ),
+    ...         samples = Labels.arange("sample", 2),
     ...         components = [],
-    ...         properties = Labels(
-    ...             names = ["properties_for_regression"],
-    ...             values = np.arange(0, 2).reshape(2, 1)
-    ...         ),
+    ...         properties = Labels.arange("properties_for_regression", 2),
     ...         values = covariance
     ...     )]
     ... )
@@ -65,15 +59,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...         values = np.array([[0]])
     ...     ),
     ...     blocks = [TensorBlock(
-    ...         samples = Labels(
-    ...             names = ["sample"],
-    ...             values = np.arange(0, 2).reshape(2, 1)
-    ...         ),
+    ...         samples = Labels.arange("sample", 2),
     ...         components = [],
-    ...         properties = Labels(
-    ...             names = ["property_to_regress"],
-    ...             values = np.arange(0, 1).reshape(1, 1)
-    ...         ),
+    ...         properties = Labels.arange("property_to_regress", 1),
     ...         values = y_regression
     ...     )]
     ... )

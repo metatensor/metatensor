@@ -10,72 +10,70 @@ def tensor_map():
     """
     block_1 = TensorBlock(
         values=np.full((3, 1, 1), 1.0),
-        samples=Labels(["samples"], np.array([[0], [2], [4]], dtype=np.int32)),
-        components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        samples=Labels(["samples"], np.array([[0], [2], [4]])),
+        components=[Labels(["components"], np.array([[0]]))],
+        properties=Labels(["properties"], np.array([[0]])),
     )
     block_1.add_gradient(
         "parameter",
-        samples=Labels(
-            ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
-        ),
+        samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
         data=np.full((2, 1, 1), 11.0),
-        components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        components=[Labels(["components"], np.array([[0]]))],
     )
 
     block_2 = TensorBlock(
         values=np.full((3, 1, 3), 2.0),
-        samples=Labels(["samples"], np.array([[0], [1], [3]], dtype=np.int32)),
-        components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
-        properties=Labels(["properties"], np.array([[3], [4], [5]], dtype=np.int32)),
+        samples=Labels(["samples"], np.array([[0], [1], [3]])),
+        components=[Labels(["components"], np.array([[0]]))],
+        properties=Labels(["properties"], np.array([[3], [4], [5]])),
     )
     block_2.add_gradient(
         "parameter",
         data=np.full((3, 1, 3), 12.0),
         samples=Labels(
             ["sample", "parameter"],
-            np.array([[0, -2], [0, 3], [2, -2]], dtype=np.int32),
+            np.array([[0, -2], [0, 3], [2, -2]]),
         ),
-        components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        components=[Labels(["components"], np.array([[0]]))],
     )
 
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
-        samples=Labels(["samples"], np.array([[0], [3], [6], [8]], dtype=np.int32)),
-        components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
-        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        samples=Labels(["samples"], np.array([[0], [3], [6], [8]])),
+        components=[Labels.arange("components", 3)],
+        properties=Labels(["properties"], np.array([[0]])),
     )
     block_3.add_gradient(
         "parameter",
         data=np.full((1, 3, 1), 13.0),
         samples=Labels(
             ["sample", "parameter"],
-            np.array([[1, -2]], dtype=np.int32),
+            np.array([[1, -2]]),
         ),
-        components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
+        components=[Labels.arange("components", 3)],
     )
 
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
-        samples=Labels(["samples"], np.array([[0], [1], [2], [5]], dtype=np.int32)),
-        components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
-        properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
+        samples=Labels(["samples"], np.array([[0], [1], [2], [5]])),
+        components=[Labels.arange("components", 3)],
+        properties=Labels(["properties"], np.array([[0]])),
     )
     block_4.add_gradient(
         "parameter",
         data=np.full((2, 3, 1), 14.0),
         samples=Labels(
             ["sample", "parameter"],
-            np.array([[0, 1], [3, 3]], dtype=np.int32),
+            np.array([[0, 1], [3, 3]]),
         ),
-        components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
+        components=[Labels.arange("components", 3)],
     )
 
     # TODO: different number of components?
 
     keys = Labels(
         names=["key_1", "key_2"],
-        values=np.array([[0, 0], [1, 0], [2, 2], [2, 3]], dtype=np.int32),
+        values=np.array([[0, 0], [1, 0], [2, 2], [2, 3]]),
     )
 
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
@@ -92,25 +90,18 @@ def large_tensor_map():
     for i in range(8):
         tmp_bl = TensorBlock(
             values=np.full((4, 3, 1), 4.0),
-            samples=Labels(["samples"], np.array([[0], [1], [4], [5]], dtype=np.int32)),
-            components=[
-                Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))
-            ],
-            properties=Labels(["properties"], np.array([[i]], dtype=np.int32)),
+            samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
+            components=[Labels.arange("components", 3)],
+            properties=Labels(["properties"], np.array([[i]])),
         )
         tmp_bl.add_gradient(
             "parameter",
             data=np.full((2, 3, 1), 14.0),
             samples=Labels(
                 ["sample", "parameter"],
-                np.array([[0, 1], [3, 3]], dtype=np.int32),
+                np.array([[0, 1], [3, 3]]),
             ),
-            components=[
-                Labels(
-                    ["components"],
-                    np.array([[0], [1], [2]], dtype=np.int32),
-                )
-            ],
+            components=[Labels.arange("components", 3)],
         )
         block_list.append(tmp_bl)
 

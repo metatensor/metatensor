@@ -101,7 +101,7 @@ def _reduce_over_samples_block(
 
         samples_label = Labels(
             remaining_samples,
-            np.zeros((0, len(remaining_samples)), dtype=np.int32),
+            np.zeros((0, len(remaining_samples))),
         )
 
         result_block = TensorBlock(
@@ -355,9 +355,7 @@ def sum_over_samples_block(
     ...         ]),
     ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...     ),
+    ...     properties=Labels.arange("properties", 3),
     ... )
     >>> block_sum = sum_over_samples_block(block, sample_names="center")
     >>> print(block_sum.samples)
@@ -416,9 +414,7 @@ def sum_over_samples(
     ...         ]),
     ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...     ),
+    ...     properties=Labels.arange("properties", 3),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     ...
