@@ -468,7 +468,7 @@ def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
 
         keys_to_move = Labels(
             names=keys_to_move,
-            values=np.zeros((0, len(keys_to_move)), dtype=np.int32),
+            values=np.zeros((0, len(keys_to_move))),
         )
 
     assert isinstance(keys_to_move, Labels)

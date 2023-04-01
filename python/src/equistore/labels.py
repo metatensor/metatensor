@@ -171,7 +171,7 @@ class Labels(np.ndarray):
 
             labels = Labels(
                 names=["structure", "atom", "center_species"],
-                values=np.array([[0, 2, 4]], dtype=np.int32),
+                values=np.array([[0, 2, 4]]),
             )
 
             for label in labels.as_namedtuples():

@@ -216,32 +216,32 @@ class TensorBlock:
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
         ...             samples=Labels(
-        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...                 ["samples"], np.array([[0], [2], [4]])
         ...             ),
         ...             components=[Labels(
-        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...                 ["components"], np.array([[0]]))
         ...             ],
         ...             properties=Labels(
-        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
+        ...                 ["properties"], np.array([[0]])),
         ...         )
         >>> block_1.add_gradient(
         ...     "position",
         ...     samples=Labels(
-        ...        ["sample", "position"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...        ["sample", "position"], np.array([[0, -2], [2, 3]])
         ...     ),
         ...     data=np.full((2, 1, 1), 11.0),
-        ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        ...     components=[Labels(["components"], np.array([[0]]))],
         ... )
         >>> block_1.add_gradient(
         ...     "cell",
         ...     data=np.full((2, 6, 1, 1), 15.0),
         ...     samples=Labels(
-        ...        ["sample"], np.array([[0], [2]], dtype=np.int32)
+        ...        ["sample"], np.array([[0], [2]])
         ...     ),
         ...     components=[Labels(["cell"],
-        ...                 np.array([[0], [1], [2], [3], [4], [5]], dtype=np.int32)),
+        ...                 np.array([[0], [1], [2], [3], [4], [5]])),
         ...                 Labels(["components"],
-        ...                 np.array([[0]], dtype=np.int32))],
+        ...                 np.array([[0]]))],
         ... )
 
         >>> grad_wrt_position = block_1.gradient("position")
@@ -286,21 +286,21 @@ class TensorBlock:
         >>> block_1 = TensorBlock(
         ...             values=np.full((3, 1, 1), 1.0),
         ...             samples=Labels(
-        ...                 ["samples"], np.array([[0], [2], [4]], dtype=np.int32)
+        ...                 ["samples"], np.array([[0], [2], [4]])
         ...             ),
         ...             components=[Labels(
-        ...                 ["components"], np.array([[0]], dtype=np.int32))
+        ...                 ["components"], np.array([[0]]))
         ...             ],
         ...             properties=Labels(
-        ...                 ["properties"], np.array([[0]], dtype=np.int32)),
+        ...                 ["properties"], np.array([[0]])),
         ...         )
         >>> block_1.add_gradient(
         ...     "position",
         ...     samples=Labels(
-        ...        ["sample", "position"], np.array([[0, -2], [2, 3]], dtype=np.int32)
+        ...        ["sample", "position"], np.array([[0, -2], [2, 3]])
         ...     ),
         ...     data=np.full((2, 1, 1), 11.0),
-        ...     components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        ...     components=[Labels(["components"], np.array([[0]]))],
         ... )
         >>> print(block_1)
         TensorBlock
