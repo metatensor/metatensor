@@ -11,14 +11,12 @@ from equistore import Labels, TensorBlock
 
 @pytest.fixture
 def block():
-    b = TensorBlock(
+    return TensorBlock(
         values=np.full((3, 2), -1.0),
         samples=Labels(["samples"], np.array([[0], [2], [4]])),
         components=[],
         properties=Labels(["properties"], np.array([[5], [3]])),
     )
-
-    return b
 
 
 def test_gradient_no_sample_error(block):
@@ -104,7 +102,7 @@ def test_block_no_components(block):
 
 @pytest.fixture
 def block_components():
-    b = TensorBlock(
+    return TensorBlock(
         values=np.full((3, 3, 2, 2), -1.0),
         samples=Labels(["samples"], np.array([[0], [2], [4]])),
         components=[
@@ -113,8 +111,6 @@ def block_components():
         ],
         properties=Labels(["properties"], np.array([[5], [3]])),
     )
-
-    return b
 
 
 def test_block_with_components(block_components):

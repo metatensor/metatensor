@@ -12,7 +12,6 @@ from . import utils
 
 @pytest.fixture
 def tensor():
-    """A pytest fixture for the test function :func:`utils.tensor`."""
     return utils.tensor()
 
 

@@ -11,12 +11,11 @@ from .. import utils
 
 @pytest.fixture
 def tensor():
-    """A pytest fixture for the test function :func:`utils.tensor`."""
     return utils.tensor()
 
 
 @pytest.fixture
-def tensor_map_abs(tensor):
+def tensor_map_complex(tensor):
     """Manipulate tensor to be a suitable test for the `abs` function."""
     blocks = []
     for _, block in tensor:
@@ -41,9 +40,9 @@ def tensor_map_abs(tensor):
 
 
 @pytest.fixture
-def tensor_map_result(tensor_map_abs):
+def tensor_map_result(tensor_map_complex):
     blocks = []
-    for _, block in tensor_map_abs:
+    for _, block in tensor_map_complex:
         new_block = TensorBlock(
             values=np.abs(block.values),
             samples=block.samples,
@@ -61,18 +60,18 @@ def tensor_map_result(tensor_map_abs):
 
         blocks.append(new_block)
 
-    return TensorMap(keys=tensor_map_abs.keys, blocks=blocks)
+    return TensorMap(keys=tensor_map_complex.keys, blocks=blocks)
 
 
 @pytest.mark.parametrize("gradients", (True, False))
-def test_abs(gradients, tensor_map_abs, tensor_map_result):
+def test_abs(gradients, tensor_map_complex, tensor_map_result):
     if not gradients:
-        tensor_map_abs = equistore.remove_gradients(tensor_map_abs)
+        tensor_map_complex = equistore.remove_gradients(tensor_map_complex)
         tensor_map_result = equistore.remove_gradients(tensor_map_result)
 
-    tensor_map_copy = tensor_map_abs.copy()
+    tensor_map_copy = tensor_map_complex.copy()
 
-    equistore.equal_raise(equistore.abs(tensor_map_abs), tensor_map_result)
+    equistore.equal_raise(equistore.abs(tensor_map_complex), tensor_map_result)
 
     # Check the tensors haven't be modified in place
-    equistore.equal_raise(tensor_map_abs, tensor_map_copy)
+    equistore.equal_raise(tensor_map_complex, tensor_map_copy)
