@@ -38,18 +38,18 @@ class TestIo:
         assert gradient.data.shape == (59, 3, 5, 3)
 
     @pytest.mark.parametrize("use_numpy", (True, False))
-    def test_save(self, use_numpy, tmpdir, tensor_map):
+    def test_save(self, use_numpy, tmpdir, tensor):
         """Check that as saved file loads fine with numpy."""
         tmpfile = "serialize-test.npz"
 
         with tmpdir.as_cwd():
-            equistore.save(tmpfile, tensor_map, use_numpy=use_numpy)
+            equistore.save(tmpfile, tensor, use_numpy=use_numpy)
             data = np.load(tmpfile)
 
         assert len(data.keys()) == 29
 
-        assert_equal(data["keys"], tensor_map.keys)
-        for i, (_, block) in enumerate(tensor_map):
+        assert_equal(data["keys"], tensor.keys)
+        for i, (_, block) in enumerate(tensor):
             prefix = f"blocks/{i}/values"
             assert_equal(data[f"{prefix}/data"], block.values)
             assert_equal(data[f"{prefix}/samples"], block.samples)

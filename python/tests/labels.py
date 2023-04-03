@@ -76,8 +76,8 @@ class TestLabels:
             )
 
     @pytest.fixture
-    def labels(self, tensor_map):
-        return tensor_map.keys
+    def labels(self, tensor):
+        return tensor.keys
 
     def test_native_labels(self, labels):
         assert labels.names == ("key_1", "key_2")

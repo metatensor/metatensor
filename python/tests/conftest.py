@@ -7,7 +7,7 @@ from equistore import Labels, TensorBlock, TensorMap
 
 
 @pytest.fixture
-def tensor_map():
+def tensor():
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
@@ -84,12 +84,12 @@ def tensor_map():
 
 
 @pytest.fixture
-def large_tensor_map(tensor_map):
+def large_tensor(tensor):
     """
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    block_list = [block.copy() for _, block in tensor_map]
+    block_list = [block.copy() for _, block in tensor]
 
     for i in range(8):
         tmp_bl = TensorBlock(

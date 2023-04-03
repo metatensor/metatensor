@@ -9,10 +9,10 @@ class TestAbs:
     """Unit tests for the :py:func:`equistore.abs` function."""
 
     @pytest.fixture
-    def tensor_map_abs(self, tensor_map):
-        """Manipulate tensor_map to be a suitable test for the `abs` function."""
+    def tensor_map_abs(self, tensor):
+        """Manipulate tensor to be a suitable test for the `abs` function."""
         blocks = []
-        for _, block in tensor_map:
+        for _, block in tensor:
             new_block = TensorBlock(
                 values=-block.values + 3j,
                 samples=block.samples,
@@ -30,7 +30,7 @@ class TestAbs:
 
             blocks.append(new_block)
 
-        return TensorMap(keys=tensor_map.keys, blocks=blocks)
+        return TensorMap(keys=tensor.keys, blocks=blocks)
 
     @pytest.fixture
     def tensor_map_result(self, tensor_map_abs):
