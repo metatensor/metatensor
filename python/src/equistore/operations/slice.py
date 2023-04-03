@@ -309,7 +309,7 @@ def _check_args(
     block = tensor.block(0) if isinstance(tensor, TensorMap) else tensor
     # Check if labels are Labels if passed
     # Check type
-    if not isinstance(labels, Labels) and labels is not None:
+    if not isinstance(labels, Labels):
         print(type(labels))
         raise TypeError("labels must be a `Labels` object")
     if axis == "samples" and labels is not None:
