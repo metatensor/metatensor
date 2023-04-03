@@ -1,8 +1,12 @@
+"""Specific pytest file allowing to share fixtures across files."""
+
 import numpy as np
+import pytest
 
 from equistore import Labels, TensorBlock, TensorMap
 
 
+@pytest.fixture
 def tensor_map():
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
@@ -79,13 +83,13 @@ def tensor_map():
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
 
 
-def large_tensor_map():
+@pytest.fixture
+def large_tensor_map(tensor_map):
     """
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    tensor = tensor_map()
-    block_list = [block.copy() for _, block in tensor]
+    block_list = [block.copy() for _, block in tensor_map]
 
     for i in range(8):
         tmp_bl = TensorBlock(

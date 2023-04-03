@@ -3,16 +3,16 @@ import copy
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
-from utils import large_tensor_map, tensor_map
 
 import equistore
 
 
 class TestTensorMap:
-    @pytest.fixture
-    def tensor(self):
-        return tensor_map()
+    def test_copy(self, tensor_map):
+        copy = tensor_map.copy()
+        block_1_values_id = id(tensor_map.block(0).values)
 
+<<<<<<< HEAD
     @pytest.fixture
     def large_tensor(self):
         return large_tensor_map()
@@ -23,6 +23,9 @@ class TestTensorMap:
         block_1_values_id = id(tensor.block(0).values)
 
         del tensor
+=======
+        del tensor_map
+>>>>>>> 1b372b6 (More use of pytest functionalities)
 
         assert id(clone.block(0).values) != block_1_values_id
         assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
@@ -41,21 +44,21 @@ class TestTensorMap:
         with pytest.raises(ValueError, match=msg):
             copy.copy(tensor)
 
-    def test_keys(self, tensor):
-        assert tensor.keys.names == ("key_1", "key_2")
-        assert len(tensor.keys) == 4
-        assert len(tensor) == 4
-        assert tuple(tensor.keys[0]) == (0, 0)
-        assert tuple(tensor.keys[1]) == (1, 0)
-        assert tuple(tensor.keys[2]) == (2, 2)
-        assert tuple(tensor.keys[3]) == (2, 3)
+    def test_keys(self, tensor_map):
+        assert tensor_map.keys.names == ("key_1", "key_2")
+        assert len(tensor_map.keys) == 4
+        assert len(tensor_map) == 4
+        assert tuple(tensor_map.keys[0]) == (0, 0)
+        assert tuple(tensor_map.keys[1]) == (1, 0)
+        assert tuple(tensor_map.keys[2]) == (2, 2)
+        assert tuple(tensor_map.keys[3]) == (2, 3)
 
-    def test_print(self, tensor):
+    def test_print(self, tensor_map):
         """
         Test routine for the print function of the TensorBlock.
         It compare the results with those in a file.
         """
-        repr = tensor.__repr__()
+        repr = tensor_map.__repr__()
         expected = """TensorMap with 4 blocks
 keys: ['key_1' 'key_2']
           0       0
@@ -64,8 +67,8 @@ keys: ['key_1' 'key_2']
           2       3"""
         assert expected == repr
 
-    def test_print_large(self, large_tensor):
-        _print = large_tensor.__repr__()
+    def test_print_large(self, large_tensor_map):
+        _print = large_tensor_map.__repr__()
         expected = """TensorMap with 12 blocks
 keys: ['key_1' 'key_2']
           0       0
@@ -77,57 +80,57 @@ keys: ['key_1' 'key_2']
           3       5"""
         assert expected == _print
 
-    def test_labels_names(self, tensor):
-        assert tensor.sample_names == ("samples",)
-        assert tensor.components_names == [("components",)]
-        assert tensor.property_names == ("properties",)
+    def test_labels_names(self, tensor_map):
+        assert tensor_map.sample_names == ("samples",)
+        assert tensor_map.components_names == [("components",)]
+        assert tensor_map.property_names == ("properties",)
 
-    def test_block(self, tensor):
+    def test_block(self, tensor_map):
         # block by index
-        block = tensor.block(2)
+        block = tensor_map.block(2)
         assert_equal(block.values, np.full((4, 3, 1), 3.0))
 
         # block by index with __getitem__
-        block = tensor[2]
+        block = tensor_map[2]
         assert_equal(block.values, np.full((4, 3, 1), 3.0))
 
         # block by kwargs
-        block = tensor.block(key_1=1, key_2=0)
+        block = tensor_map.block(key_1=1, key_2=0)
         assert_equal(block.values, np.full((3, 1, 3), 2.0))
 
         # block by Label entry
-        block = tensor.block(tensor.keys[0])
+        block = tensor_map.block(tensor_map.keys[0])
         assert_equal(block.values, np.full((3, 1, 1), 1.0))
 
         # block by Label entry with __getitem__
-        block = tensor[tensor.keys[0]]
+        block = tensor_map[tensor_map.keys[0]]
         assert_equal(block.values, np.full((3, 1, 1), 1.0))
 
         # More arguments than needed: two integers
         # by index
         msg = "only one non-keyword argument is supported, 2 are given"
         with pytest.raises(ValueError, match=msg):
-            tensor.block(3, 4)
+            tensor_map.block(3, 4)
 
         # 4 input with the first as integer by __getitem__
         msg = "only one non-keyword argument is supported, 4 are given"
         with pytest.raises(ValueError, match=msg):
-            tensor[3, 4, 7.0, "r"]
+            tensor_map[3, 4, 7.0, "r"]
 
         # More arguments than needed: 3 Labels
         msg = "only one non-keyword argument is supported, 3 are given"
         with pytest.raises(ValueError, match=msg):
-            tensor.block(tensor.keys[0], tensor.keys[1], tensor.keys[3])
+            tensor_map.block(tensor_map.keys[0], tensor_map.keys[1], tensor_map.keys[3])
 
         # by __getitem__
         msg = "only one non-keyword argument is supported, 2 are given"
         with pytest.raises(ValueError, match=msg):
-            tensor[tensor.keys[1], 4]
+            tensor_map[tensor_map.keys[1], 4]
 
         # 0 blocks matching criteria
         msg = "Couldn't find any block matching the selection 'key_1 = 3'"
         with pytest.raises(ValueError, match=msg):
-            tensor.block(key_1=3)
+            tensor_map.block(key_1=3)
 
         # more than one block matching criteria
         msg = (
@@ -135,49 +138,49 @@ keys: ['key_1' 'key_2']
             "if you want to get all of them"
         )
         with pytest.raises(ValueError, match=msg):
-            tensor.block(key_2=0)
+            tensor_map.block(key_2=0)
 
-    def test_blocks(self, tensor):
+    def test_blocks(self, tensor_map):
         # block by index
-        blocks = tensor.blocks(2)
+        blocks = tensor_map.blocks(2)
         assert len(blocks) == 1
         assert_equal(blocks[0].values, np.full((4, 3, 1), 3.0))
 
         # block by kwargs
-        blocks = tensor.blocks(key_1=1, key_2=0)
+        blocks = tensor_map.blocks(key_1=1, key_2=0)
         assert len(blocks) == 1
         assert_equal(blocks[0].values, np.full((3, 1, 3), 2.0))
 
         # more than one block
-        blocks = tensor.blocks(key_2=0)
+        blocks = tensor_map.blocks(key_2=0)
         assert len(blocks) == 2
 
         assert_equal(blocks[0].values, np.full((3, 1, 1), 1.0))
         assert_equal(blocks[1].values, np.full((3, 1, 3), 2.0))
 
-    def test_iter(self, tensor):
+    def test_iter(self, tensor_map):
         expected = [
             ((0, 0), np.full((3, 1, 1), 1.0)),
             ((1, 0), np.full((3, 1, 3), 2.0)),
             ((2, 2), np.full((4, 3, 1), 3.0)),
             ((2, 3), np.full((4, 3, 1), 4.0)),
         ]
-        for i, (sparse, block) in enumerate(tensor):
+        for i, (sparse, block) in enumerate(tensor_map):
             expected_sparse, expected_values = expected[i]
 
             assert tuple(sparse) == expected_sparse
             assert_equal(block.values, expected_values)
 
-    def test_keys_to_properties(self, tensor):
-        tensor = tensor.keys_to_properties("key_1")
+    def test_keys_to_properties(self, tensor_map):
+        tensor_map = tensor_map.keys_to_properties("key_1")
 
-        assert tensor.keys.names == ("key_2",)
-        assert tuple(tensor.keys[0]) == (0,)
-        assert tuple(tensor.keys[1]) == (2,)
-        assert tuple(tensor.keys[2]) == (3,)
+        assert tensor_map.keys.names == ("key_2",)
+        assert tuple(tensor_map.keys[0]) == (0,)
+        assert tuple(tensor_map.keys[1]) == (2,)
+        assert tuple(tensor_map.keys[2]) == (3,)
 
         # The new first block contains the old first two blocks merged
-        block = tensor.block(0)
+        block = tensor_map.block(0)
         assert tuple(block.samples[0]) == (0,)
         assert tuple(block.samples[1]) == (1,)
         assert tuple(block.samples[2]) == (2,)
@@ -221,29 +224,29 @@ keys: ['key_1' 'key_2']
         assert_equal(gradient.data, expected)
 
         # The new second block contains the old third block
-        block = tensor.block(1)
+        block = tensor_map.block(1)
         assert block.properties.names == ("key_1", "properties")
         assert tuple(block.properties[0]) == (2, 0)
 
         assert_equal(block.values, np.full((4, 3, 1), 3.0))
 
         # The new third block contains the old fourth block
-        block = tensor.block(2)
+        block = tensor_map.block(2)
         assert block.properties.names == ("key_1", "properties")
         assert tuple(block.properties[0]) == (2, 0)
 
         assert_equal(block.values, np.full((4, 3, 1), 4.0))
 
-    def test_keys_to_samples(self, tensor):
-        tensor = tensor_map().keys_to_samples("key_2", sort_samples=True)
+    def test_keys_to_samples(self, tensor_map):
+        tensor_map = tensor_map.keys_to_samples("key_2", sort_samples=True)
 
-        assert tensor.keys.names == ("key_1",)
-        assert tuple(tensor.keys[0]) == (0,)
-        assert tuple(tensor.keys[1]) == (1,)
-        assert tuple(tensor.keys[2]) == (2,)
+        assert tensor_map.keys.names == ("key_1",)
+        assert tuple(tensor_map.keys[0]) == (0,)
+        assert tuple(tensor_map.keys[1]) == (1,)
+        assert tuple(tensor_map.keys[2]) == (2,)
 
         # The first two blocks are not modified
-        block = tensor.block(0)
+        block = tensor_map.block(0)
         assert block.samples.names, ("samples", "key_2")
         assert tuple(block.samples[0]) == (0, 0)
         assert tuple(block.samples[1]) == (2, 0)
@@ -251,7 +254,7 @@ keys: ['key_1' 'key_2']
 
         assert_equal(block.values, np.full((3, 1, 1), 1.0))
 
-        block = tensor.block(1)
+        block = tensor_map.block(1)
         assert block.samples.names == ("samples", "key_2")
         assert tuple(block.samples[0]) == (0, 0)
         assert tuple(block.samples[1]) == (1, 0)
@@ -260,7 +263,7 @@ keys: ['key_1' 'key_2']
         assert_equal(block.values, np.full((3, 1, 3), 2.0))
 
         # The new third block contains the old third and fourth blocks merged
-        block = tensor.block(2)
+        block = tensor_map.block(2)
 
         assert block.samples.names == ("samples", "key_2")
         assert tuple(block.samples[0]) == (0, 2)
@@ -301,10 +304,10 @@ keys: ['key_1' 'key_2']
         )
         assert_equal(gradient.data, expected)
 
-    def test_keys_to_samples_unsorted(self, tensor):
-        tensor = tensor.keys_to_samples("key_2", sort_samples=False)
+    def test_keys_to_samples_unsorted(self, tensor_map):
+        tensor_map = tensor_map.keys_to_samples("key_2", sort_samples=False)
 
-        block = tensor.block(2)
+        block = tensor_map.block(2)
         assert block.samples.names, ("samples", "key_2")
         assert tuple(block.samples[0]) == (0, 2)
         assert tuple(block.samples[1]) == (3, 2)
@@ -315,10 +318,10 @@ keys: ['key_1' 'key_2']
         assert tuple(block.samples[6]) == (2, 3)
         assert tuple(block.samples[7]) == (5, 3)
 
-    def test_components_to_properties(self, tensor):
-        tensor = tensor.components_to_properties("components")
+    def test_components_to_properties(self, tensor_map):
+        tensor_map = tensor_map.components_to_properties("components")
 
-        block = tensor.block(0)
+        block = tensor_map.block(0)
         assert block.samples.names == ("samples",)
         assert tuple(block.samples[0]) == (0,)
         assert tuple(block.samples[1]) == (2,)
@@ -329,7 +332,7 @@ keys: ['key_1' 'key_2']
         assert block.properties.names == ("components", "properties")
         assert tuple(block.properties[0]) == (0, 0)
 
-        block = tensor.block(3)
+        block = tensor_map.block(3)
         assert block.samples.names, ("samples",)
         assert tuple(block.samples[0]) == (0,)
         assert tuple(block.samples[1]) == (1,)
@@ -343,29 +346,31 @@ keys: ['key_1' 'key_2']
         assert tuple(block.properties[1]) == (1, 0)
         assert tuple(block.properties[2]) == (2, 0)
 
-    def test_eq(self, tensor):
-        assert equistore.equal(tensor, tensor) == (tensor == tensor)
+    def test_eq(self, tensor_map):
+        assert equistore.equal(tensor_map, tensor_map) == (tensor_map == tensor_map)
 
-    def test_neq(self, tensor, large_tensor):
-        assert equistore.equal(tensor, large_tensor) == (tensor == large_tensor)
+    def test_neq(self, tensor_map, large_tensor_map):
+        assert equistore.equal(tensor_map, large_tensor_map) == (
+            tensor_map == large_tensor_map
+        )
 
-    def test_add(self, tensor):
-        assert equistore.add(tensor, 1) == (tensor + 1)
+    def test_add(self, tensor_map):
+        assert equistore.add(tensor_map, 1) == (tensor_map + 1)
 
-    def test_sub(self, tensor):
-        assert equistore.subtract(tensor, 1) == (tensor - 1)
+    def test_sub(self, tensor_map):
+        assert equistore.subtract(tensor_map, 1) == (tensor_map - 1)
 
-    def test_mul(self, tensor):
-        assert equistore.multiply(tensor, 2) == (tensor * 2)
+    def test_mul(self, tensor_map):
+        assert equistore.multiply(tensor_map, 2) == (tensor_map * 2)
 
-    def test_matmul(self, tensor):
-        tensor = tensor.components_to_properties("components")
-        tensor = equistore.remove_gradients(tensor)
+    def test_matmul(self, tensor_map):
+        tensor_map = tensor_map.components_to_properties("components")
+        tensor_map = equistore.remove_gradients(tensor_map)
 
-        assert equistore.dot(tensor, tensor) == (tensor @ tensor)
+        assert equistore.dot(tensor_map, tensor_map) == (tensor_map @ tensor_map)
 
-    def test_truediv(self, tensor):
-        assert equistore.divide(tensor, 2) == (tensor / 2)
+    def test_truediv(self, tensor_map):
+        assert equistore.divide(tensor_map, 2) == (tensor_map / 2)
 
-    def test_pow(self, tensor):
-        assert equistore.pow(tensor, 2) == (tensor**2)
+    def test_pow(self, tensor_map):
+        assert equistore.pow(tensor_map, 2) == (tensor_map**2)

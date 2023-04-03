@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
-from utils import tensor_map
 
 from equistore import EquistoreError, Labels
 
@@ -76,10 +75,11 @@ class TestLabels:
                 names=["a", "b"], values=np.array([[0, 0]], dtype=np.float64)
             )
 
-    def test_native_labels(self):
-        tensor = tensor_map()
-        labels = tensor.keys
+    @pytest.fixture
+    def labels(self, tensor_map):
+        return tensor_map.keys
 
+    def test_native_labels(self, labels):
         assert labels.names == ("key_1", "key_2")
         assert len(labels) == 4
         assert tuple(labels[0]) == (0, 0)
@@ -97,26 +97,17 @@ class TestLabels:
         )
         assert_equal(labels.asarray(), expected)
 
-    def test_position(self):
-        tensor = tensor_map()
-        labels = tensor.keys
-
+    def test_position(self, labels):
         assert labels.position((0, 0)) == 0
         assert labels.position((2, 3)) == 3
         assert labels.position((2, -1)) is None
 
-    def test_contains(self):
-        tensor = tensor_map()
-        labels = tensor.keys
-
+    def test_contains(self, labels):
         assert (0, 0) in labels
         assert (2, 3) in labels
         assert (2, -1) not in labels
 
-    def test_named_tuples(self):
-        tensor = tensor_map()
-        labels = tensor.keys
-
+    def test_named_tuples(self, labels):
         iterator = labels.as_namedtuples()
         first = next(iterator)
 
@@ -135,10 +126,7 @@ class TestLabels:
         with pytest.raises(StopIteration):
             next(iterator)
 
-    def test_not_writeable(self):
-        tensor = tensor_map()
-        labels = tensor.keys
-
+    def test_not_writeable(self, labels):
         with pytest.raises(ValueError, match="assignment destination is read-only"):
             labels[0][0] = 4
 

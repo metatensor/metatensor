@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
-from utils import tensor_map
 
 import equistore
 from equistore import TensorMap
@@ -39,19 +38,18 @@ class TestIo:
         assert gradient.data.shape == (59, 3, 5, 3)
 
     @pytest.mark.parametrize("use_numpy", (True, False))
-    def test_save(self, use_numpy, tmpdir):
+    def test_save(self, use_numpy, tmpdir, tensor_map):
         """Check that as saved file loads fine with numpy."""
-        tensor = tensor_map()
         tmpfile = "serialize-test.npz"
 
         with tmpdir.as_cwd():
-            equistore.save(tmpfile, tensor, use_numpy=use_numpy)
+            equistore.save(tmpfile, tensor_map, use_numpy=use_numpy)
             data = np.load(tmpfile)
 
         assert len(data.keys()) == 29
 
-        assert_equal(data["keys"], tensor.keys)
-        for i, (_, block) in enumerate(tensor):
+        assert_equal(data["keys"], tensor_map.keys)
+        for i, (_, block) in enumerate(tensor_map):
             prefix = f"blocks/{i}/values"
             assert_equal(data[f"{prefix}/data"], block.values)
             assert_equal(data[f"{prefix}/samples"], block.samples)
