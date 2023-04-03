@@ -41,7 +41,9 @@ def unique_metadata(
         from equistore.operations import unique_metadata
 
         unique_structures = unique_metadata(
-            tensor, axis="samples", names=["structure"],
+            tensor,
+            axis="samples",
+            names=["structure"],
         )
 
     Or, to find the unique ``"atom"`` indices in the ``"samples"`` metadata present
@@ -50,7 +52,10 @@ def unique_metadata(
     .. code-block:: python
 
         unique_grad_atoms = unique_metadata(
-            tensor, axis="samples", names=["atom"], gradient_param="positions",
+            tensor,
+            axis="samples",
+            names=["atom"],
+            gradient_param="positions",
         )
 
     The unique indices can then be used to split the :py:class:`TensorMap`
@@ -61,7 +66,7 @@ def unique_metadata(
 
         Labels(
             [(0,), (1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,)],
-            dtype=[('structure', '<i4')],
+            dtype=[("structure", "<i4")],
         )
 
     Then, the following code will split the :py:class:`TensorMap` into 2
@@ -75,7 +80,7 @@ def unique_metadata(
         [tensor_1, tensor_2] = split(
             tensor,
             axis="samples",
-            grouped_idxs=[unique_structures[:4], unique_structures[4:]]
+            grouped_idxs=[unique_structures[:4], unique_structures[4:]],
         )
 
     :param tensor: the :py:class:`TensorMap` to find unique indices for.
@@ -141,7 +146,9 @@ def unique_metadata_block(
     .. code-block:: python
 
         unique_samples = unique_metadata_block(
-            block, axis="samples", names=["structure"],
+            block,
+            axis="samples",
+            names=["structure"],
         )
 
     To find the unique ``"atom"`` indices along the ``"samples"`` axis present
@@ -150,7 +157,10 @@ def unique_metadata_block(
     .. code-block:: python
 
         unique_grad_samples = unique_metadata_block(
-            block, axis="samples", names=["atom"], gradient_param="positions",
+            block,
+            axis="samples",
+            names=["atom"],
+            gradient_param="positions",
         )
 
     :param block: the :py:class:`TensorBlock` to find unique indices for.

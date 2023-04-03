@@ -37,48 +37,42 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
     >>> import equistore
-    ...
-    >>> values_X = np.array([
-    ...     [1.0, 2.0],
-    ...     [3.0, 1.0],
-    ... ])
-    ...
-    >>> values_Y = np.array([
-    ...     [1.0, 0.0],
-    ...     [0.0, 1.0],
-    ... ])
-    ...
+    >>> values_X = np.array(
+    ...     [
+    ...         [1.0, 2.0],
+    ...         [3.0, 1.0],
+    ...     ]
+    ... )
+    >>> values_Y = np.array(
+    ...     [
+    ...         [1.0, 0.0],
+    ...         [0.0, 1.0],
+    ...     ]
+    ... )
     >>> samples = Labels(
     ...     ["structure"],
     ...     np.array([[0], [1]]),
     ... )
-    ...
     >>> components = []
-    ...
-    >>> properties = Labels(
-    ...     ["properties"],
-    ...     np.array([[0], [1]])
-    ... )
-    ...
+    >>> properties = Labels(["properties"], np.array([[0], [1]]))
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> block_X = TensorBlock(
-    ...     values_X, samples, components, properties,
+    ...     values_X,
+    ...     samples,
+    ...     components,
+    ...     properties,
     ... )
-    ...
     >>> block_Y = TensorBlock(
-    ...     values_Y, samples, components, properties,
+    ...     values_Y,
+    ...     samples,
+    ...     components,
+    ...     properties,
     ... )
-    ...
     >>> X = TensorMap(keys, [block_X])
-    ...
     >>> Y = TensorMap(keys, [block_Y])
-    ...
     >>> w = equistore.lstsq(X, Y, rcond=1e-10)
-    ...
     >>> # Note: we take the transpose here
     >>> y = X.block(0).values @ w.block(0).values.T
-    ...
     >>> # Set small entries in y to 0, they are numerical noise
     >>> mask = np.abs(y) < 1e-15
     >>> y[mask] = 0.0

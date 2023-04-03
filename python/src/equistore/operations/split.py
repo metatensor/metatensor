@@ -32,19 +32,10 @@ def split(
             tensor,
             axis="samples",
             grouped_idxs=[
-                Labels(
-                    names=["structure"],
-                    values=np.array([[0], [6], [7]])
-                ),
-                Labels(
-                    names=["structure"],
-                    values=np.array([[2], [3], [4]])
-                ),
-                Labels(
-                    names=["structure"],
-                    values=np.array([[1], [5], [8], [9], [10]])
-                ),
-            ]
+                Labels(names=["structure"], values=np.array([[0], [6], [7]])),
+                Labels(names=["structure"], values=np.array([[2], [3], [4]])),
+                Labels(names=["structure"], values=np.array([[1], [5], [8], [10]])),
+            ],
         )
 
     :param tensor: a :py:class:`TensorMap` to be split
@@ -105,19 +96,12 @@ def split_block(
             block,
             axis="samples",
             grouped_idxs=[
+                Labels(names=["structure"], values=np.array([[0], [6], [7]])),
+                Labels(names=["structure"], values=np.array([[2], [3], [4]])),
                 Labels(
-                    names=["structure"],
-                    values=np.array([[0], [6], [7]])
+                    names=["structure"], values=np.array([[1], [5], [8], [9], [10]])
                 ),
-                Labels(
-                    names=["structure"],
-                    values=np.array([[2], [3], [4]])
-                ),
-                Labels(
-                    names=["structure"],
-                    values=np.array([[1], [5], [8], [9], [10]])
-                ),
-            ]
+            ],
         )
 
     :param block: a :py:class:`TensorBlock` to be split

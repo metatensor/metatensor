@@ -336,7 +336,7 @@ def _print_labels(Labels: Labels, header: str, print_limit=10) -> str:
 
     The result will look like
 
-    .. code-block::
+    .. code-block:: text
 
         <header>: ['name_1', 'name_2', 'name_3']
                      v11       v12       v13

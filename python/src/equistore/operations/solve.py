@@ -28,7 +28,6 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
-    ...
     >>> np.random.seed(0)
     >>> # We construct two independent variables, each sampled at 100 random points
     >>> X_values = np.random.rand(100, 2)
@@ -36,36 +35,30 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> # Build a linear function of the two variables, with coefficients defined
     >>> # in the true_c array, and add some random noise
     >>> y_values = (X_values @ true_c + np.random.normal(size=(100,))).reshape((100, 1))
-    ...
     >>> covariance = X_values.T @ X_values
     >>> y_regression = X_values.T @ y_values
-    ...
     >>> X = TensorMap(
-    ...     keys = Labels(
-    ...         names = ["dummy"],
-    ...         values = np.array([[0]])
-    ...     ),
-    ...     blocks = [TensorBlock(
-    ...         samples = Labels.arange("sample", 2),
-    ...         components = [],
-    ...         properties = Labels.arange("properties_for_regression", 2),
-    ...         values = covariance
-    ...     )]
+    ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
+    ...     blocks=[
+    ...         TensorBlock(
+    ...             samples=Labels.arange("sample", 2),
+    ...             components=[],
+    ...             properties=Labels.arange("properties_for_regression", 2),
+    ...             values=covariance,
+    ...         )
+    ...     ],
     ... )
-    ...
     >>> y = TensorMap(
-    ...     keys = Labels(
-    ...         names = ["dummy"],
-    ...         values = np.array([[0]])
-    ...     ),
-    ...     blocks = [TensorBlock(
-    ...         samples = Labels.arange("sample", 2),
-    ...         components = [],
-    ...         properties = Labels.arange("property_to_regress", 1),
-    ...         values = y_regression
-    ...     )]
+    ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
+    ...     blocks=[
+    ...         TensorBlock(
+    ...             samples=Labels.arange("sample", 2),
+    ...             components=[],
+    ...             properties=Labels.arange("property_to_regress", 1),
+    ...             values=y_regression,
+    ...         )
+    ...     ],
     ... )
-    ...
     >>> c = equistore.solve(X, y)
     >>> print(c.block())
     TensorBlock

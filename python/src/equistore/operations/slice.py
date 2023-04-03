@@ -30,11 +30,11 @@ def slice(
                 values=np.array(
                     [[0, 1], [0, 6], [1, 6], [3, 16]]
                 ),  # must be a 2D-array
-            )
+            ),
             properties=Labels(
-                names=["n",],  # radial channel
-                values=np.array([[3,], [4,], [5,]]),
-            )
+                names=["n"],  # radial channel
+                values=np.array([[3], [4], [5]]),
+            ),
         )
 
     Also note that this function will return a :py:class:`TensorMap` whose
@@ -119,11 +119,11 @@ def slice_block(
                 values=np.array(
                     [[0, 1], [0, 6], [1, 6], [3, 16]]
                 ),  # must be a 2D-array
-            )
+            ),
             properties=Labels(
-                names=["n",],  # radial channel
+                names=["n"],  # radial channel
                 values=np.array([[3], [4], [5]]),
-            )
+            ),
         )
 
     For the empty blocks that may be returned, although there will be no actual
