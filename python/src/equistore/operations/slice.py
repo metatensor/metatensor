@@ -275,7 +275,7 @@ def _slice_block(
                     )
 
                 new_grad_data = new_grad_data[grad_samples_filter]
-            if axis == "properties":
+            else:  # properties
                 new_grad_data = new_grad_data[..., properties_filter]
 
             # Add sliced Gradient to the TensorBlock
