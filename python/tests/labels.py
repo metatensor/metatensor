@@ -171,7 +171,7 @@ def test_labels_contiguous():
 
     assert np.all(array == labels)
 
-    
+
 def test_arange_one_argument():
     labels_arange = Labels.arange("name", stop=10)
     assert labels_arange.asarray().shape == (10, 1)
@@ -179,35 +179,27 @@ def test_arange_one_argument():
     np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10))
 
 
-def test_arange_two_arguments(self):
+def test_arange_two_arguments():
     labels_arange = Labels.arange("dummy", 10, 42)
     assert labels_arange.names == ("dummy",)
-    np.testing.assert_equal(
-        labels_arange.asarray().reshape((-1,)), np.arange(10, 42)
-    )
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10, 42))
 
     labels_arange = Labels.arange("dummy", start=10, stop=42)
     assert labels_arange.names == ("dummy",)
-    np.testing.assert_equal(
-        labels_arange.asarray().reshape((-1,)), np.arange(10, 42)
-    )
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10, 42))
 
 
-def test_arange_three_arguments(self):
+def test_arange_three_arguments():
     labels_arange = Labels.arange("samples", 0, 10, 2)
     assert labels_arange.names == ("samples",)
-    np.testing.assert_equal(
-        labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2)
-    )
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2))
 
     labels_arange = Labels.arange("samples", start=0, stop=10, step=2)
     assert labels_arange.names == ("samples",)
-    np.testing.assert_equal(
-        labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2)
-    )
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2))
 
 
-def test_arange_incorrect_arguments(self):
+def test_arange_incorrect_arguments():
     with pytest.raises(ValueError, match="3"):
         Labels.arange("dummy", 0, 10, 2, 4)
     with pytest.raises(ValueError, match="at least"):
