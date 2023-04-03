@@ -285,8 +285,6 @@ def _slice_block(
                 components=gradient.components,
                 data=new_grad_data,
             )
-    elif labels is None:
-        new_block = block.copy()
     return new_block
 
 
