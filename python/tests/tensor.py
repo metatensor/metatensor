@@ -1,4 +1,5 @@
 import copy
+import sys
 
 import numpy as np
 import pytest
@@ -21,10 +22,15 @@ def large_tensor():
     return utils.large_tensor()
 
 
-def test_copy(tensor):
+def test_copy():
+    tensor = utils.tensor()
     # Using TensorMap.copy
     clone = tensor.copy()
     block_1_values_id = id(tensor.block(0).values)
+
+    # We should have exactly 2 references to the object: one in this function,
+    # and one passed to `sys.getrefcount`
+    assert sys.getrefcount(tensor) == 2
 
     del tensor
 
