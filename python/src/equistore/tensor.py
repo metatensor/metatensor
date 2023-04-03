@@ -194,10 +194,7 @@ class TensorMap:
             # this assumes `tensor.keys.names == ("key", "symmetric")`
 
             # with Labels containing a single entry
-            labels = Labels(
-                names=["key", "symmetric"],
-                values=np.array([[-3, 4]])
-            )
+            labels = Labels(names=["key", "symmetric"], values=np.array([[-3, 4]]))
             block = tensor.block(labels)
         """
         if len(args) > 1:
@@ -255,10 +252,7 @@ class TensorMap:
             # this assumes `tensor.keys.names == ("key", "symmetric")`
 
             # with Labels containing a single entry
-            labels = Labels(
-                names=["key"],
-                values=np.array([[-3]])
-            )
+            labels = Labels(names=["key"], values=np.array([[-3]]))
             blocks = tensor.blocks(labels)
         """
 
