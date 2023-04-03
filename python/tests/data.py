@@ -20,9 +20,6 @@ from equistore import data
 from equistore._c_api import EQS_SUCCESS, c_uintptr_t, eqs_array_t, eqs_sample_mapping_t
 
 
-ROOT = os.path.dirname(__file__)
-
-
 def free_eqs_array(array):
     array.destroy(array.ptr)
 
@@ -220,34 +217,35 @@ def create_test_array(shape_ptr, shape_count, array):
     array[0] = eqs_array
 
 
-class TestRustData:
-    def test_parent_keepalive(self):
-        path = os.path.join(ROOT, "..", "..", "equistore-core", "tests", "data.npz")
-        tensor = equistore.io.load_custom_array(path, create_test_array)
+def test_parent_keepalive():
+    path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "equistore-core", "tests", "data.npz"
+    )
+    tensor = equistore.io.load_custom_array(path, create_test_array)
 
-        values = tensor.block(0).values
-        assert isinstance(values, equistore.data.extract.ExternalCpuArray)
-        assert values._parent is not None
+    values = tensor.block(0).values
+    assert isinstance(values, equistore.data.extract.ExternalCpuArray)
+    assert values._parent is not None
 
-        tensor_ref = weakref.ref(tensor)
-        del tensor
-        gc.collect()
+    tensor_ref = weakref.ref(tensor)
+    del tensor
+    gc.collect()
 
-        # values should keep the tensor alive
-        assert tensor_ref() is not None
+    # values should keep the tensor alive
+    assert tensor_ref() is not None
 
-        view = values[::2]
-        del values
-        gc.collect()
+    view = values[::2]
+    del values
+    gc.collect()
 
-        # view should keep the tensor alive
-        assert tensor_ref() is not None
+    # view should keep the tensor alive
+    assert tensor_ref() is not None
 
-        transformed = np.sum(view)
-        del view
-        gc.collect()
+    transformed = np.sum(view)
+    del view
+    gc.collect()
 
-        # transformed should NOT keep the tensor alive
-        assert tensor_ref() is None
+    # transformed should NOT keep the tensor alive
+    assert tensor_ref() is None
 
-        assert np.isclose(transformed, 1.1596965632269784)
+    assert np.isclose(transformed, 1.1596965632269784)
