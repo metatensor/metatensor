@@ -312,7 +312,7 @@ def _check_args(
     if not isinstance(labels, Labels):
         print(type(labels))
         raise TypeError("labels must be a `Labels` object")
-    if axis == "samples" and labels is not None:
+    if axis == "samples":
         # Check names
         s_names = block.samples.names
         for name in labels.names:
