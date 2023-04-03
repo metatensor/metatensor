@@ -321,7 +321,7 @@ def _check_args(
                     f"invalid sample name '{name}' which is not part of the input"
                 )
     # Check properties Labels if passed
-    if axis == "properties" and labels is not None:
+    else:  # properties
         # Check names
         p_names = block.properties.names
         for name in labels.names:
