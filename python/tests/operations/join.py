@@ -85,8 +85,12 @@ class TestJoinTensorMap:
 
     def test_join_properties_values(self, tensor):
         """Test values for joining along `properties`."""
-        ts_1 = equistore.slice(tensor, properties=tensor[0].properties[:1])
-        ts_2 = equistore.slice(tensor, properties=tensor[0].properties[1:])
+        ts_1 = equistore.slice(
+            tensor, axis="properties", labels=tensor[0].properties[:1]
+        )
+        ts_2 = equistore.slice(
+            tensor, axis="properties", labels=tensor[0].properties[1:]
+        )
 
         tensor_joined = equistore.join([ts_1, ts_2], axis="properties")
 
@@ -175,8 +179,8 @@ class TestJoinTensorMap:
         )
 
         tm = TensorMap(keys, [tensor[0].copy()])
-        ts_1 = equistore.slice(tm, samples=tensor[0].samples[:1])
-        ts_2 = equistore.slice(tm, samples=tensor[0].samples[1:])
+        ts_1 = equistore.slice(tm, axis="samples", labels=tensor[0].samples[:1])
+        ts_2 = equistore.slice(tm, axis="samples", labels=tensor[0].samples[1:])
 
         tensor_joined = equistore.join([ts_1, ts_2], axis="samples")
 

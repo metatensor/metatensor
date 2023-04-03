@@ -101,7 +101,8 @@ class TestSliceSamples(unittest.TestCase):
         block = self.tensor.block(0)
         sliced_block = equistore.slice_block(
             block,
-            samples=samples,
+            axis="samples",
+            labels=samples,
         )
         self._check_sliced_block(block, sliced_block, structures_to_keep)
 
@@ -116,7 +117,8 @@ class TestSliceSamples(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_block = equistore.slice_block(
                 block,
-                samples=samples,
+                axis="samples",
+                labels=samples,
             )
 
         self._check_empty_block(block, sliced_block)
@@ -130,7 +132,8 @@ class TestSliceSamples(unittest.TestCase):
         )
         sliced_tensor = equistore.slice(
             self.tensor,
-            samples=samples,
+            axis="samples",
+            labels=samples,
         )
 
         for key, block in self.tensor:
@@ -151,7 +154,8 @@ class TestSliceSamples(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_tensor = equistore.slice(
                 self.tensor,
-                samples=samples,
+                axis="samples",
+                labels=samples,
             )
 
         for _, block in sliced_tensor:
@@ -247,7 +251,8 @@ class TestSliceProperties(unittest.TestCase):
         block = self.tensor.block(0)
         sliced_block = equistore.slice_block(
             block,
-            properties=properties,
+            axis="properties",
+            labels=properties,
         )
         self._check_sliced_block(block, sliced_block, radial_to_keep)
 
@@ -262,7 +267,8 @@ class TestSliceProperties(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_block = equistore.slice_block(
                 block,
-                properties=properties,
+                axis="properties",
+                labels=properties,
             )
 
         self._check_empty_block(block, sliced_block)
@@ -277,7 +283,8 @@ class TestSliceProperties(unittest.TestCase):
 
         sliced_tensor = equistore.slice(
             self.tensor,
-            properties=properties,
+            axis="properties",
+            labels=properties,
         )
 
         for key, block in self.tensor:
@@ -298,7 +305,8 @@ class TestSliceProperties(unittest.TestCase):
             warnings.simplefilter("ignore")
             sliced_tensor = equistore.slice(
                 self.tensor,
-                properties=properties,
+                axis="properties",
+                labels=properties,
             )
 
         for key, block in self.tensor:
@@ -327,10 +335,60 @@ class TestSliceBoth(unittest.TestCase):
             values=channels_to_keep,
         )
 
+        # First, slice on samples and then on properties
         sliced_block = equistore.slice_block(
             block,
-            samples=samples,
-            properties=properties,
+            axis="samples",
+            labels=samples,
+        )
+        sliced_block = equistore.slice_block(
+            sliced_block,
+            axis="properties",
+            labels=properties,
+        )
+
+        # only desired samples are in the output.
+        self.assertTrue(
+            np.all([c in centers_to_keep for c in sliced_block.samples["center"]])
+        )
+
+        # only desired properties are in the output
+        self.assertTrue(
+            np.all([n in channels_to_keep for n in sliced_block.properties["n"]])
+        )
+
+        # There are the correct number of samples
+        self.assertEqual(
+            sliced_block.values.shape[0],
+            len([s for s in block.samples if s["center"] in centers_to_keep]),
+        )
+
+        # There are the correct number of properties
+        self.assertEqual(
+            sliced_block.values.shape[-1],
+            len([p for p in block.properties if p["n"] in channels_to_keep]),
+        )
+
+        # we have the right values
+        samples_filter = [
+            sample["center"] in centers_to_keep for sample in block.samples
+        ]
+        properties_filter = [
+            property["n"] in channels_to_keep for property in block.properties
+        ]
+        expected = block.values[samples_filter][..., properties_filter]
+        self.assertTrue(np.all(sliced_block.values == expected))
+
+        # Second, slice on properties and then on samples
+        sliced_block = equistore.slice_block(
+            block,
+            axis="properties",
+            labels=properties,
+        )
+        sliced_block = equistore.slice_block(
+            sliced_block,
+            axis="samples",
+            labels=samples,
         )
 
         # only desired samples are in the output.
@@ -373,14 +431,25 @@ class TestSliceBoth(unittest.TestCase):
         # Original tensor returned if no samples/properties to slice by are passed
         self.assertTrue(
             equistore.equal_block(
-                equistore.slice_block(tensor.block(0), samples=None, properties=None),
+                equistore.slice_block(tensor.block(0), axis="samples", labels=None),
+                tensor.block(0),
+            )
+        )
+        self.assertTrue(
+            equistore.equal_block(
+                equistore.slice_block(tensor.block(0), axis="properties", labels=None),
                 tensor.block(0),
             )
         )
         # Original tensor returned if no samples/properties to slice by are passed
         self.assertTrue(
             equistore.equal(
-                equistore.slice(tensor, samples=None, properties=None), tensor
+                equistore.slice(tensor, axis="samples", labels=None), tensor
+            )
+        )
+        self.assertTrue(
+            equistore.equal(
+                equistore.slice(tensor, axis="properties", labels=None), tensor
             )
         )
 
@@ -400,7 +469,7 @@ class TestSliceErrors(unittest.TestCase):
         )
 
         with self.assertRaises(TypeError) as cm:
-            equistore.slice(self.tensor.block(0), samples=samples),
+            equistore.slice(self.tensor.block(0), axis="samples", labels=samples),
 
         self.assertEqual(
             str(cm.exception),
@@ -411,24 +480,26 @@ class TestSliceErrors(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             equistore.slice(
                 self.tensor,
-                samples=np.array([[5], [6]]),
+                axis="samples",
+                labels=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "samples must be a `Labels` object",
+            "labels must be a `Labels` object",
         )
 
         # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             equistore.slice(
                 self.tensor,
-                properties=np.array([[5], [6]]),
+                axis="properties",
+                labels=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "properties must be a `Labels` object",
+            "labels must be a `Labels` object",
         )
 
     def test_slice_block_errors(self):
@@ -439,7 +510,7 @@ class TestSliceErrors(unittest.TestCase):
         )
 
         with self.assertRaises(TypeError) as cm:
-            equistore.slice_block(self.tensor, samples=samples),
+            equistore.slice_block(self.tensor, axis="samples", labels=samples),
 
         self.assertEqual(
             str(cm.exception), "``block`` should be an equistore ``TensorBlock``"
@@ -450,24 +521,26 @@ class TestSliceErrors(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             equistore.slice_block(
                 block,
-                samples=np.array([[5], [6]]),
+                axis="samples",
+                labels=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "samples must be a `Labels` object",
+            "labels must be a `Labels` object",
         )
 
         # passing properties=np.array raises TypeError
         with self.assertRaises(TypeError) as cm:
             equistore.slice_block(
                 block,
-                properties=np.array([[5], [6]]),
+                axis="properties",
+                labels=np.array([[5], [6]]),
             )
 
         self.assertEqual(
             str(cm.exception),
-            "properties must be a `Labels` object",
+            "labels must be a `Labels` object",
         )
 
 

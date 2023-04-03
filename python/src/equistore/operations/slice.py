@@ -9,8 +9,8 @@ from ..tensor import TensorMap
 
 def slice(
     tensor: TensorMap,
-    samples: Optional[Labels] = None,
-    properties: Optional[Labels] = None,
+    axis: str = None,
+    labels: Optional[Labels] = None,
 ) -> TensorMap:
     """Slice a :py:class:`TensorMap` along the samples and/or properties dimension(s).
 
@@ -80,18 +80,18 @@ def slice(
     # Check input args
     if not isinstance(tensor, TensorMap):
         raise TypeError("``tensor`` should be an equistore ``TensorMap``")
-    _check_args(tensor, samples=samples, properties=properties)
+    _check_args(tensor, axis=axis, labels=labels)
 
     return TensorMap(
         keys=tensor.keys,
-        blocks=[_slice_block(tensor[key], samples, properties) for key in tensor.keys],
+        blocks=[_slice_block(tensor[key], axis, labels) for key in tensor.keys],
     )
 
 
 def slice_block(
     block: TensorBlock,
-    samples: Optional[Labels] = None,
-    properties: Optional[Labels] = None,
+    axis: str,
+    labels: Optional[Labels] = None,
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
@@ -157,19 +157,19 @@ def slice_block(
     # Check input args
     if not isinstance(block, TensorBlock):
         raise TypeError("``block`` should be an equistore ``TensorBlock``")
-    _check_args(block, samples=samples, properties=properties)
+    _check_args(block, axis=axis, labels=labels)
 
     return _slice_block(
         block,
-        samples=samples,
-        properties=properties,
+        axis=axis,
+        labels=labels,
     )
 
 
 def _slice_block(
     block: TensorBlock,
-    samples: Optional[Labels] = None,
-    properties: Optional[Labels] = None,
+    axis: str,
+    labels: Optional[Labels] = None,
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
@@ -196,13 +196,15 @@ def _slice_block(
     """
     # Store current values for later modification
     new_values = block.values
-    new_samples = block.samples
-    new_properties = block.properties
+    if axis == "samples":
+        new_samples = block.samples
+    elif axis == "properties":
+        new_properties = block.properties
 
     # Generate arrays of bools indicating which samples indices to keep upon slicing.
-    if samples is not None:
-        all_samples = block.samples[list(samples.names)].tolist()
-        set_samples_to_slice = set(samples.tolist())
+    if axis == "samples" and labels is not None:
+        all_samples = block.samples[list(labels.names)].tolist()
+        set_samples_to_slice = set(labels.tolist())
         samples_filter = np.array(
             [sample in set_samples_to_slice for sample in all_samples]
         )
@@ -210,9 +212,9 @@ def _slice_block(
         new_samples = new_samples[samples_filter]
 
     # Generate array of bools indicating which properties indices to keep upon slicing.
-    if properties is not None:
-        all_properties = block.properties[list(properties.names)].tolist()
-        set_properties_to_slice = set(properties.tolist())
+    if axis == "properties" and labels is not None:
+        all_properties = block.properties[list(labels.names)].tolist()
+        set_properties_to_slice = set(labels.tolist())
         properties_filter = np.array(
             [prop in set_properties_to_slice for prop in all_properties]
         )
@@ -220,95 +222,109 @@ def _slice_block(
         new_properties = new_properties[properties_filter]
 
     # Create a new TensorBlock, sliced along the samples and properties dimension.
-    new_block = TensorBlock(
-        values=new_values,
-        samples=new_samples,
-        components=block.components,
-        properties=new_properties,
-    )
+    if labels is not None:
+        if axis == "samples":
+            new_block = TensorBlock(
+                values=new_values,
+                samples=new_samples,
+                components=block.components,
+                properties=block.properties,
+            )
+        elif axis == "properties":
+            new_block = TensorBlock(
+                values=new_values,
+                samples=block.samples,
+                components=block.components,
+                properties=new_properties,
+            )
 
-    # Create a map from the previous samples indexes to the new sample indexes
-    # to update the gradient samples
-    if samples is not None:
-        # sample_map contains at position old_sample the index of the
-        # corresponding new sample
-        sample_map = np.full(shape=len(samples_filter), fill_value=-1)
-        last = 0
-        for i, picked in enumerate(samples_filter):
-            if picked:
-                sample_map[i] = last
-                last += 1
+        # Create a map from the previous samples indexes to the new sample indexes
+        # to update the gradient samples
+        if axis == "samples":
+            # sample_map contains at position old_sample the index of the
+            # corresponding new sample
+            sample_map = np.full(shape=len(samples_filter), fill_value=-1)
+            last = 0
+            for i, picked in enumerate(samples_filter):
+                if picked:
+                    sample_map[i] = last
+                    last += 1
 
-    # Slice each Gradient TensorBlock and add to the new_block.
-    for parameter, gradient in block.gradients():
-        new_grad_data = gradient.data
-        new_grad_samples = gradient.samples
+        # Slice each Gradient TensorBlock and add to the new_block.
+        for parameter, gradient in block.gradients():
+            new_grad_data = gradient.data
+            new_grad_samples = gradient.samples
 
-        # Create a samples filter for the Gradient TensorBlock
-        if samples is not None:
-            grad_samples_filter = samples_filter[gradient.samples["sample"]]
-            new_grad_samples = new_grad_samples[grad_samples_filter]
+            # Create a samples filter for the Gradient TensorBlock
+            if axis == "samples":
+                grad_samples_filter = samples_filter[gradient.samples["sample"]]
+                new_grad_samples = new_grad_samples[grad_samples_filter]
 
-            if new_grad_samples.shape[0] != 0:
-                # update the "sample" column of the gradient samples
-                # to refer to the new samples
-                new_grad_samples = (
-                    new_grad_samples.view(dtype=np.int32)
-                    .reshape(new_grad_samples.shape[0], -1)
-                    .copy()
-                )
-                new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
+                if new_grad_samples.shape[0] != 0:
+                    # update the "sample" column of the gradient samples
+                    # to refer to the new samples
+                    new_grad_samples = (
+                        new_grad_samples.view(dtype=np.int32)
+                        .reshape(new_grad_samples.shape[0], -1)
+                        .copy()
+                    )
+                    new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
 
-                new_grad_samples = Labels(
-                    names=gradient.samples.names,
-                    values=new_grad_samples,
-                )
+                    new_grad_samples = Labels(
+                        names=gradient.samples.names,
+                        values=new_grad_samples,
+                    )
 
-            new_grad_data = new_grad_data[grad_samples_filter]
-        if properties is not None:
-            new_grad_data = new_grad_data[..., properties_filter]
+                new_grad_data = new_grad_data[grad_samples_filter]
+            if axis == "properties":
+                new_grad_data = new_grad_data[..., properties_filter]
 
-        # Add sliced Gradient to the TensorBlock
-        new_block.add_gradient(
-            parameter=parameter,
-            samples=new_grad_samples,
-            components=gradient.components,
-            data=new_grad_data,
-        )
-
+            # Add sliced Gradient to the TensorBlock
+            new_block.add_gradient(
+                parameter=parameter,
+                samples=new_grad_samples,
+                components=gradient.components,
+                data=new_grad_data,
+            )
+    elif labels is None:
+        new_block = block.copy()
     return new_block
 
 
 def _check_args(
     tensor: Union[TensorMap, TensorMap],
-    samples: Optional[Labels] = None,
-    properties: Optional[Labels] = None,
+    axis: str,
+    labels: Optional[Labels] = None,
 ):
     """
     Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
     """
+    # check axis
+    if axis not in ["samples", "properties"]:
+        raise ValueError(
+            f"``axis``: {axis} is not known as a slicing axis. Please use"
+            "'samples' or 'properties'"
+        )
     # Get a single block
     block = tensor.block(0) if isinstance(tensor, TensorMap) else tensor
-    # Check samples Labels if passed
-    if samples is not None:
-        # Check type
-        if not isinstance(samples, Labels):
-            raise TypeError("samples must be a `Labels` object")
+    # Check if labels are Labels if passed
+    # Check type
+    if not isinstance(labels, Labels) and labels is not None:
+        print(type(labels))
+        raise TypeError("labels must be a `Labels` object")
+    if axis == "samples" and labels is not None:
         # Check names
         s_names = block.samples.names
-        for name in samples.names:
+        for name in labels.names:
             if name not in s_names:
                 raise ValueError(
                     f"invalid sample name '{name}' which is not part of the input"
                 )
     # Check properties Labels if passed
-    if properties is not None:
-        # Check type
-        if not isinstance(properties, Labels):
-            raise TypeError("properties must be a `Labels` object")
+    if axis == "properties" and labels is not None:
         # Check names
         p_names = block.properties.names
-        for name in properties.names:
+        for name in labels.names:
             if name not in p_names:
                 raise ValueError(
                     f"invalid property name '{name}' which is not part of the input"
