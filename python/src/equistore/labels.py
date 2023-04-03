@@ -305,8 +305,7 @@ arguments to `Labels.arange()`, but not a mixture of the two
             )
         if args_len != 0 and kwargs_len != 0:
             raise ValueError(
-                "please provide either no names or all names for the integer "
-                "arguments to `Labels.arange()`, but not a mixture of the two"
+                "use either positional or keyword arguments for start/stop/step in `Labels.arange()`, but not a mixture of the two"
             )
         if args_len == 0:
             has_args = False
