@@ -75,8 +75,7 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
     )[1]
     if indices.shape[0] != labels.asarray().shape[0]:
         raise ValueError(
-            "some values not present in the dimension "
-            "input were found in the labels input"
+            "some values not present in the dimension were found in the labels"
         )
     one_hot_array = np.eye(possible_labels.shape[0])[indices]
 
