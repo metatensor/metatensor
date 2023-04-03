@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 from datetime import datetime
 
@@ -25,30 +24,27 @@ def load_version_from_cargo_toml():
 release = load_version_from_cargo_toml()
 
 
-def build_cargo_docs():
-    subprocess.run(["cargo", "doc", "--no-deps", "--package", "equistore"])
-    output_dir = os.path.join(ROOT, "docs", "build", "html", "reference", "rust")
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    shutil.copytree(
-        os.path.join(ROOT, "target", "doc"),
-        output_dir,
-    )
-
-
 def build_doxygen_docs():
-    # we need to run a build to make sure the header is up to date
+    try:
+        os.mkdir(os.path.join(ROOT, "docs", "build"))
+    except OSError:
+        pass
+
+    # we need to run a cargo build to make sure the header is up to date
     subprocess.run(["cargo", "build"])
     subprocess.run(["doxygen", "Doxyfile"], cwd=os.path.join(ROOT, "docs"))
 
 
-build_cargo_docs()
-build_doxygen_docs()
+def setup(app):
+    build_doxygen_docs()
+    app.add_css_file("css/equistore.css")
 
 
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "4.0.0"
+
+python_use_unqualified_type_names = True
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -76,7 +72,7 @@ autodoc_typehints = "both"
 autodoc_typehints_format = "short"
 
 intersphinx_mapping = {
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    "numpy": ("http://docs.scipy.org/doc/numpy/", None),
 }
 
 breathe_projects = {
@@ -85,6 +81,12 @@ breathe_projects = {
 breathe_default_project = "equistore"
 breathe_domain_by_extension = {
     "h": "c",
+}
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -97,4 +99,4 @@ html_theme = "furo"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["../static"]

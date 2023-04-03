@@ -13,8 +13,8 @@ use super::tensor::eqs_tensormap_t;
 /// maps.
 ///
 /// This function gets the `shape` of the array (the `shape` contains
-/// `shape_count` elements) and should return a new valid `eqs_array_t` or a
-/// non-zero `eqs_status_t`.
+/// `shape_count` elements) and should fill `array` with a new valid
+/// `eqs_array_t` or return non-zero `eqs_status_t`.
 ///
 /// The newly created array should contains 64-bit floating points (`double`)
 /// data, and live on CPU, since equistore will use `eqs_array_t.data` to get

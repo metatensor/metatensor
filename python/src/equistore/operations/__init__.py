@@ -1,8 +1,7 @@
 """
 The Python API for equistore also provides functions which operate on
-:py:class:`equistore.TensorMap`, :py:class:`equistore.TensorBlocks` as well as
-:py:class:`equistore.Labels` and can be used to build Machine Learning
-models.
+:py:class:`TensorMap`, :py:class:`TensorBlocks` as well as :py:class:`Labels`
+and can be used to build Machine Learning models.
 
 These functions can handle data stored either in numpy arrays or Torch tensor,
 and automatically dispatch to the right function for a given TensorMap.

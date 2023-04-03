@@ -1,9 +1,14 @@
+"""Utility functions to be used accross all test files.
+
+These functions are by design no pytest fixtures to avoid a confusing global import.
+"""
+
 import numpy as np
 
 from equistore import Labels, TensorBlock, TensorMap
 
 
-def tensor_map():
+def tensor():
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
@@ -79,13 +84,12 @@ def tensor_map():
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
 
 
-def large_tensor_map():
+def large_tensor():
     """
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    tensor = tensor_map()
-    block_list = [block.copy() for _, block in tensor]
+    block_list = [block.copy() for _, block in tensor()]
 
     for i in range(8):
         tmp_bl = TensorBlock(
@@ -122,7 +126,6 @@ def large_tensor_map():
                 [2, 5],
                 [3, 5],
             ],
-            dtype=np.int32,
         ),
     )
     return TensorMap(keys, block_list)
