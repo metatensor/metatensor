@@ -9,8 +9,8 @@ from ..tensor import TensorMap
 
 def slice(
     tensor: TensorMap,
-    axis: str = None,
-    labels: Optional[Labels] = None,
+    axis: str,
+    labels: Labels,
 ) -> TensorMap:
     """Slice a :py:class:`TensorMap` along the samples and/or properties dimension(s).
 
