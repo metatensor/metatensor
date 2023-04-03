@@ -294,7 +294,7 @@ def _slice_block(
 def _check_args(
     tensor: Union[TensorMap, TensorMap],
     axis: str,
-    labels: Optional[Labels] = None,
+    labels: Labels,
 ):
     """
     Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
