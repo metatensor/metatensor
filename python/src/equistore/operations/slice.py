@@ -12,7 +12,7 @@ def slice(
     axis: str,
     labels: Labels,
 ) -> TensorMap:
-    """Slice a :py:class:`TensorMap` along the samples and/or properties dimension(s).
+    """Slice a :py:class:`TensorMap` along either the "samples" or "properties" `axis`.
 
     ``samples`` and ``properties`` are :py:class:`Labels` objects that specify the
     samples/properties (respectively) names and indices that should be sliced, i.e.
