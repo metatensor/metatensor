@@ -91,18 +91,21 @@ class Labels(np.ndarray):
                 "names parameter must have an entry for each column of the array"
             )
 
-        try:
+        # Check if real numbers have no fractional part. Allows to safely convert
+        # special floats (i.e `0.0`, `1.0` etc.) to ints without unwanted conversion
+        # information using `casting="unsafe"`.
+        if np.isreal(values) and np.all(np.mod(values, 1)):
             values = np.ascontiguousarray(
                 values.astype(
                     np.int32,
                     order="C",
-                    casting="same_kind",
+                    casting="unsafe",
                     subok=False,
                     copy=False,
                 )
             )
-        except TypeError as e:
-            raise TypeError("Labels values must be convertible to integers") from e
+        else:
+            raise TypeError("Labels values must be convertible to real integers")
 
         dtype = [(name, np.int32) for name in names]
 
