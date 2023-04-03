@@ -1,12 +1,13 @@
-"""Specific pytest file allowing to share fixtures across files."""
+"""Utility functions to be used accross all test files.
+
+These functions are by design no pytest fixtures to avoid a confusing global import.
+"""
 
 import numpy as np
-import pytest
 
 from equistore import Labels, TensorBlock, TensorMap
 
 
-@pytest.fixture
 def tensor():
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
@@ -83,13 +84,12 @@ def tensor():
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
 
 
-@pytest.fixture
-def large_tensor(tensor):
+def large_tensor():
     """
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    block_list = [block.copy() for _, block in tensor]
+    block_list = [block.copy() for _, block in tensor()]
 
     for i in range(8):
         tmp_bl = TensorBlock(
@@ -126,7 +126,6 @@ def large_tensor(tensor):
                 [2, 5],
                 [3, 5],
             ],
-            dtype=np.int32,
         ),
     )
     return TensorMap(keys, block_list)
