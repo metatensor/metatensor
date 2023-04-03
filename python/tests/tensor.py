@@ -21,6 +21,7 @@ def large_tensor():
 
 
 def test_copy():
+    # Do not use a fixture here because we want exactly on reference in the copy test.
     tensor = utils.tensor()
     # Using TensorMap.copy
     clone = tensor.copy()
