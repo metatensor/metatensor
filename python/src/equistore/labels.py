@@ -283,8 +283,8 @@ class Labels(np.ndarray):
         ('dummy',)
         >>> print(labels)
         [(0,) (1,) (2,) (3,) (4,) (5,) (6,)]
-        >>> # The same can be accomplished by using keyword arguments for start/stop/step.
-        >>> # For example:        
+        >>> # The same can be accomplished by using keyword arguments
+        >>> # for start/stop/step. For example:
         >>> labels = Labels.arange("dummy", start=2, stop=6)
         >>> print(labels)
         [(2,) (3,) (4,) (5,)]
@@ -292,8 +292,8 @@ class Labels(np.ndarray):
         >>> labels = Labels.arange("dummy", 2, stop=6)
         Traceback (most recent call last):
             ...
-        ValueError: please provide either no names or all names for the integer \
-arguments to `Labels.arange()`, but not a mixture of the two
+        ValueError: please use either positional or keyword arguments for \
+start/stop/step in `Labels.arange()`, but not a mixture of the two
         """
 
         args_len = len(args)
@@ -305,7 +305,8 @@ arguments to `Labels.arange()`, but not a mixture of the two
             )
         if args_len != 0 and kwargs_len != 0:
             raise ValueError(
-                "use either positional or keyword arguments for start/stop/step in `Labels.arange()`, but not a mixture of the two"
+                "please use either positional or keyword arguments for start/stop/step "
+                "in `Labels.arange()`, but not a mixture of the two"
             )
         if args_len == 0:
             has_args = False
@@ -319,6 +320,8 @@ arguments to `Labels.arange()`, but not a mixture of the two
                     f"`Labels.arange()` is 3. {args_len} were provided"
                 )
             for arg in args:
+                # check for integer arguments, otherwise np.arange will later
+                # return a range of floats
                 if not np.issubdtype(type(arg), np.integer):
                     raise ValueError(
                         "all numbers provided to `Labels.arange()` must be integers"
@@ -336,6 +339,8 @@ arguments to `Labels.arange()`, but not a mixture of the two
                     "a `stop` argument must be provided to `Labels.arange()`"
                 )
             for value in kwargs.values():
+                # check for integer arguments, otherwise np.arange will later
+                # return a range of floats
                 if not np.issubdtype(type(value), np.integer):
                     raise ValueError(
                         "all numbers provided to `Labels.arange()` must be integers"
