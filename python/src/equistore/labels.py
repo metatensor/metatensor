@@ -283,8 +283,8 @@ class Labels(np.ndarray):
         ('dummy',)
         >>> print(labels)
         [(0,) (1,) (2,) (3,) (4,) (5,) (6,)]
-        >>> # The same can be accomplished by specifying the names for
-        >>> # the integer arguments. For example:
+        >>> # The same can be accomplished by using keyword arguments for start/stop/step.
+        >>> # For example:        
         >>> labels = Labels.arange("dummy", start=2, stop=6)
         >>> print(labels)
         [(2,) (3,) (4,) (5,)]
