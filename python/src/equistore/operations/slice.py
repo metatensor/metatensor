@@ -222,21 +222,20 @@ def _slice_block(
         new_properties = new_properties[properties_filter]
 
     # Create a new TensorBlock, sliced along the samples and properties dimension.
-    if labels is not None:
-        if axis == "samples":
-            new_block = TensorBlock(
-                values=new_values,
-                samples=new_samples,
-                components=block.components,
-                properties=block.properties,
-            )
-        elif axis == "properties":
-            new_block = TensorBlock(
-                values=new_values,
-                samples=block.samples,
-                components=block.components,
-                properties=new_properties,
-            )
+    if axis == "samples":
+        new_block = TensorBlock(
+            values=new_values,
+            samples=new_samples,
+            components=block.components,
+            properties=block.properties,
+        )
+    else:  # properties
+        new_block = TensorBlock(
+            values=new_values,
+            samples=block.samples,
+            components=block.components,
+            properties=new_properties,
+        )
 
         # Create a map from the previous samples indexes to the new sample indexes
         # to update the gradient samples
