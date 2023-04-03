@@ -91,7 +91,7 @@ def slice(
 def slice_block(
     block: TensorBlock,
     axis: str,
-    labels: Optional[Labels] = None,
+    labels: Labels,
 ) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along the samples and/or properties
