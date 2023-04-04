@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -285,13 +285,13 @@ def _slice_block(
             assert axis == "properties"
             new_grad_data = new_grad_data[..., properties_filter]
 
-            # Add sliced Gradient to the TensorBlock
-            new_block.add_gradient(
-                parameter=parameter,
-                samples=new_grad_samples,
-                components=gradient.components,
-                data=new_grad_data,
-            )
+        # Add sliced Gradient to the TensorBlock
+        new_block.add_gradient(
+            parameter=parameter,
+            samples=new_grad_samples,
+            components=gradient.components,
+            data=new_grad_data,
+        )
     return new_block
 
 
