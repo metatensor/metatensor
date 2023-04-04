@@ -99,9 +99,6 @@ def slice_block(
     names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
-    Note that either ``samples`` or ``properties``
-    should be specified as input.
-
     Example: take an input :py:class:`TensorBlock` of shape (100, 1, 6), where
     there are 100 'samples', 1 'components', and 6 'properties'. Say we want to
     slice this tensor along the samples and properties dimensions. As in the
