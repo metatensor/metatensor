@@ -14,6 +14,7 @@ from .allclose import (  # noqa
     allclose_block_raise,
     allclose_raise,
 )
+from .block_from_array import block_from_array  # noqa
 from .divide import divide  # noqa
 from .dot import dot  # noqa
 from .drop_blocks import drop_blocks
@@ -52,6 +53,7 @@ __all__ = [
     "allclose_raise",
     "allclose_block",
     "allclose_block_raise",
+    "block_from_array",
     "divide",
     "dot",
     "drop_blocks",

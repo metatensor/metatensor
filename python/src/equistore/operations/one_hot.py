@@ -32,19 +32,15 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import Labels
-    ...
     >>> # Let's say we have 6 atoms, whose chemical indentities
     >>> # are C, H, H, H, C, H:
     >>> original_labels = Labels(
     ...     names=["atom", "species"],
-    ...     values=np.array([[0, 6], [1, 1], [2, 1], [3, 1], [4, 6], [5, 1]])
+    ...     values=np.array([[0, 6], [1, 1], [2, 1], [3, 1], [4, 6], [5, 1]]),
     ... )
     >>> # Set up a Labels object with all possible elements,
     >>> # including, for example, also O:
-    >>> possible_labels = Labels(
-    ...     names=["species"],
-    ...     values=np.array([[1], [6], [8]])
-    ... )
+    >>> possible_labels = Labels(names=["species"], values=np.array([[1], [6], [8]]))
     >>> # Get the one-hot encoded labels:
     >>> one_hot_encoding = equistore.one_hot(original_labels, possible_labels)
     >>> print(one_hot_encoding)
