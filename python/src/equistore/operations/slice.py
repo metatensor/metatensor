@@ -212,7 +212,8 @@ def _slice_block(
         new_samples = new_samples[samples_filter]
 
     # Generate array of bools indicating which properties indices to keep upon slicing.
-    else:  # properties
+    else: 
+        assert axis == "properties"
         all_properties = block.properties[list(labels.names)].tolist()
         set_properties_to_slice = set(labels.tolist())
         properties_filter = np.array(
