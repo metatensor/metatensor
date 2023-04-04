@@ -157,10 +157,7 @@ def _split_block(
     new_blocks = []
     for indices in grouped_idxs:
         # Perfom the slice, either along the samples or properties axis
-        if axis == "samples":
-            new_block = _slice_block(block, axis="samples", labels=indices)
-        else:  # properties
-            new_block = _slice_block(block, axis="properties", labels=indices)
+        new_block = _slice_block(block, axis=axis, labels=indices)
         new_blocks.append(new_block)
 
     return new_blocks

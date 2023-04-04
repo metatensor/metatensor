@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -18,23 +18,28 @@ def slice(
     samples/properties (respectively) names and indices that should be sliced, i.e.
     kept in the output tensor.
 
-    Note that either ``samples`` or ``properties``, or both,
-    should be specified as input.
+    Note that either ``samples`` or ``properties`` should be specified as input.
 
     .. code-block:: python
 
-        sliced_tensor = slice(
+        samples=Labels(
+            names=["structure", "center"],
+            values=np.array(
+                [[0, 1], [0, 6], [1, 6], [3, 16]]
+            )  # must be a 2D-array
+        properties=Labels(
+            names=["n",],  # radial channel
+            values=np.array([[3,], [4,], [5,]]),
+            )
+        sliced_tensor_samples = slice(
             tensor,
-            samples=Labels(
-                names=["structure", "center"],
-                values=np.array(
-                    [[0, 1], [0, 6], [1, 6], [3, 16]]
-                ),  # must be a 2D-array
-            )
-            properties=Labels(
-                names=["n",],  # radial channel
-                values=np.array([[3,], [4,], [5,]]),
-            )
+            axis="samples",
+            labels=samples,
+        )
+        sliced_tensor_properties = slice(
+            tensor,
+            axis="properties",
+            labels=properties,
         )
 
     Also note that this function will return a :py:class:`TensorMap` whose
@@ -63,16 +68,11 @@ def slice(
     individual :py:class:`TensorBlock` is sliced.
 
     :param tensor: the input :py:class:`TensorMap` to be sliced.
-    :param samples: a :py:class:`Labels` object containing the names
-        and indices of samples to keep in the each of the sliced
-        :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
-        value of None indicates no slicing along the samples dimension should
-        occur.
-    :param properties: a :py:class:`Labels` object containing the names
-        and indices of properties to keep in each of the sliced
-        :py:class:`TensorBlock` of the output :py:class:`TensorMap`. Default
-        value of None indicates no slicing along the properties dimension should
-        occur.
+    :param axis: a :py:class:`str` object containing `samples` or `properties`
+        indicating the direction of slicing.
+    :param labels: a :py:class:`Labels` object containing the names
+        and indices of the samples of properties to keep in each of the sliced
+        :py:class:`TensorBlock` of the output :py:class:`TensorMap`.
 
     :return: a :py:class:`TensorMap` that corresponds to the sliced input
         tensor.
@@ -94,13 +94,13 @@ def slice_block(
     labels: Labels,
 ) -> TensorBlock:
     """
-    Slices an input :py:class:`TensorBlock` along either the "samples" or "properties" `axis`.
-    dimension(s). ``samples`` and ``properties`` are
+    Slices an input :py:class:`TensorBlock` along either the "samples" or "properties"
+    `axis`. dimension(s). ``labels`` is a
     :py:class:`Labels` objects that specify the samples/properties
-    (respectively) names and indices that should be sliced, i.e. kept in the
+    names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
-    Note that either ``samples`` or ``properties``, or both,
+    Note that either ``samples`` or ``properties``
     should be specified as input.
 
     Example: take an input :py:class:`TensorBlock` of shape (100, 1, 6), where
@@ -112,18 +112,25 @@ def slice_block(
 
     .. code-block:: python
 
-        sliced_block = slice_block(
+        samples=Labels(
+            names=["structure", "center"],
+            values=np.array(
+                [[0, 1], [0, 6], [1, 6], [3, 16]]
+            ),  # must be a 2D-array
+        )
+        properties=Labels(
+            names=["n",],  # radial channel
+            values=np.array([[3], [4], [5]]),
+        )
+        sliced_block_samples = slice_block(
             block,
-            samples=Labels(
-                names=["structure", "center"],
-                values=np.array(
-                    [[0, 1], [0, 6], [1, 6], [3, 16]]
-                ),  # must be a 2D-array
-            )
-            properties=Labels(
-                names=["n",],  # radial channel
-                values=np.array([[3], [4], [5]]),
-            )
+            axis="samples",
+            labels=samples,
+        )
+        sliced_block_properties = slice_block(
+            block,
+            axis="properties",
+            labels=properties,
         )
 
     For the empty blocks that may be returned, although there will be no actual
@@ -172,24 +179,21 @@ def _slice_block(
     labels: Labels,
 ) -> TensorBlock:
     """
-    Slices an input :py:class:`TensorBlock` along either the "samples" or "properties" `axis`.
-    dimension(s). ``samples`` and ``properties`` are
-    :py:class:`Labels` objects that specify the samples/properties
-    (respectively) names and indices that should be sliced, i.e. kept in the
+    Slices an input :py:class:`TensorBlock` along either the "samples" or "properties"
+    `axis`. dimension(s). ``labels`` is
+    :py:class:`Labels` object that specify the samples/properties
+    names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
     Note that either ``samples`` or ``properties``, or both,
     should be specified as input.
 
     :param block: the input :py:class:`TensorBlock` to be sliced.
-    :param samples: a :py:class:`Labels` object containing the names
-        and indices of samples to keep in the sliced output
-        :py:class:`TensorBlock`. Default value of None indicates no slicing
-        along the samples dimension should occur.
-    :param properties: a :py:class:`Labels` object containing the names
-        and indices of properties to keep in the sliced output
-        :py:class:`TensorBlock`. Default value of None indicates no slicing
-        along the properties dimension should occur.
+    :param axis: a :py:class:`str` object containing `samples` or `properties`
+        indicating the direction of slicing.
+    :param labels: a :py:class:`Labels` object containing the names
+        and indices of samples/properties to keep in the sliced output
+        :py:class:`TensorBlock`.
 
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced
         input.
@@ -212,7 +216,7 @@ def _slice_block(
         new_samples = new_samples[samples_filter]
 
     # Generate array of bools indicating which properties indices to keep upon slicing.
-    else: 
+    else:
         assert axis == "properties"
         all_properties = block.properties[list(labels.names)].tolist()
         set_properties_to_slice = set(labels.tolist())
@@ -239,47 +243,47 @@ def _slice_block(
             properties=new_properties,
         )
 
-        # Create a map from the previous samples indexes to the new sample indexes
-        # to update the gradient samples
+    # Create a map from the previous samples indexes to the new sample indexes
+    # to update the gradient samples
+    if axis == "samples":
+        # sample_map contains at position old_sample the index of the
+        # corresponding new sample
+        sample_map = np.full(shape=len(samples_filter), fill_value=-1)
+        last = 0
+        for i, picked in enumerate(samples_filter):
+            if picked:
+                sample_map[i] = last
+                last += 1
+
+    # Slice each Gradient TensorBlock and add to the new_block.
+    for parameter, gradient in block.gradients():
+        new_grad_data = gradient.data
+        new_grad_samples = gradient.samples
+
+        # Create a samples filter for the Gradient TensorBlock
         if axis == "samples":
-            # sample_map contains at position old_sample the index of the
-            # corresponding new sample
-            sample_map = np.full(shape=len(samples_filter), fill_value=-1)
-            last = 0
-            for i, picked in enumerate(samples_filter):
-                if picked:
-                    sample_map[i] = last
-                    last += 1
+            grad_samples_filter = samples_filter[gradient.samples["sample"]]
+            new_grad_samples = new_grad_samples[grad_samples_filter]
 
-        # Slice each Gradient TensorBlock and add to the new_block.
-        for parameter, gradient in block.gradients():
-            new_grad_data = gradient.data
-            new_grad_samples = gradient.samples
+            if new_grad_samples.shape[0] != 0:
+                # update the "sample" column of the gradient samples
+                # to refer to the new samples
+                new_grad_samples = (
+                    new_grad_samples.view(dtype=np.int32)
+                    .reshape(new_grad_samples.shape[0], -1)
+                    .copy()
+                )
+                new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
 
-            # Create a samples filter for the Gradient TensorBlock
-            if axis == "samples":
-                grad_samples_filter = samples_filter[gradient.samples["sample"]]
-                new_grad_samples = new_grad_samples[grad_samples_filter]
+                new_grad_samples = Labels(
+                    names=gradient.samples.names,
+                    values=new_grad_samples,
+                )
 
-                if new_grad_samples.shape[0] != 0:
-                    # update the "sample" column of the gradient samples
-                    # to refer to the new samples
-                    new_grad_samples = (
-                        new_grad_samples.view(dtype=np.int32)
-                        .reshape(new_grad_samples.shape[0], -1)
-                        .copy()
-                    )
-                    new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
-
-                    new_grad_samples = Labels(
-                        names=gradient.samples.names,
-                        values=new_grad_samples,
-                    )
-
-                new_grad_data = new_grad_data[grad_samples_filter]
-            else:
-                assert axis == "properties"
-                new_grad_data = new_grad_data[..., properties_filter]
+            new_grad_data = new_grad_data[grad_samples_filter]
+        else:
+            assert axis == "properties"
+            new_grad_data = new_grad_data[..., properties_filter]
 
             # Add sliced Gradient to the TensorBlock
             new_block.add_gradient(

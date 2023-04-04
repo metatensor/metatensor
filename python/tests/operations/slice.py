@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 
 import equistore
-from equistore import Labels
+from equistore import Labels, TensorBlock, TensorMap
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -315,6 +315,38 @@ class TestSliceProperties(unittest.TestCase):
 
 
 class TestSliceBoth(unittest.TestCase):
+    def _construct_empty_slice_block(self, block, axis, labels):
+        if axis == "samples":
+            reference_block = TensorBlock(
+                block.values[:0, :],
+                labels,
+                block.components,
+                block.properties,
+            )
+            for param, grad in block.gradients():
+                reference_block.add_gradient(
+                    param,
+                    grad.data[:0, ...],
+                    Labels.empty(grad.samples.names),
+                    grad.components,
+                )
+            return reference_block
+        elif axis == "properties":
+            reference_block = TensorBlock(
+                block.values[..., :0],
+                block.samples,
+                block.components,
+                labels,
+            )
+        for param, grad in block.gradients():
+            reference_block.add_gradient(
+                param,
+                grad.data[..., :0],
+                grad.samples,
+                grad.components,
+            )
+        return reference_block
+
     def test_slice_block(self):
         tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
@@ -428,28 +460,126 @@ class TestSliceBoth(unittest.TestCase):
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
         )
-        # Original tensor returned if no samples/properties to slice by are passed
-        self.assertTrue(
-            equistore.equal_block(
-                equistore.slice_block(tensor.block(0), axis="samples", labels=None),
-                tensor.block(0),
-            )
+
+        empty_labels_samples = Labels.empty(tensor.sample_names)
+
+        # Empty block returned if no samples to slice by are passed
+        reference_block = self._construct_empty_slice_block(
+            tensor.block(0), "samples", empty_labels_samples
         )
         self.assertTrue(
             equistore.equal_block(
-                equistore.slice_block(tensor.block(0), axis="properties", labels=None),
+                equistore.slice_block(
+                    tensor.block(0), axis="samples", labels=empty_labels_samples
+                ),
+                reference_block,
+            )
+        )
+
+        # Empty tensor returned if no samples to slice by are passed
+        block_list = [
+            self._construct_empty_slice_block(block, "samples", empty_labels_samples)
+            for block in tensor.blocks()
+        ]
+        reference_tensor = TensorMap(tensor.keys, block_list)
+        self.assertTrue(
+            equistore.equal(
+                equistore.slice(tensor, axis="samples", labels=empty_labels_samples),
+                reference_tensor,
+            )
+        )
+
+        empty_labels_properties = Labels.empty(tensor.property_names)
+        # Empty block returned if no properties to slice by are passed
+        reference_block = self._construct_empty_slice_block(
+            tensor.block(0), "properties", empty_labels_properties
+        )
+        self.assertTrue(
+            equistore.equal_block(
+                equistore.slice_block(
+                    tensor.block(0), axis="properties", labels=empty_labels_properties
+                ),
+                reference_block,
+            )
+        )
+
+        # Empty tensor returned if no properties to slice by are passed
+        block_list = [
+            self._construct_empty_slice_block(
+                block, "properties", empty_labels_properties
+            )
+            for block in tensor.blocks()
+        ]
+        reference_tensor = TensorMap(tensor.keys, block_list)
+        self.assertTrue(
+            equistore.equal(
+                equistore.slice(
+                    tensor, axis="properties", labels=empty_labels_properties
+                ),
+                reference_tensor,
+            )
+        )
+
+    def test_slicing_all(self):
+        tensor = equistore.load(
+            os.path.join(DATA_ROOT, TEST_FILE),
+            use_numpy=True,
+        )
+        # Original block returned if sliced on all samples
+        self.assertTrue(
+            equistore.equal_block(
+                equistore.slice_block(
+                    tensor.block(0),
+                    axis="samples",
+                    labels=equistore.unique_metadata(
+                        tensor, axis="samples", names=tensor.sample_names
+                    ),
+                ),
                 tensor.block(0),
             )
         )
-        # Original tensor returned if no samples/properties to slice by are passed
+
+        # Original tensor returned if sliced on all samples
         self.assertTrue(
             equistore.equal(
-                equistore.slice(tensor, axis="samples", labels=None), tensor
+                equistore.slice(
+                    tensor,
+                    axis="samples",
+                    labels=equistore.unique_metadata(
+                        tensor, axis="samples", names=tensor.sample_names
+                    ),
+                ),
+                tensor,
             )
         )
+
+        # Original block returned if sliced on all properties
+        self.assertTrue(
+            equistore.equal_block(
+                equistore.slice_block(
+                    tensor.block(0),
+                    axis="properties",
+                    labels=equistore.unique_metadata(
+                        tensor,
+                        axis="properties",
+                        names=tensor.property_names,
+                    ),
+                ),
+                tensor.block(0),
+            )
+        )
+
+        # Original tensor returned if sliced on all properties
         self.assertTrue(
             equistore.equal(
-                equistore.slice(tensor, axis="properties", labels=None), tensor
+                equistore.slice(
+                    tensor,
+                    axis="properties",
+                    labels=equistore.unique_metadata(
+                        tensor, axis="properties", names=tensor.property_names
+                    ),
+                ),
+                tensor,
             )
         )
 
