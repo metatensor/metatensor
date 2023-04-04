@@ -179,9 +179,6 @@ def _slice_block(
     names and indices that should be sliced, i.e. kept in the
     output :py:class:`TensorBlock`.
 
-    Note that either ``samples`` or ``properties``, or both,
-    should be specified as input.
-
     :param block: the input :py:class:`TensorBlock` to be sliced.
     :param axis: a :py:class:`str` object containing `samples` or `properties`
         indicating the direction of slicing.
