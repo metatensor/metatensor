@@ -27,7 +27,6 @@ def block_from_array(array: equistore.data.Array) -> TensorBlock:
 
     >>> import numpy as np
     >>> import equistore
-    ...
     >>> # Construct a simple 4D array:
     >>> array = np.linspace(0, 10, 42).reshape((7, 3, 1, 2))
     >>> # Transform it into a TensorBlock:
