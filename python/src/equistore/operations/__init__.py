@@ -23,6 +23,7 @@ from .equal_metadata import equal_metadata  # noqa
 from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
+from .one_hot import one_hot  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
 from .random_like import random_uniform_like, random_uniform_like_block  # noqa
 from .pow import pow  # noqa
@@ -65,6 +66,7 @@ __all__ = [
     "lstsq",
     "mean_over_samples",
     "mean_over_samples_block",
+    "one_hot",
     "ones_like",
     "ones_like_block",
     "random_uniform_like",
