@@ -5,7 +5,7 @@ import equistore
 from equistore import Labels
 
 
-def test_ordinary_usage(self):
+def test_ordinary_usage():
     """Test one-hot encoding for the ordinary use case."""
     original_labels = Labels(
         names=["atom", "species"],
@@ -27,7 +27,7 @@ def test_ordinary_usage(self):
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
 
 
-def test_additional_value(self):
+def test_additional_value():
     """Test one-hot encoding when additional values are provided."""
     original_labels = Labels(
         names=["atom", "species"],
@@ -49,7 +49,7 @@ def test_additional_value(self):
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
 
 
-def test_multiple_names(self):
+def test_multiple_names():
     """Test one-hot encoding if multiple dimension names are provided."""
     original_labels = Labels(
         names=["atom", "species"],
@@ -63,7 +63,7 @@ def test_multiple_names(self):
         equistore.one_hot(original_labels, possible_labels)
 
 
-def test_wrong_name(self):
+def test_wrong_name():
     """Test one-hot encoding if a wrong name is provided."""
     original_labels = Labels(
         names=["atom", "species"],
@@ -74,7 +74,7 @@ def test_wrong_name(self):
         equistore.one_hot(original_labels, possible_labels)
 
 
-def test_missing_value(self):
+def test_missing_value():
     """Test one-hot encoding if there is a value is missing
     from the provided dimension label."""
     original_labels = Labels(
