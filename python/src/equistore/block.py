@@ -214,34 +214,25 @@ class TensorBlock:
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
         >>> block_1 = TensorBlock(
-        ...             values=np.full((3, 1, 1), 1.0),
-        ...             samples=Labels(
-        ...                 ["samples"], np.array([[0], [2], [4]])
-        ...             ),
-        ...             components=[Labels(
-        ...                 ["components"], np.array([[0]]))
-        ...             ],
-        ...             properties=Labels(
-        ...                 ["properties"], np.array([[0]])),
-        ...         )
+        ...     values=np.full((3, 1, 1), 1.0),
+        ...     samples=Labels(["samples"], np.array([[0], [2], [4]])),
+        ...     components=[Labels(["components"], np.array([[0]]))],
+        ...     properties=Labels(["properties"], np.array([[0]])),
+        ... )
         >>> block_1.add_gradient(
         ...     "position",
-        ...     samples=Labels(
-        ...        ["sample", "position"], np.array([[0, -2], [2, 3]])
-        ...     ),
+        ...     samples=Labels(["sample", "position"], np.array([[0, -2], [2, 3]])),
         ...     data=np.full((2, 1, 1), 11.0),
         ...     components=[Labels(["components"], np.array([[0]]))],
         ... )
         >>> block_1.add_gradient(
         ...     "cell",
         ...     data=np.full((2, 6, 1, 1), 15.0),
-        ...     samples=Labels(
-        ...        ["sample"], np.array([[0], [2]])
-        ...     ),
-        ...     components=[Labels(["cell"],
-        ...                 np.array([[0], [1], [2], [3], [4], [5]])),
-        ...                 Labels(["components"],
-        ...                 np.array([[0]]))],
+        ...     samples=Labels(["sample"], np.array([[0], [2]])),
+        ...     components=[
+        ...         Labels(["cell"], np.array([[0], [1], [2], [3], [4], [5]])),
+        ...         Labels(["components"], np.array([[0]])),
+        ...     ],
         ... )
 
         >>> grad_wrt_position = block_1.gradient("position")
@@ -253,7 +244,7 @@ class TensorBlock:
         properties (1): ['properties']
 
         >>> grad_wrt_cell = block_1.gradient("cell")
-        >>> print (grad_wrt_cell)
+        >>> print(grad_wrt_cell)
         Gradient TensorBlock
         parameter: 'cell'
         samples (2): ['sample']
@@ -284,21 +275,14 @@ class TensorBlock:
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
         >>> block_1 = TensorBlock(
-        ...             values=np.full((3, 1, 1), 1.0),
-        ...             samples=Labels(
-        ...                 ["samples"], np.array([[0], [2], [4]])
-        ...             ),
-        ...             components=[Labels(
-        ...                 ["components"], np.array([[0]]))
-        ...             ],
-        ...             properties=Labels(
-        ...                 ["properties"], np.array([[0]])),
-        ...         )
+        ...     values=np.full((3, 1, 1), 1.0),
+        ...     samples=Labels(["samples"], np.array([[0], [2], [4]])),
+        ...     components=[Labels(["components"], np.array([[0]]))],
+        ...     properties=Labels(["properties"], np.array([[0]])),
+        ... )
         >>> block_1.add_gradient(
         ...     "position",
-        ...     samples=Labels(
-        ...        ["sample", "position"], np.array([[0, -2], [2, 3]])
-        ...     ),
+        ...     samples=Labels(["sample", "position"], np.array([[0, -2], [2, 3]])),
         ...     data=np.full((2, 1, 1), 11.0),
         ...     components=[Labels(["components"], np.array([[0]]))],
         ... )

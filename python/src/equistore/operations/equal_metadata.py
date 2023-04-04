@@ -47,31 +47,15 @@ def equal_metadata(
     ...     blocks=[
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
-    ...             samples=Labels(
-    ...                 ["samples"],
-    ...                 np.array([[0], [1], [4], [5]])
-    ...             ),
-    ...             components=[
-    ...                 Labels.arange("components", 3)
-    ...             ],
-    ...             properties=Labels(
-    ...                 ["p_1", "p_2"],
-    ...                 np.array([[0, 1]])
-    ...             ),
+    ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
+    ...             components=[Labels.arange("components", 3)],
+    ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
-    ...             samples=Labels(
-    ...                 ["samples"],
-    ...                 np.array([[0], [1], [4], [5]])
-    ...             ),
-    ...             components=[
-    ...                 Labels.arange("components", 3)
-    ...             ],
-    ...             properties=Labels(
-    ...                 ["p_1", "p_2"],
-    ...                 np.array([[0, 1]])
-    ...             ),
+    ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
+    ...             components=[Labels.arange("components", 3)],
+    ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...     ],
     ... )
@@ -83,30 +67,15 @@ def equal_metadata(
     ...     blocks=[
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
-    ...             samples=Labels(
-    ...                 ["samples"],
-    ...                 np.array([[0], [1], [4], [5]])),
-    ...             components=[
-    ...                 Labels.arange("components", 3)
-    ...             ],
-    ...             properties=Labels(
-    ...                 ["p_3", "p_4"],
-    ...                 np.array([[0, 1]])
-    ...             ),
+    ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
+    ...             components=[Labels.arange("components", 3)],
+    ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
-    ...             samples=Labels(
-    ...                 ["samples"],
-    ...                 np.array([[0], [1], [4], [5]])
-    ...             ),
-    ...             components=[
-    ...                 Labels.arange("components", 3)
-    ...             ],
-    ...             properties=Labels(
-    ...                 ["p_3", "p_4"],
-    ...                 np.array([[0, 1]])
-    ...             ),
+    ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
+    ...             components=[Labels.arange("components", 3)],
+    ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...     ],
     ... )

@@ -670,7 +670,6 @@ def large_tensor_map():
                 [2, 5],
                 [3, 5],
             ],
-            dtype=np.int32,
         ),
     )
     return TensorMap(keys, block_list)

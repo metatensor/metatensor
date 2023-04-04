@@ -11,19 +11,18 @@ from equistore import Labels, TensorBlock, TensorMap
 DATA_ROOT = path.join(path.dirname(__file__), "..", "data")
 
 
-class TestJoinTensorMap:
-    @pytest.fixture
-    def tensor(self):
-        tensor = equistore.load(
-            path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-            use_numpy=True,
-        )
+@pytest.fixture
+def tensor():
+    tensor = equistore.load(
+        path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
+        use_numpy=True,
+    )
 
-        # Test if Tensormaps have at least one gradient. This avoids dropping gradient
-        # tests silently by removing gradients from the reference data
-        assert "positions" in tensor.block(0).gradients_list()
+    # Test if Tensormaps have at least one gradient. This avoids dropping gradient
+    # tests silently by removing gradients from the reference data
+    assert "positions" in tensor.block(0).gradients_list()
 
-        return tensor
+    return tensor
 
     @pytest.fixture
     def components_tensor(self):

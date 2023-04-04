@@ -1,8 +1,7 @@
 """
 The Python API for equistore also provides functions which operate on
-:py:class:`equistore.TensorMap`, :py:class:`equistore.TensorBlocks` as well as
-:py:class:`equistore.Labels` and can be used to build Machine Learning
-models.
+:py:class:`TensorMap`, :py:class:`TensorBlocks` as well as :py:class:`Labels`
+and can be used to build Machine Learning models.
 
 These functions can handle data stored either in numpy arrays or Torch tensor,
 and automatically dispatch to the right function for a given TensorMap.
@@ -24,6 +23,7 @@ from .equal_metadata import equal_metadata  # noqa
 from .join import join  # noqa
 from .lstsq import lstsq  # noqa
 from .multiply import multiply  # noqa
+from .one_hot import one_hot  # noqa
 from .ones_like import ones_like, ones_like_block  # noqa
 from .random_like import random_uniform_like, random_uniform_like_block  # noqa
 from .pow import pow  # noqa
@@ -66,6 +66,7 @@ __all__ = [
     "lstsq",
     "mean_over_samples",
     "mean_over_samples_block",
+    "one_hot",
     "ones_like",
     "ones_like_block",
     "random_uniform_like",

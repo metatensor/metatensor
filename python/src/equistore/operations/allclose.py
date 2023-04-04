@@ -34,48 +34,49 @@ def allclose(
     >>> from equistore import Labels
     >>> # Create simple block
     >>> block1 = TensorBlock(
-    ...    values=np.array([
-    ...         [1, 2, 4],
-    ...         [3, 5, 6],
-    ...     ]),
-    ...    samples=Labels(
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
+    ...     samples=Labels(
     ...         ["structure", "center"],
-    ...         np.array([
-    ...             [0, 0],
-    ...             [0, 1],
-    ...         ]),
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
     ...     ),
-    ...    components=[],
-    ...    properties=Labels(
-    ...        ["properties"], np.array([[0], [1], [2]])
-    ...     ),
+    ...     components=[],
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
     >>> # Create a second block that is equivalent to block1
     >>> block2 = TensorBlock(
-    ...     values=np.array([
-    ...          [1, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    ...
     >>> # Create tensors from blocks, using keys with different names
     >>> keys1 = Labels(names=["key1"], values=np.array([[0]]))
     >>> keys2 = Labels(names=["key2"], values=np.array([[0]]))
-    ...
     >>> tensor1 = TensorMap(keys1, [block1])
     >>> tensor2 = TensorMap(keys2, [block2])
-    ...
     >>> # Call allclose, which should fail as the blocks have different keys
     >>> # associated with them
     >>> allclose(tensor1, tensor2)
@@ -83,26 +84,26 @@ def allclose(
     >>> # Create a third tensor, which differs from tensor1 only by 1e-5 in a
     >>> # single block value
     >>> block3 = TensorBlock(
-    ...     values=np.array([
-    ...          [1+1e-5, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1 + 1e-5, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    ...
-    >>> #Create tensors from blocks, using key with same name as block1
+    >>> # Create tensors from blocks, using key with same name as block1
     >>> keys3 = Labels(names=["key1"], values=np.array([[0]]))
-    ...
     >>> tensor3 = TensorMap(keys3, [block3])
     >>> # Call allclose, which should return False because the default rtol
     >>> # is 1e-13, and the difference in the first value between the blocks
@@ -154,49 +155,49 @@ def allclose_raise(
     >>> from equistore import Labels
     >>> # Create simple block, with one np.nan value
     >>> block1 = TensorBlock(
-    ...     values=np.array([
-    ...          [1, 2, 4],
-    ...          [3, 5, np.nan],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, np.nan],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    ...
     >>> # Create a second block that differs from block1 by 1e-5 in its
     >>> # first value
     >>> block2 = TensorBlock(
-    ...     values=np.array([
-    ...          [1+1e-5, 2, 4],
-    ...          [3, 5, np.nan],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1 + 1e-5, 2, 4],
+    ...             [3, 5, np.nan],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    ...
-    >>> #Create tensors from blocks, using same keys
+    >>> # Create tensors from blocks, using same keys
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> tensor1 = TensorMap(keys, [block1])
     >>> tensor2 = TensorMap(keys, [block2])
-    ...
     >>> # Call allclose_raise, which should return a ValueError because:
     >>> # 1. The two NaNs are not considered equal,
     >>> # 2. The difference between the first value in the blocks
@@ -262,42 +263,44 @@ def allclose_block(
     >>> from equistore import Labels
     >>> # Create simple block
     >>> block1 = TensorBlock(
-    ...     values=np.array([
-    ...          [1, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["property_1"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    ...
     >>> # Recreate block1, but change first value in the block from 1 to 1.00001
     >>> block2 = TensorBlock(
-    ...     values=np.array([
-    ...          [1+1e-5, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1 + 1e-5, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["property_1"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    ...
     >>> # Call allclose_block, which should return False because the default
     >>> # rtol is 1e-13, and the difference in the first value between the
     >>> # two blocks is 1e-5
@@ -347,44 +350,46 @@ def allclose_block_raise(
     Here is an example using this function:
 
     >>> from equistore import Labels
-    >>> #Create simple block
+    >>> # Create simple block
     >>> block1 = TensorBlock(
-    ...     values=np.array([
-    ...          [1, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["property_1"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    ...
-    >>> #Recreate block1, but rename properties label 'property_1' to 'property_2'
+    >>> # Recreate block1, but rename properties label 'property_1' to 'property_2'
     >>> block2 = TensorBlock(
-    ...     values=np.array([
-    ...          [1, 2, 4],
-    ...          [3, 5, 6],
-    ...      ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
-    ...          ["structure", "center"],
-    ...          np.array([
-    ...              [0, 0],
-    ...              [0, 1],
-    ...          ]),
-    ...      ),
+    ...         ["structure", "center"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...             ]
+    ...         ),
+    ...     ),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["property_2"], np.array([[0], [1], [2]])
-    ...      ),
+    ...     properties=Labels(["property_2"], np.array([[0], [1], [2]])),
     ... )
-    ...
     >>> # Call allclose_block_raise, which should raise a ValueError because the
     >>> # properties of the two blocks are not equal
     >>> allclose_block_raise(block1, block2)

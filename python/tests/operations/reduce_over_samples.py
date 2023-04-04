@@ -166,7 +166,6 @@ class TestSumSamples(unittest.TestCase):
                         [1, 1, 1],
                         [1, 0, 0],
                     ],
-                    dtype=np.int32,
                 ),
             ),
             components=[],
@@ -426,7 +425,6 @@ class TestMeanSamples(unittest.TestCase):
                         [1, 1, 1],
                         [1, 0, 0],
                     ],
-                    dtype=np.int32,
                 ),
             ),
             components=[],
@@ -756,7 +754,6 @@ class TestStdSamples(unittest.TestCase):
                         [1, 1, 1],
                         [1, 0, 0],
                     ],
-                    dtype=np.int32,
                 ),
             ),
             components=[],
@@ -854,11 +851,7 @@ class TestStdSamples(unittest.TestCase):
         block_1 = TensorBlock(
             values=np.array([[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54]]),
             samples=Labels(
-                ["samples1", "samples2"],
-                np.array(
-                    [[0, 0], [1, 1], [2, 2]],
-                    dtype=np.int32,
-                ),
+                ["samples1", "samples2"], np.array([[0, 0], [1, 1], [2, 2]])
             ),
             components=[],
             properties=Labels(["properties"], np.array([[0], [1], [5]])),
@@ -867,13 +860,7 @@ class TestStdSamples(unittest.TestCase):
         block_1.add_gradient(
             parameter="parameter",
             data=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
-            samples=Labels(
-                ["sample", "samples2"],
-                np.array(
-                    [[0, 0], [1, 1], [2, 2]],
-                    dtype=np.int32,
-                ),
-            ),
+            samples=Labels(["sample", "samples2"], np.array([[0, 0], [1, 1], [2, 2]])),
             components=[],
         )
 
@@ -899,10 +886,7 @@ class TestStdSamples(unittest.TestCase):
         # Gradients
         grad_sample_label = Labels(
             names=["sample", "samples2"],
-            values=np.array(
-                [[0, 0], [1, 1], [2, 2]],
-                dtype=np.int32,
-            ),
+            values=np.array([[0, 0], [1, 1], [2, 2]]),
         )
         self.assertTrue(
             std_X[0].gradient("parameter").samples.names == grad_sample_label.names
@@ -993,8 +977,7 @@ class TestZeroSamples(unittest.TestCase):
                         [0, 1],
                         [1, 0],
                         [1, 1],
-                    ],
-                    dtype=np.int32,
+                    ]
                 ),
             ),
             components=[],

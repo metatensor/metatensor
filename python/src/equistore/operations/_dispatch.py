@@ -242,11 +242,15 @@ def index_add(output_array, input_array, index):
 
 
 def zeros_like(array, shape=None, requires_grad=False):
-    """Create an zeros_like with the same size of array.
-    if shape is not None it overrides the shape of the result.
+    """
+    Create an array filled with zeros, with the given ``shape``, and similar
+    dtype, device and other options as ``array``.
 
-    It is equivalent of np.zeros_like(array, shape=shape).
-    requires_grad is used only in torch"""
+    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
+    is only used for torch tensors, and set the corresponding value.
+
+    This is the equivalent to ``np.zeros_like(array, shape=shape)``.
+    """
     if isinstance(array, np.ndarray):
         return np.zeros_like(array, shape=shape, subok=False)
     elif isinstance(array, TorchTensor):
@@ -265,10 +269,14 @@ def zeros_like(array, shape=None, requires_grad=False):
 
 
 def ones_like(array, shape=None, requires_grad=False):
-    """Create an ones_like with the same size of array.
+    """
+    Create an array filled with ones, with the given ``shape``, and similar
+    dtype, device and other options as ``array``.
 
-    :param shape: If not ``None`` override the shape with the given one
-    :param requires_grad: used only in torch
+    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
+    is only used for torch tensors, and set the corresponding value.
+
+    This is the equivalent to ``np.ones_like(array, shape=shape)``.
     """
     if isinstance(array, np.ndarray):
         return np.ones_like(array, shape=shape, subok=False)
@@ -276,7 +284,7 @@ def ones_like(array, shape=None, requires_grad=False):
         if shape is None:
             shape = array.size()
 
-        return torch.ones_like(
+        return torch.ones(
             shape,
             dtype=array.dtype,
             layout=array.layout,
@@ -288,18 +296,22 @@ def ones_like(array, shape=None, requires_grad=False):
 
 
 def empty_like(array, shape=None, requires_grad=False):
-    """Create an empty_like with the same size of array.
-    if shape is not None it overrides the shape of the result.
+    """
+    Create an uninitialized array, with the given ``shape``, and similar dtype,
+    device and other options as ``array``.
 
-    It is equivalent of np.empty_like(array, shape=shape).
-    requires_grad is used only in torch"""
+    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
+    is only used for torch tensors, and set the corresponding value.
+
+    This is the equivalent to ``np.empty_like(array, shape=shape)``.
+    """
     if isinstance(array, np.ndarray):
         return np.empty_like(array, shape=shape, subok=False)
     elif isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
 
-        return torch.empty_like(
+        return torch.empty(
             shape,
             dtype=array.dtype,
             layout=array.layout,
@@ -338,13 +350,31 @@ def sign(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def random_uniform(array):
-    """Creates an array with the same size of the given array and
-    all values randomly sampled from the uniform distribution.
+def rand_like(array, shape=None, requires_grad=False):
     """
+    Create an array with values randomly sampled from the uniform distribution
+    in the ``[0, 1)`` interval, with the given ``shape``, and similar dtype,
+    device and other options as ``array``.
+
+    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
+    is only used for torch tensors, and set the corresponding value.
+    """
+
     if isinstance(array, np.ndarray):
-        return np.random.rand(*array.shape)
+        if shape is None:
+            shape = array.shape
+
+        return np.random.rand(*shape).astype(array.dtype)
     elif isinstance(array, TorchTensor):
-        return torch.rand_like(array)
+        if shape is None:
+            shape = array.shape
+
+        return torch.rand(
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+            requires_grad=requires_grad,
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)

@@ -1,9 +1,13 @@
-Contribution via merge requests are always welcome. Source code is available
-from `Github`_. Before submitting a merge request, please open an issue to
-discuss your changes. Use the only `master` as reference branch for submitting
-your requests.
+Contribution via pull requests are always welcome. Source code is available from
+`Github`_. Before submitting a pull request, please open an issue to discuss
+your changes. Use the only `master` as reference branch for submitting your
+requests.
 
 .. _`Github` : https://github.com/lab-cosmo/equistore
+
+Interactions with the equistore projects must follow our `code of conduct`_.
+
+.. _code of conduct: https://github.com/lab-cosmo/equistore/blob/master/CODE_OF_CONDUCT.md
 
 Required tools
 --------------
@@ -27,7 +31,7 @@ not have to interact with them directly:
 
 - **cmake**: we need a cmake version of at least 3.10.
 - **a C++ compiler** we need a compiler supporting C++11. GCC >= 5, clang >= 3.7
-  and MSVC >= 15 should all work, although MSVC has not been tested yet.
+  and MSVC >= 15 should all work, although MSVC is not yet tested continuously.
 
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest
@@ -133,12 +137,18 @@ can build the documentation with:
 
     tox -e docs
 
-You can visualize the local documentation with your favorite browser (here
-Mozilla Firefox is used)
+You can then visualize the local documentation with your favorite browser with
+the following command (or open the :file:`docs/build/html/index.html` file
+manually).
 
 .. code-block:: bash
 
+    # on linux, depending on what package you have installed:
+    xdg-open docs/build/html/index.html
     firefox docs/build/html/index.html
+
+    # on macOS:
+    open docs/build/html/index.html
 
 .. _`sphinx` : https://www.sphinx-doc.org/en/master/
 
