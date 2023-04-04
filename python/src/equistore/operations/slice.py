@@ -22,15 +22,14 @@ def slice(
 
     .. code-block:: python
 
-        samples=Labels(
+        samples = Labels(
             names=["structure", "center"],
-            values=np.array(
-                [[0, 1], [0, 6], [1, 6], [3, 16]]
-            )  # must be a 2D-array
-        properties=Labels(
-            names=["n",],  # radial channel
-            values=np.array([[3,], [4,], [5,]]),
-            )
+            values=np.array([[0, 1], [0, 6], [1, 6], [3, 16]]),  # must be a 2D-array
+        )
+        properties = Labels(
+            names=["n"],  # radial channel
+            values=np.array([[3], [4], [5]]),
+        )
         sliced_tensor_samples = slice(
             tensor,
             axis="samples",
@@ -112,14 +111,12 @@ def slice_block(
 
     .. code-block:: python
 
-        samples=Labels(
+        samples = Labels(
             names=["structure", "center"],
-            values=np.array(
-                [[0, 1], [0, 6], [1, 6], [3, 16]]
-            ),  # must be a 2D-array
+            values=np.array([[0, 1], [0, 6], [1, 6], [3, 16]]),  # must be a 2D-array
         )
-        properties=Labels(
-            names=["n",],  # radial channel
+        properties = Labels(
+            names=["n"],  # radial channel
             values=np.array([[3], [4], [5]]),
         )
         sliced_block_samples = slice_block(
