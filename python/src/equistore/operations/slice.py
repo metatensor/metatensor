@@ -230,7 +230,8 @@ def _slice_block(
             components=block.components,
             properties=block.properties,
         )
-    else:  # properties
+    else:
+        assert axis == "properties"
         new_block = TensorBlock(
             values=new_values,
             samples=block.samples,
