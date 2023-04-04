@@ -196,7 +196,8 @@ def _slice_block(
     new_values = block.values
     if axis == "samples":
         new_samples = block.samples
-    else:  # properties
+    else:
+        assert axis == "properties"
         new_properties = block.properties
 
     # Generate arrays of bools indicating which samples indices to keep upon slicing.
