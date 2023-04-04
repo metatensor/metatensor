@@ -455,7 +455,7 @@ class TestSliceBoth(unittest.TestCase):
         expected = block.values[samples_filter][..., properties_filter]
         self.assertTrue(np.all(sliced_block.values == expected))
 
-    def test_no_slicing(self):
+    def test_slicing_by_empty(self):
         tensor = equistore.load(
             os.path.join(DATA_ROOT, TEST_FILE),
             use_numpy=True,
