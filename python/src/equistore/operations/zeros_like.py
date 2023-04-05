@@ -134,11 +134,11 @@ def zeros_like_block(
 
     for parameter in parameters:
         gradient = block.gradient(parameter)
-        gradient_data = _dispatch.zeros_like(gradient.data)
+        gradient_values = _dispatch.zeros_like(gradient.values)
 
         result_block.add_gradient(
             parameter,
-            gradient_data,
+            gradient_values,
             gradient.samples,
             gradient.components,
         )

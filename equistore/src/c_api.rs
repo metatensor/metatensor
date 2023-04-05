@@ -400,20 +400,22 @@ extern "C" {
     #[doc = " Make a copy of an `eqs_block_t`.\n\n The memory allocated by this function and the blocks should be released\n using `eqs_block_free`, or moved into a tensor map using `eqs_tensormap`.\n\n @param block existing block to copy\n\n @returns A pointer to the newly allocated block, or a `NULL` pointer in\n          case of error. In case of error, you can use `eqs_last_error()`\n          to get the error message."]
     pub fn eqs_block_copy(block: *const eqs_block_t) -> *mut eqs_block_t;
     #[must_use]
-    #[doc = " Get the set of labels of the requested `kind` from this `block`.\n\n The `values_gradients` parameter controls whether this function looks up\n labels for `\"values\"` or one of the gradients in this block.\n\n This function allocates memory for `labels` which must be released\n `eqs_labels_free` when you don't need it anymore.\n\n @param block pointer to an existing block\n @param values_gradients either `\"values\"` or the name of gradients to lookup\n @param axis axis/dimension of the data array for which you need the labels\n @param labels pointer to an empty `eqs_labels_t` that will be set to the\n               requested labels\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
+    #[doc = " Get the set of labels from this `block`.\n\n This function allocates memory for `labels` which must be released\n `eqs_labels_free` when you don't need it anymore.\n\n @param block pointer to an existing block\n @param axis axis/dimension of the data array for which you need the labels\n @param labels pointer to an empty `eqs_labels_t` that will be set to the\n        `block`'s labels\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
     pub fn eqs_block_labels(
         block: *const eqs_block_t,
-        values_gradients: *const ::std::os::raw::c_char,
         axis: usize,
         labels: *mut eqs_labels_t,
     ) -> eqs_status_t;
     #[must_use]
-    #[doc = " Get the array handle for either values or one of the gradient in this `block`.\n\n The `values_gradients` parameter controls whether this function looks up\n labels for `\"values\"` or one of the gradients in this block.\n\n @param block pointer to an existing block\n @param values_gradients either `\"values\"` or the name of gradients to lookup\n @param data pointer to an empty `eqs_array_t` that will be set to the\n             requested array\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
-    pub fn eqs_block_data(
+    #[doc = " Get one of the gradients in this `block`.\n\n The gradient memory is still managed by the block, the returned\n `eqs_block_t*` should not be freed. The gradient pointer is invalidated if\n more gradients are added to the parent block, or if the parent block is\n freed with `eqs_block_free`.\n\n @param block pointer to an existing block @param parameter the name of the\n gradient to be extracted @param gradient pointer to an empty `eqs_block_t`\n pointer that will be set to point to the requested gradient\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full error\n          message."]
+    pub fn eqs_block_gradient(
         block: *mut eqs_block_t,
-        values_gradients: *const ::std::os::raw::c_char,
-        data: *mut eqs_array_t,
+        parameter: *const ::std::os::raw::c_char,
+        gradient: *mut *mut eqs_block_t,
     ) -> eqs_status_t;
+    #[must_use]
+    #[doc = " Get the array handle for the values in this `block`.\n\n @param block pointer to an existing block\n @param data pointer to an empty `eqs_array_t` that will be set to the\n             requested array\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
+    pub fn eqs_block_data(block: *mut eqs_block_t, data: *mut eqs_array_t) -> eqs_status_t;
     #[must_use]
     #[doc = " Add a new gradient to this `block` with the given `name`.\n\n @param block pointer to an existing block\n @param data array containing the gradient data. The block takes\n                 ownership of the array, and will release it with\n                 `array.destroy(array.ptr)` when it no longer needs it.\n @param parameter name of the gradient as a NULL-terminated UTF-8 string.\n                  This is usually the parameter used when taking derivatives\n                  (e.g. `\"positions\"`, `\"cell\"`, etc.)\n @param samples sample labels for the gradient array. The components and\n                property labels are supposed to match the values in this block\n @param components array of component labels corresponding to intermediary\n                   dimensions of the data\n @param components_count number of entries in the `components` array\n\n @returns The status code of this operation. If the status is not\n          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full\n          error message."]
     pub fn eqs_block_add_gradient(

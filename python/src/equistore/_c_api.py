@@ -154,15 +154,20 @@ def setup_functions(lib):
 
     lib.eqs_block_labels.argtypes = [
         POINTER(eqs_block_t),
-        ctypes.c_char_p,
         c_uintptr_t,
         POINTER(eqs_labels_t),
     ]
     lib.eqs_block_labels.restype = _check_status
 
-    lib.eqs_block_data.argtypes = [
+    lib.eqs_block_gradient.argtypes = [
         POINTER(eqs_block_t),
         ctypes.c_char_p,
+        POINTER(POINTER(eqs_block_t)),
+    ]
+    lib.eqs_block_gradient.restype = _check_status
+
+    lib.eqs_block_data.argtypes = [
+        POINTER(eqs_block_t),
         POINTER(eqs_array_t),
     ]
     lib.eqs_block_data.restype = _check_status

@@ -625,12 +625,12 @@ mod tests {
 
         // iterate over keys & blocks
         for (key, block) in tensor.iter() {
-            assert_eq!(block.values().data.to_array()[[0, 0]], key[0].i32() as f64);
+            assert_eq!(block.values().to_array()[[0, 0]], key[0].i32() as f64);
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in tensor.iter_mut() {
-            let array = block.values_mut().data.to_array_mut();
+            let array = block.values_mut().to_array_mut();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * (key[0].i32() as f64));
         }

@@ -58,6 +58,9 @@ class TensorMap:
         )
         _check_pointer(self._ptr)
 
+        for block in blocks:
+            block._is_inside_map = True
+
     @staticmethod
     def _from_ptr(ptr):
         """Create a tensor map from a pointer owning its data"""

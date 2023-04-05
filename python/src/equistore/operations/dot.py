@@ -58,12 +58,12 @@ def _dot_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     )
 
     for parameter, gradient in block1.gradients():
-        # gradient_data = gradient.data @ block2.values.T
-        gradient_data = _dispatch.dot(gradient.data, block2.values)
+        # gradient_values = gradient.values @ block2.values.T
+        gradient_values = _dispatch.dot(gradient.values, block2.values)
 
         result_block.add_gradient(
             parameter,
-            gradient_data,
+            gradient_values,
             gradient.samples,
             gradient.components,
         )

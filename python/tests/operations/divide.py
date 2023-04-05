@@ -70,7 +70,7 @@ class TestDivide(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -85,7 +85,7 @@ class TestDivide(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -105,7 +105,7 @@ class TestDivide(unittest.TestCase):
         )
         block_3.add_gradient(
             "parameter",
-            data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
+            values=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -119,7 +119,7 @@ class TestDivide(unittest.TestCase):
         )
         block_4.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1.0, 1.1], [1.2, 1.3]],
                     [[1.4, 1.5], [1.0, 1.1]],
@@ -143,7 +143,7 @@ class TestDivide(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [
                         [-2.52080856e00, 1.72173344e-03],
@@ -171,7 +171,7 @@ class TestDivide(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[0.09387755, 0.05415743], [0.11265306, 0.06400424]],
                     [[-1.53223072, -0.73866028], [-1.09445051, -0.5416842]],
@@ -212,7 +212,7 @@ class TestDivide(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -226,7 +226,7 @@ class TestDivide(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -246,7 +246,7 @@ class TestDivide(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1.17647059, 0.19607843], [1.37254902, 0.39215686]],
                     [[1.56862745, 0.58823529], [1.76470588, 0.78431373]],
@@ -271,7 +271,7 @@ class TestDivide(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1.96078431, 2.15686275], [2.35294118, 2.54901961]],
                     [[2.74509804, 2.94117647], [1.96078431, 2.15686275]],

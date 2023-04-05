@@ -72,8 +72,8 @@ class TestSliceSamples(unittest.TestCase):
             for sliced_c, c in zip(sliced_gradient.components, gradient.components):
                 self.assertTrue(np.all(sliced_c == c))
 
-            expected = gradient.data[gradient_sample_filter]
-            self.assertTrue(np.all(sliced_gradient.data == expected))
+            expected = gradient.values[gradient_sample_filter]
+            self.assertTrue(np.all(sliced_gradient.values == expected))
 
     def _check_empty_block(self, block, sliced_block):
         # sliced block has no values
@@ -89,7 +89,7 @@ class TestSliceSamples(unittest.TestCase):
             self.assertTrue(np.all(sliced_gradient.properties == gradient.properties))
 
             # sliced block contains zero samples
-            self.assertEqual(sliced_gradient.data.shape[0], 0)
+            self.assertEqual(sliced_gradient.values.shape[0], 0)
 
     def test_slice_block(self):
         # Slice only 'structures' 2, 4, 6, 8
@@ -217,7 +217,7 @@ class TestSliceProperties(unittest.TestCase):
 
             # we have the right values
             self.assertTrue(
-                np.all(sliced_gradient.data == gradient.data[..., property_filter])
+                np.all(sliced_gradient.values == gradient.values[..., property_filter])
             )
 
     def _check_empty_block(self, block, sliced_block):
@@ -234,7 +234,7 @@ class TestSliceProperties(unittest.TestCase):
             self.assertTrue(np.all(sliced_gradient.samples == gradient.samples))
 
             # sliced block contains zero properties
-            self.assertEqual(sliced_gradient.data.shape[-1], 0)
+            self.assertEqual(sliced_gradient.values.shape[-1], 0)
 
     def test_slice_block(self):
         # Slice only 'n' (i.e. radial channels) 1, 3

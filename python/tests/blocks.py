@@ -186,7 +186,7 @@ properties (2): ['properties']"""
     assert tuple(gradient.samples[0]) == (0, -2)
     assert tuple(gradient.samples[1]) == (2, 3)
 
-    assert_equal(gradient.data, np.full((2, 3, 2, 2), 11.0))
+    assert_equal(gradient.values, np.full((2, 3, 2, 2), 11.0))
 
 
 def test_copy():

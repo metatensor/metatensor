@@ -76,7 +76,7 @@ class TestLstsq(unittest.TestCase):
         )
         block_X.add_gradient(
             "positions",
-            data=Xgradval,
+            values=Xgradval,
             samples=Labels(
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
@@ -92,7 +92,7 @@ class TestLstsq(unittest.TestCase):
         )
         block_Y.add_gradient(
             "positions",
-            data=Ygradval,
+            values=Ygradval,
             samples=Labels(
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
@@ -131,7 +131,7 @@ class TestLstsq(unittest.TestCase):
         )
         block_X.add_gradient(
             "positions",
-            data=Xgradval.reshape(1, 3, xdim, Xval.shape[-1]),
+            values=Xgradval.reshape(1, 3, xdim, Xval.shape[-1]),
             samples=Labels(
                 ["sample", "positions"],
                 np.array([[0, 1]]),
@@ -150,7 +150,7 @@ class TestLstsq(unittest.TestCase):
         )
         block_Y.add_gradient(
             "positions",
-            data=Ygradval.reshape((1, 3, ydim, Yval.shape[-1])),
+            values=Ygradval.reshape((1, 3, ydim, Yval.shape[-1])),
             samples=Labels(["sample", "positions"], np.array([[0, 1]])),
             components=[
                 Labels.arange("der_components", 3),

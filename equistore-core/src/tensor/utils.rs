@@ -117,13 +117,13 @@ pub fn merge_samples(
     new_sample_names: Vec<&str>,
     sort: bool
 ) -> (Arc<Labels>, Vec<Vec<eqs_sample_mapping_t>>) {
-    let add_key_to_samples = blocks[0].1.values().samples.size() < new_sample_names.len();
+    let add_key_to_samples = blocks[0].1.samples.size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
     // were in the blocks, and then optionally sort them later below
     let mut merged_samples = IndexSet::new();
     for (key, block) in blocks {
-        for sample in block.values().samples.iter() {
+        for sample in block.samples.iter() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
@@ -147,7 +147,7 @@ pub fn merge_samples(
     let mut samples_mappings = Vec::new();
     for (key, block) in blocks {
         let mut mapping_for_block = Vec::new();
-        for (sample_i, sample) in block.values().samples.iter().enumerate() {
+        for (sample_i, sample) in block.samples.iter().enumerate() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);

@@ -52,7 +52,7 @@ class TestZeros_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(zeros_gradient.data, np.zeros_like(gradient.data))
+                    np.allclose(zeros_gradient.values, np.zeros_like(gradient.values))
                 )
 
     def test_zeros_component(self):
@@ -99,7 +99,7 @@ class TestZeros_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(zeros_gradient.data, np.zeros_like(gradient.data))
+                    np.allclose(zeros_gradient.values, np.zeros_like(gradient.values))
                 )
             self.assertTrue(zeros_block_pos.gradients_list() == ["positions"])
             for zeros_parameter_pos, zeros_gradient_pos in zeros_block_pos.gradients():
@@ -120,7 +120,9 @@ class TestZeros_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(zeros_gradient_pos.data, np.zeros_like(gradient.data))
+                    np.allclose(
+                        zeros_gradient_pos.values, np.zeros_like(gradient.values)
+                    )
                 )
 
     def test_zeros_error(self):

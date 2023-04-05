@@ -75,7 +75,7 @@ def _add_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
     for parameter, gradient in block.gradients():
         result_block.add_gradient(
             parameter=parameter,
-            data=gradient.data,
+            values=gradient.values,
             samples=gradient.samples,
             components=gradient.components,
         )
@@ -96,7 +96,7 @@ def _add_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
     for parameter1, gradient1 in block1.gradients():
         result_block.add_gradient(
             parameter=parameter1,
-            data=gradient1.data + block2.gradient(parameter1).data,
+            values=gradient1.values + block2.gradient(parameter1).values,
             samples=gradient1.samples,
             components=gradient1.components,
         )

@@ -155,7 +155,7 @@ def _tensor_map_to_dict(tensor_map):
         for parameter in block.gradients_list():
             gradient = block.gradient(parameter)
             prefix = f"blocks/{block_i}/gradients/{parameter}"
-            result[f"{prefix}/data"] = _array_to_numpy(gradient.data)
+            result[f"{prefix}/data"] = _array_to_numpy(gradient.values)
             result[f"{prefix}/samples"] = gradient.samples
             for i, component in enumerate(gradient.components):
                 result[f"{prefix}/components/{i}"] = component

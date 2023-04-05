@@ -115,7 +115,7 @@ def equal_metadata(
         block_1 = tensor_1[key]
         block_2 = tensor_2[key]
 
-        # Check metatdata of the blocks
+        # Check metadata of the blocks
         try:
             _check_blocks(block_1, block_2, check, "equal_metadata")
         except ValueError:

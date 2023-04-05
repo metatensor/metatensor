@@ -78,7 +78,7 @@ def _divide_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
     for parameter, gradient in block.gradients():
         result_block.add_gradient(
             parameter,
-            gradient.data / constant,
+            gradient.values / constant,
             gradient.samples,
             gradient.components,
         )
@@ -104,9 +104,9 @@ def _divide_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock
             isample_grad2 = np.where(gradient2.samples["sample"] == isample)[0]
             values_grad.append(
                 -block1.values[isample]
-                * gradient2.data[isample_grad2]
+                * gradient2.values[isample_grad2]
                 / block2.values[isample] ** 2
-                + gradient1.data[isample_grad1] / block2.values[isample]
+                + gradient1.values[isample_grad1] / block2.values[isample]
             )
         values_grad = _dispatch.concatenate(values_grad, axis=0)
 

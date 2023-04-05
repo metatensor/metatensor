@@ -106,5 +106,5 @@ def equal_block_raise(block1: TensorBlock, block2: TensorBlock):
     for parameter, gradient1 in block1.gradients():
         gradient2 = block2.gradient(parameter)
 
-        if not _dispatch.all(gradient1.data == gradient2.data):
-            raise ValueError(f'gradient ("{parameter}") data are not equal')
+        if not _dispatch.all(gradient1.values == gradient2.values):
+            raise ValueError(f'gradient ("{parameter}") values are not equal')

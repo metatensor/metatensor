@@ -427,10 +427,10 @@ def allclose_block_raise(
         gradient2 = block2.gradient(parameter)
 
         if not _dispatch.allclose(
-            gradient1.data,
-            gradient2.data,
+            gradient1.values,
+            gradient2.values,
             rtol=rtol,
             atol=atol,
             equal_nan=equal_nan,
         ):
-            raise ValueError(f'gradient ("{parameter}") data are not allclose')
+            raise ValueError(f'gradient ("{parameter}") values are not allclose')

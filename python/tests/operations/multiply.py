@@ -71,7 +71,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -86,7 +86,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -106,7 +106,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_3.add_gradient(
             "parameter",
-            data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
+            values=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -120,7 +120,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_4.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1.0, 1.1], [1.2, 1.3]],
                     [[1.4, 1.5], [1.0, 1.1]],
@@ -144,7 +144,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[22.7, 4.81], [38.15, 9.62]], [[180.76, 44.76], [251.73, 59.68]]]
             ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
@@ -160,7 +160,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1065.0, 2233.88], [1278.0, 2640.04]],
                     [[126.784, 147.4875], [90.56, 108.1575]],
@@ -197,7 +197,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -211,7 +211,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -231,7 +231,9 @@ class TestMultiply(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array([[[30.6, 5.1], [35.7, 10.2]], [[40.8, 15.3], [45.9, 20.4]]]),
+            values=np.array(
+                [[[30.6, 5.1], [35.7, 10.2]], [[40.8, 15.3], [45.9, 20.4]]]
+            ),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -245,7 +247,7 @@ class TestMultiply(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[51.0, 56.1], [61.2, 66.3]],
                     [[71.4, 76.5], [51.0, 56.1]],

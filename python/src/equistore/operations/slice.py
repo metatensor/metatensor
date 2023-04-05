@@ -241,7 +241,7 @@ def _slice_block(
 
     # Slice each Gradient TensorBlock and add to the new_block.
     for parameter, gradient in block.gradients():
-        new_grad_data = gradient.data
+        new_grad_values = gradient.values
         new_grad_samples = gradient.samples
 
         # Create a samples filter for the Gradient TensorBlock
@@ -264,16 +264,16 @@ def _slice_block(
                     values=new_grad_samples,
                 )
 
-            new_grad_data = new_grad_data[grad_samples_filter]
+            new_grad_values = new_grad_values[grad_samples_filter]
         if properties is not None:
-            new_grad_data = new_grad_data[..., properties_filter]
+            new_grad_values = new_grad_values[..., properties_filter]
 
         # Add sliced Gradient to the TensorBlock
         new_block.add_gradient(
             parameter=parameter,
             samples=new_grad_samples,
             components=gradient.components,
-            data=new_grad_data,
+            values=new_grad_values,
         )
 
     return new_block

@@ -71,7 +71,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -86,7 +86,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[-10, -11], [-12, -13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -106,7 +106,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_3.add_gradient(
             "parameter",
-            data=np.array([[[-1, -0.1], [-2, -0.2]], [[-3, -0.3], [-4.5, -0.4]]]),
+            values=np.array([[[-1, -0.1], [-2, -0.2]], [[-3, -0.3], [-4.5, -0.4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -120,7 +120,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_4.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[1.0, 1.1], [1.2, 1.3]],
                     [[-1.4, -1.5], [-1.0, -1.1]],
@@ -144,7 +144,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
+            values=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -158,7 +158,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [
                     [[-11.0, -12.1], [-13.2, -14.3]],
                     [[15.4, 16.5], [11.0, 12.1]],
@@ -195,7 +195,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -209,7 +209,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
@@ -229,7 +229,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -243,7 +243,7 @@ class TestSubtract(unittest.TestCase):
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.array(
+            values=np.array(
                 [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(

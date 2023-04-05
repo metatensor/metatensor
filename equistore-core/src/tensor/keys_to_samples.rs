@@ -100,18 +100,18 @@ fn merge_blocks_along_samples(
     assert!(!blocks_to_merge.is_empty());
 
     let first_block = blocks_to_merge[0].1;
-    let first_components_label = &first_block.values().components;
-    let first_properties_label = &first_block.values().properties;
+    let first_components_label = &first_block.components;
+    let first_properties_label = &first_block.properties;
 
     for (_, block) in blocks_to_merge {
-        if &block.values().components != first_components_label {
+        if &block.components != first_components_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
                 different components labels, call components_to_properties first".into()
             ))
         }
 
-        if &block.values().properties != first_properties_label {
+        if &block.properties != first_properties_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
                 different property labels".into() // TODO: this might be possible
@@ -120,7 +120,7 @@ fn merge_blocks_along_samples(
     }
 
     // collect and merge samples across the blocks
-    let new_samples_names = first_block.values().samples.names().iter()
+    let new_samples_names = first_block.samples.names().iter()
         .chain(extracted_names.iter())
         .copied()
         .collect();
@@ -130,19 +130,19 @@ fn merge_blocks_along_samples(
         sort_samples,
     );
 
-    let new_components = first_block.values().components.to_vec();
-    let new_properties = Arc::clone(&first_block.values().properties);
+    let new_components = first_block.components.to_vec();
+    let new_properties = Arc::clone(&first_block.properties);
 
-    let mut new_shape = first_block.values().data.shape()?.to_vec();
+    let mut new_shape = first_block.values.shape()?.to_vec();
     new_shape[0] = merged_samples.count();
-    let mut new_data = first_block.values().data.create(&new_shape)?;
+    let mut new_data = first_block.values.create(&new_shape)?;
 
     let property_range = 0..new_properties.count();
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
         new_data.move_samples_from(
-            &block.values().data,
+            &block.values,
             samples_mapping,
             property_range.clone(),
         )?;
@@ -161,9 +161,9 @@ fn merge_blocks_along_samples(
             blocks_to_merge, parameter, &samples_mappings
         )?;
 
-        let mut new_shape = first_gradient.data.shape()?.to_vec();
+        let mut new_shape = first_gradient.values.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();
-        let mut new_gradient = first_block.values().data.create(&new_shape)?;
+        let mut new_gradient = first_block.values.create(&new_shape)?;
         let new_components = first_gradient.components.to_vec();
 
         for ((_, block), samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
@@ -187,7 +187,7 @@ fn merge_blocks_along_samples(
                 });
             }
             new_gradient.move_samples_from(
-                &gradient.data,
+                &gradient.values,
                 &samples_to_move,
                 property_range.clone(),
             )?;

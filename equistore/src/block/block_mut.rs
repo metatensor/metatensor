@@ -1,11 +1,10 @@
 use std::ffi::{CString, CStr};
 use std::iter::FusedIterator;
 
-use crate::c_api::eqs_block_t;
-use crate::{ArrayRefMut, Labels};
+use crate::c_api::{eqs_block_t, eqs_array_t, EQS_INVALID_PARAMETER_ERROR};
+use crate::ArrayRefMut;
 
 use super::TensorBlockRef;
-use super::block_ref::{block_array, block_metadata};
 
 /// Mutable reference to a [`TensorBlock`](crate::TensorBlock)
 #[derive(Debug)]
@@ -14,23 +13,27 @@ pub struct TensorBlockRefMut<'a> {
     data: TensorBlockRef<'a>,
 }
 
-/// Mutable version of [`BasicBlock`](crate::BasicBlock)
-#[derive(Debug)]
-pub struct BasicBlockMut<'a> {
-    /// Mutable reference to the data array
-    pub data: ArrayRefMut<'a>,
-    /// Labels describing the samples, i.e. the first dimension of the array
-    ///
-    /// If you need to get a reference to the samples with lifetime 'a, use the
-    /// [`BasicBlock::samples_ref`](crate::BasicBlock::samples_ref) function.
-    pub samples: Labels,
-    /// Labels describing the components, i.e. the middle dimension of the array
-    ///
-    /// This can be empty if we don't have any symmetry or gradient components
-    /// (and the data array is 2 dimensional)
-    pub components: Vec<Labels>,
-    /// Labels describing the properties, i.e. the last dimension of the array
-    pub properties: Labels,
+/// Get a gradient from this block
+fn block_gradient(block: *mut eqs_block_t, parameter: &CStr) -> Option<*mut eqs_block_t> {
+    let mut gradient_block = std::ptr::null_mut();
+    let status = unsafe { crate::c_api::eqs_block_gradient(
+            block,
+            parameter.as_ptr(),
+            &mut gradient_block
+        )
+    };
+
+    match crate::errors::check_status(status) {
+        Ok(_) => Some(gradient_block),
+        Err(error) => {
+            if error.code == Some(EQS_INVALID_PARAMETER_ERROR) {
+                // there is no array for this gradient
+                None
+            } else {
+                panic!("failed to get the gradient from a block: {:?}", error)
+            }
+        }
+    }
 }
 
 impl<'a> TensorBlockRefMut<'a> {
@@ -50,55 +53,43 @@ impl<'a> TensorBlockRefMut<'a> {
         self.data.as_ptr() as *mut _
     }
 
-    /// Get a reference to this owned block, with a lifetime of `'self`.
+    /// Get a non mutable reference to this block
     pub fn as_ref(&self) -> TensorBlockRef<'_> {
-        // This is not implemented with `std::ops::Deref`, because the lifetime
-        // of the resulting TensorBlockRef should not be `'static` but `'self`.
         unsafe {
             TensorBlockRef::from_raw(self.data.as_ptr())
         }
     }
 
-    /// Get a mutable reference to the values data and metadata in this block
+    /// Get a mutable reference to the values in this block
     #[inline]
-    pub fn values_mut(&mut self) -> BasicBlockMut<'_> {
-        let values = unsafe { CStr::from_bytes_with_nul_unchecked(b"values\0") };
-        let array = block_array(self.as_mut_ptr(), values).expect("failed to get values");
+    pub fn values_mut(&mut self) -> ArrayRefMut<'_> {
+        let mut array = eqs_array_t::null();
+        unsafe {
+            crate::errors::check_status(crate::c_api::eqs_block_data(
+                self.as_mut_ptr(),
+                &mut array
+            )).expect("failed to get the array for a block");
+        };
 
-        let shape_len = array.shape().expect("failed to get the data shape").len();
-        let (samples, components, properties) = block_metadata(self.as_mut_ptr(), shape_len, values);
-
-        BasicBlockMut {
-            data: unsafe { ArrayRefMut::new(array) },
-            samples,
-            components,
-            properties,
-        }
+        // SAFETY: we are returning an `ArrayRefMut` mutably borrowing from `self`
+        unsafe { ArrayRefMut::new(array) }
     }
 
     /// Get a mutable reference to the data and metadata for the gradient with
     /// respect to the given parameter in this block, if it exists.
     #[inline]
-    pub fn gradient_mut(&mut self, parameter: &str) -> Option<BasicBlockMut<'_>> {
+    pub fn gradient_mut(&mut self, parameter: &str) -> Option<TensorBlockRefMut<'_>> {
         let parameter = CString::new(parameter).expect("invalid C string");
-        let array = block_array(self.as_mut_ptr(), &parameter);
 
-        if let Some(array) = array {
-            let shape_len = array.shape().expect("failed to get the data shape").len();
-            let (samples, components, properties) = block_metadata(self.as_mut_ptr(), shape_len, &parameter);
-
-            Some(BasicBlockMut {
-                data: unsafe { ArrayRefMut::new(array) },
-                samples,
-                components,
-                properties,
+        block_gradient(self.as_mut_ptr(), &parameter)
+            .map(|gradient_block| {
+                // SAFETY: we are returning an `TensorBlockRefMut` mutably
+                // borrowing from `self`
+                unsafe { TensorBlockRefMut::from_raw(gradient_block) }
             })
-        } else {
-            None
-        }
     }
 
-    /// Get an iterator over parameter/[`BasicBlockMut`] pairs for all gradients
+    /// Get an iterator over parameter/[`TensorBlockRefMut`] pairs for all gradients
     /// in this block
     #[inline]
     pub fn gradients_mut(&mut self) -> GradientsMutIter<'_> {
@@ -109,7 +100,7 @@ impl<'a> TensorBlockRefMut<'a> {
     }
 }
 
-/// Iterator over parameter/[`BasicBlockMut`] pairs for all gradients in a
+/// Iterator over parameter/[`TensorBlockRefMut`] pairs for all gradients in a
 /// [`TensorBlockRefMut`]
 pub struct GradientsMutIter<'a> {
     parameters: std::vec::IntoIter<&'a str>,
@@ -117,24 +108,18 @@ pub struct GradientsMutIter<'a> {
 }
 
 impl<'a> Iterator for GradientsMutIter<'a> {
-    type Item = (&'a str, BasicBlockMut<'a>);
+    type Item = (&'a str, TensorBlockRefMut<'a>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.parameters.next().map(|parameter| {
             let parameter_c = CString::new(parameter).expect("invalid C string");
-            let array = block_array(self.block, &parameter_c).expect("missing gradient");
+            let block = block_gradient(self.block, &parameter_c).expect("missing gradient");
 
-            let shape_len = array.shape().expect("failed to get the data shape").len();
-            let (samples, components, properties) = block_metadata(self.block, shape_len, &parameter_c);
-
-            let block = BasicBlockMut {
-                data: unsafe { ArrayRefMut::new(array) },
-                samples,
-                components,
-                properties,
-            };
-
+            // SAFETY: all blocks are disjoint, and we are only returning a
+            // mutable reference to each once. The reference lifetime is
+            // constrained by the lifetime of the parent TensorBlockRefMut
+            let block = unsafe { TensorBlockRefMut::from_raw(block) };
             return (parameter, block);
         })
     }

@@ -22,42 +22,6 @@ unsafe impl<'a> Send for TensorBlockRef<'a> {}
 // SAFETY: Sync is fine since there is no internal mutability in TensorBlock
 unsafe impl<'a> Sync for TensorBlockRef<'a> {}
 
-/// Single data array with the corresponding metadata inside a [`TensorBlock`]
-///
-/// A basic block contains a n-dimensional array, and n sets of labels (one for
-/// each dimension). The first dimension labels are called the `samples`, the
-/// last dimension labels are the `properties`, and everything else is in the
-/// `components`
-#[derive(Debug, Clone)]
-pub struct BasicBlock<'a> {
-    /// Reference to the data array
-    pub data: ArrayRef<'a>,
-    /// Labels describing the samples, i.e. the first dimension of the array
-    ///
-    /// If you need to get a reference to the samples with lifetime 'a, use the
-    /// [`BasicBlock::samples_ref`] function.
-    pub samples: Labels,
-    /// Labels describing the components, i.e. the middle dimension of the array
-    ///
-    /// This can be empty if we don't have any symmetry or gradient components
-    /// (and the data array is 2 dimensional)
-    pub components: Vec<Labels>,
-    /// Labels describing the properties, i.e. the last dimension of the array
-    pub properties: Labels,
-}
-
-impl<'a> BasicBlock<'a> {
-    /// Get a reference with lifetime `'a` to the samples of this `BasicBlock`
-    pub fn samples_ref(&self) -> &'a Labels {
-        let ptr = &self.samples as *const _;
-        // SAFETY: we are only handing out shared references, which can not
-        // outlive `self`
-        unsafe {
-            return &*ptr;
-        }
-    }
-}
-
 impl<'a> TensorBlockRef<'a> {
     /// Create a new `TensorBlockRef` from the given raw `eqs_block_t`
     ///
@@ -79,56 +43,26 @@ impl<'a> TensorBlockRef<'a> {
     }
 }
 
-fn get_block_label(block: *const eqs_block_t, dimension: usize, values_gradient: &CStr) -> Labels  {
-    let mut labels = eqs_labels_t::null();
-    unsafe {
-        check_status(crate::c_api::eqs_block_labels(
-            block,
-            values_gradient.as_ptr(),
-            dimension,
-            &mut labels,
-        )).expect("failed to get labels");
-    }
-    return unsafe { Labels::from_raw(labels) };
-}
-
-/// Get the metadata for the values or one gradient, depending on
-/// `values_gradient`. See `eqs_block_labels` for more information.
-pub(super) fn block_metadata(
-    block: *const eqs_block_t,
-    shape_len: usize,
-    values_gradient: &CStr,
-) -> (Labels, Vec<Labels>, Labels) {
-    let samples = get_block_label(block, 0, values_gradient);
-
-    let mut components = Vec::new();
-    for dimension in 1..(shape_len - 1) {
-        components.push(get_block_label(block, dimension, values_gradient));
-    }
-
-    let properties = get_block_label(block, shape_len - 1, values_gradient);
-
-    return (samples, components, properties);
-}
-
-
-/// Get the array associated with `values_gradient` in this block
-pub(super) fn block_array(block: *mut eqs_block_t, values_gradient: &CStr) -> Option<eqs_array_t> {
-    let mut array = eqs_array_t::null();
-    let status = unsafe { crate::c_api::eqs_block_data(
-        block,
-        values_gradient.as_ptr(),
-        &mut array
-    )};
+/// Get a gradient from this block
+fn block_gradient(block: *const eqs_block_t, parameter: &CStr) -> Option<*const eqs_block_t> {
+    let mut gradient_block = std::ptr::null_mut();
+    let status = unsafe { crate::c_api::eqs_block_gradient(
+            // the cast to mut pointer is fine since we are only returning a
+            // non-mut eqs_block_t below
+            block as *mut eqs_block_t,
+            parameter.as_ptr(),
+            &mut gradient_block
+        )
+    };
 
     match crate::errors::check_status(status) {
-        Ok(_) => Some(array),
+        Ok(_) => Some(gradient_block as *const _),
         Err(error) => {
             if error.code == Some(EQS_INVALID_PARAMETER_ERROR) {
                 // there is no array for this gradient
-                return None
+                None
             } else {
-                panic!("failed to get the array for {:?}: {:?}", values_gradient, error)
+                panic!("failed to get the gradient from a block: {:?}", error)
             }
         }
     }
@@ -136,28 +70,62 @@ pub(super) fn block_array(block: *mut eqs_block_t, values_gradient: &CStr) -> Op
 
 impl<'a> TensorBlockRef<'a> {
     /// Get the values data and metadata in this block
-
-    // SAFETY: we can return a basic block with lifetime `'a` (instead of
-    // `'self`) (which allows to get multiple references to the BasicBlock
-    // simultaneously), because there is no way to also get a mutable reference
-    // to the block at the same time.
     #[inline]
-    pub fn values(&self) -> BasicBlock<'a> {
-        let values = unsafe { CStr::from_bytes_with_nul_unchecked(b"values\0") };
+    pub fn values(&self) -> ArrayRef<'a> {
+        let mut array = eqs_array_t::null();
+        unsafe {
+            crate::errors::check_status(crate::c_api::eqs_block_data(
+                self.as_ptr() as *mut _,
+                &mut array
+            )).expect("failed to get the array for a block");
+        };
 
-        // the cast to mut pointer is fine since we are only returning a non-mut
-        // ArrayRef below
-        let array = block_array(self.as_ptr() as *mut _, values).expect("failed to get values");
-        let shape_len = array.shape().expect("failed to get the data shape").len();
+        // SAFETY: we can return an `ArrayRef` with lifetime `'a` (instead of
+        // `'self`) (which allows to get multiple references to the BasicBlock
+        // simultaneously), because there is no way to also get a mutable
+        // reference to the block at the same time (since we are already holding
+        // a const reference to the block itself).
+        unsafe { ArrayRef::from_raw(array) }
+    }
 
-        let (samples, components, properties) = block_metadata(self.as_ptr(), shape_len, values);
-
-        BasicBlock {
-            data: unsafe { ArrayRef::from_raw(array) },
-            samples,
-            components,
-            properties,
+    fn labels(&self, dimension: usize) -> Labels {
+        let mut labels = eqs_labels_t::null();
+        unsafe {
+            check_status(crate::c_api::eqs_block_labels(
+                self.as_ptr(),
+                dimension,
+                &mut labels,
+            )).expect("failed to get labels");
         }
+        return unsafe { Labels::from_raw(labels) };
+    }
+
+    /// Get the samples for this block
+    #[inline]
+    pub fn samples(&self) -> Labels {
+        return self.labels(0);
+    }
+
+    /// Get the components for this block
+    #[inline]
+    pub fn components(&self) -> Vec<Labels> {
+        let values = self.values();
+        let shape = values.as_raw().shape().expect("failed to get the data shape");
+
+        let mut result = Vec::new();
+        for i in 1..(shape.len() - 1) {
+            result.push(self.labels(i));
+        }
+        return result;
+    }
+
+    /// Get the properties for this block
+    #[inline]
+    pub fn properties(&self) -> Labels {
+        let values = self.values();
+        let shape = values.as_raw().shape().expect("failed to get the data shape");
+
+        return self.labels(shape.len() - 1);
     }
 
     /// Get the full list of gradients in this block
@@ -191,24 +159,16 @@ impl<'a> TensorBlockRef<'a> {
     // SAFETY: we can return a basic block with lifetime `'a` (instead of
     // `'self`) for the same reasons as in the `values` function.
     #[inline]
-    pub fn gradient(&self, parameter: &str) -> Option<BasicBlock<'a>> {
+    pub fn gradient(&self, parameter: &str) -> Option<TensorBlockRef<'a>> {
         let parameter = CString::new(parameter).expect("invalid C string");
 
-        // the cast to mut pointer is fine since we are only returning a non-mut
-        // ArrayRef below
-        if let Some(array) = block_array(self.as_ptr() as *mut _, &parameter) {
-            let shape_len = array.shape().expect("failed to get the data shape").len();
-            let (samples, components, properties) = block_metadata(self.as_ptr(), shape_len, &parameter);
-
-            Some(BasicBlock {
-                data: unsafe { ArrayRef::from_raw(array) },
-                samples,
-                components,
-                properties,
-            })
-        } else {
-            None
-        }
+        block_gradient(self.as_ptr(), &parameter)
+            .map(|gradient_block| {
+                // SAFETY: the lifetime of the block is the same as
+                // the lifetime of self, both are constrained to the
+                // root TensorMap/TensorBlock
+                unsafe { TensorBlockRef::from_raw(gradient_block) }
+        })
     }
 
     /// Clone this block, cloning all the data and metadata contained inside.
@@ -225,7 +185,7 @@ impl<'a> TensorBlockRef<'a> {
         return Ok(unsafe { TensorBlock::from_raw(ptr) });
     }
 
-    /// Get an iterator over parameter/[`BasicBlock`] pairs for all gradients in
+    /// Get an iterator over parameter/[`TensorBlockRef`] pairs for all gradients in
     /// this block
     #[inline]
     pub fn gradients(&self) -> GradientsIter<'_> {
@@ -236,7 +196,7 @@ impl<'a> TensorBlockRef<'a> {
     }
 }
 
-/// Iterator over parameter/[`BasicBlock`] pairs for all gradients in a
+/// Iterator over parameter/[`TensorBlockRef`] pairs for all gradients in a
 /// [`TensorBlockRef`]
 pub struct GradientsIter<'a> {
     parameters: std::vec::IntoIter<&'a str>,
@@ -244,27 +204,18 @@ pub struct GradientsIter<'a> {
 }
 
 impl<'a> Iterator for GradientsIter<'a> {
-    type Item = (&'a str, BasicBlock<'a>);
+    type Item = (&'a str, TensorBlockRef<'a>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.parameters.next().map(|parameter| {
             let parameter_c = CString::new(parameter).expect("invalid C string");
+            let block = block_gradient(self.block, &parameter_c).expect("missing gradient");
 
-            // the cast to mut pointer is fine since we are only returning a
-            // non-mut ArrayRef below
-            let array = block_array(self.block as *mut _, &parameter_c).expect("missing gradient");
-
-            let shape_len = array.shape().expect("failed to get the data shape").len();
-            let (samples, components, properties) = block_metadata(self.block, shape_len, &parameter_c);
-
-            let block = BasicBlock {
-                data: unsafe { ArrayRef::from_raw(array) },
-                samples,
-                components,
-                properties,
-            };
-
+            // SAFETY: the lifetime of the block is the same as the lifetime of
+            // the GradientsIter, both are constrained to the root
+            // TensorMap/TensorBlock
+            let block = unsafe { TensorBlockRef::from_raw(block) };
             return (parameter, block);
         })
     }
@@ -286,6 +237,8 @@ impl<'a> FusedIterator for GradientsIter<'a> {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // TODO: check gradient/gradient iter code
 
     #[test]
     fn check_repr() {

@@ -116,7 +116,7 @@ def _reduce_over_samples_block(
         for parameter, gradient in block.gradients():
             result_block.add_gradient(
                 parameter,
-                gradient.data,
+                gradient.values,
                 gradient.samples,
                 gradient.components,
             )
@@ -191,7 +191,7 @@ def _reduce_over_samples_block(
             # and dx/dt == 0.
             result_block.add_gradient(
                 parameter,
-                gradient.data,
+                gradient.values,
                 gradient.samples,
                 gradient.components,
             )
@@ -213,32 +213,34 @@ def _reduce_over_samples_block(
             samples[:, :], return_inverse=True, axis=0
         )
 
-        gradient_data = gradient.data
-        other_shape = gradient_data.shape[1:]
-        data_result = _dispatch.zeros_like(
-            gradient_data,
+        gradient_values = gradient.values
+        other_shape = gradient_values.shape[1:]
+        gradient_values_result = _dispatch.zeros_like(
+            gradient_values,
             shape=(new_gradient_samples.shape[0],) + other_shape,
         )
-        _dispatch.index_add(data_result, gradient_data, index_gradient)
+        _dispatch.index_add(gradient_values_result, gradient_values, index_gradient)
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
-            data_result = data_result / bincount.reshape(
+            gradient_values_result = gradient_values_result / bincount.reshape(
                 (-1,) + (1,) * len(other_shape)
             )
             if reduction == "std" or reduction == "var":
-                values_times_data = _dispatch.zeros_like(gradient_data)
+                values_times_gradient_values = _dispatch.zeros_like(gradient_values)
 
                 for i, s in enumerate(gradient.samples):
-                    values_times_data[i] = gradient_data[i] * block_values[s[0]]
+                    values_times_gradient_values[i] = (
+                        gradient_values[i] * block_values[s[0]]
+                    )
 
                 values_grad_result = _dispatch.zeros_like(
-                    gradient_data,
+                    gradient_values,
                     shape=(new_gradient_samples.shape[0],) + other_shape,
                 )
                 _dispatch.index_add(
                     values_grad_result,
-                    values_times_data,
+                    values_times_gradient_values,
                     index_gradient,
                 )
 
@@ -247,8 +249,12 @@ def _reduce_over_samples_block(
                 )
                 if reduction == "var":
                     for i, s in enumerate(new_gradient_samples):
-                        data_result[i] = data_result[i] * values_mean[s[0]]
-                    data_result = 2 * (values_grad_result - data_result)
+                        gradient_values_result[i] = (
+                            gradient_values_result[i] * values_mean[s[0]]
+                        )
+                    gradient_values_result = 2 * (
+                        values_grad_result - gradient_values_result
+                    )
                 else:  # std
                     for i, s in enumerate(new_gradient_samples):
                         # only numpy raise a warning for division by zero
@@ -256,13 +262,13 @@ def _reduce_over_samples_block(
                         # for torch there is nothing to catch
                         # both numpy and torch give inf for the division by zero
                         with np.errstate(divide="ignore", invalid="ignore"):
-                            data_result[i] = (
+                            gradient_values_result[i] = (
                                 values_grad_result[i]
-                                - (data_result[i] * values_mean[s[0]])
+                                - (gradient_values_result[i] * values_mean[s[0]])
                             ) / values_result[s[0]]
 
-                        data_result[i] = _dispatch.nan_to_num(
-                            data_result[i], nan=0.0, posinf=0.0, neginf=0.0
+                        gradient_values_result[i] = _dispatch.nan_to_num(
+                            gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
                         )
 
         # no check for the len of the gradient sample is needed becouse there always
@@ -270,7 +276,7 @@ def _reduce_over_samples_block(
 
         result_block.add_gradient(
             parameter,
-            data_result,
+            gradient_values_result,
             Labels(gradient_samples.names, new_gradient_samples),
             gradient.components,
         )

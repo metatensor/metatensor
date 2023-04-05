@@ -48,9 +48,11 @@ class TestDot(unittest.TestCase):
                 for p1, pres in zip(block2.samples, result_gradient.properties):
                     self.assertTrue(np.all(p1 == pres))
 
-                expected_data = gradient1.data @ block2.values.T
+                expected_gradient_values = gradient1.values @ block2.values.T
                 self.assertTrue(
-                    np.allclose(expected_data, result_gradient.data, rtol=1e-13)
+                    np.allclose(
+                        expected_gradient_values, result_gradient.values, rtol=1e-13
+                    )
                 )
 
     def test_self_dot_components(self):
@@ -111,9 +113,11 @@ class TestDot(unittest.TestCase):
                 self.assertTrue(len(block2.samples) == len(result_gradient.properties))
                 for p1, pres in zip(block2.samples, result_gradient.properties):
                     self.assertTrue(np.all(p1 == pres))
-                expected_data = gradient1.data @ value2.T
+                expected_gradient_values = gradient1.values @ value2.T
                 self.assertTrue(
-                    np.allclose(expected_data, result_gradient.data, rtol=1e-13)
+                    np.allclose(
+                        expected_gradient_values, result_gradient.values, rtol=1e-13
+                    )
                 )
 
 

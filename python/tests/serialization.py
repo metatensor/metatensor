@@ -38,7 +38,7 @@ def test_load(use_numpy):
 
     gradient = block.gradient("positions")
     assert gradient.samples.names == ("sample", "structure", "atom")
-    assert gradient.data.shape == (59, 3, 5, 3)
+    assert gradient.values.shape == (59, 3, 5, 3)
 
 
 @pytest.mark.parametrize("use_numpy", (True, False))
@@ -63,6 +63,6 @@ def test_save(use_numpy, tmpdir, tensor):
         for parameter in block.gradients_list():
             gradient = block.gradient(parameter)
             prefix = f"blocks/{i}/gradients/{parameter}"
-            assert_equal(data[f"{prefix}/data"], gradient.data)
+            assert_equal(data[f"{prefix}/data"], gradient.values)
             assert_equal(data[f"{prefix}/samples"], gradient.samples)
             assert_equal(data[f"{prefix}/components/0"], gradient.components[0])

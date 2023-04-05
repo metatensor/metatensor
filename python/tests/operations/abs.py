@@ -29,7 +29,7 @@ def tensor_map_complex(tensor):
         for parameter, gradient in block.gradients():
             new_block.add_gradient(
                 parameter=parameter,
-                data=-gradient.data - 2j,
+                values=-gradient.values - 2j,
                 samples=gradient.samples,
                 components=gradient.components,
             )
@@ -53,7 +53,7 @@ def tensor_map_result(tensor_map_complex):
         for parameter, gradient in block.gradients():
             new_block.add_gradient(
                 parameter=parameter,
-                data=-gradient.data,
+                data=-gradient.values,
                 samples=gradient.samples,
                 components=gradient.components,
             )

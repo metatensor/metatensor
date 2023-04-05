@@ -34,7 +34,7 @@ def remove_gradients(
 
             new_block.add_gradient(
                 parameter,
-                gradient.data,
+                gradient.values,
                 gradient.samples,
                 gradient.components,
             )

@@ -560,8 +560,8 @@ def tensor_map():
     )
     block_1.add_gradient(
         "parameter",
+        values=np.full((2, 1, 1), 11.0),
         samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
-        data=np.full((2, 1, 1), 11.0),
         components=[Labels(["components"], np.array([[0]]))],
     )
 
@@ -573,7 +573,7 @@ def tensor_map():
     )
     block_2.add_gradient(
         "parameter",
-        data=np.full((3, 1, 3), 12.0),
+        values=np.full((3, 1, 3), 12.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, -2], [0, 3], [2, -2]]),
@@ -589,7 +589,7 @@ def tensor_map():
     )
     block_3.add_gradient(
         "parameter",
-        data=np.full((1, 3, 1), 13.0),
+        values=np.full((1, 3, 1), 13.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[1, -2]]),
@@ -605,7 +605,7 @@ def tensor_map():
     )
     block_4.add_gradient(
         "parameter",
-        data=np.full((2, 3, 1), 14.0),
+        values=np.full((2, 3, 1), 14.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, 1], [3, 3]]),
@@ -640,7 +640,7 @@ def large_tensor_map():
         )
         tmp_bl.add_gradient(
             "parameter",
-            data=np.full((2, 3, 1), 14.0),
+            values=np.full((2, 3, 1), 14.0),
             samples=Labels(
                 ["sample", "parameter"],
                 np.array([[0, 1], [3, 3]]),

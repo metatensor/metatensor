@@ -85,8 +85,8 @@ class TestSplitSamples(unittest.TestCase):
                 )
                 for sliced_c, c in zip(split_gradient.components, gradient.components):
                     self.assertTrue(np.all(sliced_c == c))
-                expected = gradient.data[gradient_sample_filter]
-                self.assertTrue(np.all(split_gradient.data == expected))
+                expected = gradient.values[gradient_sample_filter]
+                self.assertTrue(np.all(split_gradient.values == expected))
 
     def _check_empty_block(self, block, split_block):
         # sliced block has no values
@@ -100,7 +100,7 @@ class TestSplitSamples(unittest.TestCase):
             # no slicing of properties has occurred
             self.assertTrue(np.all(sliced_gradient.properties == gradient.properties))
             # sliced block contains zero samples
-            self.assertEqual(sliced_gradient.data.shape[0], 0)
+            self.assertEqual(sliced_gradient.values.shape[0], 0)
 
     # === TensorMap checks
 
@@ -286,9 +286,11 @@ class TestSplitProperties(unittest.TestCase):
                         ]
                     ),
                 )
-                # Correct gradient data
+                # Correct gradient values
                 self.assertTrue(
-                    np.all(split_gradient.data == gradient.data[..., properties_filter])
+                    np.all(
+                        split_gradient.values == gradient.values[..., properties_filter]
+                    )
                 )
 
     def _check_empty_block(self, block, split_block):
@@ -305,7 +307,7 @@ class TestSplitProperties(unittest.TestCase):
             self.assertTrue(np.all(split_gradient.samples == gradient.samples))
 
             # sliced block contains zero properties
-            self.assertEqual(split_gradient.data.shape[-1], 0)
+            self.assertEqual(split_gradient.values.shape[-1], 0)
 
     # === TensorMap checks
 

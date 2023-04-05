@@ -50,7 +50,7 @@ class TestOnes_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(ones_gradient.data, np.ones_like(gradient.data))
+                    np.allclose(ones_gradient.values, np.ones_like(gradient.values))
                 )
 
     def test_ones_component(self):
@@ -95,7 +95,7 @@ class TestOnes_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(ones_gradient.data, np.ones_like(gradient.data))
+                    np.allclose(ones_gradient.values, np.ones_like(gradient.values))
                 )
             self.assertTrue(ones_block_pos.gradients_list() == ["positions"])
             for ones_parameter_pos, ones_gradient_pos in ones_block_pos.gradients():
@@ -116,7 +116,7 @@ class TestOnes_like(unittest.TestCase):
                     )
                 )
                 self.assertTrue(
-                    np.allclose(ones_gradient_pos.data, np.ones_like(gradient.data))
+                    np.allclose(ones_gradient_pos.values, np.ones_like(gradient.values))
                 )
 
     def test_ones_error(self):

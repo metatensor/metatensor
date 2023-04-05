@@ -292,7 +292,7 @@ class TestEqual(unittest.TestCase):
 
         block_1.add_gradient(
             "parameter",
-            data=np.full((2, 1), 11.0),
+            values=np.full((2, 1), 11.0),
             samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
@@ -306,7 +306,7 @@ class TestEqual(unittest.TestCase):
 
         block_2.add_gradient(
             "parameter",
-            data=np.full((2, 1), 11.0),
+            values=np.full((2, 1), 11.0),
             samples=Labels(["sample", "parameter1"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
@@ -330,7 +330,7 @@ class TestEqual(unittest.TestCase):
 
         block_3.add_gradient(
             "parameter",
-            data=np.full((2, 1), 1.0),
+            values=np.full((2, 1), 1.0),
             samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[],
         )
@@ -340,7 +340,7 @@ class TestEqual(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            'gradient ("parameter") data are not equal',
+            'gradient ("parameter") values are not equal',
         )
 
         block_4 = TensorBlock(
@@ -352,7 +352,7 @@ class TestEqual(unittest.TestCase):
 
         block_4.add_gradient(
             "parameter",
-            data=np.full((2, 3, 1), 1.0),
+            values=np.full((2, 3, 1), 1.0),
             samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[Labels.arange("component_1", -1, 2)],
         )
@@ -366,7 +366,7 @@ class TestEqual(unittest.TestCase):
 
         block_5.add_gradient(
             "parameter",
-            data=np.full((2, 3, 1), 1.0),
+            values=np.full((2, 3, 1), 1.0),
             samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
             components=[Labels(["component_1"], np.array([[-1], [6], [1]]))],
         )
@@ -390,7 +390,7 @@ class TestEqual(unittest.TestCase):
 
         block_6.add_gradient(
             "parameter",
-            data=np.full((2, 3, 1), 1.0),
+            values=np.full((2, 3, 1), 1.0),
             samples=Labels(["sample", "parameter_1"], np.array([[0, -2], [2, 3]])),
             components=[Labels(["component_1"], np.array([[-1], [6], [1]]))],
         )
@@ -413,7 +413,7 @@ class TestEqual(unittest.TestCase):
 
         block_7.add_gradient(
             "parameter",
-            data=np.full((2, 3, 1), 5.0),
+            values=np.full((2, 3, 1), 5.0),
             samples=Labels(["sample", "parameter_1"], np.array([[0, -2], [2, 3]])),
             components=[Labels(["component_1"], np.array([[-1], [6], [1]]))],
         )
@@ -424,7 +424,7 @@ class TestEqual(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            'gradient ("parameter") data are not equal',
+            'gradient ("parameter") values are not equal',
         )
 
 

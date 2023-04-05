@@ -34,7 +34,7 @@ class TestPow:
         )
         block_1.add_gradient(
             "parameter",
-            data=np.vstack([[b1grad_s01], [b1grad_s11]]),
+            values=np.vstack([[b1grad_s01], [b1grad_s11]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -48,7 +48,7 @@ class TestPow:
         )
         block_2.add_gradient(
             "parameter",
-            data=np.vstack([[b2grad_s01], [b2grad_s11], [b2grad_s21]]),
+            values=np.vstack([[b2grad_s01], [b2grad_s11], [b2grad_s21]]),
             samples=Labels(
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1]]),
@@ -74,7 +74,7 @@ class TestPow:
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [B * b1grad_s01 * (b1_s0 ** (B - 1))],
                     [B * b1grad_s11 * (b1_s2 ** (B - 1))],
@@ -93,7 +93,7 @@ class TestPow:
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [B * b2grad_s01 * (b2_s0 ** (B - 1))],
                     [B * b2grad_s11 * (b2_s2 ** (B - 1))],
@@ -149,7 +149,7 @@ class TestPow:
 
         block_1.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [
                         [
@@ -188,7 +188,7 @@ class TestPow:
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [
                         [
@@ -257,7 +257,7 @@ class TestPow:
         )
         block_1.add_gradient(
             "parameter",
-            data=np.vstack([[b1grad_s01], [b1grad_s11]]),
+            values=np.vstack([[b1grad_s01], [b1grad_s11]]),
             samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels.arange("components", 2),
@@ -271,7 +271,7 @@ class TestPow:
         )
         block_2.add_gradient(
             "parameter",
-            data=np.vstack([[b2grad_s01], [b2grad_s11], [b2grad_s21]]),
+            values=np.vstack([[b2grad_s01], [b2grad_s11], [b2grad_s21]]),
             samples=Labels(
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1]]),
@@ -296,7 +296,7 @@ class TestPow:
         )
         block_res1.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [B * b1grad_s01 * (b1_s0 ** (B - 1))],
                     [B * b1grad_s11 * (b1_s2 ** (B - 1))],
@@ -315,7 +315,7 @@ class TestPow:
         )
         block_res2.add_gradient(
             "parameter",
-            data=np.vstack(
+            values=np.vstack(
                 [
                     [B * b2grad_s01 * (b2_s0 ** (B - 1))],
                     [B * b2grad_s11 * (b2_s2 ** (B - 1))],

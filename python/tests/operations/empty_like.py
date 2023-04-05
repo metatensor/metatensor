@@ -53,7 +53,7 @@ class TestEmpty_like(unittest.TestCase):
                     )
                 )
                 self.assertEqual(
-                    empty_gradient.data.shape, np.empty_like(gradient.data).shape
+                    empty_gradient.values.shape, np.empty_like(gradient.values).shape
                 )
 
     def test_empty_component(self):
@@ -97,7 +97,7 @@ class TestEmpty_like(unittest.TestCase):
                     )
                 )
                 self.assertEqual(
-                    empty_gradient.data.shape, np.empty_like(gradient.data).shape
+                    empty_gradient.values.shape, np.empty_like(gradient.values).shape
                 )
 
             self.assertTrue(empty_block_pos.gradients_list() == ["positions"])
@@ -119,7 +119,8 @@ class TestEmpty_like(unittest.TestCase):
                     )
                 )
                 self.assertEqual(
-                    empty_gradient_pos.data.shape, np.empty_like(gradient.data).shape
+                    empty_gradient_pos.values.shape,
+                    np.empty_like(gradient.values).shape,
                 )
 
     def test_empty_error(self):

@@ -63,39 +63,39 @@ class TestSumSamples(unittest.TestCase):
         )
 
         # Test the gradients
-        gr1 = tensor_ps[0].gradient("positions").data
+        gr1 = tensor_ps[0].gradient("positions").values
 
         self.assertTrue(
             np.all(
                 np.sum(gr1[[0, 4, 8, 12]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[0]
+                == reduce_tensor_ps.block(0).gradient("positions").values[0]
             )
         )
         self.assertTrue(
             np.all(
                 np.sum(gr1[[2, 6, 10, 14]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[2]
+                == reduce_tensor_ps.block(0).gradient("positions").values[2]
             )
         )
 
         self.assertTrue(
             np.all(
                 np.sum(gr1[[3, 7, 11, 15]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[3]
+                == reduce_tensor_ps.block(0).gradient("positions").values[3]
             )
         )
 
         self.assertTrue(
             np.all(
                 np.sum(gr1[[96, 99, 102]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[40]
+                == reduce_tensor_ps.block(0).gradient("positions").values[40]
             )
         )
 
         self.assertTrue(
             np.all(
                 np.sum(gr1[-1], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[-1]
+                == reduce_tensor_ps.block(0).gradient("positions").values[-1]
             )
         )
 
@@ -305,13 +305,13 @@ class TestMeanSamples(unittest.TestCase):
         )
 
         # Test the gradients
-        gr1 = tensor_ps[0].gradient("positions").data
+        gr1 = tensor_ps[0].gradient("positions").values
 
         self.assertTrue(
             np.all(
                 np.allclose(
                     np.mean(gr1[[0, 4, 8, 12]], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[0],
+                    reduce_tensor_ps.block(0).gradient("positions").values[0],
                     rtol=1e-13,
                 )
             )
@@ -320,7 +320,7 @@ class TestMeanSamples(unittest.TestCase):
             np.all(
                 np.allclose(
                     np.mean(gr1[[2, 6, 10, 14]], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[2],
+                    reduce_tensor_ps.block(0).gradient("positions").values[2],
                 )
             )
         )
@@ -328,7 +328,7 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.mean(gr1[[3, 7, 11, 15]], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[3]
+                == reduce_tensor_ps.block(0).gradient("positions").values[3]
             )
         )
 
@@ -336,7 +336,7 @@ class TestMeanSamples(unittest.TestCase):
             np.all(
                 np.allclose(
                     np.mean(gr1[[96, 99, 102]], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[40],
+                    reduce_tensor_ps.block(0).gradient("positions").values[40],
                     rtol=1e-13,
                 )
             )
@@ -345,7 +345,7 @@ class TestMeanSamples(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.mean(gr1[-1], axis=0)
-                == reduce_tensor_ps.block(0).gradient("positions").data[-1]
+                == reduce_tensor_ps.block(0).gradient("positions").values[-1]
             )
         )
 
@@ -622,10 +622,10 @@ class TestStdSamples(unittest.TestCase):
                     (
                         np.mean(XdX, axis=0)
                         - np.mean(bl1.values[:4], axis=0)
-                        * np.mean(gr1.data[[0, 4, 8, 12]], axis=0)
+                        * np.mean(gr1.values[[0, 4, 8, 12]], axis=0)
                     )
                     / np.std(bl1.values[:4], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[0],
+                    reduce_tensor_ps.block(0).gradient("positions").values[0],
                     rtol=1e-13,
                 )
             )
@@ -637,10 +637,10 @@ class TestStdSamples(unittest.TestCase):
                     (
                         np.mean(XdX, axis=0)
                         - np.mean(bl1.values[:4], axis=0)
-                        * np.mean(gr1.data[[2, 6, 10, 14]], axis=0)
+                        * np.mean(gr1.values[[2, 6, 10, 14]], axis=0)
                     )
                     / np.std(bl1.values[:4], axis=0),
-                    reduce_tensor_ps.block(0).gradient("positions").data[2],
+                    reduce_tensor_ps.block(0).gradient("positions").values[2],
                 )
             )
         )
@@ -651,10 +651,10 @@ class TestStdSamples(unittest.TestCase):
                 (
                     np.mean(XdX, axis=0)
                     - np.mean(bl1.values[:4], axis=0)
-                    * np.mean(gr1.data[[3, 7, 11, 15]], axis=0)
+                    * np.mean(gr1.values[[3, 7, 11, 15]], axis=0)
                 )
                 / np.std(bl1.values[:4], axis=0),
-                reduce_tensor_ps.block(0).gradient("positions").data[3],
+                reduce_tensor_ps.block(0).gradient("positions").values[3],
             )
         )
 
@@ -670,10 +670,10 @@ class TestStdSamples(unittest.TestCase):
                 (
                     np.mean(XdX, axis=0)
                     - np.mean(bl1.values[idx], axis=0)
-                    * np.mean(gr1.data[[96, 99, 102]], axis=0)
+                    * np.mean(gr1.values[[96, 99, 102]], axis=0)
                 )
                 / np.std(bl1.values[idx], axis=0),
-                reduce_tensor_ps.block(0).gradient("positions").data[40],
+                reduce_tensor_ps.block(0).gradient("positions").values[40],
                 rtol=1e-13,
             )
         )
@@ -859,7 +859,7 @@ class TestStdSamples(unittest.TestCase):
 
         block_1.add_gradient(
             parameter="parameter",
-            data=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
+            values=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
             samples=Labels(["sample", "samples2"], np.array([[0, 0], [1, 1], [2, 2]])),
             components=[],
         )
@@ -896,16 +896,22 @@ class TestStdSamples(unittest.TestCase):
         )
         self.assertTrue(
             np.all(
-                X[0].gradient("parameter").data == add_X[0].gradient("parameter").data
+                X[0].gradient("parameter").values
+                == add_X[0].gradient("parameter").values
             )
         )
         self.assertTrue(
             np.all(
-                X[0].gradient("parameter").data == mean_X[0].gradient("parameter").data
+                X[0].gradient("parameter").values
+                == mean_X[0].gradient("parameter").values
             )
         )
-        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].gradient("parameter").data))
-        self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").data))
+        self.assertTrue(
+            np.all(np.zeros((3, 3)) == std_X[0].gradient("parameter").values)
+        )
+        self.assertTrue(
+            np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").values)
+        )
 
 
 class TestZeroSamples(unittest.TestCase):
@@ -986,7 +992,7 @@ class TestZeroSamples(unittest.TestCase):
 
         block.add_gradient(
             parameter="positions",
-            data=np.zeros((0, 3)),
+            values=np.zeros((0, 3)),
             samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
             components=[],
         )
@@ -1000,7 +1006,7 @@ class TestZeroSamples(unittest.TestCase):
 
         sum_block.add_gradient(
             parameter="positions",
-            data=np.zeros((0, 3)),
+            values=np.zeros((0, 3)),
             samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
             components=[],
         )
@@ -1024,7 +1030,7 @@ def get_XdX(block, gradient, der_index):
     XdX = []
     for ig in der_index:
         idx = gradient.samples[ig][0]
-        XdX.append(block.values[idx] * gradient.data[ig])
+        XdX.append(block.values[idx] * gradient.values[ig])
     return np.stack(XdX)
 
 

@@ -4,10 +4,10 @@
 // in the C API, but we wrap them into three different types for Rust.
 
 mod block_ref;
-pub use self::block_ref::{TensorBlockRef, BasicBlock, GradientsIter};
+pub use self::block_ref::{TensorBlockRef, GradientsIter};
 
 mod block_mut;
-pub use self::block_mut::{TensorBlockRefMut, BasicBlockMut, GradientsMutIter};
+pub use self::block_mut::{TensorBlockRefMut, GradientsMutIter};
 
 mod owned;
 pub use self::owned::TensorBlock;

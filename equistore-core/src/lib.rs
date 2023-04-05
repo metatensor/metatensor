@@ -18,7 +18,7 @@ use self::data::{eqs_array_t, eqs_sample_mapping_t, eqs_data_origin_t};
 use self::data::{register_data_origin, get_data_origin};
 
 mod blocks;
-use self::blocks::{BasicBlock, TensorBlock};
+use self::blocks::TensorBlock;
 
 mod tensor;
 use self::tensor::TensorMap;

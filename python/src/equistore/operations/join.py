@@ -71,7 +71,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
         len(unique_names) == np.array([len(names) for names in names_list])
     )
 
-    # It's fine to loose metadata on the property axis, less so on the sample axis!
+    # It's fine to lose metadata on the property axis, less so on the sample axis!
     if axis == "samples" and not names_are_same:
         raise ValueError(
             "Sample names are not the same! Joining along samples with different "
@@ -103,7 +103,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
             for parameter, gradient in block.gradients():
                 new_block.add_gradient(
                     parameter=parameter,
-                    data=gradient.data,
+                    values=gradient.values,
                     samples=gradient.samples,
                     components=gradient.components,
                 )

@@ -52,13 +52,13 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
 
     for parameter, gradient in block.gradients():
         values_grad = []
-        gradient_data = gradient.data
+        gradient_values = gradient.values
         # I want the difference between the number of components of the gradients and
         # the values
-        diff_components = len(gradient_data.shape) - len(block.values.shape)
+        diff_components = len(gradient_values.shape) - len(block.values.shape)
         values_grad.append(
             constant
-            * gradient_data
+            * gradient_values
             * block.values[gradient.samples["sample"]].reshape(
                 (-1,) + (1,) * diff_components + _shape
             )
