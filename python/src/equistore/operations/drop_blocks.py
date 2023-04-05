@@ -20,11 +20,27 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = True) -> TensorMap
     :return: the input :py:class:`TensorMap` with the specified key/block pairs
         dropped.
     """
+    # Check arg types
+    if not isinstance(tensor, TensorMap):
+        raise TypeError(
+            "The input `tensor` must be a TensorMap. " f"Got {type(tensor)} instead."
+        )
+    if not isinstance(keys, Labels):
+        raise TypeError(
+            "The input `keys` must be a Labels object. " f"Got {type(keys)} instead."
+        )
+    if not isinstance(copy, bool):
+        raise TypeError(
+            "The input `copy` flag must be a boolean. " f"Got {type(copy)} instead."
+        )
+
     if not np.all(tensor.keys.names == keys.names):
         raise ValueError(
             "The input tensor's keys must have the same names as the specified"
             f" keys to drop. Should be {tensor.keys.names} but got {keys.names}"
         )
+
+    # Find the difference between key of the original tensor and those to drop
     diff = np.setdiff1d(keys, tensor.keys)
     if len(diff) > 0:
         raise ValueError(
@@ -32,6 +48,8 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = True) -> TensorMap
             f" Non-existent keys: {diff}"
         )
     new_keys = np.setdiff1d(tensor.keys, keys)
+
+    # Create the new TensorMap
     if copy:
         new_blocks = [tensor[key].copy() for key in new_keys]
     else:
