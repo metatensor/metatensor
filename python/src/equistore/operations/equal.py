@@ -6,105 +6,131 @@ from . import _dispatch
 from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
-def equal(tensor1: TensorMap, tensor2: TensorMap) -> bool:
+class NotEqualError(Exception):
+    """Exception used to indicate that two equistore objects are different"""
+
+    pass
+
+
+def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
     """Compare two :py:class:`TensorMap`.
 
     This function returns ``True`` if the two tensors have the same keys
     (potentially in different order) and all the :py:class:`TensorBlock` have
-    the same (and in the same order) samples, components, properties,
-    and their values matrices pass the == test with the provided
-    ``rtol``, and ``atol``.
+    the same (and in the same order) samples, components, properties, and their
+    their values are strictly equal.
 
     The :py:class:`TensorMap` contains gradient data, then this function only
     returns ``True`` if all the gradients also have the same samples,
-    components, properties and their data matrices pass == test.
+    components, properties and their their values are strictly equal.
 
-    In practice this function calls :py:func:`equal_raise`, returning
-    ``True`` if no exception is rased, `False` otherwise.
+    In practice this function calls :py:func:`equal_raise`, returning ``True``
+    if no exception is raised, ``False`` otherwise.
 
-    :param tensor1: first :py:class:`TensorMap`.
-    :param tensor2: second :py:class:`TensorMap`.
+    :param tensor_1: first :py:class:`TensorMap`.
+    :param tensor_2: second :py:class:`TensorMap`.
     """
     try:
-        equal_raise(tensor1=tensor1, tensor2=tensor2)
+        equal_raise(tensor_1=tensor_1, tensor_2=tensor_2)
         return True
-    except ValueError:
+    except NotEqualError:
         return False
 
 
-def equal_raise(tensor1: TensorMap, tensor2: TensorMap):
+def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap):
     """
-    Compare two :py:class:`TensorMap`, raising a ``ValueError`` if they are not
-    the same.
+    Compare two :py:class:`TensorMap`, raising :py:class:`NotEqualError` if they
+    are not the same.
 
-    The message associated with the ``ValueError`` will contain more information
-    on where the two :py:class:`TensorMap` differ. See :py:func:`equal` for
-    more information on which :py:class:`TensorMap` are considered equal.
+    The message associated with the exception will contain more information on
+    where the two :py:class:`TensorMap` differ. See :py:func:`equal` for more
+    information on which :py:class:`TensorMap` are considered equal.
 
-    :param tensor1: first :py:class:`TensorMap`.
-    :param tensor2: second :py:class:`TensorMap`.
+    :raises: :py:class:`equistore.NotEqualError` if the blocks are
+        different
+
+    :param tensor_1: first :py:class:`TensorMap`.
+    :param tensor_2: second :py:class:`TensorMap`.
     """
-    _check_same_keys(tensor1, tensor2, "equal")
+    try:
+        _check_same_keys(tensor_1, tensor_2, "equal")
+    except ValueError as e:
+        raise NotEqualError("the tensor maps have different keys") from e
 
-    for key, block1 in tensor1:
+    for key, block_1 in tensor_1:
         try:
-            equal_block_raise(block1, tensor2.block(key))
-        except ValueError as e:
-            raise ValueError(f"The TensorBlocks with key = {key} are different") from e
+            equal_block_raise(block_1, tensor_2.block(key))
+        except NotEqualError as e:
+            raise NotEqualError(f"blocks for key '{key}' are different") from e
 
 
-def equal_block(block1: TensorBlock, block2: TensorBlock) -> bool:
+def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
     """
     Compare two :py:class:`TensorBlock`.
 
     This function returns ``True`` if the two :py:class:`TensorBlock` have the
-    same samples, components, properties and their values matrices must pass == test.
+    same samples, components, properties and their values are strictly equal.
 
     If the :py:class:`TensorBlock` contains gradients, then the gradient must
-    also have same (and in the same order) samples, components, properties
-    and their data matrices must pass the == test.
+    also have same (and in the same order) samples, components, properties and
+    their values are strictly equal.
 
     In practice this function calls :py:func:`equal_block_raise`, returning
-    ``True`` if no exception is rased, `False` otherwise.
+    ``True`` if no exception is raised, ``False`` otherwise.
 
-    :param block1: first :py:class:`TensorBlock`.
-    :param block2: second :py:class:`TensorBlock`.
+    :param block_1: first :py:class:`TensorBlock`.
+    :param block_2: second :py:class:`TensorBlock`.
     """
     try:
-        equal_block_raise(block1=block1, block2=block2)
+        equal_block_raise(block_1=block_1, block_2=block_2)
         return True
-    except ValueError:
+    except NotEqualError:
         return False
 
 
-def equal_block_raise(block1: TensorBlock, block2: TensorBlock):
+def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock):
     """
-    Compare two :py:class:`TensorBlock`, raising a ``ValueError`` if they are
-    not the same.
+    Compare two :py:class:`TensorBlock`, raising
+    :py:class:`equistore.NotEqualError` if they are not the same.
 
-    The message associated with the ``ValueError`` will contain more information
-    on where the two :py:class:`TensorBlock` differ. See
-    :py:func:`equal_block` for more information on which
-    :py:class:`TensorBlock` are considered equal.
+    The message associated with the exception will contain more information on
+    where the two :py:class:`TensorBlock` differ. See :py:func:`equal_block` for
+    more information on which :py:class:`TensorBlock` are considered equal.
 
-    :param block1: first :py:class:`TensorBlock`.
-    :param block2: second :py:class:`TensorBlock`.
+    :raises: :py:class:`equistore.NotEqualError` if the blocks are different
+
+    :param block_1: first :py:class:`TensorBlock`.
+    :param block_2: second :py:class:`TensorBlock`.
     """
 
-    if not np.all(block1.values.shape == block2.values.shape):
-        raise ValueError("values shapes are different")
+    if not np.all(block_1.values.shape == block_2.values.shape):
+        raise NotEqualError("values shapes are different")
 
-    if not _dispatch.all(block1.values == block2.values):
-        raise ValueError("values are not equal")
-    _check_blocks(
-        block1, block2, props=["samples", "properties", "components"], fname="equal"
-    )
-    _check_same_gradients(
-        block1, block2, props=["samples", "properties", "components"], fname="equal"
-    )
+    if not _dispatch.all(block_1.values == block_2.values):
+        raise NotEqualError("values are not equal")
 
-    for parameter, gradient1 in block1.gradients():
-        gradient2 = block2.gradient(parameter)
+    try:
+        _check_blocks(
+            block_1,
+            block_2,
+            props=["samples", "properties", "components"],
+            fname="equal",
+        )
+    except ValueError as e:
+        raise NotEqualError(str(e))
+
+    try:
+        _check_same_gradients(
+            block_1,
+            block_2,
+            props=["samples", "properties", "components"],
+            fname="equal",
+        )
+    except ValueError as e:
+        raise NotEqualError(str(e))
+
+    for parameter, gradient1 in block_1.gradients():
+        gradient2 = block_2.gradient(parameter)
 
         if not _dispatch.all(gradient1.data == gradient2.data):
-            raise ValueError(f'gradient ("{parameter}") data are not equal')
+            raise NotEqualError(f"gradient '{parameter}' values are not equal")
