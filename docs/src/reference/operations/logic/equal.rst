@@ -8,3 +8,5 @@ equal
 .. autofunction:: equistore.equal_block
 
 .. autofunction:: equistore.equal_block_raise
+
+.. autofunction:: equistore.NotEqualError

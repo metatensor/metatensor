@@ -19,7 +19,7 @@ from .divide import divide
 from .dot import dot
 from .drop_blocks import drop_blocks
 from .empty_like import empty_like, empty_like_block
-from .equal import equal, equal_block, equal_block_raise, equal_raise
+from .equal import equal, equal_block, equal_block_raise, equal_raise, NotEqualError
 from .equal_metadata import equal_metadata
 from .join import join
 from .lstsq import lstsq
@@ -47,6 +47,7 @@ from .unique_metadata import unique_metadata, unique_metadata_block
 from .zeros_like import zeros_like, zeros_like_block
 
 __all__ = [
+    "NotEqualError",
     "abs",
     "add",
     "allclose",

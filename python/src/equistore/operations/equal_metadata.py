@@ -174,10 +174,10 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
                  ``'components'`` and ``'gradients'``.
     """
     for prop in props:
-        err_msg = f"Inputs to '{fname}' should have the same {prop}:\n"
-        err_msg_len = f"{prop} of the two `TensorBlock` have not the same lenght."
-        err_msg_1 = f"{prop} are not the same or not in the same order."
-        err_msg_names = f"{prop} names are not the same or not in the same order."
+        err_msg = f"inputs to '{fname}' should have the same {prop}:\n"
+        err_msg_len = f"{prop} of the two `TensorBlock` have different lengths"
+        err_msg_1 = f"{prop} are not the same or not in the same order"
+        err_msg_names = f"{prop} names are not the same or not in the same order"
         if prop == "samples":
             if not len(a.samples) == len(b.samples):
                 raise ValueError(err_msg + err_msg_len)
@@ -208,13 +208,14 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
 
         else:
             raise ValueError(
-                f"{prop} is not a valid property to check. "
-                "Choose from 'samples', 'properties', 'components'."
+                f"{prop} is not a valid property to check, "
+                "choose from ['samples', 'properties', 'components']"
             )
 
 
 def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
-    """Check if metadata between two gradients's TensorBlocks is consistent
+    """
+    Check if metadata between two gradients's TensorBlocks is consistent
      for an operation.
 
     The functions verifies that the metadata of the given props is the same
@@ -224,38 +225,38 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
 
     :param a: first :py:class:`TensorBlock` for check
     :param b: second :py:class:`TensorBlock` for check
-    :param props: A list of strings containing the property to check.
-                 Allowed values are ``'samples'`` or ``'properties'``,
-                 ``'components'``. To check only if the ``'parameters'`` are consistent
-                 use ``props=None``, using ``'parameters'`` is allowed
+    :param props: A list of strings containing the property to check. Allowed
+                 values are ``'samples'`` or ``'properties'``, ``'components'``.
+                 To check only if the ``'parameters'`` are consistent use
+                 ``props=None``, using ``'parameters'`` is allowed
                   even though deprecated.
     """
-    err_msg = f"Inputs to {fname} should have the same gradient:\n"
+    err_msg = f"inputs to {fname} should have the same gradient:\n"
     grads_a = a.gradients_list()
     grads_b = b.gradients_list()
 
     if len(grads_a) != len(grads_b) or (
         not np.all([parameter in grads_b for parameter in grads_a])
     ):
-        raise ValueError(f"Inputs to {fname} should have the same gradient parameters.")
+        raise ValueError(f"inputs to {fname} should have the same gradient parameters")
 
     if props is not None:
         for parameter, grad_a in a.gradients():
             grad_b = b.gradient(parameter)
             for prop in props:
                 err_msg_len = (
-                    f'gradient ("{parameter}") {prop} of the two `TensorBlock` '
-                    "have not the same lenght."
+                    f"gradient '{parameter}' {prop} of the two `TensorBlock` "
+                    "have different lengths"
                 )
 
                 err_msg_1 = (
-                    f'gradient ("{parameter}") {prop} are not the same or not in the '
-                    "same order."
+                    f"gradient '{parameter}' {prop} are not the same or not in the "
+                    "same order"
                 )
 
                 err_msg_names = (
-                    f'gradient ("{parameter}") {prop} names are not the same '
-                    "or not in the same order."
+                    f"gradient '{parameter}' {prop} names are not the same "
+                    "or not in the same order"
                 )
 
                 if prop == "samples":
@@ -283,12 +284,12 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
                         if not np.all(c1 == c2):
                             raise ValueError(err_msg + err_msg_1)
                 elif prop != "parameters":
-                    # parameters are already checked at the begining but i want to give
-                    # the opportunity to the 'user' to use it, without problems
+                    # parameters are already checked at the beginning but i want
+                    # to give the opportunity to the 'user' to use it, without
+                    # problems
                     raise ValueError(
-                        f"{prop} is not a valid property of the gradients to check. "
-                        "Choose from 'parameters', 'samples', "
-                        "'properties', 'components'."
+                        f"{prop} is not a valid property to check, "
+                        "choose from ['samples', 'properties', 'components']"
                     )
 
 
