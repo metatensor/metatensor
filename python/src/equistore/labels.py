@@ -275,7 +275,6 @@ class Labels(np.ndarray):
         Here is an example using this method:
 
         >>> from equistore import Labels
-        ...
         >>> # Construct a labels object using Labels.arange():
         >>> labels = Labels.arange("dummy", 7)
         >>> # Inspect the labels object:
