@@ -31,7 +31,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         )
     if not isinstance(copy, bool):
         raise TypeError(
-            "The input `copy` flag must be a boolean. " f"Got {type(copy)} instead."
+            f"`copy` flag must be a boolean, got '{type(copy)}' instead"
         )
 
     if not np.all(tensor.keys.names == keys.names):
