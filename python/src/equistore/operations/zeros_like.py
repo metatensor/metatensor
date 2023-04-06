@@ -3,7 +3,7 @@ from typing import List, Union
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from .equal_metadata import _check_parameters_in_gradient_block
+from .equal_metadata import _check_gradient_presence
 
 
 def zeros_like(
@@ -128,9 +128,7 @@ def zeros_like_block(
     if parameters is None:
         parameters = block.gradients_list()
     else:
-        _check_parameters_in_gradient_block(
-            block=block, parameters=parameters, fname="zeros_like_block"
-        )
+        _check_gradient_presence(block=block, parameters=parameters, fname="zeros_like")
 
     for parameter in parameters:
         gradient = block.gradient(parameter)

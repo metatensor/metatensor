@@ -59,8 +59,8 @@ class TestRandomLike:
 
     def test_random_uniform_like_error(self, tensor):
         msg = (
-            "The requested parameter 'err' in random_uniform_like_block "
-            + "is not a valid parameterfor the TensorBlock"
+            "requested gradient 'err' in random_uniform_like "
+            "is not defined in this tensor"
         )
         with pytest.raises(ValueError, match=msg):
             tensor = equistore.random_uniform_like(
