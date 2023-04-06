@@ -6,6 +6,7 @@ Manipulation operations
 
     drop_blocks() <drop-blocks>
     join() <join>
+    one_hot() <one-hot>
     slice() <slice>
     split() <split>
     [sum/mean/std/variance]_over_samples()  <samples-reduction>

@@ -29,7 +29,6 @@ def random_uniform_like(
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
-    ...
     >>> np.random.seed(1)
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
@@ -38,23 +37,19 @@ def random_uniform_like(
     ...     properties=Labels.arange("property", 3),
     ... )
     >>> block.add_gradient(
-    ...    parameter="alpha",
-    ...    data=np.random.rand(2, 3, 3),
-    ...    samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...    components=[Labels.arange("component", 3)],
+    ...     parameter="alpha",
+    ...     data=np.random.rand(2, 3, 3),
+    ...     samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
+    ...     components=[Labels.arange("component", 3)],
     ... )
-    ...
     >>> block.add_gradient(
-    ...    parameter="beta",
-    ...    data=np.random.rand(1, 3),
-    ...    samples=Labels(["sample"], np.array([[0]])),
-    ...    components=[],
+    ...     parameter="beta",
+    ...     data=np.random.rand(1, 3),
+    ...     samples=Labels(["sample"], np.array([[0]])),
+    ...     components=[],
     ... )
-    ...
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> tensor = TensorMap(keys, [block])
-    ...
     >>> print(tensor.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -67,7 +62,6 @@ def random_uniform_like(
     values set equal to random values.
 
     >>> tensor_random = equistore.random_uniform_like(tensor)
-    ...
     >>> print(tensor_random.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -79,7 +73,7 @@ def random_uniform_like(
      [0.68650093 0.83462567 0.01828828]
      [0.75014431 0.98886109 0.74816565]
      [0.28044399 0.78927933 0.10322601]]
-    >>> print(tensor_random.block(0).gradient('alpha').data)
+    >>> print(tensor_random.block(0).gradient("alpha").data)
     [[[0.44789353 0.9085955  0.29361415]
       [0.28777534 0.13002857 0.01936696]
       [0.67883553 0.21162812 0.26554666]]
@@ -91,8 +85,7 @@ def random_uniform_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_random = equistore.random_uniform_like(tensor,  parameters='alpha')
-    ...
+    >>> tensor_random = equistore.random_uniform_like(tensor, parameters="alpha")
     >>> print(tensor_random.block(0).gradients_list())
     ['alpha']
     """

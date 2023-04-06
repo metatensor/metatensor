@@ -1,9 +1,6 @@
-use std::fmt::Write;
-
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
-use py_literal::Value as PyValue;
 
-use super::{Header, check_for_extra_bytes};
+use super::{Header, DataType, check_for_extra_bytes};
 use crate::{Error, Labels, LabelsBuilder, LabelValue};
 
 /// Read `Labels` stored using numpy's NPY format.
@@ -20,7 +17,7 @@ pub fn read_npy_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error>
     } else if header.shape.len() != 1 {
         return Err(Error::Serialization("Expected a 1-D array when loading Labels".into()));
     }
-    let (names, endianness) = check_type_descriptor(header.type_descriptor)?;
+    let (names, endianness) = check_type_descriptor(&header.type_descriptor)?;
 
     let mut data = vec![0; header.shape[0] * names.len()];
     match endianness {
@@ -43,19 +40,18 @@ pub fn read_npy_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error>
 /// See [`read_npy_labels`] for more information on how `Labels` are stored to
 /// files.
 pub fn write_npy_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result<(), Error> {
-    let mut type_descriptor = String::from("[");
+    let mut type_descriptor = Vec::new();
     for name in labels.names() {
         if cfg!(target_endian = "little") {
-            write!(type_descriptor, "('{}', '<i4'), ", name).expect("failed to write dtype");
+            type_descriptor.push((name.into(), "<i4".into()));
         } else {
             assert!(cfg!(target_endian = "big"));
-            write!(type_descriptor, "('{}', '>i4'), ", name).expect("failed to write dtype");
+            type_descriptor.push((name.into(), ">i4".into()));
         }
     }
-    type_descriptor += "]";
 
     let header = Header {
-        type_descriptor: type_descriptor.parse().expect("invalid dtype"),
+        type_descriptor: DataType::Compound(type_descriptor),
         fortran_order: false,
         shape: vec![labels.count()],
     };
@@ -78,55 +74,39 @@ enum Endianness {
 
 /// Check that the given type descriptor matches the expected one for Labels and
 /// return the corresponding set of names & endianness.
-fn check_type_descriptor(desc: PyValue) -> Result<(Vec<String>, Endianness), Error> {
+fn check_type_descriptor(desc: &DataType) -> Result<(Vec<String>, Endianness), Error> {
     let mut names = Vec::new();
 
     let error = Error::Serialization("invalid dtype for labels".into());
 
     let mut endianness = None;
     match desc {
-        PyValue::List(list) => {
-            for element in list {
-                match element {
-                    PyValue::Tuple(data) if data.len() == 2 => {
-                        let name = &data[0];
-                        let typ = &data[1];
-                        if !name.is_string() || !typ.is_string() {
-                            return Err(error);
-                        }
-
-                        let name = name.as_string().expect("name is not a string");
-                        let typ = typ.as_string().expect("type is not a string");
-
-                        if endianness.is_none() {
-                            if typ == "<i4" {
-                                endianness = Some(Endianness::LittleEndian);
-                            } else if typ == ">i4" {
-                                endianness = Some(Endianness::BigEndian);
-                            }
-                        }
-
-                        if typ == "<i4" {
-                            if endianness != Some(Endianness::LittleEndian) {
-                                return Err(error);
-                            }
-                        } else if typ == ">i4" {
-                            if endianness != Some(Endianness::BigEndian) {
-                                return Err(error);
-                            }
-                        } else {
-                            return Err(error);
-                        }
-
-                        names.push(name.clone());
-                    }
-                    _ => {
-                        return Err(error);
+        DataType::Compound(list) => {
+            for (name, typ) in list {
+                if endianness.is_none() {
+                    if typ == "<i4" {
+                        endianness = Some(Endianness::LittleEndian);
+                    } else if typ == ">i4" {
+                        endianness = Some(Endianness::BigEndian);
                     }
                 }
+
+                if typ == "<i4" {
+                    if endianness != Some(Endianness::LittleEndian) {
+                        return Err(error);
+                    }
+                } else if typ == ">i4" {
+                    if endianness != Some(Endianness::BigEndian) {
+                        return Err(error);
+                    }
+                } else {
+                    return Err(error);
+                }
+
+                names.push(name.clone());
             }
         },
-        _ => {
+        DataType::Scalar(_) => {
             return Err(error);
         }
     }

@@ -339,20 +339,24 @@ def sum_over_samples_block(
     This is best explained with an example:
 
     >>> block = TensorBlock(
-    ...     values=np.array([
-    ...         [1, 2, 4],
-    ...         [3, 5, 6],
-    ...         [7, 8, 9],
-    ...         [10, 11, 12],
-    ...     ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...             [7, 8, 9],
+    ...             [10, 11, 12],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
     ...         ["structure", "center"],
-    ...         np.array([
-    ...             [0, 0],
-    ...             [0, 1],
-    ...             [1, 0],
-    ...             [1, 1],
-    ...         ]),
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...                 [1, 0],
+    ...                 [1, 1],
+    ...             ]
+    ...         ),
     ...     ),
     ...     components=[],
     ...     properties=Labels.arange("properties", 3),
@@ -398,30 +402,31 @@ def sum_over_samples(
     Here is an example using this function
 
     >>> block = TensorBlock(
-    ...     values=np.array([
-    ...         [1, 2, 4],
-    ...         [3, 5, 6],
-    ...         [7, 8, 9],
-    ...         [10, 11, 12],
-    ...     ]),
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...             [7, 8, 9],
+    ...             [10, 11, 12],
+    ...         ]
+    ...     ),
     ...     samples=Labels(
     ...         ["structure", "center"],
-    ...         np.array([
-    ...             [0, 0],
-    ...             [0, 1],
-    ...             [1, 0],
-    ...             [1, 1],
-    ...         ]),
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...                 [1, 0],
+    ...                 [1, 1],
+    ...             ]
+    ...         ),
     ...     ),
     ...     components=[],
     ...     properties=Labels.arange("properties", 3),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> tensor = TensorMap(keys, [block])
-    ...
     >>> tensor_sum = sum_over_samples(tensor, sample_names="center")
-    ...
     >>> # only 'structure' is left as a sample
     >>> print(tensor_sum.block(0))
     TensorBlock
