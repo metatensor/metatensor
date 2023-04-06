@@ -133,8 +133,7 @@ class TestEmpty_like(unittest.TestCase):
             tensor = equistore.empty_like(tensor, parameters=["positions", "err"])
         self.assertEqual(
             str(cm.exception),
-            "The requested parameter 'err' in empty_like_block "
-            "is not a valid parameterfor the TensorBlock",
+            "requested gradient 'err' in empty_like is not defined in this tensor",
         )
 
 
