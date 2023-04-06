@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
 def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -37,7 +37,7 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     blocks = []
     if isinstance(B, TensorMap):
-        _check_maps(A, B, "divide")
+        _check_same_keys(A, B, "divide")
         for key, blockA in A:
             blockB = B.block(key)
             _check_blocks(

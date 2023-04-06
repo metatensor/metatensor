@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
 def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -36,7 +36,7 @@ def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     """
     blocks = []
     if isinstance(B, TensorMap):
-        _check_maps(A, B, "multiply")
+        _check_same_keys(A, B, "multiply")
         for key in A.keys:
             blockA = A[key]
             blockB = B[key]

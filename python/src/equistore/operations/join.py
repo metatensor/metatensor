@@ -6,7 +6,7 @@ import numpy as np
 
 from ..labels import Labels
 from ..tensor import TensorBlock, TensorMap
-from .equal_metadata import _check_maps
+from .equal_metadata import _check_same_keys
 
 
 def join(tensor_maps: List[TensorMap], axis: str):
@@ -50,7 +50,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
         return tensor_maps[0]
 
     for ts_to_join in tensor_maps[1:]:
-        _check_maps(tensor_maps[0], ts_to_join, "join")
+        _check_same_keys(tensor_maps[0], ts_to_join, "join")
 
     # Deduce if sample/property names are the same in all tensor_maps.
     # If this is not the case we have to change unify the corresponding labels later.

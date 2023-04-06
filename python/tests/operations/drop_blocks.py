@@ -43,9 +43,7 @@ def test_drop_all(test_tensor_map):
     keys = test_tensor_map.keys
     tensor = equistore.drop_blocks(test_tensor_map, keys)
     empty_tensor = TensorMap(keys=Labels.empty(keys.names), blocks=[])
-    assert not (
-        equistore.equal(tensor, empty_tensor)
-    )  # TODO: reverse this once #175 is fixed
+    assert equistore.equal(tensor, empty_tensor)
 
 
 def test_drop_first(test_tensor_map):

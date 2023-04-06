@@ -2,7 +2,7 @@ from typing import Union
 
 from ..block import TensorBlock
 from ..tensor import TensorMap
-from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -33,7 +33,7 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     blocks = []
     if isinstance(B, TensorMap):
-        _check_maps(A, B, "add")
+        _check_same_keys(A, B, "add")
         for key in A.keys:
             blockA = A[key]
             blockB = B[key]
