@@ -63,7 +63,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
                 values=tensor[key].values,
             )
             # Add gradients
-            for param, obj in tensor[key].gradients():
+            for parameter, gradient in tensor[key].gradients():
                 new_block.add_gradient(
                     parameter=param,
                     samples=obj.samples,
