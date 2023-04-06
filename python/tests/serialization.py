@@ -1,4 +1,6 @@
 import os
+import pickle
+import sys
 
 import numpy as np
 import pytest
@@ -66,3 +68,43 @@ def test_save(use_numpy, tmpdir, tensor):
             assert_equal(data[f"{prefix}/data"], gradient.data)
             assert_equal(data[f"{prefix}/samples"], gradient.samples)
             assert_equal(data[f"{prefix}/components/0"], gradient.components[0])
+
+
+if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
+    protocols = (4, 5)
+else:
+    protocols = (4,)
+
+
+@pytest.mark.parametrize("protocol", protocols)
+def test_pickle(protocol, tmpdir, tensor):
+    """
+    Checks that pickling and unpickling a tensor map
+    results in the same tensor map
+    """
+
+    tmpfile = "serialize-test.pickle"
+
+    with tmpdir.as_cwd():
+        with open(tmpfile, "wb") as f:
+            pickle.dump(tensor, f, protocol=protocol)
+
+        with open(tmpfile, "rb") as f:
+            tensor_loaded = pickle.load(f)
+
+    assert_equal(tensor.keys, tensor_loaded.keys)
+    assert_equal(len(tensor.blocks()), len(tensor_loaded.blocks()))
+    for i, (_, block) in enumerate(tensor):
+        ref_block = tensor.blocks()[i]
+        assert_equal(type(block.values), type(ref_block.values))
+        assert_equal(block.values, ref_block.values)
+        assert_equal(block.samples, ref_block.samples)
+        assert_equal(block.components, ref_block.components)
+        assert_equal(block.properties, ref_block.properties)
+
+        for parameter in block.gradients_list():
+            gradient = block.gradient(parameter)
+            ref_gradient = ref_block.gradient(parameter)
+            assert_equal(gradient.data, ref_gradient.data)
+            assert_equal(gradient.samples, ref_gradient.samples)
+            assert_equal(gradient.components, ref_gradient.components)
