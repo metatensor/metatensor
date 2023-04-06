@@ -62,7 +62,8 @@ class TestUniqueMetadata(unittest.TestCase):
         target_samples = Labels(names=["structure"], values=np.array([[0]])[:0])
         sliced_block = equistore.slice_block(
             self.tensor3.block(0),
-            samples=Labels(names=["structure"], values=np.array([[-1]])),
+            axis="samples",
+            labels=Labels(names=["structure"], values=np.array([[-1]])),
         )
         actual_samples = equistore.unique_metadata_block(
             sliced_block, "samples", "structure"
@@ -114,7 +115,8 @@ class TestUniqueMetadata(unittest.TestCase):
         target_properties = Labels(names=["n"], values=np.array([[0]])[:0])
         sliced_block = equistore.slice_block(
             self.tensor3.block(0),
-            properties=Labels(names=["n"], values=np.array([[-1]])),
+            axis="properties",
+            labels=Labels(names=["n"], values=np.array([[-1]])),
         )
         actual_properties = equistore.unique_metadata_block(
             sliced_block, "properties", "n"
@@ -157,7 +159,8 @@ class TestUniqueMetadata(unittest.TestCase):
         target_samples = Labels(names=["sample"], values=np.array([[0]])[:0])
         sliced_block = equistore.slice_block(
             self.tensor3.block(0),
-            samples=Labels(names=["structure"], values=np.array([[-1]])),
+            axis="samples",
+            labels=Labels(names=["structure"], values=np.array([[-1]])),
         )
         actual_samples = equistore.unique_metadata_block(
             sliced_block, "samples", "sample", gradient_param="cell"
@@ -233,7 +236,8 @@ class TestUniqueMetadata(unittest.TestCase):
         target_properties = Labels(names=["n"], values=np.array([[0]])[:0])
         sliced_block = equistore.slice_block(
             self.tensor3.block(0),
-            properties=Labels(names=["n"], values=np.array([[-1]])),
+            axis="properties",
+            labels=Labels(names=["n"], values=np.array([[-1]])),
         )
         actual_properties = equistore.unique_metadata_block(
             sliced_block, "properties", "n", gradient_param="cell"

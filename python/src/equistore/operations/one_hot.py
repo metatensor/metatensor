@@ -32,6 +32,7 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import Labels
+
     >>> # Let's say we have 6 atoms, whose chemical indentities
     >>> # are C, H, H, H, C, H:
     >>> original_labels = Labels(

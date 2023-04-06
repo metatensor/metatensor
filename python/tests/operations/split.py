@@ -30,19 +30,19 @@ class TestSplitSamples(unittest.TestCase):
         self,
         block: TensorBlock,
         split_blocks: List[TensorBlock],
-        grouped_idxs: List[Labels],
+        grouped_labels: List[Labels],
     ):
         # Same number of returned blocks as groups of indices
-        self.assertEqual(len(split_blocks), len(grouped_idxs))
+        self.assertEqual(len(split_blocks), len(grouped_labels))
 
         # Define reference values
-        target_names = list(grouped_idxs[0].names)
+        target_names = list(grouped_labels[0].names)
         p_size = len(block.properties)
         c_sizes = [len(c) for c in block.components]
         # Checks on each split block
         for i, split_block in enumerate(split_blocks):
             # Check samples indices
-            target_idxs = _searchable_labels(grouped_idxs[i])
+            target_idxs = _searchable_labels(grouped_labels[i])
             actual_idxs = _unique_indices(split_block, "samples", target_names)
             self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
             # No properties split
@@ -53,7 +53,7 @@ class TestSplitSamples(unittest.TestCase):
             # Equal values tensor
             samples_filter = np.array(
                 [
-                    s in _searchable_labels(grouped_idxs[i])
+                    s in _searchable_labels(grouped_labels[i])
                     for s in block.samples[target_names]
                 ]
             )
@@ -113,14 +113,14 @@ class TestSplitSamples(unittest.TestCase):
     def _check_group_sizes_tensors(
         self,
         split_tensors: List[TensorMap],
-        grouped_idxs: List[Labels],
+        grouped_labels: List[Labels],
     ):
         # Same number of returned tensors as groups of indices
-        self.assertEqual(len(split_tensors), len(grouped_idxs))
+        self.assertEqual(len(split_tensors), len(grouped_labels))
         # Number of unique idxs in each tensor equal to respective group size
         for i, tensor in enumerate(split_tensors):
-            unique_idxs = _unique_indices(tensor, "samples", grouped_idxs[i].names)
-            self.assertEqual(len(unique_idxs), len(grouped_idxs[i]))
+            unique_idxs = _unique_indices(tensor, "samples", grouped_labels[i].names)
+            self.assertEqual(len(unique_idxs), len(grouped_labels[i]))
 
     def _check_empty_tensor(self, tensor, split_tensor):
         for key in tensor.keys:
@@ -133,60 +133,60 @@ class TestSplitSamples(unittest.TestCase):
         block = self.tensor.block(
             spherical_harmonics_l=2, species_center=6, species_neighbor=6
         )  # has structure samples 0 -> 9 (inc.)
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["structure"], values=np.array([[0], [6], [7]])),
             Labels(names=["structure"], values=np.array([[2], [3], [4]])),
             Labels(names=["structure"], values=np.array([[1], [5], [8], [9]])),
         ]
-        split_blocks = equistore.split_block(block, "samples", grouped_idxs)
+        split_blocks = equistore.split_block(block, "samples", grouped_labels)
         self.assertEqual(
             np.sum([len(b.samples) for b in split_blocks]), len(block.samples)
         )
-        self._check_split_blocks(block, split_blocks, grouped_idxs)
+        self._check_split_blocks(block, split_blocks, grouped_labels)
         # All indices present - block with key (2, 6, 8)
         block = self.tensor.block(
             spherical_harmonics_l=2, species_center=6, species_neighbor=8
         )  # has structure samples 4 -> 6 (inc.)
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["structure"], values=np.array([[4], [6]])),
             Labels(names=["structure"], values=np.array([[5]])),
         ]
-        split_blocks = equistore.split_block(block, "samples", grouped_idxs)
+        split_blocks = equistore.split_block(block, "samples", grouped_labels)
         self.assertEqual(
             np.sum([len(b.samples) for b in split_blocks]), len(block.samples)
         )
-        self._check_split_blocks(block, split_blocks, grouped_idxs)
+        self._check_split_blocks(block, split_blocks, grouped_labels)
         # Indices not present for first group
-        grouped_idxs_empty = [
+        grouped_labels_empty = [
             Labels(names=["structure"], values=np.array([[1], [2]])),  # not present
             Labels(names=["structure"], values=np.array([[4], [6]])),  # present
             Labels(names=["structure"], values=np.array([[5]])),  # present
         ]
-        split_blocks = equistore.split_block(block, "samples", grouped_idxs_empty)
-        self._check_split_blocks(block, split_blocks[1:], grouped_idxs_empty[1:])
+        split_blocks = equistore.split_block(block, "samples", grouped_labels_empty)
+        self._check_split_blocks(block, split_blocks[1:], grouped_labels_empty[1:])
         self._check_empty_block(block, split_blocks[0])
 
     def test_split(self):
         # Normal - all indices present
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["structure"], values=np.array([[0], [6], [7]])),
             Labels(names=["structure"], values=np.array([[2], [3], [4]])),
             Labels(names=["structure"], values=np.array([[1], [5], [8], [9]])),
         ]
-        split_tensors = equistore.split(self.tensor, "samples", grouped_idxs)
+        split_tensors = equistore.split(self.tensor, "samples", grouped_labels)
         self._check_num_blocks_tensor(split_tensors)
-        self._check_group_sizes_tensors(split_tensors, grouped_idxs)
+        self._check_group_sizes_tensors(split_tensors, grouped_labels)
         # Third returned tensor should be empty
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["structure"], values=np.array([[6], [7]])),  # present
             Labels(names=["structure"], values=np.array([[2], [3], [4]])),  # present
             Labels(
                 names=["structure"], values=np.array([[1], [5], [8], [9]]) * -1
             ),  # not present
         ]
-        split_tensors = equistore.split(self.tensor, "samples", grouped_idxs)
+        split_tensors = equistore.split(self.tensor, "samples", grouped_labels)
         self._check_num_blocks_tensor(split_tensors)
-        self._check_group_sizes_tensors(split_tensors[:2], grouped_idxs[:2])
+        self._check_group_sizes_tensors(split_tensors[:2], grouped_labels[:2])
         self._check_empty_tensor(self.tensor, split_tensors[2])
 
     def test_split_block_(self):
@@ -194,26 +194,26 @@ class TestSplitSamples(unittest.TestCase):
         block = self.tensor.block(
             spherical_harmonics_l=2, species_center=6, species_neighbor=6
         )  # has structure samples 0 -> 9 (inc.)
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["structure"], values=np.array([[0], [6], [7]])),
             Labels(names=["structure"], values=np.array([[2], [6], [4]])),
             Labels(names=["structure"], values=np.array([[1], [0], [6], [4]])),
         ]
-        split_blocks = equistore.split_block(block, "samples", grouped_idxs)
-        self._check_split_blocks(block, split_blocks, grouped_idxs)
+        split_blocks = equistore.split_block(block, "samples", grouped_labels)
+        self._check_split_blocks(block, split_blocks, grouped_labels)
 
     def test_no_splitting(self):
         # Passing no groups of indices returns an empty list
         # Block
         self.assertEqual(
             equistore.split_block(
-                self.tensor.block(0), axis="samples", grouped_idxs=[]
+                self.tensor.block(0), axis="samples", grouped_labels=[]
             ),
             [],
         )
         # TensorMap
         self.assertEqual(
-            equistore.split(self.tensor, axis="samples", grouped_idxs=[]), []
+            equistore.split(self.tensor, axis="samples", grouped_labels=[]), []
         )
 
 
@@ -234,19 +234,19 @@ class TestSplitProperties(unittest.TestCase):
         self,
         block: TensorBlock,
         split_blocks: List[TensorBlock],
-        grouped_idxs: List[Labels],
+        grouped_labels: List[Labels],
     ):
         # Same number of returned blocks as groups of indices
-        self.assertEqual(len(split_blocks), len(grouped_idxs))
+        self.assertEqual(len(split_blocks), len(grouped_labels))
 
         # Define reference values
-        target_names = list(grouped_idxs[0].names)
+        target_names = list(grouped_labels[0].names)
         s_size = len(block.samples)
         c_sizes = [len(c) for c in block.components]
         # Checks on each split block
         for i, split_block in enumerate(split_blocks):
             # Check properties indices
-            target_idxs = _searchable_labels(grouped_idxs[i])
+            target_idxs = _searchable_labels(grouped_labels[i])
             actual_idxs = _unique_indices(split_block, "properties", target_names)
             self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
             # No samples split
@@ -257,7 +257,7 @@ class TestSplitProperties(unittest.TestCase):
             # Equal values tensor
             properties_filter = np.array(
                 [
-                    p in _searchable_labels(grouped_idxs[i])
+                    p in _searchable_labels(grouped_labels[i])
                     for p in block.properties[target_names]
                 ]
             )
@@ -318,14 +318,14 @@ class TestSplitProperties(unittest.TestCase):
     def _check_group_sizes_tensors(
         self,
         split_tensors: List[TensorMap],
-        grouped_idxs: List[Labels],
+        grouped_labels: List[Labels],
     ):
         # Same number of returned tensors as groups of indices
-        self.assertEqual(len(split_tensors), len(grouped_idxs))
+        self.assertEqual(len(split_tensors), len(grouped_labels))
         # Number of unique idxs in each tensor equal to respective group size
         for i, tensor in enumerate(split_tensors):
-            unique_idxs = _unique_indices(tensor, "properties", grouped_idxs[i].names)
-            self.assertEqual(len(unique_idxs), len(grouped_idxs[i]))
+            unique_idxs = _unique_indices(tensor, "properties", grouped_labels[i].names)
+            self.assertEqual(len(unique_idxs), len(grouped_labels[i]))
 
     def _check_empty_tensor(self, tensor, split_tensor):
         for key in tensor.keys:
@@ -338,15 +338,15 @@ class TestSplitProperties(unittest.TestCase):
         block = self.tensor.block(
             species_center=8, species_neighbor_1=6, species_neighbor_2=8
         )
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["l", "n2"], values=np.array([[0, 0], [1, 3], [3, 1]])),
             Labels(names=["l", "n2"], values=np.array([[4, 2], [4, 3], [4, 1]])),
             Labels(names=["l", "n2"], values=np.array([[3, 2], [1, 1]])),
         ]
-        split_blocks = equistore.split_block(block, "properties", grouped_idxs)
-        self._check_split_blocks(block, split_blocks, grouped_idxs)
+        split_blocks = equistore.split_block(block, "properties", grouped_labels)
+        self._check_split_blocks(block, split_blocks, grouped_labels)
         # Indices not present for last group
-        grouped_idxs_empty = [
+        grouped_labels_empty = [
             Labels(
                 names=["l", "n2"], values=np.array([[0, 0], [1, 3], [3, 1]])
             ),  # present
@@ -357,22 +357,22 @@ class TestSplitProperties(unittest.TestCase):
                 names=["l", "n2"], values=np.array([[3, 2], [1, 1]]) * -1
             ),  # not present
         ]
-        split_blocks = equistore.split_block(block, "properties", grouped_idxs_empty)
-        self._check_split_blocks(block, split_blocks[:2], grouped_idxs_empty[:2])
+        split_blocks = equistore.split_block(block, "properties", grouped_labels_empty)
+        self._check_split_blocks(block, split_blocks[:2], grouped_labels_empty[:2])
         self._check_empty_block(block, split_blocks[2])
 
     def test_split(self):
         # Normal - all indices present
-        grouped_idxs = [
+        grouped_labels = [
             Labels(names=["l", "n2"], values=np.array([[0, 0], [1, 3], [3, 1]])),
             Labels(names=["l", "n2"], values=np.array([[4, 2], [4, 3], [4, 1]])),
             Labels(names=["l", "n2"], values=np.array([[3, 2], [1, 1]])),
         ]
-        split_tensors = equistore.split(self.tensor, "properties", grouped_idxs)
+        split_tensors = equistore.split(self.tensor, "properties", grouped_labels)
         self._check_num_blocks_tensor(split_tensors)
-        self._check_group_sizes_tensors(split_tensors, grouped_idxs)
+        self._check_group_sizes_tensors(split_tensors, grouped_labels)
         # Second returned tensor should be empty
-        grouped_idxs = [
+        grouped_labels = [
             Labels(
                 names=["l", "n2"], values=np.array([[0, 0], [1, 3], [3, 1]])
             ),  # present
@@ -381,10 +381,10 @@ class TestSplitProperties(unittest.TestCase):
             ),  # not present
             Labels(names=["l", "n2"], values=np.array([[3, 2], [1, 1]])),  # present
         ]
-        split_tensors = equistore.split(self.tensor, "properties", grouped_idxs)
+        split_tensors = equistore.split(self.tensor, "properties", grouped_labels)
         self._check_num_blocks_tensor(split_tensors)
         self._check_group_sizes_tensors(
-            [split_tensors[0], split_tensors[2]], [grouped_idxs[0], grouped_idxs[2]]
+            [split_tensors[0], split_tensors[2]], [grouped_labels[0], grouped_labels[2]]
         )
         self._check_empty_tensor(self.tensor, split_tensors[1])
 
@@ -393,13 +393,13 @@ class TestSplitProperties(unittest.TestCase):
         # Block
         self.assertEqual(
             equistore.split_block(
-                self.tensor.block(0), axis="properties", grouped_idxs=[]
+                self.tensor.block(0), axis="properties", grouped_labels=[]
             ),
             [],
         )
         # TensorMap
         self.assertEqual(
-            equistore.split(self.tensor, axis="properties", grouped_idxs=[]), []
+            equistore.split(self.tensor, axis="properties", grouped_labels=[]), []
         )
 
 
@@ -410,7 +410,7 @@ class TestSplitErrors(unittest.TestCase):
             use_numpy=True,
         )
         self.block = self.tensor.block(0)
-        self.grouped_idxs = [
+        self.grouped_labels = [
             Labels(names=["structure"], values=np.array([[0], [6], [7]])),
             Labels(names=["structure"], values=np.array([[2], [3], [4]])),
             Labels(names=["structure"], values=np.array([[1], [5], [8], [9]])),
@@ -419,55 +419,60 @@ class TestSplitErrors(unittest.TestCase):
     def test_split_errors(self):
         # TypeError not TM
         with self.assertRaises(TypeError) as cm:
-            equistore.split(self.block, axis="samples", grouped_idxs=self.grouped_idxs),
+            equistore.split(
+                self.block, axis="samples", grouped_labels=self.grouped_labels
+            ),
         self.assertEqual(
             str(cm.exception), "``tensor`` should be an equistore ``TensorMap``"
         )
         # axis not str
         with self.assertRaises(TypeError) as cm:
-            equistore.split(self.tensor, axis=3.14, grouped_idxs=self.grouped_idxs),
+            equistore.split(self.tensor, axis=3.14, grouped_labels=self.grouped_labels),
         self.assertEqual(str(cm.exception), "``axis`` should be passed as a ``str``")
         # axis not "samples" or "properties"
         with self.assertRaises(ValueError) as cm:
             equistore.split(
                 self.tensor,
                 axis="buongiorno!",
-                grouped_idxs=self.grouped_idxs,
+                grouped_labels=self.grouped_labels,
             ),
         self.assertEqual(
             str(cm.exception),
             "must pass ``axis`` as either 'samples' or 'properties'",
         )
-        # grouped_idxs is Labels not list
+        # grouped_labels is Labels not list
         with self.assertRaises(TypeError) as cm:
             equistore.split(
-                self.tensor, axis="samples", grouped_idxs=self.grouped_idxs[0]
+                self.tensor, axis="samples", grouped_labels=self.grouped_labels[0]
             ),
         self.assertEqual(
             str(cm.exception),
-            "``grouped_idxs`` should be passed as a ``list`` of equistore ``Labels``",
+            "``grouped_labels`` should be passed as a ``list`` of equistore ``Labels``",
         )
-        # grouped_idxs is list of str
+        # grouped_labels is list of str
         with self.assertRaises(TypeError) as cm:
-            equistore.split(self.tensor, axis="samples", grouped_idxs=["a", "b", "c"]),
+            equistore.split(
+                self.tensor, axis="samples", grouped_labels=["a", "b", "c"]
+            ),
         self.assertEqual(
             str(cm.exception),
-            "each element in ``grouped_idxs`` must be an equistore ``Labels`` object",
+            "each element in ``grouped_labels`` must be an equistore ``Labels`` object",
         )
-        # different names in labels of grouped_idxs
-        grouped_idxs = [
+        # different names in labels of grouped_labels
+        grouped_labels = [
             Labels(names=["red"], values=np.array([[0], [6], [7]])),
             Labels(names=["red"], values=np.array([[2], [3], [4]])),
             Labels(names=["wine"], values=np.array([[1], [5], [8], [9]])),
         ]
         with self.assertRaises(ValueError) as cm:
-            equistore.split(self.tensor, axis="samples", grouped_idxs=grouped_idxs),
+            equistore.split(self.tensor, axis="samples", grouped_labels=grouped_labels),
         self.assertEqual(
             str(cm.exception),
-            "the names of all ``Labels`` passed in ``grouped_idxs`` must be equivalent",
+            "the names of all ``Labels`` passed in ``grouped_labels``"
+            " must be equivalent",
         )
-        # a name in grouped_idxs not in the tensor
-        grouped_idxs = [
+        # a name in grouped_labels not in the tensor
+        grouped_labels = [
             Labels(
                 names=["front_and", "center"], values=np.array([[0, 1], [6, 7], [7, 4]])
             ),
@@ -480,12 +485,12 @@ class TestSplitErrors(unittest.TestCase):
             ),
         ]
         with self.assertRaises(ValueError) as cm:
-            equistore.split(self.tensor, axis="samples", grouped_idxs=grouped_idxs),
+            equistore.split(self.tensor, axis="samples", grouped_labels=grouped_labels),
 
         self.assertEqual(
             str(cm.exception),
             "the name ``front_and`` passed in a Labels object at position 0 of "
-            "``grouped_idxs`` does not appear in the ``samples`` names "
+            "``grouped_labels`` does not appear in the ``samples`` names "
             "of the input tensor",
         )
 
@@ -493,7 +498,7 @@ class TestSplitErrors(unittest.TestCase):
         # TypeError not TB
         with self.assertRaises(TypeError) as cm:
             equistore.split_block(
-                self.tensor, axis="samples", grouped_idxs=self.grouped_idxs
+                self.tensor, axis="samples", grouped_labels=self.grouped_labels
             ),
         self.assertEqual(
             str(cm.exception), "``block`` should be an equistore ``TensorBlock``"
