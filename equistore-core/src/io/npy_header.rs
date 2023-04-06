@@ -277,13 +277,14 @@ impl std::fmt::Display for DataType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Header {
     pub type_descriptor: DataType,
     pub fortran_order: bool,
     pub shape: Vec<usize>,
 }
 
+#[derive(Clone, Debug)]
 struct HeaderParser {
     data: Vec<char>,
     position: usize,
@@ -469,6 +470,8 @@ impl HeaderParser {
 
         self.skip_whitespaces();
         self.expects('{')?;
+        self.skip_whitespaces();
+
         loop {
             let key = self.parse_string()?;
             self.skip_whitespaces();
@@ -643,7 +646,7 @@ mod tests {
 
     #[test]
     fn npy_header_parsing() {
-        let header = "  \t{'descr': [('a', '<i4'),('b', '<i4'),], 'fortran_order':False, 'shape': (27, 3), }";
+        let header = "  \t{'descr': [('a', '<i4'),('b', '<i4'),], 'shape': (27, 3), 'fortran_order':False, }";
 
         let header = Header::from_str(header).unwrap();
 
@@ -661,5 +664,9 @@ mod tests {
             shape: vec![3],
         };
         assert_eq!(header.to_dict_literal(), "{ 'descr': '<f8', 'fortran_order': True, 'shape': (3, ) }");
+
+        // check round trip
+        let parsed = Header::from_str(&header.to_dict_literal()).unwrap();
+        assert_eq!(parsed, header);
     }
 }
