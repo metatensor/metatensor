@@ -3,7 +3,7 @@ import numpy as np
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
 def equal(tensor1: TensorMap, tensor2: TensorMap) -> bool:
@@ -44,7 +44,7 @@ def equal_raise(tensor1: TensorMap, tensor2: TensorMap):
     :param tensor1: first :py:class:`TensorMap`.
     :param tensor2: second :py:class:`TensorMap`.
     """
-    _check_maps(tensor1, tensor2, "equal")
+    _check_same_keys(tensor1, tensor2, "equal")
 
     for key, block1 in tensor1:
         try:

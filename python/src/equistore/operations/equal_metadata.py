@@ -106,7 +106,7 @@ def equal_metadata(
             raise ValueError(f"Invalid metadata to check: {metadata}")
     # Check equivalence in keys
     try:
-        _check_maps(tensor_1, tensor_2, "equal_metadata")
+        _check_same_keys(tensor_1, tensor_2, "equal_metadata")
     except ValueError:
         return False
 
@@ -129,7 +129,7 @@ def equal_metadata(
     return True
 
 
-def _check_maps(a: TensorMap, b: TensorMap, fname: str):
+def _check_same_keys(a: TensorMap, b: TensorMap, fname: str):
     """Check if metadata between two TensorMaps is consistent for an operation.
 
     The functions verifies that
@@ -142,20 +142,23 @@ def _check_maps(a: TensorMap, b: TensorMap, fname: str):
     :param b: second :py:class:`TensorMap` for check
     """
 
-    if a.keys.names != b.keys.names:
+    keys_a = a.keys
+    keys_b = b.keys
+
+    if keys_a.names != keys_b.names:
         raise ValueError(
-            f"Inputs to {fname} should have the same keys. "
-            f"Got {a.keys.names} and {b.keys.names}."
+            f"inputs to {fname} should have the same keys names, "
+            f"got '{keys_a.names}' and '{keys_b.names}'"
         )
 
-    if len(a.blocks()) != len(b.blocks()):
+    if len(keys_a) != len(keys_b):
         raise ValueError(
-            f"Inputs to {fname} should have the same number of blocks. "
-            f"Got {len(a.blocks())} and {len(b.blocks())}."
+            f"inputs to {fname} should have the same number of blocks, "
+            f"got {len(keys_a)} and {len(keys_b)}"
         )
 
-    if not np.all([key in a.keys for key in b.keys]):
-        raise ValueError(f"Inputs to {fname} should have the same key indices.")
+    if not np.all([key in keys_a for key in keys_b]):
+        raise ValueError(f"inputs to {fname} should have the same keys")
 
 
 def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):

@@ -2,7 +2,7 @@ from typing import Union
 
 from ..tensor import TensorMap
 from .add import add
-from .equal_metadata import _check_maps
+from .equal_metadata import _check_same_keys
 from .multiply import multiply
 
 
@@ -32,7 +32,7 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if isinstance(B, TensorMap):
-        _check_maps(A, B, "subtract")
+        _check_same_keys(A, B, "subtract")
         B = multiply(B, -1)
     else:
         # check if can be converted in float (so if it is a constant value)

@@ -3,7 +3,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from .equal_metadata import _check_maps, _check_same_gradients
+from .equal_metadata import _check_same_gradients, _check_same_keys
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -70,7 +70,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]
     """
-    _check_maps(X, Y, "solve")
+    _check_same_keys(X, Y, "solve")
 
     for _, X_block in X:
         shape = X_block.values.shape

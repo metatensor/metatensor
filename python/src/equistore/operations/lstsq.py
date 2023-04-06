@@ -5,7 +5,7 @@ import numpy as np
 from ..block import TensorBlock
 from ..tensor import TensorMap
 from . import _dispatch
-from .equal_metadata import _check_maps, _check_same_gradients
+from .equal_metadata import _check_same_gradients, _check_same_keys
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
@@ -110,7 +110,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
             stacklevel=1,
         )
 
-    _check_maps(X, Y, "lstsq")
+    _check_same_keys(X, Y, "lstsq")
 
     blocks = []
     for key, X_block in X:

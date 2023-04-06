@@ -3,7 +3,7 @@ import numpy as np
 from equistore import TensorBlock, TensorMap
 
 from . import _dispatch
-from .equal_metadata import _check_blocks, _check_maps, _check_same_gradients
+from .equal_metadata import _check_blocks, _check_same_gradients, _check_same_keys
 
 
 def allclose(
@@ -221,7 +221,7 @@ def allclose_raise(
     :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
     :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
-    _check_maps(tensor1, tensor2, "allclose")
+    _check_same_keys(tensor1, tensor2, "allclose")
 
     for key, block1 in tensor1:
         try:
