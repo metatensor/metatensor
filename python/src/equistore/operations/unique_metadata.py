@@ -38,9 +38,9 @@ def unique_metadata(
 
     .. code-block:: python
 
-        from equistore.operations import unique_metadata
+        import equistore
 
-        unique_structures = unique_metadata(
+        unique_structures = equistore.unique_metadata(
             tensor,
             axis="samples",
             names=["structure"],
@@ -51,7 +51,7 @@ def unique_metadata(
 
     .. code-block:: python
 
-        unique_grad_atoms = unique_metadata(
+        unique_grad_atoms = equistore.unique_metadata(
             tensor,
             axis="samples",
             names=["atom"],
@@ -75,12 +75,12 @@ def unique_metadata(
 
     .. code-block:: python
 
-        from equistore.operations import split
+        import equistore
 
-        [tensor_1, tensor_2] = split(
+        [tensor_1, tensor_2] = equistore.split(
             tensor,
             axis="samples",
-            grouped_idxs=[unique_structures[:4], unique_structures[4:]],
+            grouped_labels=[unique_structures[:4], unique_structures[4:]],
         )
 
     :param tensor: the :py:class:`TensorMap` to find unique indices for.
@@ -145,7 +145,9 @@ def unique_metadata_block(
 
     .. code-block:: python
 
-        unique_samples = unique_metadata_block(
+        import equistore
+
+        unique_samples = equistore.unique_metadata_block(
             block,
             axis="samples",
             names=["structure"],
@@ -156,7 +158,7 @@ def unique_metadata_block(
 
     .. code-block:: python
 
-        unique_grad_samples = unique_metadata_block(
+        unique_grad_samples = equistore.unique_metadata_block(
             block,
             axis="samples",
             names=["atom"],
