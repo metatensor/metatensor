@@ -23,7 +23,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
     # Check arg types
     if not isinstance(tensor, TensorMap):
         raise TypeError(
-            "The input `tensor` must be a TensorMap. " f"Got {type(tensor)} instead."
+            f"input `tensor` must be a TensorMap, got '{type(tensor)}' instead"
         )
     if not isinstance(keys, Labels):
         raise TypeError(
