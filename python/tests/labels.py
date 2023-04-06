@@ -200,21 +200,43 @@ def test_arange_three_arguments():
 
 
 def test_arange_incorrect_arguments():
-    with pytest.raises(ValueError, match="3"):
+    with pytest.raises(
+        ValueError,
+        match="the maximum number of integer arguments accepted by "
+        r"`Labels.arange\(\)` is 3. 4 were provided",
+    ):
         Labels.arange("dummy", 0, 10, 2, 4)
-    with pytest.raises(ValueError, match="at least"):
+    with pytest.raises(
+        ValueError, match=r"please provide at least one integer for `Labels.arange\(\)`"
+    ):
         Labels.arange("dummy")
-    with pytest.raises(EquistoreError, match="label name"):
+    with pytest.raises(
+        EquistoreError, match="invalid parameter: '0' is not a valid label name"
+    ):
         Labels.arange(0, 1, 2)
-    with pytest.raises(ValueError, match="integer"):
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange(0.0, 1.0, 2)
-    with pytest.raises(ValueError, match="integer"):
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange("dummy", 0, 5, 0.2)
-    with pytest.raises(ValueError, match="argument"):
+    with pytest.raises(
+        ValueError,
+        match="the only valid names for integer arguments to "
+        r"`Labels.arange\(\)` are start, stop and step",
+    ):
         Labels.arange("dummy", random=10)
-    with pytest.raises(EquistoreError, match="label name"):
-        Labels.arange(0, 1, 2)
-    with pytest.raises(ValueError, match="integer"):
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange(name="dummy", start=0.0, stop=1.0, step=2)
-    with pytest.raises(ValueError, match="integer"):
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange("dummy", start=0, stop=0.2)
