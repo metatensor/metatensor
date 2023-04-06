@@ -141,8 +141,8 @@ def test_copy_flag(test_tensor_map):
     # Define some keys to drop
     keys_to_drop = test_tensor_map.keys[:5]
 
-    # Drop blocks with default copy=True flag
-    new_tensor_copied = equistore.drop_blocks(test_tensor_map, keys_to_drop)
+    # Drop blocks with copy=True flag
+    new_tensor_copied = equistore.drop_blocks(test_tensor_map, keys_to_drop, copy=True)
 
     # Drop blocks with copy=False flag
     new_tensor_not_copied = equistore.drop_blocks(

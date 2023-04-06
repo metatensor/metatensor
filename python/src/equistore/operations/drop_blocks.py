@@ -3,15 +3,15 @@ import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
 
 
-def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = True) -> TensorMap:
+def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
     """
     Drop specified key/block pairs from a TensorMap.
 
     :param tensor: the TensorMap to drop the key-block pair from.
     :param keys: a :py:class:`Labels` object containing the keys of the blocks
         to drop
-    :param copy: if ``True`` (default), the returned :py:class:`TensorMap` is
-        constructed by copying the blocks from the input `tensor`. If ``False``,
+    :param copy: if ``True``, the returned :py:class:`TensorMap` is constructed
+        by copying the blocks from the input `tensor`. If ``False`` (default),
         the values of the blocks in the output :py:class:`TensorMap` reference
         the same data as the input `tensor`. The latter can be useful for
         limiting memory usage, but should be used with caution when manipulating
