@@ -30,9 +30,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
             f"input `keys` must be a Labels object, got '{type(keys)}' instead"
         )
     if not isinstance(copy, bool):
-        raise TypeError(
-            f"`copy` flag must be a boolean, got '{type(copy)}' instead"
-        )
+        raise TypeError(f"`copy` flag must be a boolean, got '{type(copy)}' instead")
 
     if not np.all(tensor.keys.names == keys.names):
         raise ValueError(
@@ -57,18 +55,18 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         for key in new_keys:
             # Create new block
             new_block = TensorBlock(
+                values=tensor[key].values,
                 samples=tensor[key].samples,
                 components=tensor[key].components,
                 properties=tensor[key].properties,
-                values=tensor[key].values,
             )
             # Add gradients
             for parameter, gradient in tensor[key].gradients():
                 new_block.add_gradient(
-                    parameter=param,
-                    samples=obj.samples,
-                    components=obj.components,
-                    data=obj.data,
+                    parameter=parameter,
+                    data=gradient.data,
+                    samples=gradient.samples,
+                    components=gradient.components,
                 )
             new_blocks.append(new_block)
 
