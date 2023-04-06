@@ -110,6 +110,12 @@ class TensorBlock:
         new_ptr = self._lib.eqs_block_copy(self._ptr)
         return TensorBlock._from_ptr(new_ptr, parent=None)
 
+    def __reduce__(self):
+        raise NotImplementedError(
+            "Pickling for TensorBlocks does not work. Please wrap it into a TensorMap"
+            " to save it."
+        )
+
     def copy(self) -> "TensorBlock":
         """
         Get a deep copy of this block, including all the (potentially non

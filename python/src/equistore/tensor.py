@@ -1,6 +1,14 @@
 import copy
 import ctypes
+import os
+import pickle
+import sys
+import tempfile
 from typing import List, Union
+
+
+if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
+    from pickle import PickleBuffer
 
 import numpy as np
 
@@ -68,6 +76,22 @@ class TensorMap:
         obj._blocks = []
         return obj
 
+    @classmethod
+    def _from_pickle(cls, data: bytes):
+        """
+        Passed to pickler to reconstruct TensorMap from bytes object
+        """
+        import equistore
+
+        path = os.path.join(tempfile.gettempdir(), str(id(data)))
+        try:
+            with open(path, "wb") as f:
+                pickle.dump(data, f)
+            tensor_map = equistore.load(path)
+        finally:
+            os.remove(path)
+        return tensor_map
+
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
             self._lib.eqs_tensormap_free(self._ptr)
@@ -87,6 +111,26 @@ class TensorMap:
         non Python-owned) data and metadata
         """
         return copy.deepcopy(self)
+
+    def __reduce_ex__(self, protocol: int):
+        """
+        Used by the Pickler to dump TensorMap object to bytes object.
+        When protocol >= 5 it supports PickleBuffer which reduces number of
+        copyies needed
+        """
+        import equistore
+
+        path = os.path.join(tempfile.gettempdir(), str(id(self)) + ".npz")
+        try:
+            equistore.save(path, self)
+            with open(path, "rb") as f:
+                data = f.read()
+        finally:
+            os.remove(path)
+        if protocol >= 5:
+            return self._from_pickle, (PickleBuffer(data),), None
+        else:
+            return self._from_pickle, (data,)
 
     def __iter__(self):
         keys = self.keys
