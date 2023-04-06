@@ -27,7 +27,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         )
     if not isinstance(keys, Labels):
         raise TypeError(
-            "The input `keys` must be a Labels object. " f"Got {type(keys)} instead."
+            f"input `keys` must be a Labels object, got '{type(keys)}' instead"
         )
     if not isinstance(copy, bool):
         raise TypeError(
