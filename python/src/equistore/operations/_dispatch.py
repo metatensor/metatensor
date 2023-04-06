@@ -65,6 +65,7 @@ def bincount(input, weights=None, minlength=0):
                                         Defaults to None.
         minlength (int, optional): A minimum number of bins for the output array.
                                         Defaults to 0.
+        out_format
     """
     if isinstance(input, np.ndarray):
         if weights is not None:
@@ -74,6 +75,18 @@ def bincount(input, weights=None, minlength=0):
         if weights is not None:
             _check_all_same_type([weights], TorchTensor)
         return torch.bincount(input, weights=weights, minlength=minlength)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def array_like_data(array, data):
+    """Return `data` with the same data-type and array-type of array"""
+    if _check_all_same_type([array], type(data)):
+        return data
+    if isinstance(array, np.ndarray):
+        return np.array(data, dtype=array.dtype)
+    elif isinstance(array, TorchTensor):
+        return torch.Tensor(data, device=array.device)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
