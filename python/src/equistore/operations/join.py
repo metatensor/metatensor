@@ -9,7 +9,7 @@ from ..tensor import TensorBlock, TensorMap
 from .equal_metadata import _check_maps
 
 
-def join(tensor_maps: List[TensorMap], axis: str):
+def join(tensor_maps: List[TensorMap], axis: str, unsafe=False):
     """Join a sequence of :py:class:`TensorMap` along an axis.
 
     The ``axis`` parameter specifies the type join. For example, if
@@ -26,6 +26,11 @@ def join(tensor_maps: List[TensorMap], axis: str):
     :param axis:
         A string indicating how the tensormaps are stacked. Allowed
         values are ``'properties'`` or ``'samples'``.
+    :param unsafe:
+        if True no checks on the input are made. It is assumed that the user
+        has passed to the function :py:class:`TensorMap` with the correct metadata
+        that can be joined along the chosen axis, the function assumes also that the
+        order of the metadata is the correct one . Use at your own risk. (Default False)
 
     :return tensor_joined:
         The stacked :py:class:`TensorMap` with more properties or samples
@@ -48,35 +53,37 @@ def join(tensor_maps: List[TensorMap], axis: str):
 
     if len(tensor_maps) == 1:
         return tensor_maps[0]
+    if not unsafe:
+        for ts_to_join in tensor_maps[1:]:
+            _check_maps(tensor_maps[0], ts_to_join, "join")
 
-    for ts_to_join in tensor_maps[1:]:
-        _check_maps(tensor_maps[0], ts_to_join, "join")
+        # Deduce if sample/property names are the same in all tensor_maps.
+        # If this is not the case we have to change unify the corresponding labels
+        # later.
+        if axis == "samples":
+            names_list = [tensor.sample_names for tensor in tensor_maps]
+        else:
+            names_list = [tensor.property_names for tensor in tensor_maps]
 
-    # Deduce if sample/property names are the same in all tensor_maps.
-    # If this is not the case we have to change unify the corresponding labels later.
-    if axis == "samples":
-        names_list = [tensor.sample_names for tensor in tensor_maps]
-    else:
-        names_list = [tensor.property_names for tensor in tensor_maps]
+        # We use functools to flatten a list of sublists::
+        #
+        #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
+        #
+        # A nested list with sublist of different shapes can not be handled by
+        # np.unique.
+        unique_names = np.unique(functools.reduce(operator.concat, names_list))
 
-    # We use functools to flatten a list of sublists::
-    #
-    #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
-    #
-    # A nested list with sublist of different shapes can not be handled by np.unique.
-    unique_names = np.unique(functools.reduce(operator.concat, names_list))
-
-    # Label names are unique: We can do an equal check only checking the lengths.
-    names_are_same = np.all(
-        len(unique_names) == np.array([len(names) for names in names_list])
-    )
-
-    # It's fine to loose metadata on the property axis, less so on the sample axis!
-    if axis == "samples" and not names_are_same:
-        raise ValueError(
-            "Sample names are not the same! Joining along samples with different "
-            "sample names will loose information and is not supported."
+        # Label names are unique: We can do an equal check only checking the lengths.
+        names_are_same = np.all(
+            len(unique_names) == np.array([len(names) for names in names_list])
         )
+
+        # It's fine to loose metadata on the property axis, less so on the sample axis!
+        if axis == "samples" and not names_are_same:
+            raise ValueError(
+                "Sample names are not the same! Joining along samples with different "
+                "sample names will loose information and is not supported."
+            )
 
     keys_names = ("tensor",) + tensor_maps[0].keys.names
     keys_values = []
@@ -88,7 +95,8 @@ def join(tensor_maps: List[TensorMap], axis: str):
         for _, block in tensor:
             # We would already raised an error if `axis == "samples"`. Therefore, we can
             # neglect the check for `axis == "properties"`.
-            if names_are_same:
+            # for unsafe ==True we assume same property name
+            if unsafe or names_are_same:
                 properties = block.properties
             else:
                 properties = Labels.arange("property", len(block.properties))
