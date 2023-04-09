@@ -21,40 +21,31 @@ def dot(A: TensorMap, B: TensorMap) -> TensorMap:
 
     >>> from equistore import Labels
     >>> block1 = TensorBlock(
-    ...     values=np.array([
-    ...         [1, 2, 3],
-    ...         [4, 5, 6],
-    ...     ]),
-    ...     samples=Labels(
-    ...         ["structure"],
-    ...         np.array([[0],[1]])
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 3],
+    ...             [4, 5, 6],
+    ...         ]
     ...     ),
+    ...     samples=Labels(["structure"], np.array([[0], [1]])),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...     ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
     >>> block2 = TensorBlock(
-    ...     values=np.array([
-    ...         [1, 2, 3],
-    ...         [4, 5, 6],
-    ...     ]),
-    ...     samples=Labels(
-    ...         ["structure"],
-    ...         np.array([[0],[1]])
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 3],
+    ...             [4, 5, 6],
+    ...         ]
     ...     ),
+    ...     samples=Labels(["structure"], np.array([[0], [1]])),
     ...     components=[],
-    ...     properties=Labels(
-    ...         ["properties"], np.array([[0], [1], [2]])
-    ...     ),
+    ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> A = TensorMap(keys, [block1])
     >>> B = TensorMap(keys, [block2])
-    ...
-    >>> tensor_dot = dot(A,B)
-    ...
+    >>> tensor_dot = dot(A, B)
     >>> print(tensor_dot.block(0))
     TensorBlock
         samples (2): ['structure']
