@@ -148,7 +148,7 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
 def _check_empty_block(block, sliced_block, axis):
     # Define the axis that should be sliced to zero (axis1)
     # and the one that should not be sliced (axis2)
-    if axis == "samples":
+    if axis == "s":
         sliced_axis, unsliced_axis = 0, -1
     else:
         sliced_axis, unsliced_axis = -1, 0
@@ -162,7 +162,7 @@ def _check_empty_block(block, sliced_block, axis):
     for parameter, gradient in block.gradients():
         sliced_gradient = sliced_block.gradient(parameter)
         # no slicing of samples has occurred
-        if axis == "samples":
+        if axis == "s":
             assert np.all(sliced_gradient.properties == gradient.properties)
         else:
             assert np.all(sliced_gradient.samples == gradient.samples)
@@ -202,7 +202,7 @@ def test_slice_block_samples(tensor):
         labels=samples,
     )
 
-    _check_empty_block(block, sliced_block, "samples")
+    _check_empty_block(block, sliced_block, "s")
 
 
 def test_slice_samples(tensor):
@@ -240,7 +240,7 @@ def test_slice_samples(tensor):
 
     for _, block in sliced_tensor:
         # all blocks are empty
-        _check_empty_block(block, sliced_tensor.block(key), "samples")
+        _check_empty_block(block, sliced_tensor.block(key), "s")
 
 
 # ===== Tests for slicing along properties =====
@@ -275,7 +275,7 @@ def test_slice_block_properties(tensor):
         labels=properties,
     )
 
-    _check_empty_block(block, sliced_block, "properties")
+    _check_empty_block(block, sliced_block, "p")
 
 
 def test_slice_properties(tensor):
@@ -314,7 +314,7 @@ def test_slice_properties(tensor):
 
     for key, block in tensor:
         sliced_block = sliced_tensor.block(key)
-        _check_empty_block(block, sliced_block, "properties")
+        _check_empty_block(block, sliced_block, "p")
 
 
 # ===== Tests slicing both samples and properties =====

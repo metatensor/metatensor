@@ -14,28 +14,28 @@ class TestLstsq(unittest.TestCase):
     def test_self_lstsq_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["samples"], np.array([[0], [2]])),
+            samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("properties", 2),
+            properties=Labels.arange("p", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]])),
+            samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("properties", 2),
+            properties=Labels.arange("p", 2),
         )
 
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["samples"], np.array([[0], [2]])),
+            samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0]])),
+            properties=Labels(["p"], np.array([[0]])),
         )
         block_4 = TensorBlock(
             values=np.array([[23], [53], [83]]),
-            samples=Labels(["samples"], np.array([[0], [2], [7]])),
+            samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["properties"], np.array([[6]])),
+            properties=Labels(["p"], np.array([[6]])),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         X = TensorMap(keys, [block_1, block_2])
@@ -70,9 +70,9 @@ class TestLstsq(unittest.TestCase):
         Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
         block_X = TensorBlock(
             values=Xval,
-            samples=Labels.arange("samples", 5),
+            samples=Labels.arange("s", 5),
             components=[],
-            properties=Labels.arange("properties", 2),
+            properties=Labels.arange("p", 2),
         )
         block_X.add_gradient(
             "positions",
@@ -81,14 +81,14 @@ class TestLstsq(unittest.TestCase):
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
             ),
-            components=[Labels.arange("components", 3)],
+            components=[Labels.arange("c", 3)],
         )
 
         block_Y = TensorBlock(
             values=Yval,
-            samples=Labels.arange("samples", 5),
+            samples=Labels.arange("s", 5),
             components=[],
-            properties=Labels(["properties"], np.array([[2]])),
+            properties=Labels(["p"], np.array([[2]])),
         )
         block_Y.add_gradient(
             "positions",
@@ -97,7 +97,7 @@ class TestLstsq(unittest.TestCase):
                 ["sample", "positions"],
                 np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
             ),
-            components=[Labels.arange("components", 3)],
+            components=[Labels.arange("c", 3)],
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
@@ -125,9 +125,9 @@ class TestLstsq(unittest.TestCase):
         ydim = len(Yval)
         block_X = TensorBlock(
             values=Xval.reshape((1, xdim, Xval.shape[-1])),
-            samples=Labels(["samples"], np.array([[0]])),
-            components=[Labels.arange("components", 5)],
-            properties=Labels.arange("properties", 2),
+            samples=Labels(["s"], np.array([[0]])),
+            components=[Labels.arange("c", 5)],
+            properties=Labels.arange("p", 2),
         )
         block_X.add_gradient(
             "positions",
@@ -138,15 +138,15 @@ class TestLstsq(unittest.TestCase):
             ),
             components=[
                 Labels.arange("der_components", 3),
-                Labels.arange("components", 5),
+                Labels.arange("c", 5),
             ],
         )
 
         block_Y = TensorBlock(
             values=Yval.reshape((1, ydim, Yval.shape[-1])),
-            samples=Labels(["samples"], np.array([[0]])),
-            components=[Labels.arange("components", 5)],
-            properties=Labels(["properties"], np.array([[2]])),
+            samples=Labels(["s"], np.array([[0]])),
+            components=[Labels.arange("c", 5)],
+            properties=Labels(["p"], np.array([[2]])),
         )
         block_Y.add_gradient(
             "positions",
@@ -154,7 +154,7 @@ class TestLstsq(unittest.TestCase):
             samples=Labels(["sample", "positions"], np.array([[0, 1]])),
             components=[
                 Labels.arange("der_components", 3),
-                Labels.arange("components", 5),
+                Labels.arange("c", 5),
             ],
         )
 

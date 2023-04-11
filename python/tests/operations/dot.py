@@ -69,7 +69,7 @@ class TestDot(unittest.TestCase):
             block2 = TensorBlock(
                 values=value2,
                 samples=Labels(
-                    ["samples"],
+                    ["s"],
                     np.array([[i] for i in range(n_samples)]),
                 ),
                 components=[],
