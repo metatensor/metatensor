@@ -18,8 +18,8 @@ def tensor():
         use_numpy=True,
     )
 
-    # Test if Tensormaps have at least one gradient. This avoids dropping gradient
-    # tests silently by removing gradients from the reference data
+    # Ensure that the tensor has at least one gradient. This avoids dropping
+    # gradient tests silently by removing gradients from the reference data
     assert "positions" in tensor.block(0).gradients_list()
 
     return tensor
@@ -59,8 +59,8 @@ def test_no_tensormaps(tensor):
 
 def test_single_tensormap(tensor):
     """Test if only one TensorMap is provided."""
-    tensor_joined = equistore.join([tensor], axis="properties")
-    assert tensor_joined is tensor
+    joined_tensor = equistore.join([tensor], axis="properties")
+    assert joined_tensor is tensor
 
 
 @pytest.mark.parametrize("axis", ["samples", "properties"])
@@ -70,68 +70,71 @@ def test_join_components(components_tensor, axis):
 
 
 def test_join_properties_metadata(tensor):
-    """Test join function with three tensormaps along `properties`.
+    """Test join function with three tensors along `properties`.
 
-    We check for the values below."""
+    We check for the values below"""
 
-    tensor_joined = equistore.join([tensor, tensor, tensor], axis="properties")
+    joined_tensor = equistore.join([tensor, tensor, tensor], axis="properties")
 
     # test property names
     names = tensor.block(0).properties.names
-    assert tensor_joined.block(0).properties.names == ("tensor",) + names
+    assert joined_tensor.block(0).properties.names == ("tensor",) + names
 
     # test property values
-    tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
+    tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
     assert set(tensor_prop) == set((0, 1, 2))
 
     # test if gradients exist
-    assert sorted(tensor_joined[0].gradients_list()) == sorted(
+    assert sorted(joined_tensor[0].gradients_list()) == sorted(
         tensor[0].gradients_list()
     )
 
 
 def test_join_properties_values(tensor):
-    """Test values for joining along `properties`."""
-    ts_1 = equistore.slice(tensor, axis="properties", labels=tensor[0].properties[:1])
-    ts_2 = equistore.slice(tensor, axis="properties", labels=tensor[0].properties[1:])
+    """Test values for joining along `properties`"""
+    slice_1 = equistore.slice(
+        tensor, axis="properties", labels=tensor[0].properties[:1]
+    )
+    slice_2 = equistore.slice(
+        tensor, axis="properties", labels=tensor[0].properties[1:]
+    )
 
-    tensor_joined = equistore.join([ts_1, ts_2], axis="properties")
+    joined_tensor = equistore.join([slice_1, slice_2], axis="properties")
 
     # We can not use #equistore.equal_raise for the checks because the meta data
     # differs by the tensor entry.
-    for i, block_tensor in tensor:
-        block_tensor_joined = tensor_joined[i]
+    for key, block in tensor:
+        joined_block = joined_tensor[key]
 
-        assert_equal(block_tensor_joined.values, block_tensor.values)
+        assert_equal(joined_block.values, block.values)
 
-        for parameter, gradient_tensor in block_tensor.gradients():
-            gradient_tensor_joined = block_tensor_joined.gradient(parameter)
-            assert_equal(gradient_tensor_joined.data, gradient_tensor.data)
+        for parameter, gradient in block.gradients():
+            joined_gradient = joined_block.gradient(parameter)
+            assert_equal(joined_gradient.data, gradient.data)
 
 
 def test_join_properties_with_same_property_names(tensor):
-    """Test join function with three tensormaps along `properties`.
+    """Test join function with three tensor along `properties`"""
 
-    We check for the values below."""
-
-    tensor_joined = equistore.join([tensor, tensor, tensor], axis="properties")
+    joined_tensor = equistore.join([tensor, tensor, tensor], axis="properties")
 
     # test property names
     names = tensor.block(0).properties.names
-    assert tensor_joined.block(0).properties.names == ("tensor",) + names
+    assert joined_tensor.block(0).properties.names == ("tensor",) + names
 
     # test property values
-    tensor_prop = np.unique(tensor_joined.block(0).properties["tensor"])
+    tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
     assert set(tensor_prop) == set((0, 1, 2))
 
     # test if gradients exist
-    assert sorted(tensor_joined[0].gradients_list()) == sorted(
+    assert sorted(joined_tensor[0].gradients_list()) == sorted(
         tensor[0].gradients_list()
     )
 
 
 def test_join_properties_with_different_property_names():
-    """Test join function with tensormaps of different `property` names."""
+    """Test join function with tensors of different `property` names"""
+
     keys = Labels.arange("frame_a", 1)
     values = np.zeros([1, 1])
     samples = Labels.arange("idx", 1)
@@ -143,7 +146,7 @@ def test_join_properties_with_different_property_names():
                 values=values,
                 samples=samples,
                 components=[],
-                properties=Labels.arange("prop1", 1),
+                properties=Labels.arange("p_1", 1),
             )
         ],
     )
@@ -155,56 +158,56 @@ def test_join_properties_with_different_property_names():
                 values=np.zeros([1, 1]),
                 samples=samples,
                 components=[],
-                properties=Labels.arange("prop2", 1),
+                properties=Labels.arange("p_2", 1),
             )
         ],
     )
 
-    tensor_joined = equistore.join([tensor_map_a, tensor_map_b], axis="properties")
-    assert tensor_joined.property_names == ("tensor", "property")
-    assert len(tensor_joined[0].properties) == 2
+    joined_tensor = equistore.join([tensor_map_a, tensor_map_b], axis="properties")
+    assert joined_tensor.property_names == ("tensor", "property")
+    assert len(joined_tensor[0].properties) == 2
 
 
 def test_join_samples_metadata(tensor):
-    """Test join function with three tensormaps along `samples`."""
-    tensor_joined = equistore.join([tensor, tensor, tensor], axis="samples")
+    """Test join function with three tensors along `samples`"""
+    joined_tensor = equistore.join([tensor, tensor, tensor], axis="samples")
 
     # test sample values
-    assert len(tensor_joined.block(0).samples) == 3 * len(tensor.block(0).samples)
+    assert len(joined_tensor.block(0).samples) == 3 * len(tensor.block(0).samples)
 
     # test if gradients exist
-    assert sorted(tensor_joined[0].gradients_list()) == sorted(
+    assert sorted(joined_tensor[0].gradients_list()) == sorted(
         tensor[0].gradients_list()
     )
 
 
 def test_join_samples_values(tensor):
-    """Test values for joining along `samples`."""
+    """Test values for joining along `samples`"""
     keys = Labels(
         names=tensor.keys.names,
         values=np.array(tensor.keys[0].tolist()).reshape(1, -1),
     )
 
-    tm = TensorMap(keys, [tensor[0].copy()])
-    ts_1 = equistore.slice(tm, axis="samples", labels=tensor[0].samples[:1])
-    ts_2 = equistore.slice(tm, axis="samples", labels=tensor[0].samples[1:])
+    tensor = TensorMap(keys, [tensor[0].copy()])
+    slice_1 = equistore.slice(tensor, axis="samples", labels=tensor[0].samples[:1])
+    slice_2 = equistore.slice(tensor, axis="samples", labels=tensor[0].samples[1:])
 
-    tensor_joined = equistore.join([ts_1, ts_2], axis="samples")
+    joined_tensor = equistore.join([slice_1, slice_2], axis="samples")
 
     # We can not use #equistore.equal_raise for the checks because the meta data
     # differs by the tensor entry.
-    for i, block_tensor in tm:
-        block_tensor_joined = tensor_joined[i]
+    for key, block in tensor:
+        joined_block = joined_tensor[key]
 
-        assert_equal(block_tensor_joined.values, block_tensor.values)
+        assert_equal(joined_block.values, block.values)
 
-        for parameter, gradient_tensor in block_tensor.gradients():
-            gradient_tensor_joined = block_tensor_joined.gradient(parameter)
-            assert_equal(gradient_tensor_joined.data, gradient_tensor.data)
+        for parameter, gradient in block.gradients():
+            joined_gradient = joined_block.gradient(parameter)
+            assert_equal(joined_gradient.data, gradient.data)
 
 
 def test_join_samples_with_different_sample_names():
-    """Test join function raises an error with different `sample` names."""
+    """Test join function raises an error with different `sample` names"""
     keys = Labels.arange("frame_a", 1)
     values = np.zeros([1, 1])
     properties = Labels.arange("idx", 1)

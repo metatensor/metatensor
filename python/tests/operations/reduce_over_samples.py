@@ -169,7 +169,7 @@ class TestSumSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
@@ -428,7 +428,7 @@ class TestMeanSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
@@ -527,17 +527,17 @@ class TestReductionAllSamples(unittest.TestCase):
                     [-1.3, 26.7, 4.54],
                 ]
             ),
-            samples=Labels.arange("samples", 3),
+            samples=Labels.arange("s", 3),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
-        sum_X = equistore.sum_over_samples(X, sample_names=["samples"])
-        mean_X = equistore.mean_over_samples(X, sample_names=["samples"])
-        var_X = equistore.var_over_samples(X, sample_names=["samples"])
-        std_X = equistore.std_over_samples(X, sample_names=["samples"])
+        sum_X = equistore.sum_over_samples(X, sample_names=["s"])
+        mean_X = equistore.mean_over_samples(X, sample_names=["s"])
+        var_X = equistore.var_over_samples(X, sample_names=["s"])
+        std_X = equistore.std_over_samples(X, sample_names=["s"])
 
         self.assertTrue(equistore.equal_metadata(sum_X, mean_X))
         self.assertTrue(equistore.equal_metadata(sum_X, std_X))
@@ -742,7 +742,7 @@ class TestStdSamples(unittest.TestCase):
                 ]
             ),
             samples=Labels(
-                ["samples1", "samples2", "samples3"],
+                ["s_1", "s_2", "s_3"],
                 np.array(
                     [
                         [0, 0, 0],
@@ -757,17 +757,15 @@ class TestStdSamples(unittest.TestCase):
                 ),
             ),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         X = TensorMap(keys, [block_1])
 
-        reduce_X_12 = equistore.std_over_samples(X, sample_names=["samples3"])
-        reduce_X_23 = equistore.std_over_samples(X, sample_names="samples1")
-        reduce_X_2 = equistore.std_over_samples(
-            X, sample_names=["samples1", "samples3"]
-        )
+        reduce_X_12 = equistore.std_over_samples(X, sample_names=["s_3"])
+        reduce_X_23 = equistore.std_over_samples(X, sample_names="s_1")
+        reduce_X_2 = equistore.std_over_samples(X, sample_names=["s_1", "s_3"])
 
         self.assertTrue(
             np.all(
@@ -832,15 +830,15 @@ class TestStdSamples(unittest.TestCase):
         self.assertTrue(np.all(reduce_X_2.block(0).properties == X.block(0).properties))
 
         samples_12 = Labels(
-            names=["samples1", "samples2"],
+            names=["s_1", "s_2"],
             values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
         )
         samples_23 = Labels(
-            names=["samples2", "samples3"],
+            names=["s_2", "s_3"],
             values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
         )
         samples_2 = Labels(
-            names=["samples2"],
+            names=["s_2"],
             values=np.array([[0], [1]]),
         )
         self.assertTrue(np.all(reduce_X_12.block(0).samples == samples_12))
@@ -850,27 +848,25 @@ class TestStdSamples(unittest.TestCase):
     def test_reduction_of_one_element(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54]]),
-            samples=Labels(
-                ["samples1", "samples2"], np.array([[0, 0], [1, 1], [2, 2]])
-            ),
+            samples=Labels(["s_1", "s_2"], np.array([[0, 0], [1, 1], [2, 2]])),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         block_1.add_gradient(
-            parameter="parameter",
+            parameter="g",
             data=np.array([[1, 2, 3], [3, 4, 5], [5, 6, 7.8]]),
-            samples=Labels(["sample", "samples2"], np.array([[0, 0], [1, 1], [2, 2]])),
+            samples=Labels(["sample", "g"], np.array([[0, 0], [1, 1], [2, 2]])),
             components=[],
         )
 
         keys = Labels(names=["key_1"], values=np.array([[0]]))
         X = TensorMap(keys, [block_1])
 
-        add_X = equistore.sum_over_samples(X, sample_names=["samples1"])
-        mean_X = equistore.mean_over_samples(X, sample_names=["samples1"])
-        var_X = equistore.var_over_samples(X, sample_names=["samples1"])
-        std_X = equistore.std_over_samples(X, sample_names=["samples1"])
+        add_X = equistore.sum_over_samples(X, sample_names=["s_1"])
+        mean_X = equistore.mean_over_samples(X, sample_names=["s_1"])
+        var_X = equistore.var_over_samples(X, sample_names=["s_1"])
+        std_X = equistore.std_over_samples(X, sample_names=["s_1"])
 
         # print(add_X[0])
         # print(X[0].values, add_X[0].values)
@@ -885,41 +881,29 @@ class TestStdSamples(unittest.TestCase):
 
         # Gradients
         grad_sample_label = Labels(
-            names=["sample", "samples2"],
+            names=["sample", "g"],
             values=np.array([[0, 0], [1, 1], [2, 2]]),
         )
-        self.assertTrue(
-            std_X[0].gradient("parameter").samples.names == grad_sample_label.names
-        )
-        self.assertTrue(
-            np.all(std_X[0].gradient("parameter").samples == grad_sample_label)
-        )
-        self.assertTrue(
-            np.all(
-                X[0].gradient("parameter").data == add_X[0].gradient("parameter").data
-            )
-        )
-        self.assertTrue(
-            np.all(
-                X[0].gradient("parameter").data == mean_X[0].gradient("parameter").data
-            )
-        )
-        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].gradient("parameter").data))
-        self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("parameter").data))
+        self.assertTrue(std_X[0].gradient("g").samples.names == grad_sample_label.names)
+        self.assertTrue(np.all(std_X[0].gradient("g").samples == grad_sample_label))
+        self.assertTrue(np.all(X[0].gradient("g").data == add_X[0].gradient("g").data))
+        self.assertTrue(np.all(X[0].gradient("g").data == mean_X[0].gradient("g").data))
+        self.assertTrue(np.all(np.zeros((3, 3)) == std_X[0].gradient("g").data))
+        self.assertTrue(np.all(np.zeros((3, 3)) == var_X[0].gradient("g").data))
 
 
 class TestZeroSamples(unittest.TestCase):
     def test_zeros_sample_block(self):
         block = TensorBlock(
             values=np.zeros([0, 1]),
-            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["structure"], np.empty((0, 1))),
+            properties=Labels(["p"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["s"], np.empty((0, 1))),
             components=[],
         )
 
         result_block = TensorBlock(
             values=np.zeros([0, 1]),
-            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
+            properties=Labels(["p"], np.zeros([1, 1], dtype=int)),
             samples=Labels([], np.empty((0, 0))),
             components=[],
         )
@@ -927,10 +911,10 @@ class TestZeroSamples(unittest.TestCase):
         tensor = TensorMap(Labels.single(), [block])
         result_tensor = TensorMap(Labels.single(), [result_block])
 
-        tensor_sum = equistore.sum_over_samples(tensor, "structure")
-        tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_var = equistore.var_over_samples(tensor, "structure")
+        tensor_sum = equistore.sum_over_samples(tensor, "s")
+        tensor_mean = equistore.mean_over_samples(tensor, "s")
+        tensor_std = equistore.std_over_samples(tensor, "s")
+        tensor_var = equistore.var_over_samples(tensor, "s")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
@@ -939,25 +923,25 @@ class TestZeroSamples(unittest.TestCase):
 
         block = TensorBlock(
             values=np.zeros([0, 1]),
-            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["structure", "s1"], np.empty((0, 1))),
+            properties=Labels(["p"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["s_1", "s_2"], np.empty((0, 1))),
             components=[],
         )
 
         result_block = TensorBlock(
             values=np.zeros([0, 1]),
-            properties=Labels(["prop"], np.zeros([1, 1], dtype=int)),
-            samples=Labels(["s1"], np.empty((0, 1))),
+            properties=Labels(["p"], np.zeros([1, 1], dtype=int)),
+            samples=Labels(["s_2"], np.empty((0, 1))),
             components=[],
         )
 
         tensor = TensorMap(Labels.single(), [block])
         result_tensor = TensorMap(Labels.single(), [result_block])
 
-        tensor_sum = equistore.sum_over_samples(tensor, "structure")
-        tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_var = equistore.var_over_samples(tensor, "structure")
+        tensor_sum = equistore.sum_over_samples(tensor, "s_1")
+        tensor_mean = equistore.mean_over_samples(tensor, "s_1")
+        tensor_std = equistore.std_over_samples(tensor, "s_1")
+        tensor_var = equistore.var_over_samples(tensor, "s_1")
 
         self.assertTrue(equistore.equal(result_tensor, tensor_sum))
         self.assertTrue(equistore.equal(result_tensor, tensor_mean))
@@ -970,48 +954,41 @@ class TestZeroSamples(unittest.TestCase):
                 [[1, 2, 4], [3, 5, 6], [-1.3, 26.7, 4.54], [3.5, 5.3, 6.87]]
             ),
             samples=Labels(
-                ["structure", "samples1"],
-                np.array(
-                    [
-                        [0, 0],
-                        [0, 1],
-                        [1, 0],
-                        [1, 1],
-                    ]
-                ),
+                ["s_1", "s_2"],
+                np.array([[0, 0], [0, 1], [1, 0], [1, 1]]),
             ),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         block.add_gradient(
-            parameter="positions",
+            parameter="g",
             data=np.zeros((0, 3)),
-            samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
+            samples=Labels(["sample", "g"], np.empty((0, 3))),
             components=[],
         )
 
         sum_block = TensorBlock(
             values=np.array([[-0.3, 28.7, 8.54], [6.5, 10.3, 12.87]]),
-            samples=Labels.arange("samples1", 2),
+            samples=Labels.arange("s_2", 2),
             components=[],
-            properties=Labels(["properties"], np.array([[0], [1], [5]])),
+            properties=Labels(["p"], np.array([[0], [1], [5]])),
         )
 
         sum_block.add_gradient(
-            parameter="positions",
+            parameter="g",
             data=np.zeros((0, 3)),
-            samples=Labels(["sample", "structure", "atom"], np.empty((0, 3))),
+            samples=Labels(["sample", "g"], np.empty((0, 3))),
             components=[],
         )
 
         tensor = TensorMap(Labels.single(), [block])
         tensor_sum_result = TensorMap(Labels.single(), [sum_block])
 
-        tensor_sum = equistore.sum_over_samples(tensor, "structure")
-        tensor_mean = equistore.mean_over_samples(tensor, "structure")
-        tensor_std = equistore.std_over_samples(tensor, "structure")
-        tensor_var = equistore.var_over_samples(tensor, "structure")
+        tensor_sum = equistore.sum_over_samples(tensor, "s_1")
+        tensor_mean = equistore.mean_over_samples(tensor, "s_1")
+        tensor_std = equistore.std_over_samples(tensor, "s_1")
+        tensor_var = equistore.var_over_samples(tensor, "s_1")
 
         self.assertTrue(equistore.allclose(tensor_sum_result, tensor_sum, atol=1e-14))
         self.assertTrue(equistore.equal_metadata(tensor_sum, tensor_mean))

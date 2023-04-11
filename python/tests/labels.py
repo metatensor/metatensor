@@ -186,8 +186,8 @@ def test_arange_two_arguments():
 
 
 def test_arange_three_arguments():
-    labels_arange = Labels.arange("samples", 0, 10, 2)
-    assert labels_arange.names == ("samples",)
+    labels_arange = Labels.arange("s", 0, 10, 2)
+    assert labels_arange.names == ("s",)
     np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2))
 
 
