@@ -8,7 +8,10 @@ use crate::{Error, TensorBlock, eqs_sample_mapping_t};
 
 /// single block and part of the associated key, this is used for the various
 /// `keys_to_xxx` functions
-pub type KeyAndBlock<'a> = (Vec<LabelValue>, &'a TensorBlock);
+pub struct KeyAndBlock<'a> {
+    pub key: Vec<LabelValue>,
+    pub block: &'a TensorBlock,
+}
 
 /// Result of the `remove_dimensions_from_keys` function
 #[derive(Debug, Clone)]
@@ -84,7 +87,7 @@ pub fn merge_gradient_samples(
 ) -> Result<Arc<Labels>, Error> {
     let mut new_gradient_samples = BTreeSet::new();
     let mut new_gradient_samples_names = None;
-    for ((_, block), samples_mapping) in blocks.iter().zip(samples_mappings) {
+    for (KeyAndBlock{block, ..}, samples_mapping) in blocks.iter().zip(samples_mappings) {
         let gradient = block.gradient(gradient_name).expect("missing gradient");
 
         if new_gradient_samples_names.is_none() {
@@ -117,13 +120,13 @@ pub fn merge_samples(
     new_sample_names: Vec<&str>,
     sort: bool
 ) -> (Arc<Labels>, Vec<Vec<eqs_sample_mapping_t>>) {
-    let add_key_to_samples = blocks[0].1.values().samples.size() < new_sample_names.len();
+    let add_key_to_samples = blocks[0].block.samples.size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
     // were in the blocks, and then optionally sort them later below
     let mut merged_samples = IndexSet::new();
-    for (key, block) in blocks {
-        for sample in block.values().samples.iter() {
+    for KeyAndBlock{key, block} in blocks {
+        for sample in block.samples.iter() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
@@ -145,9 +148,9 @@ pub fn merge_samples(
     let merged_samples = Arc::new(merged_samples_builder.finish());
 
     let mut samples_mappings = Vec::new();
-    for (key, block) in blocks {
+    for KeyAndBlock{key, block} in blocks {
         let mut mapping_for_block = Vec::new();
-        for (sample_i, sample) in block.values().samples.iter().enumerate() {
+        for (sample_i, sample) in block.samples.iter().enumerate() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);

@@ -560,7 +560,7 @@ impl Header {
                 std::str::from_utf8(without_newline).map_err(ParseHeaderError::from)?
             }
         };
-        // let arr_format: PyValue = header_str.parse().map_err(ParseHeaderError::from)?;
+
         Ok(Header::from_str(header_str)?)
     }
 

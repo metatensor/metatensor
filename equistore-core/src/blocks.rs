@@ -29,23 +29,14 @@ impl<'a, T> IntoIterator for &'a ImmutableVec<T> {
     }
 }
 
-/// Single data array with the corresponding metadata inside a `TensorBlock`
-#[derive(Debug)]
-pub struct BasicBlock {
-    pub data: eqs_array_t,
-    pub samples: Arc<Labels>,
-    pub components: ImmutableVec<Arc<Labels>>,
-    pub properties: Arc<Labels>,
-}
-
 fn check_data_and_labels(
     context: &str,
-    data: &eqs_array_t,
+    values: &eqs_array_t,
     samples: &Labels,
     components: &[Arc<Labels>],
     properties: &Labels,
 ) -> Result<(), Error> {
-    let shape = data.shape()?;
+    let shape = values.shape()?;
 
     if shape.len() != components.len() + 2 {
         return Err(Error::InvalidParameter(format!(
@@ -112,25 +103,174 @@ fn check_component_labels(components: &[Arc<Labels>]) -> Result<(), Error> {
     Ok(())
 }
 
-impl BasicBlock {
-    /// Create a new `BasicBlock`, validating the shape of data & labels
+/// A single block in a `TensorMap`, containing both data & the corresponding
+/// metadata.
+///
+/// Optionally gradients of the data w.r.t. any relevant quantity can be stored
+/// as additional `TensorBlock` inside this one.
+#[derive(Debug)]
+pub struct TensorBlock {
+    pub values: eqs_array_t,
+    pub samples: Arc<Labels>,
+    pub components: ImmutableVec<Arc<Labels>>,
+    pub properties: Arc<Labels>,
+    gradients: HashMap<String, TensorBlock>,
+    // all the keys from `self.gradients`, as C-compatible strings
+    gradient_parameters: Vec<ConstCString>,
+}
+
+impl TensorBlock {
+    /// Create a new `TensorBlock` containing the given values, described by the
+    /// `samples`, `components`, and `properties` labels. The block is
+    /// initialized without any gradients.
     pub fn new(
-        data: eqs_array_t,
+        values: eqs_array_t,
         samples: Arc<Labels>,
         components: Vec<Arc<Labels>>,
         properties: Arc<Labels>,
-    ) -> Result<BasicBlock, Error> {
+    ) -> Result<TensorBlock, Error> {
         check_data_and_labels(
-            "data and labels don't match", &data, &samples, &components, &properties
+            "data and labels don't match", &values, &samples, &components, &properties
         )?;
-
         check_component_labels(&components)?;
         let components = ImmutableVec(components);
-        return Ok(BasicBlock { data, samples, components, properties });
+        Ok(TensorBlock {
+            values,
+            samples,
+            components,
+            properties,
+            gradients: HashMap::new(),
+            gradient_parameters: Vec::new(),
+        })
     }
 
-    fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
-        debug_assert!(!dimensions.is_empty());
+    /// Try to copy this `TensorBlock`. This can fail if we are unable to copy
+    /// one of the underlying `eqs_array_t` data arrays
+    pub fn try_clone(&self) -> Result<TensorBlock, Error> {
+        // Try to clone the values
+        let values = self.values.try_clone()?;
+
+        // Try to clone all gradient blocks
+        let mut gradients = HashMap::new();
+        for (gradient_parameter, gradient_block) in &self.gradients {
+            gradients.insert(gradient_parameter.clone(), gradient_block.try_clone()?);
+        }
+        let gradient_parameters = self.gradient_parameters.clone();
+
+        Ok(TensorBlock {
+            values,
+            samples: Arc::clone(&self.samples),
+            components: self.components.clone(),
+            properties: Arc::clone(&self.properties),
+            gradients,
+            gradient_parameters
+        })
+    }
+
+    /// Get all gradients defined in this block
+    pub fn gradients(&self) -> &HashMap<String, TensorBlock> {
+        &self.gradients
+    }
+
+    /// Get the data and metadata for the gradient with respect to the given
+    /// parameter in this block, if it exists.
+    pub fn gradient(&self, parameter: &str) -> Option<&TensorBlock> {
+        self.gradients.get(parameter)
+    }
+
+    /// Get the data and metadata for the gradient with respect to the given
+    /// parameter in this block, if it exists.
+    pub fn gradient_mut(&mut self, parameter: &str) -> Option<&mut TensorBlock> {
+        self.gradients.get_mut(parameter)
+    }
+
+    /// Get the list of gradients in this block for the C API
+    pub fn gradient_parameters_c(&self) -> &[ConstCString] {
+        &self.gradient_parameters
+    }
+
+    /// Add a gradient with respect to `parameter` to this block.
+    ///
+    /// The gradient `data` is given as an array, and the samples and components
+    /// labels must be provided. The property labels are assumed to match the
+    /// ones of the values in the current block.
+    ///
+    /// The components labels must contain at least the same entries as the
+    /// value components labels, and can prepend other components labels.
+    pub fn add_gradient(
+        &mut self,
+        parameter: &str,
+        gradient: TensorBlock
+    ) -> Result<(), Error> {
+        if self.gradients.contains_key(parameter) {
+            return Err(Error::InvalidParameter(format!(
+                "gradient with respect to '{}' already exists for this block", parameter
+            )))
+        }
+
+        if gradient.values.origin()? != self.values.origin()? {
+            return Err(Error::InvalidParameter(format!(
+                "the gradient data has a different origin ('{}') than the value data ('{}')",
+                get_data_origin(gradient.values.origin()?),
+                get_data_origin(self.values.origin()?),
+            )))
+        }
+
+        if gradient.samples.size() == 0 {
+            return Err(Error::InvalidParameter(
+                "gradients samples must have at least one dimension named 'sample', we got none".into()
+            ))
+        }
+
+        if gradient.samples.size() < 1 || gradient.samples.names()[0] != "sample" {
+            return Err(Error::InvalidParameter(format!(
+                "'{}' is not valid for the first dimension in the gradients \
+                samples labels. It must must be 'sample'", gradient.samples.names()[0])
+            ))
+        }
+
+        check_component_labels(&gradient.components)?;
+        if self.components.len() > gradient.components.len() {
+            return Err(Error::InvalidParameter(
+                "gradients components should contain at least as many labels \
+                as the values components".into()
+            ))
+        }
+
+        if gradient.properties != self.properties {
+            return Err(Error::InvalidParameter(
+                "gradient properties must be the same as values properties".into()
+            ));
+        }
+
+        let extra_gradient_components = gradient.components.len() - self.components.len();
+        for (component_i, (gradient_labels, values_labels)) in gradient.components.iter()
+            .skip(extra_gradient_components)
+            .zip(&*self.components)
+            .enumerate() {
+                if gradient_labels != values_labels {
+                    return Err(Error::InvalidParameter(format!(
+                        "gradients and values components mismatch for values \
+                        component {} (the corresponding names are [{}])",
+                        component_i, values_labels.names().join(", ")
+                    )))
+                }
+            }
+
+        self.gradients.insert(parameter.into(), gradient);
+
+        let parameter = ConstCString::new(CString::new(parameter.to_owned()).expect("invalid C string"));
+        self.gradient_parameters.push(parameter);
+
+        return Ok(())
+    }
+
+    /// Move components to properties for this block and all gradients in this
+    /// block
+    pub(crate) fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
+        if dimensions.is_empty() {
+            return Ok(());
+        }
 
         let mut component_axis = None;
         for (component_i, component) in self.components.iter().enumerate() {
@@ -163,205 +303,17 @@ impl BasicBlock {
         }
         let new_properties = new_properties_builder.finish();
 
-        let mut new_shape = self.data.shape()?.to_vec();
+        let mut new_shape = self.values.shape()?.to_vec();
         let properties_axis = new_shape.len() - 1;
         new_shape[properties_axis] = new_properties.count();
         new_shape.remove(component_axis + 1);
 
-        self.data.swap_axes(component_axis + 1, properties_axis - 1)?;
-        self.data.reshape(&new_shape)?;
+        self.values.swap_axes(component_axis + 1, properties_axis - 1)?;
+        self.values.reshape(&new_shape)?;
 
         self.properties = Arc::new(new_properties);
 
-        Ok(())
-    }
-
-    /// Try to copy this `BasicBlock`. This can fail if we are unable to copy
-    /// the underlying `eqs_array_t` data array
-    pub fn try_clone(&self) -> Result<BasicBlock, Error> {
-        let data = self.data.try_clone()?;
-
-        Ok(BasicBlock {
-            data,
-            samples: Arc::clone(&self.samples),
-            components: self.components.clone(),
-            properties: Arc::clone(&self.properties),
-        })
-    }
-}
-
-/// A single block in a `TensorMap`, containing both values & optionally
-/// gradients of these values w.r.t. any relevant quantity.
-#[derive(Debug)]
-pub struct TensorBlock {
-    values: BasicBlock,
-    gradients: HashMap<String, BasicBlock>,
-    // all the keys from `self.gradients`, as C-compatible strings
-    gradient_parameters: Vec<ConstCString>,
-}
-
-impl TensorBlock {
-    /// Create a new `TensorBlock` containing the given data, described by the
-    /// `samples`, `components`, and `properties` labels. The block is
-    /// initialized without any gradients.
-    pub fn new(
-        data: impl Into<eqs_array_t>,
-        samples: Arc<Labels>,
-        components: Vec<Arc<Labels>>,
-        properties: Arc<Labels>,
-    ) -> Result<TensorBlock, Error> {
-        Ok(TensorBlock {
-            values: BasicBlock::new(data.into(), samples, components, properties)?,
-            gradients: HashMap::new(),
-            gradient_parameters: Vec::new(),
-        })
-    }
-
-    /// Try to copy this `TensorBlock`. This can fail if we are unable to copy
-    /// one of the underlying `eqs_array_t` data arrays
-    pub fn try_clone(&self) -> Result<TensorBlock, Error> {
-        let values = self.values.try_clone()?;
-        let mut gradients = HashMap::new();
-        for (parameter, basic_block) in &self.gradients {
-            gradients.insert(parameter.clone(), basic_block.try_clone()?);
-        }
-        let gradient_parameters = self.gradient_parameters.clone();
-
-        return Ok(TensorBlock {
-            values,
-            gradients,
-            gradient_parameters
-        });
-    }
-
-    /// Get the values data and metadata in this block
-    pub fn values(&self) -> &BasicBlock {
-        &self.values
-    }
-
-    /// Get read-write access to the values data and metadata in this block
-    pub fn values_mut(&mut self) -> &mut BasicBlock {
-        &mut self.values
-    }
-
-    /// Get all gradients defined in this block
-    pub fn gradients(&self) -> &HashMap<String, BasicBlock> {
-        &self.gradients
-    }
-
-    /// Get the data and metadata for the gradient with respect to the given
-    /// parameter in this block, if it exists.
-    pub fn gradient(&self, parameter: &str) -> Option<&BasicBlock> {
-        self.gradients.get(parameter)
-    }
-
-    /// Get the data and metadata for the gradient with respect to the given
-    /// parameter in this block, if it exists.
-    pub fn gradient_mut(&mut self, parameter: &str) -> Option<&mut BasicBlock> {
-        self.gradients.get_mut(parameter)
-    }
-
-    /// Get the list of gradients in this block for the C API
-    pub fn gradient_parameters_c(&self) -> &[ConstCString] {
-        &self.gradient_parameters
-    }
-
-    /// Add a gradient with respect to `parameter` to this block.
-    ///
-    /// The gradient `data` is given as an array, and the samples and components
-    /// labels must be provided. The property labels are assumed to match the
-    /// ones of the values in this block.
-    ///
-    /// The components labels must contain at least the same entries as the
-    /// value components labels, and can prepend other components labels.
-    pub fn add_gradient(
-        &mut self,
-        parameter: &str,
-        data: impl Into<eqs_array_t>,
-        samples: Arc<Labels>,
-        components: Vec<Arc<Labels>>,
-    ) -> Result<(), Error> {
-        if self.gradients.contains_key(parameter) {
-            return Err(Error::InvalidParameter(format!(
-                "gradient with respect to '{}' already exists for this block", parameter
-            )))
-        }
-        let data = data.into();
-
-        if data.origin()? != self.values.data.origin()? {
-            return Err(Error::InvalidParameter(format!(
-                "the gradient array has a different origin ('{}') than the value array ('{}')",
-                get_data_origin(data.origin()?),
-                get_data_origin(self.values.data.origin()?),
-            )))
-        }
-
-        // this is used as a special marker in the C API
-        if parameter == "values" {
-            return Err(Error::InvalidParameter(
-                "can not store gradient with respect to 'values'".into()
-            ))
-        }
-
-        if samples.size() == 0 {
-            return Err(Error::InvalidParameter(
-                "gradients samples must have at least one dimension named 'sample', we got none".into()
-            ))
-        }
-
-        if samples.size() < 1 || samples.names()[0] != "sample" {
-            return Err(Error::InvalidParameter(format!(
-                "'{}' is not valid for the first dimension in the gradients \
-                samples labels. It must must be 'sample'", samples.names()[0])
-            ))
-        }
-
-        check_component_labels(&components)?;
-        if self.values.components.len() > components.len() {
-            return Err(Error::InvalidParameter(
-                "gradients components should contain at least as many labels \
-                as the values components".into()
-            ))
-        }
-        let extra_gradient_components = components.len() - self.values.components.len();
-        for (component_i, (gradient_labels, values_labels)) in components.iter()
-            .skip(extra_gradient_components)
-            .zip(&*self.values.components)
-            .enumerate() {
-                if gradient_labels != values_labels {
-                    return Err(Error::InvalidParameter(format!(
-                        "gradients and values components mismatch for values \
-                        component {} (the corresponding names are [{}])",
-                        component_i, values_labels.names().join(", ")
-                    )))
-                }
-            }
-
-        let properties = Arc::clone(&self.values.properties);
-        check_data_and_labels(
-            "gradient data and labels don't match", &data, &samples, &components, &properties
-        )?;
-
-        let components = ImmutableVec(components);
-        self.gradients.insert(parameter.into(), BasicBlock {
-            data,
-            samples,
-            components,
-            properties
-        });
-
-        let parameter = ConstCString::new(CString::new(parameter.to_owned()).expect("invalid C string"));
-        self.gradient_parameters.push(parameter);
-
-        return Ok(())
-    }
-
-    pub(crate) fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
-        if dimensions.is_empty() {
-            return Ok(());
-        }
-
-        self.values.components_to_properties(dimensions)?;
+        // Repeat all the above for all gradient blocks
         for gradient in self.gradients.values_mut() {
             gradient.components_to_properties(dimensions)?;
         }
@@ -389,28 +341,28 @@ mod tests {
     fn no_components() {
         let samples = example_labels("samples", 4);
         let properties = example_labels("properties", 7);
-        let data = TestArray::new(vec![4, 7]);
-        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
+        let values = TestArray::new(vec![4, 7]);
+        let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert!(result.is_ok());
 
-        let data = TestArray::new(vec![3, 7]);
-        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
+        let values = TestArray::new(vec![3, 7]);
+        let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
             along axis 0 is 3 but we have 4 sample labels"
         );
 
-        let data = TestArray::new(vec![4, 9]);
-        let result = TensorBlock::new(data, samples.clone(), Vec::new(), properties.clone());
+        let values = TestArray::new(vec![4, 9]);
+        let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
             along axis 1 is 9 but we have 7 properties labels"
         );
 
-        let data = TestArray::new(vec![4, 1, 7]);
-        let result = TensorBlock::new(data, samples, Vec::new(), properties);
+        let values = TestArray::new(vec![4, 1, 7]);
+        let result = TensorBlock::new(values, samples, Vec::new(), properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has \
@@ -425,48 +377,48 @@ mod tests {
 
         let samples = example_labels("samples", 3);
         let properties = example_labels("properties", 2);
-        let data = TestArray::new(vec![3, 4, 2]);
+        let values = TestArray::new(vec![3, 4, 2]);
         let components = vec![Arc::clone(&component_1)];
-        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
-        let data = TestArray::new(vec![3, 4, 3, 2]);
+        let values = TestArray::new(vec![3, 4, 3, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
-        let data = TestArray::new(vec![3, 4, 2]);
+        let values = TestArray::new(vec![3, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has 3 \
             dimensions, but we have 4 separate labels"
         );
 
-        let data = TestArray::new(vec![3, 4, 4, 2]);
+        let values = TestArray::new(vec![3, 4, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
-        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
             along axis 2 is 4 but we have 3 entries for the corresponding component"
         );
 
-        let data = TestArray::new(vec![3, 4, 4, 2]);
+        let values = TestArray::new(vec![3, 4, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_1)];
-        let result = TensorBlock::new(data, samples.clone(), components, properties.clone());
+        let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: some of the \
             component names appear more than once in component labels"
         );
 
-        let data = TestArray::new(vec![3, 1, 2]);
+        let values = TestArray::new(vec![3, 1, 2]);
         let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
         components.add(&[LabelValue::from(0), LabelValue::from(1)]).unwrap();
 
-        let result = TensorBlock::new(data, samples, vec![Arc::new(components.finish())], properties);
+        let result = TensorBlock::new(values, samples, vec![Arc::new(components.finish())], properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: component labels must have a single dimension, \
@@ -481,68 +433,80 @@ mod tests {
         fn values_without_components() {
             let samples = example_labels("samples", 4);
             let properties = example_labels("properties", 7);
-            let data = TestArray::new(vec![4, 7]);
-            let mut block = TensorBlock::new(data, samples, vec![], properties).unwrap();
+            let values = TestArray::new(vec![4, 7]);
+            let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
-            let gradient = TestArray::new(vec![3, 7]);
             let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]);
             gradient_samples.add(&[0, 0]).unwrap();
             gradient_samples.add(&[1, 1]).unwrap();
             gradient_samples.add(&[3, -2]).unwrap();
             let gradient_samples = Arc::new(gradient_samples.finish());
-            block.add_gradient("foo", gradient, gradient_samples, vec![]).unwrap();
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                gradient_samples,
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            block.add_gradient("foo", gradient).unwrap();
 
-            let gradient = TestArray::new(vec![3, 5, 7]);
-            let gradient_samples = example_labels("sample", 3);
-            let component = example_labels("component", 5);
-            block.add_gradient("component", gradient, gradient_samples, vec![component]).unwrap();
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 5, 7]),
+                example_labels("sample", 3),
+                vec![example_labels("component", 5)],
+                properties,
+            ).unwrap();
+            block.add_gradient("component", gradient).unwrap();
 
             let mut gradients_list = block.gradients().keys().collect::<Vec<_>>();
             gradients_list.sort_unstable();
             assert_eq!(gradients_list, ["component", "foo"]);
 
-            let basic_block = block.gradients().get("foo").unwrap();
-            assert_eq!(basic_block.samples.names(), ["sample", "foo"]);
-            assert!(basic_block.components.is_empty());
-            assert_eq!(basic_block.properties.names(), ["properties"]);
+            let gradient_block = block.gradients().get("foo").unwrap();
+            assert_eq!(gradient_block.samples.names(), ["sample", "foo"]);
+            assert!(gradient_block.components.is_empty());
+            assert_eq!(gradient_block.properties.names(), ["properties"]);
 
-            let basic_block = block.gradients().get("component").unwrap();
-            assert_eq!(basic_block.samples.names(), ["sample"]);
-            assert_eq!(basic_block.components.len(), 1);
-            assert_eq!(basic_block.components[0].names(), ["component"]);
-            assert_eq!(basic_block.properties.names(), ["properties"]);
+            let gradient_block = block.gradients().get("component").unwrap();
+            assert_eq!(gradient_block.samples.names(), ["sample"]);
+            assert_eq!(gradient_block.components.len(), 1);
+            assert_eq!(gradient_block.components[0].names(), ["component"]);
+            assert_eq!(gradient_block.properties.names(), ["properties"]);
 
             assert!(block.gradients().get("baz").is_none());
         }
 
         #[test]
         fn values_with_components() {
-            let samples = example_labels("samples", 4);
             let component = example_labels("component", 5);
             let properties = example_labels("properties", 7);
-            let data = TestArray::new(vec![4, 5, 7]);
-            let mut block = TensorBlock::new(data, samples, vec![component.clone()], properties).unwrap();
+            let mut block = TensorBlock::new(
+                TestArray::new(vec![4, 5, 7]),
+                example_labels("samples", 4),
+                vec![component.clone()],
+                properties.clone(),
+            ).unwrap();
 
-            let gradient = TestArray::new(vec![3, 5, 7]);
+
             let gradient_samples = example_labels("sample", 3);
-            let result = block.add_gradient("basic", gradient, gradient_samples.clone(), vec![component.clone()]);
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 5, 7]),
+                gradient_samples.clone(),
+                vec![component.clone()],
+                properties.clone(),
+            ).unwrap();
+            let result = block.add_gradient("gradient", gradient);
             assert!(result.is_ok());
 
-            let gradient = TestArray::new(vec![3, 3, 5, 7]);
             let component_2 = example_labels("component_2", 3);
-            let components = vec![component_2.clone(), component.clone()];
-            let result = block.add_gradient("components", gradient, gradient_samples.clone(), components);
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 3, 5, 7]),
+                gradient_samples,
+                vec![component_2, component],
+                properties,
+            ).unwrap();
+            let result = block.add_gradient("components", gradient);
             assert!(result.is_ok());
-
-            let gradient = TestArray::new(vec![3, 3, 5, 7]);
-            let components = vec![component, component_2];
-            let result = block.add_gradient("wrong", gradient, gradient_samples, components);
-            assert_eq!(
-                result.unwrap_err().to_string(),
-                "invalid parameter: gradients and values components mismatch \
-                for values component 0 (the corresponding names are [component])"
-            );
         }
     }
 }
