@@ -44,15 +44,21 @@ def random_uniform_like(
     ... )
     >>> block.add_gradient(
     ...     parameter="alpha",
-    ...     data=np.random.rand(2, 3, 3),
-    ...     samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...     components=[Labels.arange("component", 3)],
+    ...     gradient=TensorBlock(
+    ...         values=np.random.rand(2, 3, 3),
+    ...         samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
+    ...         components=[Labels.arange("component", 3)],
+    ...         properties=block.properties,
+    ...     ),
     ... )
     >>> block.add_gradient(
     ...     parameter="beta",
-    ...     data=np.random.rand(1, 3),
-    ...     samples=Labels(["sample"], np.array([[0]])),
-    ...     components=[],
+    ...     gradient=TensorBlock(
+    ...         values=np.random.rand(1, 3),
+    ...         samples=Labels(["sample"], np.array([[0]])),
+    ...         components=[],
+    ...         properties=block.properties,
+    ...     ),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
@@ -79,7 +85,7 @@ def random_uniform_like(
      [0.68650093 0.83462567 0.01828828]
      [0.75014431 0.98886109 0.74816565]
      [0.28044399 0.78927933 0.10322601]]
-    >>> print(tensor_random.block(0).gradient("alpha").data)
+    >>> print(tensor_random.block(0).gradient("alpha").values)
     [[[0.44789353 0.9085955  0.29361415]
       [0.28777534 0.13002857 0.01936696]
       [0.67883553 0.21162812 0.26554666]]
@@ -152,16 +158,22 @@ def random_uniform_like_block(
 
     for parameter in gradients:
         gradient = block.gradient(parameter)
-        gradient_data = _dispatch.rand_like(
-            gradient.data,
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        gradient_values = _dispatch.rand_like(
+            gradient.values,
             requires_grad=requires_grad,
         )
 
         result_block.add_gradient(
-            parameter,
-            gradient_data,
-            gradient.samples,
-            gradient.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient_values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
         )
 
     return result_block

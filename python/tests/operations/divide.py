@@ -69,12 +69,13 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_1.add_gradient(
-            "g",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-            components=[
-                Labels.arange("c", 2),
-            ],
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_1.properties,
+            ),
         )
 
         block_2 = TensorBlock(
@@ -84,17 +85,15 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_2.add_gradient(
-            "g",
-            data=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1], [2, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_2.properties,
             ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]]),
-            ),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
 
         block_3 = TensorBlock(
@@ -104,12 +103,13 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_3.add_gradient(
-            "g",
-            data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
-            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-            components=[
-                Labels.arange("c", 2),
-            ],
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_3.properties,
+            ),
         )
         block_4 = TensorBlock(
             values=np.array([[105, 200.58], [3.756, 4.4325], [545.5, 26.05]]),
@@ -118,21 +118,19 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_4.add_gradient(
-            "g",
-            data=np.array(
-                [
-                    [[1.0, 1.1], [1.2, 1.3]],
-                    [[1.4, 1.5], [1.0, 1.1]],
-                    [[1.2, 1.3], [1.4, 1.5]],
-                ]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [
+                        [[1.0, 1.1], [1.2, 1.3]],
+                        [[1.4, 1.5], [1.0, 1.1]],
+                        [[1.2, 1.3], [1.4, 1.5]],
+                    ]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1], [2, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_4.properties,
             ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]]),
-            ),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
 
         block_res1 = TensorBlock(
@@ -142,20 +140,18 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_res1.add_gradient(
-            "g",
-            data=np.array(
-                [
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
                     [
-                        [-2.52080856e00, 1.72173344e-03],
-                        [-8.48989298e00, 3.44346688e-03],
-                    ],
-                    [[-1.84515861, 0.16357146], [-3.23141643, 0.21809528]],
-                ]
+                        [[-2.52080856, 1.72173344e-03], [-8.48989298, 3.44346688e-03]],
+                        [[-1.84515861, 0.16357146], [-3.23141643, 0.21809528]],
+                    ]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_res1.properties,
             ),
-            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
         block_res2 = TensorBlock(
             values=np.array(
@@ -170,22 +166,21 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_res2.add_gradient(
-            "g",
-            data=np.array(
-                [
-                    [[0.09387755, 0.05415743], [0.11265306, 0.06400424]],
-                    [[-1.53223072, -0.73866028], [-1.09445051, -0.5416842]],
-                    [[0.02177637, 0.37451969], [0.02540577, 0.43213811]],
-                ]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [
+                        [[0.09387755, 0.05415743], [0.11265306, 0.06400424]],
+                        [[-1.53223072, -0.73866028], [-1.09445051, -0.5416842]],
+                        [[0.02177637, 0.37451969], [0.02540577, 0.43213811]],
+                    ]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1], [2, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_res2.properties,
             ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]]),
-            ),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
+
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         A = TensorMap(keys, [block_1, block_2])
         A_copy = A.copy()
@@ -211,12 +206,13 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_1.add_gradient(
-            "g",
-            data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-            components=[
-                Labels.arange("c", 2),
-            ],
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_1.properties,
+            ),
         )
         block_2 = TensorBlock(
             values=np.array([[11, 12], [13, 14], [15, 16]]),
@@ -225,17 +221,15 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_2.add_gradient(
-            "g",
-            data=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1], [2, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_2.properties,
             ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]]),
-            ),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
 
         block_res1 = TensorBlock(
@@ -245,17 +239,18 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_res1.add_gradient(
-            "g",
-            data=np.array(
-                [
-                    [[1.17647059, 0.19607843], [1.37254902, 0.39215686]],
-                    [[1.56862745, 0.58823529], [1.76470588, 0.78431373]],
-                ]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [
+                        [[1.17647059, 0.19607843], [1.37254902, 0.39215686]],
+                        [[1.56862745, 0.58823529], [1.76470588, 0.78431373]],
+                    ]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_res1.properties,
             ),
-            samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
         block_res2 = TensorBlock(
             values=np.array(
@@ -270,21 +265,19 @@ class TestDivide(unittest.TestCase):
             properties=Labels.arange("p", 2),
         )
         block_res2.add_gradient(
-            "g",
-            data=np.array(
-                [
-                    [[1.96078431, 2.15686275], [2.35294118, 2.54901961]],
-                    [[2.74509804, 2.94117647], [1.96078431, 2.15686275]],
-                    [[2.35294118, 2.54901961], [2.74509804, 2.94117647]],
-                ]
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.array(
+                    [
+                        [[1.96078431, 2.15686275], [2.35294118, 2.54901961]],
+                        [[2.74509804, 2.94117647], [1.96078431, 2.15686275]],
+                        [[2.35294118, 2.54901961], [2.74509804, 2.94117647]],
+                    ]
+                ),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1], [2, 1]])),
+                components=[Labels.arange("c", 2)],
+                properties=block_res2.properties,
             ),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1]]),
-            ),
-            components=[
-                Labels.arange("c", 2),
-            ],
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))

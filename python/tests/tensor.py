@@ -236,7 +236,7 @@ def test_keys_to_properties(tensor):
             [[11.0, 0.0, 0.0, 0.0]],
         ]
     )
-    assert_equal(gradient.data, expected)
+    assert_equal(gradient.values, expected)
 
     # The new second block contains the old third block
     block = tensor.block(1)
@@ -318,7 +318,7 @@ def test_keys_to_samples(tensor):
             [[14.0], [14.0], [14.0]],
         ]
     )
-    assert_equal(gradient.data, expected)
+    assert_equal(gradient.values, expected)
 
 
 def test_keys_to_samples_unsorted(tensor):

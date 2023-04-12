@@ -448,8 +448,8 @@ def allclose_block_raise(
         gradient2 = block_2.gradient(parameter)
 
         if not _dispatch.allclose(
-            gradient1.data,
-            gradient2.data,
+            gradient1.values,
+            gradient2.values,
             rtol=rtol,
             atol=atol,
             equal_nan=equal_nan,

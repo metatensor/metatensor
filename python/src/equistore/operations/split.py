@@ -144,7 +144,7 @@ def _split_block(
     """
     new_blocks = []
     for indices in grouped_labels:
-        # Perfom the slice, either along the samples or properties axis
+        # perform the slice either along the samples or properties axis
         new_block = _slice_block(block, axis=axis, labels=indices)
         new_blocks.append(new_block)
 

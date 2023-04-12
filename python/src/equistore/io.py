@@ -145,20 +145,23 @@ def _tensor_map_to_dict(tensor_map):
     result = {"keys": tensor_map.keys}
 
     for block_i, (_, block) in enumerate(tensor_map):
-        prefix = f"blocks/{block_i}/values"
-        result[f"{prefix}/data"] = _array_to_numpy(block.values)
-        result[f"{prefix}/samples"] = block.samples
-        for i, component in enumerate(block.components):
-            result[f"{prefix}/components/{i}"] = component
+        prefix = f"blocks/{block_i}"
+
+        result.update(_block_to_dict(block, prefix))
         result[f"{prefix}/properties"] = block.properties
 
-        for parameter in block.gradients_list():
-            gradient = block.gradient(parameter)
-            prefix = f"blocks/{block_i}/gradients/{parameter}"
-            result[f"{prefix}/data"] = _array_to_numpy(gradient.data)
-            result[f"{prefix}/samples"] = gradient.samples
-            for i, component in enumerate(gradient.components):
-                result[f"{prefix}/components/{i}"] = component
+    return result
+
+
+def _block_to_dict(block, prefix):
+    result = {}
+    result[f"{prefix}/values"] = _array_to_numpy(block.values)
+    result[f"{prefix}/samples"] = block.samples
+    for i, component in enumerate(block.components):
+        result[f"{prefix}/components/{i}"] = component
+
+    for parameter, gradient in block.gradients():
+        result.update(_block_to_dict(gradient, f"{prefix}/gradients/{parameter}"))
 
     return result
 
@@ -174,39 +177,40 @@ def _read_npz(path):
     keys = _labels_from_npz(dictionary["keys"])
     blocks = []
 
-    gradient_parameters = []
     for block_i in range(len(keys)):
-        prefix = f"blocks/{block_i}/values"
-        data = dictionary[f"{prefix}/data"]
-
-        samples = _labels_from_npz(dictionary[f"{prefix}/samples"])
-        components = []
-        for i in range(len(data.shape) - 2):
-            components.append(_labels_from_npz(dictionary[f"{prefix}/components/{i}"]))
-
+        prefix = f"blocks/{block_i}"
         properties = _labels_from_npz(dictionary[f"{prefix}/properties"])
 
-        block = TensorBlock(data, samples, components, properties)
-
-        if block_i == 0:
-            prefix = f"blocks/{block_i}/gradients/"
-            for name in dictionary.keys():
-                if name.startswith(prefix) and name.endswith("/data"):
-                    gradient_parameters.append(name[len(prefix) : -len("/data")])
-
-        for parameter in gradient_parameters:
-            prefix = f"blocks/{block_i}/gradients/{parameter}"
-            data = dictionary[f"{prefix}/data"]
-
-            samples = _labels_from_npz(dictionary[f"{prefix}/samples"])
-            components = []
-            for i in range(len(data.shape) - 2):
-                components.append(
-                    _labels_from_npz(dictionary[f"{prefix}/components/{i}"])
-                )
-
-            block.add_gradient(parameter, data, samples, components)
-
+        block = _read_block(prefix, dictionary, properties)
         blocks.append(block)
 
     return TensorMap(keys, blocks)
+
+
+def _read_block(prefix, dictionary, properties):
+    values = dictionary[f"{prefix}/values"]
+
+    samples = _labels_from_npz(dictionary[f"{prefix}/samples"])
+    components = []
+    for i in range(len(values.shape) - 2):
+        components.append(_labels_from_npz(dictionary[f"{prefix}/components/{i}"]))
+
+    block = TensorBlock(values, samples, components, properties)
+
+    parameters = set()
+    gradient_prefix = f"{prefix}/gradients/"
+    for name in dictionary.keys():
+        if name.startswith(gradient_prefix) and name.endswith("/values"):
+            parameter = name[len(gradient_prefix) :]
+            parameter = parameter.split("/")[0]
+            parameters.add(parameter)
+
+    for parameter in parameters:
+        gradient = _read_block(
+            f"{prefix}/gradients/{parameter}",
+            dictionary,
+            properties,
+        )
+        block.add_gradient(parameter, gradient)
+
+    return block

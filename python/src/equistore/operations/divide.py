@@ -52,7 +52,7 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 props=["samples", "components", "properties"],
                 fname="divide",
             )
-            blocks.append(_divide_block_block(block1=blockA, block2=blockB))
+            blocks.append(_divide_block_block(block_1=blockA, block_2=blockB))
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
@@ -76,45 +76,61 @@ def _divide_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
     )
 
     for parameter, gradient in block.gradients():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
         result_block.add_gradient(
-            parameter,
-            gradient.data / constant,
-            gradient.samples,
-            gradient.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient.values / constant,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
         )
 
     return result_block
 
 
-def _divide_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
-    values = block1.values / block2.values
+def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
+    values = block_1.values / block_2.values
 
     result_block = TensorBlock(
         values=values,
-        samples=block1.samples,
-        components=block1.components,
-        properties=block1.properties,
+        samples=block_1.samples,
+        components=block_1.components,
+        properties=block_1.properties,
     )
 
-    for parameter1, gradient1 in block1.gradients():
-        gradient2 = block2.gradient(parameter1)
+    for parameter_1, gradient_1 in block_1.gradients():
+        gradient_2 = block_2.gradient(parameter_1)
+
+        if len(gradient_1.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        if len(gradient_2.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
         values_grad = []
-        for isample in range(len(block1.samples)):
-            isample_grad1 = np.where(gradient1.samples["sample"] == isample)[0]
-            isample_grad2 = np.where(gradient2.samples["sample"] == isample)[0]
+        for i_sample in range(len(block_1.samples)):
+            i_sample_grad_1 = np.where(gradient_1.samples["sample"] == i_sample)[0]
+            i_sample_grad_2 = np.where(gradient_2.samples["sample"] == i_sample)[0]
             values_grad.append(
-                -block1.values[isample]
-                * gradient2.data[isample_grad2]
-                / block2.values[isample] ** 2
-                + gradient1.data[isample_grad1] / block2.values[isample]
+                -block_1.values[i_sample]
+                * gradient_2.values[i_sample_grad_2]
+                / block_2.values[i_sample] ** 2
+                + gradient_1.values[i_sample_grad_1] / block_2.values[i_sample]
             )
         values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
-            parameter1,
-            values_grad,
-            gradient1.samples,
-            gradient1.components,
+            parameter=parameter_1,
+            gradient=TensorBlock(
+                values=values_grad,
+                samples=gradient_1.samples,
+                components=gradient_1.components,
+                properties=gradient_1.properties,
+            ),
         )
 
     return result_block

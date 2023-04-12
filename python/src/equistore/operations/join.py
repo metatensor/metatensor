@@ -9,7 +9,7 @@ from ..tensor import TensorBlock, TensorMap
 from .equal_metadata import _check_same_keys
 
 
-def join(tensor_maps: List[TensorMap], axis: str):
+def join(tensors: List[TensorMap], axis: str):
     """Join a sequence of :py:class:`TensorMap` along an axis.
 
     The ``axis`` parameter specifies the type join. For example, if
@@ -21,7 +21,7 @@ def join(tensor_maps: List[TensorMap], axis: str):
     the list of `tensor_maps`.  If `sample`/`property` names are not the same in all
     `tensor_maps` they will be unified with a general name ``"property"``.
 
-    :param tensormaps:
+    :param tensors:
         sequence of :py:class:`TensorMap` for join
     :param axis:
         A string indicating how the tensormaps are stacked. Allowed
@@ -32,12 +32,12 @@ def join(tensor_maps: List[TensorMap], axis: str):
         than the input TensorMap.
     """
 
-    if not isinstance(tensor_maps, (list, tuple)):
+    if not isinstance(tensors, (list, tuple)):
         raise TypeError(
             "the `TensorMap`s to join must be provided as a list or a tuple"
         )
 
-    if len(tensor_maps) < 1:
+    if len(tensors) < 1:
         raise ValueError("provide at least one `TensorMap` for joining")
 
     if axis not in ("samples", "properties"):
@@ -46,18 +46,18 @@ def join(tensor_maps: List[TensorMap], axis: str):
             "valid values for the `axis` parameter."
         )
 
-    if len(tensor_maps) == 1:
-        return tensor_maps[0]
+    if len(tensors) == 1:
+        return tensors[0]
 
-    for ts_to_join in tensor_maps[1:]:
-        _check_same_keys(tensor_maps[0], ts_to_join, "join")
+    for ts_to_join in tensors[1:]:
+        _check_same_keys(tensors[0], ts_to_join, "join")
 
-    # Deduce if sample/property names are the same in all tensor_maps.
+    # Deduce if sample/property names are the same in all tensors.
     # If this is not the case we have to change unify the corresponding labels later.
     if axis == "samples":
-        names_list = [tensor.sample_names for tensor in tensor_maps]
+        names_list = [tensor.sample_names for tensor in tensors]
     else:
-        names_list = [tensor.property_names for tensor in tensor_maps]
+        names_list = [tensor.property_names for tensor in tensors]
 
     # We use functools to flatten a list of sublists::
     #
@@ -71,18 +71,18 @@ def join(tensor_maps: List[TensorMap], axis: str):
         len(unique_names) == np.array([len(names) for names in names_list])
     )
 
-    # It's fine to loose metadata on the property axis, less so on the sample axis!
+    # It's fine to lose metadata on the property axis, less so on the sample axis!
     if axis == "samples" and not names_are_same:
         raise ValueError(
             "Sample names are not the same! Joining along samples with different "
             "sample names will loose information and is not supported."
         )
 
-    keys_names = ("tensor",) + tensor_maps[0].keys.names
+    keys_names = ("tensor",) + tensors[0].keys.names
     keys_values = []
     blocks = []
 
-    for i, tensor in enumerate(tensor_maps):
+    for i, tensor in enumerate(tensors):
         keys_values += [(i,) + value for value in tensor.keys.tolist()]
 
         for _, block in tensor:
@@ -101,11 +101,19 @@ def join(tensor_maps: List[TensorMap], axis: str):
             )
 
             for parameter, gradient in block.gradients():
+                if len(gradient.gradients_list()) != 0:
+                    raise NotImplementedError(
+                        "gradients of gradients are not supported"
+                    )
+
                 new_block.add_gradient(
                     parameter=parameter,
-                    data=gradient.data,
-                    samples=gradient.samples,
-                    components=gradient.components,
+                    gradient=TensorBlock(
+                        values=gradient.values,
+                        samples=gradient.samples,
+                        components=gradient.components,
+                        properties=new_block.properties,
+                    ),
                 )
 
             blocks.append(new_block)

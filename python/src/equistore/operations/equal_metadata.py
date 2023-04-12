@@ -115,7 +115,7 @@ def equal_metadata(
         block_1 = tensor_1[key]
         block_2 = tensor_2[key]
 
-        # Check metatdata of the blocks
+        # Check metadata of the blocks
         try:
             _check_blocks(block_1, block_2, check, "equal_metadata")
         except ValueError:
@@ -231,18 +231,22 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
                  ``props=None``, using ``'parameters'`` is allowed
                   even though deprecated.
     """
-    err_msg = f"inputs to {fname} should have the same gradient:\n"
-    grads_a = a.gradients_list()
-    grads_b = b.gradients_list()
+    err_msg = f"inputs to {fname} should have the same gradients:\n"
+    gradients_list_a = a.gradients_list()
+    gradients_list_b = b.gradients_list()
 
-    if len(grads_a) != len(grads_b) or (
-        not np.all([parameter in grads_b for parameter in grads_a])
+    if len(gradients_list_a) != len(gradients_list_b) or (
+        not np.all([parameter in gradients_list_b for parameter in gradients_list_a])
     ):
         raise ValueError(f"inputs to {fname} should have the same gradient parameters")
 
-    if props is not None:
-        for parameter, grad_a in a.gradients():
-            grad_b = b.gradient(parameter)
+    for parameter, grad_a in a.gradients():
+        grad_b = b.gradient(parameter)
+
+        if len(grad_a.gradients_list()) != 0 or len(grad_b.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        if props is not None:
             for prop in props:
                 err_msg_len = (
                     f"gradient '{parameter}' {prop} of the two `TensorBlock` "

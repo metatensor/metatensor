@@ -31,7 +31,7 @@ def test_zeros_like():
 
         for parameter, gradient in block.gradients():
             zeros_gradient = zeros_block.gradient(parameter)
-            assert np.all(zeros_gradient.data == np.zeros_like(gradient.data))
+            assert np.all(zeros_gradient.values == np.zeros_like(gradient.values))
 
 
 def test_zeros_like_error():

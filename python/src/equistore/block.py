@@ -2,7 +2,7 @@ import copy
 import ctypes
 from typing import Generator, List, Tuple
 
-from ._c_api import c_uintptr_t, eqs_array_t, eqs_labels_t
+from ._c_api import c_uintptr_t, eqs_array_t, eqs_block_t, eqs_labels_t
 from ._c_lib import _get_library
 from .data import Array, ArrayWrapper, eqs_array_to_python_array
 from .labels import Labels
@@ -24,8 +24,9 @@ class TensorBlock:
     components of the data.
 
     A block can also contain gradients of the values with respect to a variety
-    of parameters. In this case, each gradient has a separate set of samples,
-    and possibly components but share the same property labels as the values.
+    of parameters. In this case, each gradient is a :py:class:`TensorBlock` with
+    a separate set of samples and possibly components, but which shares the same
+    property labels as the original :py:class:`TensorBlock`.
     """
 
     def __init__(
@@ -82,7 +83,8 @@ class TensorBlock:
     def _ptr(self):
         if self._actual_ptr is None:
             raise ValueError(
-                "this block has been moved inside a TensorMap and can no longer be used"
+                "this block has been moved inside a TensorMap/another TensorBlock "
+                "and can no longer be used"
             )
 
         return self._actual_ptr
@@ -124,7 +126,11 @@ class TensorBlock:
         return copy.deepcopy(self)
 
     def __repr__(self) -> str:
-        s = "TensorBlock\n"
+        if isinstance(self._parent, TensorBlock):
+            # TODO: print the gradient parameter as well
+            s = "Gradient TensorBlock\n"
+        else:
+            s = "TensorBlock\n"
         s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
         s += "\n"
         s += "    components ("
@@ -142,7 +148,7 @@ class TensorBlock:
         if len(self.gradients_list()) > 0:
             s += f"{str(list(self.gradients_list()))}"
         else:
-            s += "no"
+            s += "None"
 
         return s
 
@@ -165,7 +171,7 @@ class TensorBlock:
         ``ndarray`` and torch ``Tensor`` are supported.
         """
 
-        raw_array = _get_raw_array(self._lib, self._ptr, "values")
+        raw_array = _get_raw_array(self._lib, self._ptr)
         return eqs_array_to_python_array(raw_array, parent=self)
 
     @property
@@ -208,120 +214,127 @@ class TensorBlock:
 
     def _labels(self, axis) -> Labels:
         result = eqs_labels_t()
-        self._lib.eqs_block_labels(self._ptr, "values".encode("utf8"), axis, result)
+        self._lib.eqs_block_labels(self._ptr, axis, result)
         return Labels._from_eqs_labels_t(result)
 
-    def gradient(self, parameter: str) -> "Gradient":
+    def gradient(self, parameter: str) -> "TensorBlock":
         """
-        Get the gradient of the block ``values``  with respect to the
-        given ``parameter``.
+        Get the gradient of the block ``values``  with respect to the given
+        ``parameter``.
 
         :param parameter: check for gradients with respect to this ``parameter``
             (e.g. ``positions``, ``cell``, ...)
 
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
-        >>> block_1 = TensorBlock(
-        ...     values=np.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["samples"], np.array([[0], [2], [4]])),
-        ...     components=[Labels(["components"], np.array([[0]]))],
-        ...     properties=Labels(["properties"], np.array([[0]])),
+        >>> block = TensorBlock(
+        ...     values=np.full((3, 1, 5), 1.0),
+        ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
+        ...     components=[Labels.arange("component", 1)],
+        ...     properties=Labels.arange("property", 5),
         ... )
-        >>> block_1.add_gradient(
-        ...     "position",
-        ...     samples=Labels(["sample", "position"], np.array([[0, -2], [2, 3]])),
-        ...     data=np.full((2, 1, 1), 11.0),
-        ...     components=[Labels(["components"], np.array([[0]]))],
-        ... )
-        >>> block_1.add_gradient(
-        ...     "cell",
-        ...     data=np.full((2, 6, 1, 1), 15.0),
-        ...     samples=Labels(["sample"], np.array([[0], [2]])),
+        >>> positions_gradient = TensorBlock(
+        ...     values=np.full((2, 3, 1, 5), 11.0),
+        ...     samples=Labels(["sample", "atom"], np.array([[0, 2], [2, 3]])),
         ...     components=[
-        ...         Labels(["cell"], np.array([[0], [1], [2], [3], [4], [5]])),
-        ...         Labels(["components"], np.array([[0]])),
+        ...         Labels.arange("direction", 3),
+        ...         Labels.arange("component", 1),
         ...     ],
+        ...     properties=Labels.arange("property", 5),
         ... )
 
-        >>> grad_wrt_position = block_1.gradient("position")
-        >>> print(grad_wrt_position)
+        >>> block.add_gradient("positions", positions_gradient)
+        >>> cell_gradient = TensorBlock(
+        ...     values=np.full((2, 3, 3, 1, 5), 15.0),
+        ...     samples=Labels.arange("sample", 2),
+        ...     components=[
+        ...         Labels.arange("direction_1", 3),
+        ...         Labels.arange("direction_2", 3),
+        ...         Labels.arange("component", 1),
+        ...     ],
+        ...     properties=Labels.arange("property", 5),
+        ... )
+        >>> block.add_gradient("cell", cell_gradient)
+
+        >>> positions_gradient = block.gradient("positions")
+        >>> print(positions_gradient)
         Gradient TensorBlock
-        parameter: 'position'
-        samples (2): ['sample', 'position']
-        components (1): ['components']
-        properties (1): ['properties']
+            samples (2): ['sample', 'atom']
+            components (3, 1): ['direction', 'component']
+            properties (5): ['property']
+            gradients: None
 
-        >>> grad_wrt_cell = block_1.gradient("cell")
-        >>> print(grad_wrt_cell)
+        >>> cell_gradient = block.gradient("cell")
+        >>> print(cell_gradient)
         Gradient TensorBlock
-        parameter: 'cell'
-        samples (2): ['sample']
-        components (6, 1): ['cell', 'components']
-        properties (1): ['properties']
+            samples (2): ['sample']
+            components (3, 3, 1): ['direction_1', 'direction_2', 'component']
+            properties (5): ['property']
+            gradients: None
         """
-        if not self.has_gradient(parameter):
-            raise ValueError(
-                f"this block does not contain gradient with respect to {parameter}"
-            )
-        return Gradient(self, parameter)
+        gradient_block = ctypes.POINTER(eqs_block_t)()
+        self._lib.eqs_block_gradient(
+            self._ptr, parameter.encode("utf8"), gradient_block
+        )
 
-    def add_gradient(
-        self,
-        parameter: str,
-        data: Array,
-        samples: Labels,
-        components: List[Labels],
-    ):
+        return TensorBlock._from_ptr(gradient_block, parent=self)
+
+    def add_gradient(self, parameter: str, gradient: "TensorBlock"):
         """
-        Add a set of gradients with respect to ``parameters`` in this block.
+        Add gradient with respect to ``parameter`` in this block.
 
-        :param parameter: add gradients with respect to this ``parameter`` (e.g.
+        :param parameter:
+            add gradients with respect to this ``parameter`` (e.g.
             ``positions``, ``cell``, ...)
-        :param data: the gradient array, of shape ``(gradient_samples,
-            components, properties)``, where the properties labels are the same
-            as the values' properties labels.
-        :param samples: labels describing the gradient samples
-        :param components: labels describing the gradient components
+
+        :param gradient:
+            a :py:class:`TensorBlock` whose values contain the gradients with
+            respect to the ``parameter``. The labels of the gradient
+            :py:class:`TensorBlock` should be organized as follows: its
+            ``samples`` must contain ``"sample"`` as the first label, which
+            establishes a correspondence with the ``samples`` of the original
+            :py:class:`TensorBlock`; its components must contain at least the
+            same components as the original :py:class:`TensorBlock`, with any
+            additional :py:class:`Labels` coming before those; its properties
+            must match those of the original :py:class:`TensorBlock`.
 
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
-        >>> block_1 = TensorBlock(
+        >>> block = TensorBlock(
         ...     values=np.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["samples"], np.array([[0], [2], [4]])),
-        ...     components=[Labels(["components"], np.array([[0]]))],
-        ...     properties=Labels(["properties"], np.array([[0]])),
+        ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
+        ...     components=[Labels.arange("component", 1)],
+        ...     properties=Labels.arange("property", 1),
         ... )
-        >>> block_1.add_gradient(
-        ...     "position",
-        ...     samples=Labels(["sample", "position"], np.array([[0, -2], [2, 3]])),
-        ...     data=np.full((2, 1, 1), 11.0),
-        ...     components=[Labels(["components"], np.array([[0]]))],
+        >>> gradient = TensorBlock(
+        ...     values=np.full((2, 1, 1), 11.0),
+        ...     samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
+        ...     components=[Labels.arange("component", 1)],
+        ...     properties=Labels.arange("property", 1),
         ... )
-        >>> print(block_1)
+        >>> block.add_gradient("parameter", gradient)
+        >>> print(block)
         TensorBlock
-            samples (3): ['samples']
-            components (1): ['components']
-            properties (1): ['properties']
-            gradients: ['position']
+            samples (3): ['structure']
+            components (1): ['component']
+            properties (1): ['property']
+            gradients: ['parameter']
         """
         if self._parent is not None:
             raise ValueError(
-                "can not add gradient on this block since it is a view inside "
-                "a TensorMap"
+                "cannot add gradient on this block since it is a view inside "
+                "a TensorMap or another TensorBlock"
             )
-        components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
-        for i, component in enumerate(components):
-            components_array[i] = component._as_eqs_labels_t()
 
-        data = ArrayWrapper(data)
+        gradient_ptr = gradient._ptr
+
+        # the gradient is moved inside this block, assign NULL to
+        # `gradient._ptr` to prevent accessing invalid data from Python and
+        # double free
+        gradient._move_ptr()
 
         self._lib.eqs_block_add_gradient(
-            self._ptr,
-            parameter.encode("utf8"),
-            data.into_eqs_array(),
-            samples._as_eqs_labels_t(),
-            components_array,
-            len(components_array),
+            self._ptr, parameter.encode("utf8"), gradient_ptr
         )
 
     def gradients_list(self) -> List[str]:
@@ -346,101 +359,13 @@ class TensorBlock:
         """
         return parameter in self.gradients_list()
 
-    def gradients(self) -> Generator[Tuple[str, "Gradient"], None, None]:
+    def gradients(self) -> Generator[Tuple[str, "TensorBlock"], None, None]:
         """Get an iterator over all gradients defined in this block."""
         for parameter in self.gradients_list():
             yield (parameter, self.gradient(parameter))
 
 
-class Gradient:
-    """
-    Proxy class allowing to access the information associated with a gradient
-    inside a block.
-    """
-
-    def __init__(self, block: TensorBlock, name: str):
-        self._lib = _get_library()
-
-        self._block = block
-        self._name = name
-
-    def __repr__(self) -> str:
-        s = "Gradient TensorBlock\n"
-        s += "parameter: '{}'\n".format(self._name)
-        s += f"samples ({len(self.samples)}): {str(list(self.samples.names))}"
-        s += "\n"
-        s += "components ("
-        s += ", ".join([str(len(c)) for c in self.components])
-        s += "): ["
-        for ic in self.components:
-            for name in ic.names[:]:
-                s += "'" + name + "', "
-        if len(self.components) > 0:
-            s = s[:-2]
-        s += "]\n"
-        s += f"properties ({len(self.properties)}): {str(list(self.properties.names))}"
-
-        return s
-
-    @property
-    def data(self) -> Array:
-        """
-        Access the data for this gradient.
-
-        The array type depends on how the block was created. Currently, numpy
-        ``ndarray`` and torch ``Tensor`` are supported.
-        """
-
-        raw_array = _get_raw_array(self._lib, self._block._ptr, self._name)
-        return eqs_array_to_python_array(raw_array, parent=self)
-
-    @property
-    def samples(self) -> Labels:
-        """
-        Access the sample :py:class:`Labels` for this gradient.
-
-        The entries in these labels describe the first dimension of the ``data``
-        array.
-        """
-        return self._labels(0)
-
-    @property
-    def components(self) -> List[Labels]:
-        """
-        Access the component :py:class:`Labels` for this gradient.
-
-        The entries in these labels describe intermediate dimensions of the
-        ``data`` array.
-        """
-        n_components = len(self.data.shape) - 2
-
-        result = []
-        for axis in range(n_components):
-            result.append(self._labels(axis + 1))
-
-        return result
-
-    @property
-    def properties(self) -> Labels:
-        """
-        Access the property :py:class:`Labels` for this gradient.
-
-        The entries in these labels describe the last dimension of the ``data``
-        array. The properties are guaranteed to be the same for values and
-        gradients in the same block.
-        """
-        property_axis = len(self.data.shape) - 1
-        return self._labels(property_axis)
-
-    def _labels(self, axis) -> Labels:
-        result = eqs_labels_t()
-        self._lib.eqs_block_labels(
-            self._block._ptr, self._name.encode("utf8"), axis, result
-        )
-        return Labels._from_eqs_labels_t(result)
-
-
-def _get_raw_array(lib, block_ptr, name) -> eqs_array_t:
+def _get_raw_array(lib, block_ptr) -> eqs_array_t:
     data = eqs_array_t()
-    lib.eqs_block_data(block_ptr, name.encode("utf8"), data)
+    lib.eqs_block_data(block_ptr, data)
     return data

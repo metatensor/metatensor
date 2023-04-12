@@ -15,7 +15,9 @@ class TestRemoveGradients(unittest.TestCase):
             use_numpy=True,
         )
 
-        self.assertEqual(tensor.block(0).gradients_list(), ["cell", "positions"])
+        self.assertEqual(
+            set(tensor.block(0).gradients_list()), set(["cell", "positions"])
+        )
 
         tensor = equistore.remove_gradients(tensor)
         self.assertEqual(tensor.block(0).gradients_list(), [])
@@ -27,7 +29,9 @@ class TestRemoveGradients(unittest.TestCase):
             use_numpy=True,
         )
 
-        self.assertEqual(tensor.block(0).gradients_list(), ["cell", "positions"])
+        self.assertEqual(
+            set(tensor.block(0).gradients_list()), set(["cell", "positions"])
+        )
 
         tensor = equistore.remove_gradients(tensor, ["positions"])
         self.assertEqual(tensor.block(0).gradients_list(), ["cell"])

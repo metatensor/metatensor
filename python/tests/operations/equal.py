@@ -271,10 +271,13 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_1.add_gradient(
-        "g",
-        data=np.full((2, 1), 11.0),
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        components=[],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 1), 11.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=[],
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -285,14 +288,17 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_2.add_gradient(
-        "g",
-        data=np.full((2, 1), 11.0),
-        samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
-        components=[],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 1), 11.0),
+            samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
+            components=[],
+            properties=block_2.properties,
+        ),
     )
 
     message = (
-        "inputs to equal should have the same gradient:\n"
+        "inputs to equal should have the same gradients:\n"
         "gradient 'g' samples names are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
@@ -306,10 +312,13 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_3.add_gradient(
-        "g",
-        data=np.full((2, 1), 1.0),
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        components=[],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 1), 1.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=[],
+            properties=block_3.properties,
+        ),
     )
 
     with pytest.raises(NotEqualError, match="gradient 'g' values are not equal"):
@@ -323,10 +332,13 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_4.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 1.0),
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        components=[Labels.arange("c_1", -1, 2)],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 1.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=[Labels.arange("c_1", -1, 2)],
+            properties=block_4.properties,
+        ),
     )
 
     block_5 = TensorBlock(
@@ -337,14 +349,17 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_5.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 1.0),
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 1.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+            properties=block_5.properties,
+        ),
     )
 
     message = (
-        "inputs to equal should have the same gradient:\n"
+        "inputs to equal should have the same gradients:\n"
         "gradient 'g' components are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
@@ -358,14 +373,17 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_6.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 1.0),
-        samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
-        components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 1.0),
+            samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+            properties=block_6.properties,
+        ),
     )
 
     message = (
-        "inputs to equal should have the same gradient:\n"
+        "inputs to equal should have the same gradients:\n"
         "gradient 'g' samples names are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
@@ -379,10 +397,13 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_7.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 5.0),
-        samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
-        components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 5.0),
+            samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
+            properties=block_7.properties,
+        ),
     )
     assert not equistore.equal_block(block_6, block_7)
 

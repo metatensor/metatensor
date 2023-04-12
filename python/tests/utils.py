@@ -9,10 +9,7 @@ from equistore import Labels, TensorBlock, TensorMap
 
 
 def tensor():
-    """
-    Create a dummy tensor map to be used in tests. This is the same one as the
-    tensor map used in `tensor.rs` tests.
-    """
+    """A dummy tensor map to be used in tests"""
     block_1 = TensorBlock(
         values=np.full((3, 1, 1), 1.0),
         samples=Labels(["s"], np.array([[0], [2], [4]])),
@@ -20,10 +17,13 @@ def tensor():
         properties=Labels(["p"], np.array([[0]])),
     )
     block_1.add_gradient(
-        "g",
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        data=np.full((2, 1, 1), 11.0),
-        components=[Labels(["c"], np.array([[0]]))],
+        parameter="g",
+        gradient=TensorBlock(
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            values=np.full((2, 1, 1), 11.0),
+            components=block_1.components,
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -33,13 +33,13 @@ def tensor():
         properties=Labels(["p"], np.array([[3], [4], [5]])),
     )
     block_2.add_gradient(
-        "g",
-        data=np.full((3, 1, 3), 12.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[0, -2], [0, 3], [2, -2]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((3, 1, 3), 12.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [0, 3], [2, -2]])),
+            components=block_2.components,
+            properties=block_2.properties,
         ),
-        components=[Labels(["c"], np.array([[0]]))],
     )
 
     block_3 = TensorBlock(
@@ -49,13 +49,13 @@ def tensor():
         properties=Labels(["p"], np.array([[0]])),
     )
     block_3.add_gradient(
-        "g",
-        data=np.full((1, 3, 1), 13.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[1, -2]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((1, 3, 1), 13.0),
+            samples=Labels(["sample", "g"], np.array([[1, -2]])),
+            components=block_3.components,
+            properties=block_3.properties,
         ),
-        components=[Labels.arange("c", 3)],
     )
 
     block_4 = TensorBlock(
@@ -65,16 +65,14 @@ def tensor():
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 14.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[0, 1], [3, 3]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 14.0),
+            samples=Labels(["sample", "g"], np.array([[0, 1], [3, 3]])),
+            components=block_4.components,
+            properties=block_4.properties,
         ),
-        components=[Labels.arange("c", 3)],
     )
-
-    # TODO: different number of components?
 
     keys = Labels(
         names=["key_1", "key_2"],
@@ -89,25 +87,25 @@ def large_tensor():
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    block_list = [block.copy() for _, block in tensor()]
+    blocks = [block.copy() for _, block in tensor()]
 
     for i in range(8):
-        tmp_bl = TensorBlock(
+        block = TensorBlock(
             values=np.full((4, 3, 1), 4.0),
             samples=Labels(["s"], np.array([[0], [1], [4], [5]])),
             components=[Labels.arange("c", 3)],
             properties=Labels(["p"], np.array([[i]])),
         )
-        tmp_bl.add_gradient(
-            "g",
-            data=np.full((2, 3, 1), 14.0),
-            samples=Labels(
-                ["sample", "g"],
-                np.array([[0, 1], [3, 3]]),
+        block.add_gradient(
+            parameter="g",
+            gradient=TensorBlock(
+                values=np.full((2, 3, 1), 14.0),
+                samples=Labels(["sample", "g"], np.array([[0, 1], [3, 3]])),
+                components=block.components,
+                properties=block.properties,
             ),
-            components=[Labels.arange("c", 3)],
         )
-        block_list.append(tmp_bl)
+        blocks.append(block)
 
     keys = Labels(
         names=["key_1", "key_2"],
@@ -128,4 +126,4 @@ def large_tensor():
             ],
         ),
     )
-    return TensorMap(keys, block_list)
+    return TensorMap(keys, blocks)

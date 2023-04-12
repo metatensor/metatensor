@@ -110,7 +110,7 @@ def test_join_properties_values(tensor):
 
         for parameter, gradient in block.gradients():
             joined_gradient = joined_block.gradient(parameter)
-            assert_equal(joined_gradient.data, gradient.data)
+            assert_equal(joined_gradient.values, gradient.values)
 
 
 def test_join_properties_with_same_property_names(tensor):
@@ -203,7 +203,7 @@ def test_join_samples_values(tensor):
 
         for parameter, gradient in block.gradients():
             joined_gradient = joined_block.gradient(parameter)
-            assert_equal(joined_gradient.data, gradient.data)
+            assert_equal(joined_gradient.values, gradient.values)
 
 
 def test_join_samples_with_different_sample_names():

@@ -5,8 +5,7 @@ import pytest
 from numpy.testing import assert_equal
 
 import equistore
-import equistore.status
-from equistore import Labels, TensorBlock
+from equistore import EquistoreError, Labels, TensorBlock
 
 
 @pytest.fixture
@@ -20,17 +19,19 @@ def block():
 
 
 def test_gradient_no_sample_error(block):
+    gradient = TensorBlock(
+        values=np.zeros((0, 2)),
+        samples=Labels([], np.empty((0, 2))),
+        components=[],
+        properties=block.properties,
+    )
+
     msg = (
         "invalid parameter: gradients samples must have at least "
         "one dimension named 'sample', we got none"
     )
-    with pytest.raises(equistore.status.EquistoreError, match=msg):
-        block.add_gradient(
-            "g",
-            data=np.zeros((0, 2)),
-            samples=Labels([], np.empty((0, 2))),
-            components=[],
-        )
+    with pytest.raises(EquistoreError, match=msg):
+        block.add_gradient("g", gradient)
 
 
 def test_repr(block):
@@ -38,7 +39,7 @@ def test_repr(block):
     samples (3): ['s']
     components (): []
     properties (2): ['p']
-    gradients: no"""
+    gradients: None"""
     assert block.__repr__() == expected
 
 
@@ -53,16 +54,19 @@ def test_repr_zero_samples():
     samples (0): []
     components (): []
     properties (2): ['p']
-    gradients: no"""
+    gradients: None"""
     assert block.__repr__() == expected
 
 
 def test_repr_zero_samples_gradient(block):
     block.add_gradient(
-        "g",
-        data=np.zeros((0, 2)),
-        samples=Labels(["sample"], np.empty((0, 2))),
-        components=[],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.zeros((0, 2)),
+            samples=Labels(["sample"], np.empty((0, 2))),
+            components=block.components,
+            properties=block.properties,
+        ),
     )
 
     expected_block = """TensorBlock
@@ -74,10 +78,10 @@ def test_repr_zero_samples_gradient(block):
     assert block.__repr__() == expected_block
 
     expected_grad = """Gradient TensorBlock
-parameter: 'g'
-samples (0): ['sample']
-components (): []
-properties (2): ['p']"""
+    samples (0): ['sample']
+    components (): []
+    properties (2): ['p']
+    gradients: None"""
 
     gradient = block.gradient("g")
     assert gradient.__repr__() == expected_grad
@@ -118,7 +122,7 @@ def test_block_with_components(block_components):
     samples (3): ['s']
     components (3, 2): ['c_1', 'c_2']
     properties (2): ['p']
-    gradients: no"""
+    gradients: None"""
     assert block_components.__repr__() == expected
 
     assert_equal(block_components.values, np.full((3, 3, 2, 2), -1.0))
@@ -151,13 +155,13 @@ def test_block_with_components(block_components):
 
 def test_gradients(block_components):
     block_components.add_gradient(
-        "g",
-        data=np.full((2, 3, 2, 2), 11.0),
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        components=[
-            Labels(["c_1"], np.array([[-1], [0], [1]])),
-            Labels(["c_2"], np.array([[-4], [1]])),
-        ],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 2, 2), 11.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=block_components.components,
+            properties=block_components.properties,
+        ),
     )
 
     expected = """TensorBlock
@@ -176,10 +180,10 @@ def test_gradients(block_components):
     gradient = block_components.gradient("g")
 
     expected_grad = """Gradient TensorBlock
-parameter: 'g'
-samples (2): ['sample', 'g']
-components (3, 2): ['c_1', 'c_2']
-properties (2): ['p']"""
+    samples (2): ['sample', 'g']
+    components (3, 2): ['c_1', 'c_2']
+    properties (2): ['p']
+    gradients: None"""
     assert gradient.__repr__() == expected_grad
 
     assert gradient.samples.names == ("sample", "g")
@@ -187,7 +191,7 @@ properties (2): ['p']"""
     assert tuple(gradient.samples[0]) == (0, -2)
     assert tuple(gradient.samples[1]) == (2, 3)
 
-    assert_equal(gradient.data, np.full((2, 3, 2, 2), 11.0))
+    assert_equal(gradient.values, np.full((2, 3, 2, 2), 11.0))
 
 
 def test_copy():
@@ -237,3 +241,39 @@ def test_eq(block):
 
 def test_neq(block, block_components):
     assert equistore.equal_block(block, block_components) == (block == block_components)
+
+
+def test_nested_gradients():
+    """
+    Test that nested gradients are correctly returned when accessed via their
+    relative syntax
+    """
+    grad_grad = TensorBlock(
+        values=np.array([[2.0]]),
+        samples=Labels.arange("sample", 1),
+        components=[],
+        properties=Labels.single(),
+    )
+
+    grad = TensorBlock(
+        values=np.array([[1.0]]),
+        samples=Labels.arange("sample", 1),
+        components=[],
+        properties=Labels.single(),
+    )
+    grad.add_gradient("gradient_of_gradient", grad_grad)
+
+    block = TensorBlock(
+        values=np.array([[0.0]]),
+        samples=Labels.single(),
+        components=[],
+        properties=Labels.single(),
+    )
+    block.add_gradient("gradient", grad)
+
+    assert np.all(block.gradient("gradient").values == np.array([[1.0]]))
+
+    grad_grad_values = (
+        block.gradient("gradient").gradient("gradient_of_gradient").values
+    )
+    assert np.all(grad_grad_values == np.array([[2.0]]))

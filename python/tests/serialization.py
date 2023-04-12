@@ -7,7 +7,7 @@ import pytest
 from numpy.testing import assert_equal
 
 import equistore
-from equistore import TensorMap
+from equistore import Labels, TensorBlock, TensorMap
 
 from . import utils
 
@@ -25,7 +25,7 @@ def tensor():
 def test_load(use_numpy):
     tensor = equistore.load(
         os.path.join(
-            os.path.dirname(__file__), "..", "..", "equistore-core", "tests", "data.npz"
+            os.path.dirname(__file__), "..", "..", "equistore", "tests", "data.npz"
         ),
         use_numpy=use_numpy,
     )
@@ -44,7 +44,7 @@ def test_load(use_numpy):
 
     gradient = block.gradient("positions")
     assert gradient.samples.names == ("sample", "structure", "atom")
-    assert gradient.data.shape == (59, 3, 5, 3)
+    assert gradient.values.shape == (59, 3, 5, 3)
 
 
 @pytest.mark.parametrize("use_numpy", (True, False))
@@ -60,8 +60,8 @@ def test_save(use_numpy, tmpdir, tensor):
 
     assert_equal(data["keys"], tensor.keys)
     for i, (_, block) in enumerate(tensor):
-        prefix = f"blocks/{i}/values"
-        assert_equal(data[f"{prefix}/data"], block.values)
+        prefix = f"blocks/{i}"
+        assert_equal(data[f"{prefix}/values"], block.values)
         assert_equal(data[f"{prefix}/samples"], block.samples)
         assert_equal(data[f"{prefix}/components/0"], block.components[0])
         assert_equal(data[f"{prefix}/properties"], block.properties)
@@ -69,7 +69,7 @@ def test_save(use_numpy, tmpdir, tensor):
         for parameter in block.gradients_list():
             gradient = block.gradient(parameter)
             prefix = f"blocks/{i}/gradients/{parameter}"
-            assert_equal(data[f"{prefix}/data"], gradient.data)
+            assert_equal(data[f"{prefix}/values"], gradient.values)
             assert_equal(data[f"{prefix}/samples"], gradient.samples)
             assert_equal(data[f"{prefix}/components/0"], gradient.components[0])
 
@@ -111,9 +111,8 @@ def test_pickle(protocol, tmpdir, tensor):
             tensor_loaded = pickle.load(f)
 
     assert_equal(tensor.keys, tensor_loaded.keys)
-    assert_equal(len(tensor.blocks()), len(tensor_loaded.blocks()))
-    for i, (_, block) in enumerate(tensor):
-        ref_block = tensor.blocks()[i]
+    for key, block in tensor:
+        ref_block = tensor.block(key)
         assert_equal(type(block.values), type(ref_block.values))
         assert_equal(block.values, ref_block.values)
         assert_equal(block.samples, ref_block.samples)
@@ -123,6 +122,101 @@ def test_pickle(protocol, tmpdir, tensor):
         for parameter in block.gradients_list():
             gradient = block.gradient(parameter)
             ref_gradient = ref_block.gradient(parameter)
-            assert_equal(gradient.data, ref_gradient.data)
+            assert_equal(gradient.values, ref_gradient.values)
             assert_equal(gradient.samples, ref_gradient.samples)
             assert_equal(gradient.components, ref_gradient.components)
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_nested_gradients(tmpdir, use_numpy):
+    block = TensorBlock(
+        values=np.random.rand(3, 3),
+        samples=Labels.arange("s", 3),
+        components=[],
+        properties=Labels.arange("p", 3),
+    )
+
+    grad = TensorBlock(
+        values=np.random.rand(3, 3),
+        samples=Labels.arange("sample", 3),
+        components=[],
+        properties=Labels.arange("p", 3),
+    )
+
+    grad_grad = TensorBlock(
+        values=np.random.rand(3, 5, 3),
+        samples=Labels.arange("sample", 3),
+        components=[Labels.arange("c", 5)],
+        properties=Labels.arange("p", 3),
+    )
+
+    grad.add_gradient("grad-of-grad", grad_grad)
+    block.add_gradient("grad", grad)
+    tensor = TensorMap(Labels.single(), [block])
+
+    tmpfile = "grad-grad-test.npz"
+
+    with tmpdir.as_cwd():
+        equistore.save(tmpfile, tensor, use_numpy=use_numpy)
+
+        # load back with numpy
+        data = np.load(tmpfile)
+
+        # load back with equistore
+        loaded = equistore.load(tmpfile)
+
+    assert_equal(data["keys"], tensor.keys)
+    assert_equal(data["keys"], loaded.keys)
+
+    for i, (key, block) in enumerate(tensor):
+        loaded_block = loaded.block(key)
+
+        prefix = f"blocks/{i}"
+        assert_equal(data[f"{prefix}/values"], block.values)
+        assert_equal(data[f"{prefix}/values"], loaded_block.values)
+
+        assert_equal(data[f"{prefix}/samples"], block.samples)
+        assert_equal(data[f"{prefix}/samples"], loaded_block.samples)
+
+        assert_equal(data[f"{prefix}/properties"], block.properties)
+        assert_equal(data[f"{prefix}/properties"], loaded_block.properties)
+
+        assert_equal(block.gradients_list(), loaded_block.gradients_list())
+
+        for parameter, gradient in block.gradients():
+            loaded_gradient = loaded_block.gradient(parameter)
+            grad_prefix = f"{prefix}/gradients/{parameter}"
+
+            assert_equal(data[f"{grad_prefix}/values"], gradient.values)
+            assert_equal(data[f"{grad_prefix}/values"], loaded_gradient.values)
+
+            assert_equal(data[f"{grad_prefix}/samples"], gradient.samples)
+            assert_equal(data[f"{grad_prefix}/samples"], loaded_gradient.samples)
+
+            assert len(gradient.components) == len(loaded_gradient.components)
+            for a, b in zip(gradient.components, loaded_gradient.components):
+                assert_equal(a, b)
+
+            assert_equal(gradient.properties, loaded_gradient.properties)
+
+            assert_equal(gradient.gradients_list(), loaded_gradient.gradients_list())
+
+            for parameter, grad_grad in gradient.gradients():
+                loaded_grad_grad = loaded_gradient.gradient(parameter)
+                grad_grad_prefix = f"{grad_prefix}/gradients/{parameter}"
+
+                assert_equal(data[f"{grad_grad_prefix}/values"], grad_grad.values)
+                assert_equal(
+                    data[f"{grad_grad_prefix}/values"], loaded_grad_grad.values
+                )
+
+                assert_equal(data[f"{grad_grad_prefix}/samples"], grad_grad.samples)
+                assert_equal(
+                    data[f"{grad_grad_prefix}/samples"], loaded_grad_grad.samples
+                )
+
+                assert len(grad_grad.components) == len(loaded_grad_grad.components)
+                for a, b in zip(grad_grad.components, loaded_grad_grad.components):
+                    assert_equal(a, b)
+
+                assert_equal(grad_grad.properties, loaded_grad_grad.properties)

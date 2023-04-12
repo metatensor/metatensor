@@ -57,7 +57,7 @@ class TensorMap:
                 )
 
         # all blocks are moved into the tensor map, assign NULL to `block._ptr`
-        # to prevent accessing the blocks from Python/double free
+        # to prevent accessing invalid data from Python and double free
         for block in blocks:
             block._move_ptr()
 
@@ -65,6 +65,9 @@ class TensorMap:
             keys._as_eqs_labels_t(), blocks_array, len(blocks)
         )
         _check_pointer(self._ptr)
+
+        for block in blocks:
+            block._is_inside_map = True
 
     @staticmethod
     def _from_ptr(ptr):
