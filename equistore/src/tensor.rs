@@ -599,23 +599,23 @@ mod tests {
     fn iter() {
         let block_1 = TensorBlock::new(
             ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
-            Labels::new(["samples"], &[[0], [1]]),
+            &Labels::new(["samples"], &[[0], [1]]),
             &[],
-            Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             ndarray::ArrayD::from_elem(vec![1, 1], 3.0),
-            Labels::new(["samples"], &[[1]]),
+            &Labels::new(["samples"], &[[1]]),
             &[],
-            Labels::new(["properties"], &[[1]]),
+            &Labels::new(["properties"], &[[1]]),
         ).unwrap();
 
         let block_3 = TensorBlock::new(
             ndarray::ArrayD::from_elem(vec![3, 2], -4.0),
-            Labels::new(["samples"], &[[0], [1], [3]]),
+            &Labels::new(["samples"], &[[0], [1], [3]]),
             &[],
-            Labels::new(["properties"], &[[-2], [1]]),
+            &Labels::new(["properties"], &[[-2], [1]]),
         ).unwrap();
 
         let mut tensor = TensorMap::new(
@@ -625,12 +625,12 @@ mod tests {
 
         // iterate over keys & blocks
         for (key, block) in tensor.iter() {
-            assert_eq!(block.values().data.to_array()[[0, 0]], key[0].i32() as f64);
+            assert_eq!(block.values().to_array()[[0, 0]], key[0].i32() as f64);
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in tensor.iter_mut() {
-            let array = block.values_mut().data.to_array_mut();
+            let array = block.values_mut().to_array_mut();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * (key[0].i32() as f64));
         }

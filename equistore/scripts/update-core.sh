@@ -15,6 +15,7 @@ cd $ROOT_DIR/equistore
 
 bindgen $ROOT_DIR/equistore-core/include/equistore.h -o src/c_api.rs \
     --disable-header-comment \
+    --no-doc-comments \
     --default-macro-constant-type=signed \
     --merge-extern-blocks \
     --allowlist-function "^eqs_.*" \
