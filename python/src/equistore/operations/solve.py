@@ -23,7 +23,6 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
             equal to the ``properties`` of ``Y``;
             and the ``properties`` equal to the ``properties`` of ``X``.
 
-    Here is an example using this function:
 
     >>> import numpy as np
     >>> import equistore

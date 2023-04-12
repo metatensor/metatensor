@@ -22,14 +22,14 @@ def random_uniform_like(
     :param requires_grad: If autograd should record operations for the returned
                           tensor. This option is only relevant for torch.
 
-    Here is an example using this function. First we create a ``TensorMap`` with
-    just one block with two gradients, named ``alpha`` and ``beta``, containing
-    random data for values and gradients.
-
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
+
+    First we create a :py:class:`TensorMap` with just one block with two
+    gradients, named ``alpha`` and ``beta``, containing random data:
+
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
     ...     samples=Labels.arange("sample", 4),
@@ -57,9 +57,9 @@ def random_uniform_like(
         properties (3): ['property']
         gradients: ['alpha', 'beta']
 
-    Then we use the function ``random_uniform_like`` to create a
-    :py:class:`TensorMap` with the same metadata as ``tensor``, but with all
-    values set equal to random values.
+    Then we use ``random_uniform_like`` to create a :py:class:`TensorMap` with
+    the same metadata as ``tensor``, but with all values randomly sampled from a
+    uniform distribution.
 
     >>> tensor_random = equistore.random_uniform_like(tensor)
     >>> print(tensor_random.block(0))
