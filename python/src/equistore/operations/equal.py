@@ -15,17 +15,17 @@ class NotEqualError(Exception):
 def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
     """Compare two :py:class:`TensorMap`.
 
-    This function returns ``True`` if the two tensors have the same keys
+    This function returns :py:obj:`True` if the two tensors have the same keys
     (potentially in different order) and all the :py:class:`TensorBlock` have
     the same (and in the same order) samples, components, properties, and their
     their values are strictly equal.
 
     The :py:class:`TensorMap` contains gradient data, then this function only
-    returns ``True`` if all the gradients also have the same samples,
+    returns :py:obj:`True` if all the gradients also have the same samples,
     components, properties and their their values are strictly equal.
 
-    In practice this function calls :py:func:`equal_raise`, returning ``True``
-    if no exception is raised, ``False`` otherwise.
+    In practice this function calls :py:func:`equal_raise`, returning
+    :py:obj:`True` if no exception is raised, :py:obj:`False` otherwise.
 
     :param tensor_1: first :py:class:`TensorMap`.
     :param tensor_2: second :py:class:`TensorMap`.
@@ -68,15 +68,16 @@ def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
     """
     Compare two :py:class:`TensorBlock`.
 
-    This function returns ``True`` if the two :py:class:`TensorBlock` have the
-    same samples, components, properties and their values are strictly equal.
+    This function returns :py:obj:`True` if the two :py:class:`TensorBlock` have
+    the same samples, components, properties and their values are strictly
+    equal.
 
     If the :py:class:`TensorBlock` contains gradients, then the gradient must
     also have same (and in the same order) samples, components, properties and
     their values are strictly equal.
 
     In practice this function calls :py:func:`equal_block_raise`, returning
-    ``True`` if no exception is raised, ``False`` otherwise.
+    :py:obj:`True` if no exception is raised, :py:obj:`False` otherwise.
 
     :param block_1: first :py:class:`TensorBlock`.
     :param block_2: second :py:class:`TensorBlock`.

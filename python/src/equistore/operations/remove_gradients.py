@@ -9,11 +9,16 @@ def remove_gradients(
 ) -> TensorMap:
     """Remove some or all of the gradients from a :py:class:`TensorMap`.
 
-    :param tensor: input :py:class:`TensorMap`, with gradients to remove
-    :param remove: which gradients should be excluded from the new tensor map.
-        If this is set to ``None`` (this is the default), all the gradients will
-        be removed.
-    :returns: A new tensormap without the gradients.
+    :param tensor:
+        input :py:class:`TensorMap`, with gradients to remove
+
+    :param remove:
+        which gradients should be excluded from the new tensor map. If this is
+        set to :py:obj:`None` (this is the default), all the gradients will be
+        removed.
+
+    :returns:
+        A new tensormap without the gradients.
     """
 
     if remove is None:

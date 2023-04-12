@@ -264,8 +264,9 @@ def zeros_like(array, shape=None, requires_grad=False):
     Create an array filled with zeros, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
 
-    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
-    is only used for torch tensors, and set the corresponding value.
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
 
     This is the equivalent to ``np.zeros_like(array, shape=shape)``.
     """
@@ -291,8 +292,9 @@ def ones_like(array, shape=None, requires_grad=False):
     Create an array filled with ones, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
 
-    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
-    is only used for torch tensors, and set the corresponding value.
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
 
     This is the equivalent to ``np.ones_like(array, shape=shape)``.
     """
@@ -318,8 +320,9 @@ def empty_like(array, shape=None, requires_grad=False):
     Create an uninitialized array, with the given ``shape``, and similar dtype,
     device and other options as ``array``.
 
-    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
-    is only used for torch tensors, and set the corresponding value.
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
 
     This is the equivalent to ``np.empty_like(array, shape=shape)``.
     """
@@ -374,8 +377,9 @@ def rand_like(array, shape=None, requires_grad=False):
     in the ``[0, 1)`` interval, with the given ``shape``, and similar dtype,
     device and other options as ``array``.
 
-    If ``shape`` is ``None``, the array shape is used instead. ``requires_grad``
-    is only used for torch tensors, and set the corresponding value.
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
     """
 
     if isinstance(array, np.ndarray):
