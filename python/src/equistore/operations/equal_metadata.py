@@ -293,11 +293,12 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
                     )
 
 
-def _check_gradient_presence(block: TensorBlock, parameters: List, fname: str):
-    for p in parameters:
-        if p not in block.gradients_list():
+def _check_gradient_presence(block: TensorBlock, parameters: List[str], fname: str):
+    for parameter in parameters:
+        if parameter not in block.gradients_list():
             raise ValueError(
-                f"requested gradient '{p}' in {fname} is not defined in this tensor"
+                f"requested gradient '{parameter}' in {fname} is not defined "
+                "in this tensor"
             )
 
 

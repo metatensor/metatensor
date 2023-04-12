@@ -8,18 +8,24 @@ from .equal_metadata import _check_gradient_presence
 
 def zeros_like(
     tensor: TensorMap,
-    parameters: Union[List[str], str] = None,
+    gradients: Union[List[str], str] = None,
     requires_grad: bool = False,
 ) -> TensorMap:
     """Return a new :py:class:`TensorMap` with the same metadata as tensor,
     and all values equal to zero.
 
-    :param tensor: Input tensor from which the metadata is taken.
-    :param parameters: Which gradient parameter to copy. If ``None`` (default)
-                       all gradient of ``tensor`` are present in the new tensor.
-                       If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned
-                          tensor. This option is only relevant for torch.
+    :param tensor:
+        Input tensor from which the metadata is taken.
+
+    :param gradients:
+        Which gradients should be present in the output. If this is ``None``
+        (default) all gradient of ``tensor`` are present in the new
+        :py:class:`TensorMap`. If this is an empty list ``[]``, no gradients
+        information is copied.
+
+    :param requires_grad:
+        If autograd should record operations for the returned tensor. This
+        option is only relevant for torch.
 
     >>> import numpy as np
     >>> import equistore
@@ -83,7 +89,7 @@ def zeros_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_zeros = equistore.zeros_like(tensor, parameters="alpha")
+    >>> tensor_zeros = equistore.zeros_like(tensor, gradients="alpha")
     >>> print(tensor_zeros.block(0).gradients_list())
     ['alpha']
     """
@@ -92,7 +98,7 @@ def zeros_like(
     for block in tensor.blocks():
         blocks.append(
             zeros_like_block(
-                block=block, parameters=parameters, requires_grad=requires_grad
+                block=block, gradients=gradients, requires_grad=requires_grad
             )
         )
     return TensorMap(tensor.keys, blocks)
@@ -100,18 +106,24 @@ def zeros_like(
 
 def zeros_like_block(
     block: TensorBlock,
-    parameters: Union[List[str], str] = None,
+    gradients: Union[List[str], str] = None,
     requires_grad: bool = False,
 ) -> TensorBlock:
     """Return a new :py:class:`TensorBlock` with the same metadata as block,
     and all values equal to zero.
 
-    :param block: Input block from which the metadata is taken.
-    :param parameters: Which gradient parameter to copy. If ``None`` (default)
-                       all gradient of ``tensor`` are present in the new tensor.
-                       If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned tensor.
-                          This option is only relevant for torch.
+    :param block:
+        Input block from which the metadata is taken.
+
+    :param gradients:
+        Which gradients should be present in the output. If this is ``None``
+        (default) all gradient of ``block`` are present in the new
+        :py:class:`TensorBlock`. If this is an empty list ``[]``, no gradients
+        information is copied.
+
+    :param requires_grad:
+        If autograd should record operations for the returned tensor. This
+        option is only relevant for torch.
     """
 
     values = _dispatch.zeros_like(block.values, requires_grad=requires_grad)
@@ -122,15 +134,15 @@ def zeros_like_block(
         properties=block.properties,
     )
 
-    if isinstance(parameters, str):
-        parameters = [parameters]
+    if isinstance(gradients, str):
+        gradients = [gradients]
 
-    if parameters is None:
-        parameters = block.gradients_list()
+    if gradients is None:
+        gradients = block.gradients_list()
     else:
-        _check_gradient_presence(block=block, parameters=parameters, fname="zeros_like")
+        _check_gradient_presence(block=block, parameters=gradients, fname="zeros_like")
 
-    for parameter in parameters:
+    for parameter in gradients:
         gradient = block.gradient(parameter)
         gradient_data = _dispatch.zeros_like(gradient.data)
 

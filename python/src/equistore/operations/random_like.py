@@ -8,19 +8,25 @@ from .equal_metadata import _check_gradient_presence
 
 def random_uniform_like(
     tensor: TensorMap,
-    parameters: Union[List[str], str] = None,
+    gradients: Union[List[str], str] = None,
     requires_grad: bool = False,
 ) -> TensorMap:
     """
     Return a new :py:class:`TensorMap` with the same metadata as tensor, and all
     values randomly sampled from the uniform distribution between 0 and 1.
 
-    :param tensor: Input tensor from which the metadata is taken.
-    :param parameters: Which gradient parameter to copy. If ``None`` (default)
-                       all gradient of ``tensor`` are present in the new tensor.
-                       If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned
-                          tensor. This option is only relevant for torch.
+    :param tensor:
+        Input tensor from which the metadata is taken.
+
+    :param gradients:
+        Which gradients should be present in the output. If this is ``None``
+        (default) all gradient of ``tensor`` are present in the new
+        :py:class:`TensorMap`. If this is an empty list ``[]``, no gradients
+        information is copied.
+
+    :param requires_grad:
+        If autograd should record operations for the returned tensor. This
+        option is only relevant for torch.
 
     >>> import numpy as np
     >>> import equistore
@@ -85,7 +91,7 @@ def random_uniform_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_random = equistore.random_uniform_like(tensor, parameters="alpha")
+    >>> tensor_random = equistore.random_uniform_like(tensor, gradients="alpha")
     >>> print(tensor_random.block(0).gradients_list())
     ['alpha']
     """
@@ -94,7 +100,7 @@ def random_uniform_like(
         blocks.append(
             random_uniform_like_block(
                 block=block,
-                parameters=parameters,
+                gradients=gradients,
                 requires_grad=requires_grad,
             )
         )
@@ -103,19 +109,25 @@ def random_uniform_like(
 
 def random_uniform_like_block(
     block: TensorBlock,
-    parameters: Union[List[str], str] = None,
+    gradients: Union[List[str], str] = None,
     requires_grad: bool = False,
 ) -> TensorBlock:
     """
     Return a new :py:class:`TensorBlock` with the same metadata as block, and
     all values randomly sampled from the uniform distribution between 0 and 1.
 
-    :param block: Input block from which the metadata is taken.
-    :param parameters: Which gradient parameter to copy. If ``None`` (default)
-                       all gradients of ``block`` are present in the new block.
-                       If empty list ``[]`` no gradients information are copied.
-    :param requires_grad: If autograd should record operations for the returned
-                          tensor. This option is only relevant for torch.
+    :param block:
+        Input block from which the metadata is taken.
+
+    :param gradients:
+        Which gradients should be present in the output. If this is ``None``
+        (default) all gradient of ``block`` are present in the new
+        :py:class:`TensorBlock`. If this is an empty list ``[]``, no gradients
+        information is copied.
+
+    :param requires_grad:
+        If autograd should record operations for the returned tensor. This
+        option is only relevant for torch.
     """
     values = _dispatch.rand_like(
         block.values,
@@ -128,17 +140,17 @@ def random_uniform_like_block(
         properties=block.properties,
     )
 
-    if isinstance(parameters, str):
-        parameters = [parameters]
+    if isinstance(gradients, str):
+        gradients = [gradients]
 
-    if parameters is None:
-        parameters = block.gradients_list()
+    if gradients is None:
+        gradients = block.gradients_list()
     else:
         _check_gradient_presence(
-            block=block, parameters=parameters, fname="random_uniform_like"
+            block=block, parameters=gradients, fname="random_uniform_like"
         )
 
-    for parameter in parameters:
+    for parameter in gradients:
         gradient = block.gradient(parameter)
         gradient_data = _dispatch.rand_like(
             gradient.data,
