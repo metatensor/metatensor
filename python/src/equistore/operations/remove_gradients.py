@@ -13,7 +13,7 @@ def remove_gradients(
     :param remove: which gradients should be excluded from the new tensor map.
         If this is set to ``None`` (this is the default), all the gradients will
         be removed.
-    :returns: A new tensormap withput the gradients.
+    :returns: A new tensormap without the gradients.
     """
 
     if remove is None:

@@ -1,7 +1,7 @@
 import os
-import unittest
 
 import numpy as np
+import pytest
 
 import equistore
 
@@ -9,132 +9,41 @@ import equistore
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
-class TestOnes_like(unittest.TestCase):
-    def test_ones_like_nocomponent(self):
-        tensor = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-            # the npz is using DEFLATE compression, equistore only supports STORED
-            use_numpy=True,
-        )
-        ones_tensor = equistore.ones_like(tensor)
+def test_ones_like():
+    tensor = equistore.load(
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
+        # the npz is using DEFLATE compression, equistore only supports STORED
+        use_numpy=True,
+    )
+    ones_tensor = equistore.ones_like(tensor)
+    ones_tensor_positions = equistore.ones_like(tensor, gradients="positions")
 
-        self.assertTrue(np.all(tensor.keys == ones_tensor.keys))
-        for key, ones_block in ones_tensor:
-            block = tensor.block(key)
-            self.assertTrue(np.all(ones_block.samples == block.samples))
-            self.assertTrue(np.all(ones_block.properties == block.properties))
-            self.assertEqual(len(ones_block.components), len(block.components))
-            self.assertTrue(
-                np.all(
-                    [
-                        np.all(ones_block.components[i] == block.components[i])
-                        for i in range(len(block.components))
-                    ]
-                )
-            )
-            self.assertTrue(np.allclose(ones_block.values, np.ones_like(block.values)))
-            for ones_parameter, ones_gradient in ones_block.gradients():
-                gradient = block.gradient(ones_parameter)
-                self.assertTrue(np.all(ones_gradient.samples == gradient.samples))
-                self.assertEqual(
-                    len(ones_gradient.components), len(gradient.components)
-                )
-                self.assertTrue(
-                    np.all(
-                        [
-                            np.all(
-                                ones_gradient.components[i] == gradient.components[i]
-                            )
-                            for i in range(len(gradient.components))
-                        ]
-                    )
-                )
-                self.assertTrue(
-                    np.allclose(ones_gradient.data, np.ones_like(gradient.data))
-                )
+    assert equistore.equal_metadata(ones_tensor, tensor)
 
-    def test_ones_component(self):
-        tensor = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-            # the npz is using DEFLATE compression, equistore only supports STORED
-            use_numpy=True,
-        )
-        ones_tensor = equistore.ones_like(tensor)
-        ones_tensor_positions = equistore.ones_like(tensor, parameters="positions")
+    tensor_no_cell = equistore.remove_gradients(tensor, "cell")
+    assert equistore.equal_metadata(ones_tensor_positions, tensor_no_cell)
 
-        self.assertTrue(np.all(tensor.keys == ones_tensor.keys))
-        self.assertTrue(np.all(tensor.keys == ones_tensor_positions.keys))
-        for key, ones_block in ones_tensor:
-            block = tensor.block(key)
-            ones_block_pos = ones_tensor_positions.block(key)
-            self.assertTrue(np.all(ones_block.samples == block.samples))
-            self.assertTrue(np.all(ones_block.properties == block.properties))
-            self.assertTrue(np.allclose(ones_block.values, np.ones_like(block.values)))
+    # check the values
+    for key, block in tensor:
+        one_block = ones_tensor[key]
 
-            self.assertTrue(np.all(ones_block_pos.samples == block.samples))
-            self.assertTrue(np.all(ones_block_pos.properties == block.properties))
-            self.assertTrue(
-                np.allclose(ones_block_pos.values, np.ones_like(block.values))
-            )
+        assert np.all(one_block.values == np.ones_like(block.values))
 
-            self.assertTrue(ones_block.gradients_list() == block.gradients_list())
-            for ones_parameter, ones_gradient in ones_block.gradients():
-                gradient = block.gradient(ones_parameter)
-                self.assertTrue(np.all(ones_gradient.samples == gradient.samples))
-                self.assertEqual(
-                    len(ones_gradient.components), len(gradient.components)
-                )
-                self.assertTrue(
-                    np.all(
-                        [
-                            np.all(
-                                ones_gradient.components[i] == gradient.components[i]
-                            )
-                            for i in range(len(gradient.components))
-                        ]
-                    )
-                )
-                self.assertTrue(
-                    np.allclose(ones_gradient.data, np.ones_like(gradient.data))
-                )
-            self.assertTrue(ones_block_pos.gradients_list() == ["positions"])
-            for ones_parameter_pos, ones_gradient_pos in ones_block_pos.gradients():
-                gradient = block.gradient(ones_parameter_pos)
-                self.assertTrue(np.all(ones_gradient_pos.samples == gradient.samples))
-                self.assertEqual(
-                    len(ones_gradient_pos.components), len(gradient.components)
-                )
-                self.assertTrue(
-                    np.all(
-                        [
-                            np.all(
-                                ones_gradient_pos.components[i]
-                                == gradient.components[i]
-                            )
-                            for i in range(len(gradient.components))
-                        ]
-                    )
-                )
-                self.assertTrue(
-                    np.allclose(ones_gradient_pos.data, np.ones_like(gradient.data))
-                )
+        for parameter, gradient in block.gradients():
+            ones_gradient = one_block.gradient(parameter)
+            assert np.all(ones_gradient.data == np.ones_like(gradient.data))
 
-    def test_ones_error(self):
-        tensor = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-            # the npz is using DEFLATE compression, equistore only supports STORED
-            use_numpy=True,
-        )
 
-        with self.assertRaises(ValueError) as cm:
-            tensor = equistore.ones_like(tensor, parameters=["positions", "err"])
-        self.assertEqual(
-            str(cm.exception),
-            "requested gradient 'err' in ones_like is not defined in this tensor",
-        )
+def test_ones_like_error():
+    tensor = equistore.load(
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
+        # the npz is using DEFLATE compression, equistore only supports STORED
+        use_numpy=True,
+    )
+
+    message = "requested gradient 'err' in ones_like is not defined in this tensor"
+    with pytest.raises(ValueError, match=message):
+        tensor = equistore.ones_like(tensor, gradients=["positions", "err"])
 
 
 # TODO: add tests with torch & torch scripting/tracing
-
-if __name__ == "__main__":
-    unittest.main()
