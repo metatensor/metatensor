@@ -40,14 +40,14 @@ TEST_CASE("TensorMap") {
         // The first two blocks are not modified
         auto block = tensor.block_by_id(0);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {{0, 0}, {2, 0}, {4, 0}}));
-        auto& values_1 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto& values_1 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_1 == SimpleDataArray({3, 1, 1}, 1.0));
 
 
         block = tensor.block_by_id(1);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {{0, 0}, {1, 0}, {3, 0}}));
 
-        auto& values_2 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto& values_2 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_2 == SimpleDataArray({3, 1, 3}, 2.0));
 
         // The new third block contains the old third and fourth blocks merged
@@ -67,7 +67,7 @@ TEST_CASE("TensorMap") {
             3.0, 3.0, 3.0,
         });
 
-        auto& values_3 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto& values_3 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_3 == expected);
 
         auto gradient = block.gradient("parameter");
@@ -81,7 +81,7 @@ TEST_CASE("TensorMap") {
             14.0, 14.0, 14.0,
         });
 
-        auto gradient_3 = SimpleDataArray::from_eqs_array(block.eqs_array("parameter"));
+        auto gradient_3 = SimpleDataArray::from_eqs_array(block.gradient("parameter").eqs_array());
         CHECK(gradient_3 == expected);
 
         // unsorted samples
@@ -118,7 +118,7 @@ TEST_CASE("TensorMap") {
             1.0, 0.0, 0.0, 0.0,
         });
 
-        auto& values_1 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto& values_1 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_1 == expected);
 
         auto gradient = block.gradient("parameter");
@@ -131,21 +131,21 @@ TEST_CASE("TensorMap") {
             11.0, 0.0, 0.0, 0.0,
         });
 
-        auto gradient_1 = SimpleDataArray::from_eqs_array(block.eqs_array("parameter"));
+        auto gradient_1 = SimpleDataArray::from_eqs_array(block.gradient("parameter").eqs_array());
         CHECK(gradient_1 == expected);
 
         // The new second block contains the old third block
         block = tensor.block_by_id(1);
         CHECK(block.properties() == Labels({"key_1", "properties"}, {{2, 0}}));
 
-        auto values_2 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto values_2 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_2 == SimpleDataArray({4, 3, 1}, 3.0));
 
         // the new third block contains the old fourth block
         block = tensor.block_by_id(2);
         CHECK(block.properties() == Labels({"key_1", "properties"}, {{2, 0}}));
 
-        auto values_3 = SimpleDataArray::from_eqs_array(block.eqs_array("values"));
+        auto values_3 = SimpleDataArray::from_eqs_array(block.eqs_array());
         CHECK(values_3 == SimpleDataArray({4, 3, 1}, 4.0));
     }
 
@@ -226,7 +226,7 @@ TEST_CASE("TensorMap serialization") {
         CHECK(samples.names()[1] == std::string("structure"));
         CHECK(samples.names()[2] == std::string("atom"));
 
-        CHECK(gradient.data().shape() == std::vector<size_t>{59, 3, 5, 3});
+        CHECK(gradient.values().shape() == std::vector<size_t>{59, 3, 5, 3});
     }
 }
 
@@ -243,12 +243,13 @@ TensorMap test_tensor_map() {
         components,
         Labels({"properties"}, {{0}})
     );
-    block_1.add_gradient(
-        "parameter",
+    auto gradient_1 = TensorBlock(
         std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 1, 1}, 11.0)),
         Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}),
-        components
+        components,
+        Labels({"properties"}, {{0}})
     );
+    block_1.add_gradient("parameter", std::move(gradient_1));
 
     blocks.emplace_back(std::move(block_1));
 
@@ -258,12 +259,13 @@ TensorMap test_tensor_map() {
         components,
         Labels({"properties"}, {{3}, {4}, {5}})
     );
-    block_2.add_gradient(
-        "parameter",
+    auto gradient_2 = TensorBlock(
         std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 1, 3}, 12.0)),
         Labels({"sample", "parameter"}, {{0, -2}, {0, 3}, {2, -2}}),
-        components
+        components,
+        Labels({"properties"}, {{3}, {4}, {5}})
     );
+    block_2.add_gradient("parameter", std::move(gradient_2));
 
     blocks.emplace_back(std::move(block_2));
 
@@ -275,12 +277,13 @@ TensorMap test_tensor_map() {
         components,
         Labels({"properties"}, {{0}})
     );
-    block_3.add_gradient(
-        "parameter",
+    auto gradient_3 = TensorBlock(
         std::unique_ptr<SimpleDataArray>(new SimpleDataArray({1, 3, 1}, 13.0)),
         Labels({"sample", "parameter"}, {{1, -2}}),
-        components
+        components,
+        Labels({"properties"}, {{0}})
     );
+    block_3.add_gradient("parameter", std::move(gradient_3));
 
     blocks.emplace_back(std::move(block_3));
 
@@ -290,12 +293,13 @@ TensorMap test_tensor_map() {
         components,
         Labels({"properties"}, {{0}})
     );
-    block_4.add_gradient(
-        "parameter",
+    auto gradient_4 = TensorBlock(
         std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 3, 1}, 14.0)),
         Labels({"sample", "parameter"}, {{0, 1}, {3, 3}}),
-        components
+        components,
+        Labels({"properties"}, {{0}})
     );
+    block_4.add_gradient("parameter", std::move(gradient_4));
 
     blocks.emplace_back(std::move(block_4));
 

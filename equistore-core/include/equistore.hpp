@@ -510,7 +510,6 @@ private:
     friend Labels details::labels_from_cxx(const std::vector<std::string>&, NDArray<int32_t>);
     friend class TensorMap;
     friend class TensorBlock;
-    friend class GradientProxy;
 
     std::vector<const char*> names_;
     eqs_labels_t labels_;
@@ -1004,125 +1003,6 @@ inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 /******************************************************************************/
 
 
-/// This is a proxy class allowing to access the information associated with a
-/// gradient inside a `TensorBlock`.
-///
-/// Tha data accessible through this proxy is only alive for as long as the
-/// corresponding `TensorBlock` is.
-class GradientProxy {
-public:
-    ~GradientProxy() = default;
-
-    /// GradientProxy can be copy-constructed
-    GradientProxy(const GradientProxy&) = default;
-    /// GradientProxy can be copy-assigned
-    GradientProxy& operator=(const GradientProxy&) = default;
-    /// GradientProxy can be move-constructed
-    GradientProxy(GradientProxy&&) noexcept = default;
-    /// GradientProxy can be move-assigned
-    GradientProxy& operator=(GradientProxy&&) noexcept = default;
-
-    /// Get a view of the data for this gradient
-    NDArray<double> data() {
-        auto array = this->eqs_array();
-        double* data = nullptr;
-        details::check_status(array.data(array.ptr, &data));
-
-        return NDArray<double>(data, this->data_shape());
-    }
-
-    /// Get the `eqs_array_t` corresponding to the data of this gradient
-    eqs_array_t eqs_array() {
-        eqs_array_t array;
-        std::memset(&array, 0, sizeof(array));
-
-        details::check_status(
-            eqs_block_data(block_, parameter_.c_str(), &array)
-        );
-        return array;
-    }
-
-    /// Access the sample `Labels` for this gradient.
-    ///
-    /// The entries in these labels describe the first dimension of the `data()`
-    /// array.
-    Labels samples() const {
-        return this->labels(0);
-    }
-
-    /// Access the component `Labels` for this gradient.
-    ///
-    /// The entries in these labels describe intermediate dimensions of the
-    /// `data()` array.
-    std::vector<Labels> components() const {
-        auto shape = this->data_shape();
-
-        auto result = std::vector<Labels>();
-        for (size_t i=1; i<shape.size() - 1; i++) {
-            result.emplace_back(this->labels(i));
-        }
-
-        return result;
-    }
-
-    /// Access the property `Labels` for this gradient.
-    ///
-    /// The entries in these labels describe the last dimension of the `data()`
-    /// array. The properties are guaranteed to be the same for values and
-    /// gradients in the same block.
-    Labels properties() const {
-        auto shape = this->data_shape();
-        return this->labels(shape.size() - 1);
-    }
-
-
-private:
-    /// Get the labels for the given axis
-    Labels labels(uintptr_t axis) const {
-        eqs_labels_t labels;
-        std::memset(&labels, 0, sizeof(labels));
-        details::check_status(eqs_block_labels(
-            block_, parameter_.c_str(), axis, &labels
-        ));
-
-        return Labels(labels);
-    }
-
-    /// extract the shape of the data for these gradients
-    std::vector<uintptr_t> data_shape() const {
-        auto array = this->const_eqs_array();
-
-        const uintptr_t* shape = nullptr;
-        uintptr_t shape_count = 0;
-        details::check_status(array.shape(array.ptr, &shape, &shape_count));
-        assert(shape_count >= 2);
-
-        return {shape, shape + shape_count};
-    }
-
-    /// Get the `eqs_array_t` corresponding to the data of this gradient. The
-    /// returned `eqs_array_t` should only be used in a const context
-    eqs_array_t const_eqs_array() const {
-        eqs_array_t array;
-        std::memset(&array, 0, sizeof(array));
-
-        details::check_status(
-            eqs_block_data(block_, parameter_.c_str(), &array)
-        );
-        return array;
-    }
-
-    /// Create a gradient proxy for the given parameter and block
-    GradientProxy(eqs_block_t* block, std::string parameter):
-        block_(block), parameter_(std::move(parameter)) {}
-
-    friend class TensorBlock;
-
-    eqs_block_t* block_;
-    std::string parameter_;
-};
-
-
 /// Basic building block for a tensor map.
 ///
 /// A single block contains a n-dimensional `eqs_array_t` (or `DataArrayBase`),
@@ -1210,7 +1090,7 @@ public:
 
     /// Get a view in the values in this block
     NDArray<double> values() {
-        auto array = this->eqs_array("values");
+        auto array = this->eqs_array();
         double* data = nullptr;
         details::check_status(array.data(array.ptr, &data));
 
@@ -1222,7 +1102,7 @@ public:
     /// The entries in these labels describe the first dimension of the
     /// `values()` array.
     Labels samples() const {
-        return this->labels("values", 0);
+        return this->labels(0);
     }
 
     /// Access the component `Labels` for this block.
@@ -1234,7 +1114,7 @@ public:
 
         auto result = std::vector<Labels>();
         for (size_t i=1; i<shape.size() - 1; i++) {
-            result.emplace_back(this->labels("values", i));
+            result.emplace_back(this->labels(i));
         }
 
         return result;
@@ -1244,27 +1124,27 @@ public:
     ///
     /// The entries in these labels describe the last dimension of the
     /// `values()` array. The properties are guaranteed to be the same for
-    /// values and gradients in the same block.
+    /// a block and all of its gradients.
     Labels properties() const {
         auto shape = this->values_shape();
-        return this->labels("values", shape.size() - 1);
+        return this->labels(shape.size() - 1);
     }
 
     /// Add a set of gradients with respect to `parameters` in this block.
     ///
     /// @param parameter add gradients with respect to this `parameter` (e.g.
     ///                 `"positions"`, `"cell"`, ...)
-    /// @param data the gradient array, of shape `(gradient_samples, components,
-    ///             properties)`, where the properties labels are the same as
-    ///             the values' properties labels.
-    /// @param samples labels describing the gradient samples
-    /// @param components labels describing the gradient components
-    void add_gradient(
-        const std::string& parameter,
-        std::unique_ptr<DataArrayBase> data,
-        const Labels& samples,
-        const std::vector<Labels>& components
-    ) {
+    /// @param gradient a `TensorBlock` whose values contain the gradients with
+    ///                 respect to the `parameter`. The labels of the gradient
+    ///                 `TensorBlock` should be organized as follows: its
+    ///                 `samples` must contain `"sample"` as the first label,
+    ///                 which establishes a correspondence with the `samples` of
+    ///                 the original `TensorBlock`; its components must contain
+    ///                 at least the same components as the original
+    ///                 `TensorBlock`, with any additional component coming
+    ///                 before those; its properties must match those of the
+    ///                 original `TensorBlock`.
+    void add_gradient(const std::string& parameter, TensorBlock gradient) {
         if (is_view_) {
             throw Error(
                 "can not call TensorBlock::add_gradient on this block since "
@@ -1272,17 +1152,10 @@ public:
             );
         }
 
-        auto c_components = std::vector<eqs_labels_t>();
-        for (const auto& component: components) {
-            c_components.push_back(component.as_eqs_labels_t());
-        }
         details::check_status(eqs_block_add_gradient(
             block_,
             parameter.c_str(),
-            DataArrayBase::to_eqs_array_t(std::move(data)),
-            samples.as_eqs_labels_t(),
-            c_components.data(),
-            c_components.size()
+            gradient.release()
         ));
     }
 
@@ -1304,13 +1177,18 @@ public:
         return result;
     }
 
-    /// Get the gradient of the `values()` in this block with respect to
-    /// the given `parameter`.
+    /// Get the gradient in this block with respect to the given `parameter`.
+    /// The gradient is returned as a TensorBlock itself.
     ///
     /// @param parameter check for gradients with respect to this `parameter`
     ///                  (e.g. `"positions"`, `"cell"`, ...)
-    GradientProxy gradient(std::string parameter) const {
-        return GradientProxy(block_, std::move(parameter));
+    TensorBlock gradient(std::string parameter) const {
+        eqs_block_t* gradient_block = nullptr;
+        details::check_status(
+            eqs_block_gradient(block_, parameter.c_str(), &gradient_block)
+        );
+        details::check_pointer(gradient_block);
+        return TensorBlock::unsafe_view_from_ptr(gradient_block);
     }
 
     /// Get the `eqs_block_t` pointer corresponding to this block.
@@ -1356,7 +1234,7 @@ public:
         return block;
     }
 
-     /// Create a new TensorBlock which is a view corresponding to a raw
+    /// Create a new TensorBlock which is a view corresponding to a raw
     /// `eqs_block_t` pointer.
     static TensorBlock unsafe_view_from_ptr(eqs_block_t* ptr) {
         auto block = TensorBlock();
@@ -1365,29 +1243,23 @@ public:
         return block;
     }
 
-    /// Get a raw `eqs_array_t` corresponding to either the values or one of the
-    /// gradients in this block.
-    ///
-    /// `values_gradients` should be `"values"` to get the values, or the
-    /// gradient parameter to get a gradient.
-    eqs_array_t eqs_array(const char* values_gradients) {
+    /// Get a raw `eqs_array_t` corresponding to the values in this block.
+    eqs_array_t eqs_array() {
         eqs_array_t array;
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
-            eqs_block_data(block_, values_gradients, &array)
+            eqs_block_data(block_, &array)
         );
         return array;
     }
 
-    /// Get the labels in this block associated with either `"values"` or one
-    /// gradient (by setting `values_gradients` to the gradient parameter); in
-    /// the given `axis`.
-    Labels labels(const char* values_gradients, uintptr_t axis) const {
+    /// Get the labels in this block associated with the given `axis`.
+    Labels labels(uintptr_t axis) const {
         eqs_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));
         details::check_status(eqs_block_labels(
-            block_, values_gradients, axis, &labels
+            block_, axis, &labels
         ));
 
         return Labels(labels);
@@ -1399,7 +1271,7 @@ private:
 
     /// Get the shape of the value array for this block
     std::vector<uintptr_t> values_shape() const {
-        auto array = this->const_eqs_array("values");
+        auto array = this->const_eqs_array();
 
         const uintptr_t* shape = nullptr;
         uintptr_t shape_count = 0;
@@ -1409,16 +1281,15 @@ private:
         return {shape, shape + shape_count};
     }
 
-    /// Get one of the `eqs_array_t` for this block, either the `"values"` or
-    /// one of the gradients
+    /// Get the `eqs_array_t` for this block.
     ///
     /// The returned `eqs_array_t` should only be used in a const context
-    eqs_array_t const_eqs_array(const char* values_gradients) const {
+    eqs_array_t const_eqs_array() const {
         eqs_array_t array;
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
-            eqs_block_data(block_, values_gradients, &array)
+            eqs_block_data(block_, &array)
         );
         return array;
     }

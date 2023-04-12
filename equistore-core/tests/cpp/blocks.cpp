@@ -12,7 +12,7 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        auto values_eqs_array = block.eqs_array("values");
+        auto values_eqs_array = block.eqs_array();
         CHECK(SimpleDataArray::from_eqs_array(values_eqs_array).shape() == std::vector<size_t>{3, 2});
 
         auto values = block.values();
@@ -34,7 +34,7 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        auto values_eqs_array = block.eqs_array("values");
+        auto values_eqs_array = block.eqs_array();
         CHECK(SimpleDataArray::from_eqs_array(values_eqs_array).shape() == std::vector<size_t>{3, 3, 2, 2});
 
         auto values = block.values();
@@ -53,33 +53,35 @@ TEST_CASE("Blocks") {
     SECTION("gradients") {
         auto components = std::vector<Labels>();
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
+        auto properties = Labels({"properties"}, {{5}, {3}});
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
-            Labels({"properties"}, {{5}, {3}})
+            properties
         );
 
         components = std::vector<Labels>();
         components.emplace_back(Labels({"gradient_component"}, {{42}}));
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
-        block.add_gradient(
-            "parameter",
+
+        auto gradient = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 1, 3, 2})),
             Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}),
-            components
+            components,
+            properties
         );
+        block.add_gradient("parameter", std::move(gradient));
 
         CHECK(block.gradients_list() == std::vector<std::string>{"parameter"});
 
-        auto gradient_eqs_array = block.eqs_array("parameter");
+        auto gradient_eqs_array = block.gradient("parameter").eqs_array();
         CHECK(SimpleDataArray::from_eqs_array(gradient_eqs_array).shape() == std::vector<size_t>{2, 1, 3, 2});
 
-        auto gradient = block.gradient("parameter");
-
+        gradient = block.gradient("parameter");
         gradient_eqs_array = gradient.eqs_array();
         CHECK(SimpleDataArray::from_eqs_array(gradient_eqs_array).shape() == std::vector<size_t>{2, 1, 3, 2});
-        auto data = gradient.data();
+        auto data = gradient.values();
         CHECK(data.shape() == std::vector<size_t>{2, 1, 3, 2});
 
         CHECK(gradient.samples() == Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}));
@@ -92,7 +94,7 @@ TEST_CASE("Blocks") {
         CHECK(gradient.properties() == Labels({"properties"}, {{5}, {3}}));
 
         CHECK_THROWS_WITH(
-            block.gradient("not there").data(),
+            block.gradient("not there").values(),
             "invalid parameter: can not find gradients with respect to 'not there' in this block"
         );
     }
