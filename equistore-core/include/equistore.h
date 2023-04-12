@@ -408,37 +408,49 @@ eqs_status_t eqs_block_free(struct eqs_block_t *block);
 struct eqs_block_t *eqs_block_copy(const struct eqs_block_t *block);
 
 /**
- * Get the set of labels of the requested `kind` from this `block`.
- *
- * The `values_gradients` parameter controls whether this function looks up
- * labels for `"values"` or one of the gradients in this block.
+ * Get the set of labels from this `block`.
  *
  * This function allocates memory for `labels` which must be released
  * `eqs_labels_free` when you don't need it anymore.
  *
  * @param block pointer to an existing block
- * @param values_gradients either `"values"` or the name of gradients to lookup
  * @param axis axis/dimension of the data array for which you need the labels
  * @param labels pointer to an empty `eqs_labels_t` that will be set to the
- *               requested labels
+ *        `block`'s labels
  *
  * @returns The status code of this operation. If the status is not
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
 eqs_status_t eqs_block_labels(const struct eqs_block_t *block,
-                              const char *values_gradients,
                               uintptr_t axis,
                               struct eqs_labels_t *labels);
 
 /**
- * Get the array handle for either values or one of the gradient in this `block`.
+ * Get one of the gradients in this `block`.
  *
- * The `values_gradients` parameter controls whether this function looks up
- * labels for `"values"` or one of the gradients in this block.
+ * The gradient memory is still managed by the block, the returned
+ * `eqs_block_t*` should not be freed. The gradient pointer is invalidated if
+ * more gradients are added to the parent block, or if the parent block is
+ * freed with `eqs_block_free`.
  *
  * @param block pointer to an existing block
- * @param values_gradients either `"values"` or the name of gradients to lookup
+ * @param parameter the name of the gradient to be extracted
+ * @param gradient pointer to an empty `eqs_block_t` pointer that will be
+ *        overwritten to the requested gradient
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full error
+ *          message.
+ */
+eqs_status_t eqs_block_gradient(struct eqs_block_t *block,
+                                const char *parameter,
+                                struct eqs_block_t **gradient);
+
+/**
+ * Get the array handle for the values in this `block`.
+ *
+ * @param block pointer to an existing block
  * @param data pointer to an empty `eqs_array_t` that will be set to the
  *             requested array
  *
@@ -446,25 +458,27 @@ eqs_status_t eqs_block_labels(const struct eqs_block_t *block,
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
  *          error message.
  */
-eqs_status_t eqs_block_data(struct eqs_block_t *block,
-                            const char *values_gradients,
-                            struct eqs_array_t *data);
+eqs_status_t eqs_block_data(struct eqs_block_t *block, struct eqs_array_t *data);
 
 /**
  * Add a new gradient to this `block` with the given `name`.
  *
+ * The block takes ownership of the gradient, which should not be released
+ * separately.
+ *
  * @param block pointer to an existing block
- * @param data array containing the gradient data. The block takes
- *                 ownership of the array, and will release it with
- *                 `array.destroy(array.ptr)` when it no longer needs it.
  * @param parameter name of the gradient as a NULL-terminated UTF-8 string.
  *                  This is usually the parameter used when taking derivatives
  *                  (e.g. `"positions"`, `"cell"`, etc.)
- * @param samples sample labels for the gradient array. The components and
- *                property labels are supposed to match the values in this block
- * @param components array of component labels corresponding to intermediary
- *                   dimensions of the data
- * @param components_count number of entries in the `components` array
+ * @param gradient a block whose values contain the gradients with respect to
+ *                 the `parameter`. The labels of the `gradient` should be
+ *                 organized as follows: its `samples` must contain `"sample"`
+ *                 as the first label, which establishes a correspondence with
+ *                 the `samples` of the original `block`; its components must
+ *                 contain at least the same components as the original
+ *                 `TensorBlock`, with any additional component coming before
+ *                 those; its properties must match those of the original
+ *                 `block`.
  *
  * @returns The status code of this operation. If the status is not
  *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -472,10 +486,7 @@ eqs_status_t eqs_block_data(struct eqs_block_t *block,
  */
 eqs_status_t eqs_block_add_gradient(struct eqs_block_t *block,
                                     const char *parameter,
-                                    struct eqs_array_t data,
-                                    struct eqs_labels_t samples,
-                                    const struct eqs_labels_t *components,
-                                    uintptr_t components_count);
+                                    struct eqs_block_t *gradient);
 
 /**
  * Get a list of all gradients defined in this `block` in the `parameters` array.

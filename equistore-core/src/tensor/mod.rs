@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::{TensorBlock, BasicBlock};
+use crate::TensorBlock;
 use crate::{Labels, Error};
 use crate::get_data_origin;
 
@@ -28,7 +28,7 @@ pub struct TensorMap {
 }
 
 fn check_labels_names(
-    block: &BasicBlock,
+    block: &TensorBlock,
     sample_names: &[&str],
     components_names: &[Vec<&str>],
     context: &str,
@@ -67,13 +67,13 @@ fn check_labels_names(
 }
 
 fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
-
     if blocks.is_empty() {
         return Ok(());
     }
-    let first_origin = blocks[0].values().data.origin()?;
+
+    let first_origin = blocks[0].values.origin()?;
     for block in blocks.iter().skip(1) {
-        let block_origin = block.values().data.origin()?;
+        let block_origin = block.values.origin()?;
         if first_origin != block_origin {
             return Err(Error::InvalidParameter(format!(
                 "tried to build a TensorMap from blocks with different origins: at least ('{}') and ('{}') were detected",
@@ -84,6 +84,36 @@ fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct GradientMetadata<'a> {
+    sample_names: Vec<&'a str>,
+    components_names: Vec<Vec<&'a str>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct GradientMap<'a> {
+    // a struct that contains all the gradient information for a single
+    // TensorBlock. The GradientMap is recursive for gradients of gradients
+    gradients: HashMap<String, (GradientMetadata<'a>, GradientMap<'a>)>
+}
+
+impl GradientMap<'_> {
+    fn new(block: &TensorBlock) -> GradientMap {
+        // generate gradient information for a block
+        let mut gradients = HashMap::new();
+        for (gradient_name, sub_gradient) in block.gradients().iter() {
+            let metadata = GradientMetadata {
+                sample_names: sub_gradient.samples.names(),
+                components_names: sub_gradient.components.iter()
+                    .map(|c| c.names())
+                    .collect::<Vec<_>>(),
+            };
+            gradients.insert(gradient_name.clone(), (metadata, GradientMap::new(sub_gradient)));
+        }
+        GradientMap { gradients }
+    }
 }
 
 impl TensorMap {
@@ -101,63 +131,40 @@ impl TensorMap {
                 keys.count(), blocks.len()
             )))
         }
-        
+
         check_origin(&blocks)?;
 
         if !blocks.is_empty() {
-            // make sure all blocks have the same kind of samples, components &
-            // properties labels
-            let sample_names = blocks[0].values().samples.names();
-            let components_names = blocks[0].values().components.iter()
+            // extract metadata from the first block
+            let sample_names = blocks[0].samples.names();
+            let components_names = blocks[0].components.iter()
                 .map(|c| c.names())
                 .collect::<Vec<_>>();
-            let properties_names = blocks[0].values().properties.names();
-
-            let gradients_data = blocks[0].gradients().iter()
-                .map(|(name, gradient)| {
-                    let components_names = gradient.components.iter()
-                        .map(|c| c.names())
-                        .collect::<Vec<_>>();
-                    (&**name, (gradient.samples.names(), components_names))
-                })
-                .collect::<HashMap<_, _>>();
-
+            let properties_names = blocks[0].properties.names();
+            let gradient_map = GradientMap::new(&blocks[0]);
 
             for block in &blocks {
-                check_labels_names(block.values(), &sample_names, &components_names, "")?;
+                // check samples and components are the same as those of the first block
+                check_labels_names(block, &sample_names, &components_names, "")?;
 
-                if block.values().properties.names() != properties_names {
+                // check properties are the same as those of the first block
+                if block.properties.names() != properties_names {
                     return Err(Error::InvalidParameter(format!(
                         "all blocks must have the same property label names, got [{}] and [{}]",
-                        block.values().properties.names().join(", "),
+                        block.properties.names().join(", "),
                         properties_names.join(", "),
                     )));
                 }
 
-                if block.gradients().len() != gradients_data.len() {
+                // check gradients are the same as those of the first block
+                if GradientMap::new(block) != gradient_map {
                     return Err(Error::InvalidParameter(
-                        "all blocks must contains the same set of gradients".into(),
+                        "all blocks must have the same set of gradients, with \
+                        the same samples, properties and components names, \
+                        and the same must be true for gradients of gradients".into(),
                     ));
                 }
 
-                for (parameter, gradient) in block.gradients() {
-                    match gradients_data.get(&**parameter) {
-                        None => {
-                            return Err(Error::InvalidParameter(format!(
-                                "missing gradient with respect to {} in one of the blocks",
-                                parameter
-                            )));
-                        },
-                        Some((sample_names, components_names)) => {
-                            check_labels_names(
-                                gradient,
-                                sample_names,
-                                components_names,
-                                &format!(" for gradients with respect to {}", parameter),
-                            )?;
-                        }
-                    }
-                }
             }
         }
 

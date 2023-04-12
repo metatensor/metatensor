@@ -152,19 +152,15 @@ pub unsafe extern fn eqs_block_copy(
 }
 
 
-/// Get the set of labels of the requested `kind` from this `block`.
-///
-/// The `values_gradients` parameter controls whether this function looks up
-/// labels for `"values"` or one of the gradients in this block.
+/// Get the set of labels from this `block`.
 ///
 /// This function allocates memory for `labels` which must be released
 /// `eqs_labels_free` when you don't need it anymore.
 ///
 /// @param block pointer to an existing block
-/// @param values_gradients either `"values"` or the name of gradients to lookup
 /// @param axis axis/dimension of the data array for which you need the labels
 /// @param labels pointer to an empty `eqs_labels_t` that will be set to the
-///               requested labels
+///        `block`'s labels
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -172,12 +168,11 @@ pub unsafe extern fn eqs_block_copy(
 #[no_mangle]
 pub unsafe extern fn eqs_block_labels(
     block: *const eqs_block_t,
-    values_gradients: *const c_char,
     axis: usize,
     labels: *mut eqs_labels_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(block, values_gradients, labels);
+        check_pointers!(block, labels);
 
         if (*labels).is_rust() {
             return Err(Error::InvalidParameter(
@@ -185,26 +180,17 @@ pub unsafe extern fn eqs_block_labels(
             ));
         }
 
-        let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
-        let basic_block = match values_gradients {
-            "values" => (*block).values(),
-            parameter => {
-                (*block).gradient(parameter).ok_or_else(|| Error::InvalidParameter(format!(
-                    "can not find gradients with respect to '{}' in this block", parameter
-                )))?
-            }
-        };
-
-        let n_components = basic_block.components.len();
+        let block = &(*block);
+        let n_components = block.components.len();
 
         let rust_labels = if axis == 0 {
-            &basic_block.samples
+            &block.samples
         } else if axis - 1 < n_components {
             // component labels
-            &basic_block.components[axis - 1]
+            &block.components[axis - 1]
         } else if axis == n_components + 1 {
             // property labels
-            &basic_block.properties
+            &block.properties
         } else {
             return Err(Error::InvalidParameter(format!(
                 "tried to get the labels for axis {}, but we only have {} axes for this block",
@@ -218,14 +204,68 @@ pub unsafe extern fn eqs_block_labels(
     })
 }
 
+fn _get_gradient<'a>(
+    block: &'a mut TensorBlock,
+    parameter: &str
+) -> Result<&'a mut TensorBlock, Error> {
+    let gradient_block =
+        if let Some((first, rest)) = parameter.split_once('/') {
+            _get_gradient(
+                block.gradient_mut(first).ok_or_else(|| Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", first
+                )))?,
+                rest
+            )?
+        } else {
+            block.gradient_mut(parameter).ok_or_else(|| Error::InvalidParameter(format!(
+                "can not find gradients with respect to '{}' in this block", parameter
+            )))?
+        };
 
-/// Get the array handle for either values or one of the gradient in this `block`.
+    Ok(gradient_block)
+}
+
+
+/// Get one of the gradients in this `block`.
 ///
-/// The `values_gradients` parameter controls whether this function looks up
-/// labels for `"values"` or one of the gradients in this block.
+/// The gradient memory is still managed by the block, the returned
+/// `eqs_block_t*` should not be freed. The gradient pointer is invalidated if
+/// more gradients are added to the parent block, or if the parent block is
+/// freed with `eqs_block_free`.
 ///
 /// @param block pointer to an existing block
-/// @param values_gradients either `"values"` or the name of gradients to lookup
+/// @param parameter the name of the gradient to be extracted
+/// @param gradient pointer to an empty `eqs_block_t` pointer that will be
+///        overwritten to the requested gradient
+///
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full error
+///          message.
+#[no_mangle]
+pub unsafe extern fn eqs_block_gradient(
+    block: *mut eqs_block_t,
+    parameter: *const c_char,
+    gradient: *mut *mut eqs_block_t
+) -> eqs_status_t {
+    catch_unwind(|| {
+        check_pointers!(block, parameter);
+        let parameter = CStr::from_ptr(parameter).to_str().unwrap();
+
+        let gradient_rust = (*block).gradient_mut(parameter).ok_or_else(|| {
+            Error::InvalidParameter(format!(
+                "can not find gradients with respect to '{}' in this block", parameter
+            ))
+        })?;
+        (*gradient) = (gradient_rust as *mut TensorBlock).cast();
+
+        Ok(())
+    })
+}
+
+
+/// Get the array handle for the values in this `block`.
+///
+/// @param block pointer to an existing block
 /// @param data pointer to an empty `eqs_array_t` that will be set to the
 ///             requested array
 ///
@@ -235,24 +275,11 @@ pub unsafe extern fn eqs_block_labels(
 #[no_mangle]
 pub unsafe extern fn eqs_block_data(
     block: *mut eqs_block_t,
-    values_gradients: *const c_char,
     data: *mut eqs_array_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(block, values_gradients, data);
-
-        let values_gradients = CStr::from_ptr(values_gradients).to_str().unwrap();
-        let basic_block = match values_gradients {
-            "values" => (*block).values_mut(),
-            parameter => {
-                (*block).gradient_mut(parameter).ok_or_else(|| Error::InvalidParameter(format!(
-                    "can not find gradients with respect to '{}' in this block", parameter
-                )))?
-            }
-        };
-
-        *data = basic_block.data.raw_copy();
-
+        check_pointers!(block, data);
+        *data = (*block).values.raw_copy();
         Ok(())
     })
 }
@@ -260,18 +287,22 @@ pub unsafe extern fn eqs_block_data(
 
 /// Add a new gradient to this `block` with the given `name`.
 ///
+/// The block takes ownership of the gradient, which should not be released
+/// separately.
+///
 /// @param block pointer to an existing block
-/// @param data array containing the gradient data. The block takes
-///                 ownership of the array, and will release it with
-///                 `array.destroy(array.ptr)` when it no longer needs it.
 /// @param parameter name of the gradient as a NULL-terminated UTF-8 string.
 ///                  This is usually the parameter used when taking derivatives
 ///                  (e.g. `"positions"`, `"cell"`, etc.)
-/// @param samples sample labels for the gradient array. The components and
-///                property labels are supposed to match the values in this block
-/// @param components array of component labels corresponding to intermediary
-///                   dimensions of the data
-/// @param components_count number of entries in the `components` array
+/// @param gradient a block whose values contain the gradients with respect to
+///                 the `parameter`. The labels of the `gradient` should be
+///                 organized as follows: its `samples` must contain `"sample"`
+///                 as the first label, which establishes a correspondence with
+///                 the `samples` of the original `block`; its components must
+///                 contain at least the same components as the original
+///                 `TensorBlock`, with any additional component coming before
+///                 those; its properties must match those of the original
+///                 `block`.
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
@@ -280,24 +311,17 @@ pub unsafe extern fn eqs_block_data(
 pub unsafe extern fn eqs_block_add_gradient(
     block: *mut eqs_block_t,
     parameter: *const c_char,
-    data: eqs_array_t,
-    samples: eqs_labels_t,
-    components: *const eqs_labels_t,
-    components_count: usize,
+    gradient: *mut eqs_block_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
         check_pointers!(block, parameter);
         // TODO: add a check that the block is not already part of a tensor map?
-
         let parameter = CStr::from_ptr(parameter).to_str().unwrap();
-        let samples = eqs_labels_to_rust(&samples)?;
 
-        let mut rust_components = Vec::new();
-        for component in std::slice::from_raw_parts(components, components_count) {
-            rust_components.push(eqs_labels_to_rust(component)?);
-        }
+        // move the gradient out of the pointer
+        let gradient = Box::from_raw(gradient).into_block();
 
-        (*block).add_gradient(parameter, data, samples, rust_components)?;
+        (*block).add_gradient(parameter, gradient)?;
         Ok(())
     })
 }

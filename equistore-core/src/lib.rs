@@ -18,7 +18,7 @@ use self::data::{eqs_array_t, eqs_sample_mapping_t, eqs_data_origin_t};
 use self::data::{register_data_origin, get_data_origin};
 
 mod blocks;
-use self::blocks::{BasicBlock, TensorBlock};
+use self::blocks::TensorBlock;
 
 mod tensor;
 use self::tensor::TensorMap;
@@ -85,7 +85,7 @@ impl From<(String, zip::result::ZipError)> for Error {
     fn from((path, error): (String, zip::result::ZipError)) -> Self {
         match error {
             zip::result::ZipError::Io(e) => Error::Io(e),
-            error => Error::Serialization(format!("{}: {}", error, path)),
+            error => Error::Serialization(format!("{}: at '{}'", error, path)),
         }
     }
 }

@@ -1,6 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 
-use super::{Header, DataType, check_for_extra_bytes};
+use super::npy_header::{Header, DataType};
+use super::check_for_extra_bytes;
 use crate::{Error, Labels, LabelsBuilder, LabelValue};
 
 /// Read `Labels` stored using numpy's NPY format.
