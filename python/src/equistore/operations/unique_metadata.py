@@ -91,7 +91,7 @@ def unique_metadata(
         corresponding to the name(s) of the indices along the specified ``axis``
         for which the unique values should be found.
     :param gradient: a ``str`` corresponding to the gradient parameter name for
-        the gradient blocks to find the unique indices for. If ``None``
+        the gradient blocks to find the unique indices for. If :py:obj:`None`
         (default), the unique indices of the regular :py:class:`TensorBlock`
         objects will be calculated.
 
@@ -172,7 +172,7 @@ def unique_metadata_block(
         corresponding to the name(s) of the metadata along the specified
         ``axis`` for which the unique indices should be found.
     :param gradient: a ``str`` corresponding to the gradient parameter name for
-        the gradient blocks to find the unique metadata for. If ``None``
+        the gradient blocks to find the unique metadata for. If :py:obj:`None`
         (default), the unique metadata of the regular :py:class:`TensorBlock`
         objects will be calculated.
 

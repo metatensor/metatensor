@@ -18,9 +18,9 @@ def zeros_like(
         Input tensor from which the metadata is taken.
 
     :param gradients:
-        Which gradients should be present in the output. If this is ``None``
-        (default) all gradient of ``tensor`` are present in the new
-        :py:class:`TensorMap`. If this is an empty list ``[]``, no gradients
+        Which gradients should be present in the output. If this is
+        :py:obj:`None` (default) all gradient of ``tensor`` are present in the
+        new :py:class:`TensorMap`. If this is an empty list ``[]``, no gradients
         information is copied.
 
     :param requires_grad:
@@ -116,10 +116,10 @@ def zeros_like_block(
         Input block from which the metadata is taken.
 
     :param gradients:
-        Which gradients should be present in the output. If this is ``None``
-        (default) all gradient of ``block`` are present in the new
-        :py:class:`TensorBlock`. If this is an empty list ``[]``, no gradients
-        information is copied.
+        Which gradients should be present in the output. If this is
+        :py:obj:`None` (default) all gradient of ``block`` are present in the
+        new :py:class:`TensorBlock`. If this is an empty list ``[]``, no
+        gradients information is copied.
 
     :param requires_grad:
         If autograd should record operations for the returned tensor. This
