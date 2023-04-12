@@ -31,8 +31,10 @@ def empty_like(
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
-    >>> # First we create a TensorMap with just one block with two gradients,
-    >>> # named 'alpha' and 'beta', containing random data
+
+    First we create a :py:class:`TensorMap` with just one block with two
+    gradients, named ``alpha`` and ``beta``, containing random data:
+
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
     ...     samples=Labels.arange("sample", 4),
@@ -59,8 +61,10 @@ def empty_like(
         components (): []
         properties (3): ['property']
         gradients: ['alpha', 'beta']
-    >>> # Then we use `empty_like` to create a TensorMap with the same metadata
-    >>> # as `tensor`, but with all values uninitialized.
+
+    Then we use ``empty_like`` to create a :py:class:`TensorMap` with the same
+    metadata as ``tensor``, but with all values uninitialized.
+
     >>> tensor_empty = equistore.empty_like(tensor)
     >>> print(tensor_empty.block(0))
     TensorBlock
@@ -68,8 +72,10 @@ def empty_like(
         components (): []
         properties (3): ['property']
         gradients: ['alpha', 'beta']
-    >>> # Note that if we copy just the gradient 'alpha', 'beta' is no longer
-    >>> # available.
+
+    Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
+    available.
+
     >>> tensor_empty = equistore.empty_like(tensor, gradients="alpha")
     >>> print(tensor_empty.block(0).gradients_list())
     ['alpha']

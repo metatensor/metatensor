@@ -32,8 +32,10 @@ def random_uniform_like(
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
-    >>> # First we create a TensorMap with just one block with two gradients,
-    >>> # named 'alpha' and 'beta', containing random data
+
+    First we create a :py:class:`TensorMap` with just one block with two
+    gradients, named ``alpha`` and ``beta``, containing random data:
+
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
     ...     samples=Labels.arange("sample", 4),
@@ -60,9 +62,11 @@ def random_uniform_like(
         components (): []
         properties (3): ['property']
         gradients: ['alpha', 'beta']
-    >>> # Then we use `random_uniform_like` to create a TensorMap with the same
-    >>> # metadata as `tensor`, but with all values randomly sampled from a
-    >>> # uniform distribution
+
+    Then we use ``random_uniform_like`` to create a :py:class:`TensorMap` with
+    the same metadata as ``tensor``, but with all values randomly sampled from a
+    uniform distribution.
+
     >>> tensor_random = equistore.random_uniform_like(tensor)
     >>> print(tensor_random.block(0))
     TensorBlock
@@ -83,8 +87,10 @@ def random_uniform_like(
      [[0.49157316 0.05336255 0.57411761]
       [0.14672857 0.58930554 0.69975836]
       [0.10233443 0.41405599 0.69440016]]]
-    >>> # Note that if we copy just the gradient 'alpha', 'beta' is no longer
-    >>> # available.
+
+    Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
+    available.
+
     >>> tensor_random = equistore.random_uniform_like(tensor, gradients="alpha")
     >>> print(tensor_random.block(0).gradients_list())
     ['alpha']

@@ -31,8 +31,10 @@ def zeros_like(
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
-    >>> # First we create a TensorMap with just one block with two gradients,
-    >>> # named 'alpha' and 'beta', containing random data
+
+    First we create a :py:class:`TensorMap` with just one block with two
+    gradients, named ``alpha`` and ``beta``, containing random data:
+
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
     ...     samples=Labels.arange("sample", 4),
@@ -59,8 +61,10 @@ def zeros_like(
         components (): []
         properties (3): ['property']
         gradients: ['alpha', 'beta']
-    >>> # Then we use `zeros_like` to create a TensorMap with the same metadata
-    >>> # as `tensor`, but with all values set to 0.
+
+    Then we use ``zeros_like`` to create a :py:class:`TensorMap` with
+    the same metadata as ``tensor``, but with all values set to 0.
+
     >>> tensor_zeros = equistore.zeros_like(tensor)
     >>> print(tensor_zeros.block(0))
     TensorBlock
@@ -81,8 +85,10 @@ def zeros_like(
      [[0. 0. 0.]
       [0. 0. 0.]
       [0. 0. 0.]]]
-    >>> # Note that if we copy just the gradient 'alpha', 'beta' is no longer
-    >>> # available.
+
+    Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
+    available.
+
     >>> tensor_zeros = equistore.zeros_like(tensor, gradients="alpha")
     >>> print(tensor_zeros.block(0).gradients_list())
     ['alpha']
