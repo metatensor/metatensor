@@ -28,20 +28,21 @@ pub fn example_block(
     let shape = vec![samples.count(), components[0].count(), properties.count()];
     let mut block = TensorBlock::new(
         ArrayD::from_elem(shape, values),
-        samples,
+        &samples,
         &components,
-        properties.clone(),
+        &properties,
     ).unwrap();
 
     let gradient_samples = example_labels(vec!["sample", "parameter"], gradient_samples);
 
     let shape = vec![gradient_samples.count(), components[0].count(), properties.count()];
-    block.add_gradient(
-        "parameter",
+    let gradient = TensorBlock::new(
         ArrayD::from_elem(shape, gradient_values),
-        gradient_samples,
+        &gradient_samples,
         &components,
+        &properties,
     ).unwrap();
+    block.add_gradient("parameter", gradient).unwrap();
 
     return block;
 }
