@@ -25,9 +25,7 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
         encoding along the selected dimension: its first dimension
         matches the one in ``labels``, while the second contains 1
         at the position corresponding to the original label and 0
-        everywhere else.
-
-    Here is an example using this function:
+        everywhere else
 
     >>> import numpy as np
     >>> import equistore

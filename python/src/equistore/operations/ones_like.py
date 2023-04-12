@@ -21,14 +21,12 @@ def ones_like(
     :param requires_grad: If autograd should record operations for the returned
                           tensor. This option is only relevant for torch.
 
-    Here is an example using this function. First we create a ``TensorMap`` with
-    just one block with two gradients, named ``alpha`` and ``beta``, containing
-    random data for values and gradients.
-
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
+    >>> # First we create a TensorMap with just one block with two gradients,
+    >>> # named 'alpha' and 'beta', containing random data
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
     ...     samples=Labels.arange("sample", 4),
@@ -55,10 +53,8 @@ def ones_like(
         components (): []
         properties (3): ['property']
         gradients: ['alpha', 'beta']
-
-    Then we use the function ``ones_like`` to create a :py:class:`TensorMap`
-    with the same metadata as ``tensor``, but with all values set equal to 1.
-
+    >>> # Then we use `ones_like` to create a TensorMap with the same metadata
+    >>> # as `tensor`, but with all values set to 1.
     >>> tensor_ones = equistore.ones_like(tensor)
     >>> print(tensor_ones.block(0))
     TensorBlock
@@ -79,10 +75,8 @@ def ones_like(
      [[1. 1. 1.]
       [1. 1. 1.]
       [1. 1. 1.]]]
-
-    Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
-    available.
-
+    >>> # Note that if we copy just the gradient 'alpha', 'beta' is no longer
+    >>> # available.
     >>> tensor_ones = equistore.ones_like(tensor, parameters="alpha")
     >>> print(tensor_ones.block(0).gradients_list())
     ['alpha']

@@ -23,7 +23,6 @@ def block_from_array(array: equistore.data.Array) -> TensorBlock:
         size of the corresponding axis. The returned :py:class:`TensorBlock` has
         no gradients.
 
-    Here is an example using this function:
 
     >>> import numpy as np
     >>> import equistore

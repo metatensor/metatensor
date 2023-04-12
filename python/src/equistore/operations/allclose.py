@@ -31,7 +31,12 @@ def allclose(
     In practice this function calls :py:func:`allclose_raise`, returning
     ``True`` if no exception is raised, ``False`` otherwise.
 
-    Here are examples using this function:
+    :param tensor_1: first :py:class:`TensorMap`
+    :param tensor_2: second :py:class:`TensorMap`
+    :param rtol: relative tolerance for ``allclose``
+    :param atol: absolute tolerance for ``allclose``
+    :param equal_nan: should two ``NaN`` be considered equal?
+
 
     >>> from equistore import Labels
     >>> # Create simple block
@@ -117,12 +122,6 @@ def allclose(
     >>> # of the two tensors is within the tolerance limit
     >>> allclose(tensor_1, tensor3, rtol=1e-5)
     True
-
-    :param tensor_1: first :py:class:`TensorMap`.
-    :param tensor_2: second :py:class:`TensorMap`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     try:
         allclose_raise(
@@ -152,7 +151,13 @@ def allclose_raise(
     where the two :py:class:`TensorMap` differ. See :py:func:`allclose` for more
     information on which :py:class:`TensorMap` are considered equal.
 
-    Here are examples using this function:
+    :raises: :py:class:`NotEqualError` if the blocks are different
+
+    :param tensor_1: first :py:class:`TensorMap`
+    :param tensor_2: second :py:class:`TensorMap`
+    :param rtol: relative tolerance for ``allclose``
+    :param atol: absolute tolerance for ``allclose``
+    :param equal_nan: should two ``NaN`` be considered equal?
 
     >>> import equistore
     >>> from equistore import Labels
@@ -218,14 +223,6 @@ def allclose_raise(
     >>> # difference between the first values of the blocks of the two tensors
     >>> # is within the rtol limit of 1e-5
     >>> allclose_raise(tensor_1, tensor_2, equal_nan=True, rtol=1e-5)
-
-    :raises: :py:class:`NotEqualError` if the blocks are different
-
-    :param tensor_1: first :py:class:`TensorMap`.
-    :param tensor_2: second :py:class:`TensorMap`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     try:
         _check_same_keys(tensor_1, tensor_2, "allclose")
@@ -267,7 +264,12 @@ def allclose_block(
     In practice this function calls :py:func:`allclose_block_raise`, returning
     ``True`` if no exception is raised, ``False`` otherwise.
 
-    Here are some examples using this function:
+    :param block_1: first :py:class:`TensorBlock`
+    :param block_2: second :py:class:`TensorBlock`
+    :param rtol: relative tolerance for ``allclose``
+    :param atol: absolute tolerance for ``allclose``
+    :param equal_nan: should two ``NaN`` be considered equal?
+
 
     >>> from equistore import Labels
     >>> # Create simple block
@@ -320,12 +322,6 @@ def allclose_block(
     >>> # blocks is within the tolerance limit
     >>> allclose_block(block_1, block_2, rtol=1e-5)
     True
-
-    :param block_1: first :py:class:`TensorBlock`.
-    :param block_2: second :py:class:`TensorBlock`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
     try:
         allclose_block_raise(
@@ -355,7 +351,13 @@ def allclose_block_raise(
     where the two :py:class:`TensorBlock` differ. See :py:func:`allclose_block`
     for more information on which :py:class:`TensorBlock` are considered equal.
 
-    Here is an example using this function:
+    :raises: :py:class:`NotEqualError` if the blocks are different
+
+    :param block_1: first :py:class:`TensorBlock`
+    :param block_2: second :py:class:`TensorBlock`
+    :param rtol: relative tolerance for ``allclose``
+    :param atol: absolute tolerance for ``allclose``
+    :param equal_nan: should two ``NaN`` be considered equal?
 
     >>> import equistore
     >>> from equistore import Labels
@@ -408,14 +410,6 @@ def allclose_block_raise(
     ...
     got an exception: inputs to 'allclose' should have the same properties:
     properties names are not the same or not in the same order
-
-    :raises: :py:class:`NotEqualError` if the blocks are different
-
-    :param block_1: first :py:class:`TensorBlock`.
-    :param block_2: second :py:class:`TensorBlock`.
-    :param rtol: relative tolerance for ``allclose``. Default: 1e-13.
-    :param atol: absolute tolerance for ``allclose``. Defaults: 1e-12.
-    :param equal_nan: should two ``NaN`` be considered equal? Defaults: False.
     """
 
     if not np.all(block_1.values.shape == block_2.values.shape):

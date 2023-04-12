@@ -32,7 +32,21 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
       are already transposed. Be aware of that if you want to manually access
       the values of blocks of ``w`` (see also the example below).
 
-    Here is an example using this function:
+    :param X: a :py:class:`TensorMap` containing the "coefficient" matrices
+    :param Y: a :py:class:`TensorMap` containing the "dependent variable" values
+    :param rcond: Cut-off ratio for small singular values of a. The singular
+        value :math:`{\sigma}_i` is treated as zero if smaller than
+        :math:`r_{cond}{\sigma}_1`, where :math:`{\sigma}_1` is the biggest
+        singular value of :math:`X_b`. ``None`` choses the default value for
+        numpy or PyTorch.
+    :param driver: Used only in torch (ignored if numpy is used), see
+        https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html for a
+        full description
+
+    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``, and
+        where each :py:class:`TensorBlock` has: the ``sample`` equal to the
+        ``properties`` of ``Y``; and the ``properties`` equal to the
+        ``properties`` of ``X``.
 
     >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
@@ -79,28 +93,6 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     >>> print(y)
     [[1. 0.]
      [0. 1.]]
-
-
-    :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
-    :param Y: a :py:class:`TensorMap` containing the "dependent variable"
-        values.
-    :param rcond: Cut-off ratio for small singular values of a. The singular
-        value :math:`{\sigma}_i` is treated as zero if smaller than
-        :math:`r_{cond}{\sigma}_1`, where :math:`{\sigma}_1` is the biggest
-        singular value of :math:`X_b`. ``None`` choses the default value for numpy
-        or PyTorch.
-    :param driver: Used only in torch (ignored if numpy is used), see
-        https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html for a
-        full description
-
-    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``, and
-        where each :py:class:`TensorBlock` has: the ``sample`` equal to the
-        ``properties`` of ``Y``; and the ``properties`` equal to the
-        ``properties`` of ``X``.
-
-    :raises ValueError: if the order in the samples or components does not match
-        between ``X`` and ``Y``.
-
     """
     if rcond is None:
         warnings.warn(

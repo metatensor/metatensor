@@ -338,8 +338,15 @@ def sum_over_samples_block(
     performed. A single string is equivalent to a list with a single element:
     ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
 
-    This is best explained with an example:
+    :param block:
+        input :py:class:`TensorBlock`
+    :param sample_names:
+        names of samples to sum over
 
+    :returns:
+        a :py:class:`TensorBlock` containing the reduced values and sample labels
+
+    >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -369,14 +376,6 @@ def sum_over_samples_block(
     >>> print(block_sum.values)
     [[ 4  7 10]
      [17 19 21]]
-
-    :param block:
-        input :py:class:`TensorBlock`
-    :param sample_names:
-        names of samples to sum over
-
-    :returns:
-        a :py:class:`TensorBlock` containing the reduced values and sample labels
     """
 
     return _reduce_over_samples_block(
@@ -401,8 +400,15 @@ def sum_over_samples(
     performed. A single string is equivalent to a list with a single element:
     ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
 
-    Here is an example using this function
+    :param tensor:
+        input :py:class:`TensorMap`
+    :param sample_names:
+        names of samples to sum over
 
+    :returns:
+        a :py:class:`TensorMap` containing the reduced values and sample labels
+
+    >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -441,14 +447,6 @@ def sum_over_samples(
     >>> print(tensor_sum.block(0).values)
     [[ 4  7 10]
      [17 19 21]]
-
-    :param tensor:
-        input :py:class:`TensorMap`
-    :param sample_names:
-        names of samples to sum over
-
-    :returns:
-        a :py:class:`TensorMap` containing the reduced values and sample labels
     """
 
     return _reduce_over_samples(

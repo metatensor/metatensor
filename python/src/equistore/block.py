@@ -210,7 +210,9 @@ class TensorBlock:
         Get the gradient of the block ``values``  with respect to the
         given ``parameter``.
 
-        Here is an example of how to use this method:
+        :param parameter: check for gradients with respect to this ``parameter``
+            (e.g. ``positions``, ``cell``, ...)
+
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
         >>> block_1 = TensorBlock(
@@ -250,9 +252,6 @@ class TensorBlock:
         samples (2): ['sample']
         components (6, 1): ['cell', 'components']
         properties (1): ['properties']
-
-        :param parameter: check for gradients with respect to this ``parameter``
-            (e.g. ``positions``, ``cell``, ...)
         """
         if not self.has_gradient(parameter):
             raise ValueError(
@@ -270,7 +269,13 @@ class TensorBlock:
         """
         Add a set of gradients with respect to ``parameters`` in this block.
 
-        Here is an example of how to use this method:
+        :param parameter: add gradients with respect to this ``parameter`` (e.g.
+            ``positions``, ``cell``, ...)
+        :param data: the gradient array, of shape ``(gradient_samples,
+            components, properties)``, where the properties labels are the same
+            as the values' properties labels.
+        :param samples: labels describing the gradient samples
+        :param components: labels describing the gradient components
 
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
@@ -292,14 +297,6 @@ class TensorBlock:
             components (1): ['components']
             properties (1): ['properties']
             gradients: ['position']
-
-        :param parameter: add gradients with respect to this ``parameter`` (e.g.
-            ``positions``, ``cell``, ...)
-        :param data: the gradient array, of shape ``(gradient_samples,
-            components, properties)``, where the properties labels are the same
-            as the values' properties labels.
-        :param samples: labels describing the gradient samples
-        :param components: labels describing the gradient components
         """
         if self._parent is not None:
             raise ValueError(
