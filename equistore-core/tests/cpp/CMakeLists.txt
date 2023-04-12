@@ -54,7 +54,7 @@ foreach(_file_ ${ALL_TESTS})
     get_filename_component(_name_ ${_file_} NAME_WE)
     add_executable(${_name_} ${_file_})
     target_link_libraries(${_name_} equistore catch)
-    target_compile_definitions(${_name_} PRIVATE "-DDATA_NPZ=\"${CMAKE_CURRENT_SOURCE_DIR}/../data.npz\"")
+    target_compile_definitions(${_name_} PRIVATE "-DDATA_NPZ=\"${CMAKE_CURRENT_SOURCE_DIR}/../../../equistore/tests/data.npz\"")
 
     add_test(
         NAME ${_name_}
