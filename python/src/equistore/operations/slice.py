@@ -232,7 +232,10 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
 
     # Slice each Gradient TensorBlock and add to the new_block.
     for parameter, gradient in block.gradients():
-        new_grad_data = gradient.data
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        new_grad_values = gradient.values
         new_grad_samples = gradient.samples
 
         # Create a samples filter for the Gradient TensorBlock
@@ -255,18 +258,22 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
                     values=new_grad_samples,
                 )
 
-            new_grad_data = new_grad_data[grad_samples_filter]
+            new_grad_values = new_grad_values[grad_samples_filter]
         else:
             assert axis == "properties"
-            new_grad_data = new_grad_data[..., properties_filter]
+            new_grad_values = new_grad_values[..., properties_filter]
 
-        # Add sliced Gradient to the TensorBlock
+        # Add sliced gradient to the TensorBlock
         new_block.add_gradient(
             parameter=parameter,
-            samples=new_grad_samples,
-            components=gradient.components,
-            data=new_grad_data,
+            gradient=TensorBlock(
+                values=new_grad_values,
+                samples=new_grad_samples,
+                components=gradient.components,
+                properties=new_block.properties,
+            ),
         )
+
     return new_block
 
 

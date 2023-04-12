@@ -49,7 +49,7 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 props=["samples", "components", "properties"],
                 fname="add",
             )
-            blocks.append(_add_block_block(block1=blockA, block2=blockB))
+            blocks.append(_add_block_block(block_1=blockA, block_2=blockB))
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
@@ -73,32 +73,49 @@ def _add_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
     )
 
     for parameter, gradient in block.gradients():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
         result_block.add_gradient(
             parameter=parameter,
-            data=gradient.data,
-            samples=gradient.samples,
-            components=gradient.components,
+            gradient=TensorBlock(
+                values=gradient.values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
         )
 
     return result_block
 
 
-def _add_block_block(block1: TensorBlock, block2: TensorBlock) -> TensorBlock:
-    values = block1.values + block2.values
+def _add_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
+    values = block_1.values + block_2.values
 
     result_block = TensorBlock(
         values=values,
-        samples=block1.samples,
-        components=block1.components,
-        properties=block1.properties,
+        samples=block_1.samples,
+        components=block_1.components,
+        properties=block_1.properties,
     )
 
-    for parameter1, gradient1 in block1.gradients():
+    for parameter, gradient_1 in block_1.gradients():
+        gradient_2 = block_2.gradient(parameter)
+
+        if len(gradient_1.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        if len(gradient_2.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
         result_block.add_gradient(
-            parameter=parameter1,
-            data=gradient1.data + block2.gradient(parameter1).data,
-            samples=gradient1.samples,
-            components=gradient1.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient_1.values + gradient_2.values,
+                samples=gradient_1.samples,
+                components=gradient_1.components,
+                properties=gradient_1.properties,
+            ),
         )
 
     return result_block

@@ -67,37 +67,37 @@ class TestLstsq(unittest.TestCase):
         self.assertTrue(equistore.allclose(Ydot, Y))
 
     def test_self_lstsq_grad(self):
-        Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
+        x, x_grad, y, y_grad = get_value_linear_solve()
         block_X = TensorBlock(
-            values=Xval,
+            values=x,
             samples=Labels.arange("s", 5),
             components=[],
             properties=Labels.arange("p", 2),
         )
         block_X.add_gradient(
-            "positions",
-            data=Xgradval,
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
+            parameter="z",
+            gradient=TensorBlock(
+                values=x_grad,
+                samples=Labels.arange("sample", 5),
+                components=[Labels.arange("c", 3)],
+                properties=block_X.properties,
             ),
-            components=[Labels.arange("c", 3)],
         )
 
         block_Y = TensorBlock(
-            values=Yval,
+            values=y,
             samples=Labels.arange("s", 5),
             components=[],
             properties=Labels(["p"], np.array([[2]])),
         )
         block_Y.add_gradient(
-            "positions",
-            data=Ygradval,
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]),
+            parameter="z",
+            gradient=TensorBlock(
+                values=y_grad,
+                samples=Labels.arange("sample", 5),
+                components=[Labels.arange("c", 3)],
+                properties=block_Y.properties,
             ),
-            components=[Labels.arange("c", 3)],
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
@@ -120,42 +120,43 @@ class TestLstsq(unittest.TestCase):
         self.assertTrue(equistore.allclose(Ydot, Y))
 
     def test_self_lstsq_grad_components(self):
-        Xval, Xgradval, Yval, Ygradval = get_value_linear_solve()
-        xdim = len(Xval)
-        ydim = len(Yval)
+        x, x_grad, y, y_grad = get_value_linear_solve()
         block_X = TensorBlock(
-            values=Xval.reshape((1, xdim, Xval.shape[-1])),
+            values=x.reshape((1, x.shape[0], x.shape[1])),
             samples=Labels(["s"], np.array([[0]])),
             components=[Labels.arange("c", 5)],
             properties=Labels.arange("p", 2),
         )
         block_X.add_gradient(
-            "positions",
-            data=Xgradval.reshape(1, 3, xdim, Xval.shape[-1]),
-            samples=Labels(
-                ["sample", "positions"],
-                np.array([[0, 1]]),
+            parameter="z",
+            gradient=TensorBlock(
+                values=x_grad.reshape(1, 3, len(x), x.shape[-1]),
+                samples=Labels.arange("sample", 1),
+                components=[
+                    Labels.arange("der_components", 3),
+                    Labels.arange("c", 5),
+                ],
+                properties=block_X.properties,
             ),
-            components=[
-                Labels.arange("der_components", 3),
-                Labels.arange("c", 5),
-            ],
         )
 
         block_Y = TensorBlock(
-            values=Yval.reshape((1, ydim, Yval.shape[-1])),
+            values=y.reshape((1, len(y), y.shape[-1])),
             samples=Labels(["s"], np.array([[0]])),
             components=[Labels.arange("c", 5)],
             properties=Labels(["p"], np.array([[2]])),
         )
         block_Y.add_gradient(
-            "positions",
-            data=Ygradval.reshape((1, 3, ydim, Yval.shape[-1])),
-            samples=Labels(["sample", "positions"], np.array([[0, 1]])),
-            components=[
-                Labels.arange("der_components", 3),
-                Labels.arange("c", 5),
-            ],
+            parameter="z",
+            gradient=TensorBlock(
+                values=y_grad.reshape((1, 3, len(y), y.shape[-1])),
+                samples=Labels.arange("sample", 1),
+                components=[
+                    Labels.arange("der_components", 3),
+                    Labels.arange("c", 5),
+                ],
+                properties=block_Y.properties,
+            ),
         )
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
@@ -217,27 +218,28 @@ def Xfun2_dz(x, y, z):
 
 
 def get_value_linear_solve():
-    """Generate a value matrix for block and gradient in
-    the test for the linear solve
+    """
+    Generate a value matrix for block and gradient in the test for the linear
+    solve
     """
     data = np.arange(15).reshape((-1, 3))
-    Xval = np.zeros((len(data), 2))
-    Xgradval = np.zeros((len(data), 3, 2))
+    x = np.zeros((len(data), 2))
+    x_grad = np.zeros((len(data), 3, 2))
     for i in range(len(data)):
-        Xval[i, 0] = Xfun1(data[i, 0], data[i, 1], data[i, 2])
-        Xval[i, 1] = Xfun2(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 0, 0] = Xfun1_dx(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 1, 0] = Xfun1_dy(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 2, 0] = Xfun1_dz(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 0, 1] = Xfun2_dx(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 1, 1] = Xfun2_dy(data[i, 0], data[i, 1], data[i, 2])
-        Xgradval[i, 2, 1] = Xfun2_dz(data[i, 0], data[i, 1], data[i, 2])
+        x[i, 0] = Xfun1(data[i, 0], data[i, 1], data[i, 2])
+        x[i, 1] = Xfun2(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 0, 0] = Xfun1_dx(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 1, 0] = Xfun1_dy(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 2, 0] = Xfun1_dz(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 0, 1] = Xfun2_dx(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 1, 1] = Xfun2_dy(data[i, 0], data[i, 1], data[i, 2])
+        x_grad[i, 2, 1] = Xfun2_dz(data[i, 0], data[i, 1], data[i, 2])
 
     w = np.array([[1], [3]])
-    Yval = np.dot(Xval, w)
-    Ygradval = np.dot(Xgradval, w)
+    y = np.dot(x, w)
+    y_grad = np.dot(x_grad, w)
 
-    return Xval, Xgradval, Yval, Ygradval
+    return x, x_grad, y, y_grad
 
 
 # TODO: add tests with torch & torch scripting/tracing

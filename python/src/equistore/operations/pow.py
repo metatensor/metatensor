@@ -51,14 +51,17 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
     _shape += (len(block.properties),)
 
     for parameter, gradient in block.gradients():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
         values_grad = []
-        gradient_data = gradient.data
+        gradient_values = gradient.values
         # I want the difference between the number of components of the gradients and
         # the values
-        diff_components = len(gradient_data.shape) - len(block.values.shape)
+        diff_components = len(gradient_values.shape) - len(block.values.shape)
         values_grad.append(
             constant
-            * gradient_data
+            * gradient_values
             * block.values[gradient.samples["sample"]].reshape(
                 (-1,) + (1,) * diff_components + _shape
             )
@@ -67,10 +70,13 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
-            parameter,
-            values_grad,
-            gradient.samples,
-            gradient.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=values_grad,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
         )
 
     return result_block

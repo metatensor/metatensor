@@ -219,7 +219,7 @@ def create_test_array(shape_ptr, shape_count, array):
 
 def test_parent_keepalive():
     path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "equistore-core", "tests", "data.npz"
+        os.path.dirname(__file__), "..", "..", "equistore", "tests", "data.npz"
     )
     tensor = equistore.io.load_custom_array(path, create_test_array)
 

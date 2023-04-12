@@ -133,5 +133,5 @@ def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock):
     for parameter, gradient1 in block_1.gradients():
         gradient2 = block_2.gradient(parameter)
 
-        if not _dispatch.all(gradient1.data == gradient2.data):
+        if not _dispatch.all(gradient1.values == gradient2.values):
             raise NotEqualError(f"gradient '{parameter}' values are not equal")

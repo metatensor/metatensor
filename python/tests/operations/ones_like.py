@@ -31,7 +31,7 @@ def test_ones_like():
 
         for parameter, gradient in block.gradients():
             ones_gradient = one_block.gradient(parameter)
-            assert np.all(ones_gradient.data == np.ones_like(gradient.data))
+            assert np.all(ones_gradient.values == np.ones_like(gradient.values))
 
 
 def test_ones_like_error():

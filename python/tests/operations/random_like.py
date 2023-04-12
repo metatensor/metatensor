@@ -31,8 +31,8 @@ def test_random_uniform_like():
         assert np.all(random_block.values < 1)
 
         for _, random_gradient in random_block.gradients():
-            assert np.all(random_gradient.data >= 0)
-            assert np.all(random_gradient.data < 1)
+            assert np.all(random_gradient.values >= 0)
+            assert np.all(random_gradient.values < 1)
 
 
 def test_random_uniform_like_error():

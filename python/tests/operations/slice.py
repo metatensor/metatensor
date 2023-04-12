@@ -25,32 +25,38 @@ def tensor() -> TensorMap:
 def _construct_empty_slice_block(block, axis, labels) -> TensorBlock:
     if axis == "samples":
         reference_block = TensorBlock(
-            block.values[:0, :],
-            labels,
-            block.components,
-            block.properties,
+            values=block.values[:0, :],
+            samples=labels,
+            components=block.components,
+            properties=block.properties,
         )
-        for param, grad in block.gradients():
+        for parameter, gradient in block.gradients():
             reference_block.add_gradient(
-                param,
-                grad.data[:0, ...],
-                Labels.empty(grad.samples.names),
-                grad.components,
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values[:0, ...],
+                    samples=Labels.empty(gradient.samples.names),
+                    components=gradient.components,
+                    properties=block.properties,
+                ),
             )
         return reference_block
     elif axis == "properties":
         reference_block = TensorBlock(
-            block.values[..., :0],
-            block.samples,
-            block.components,
-            labels,
+            values=block.values[..., :0],
+            samples=block.samples,
+            components=block.components,
+            properties=labels,
         )
-    for param, grad in block.gradients():
+    for parameter, gradient in block.gradients():
         reference_block.add_gradient(
-            param,
-            grad.data[..., :0],
-            grad.samples,
-            grad.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient.values[..., :0],
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=labels,
+            ),
         )
     return reference_block
 
@@ -98,8 +104,8 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
         for sliced_c, c in zip(sliced_gradient.components, gradient.components):
             assert np.all(sliced_c == c)
 
-        expected = gradient.data[gradient_sample_filter]
-        assert np.all(sliced_gradient.data == expected)
+        expected = gradient.values[gradient_sample_filter]
+        assert np.all(sliced_gradient.values == expected)
 
 
 def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
@@ -142,7 +148,7 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
             assert np.all(sliced_c == c)
 
         # we have the right values
-        assert np.all(sliced_gradient.data == gradient.data[..., property_filter])
+        assert np.all(sliced_gradient.values == gradient.values[..., property_filter])
 
 
 def _check_empty_block(block, sliced_block, axis):
@@ -168,7 +174,7 @@ def _check_empty_block(block, sliced_block, axis):
             assert np.all(sliced_gradient.samples == gradient.samples)
 
         # sliced block contains zero properties
-        assert sliced_gradient.data.shape[sliced_axis] == 0
+        assert sliced_gradient.values.shape[sliced_axis] == 0
 
 
 # ===== Tests for slicing along samples =====

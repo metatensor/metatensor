@@ -35,7 +35,7 @@ def block_from_array(array: equistore.data.Array) -> TensorBlock:
         samples (7): ['sample']
         components (3, 1): ['component_1', 'component_2']
         properties (2): ['property']
-        gradients: no
+        gradients: None
     >>> # The data inside the TensorBlock will correspond to the provided array:
     >>> print(np.all(array == tensor_block.values))
     True

@@ -37,11 +37,17 @@ def remove_gradients(
             if parameter in remove:
                 continue
 
+            if len(gradient.gradients_list()) != 0:
+                raise NotImplementedError("gradients of gradients are not supported")
+
             new_block.add_gradient(
-                parameter,
-                gradient.data,
-                gradient.samples,
-                gradient.components,
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=gradient.properties,
+                ),
             )
 
         blocks.append(new_block)

@@ -43,15 +43,21 @@ def ones_like(
     ... )
     >>> block.add_gradient(
     ...     parameter="alpha",
-    ...     data=np.random.rand(2, 3, 3),
-    ...     samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...     components=[Labels.arange("component", 3)],
+    ...     gradient=TensorBlock(
+    ...         values=np.random.rand(2, 3, 3),
+    ...         samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
+    ...         components=[Labels.arange("component", 3)],
+    ...         properties=block.properties,
+    ...     ),
     ... )
     >>> block.add_gradient(
     ...     parameter="beta",
-    ...     data=np.random.rand(1, 3),
-    ...     samples=Labels(["sample"], np.array([[0]])),
-    ...     components=[],
+    ...     gradient=TensorBlock(
+    ...         values=np.random.rand(1, 3),
+    ...         samples=Labels(["sample"], np.array([[0]])),
+    ...         components=[],
+    ...         properties=block.properties,
+    ...     ),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
@@ -77,7 +83,7 @@ def ones_like(
      [1. 1. 1.]
      [1. 1. 1.]
      [1. 1. 1.]]
-    >>> print(tensor_ones.block(0).gradient("alpha").data)
+    >>> print(tensor_ones.block(0).gradient("alpha").values)
     [[[1. 1. 1.]
       [1. 1. 1.]
       [1. 1. 1.]]
@@ -144,13 +150,19 @@ def ones_like_block(
 
     for parameter in gradients:
         gradient = block.gradient(parameter)
-        gradient_data = _dispatch.ones_like(gradient.data)
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        gradient_values = _dispatch.ones_like(gradient.values)
 
         result_block.add_gradient(
-            parameter,
-            gradient_data,
-            gradient.samples,
-            gradient.components,
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient_values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
         )
 
     return result_block

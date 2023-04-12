@@ -44,10 +44,13 @@ def tensor_map() -> TensorMap:
         properties=Labels(["p"], np.array([[0]])),
     )
     block_1.add_gradient(
-        "g",
-        samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
-        data=np.full((2, 1, 1), 11.0),
-        components=[Labels(["c"], np.array([[0]]))],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 1, 1), 11.0),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            components=[Labels(["c"], np.array([[0]]))],
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -57,13 +60,16 @@ def tensor_map() -> TensorMap:
         properties=Labels(["p"], np.array([[3], [4], [5]])),
     )
     block_2.add_gradient(
-        "g",
-        data=np.full((3, 1, 3), 12.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[0, -2], [0, 3], [2, -2]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((3, 1, 3), 12.0),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, -2], [0, 3], [2, -2]]),
+            ),
+            components=[Labels(["c"], np.array([[0]]))],
+            properties=block_2.properties,
         ),
-        components=[Labels(["c"], np.array([[0]]))],
     )
 
     block_3 = TensorBlock(
@@ -73,13 +79,16 @@ def tensor_map() -> TensorMap:
         properties=Labels(["p"], np.array([[0]])),
     )
     block_3.add_gradient(
-        "g",
-        data=np.full((1, 3, 1), 13.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[1, -2]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((1, 3, 1), 13.0),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[1, -2]]),
+            ),
+            components=[Labels.arange("c", 3)],
+            properties=block_3.properties,
         ),
-        components=[Labels.arange("c", 3)],
     )
 
     block_4 = TensorBlock(
@@ -89,13 +98,16 @@ def tensor_map() -> TensorMap:
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4.add_gradient(
-        "g",
-        data=np.full((2, 3, 1), 14.0),
-        samples=Labels(
-            ["sample", "g"],
-            np.array([[0, 1], [3, 3]]),
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.full((2, 3, 1), 14.0),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, 1], [3, 3]]),
+            ),
+            components=[Labels.arange("c", 3)],
+            properties=block_4.properties,
         ),
-        components=[Labels.arange("c", 3)],
     )
 
     # TODO: different number of components?
@@ -184,12 +196,15 @@ def test_changing_samples_key_order(test_tensor_map_1):
             properties=block.properties,
             components=block.components,
         )
-        for param, obj in block.gradients():
+        for parameter, gradient in block.gradients():
             new_block.add_gradient(
-                parameter=param,
-                samples=obj.samples,
-                components=obj.components,
-                data=obj.data,
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=new_block.properties,
+                ),
             )
         new_blocks.append(new_block)
 
@@ -209,12 +224,15 @@ def test_changing_properties_key_order(test_tensor_map_1):
             properties=properties,
             components=block.components,
         )
-        for param, obj in block.gradients():
+        for parameter, gradient in block.gradients():
             new_block.add_gradient(
-                parameter=param,
-                samples=obj.samples,
-                components=obj.components,
-                data=obj.data,
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=new_block.properties,
+                ),
             )
         new_blocks.append(new_block)
 
@@ -234,12 +252,15 @@ def test_add_components_key_order(tensor_map):
             properties=block.properties,
             components=components,
         )
-        for param, obj in block.gradients():
+        for parameter, gradient in block.gradients():
             new_block.add_gradient(
-                parameter=param,
-                samples=obj.samples,
-                components=components,
-                data=obj.data,
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=components,
+                    properties=new_block.properties,
+                ),
             )
         new_blocks.append(new_block)
 
@@ -258,12 +279,15 @@ def test_remove_last_sample(tensor_map):
             properties=block.properties,
             components=block.components,
         )
-        for param, obj in block.gradients():
+        for parameter, gradient in block.gradients():
             new_block.add_gradient(
-                parameter=param,
-                samples=obj.samples[:-1],
-                components=obj.components,
-                data=obj.data[:-1],
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values[:-1],
+                    samples=gradient.samples[:-1],
+                    components=gradient.components,
+                    properties=new_block.properties,
+                ),
             )
         new_blocks.append(new_block)
 
@@ -282,12 +306,15 @@ def test_remove_last_property(tensor_map):
             properties=block.properties[..., :-1],
             components=block.components,
         )
-        for param, obj in block.gradients():
+        for parameter, gradient in block.gradients():
             new_block.add_gradient(
-                parameter=param,
-                samples=obj.samples,
-                components=obj.components,
-                data=obj.data[..., :-1],
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values[..., :-1],
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=new_block.properties,
+                ),
             )
         new_blocks.append(new_block)
 
@@ -314,9 +341,12 @@ def test_remove_last_component(tensor_map):
             for parameter, gradient in block.gradients():
                 new_block.add_gradient(
                     parameter=parameter,
-                    data=gradient.data[:, :-1],
-                    samples=gradient.samples,
-                    components=components,
+                    gradient=TensorBlock(
+                        values=gradient.values[:, :-1],
+                        samples=gradient.samples,
+                        components=components,
+                        properties=new_block.properties,
+                    ),
                 )
         else:
             new_block = block.copy()

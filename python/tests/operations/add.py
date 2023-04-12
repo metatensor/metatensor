@@ -21,12 +21,15 @@ def tensor_A(keys):
     )
 
     block_1.add_gradient(
-        "g",
-        data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-        samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -37,17 +40,20 @@ def tensor_A(keys):
     )
 
     block_2.add_gradient(
-        "g",
-        data=np.array(
-            [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, 1], [1, 1], [2, 1]]),
+            ),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_2.properties,
         ),
-        samples=Labels(
-            ["sample", "positions"],
-            np.array([[0, 1], [1, 1], [2, 1]]),
-        ),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
     )
 
     return TensorMap(keys, [block_1, block_2])
@@ -63,12 +69,15 @@ def tensor_B(keys):
     )
 
     block_1.add_gradient(
-        "g",
-        data=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
-        samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -79,21 +88,24 @@ def tensor_B(keys):
     )
 
     block_2.add_gradient(
-        "g",
-        data=np.array(
-            [
-                [[1.0, 1.1], [1.2, 1.3]],
-                [[1.4, 1.5], [1.0, 1.1]],
-                [[1.2, 1.3], [1.4, 1.5]],
-            ]
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [
+                    [[1.0, 1.1], [1.2, 1.3]],
+                    [[1.4, 1.5], [1.0, 1.1]],
+                    [[1.2, 1.3], [1.4, 1.5]],
+                ]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, 1], [1, 1], [2, 1]]),
+            ),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_2.properties,
         ),
-        samples=Labels(
-            ["sample", "positions"],
-            np.array([[0, 1], [1, 1], [2, 1]]),
-        ),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
     )
 
     return TensorMap(keys, [block_1, block_2])
@@ -109,12 +121,15 @@ def tensor_res_1(keys):
     )
 
     block_1.add_gradient(
-        "g",
-        data=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
-        samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(np.array([[[7, 1.1], [9, 2.2]], [[11, 3.3], [13.5, 4.4]]])),
+            samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_1.properties,
+        ),
     )
 
     block_2 = TensorBlock(
@@ -125,21 +140,24 @@ def tensor_res_1(keys):
     )
 
     block_2.add_gradient(
-        "g",
-        data=np.array(
-            [
-                [[11.0, 12.1], [13.2, 14.3]],
-                [[15.4, 16.5], [11.0, 12.1]],
-                [[13.2, 14.3], [15.4, 16.5]],
-            ]
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [
+                    [[11.0, 12.1], [13.2, 14.3]],
+                    [[15.4, 16.5], [11.0, 12.1]],
+                    [[13.2, 14.3], [15.4, 16.5]],
+                ]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, 1], [1, 1], [2, 1]]),
+            ),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_2.properties,
         ),
-        samples=Labels(
-            ["sample", "positions"],
-            np.array([[0, 1], [1, 1], [2, 1]]),
-        ),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
     )
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
@@ -155,13 +173,17 @@ def tensor_res_2(keys):
         properties=Labels(["p"], np.array([[0], [1]])),
     )
     block_1.add_gradient(
-        "g",
-        data=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-        samples=Labels(["sample", "positions"], np.array([[0, 1], [1, 1]])),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_1.properties,
+        ),
     )
+
     block_2 = TensorBlock(
         values=np.array([[6.1, 7.1], [8.1, 9.1], [10.1, 11.1]]),
         samples=Labels(["s"], np.array([[0], [2], [7]])),
@@ -169,23 +191,26 @@ def tensor_res_2(keys):
         properties=Labels(["p"], np.array([[0], [1]])),
     )
     block_2.add_gradient(
-        "g",
-        data=np.array(
-            [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array([[0, 1], [1, 1], [2, 1]]),
+            ),
+            components=[
+                Labels(["c"], np.array([[0], [1]])),
+            ],
+            properties=block_2.properties,
         ),
-        samples=Labels(
-            ["sample", "positions"],
-            np.array([[0, 1], [1, 1], [2, 1]]),
-        ),
-        components=[
-            Labels(["c"], np.array([[0], [1]])),
-        ],
     )
 
     return TensorMap(keys, [block_1, block_2])
 
 
-def test_self_add_tensors_nogradient(tensor_A, tensor_B, tensor_res_1):
+def test_self_add_tensors_no_gradient(tensor_A, tensor_B, tensor_res_1):
     tensor_A = equistore.remove_gradients(tensor_A)
     tensor_B = equistore.remove_gradients(tensor_B)
     tensor_res_1 = equistore.remove_gradients(tensor_res_1)

@@ -57,11 +57,14 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     let path = String::from("keys.npy");
     let keys = read_npy_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
 
-    // FIXME before merging: should we add a fallback?
-    assert!(
-        archive.by_name("blocks/0/values/data.npy").is_err(),
-        "this is the old data format, TODO: fallback"
-    );
+    if archive.by_name("blocks/0/values/data.npy").is_ok() {
+        return Err(Error::Serialization(
+            "trying to load a file in the old equistore format, please convert \
+            it to the new format first using the script at \
+            https://github.com/lab-cosmo/equistore/blob/master/python/scripts/convert-equistore-npz.py
+            ".into()
+        ));
+    }
 
     let mut blocks = Vec::new();
     for block_i in 0..keys.count() {
