@@ -252,7 +252,7 @@ class Labels(np.ndarray):
         return self.position(label) is not None
 
     @staticmethod
-    def arange(name, *args):
+    def arange(name, *args, **kwargs):
         """
         A `Labels` instance with evenly spaced integers within a given interval.
 
@@ -271,25 +271,82 @@ class Labels(np.ndarray):
 
         :returns: A new :py:class:`Labels` object with the provided name and
             values corresponding to the specified range bounds and step.
+
+        >>> from equistore import Labels
+        >>> # Construct a labels object using Labels.arange():
+        >>> labels = Labels.arange("dummy", 7)
+        >>> # Inspect the labels object:
+        >>> print(labels.names)
+        ('dummy',)
+        >>> print(labels)
+        [(0,) (1,) (2,) (3,) (4,) (5,) (6,)]
+        >>> # The same can be accomplished by using keyword arguments
+        >>> # for start/stop/step. For example:
+        >>> labels = Labels.arange("dummy", start=2, stop=6)
+        >>> print(labels)
+        [(2,) (3,) (4,) (5,)]
+        >>> # However, a mixture of the two will not work:
+        >>> labels = Labels.arange("dummy", 2, stop=6)
+        Traceback (most recent call last):
+            ...
+        ValueError: please use either positional or keyword arguments for \
+start/stop/step in `Labels.arange()`, but not a mixture of the two
         """
 
         args_len = len(args)
-        if args_len == 0:
+        kwargs_len = len(kwargs)
+
+        if args_len == 0 and kwargs_len == 0:
             raise ValueError(
                 "please provide at least one integer for `Labels.arange()`"
             )
-        if args_len > 3:
+        if args_len != 0 and kwargs_len != 0:
             raise ValueError(
-                f"the maximum number of integer arguments accepted by \
-                `Labels.arange()` is 3. {args_len} were provided"
+                "please use either positional or keyword arguments for start/stop/step "
+                "in `Labels.arange()`, but not a mixture of the two"
             )
-        for arg in args:
-            if not np.issubdtype(type(arg), np.integer):
-                raise ValueError(
-                    "all numbers provided to `Labels.arange()` must be integers"
-                )
+        if args_len == 0:
+            has_args = False
+        else:
+            has_args = True
 
-        labels = Labels(names=[name], values=np.arange(*args).reshape(-1, 1))
+        if has_args:
+            if args_len > 3:
+                raise ValueError(
+                    "the maximum number of integer arguments accepted by "
+                    f"`Labels.arange()` is 3. {args_len} were provided"
+                )
+            for arg in args:
+                # check for integer arguments, otherwise np.arange will later
+                # return a range of floats
+                if not np.issubdtype(type(arg), np.integer):
+                    raise ValueError(
+                        "all numbers provided to `Labels.arange()` must be integers"
+                    )
+        else:  # kwargs were provided instead of args
+            possible_kwargs = ["start", "stop", "step"]
+            for key in kwargs.keys():
+                if key not in possible_kwargs:
+                    raise ValueError(
+                        "the only valid names for integer arguments to "
+                        "`Labels.arange()` are start, stop and step"
+                    )
+            if "stop" not in kwargs.keys():
+                raise ValueError(
+                    "a `stop` argument must be provided to `Labels.arange()`"
+                )
+            for value in kwargs.values():
+                # check for integer arguments, otherwise np.arange will later
+                # return a range of floats
+                if not np.issubdtype(type(value), np.integer):
+                    raise ValueError(
+                        "all numbers provided to `Labels.arange()` must be integers"
+                    )
+
+        if has_args:
+            labels = Labels(names=[name], values=np.arange(*args).reshape(-1, 1))
+        else:
+            labels = Labels(names=[name], values=np.arange(**kwargs).reshape(-1, 1))
 
         return labels
 

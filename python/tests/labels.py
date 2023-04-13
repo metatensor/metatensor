@@ -178,27 +178,77 @@ def test_arange_one_argument():
     assert labels_arange.names == ("name",)
     np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10))
 
+    labels_arange = Labels.arange("name", stop=10)
+    assert labels_arange.asarray().shape == (10, 1)
+    assert labels_arange.names == ("name",)
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10))
+
 
 def test_arange_two_arguments():
     labels_arange = Labels.arange("dummy", 10, 42)
     assert labels_arange.names == ("dummy",)
     np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10, 42))
 
+    labels_arange = Labels.arange("dummy", start=10, stop=42)
+    assert labels_arange.names == ("dummy",)
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(10, 42))
+
 
 def test_arange_three_arguments():
-    labels_arange = Labels.arange("s", 0, 10, 2)
-    assert labels_arange.names == ("s",)
+    labels_arange = Labels.arange("samples", 0, 10, 2)
+    assert labels_arange.names == ("samples",)
+    np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2))
+
+    labels_arange = Labels.arange("samples", start=0, stop=10, step=2)
+    assert labels_arange.names == ("samples",)
     np.testing.assert_equal(labels_arange.asarray().reshape((-1,)), np.arange(0, 10, 2))
 
 
 def test_arange_incorrect_arguments():
-    with pytest.raises(ValueError, match="3"):
+    with pytest.raises(
+        ValueError,
+        match="the maximum number of integer arguments accepted by "
+        r"`Labels.arange\(\)` is 3. 4 were provided",
+    ):
         Labels.arange("dummy", 0, 10, 2, 4)
-    with pytest.raises(ValueError, match="at least"):
+
+    with pytest.raises(
+        ValueError, match=r"please provide at least one integer for `Labels.arange\(\)`"
+    ):
         Labels.arange("dummy")
-    with pytest.raises(EquistoreError, match="label name"):
+
+    with pytest.raises(
+        EquistoreError, match="invalid parameter: '0' is not a valid label name"
+    ):
         Labels.arange(0, 1, 2)
-    with pytest.raises(ValueError, match="integer"):
+
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange(0.0, 1.0, 2)
-    with pytest.raises(ValueError, match="integer"):
+
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
         Labels.arange("dummy", 0, 5, 0.2)
+
+    with pytest.raises(
+        ValueError,
+        match="the only valid names for integer arguments to "
+        r"`Labels.arange\(\)` are start, stop and step",
+    ):
+        Labels.arange("dummy", random=10)
+
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
+        Labels.arange(name="dummy", start=0.0, stop=1.0, step=2)
+
+    with pytest.raises(
+        ValueError,
+        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
+    ):
+        Labels.arange("dummy", start=0, stop=0.2)
