@@ -44,6 +44,7 @@ from .solve import solve
 from .split import split, split_block
 from .subtract import subtract
 from .unique_metadata import unique_metadata, unique_metadata_block
+from .checks import checks_enabled, unsafe_disable_checks, unsafe_enable_checks
 from .zeros_like import zeros_like, zeros_like_block
 
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     "allclose_block",
     "allclose_block_raise",
     "block_from_array",
+    "checks_enabled",
     "divide",
     "dot",
     "drop_blocks",
@@ -89,6 +91,8 @@ __all__ = [
     "sum_over_samples_block",
     "unique_metadata",
     "unique_metadata_block",
+    "unsafe_disable_checks",
+    "unsafe_enable_checks",
     "var_over_samples",
     "var_over_samples_block",
     "zeros_like",
