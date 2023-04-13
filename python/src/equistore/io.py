@@ -120,7 +120,7 @@ def save(path: str, tensor: TensorMap, use_numpy=False):
     if not path.endswith(".npz"):
         path += ".npz"
         warnings.warn(
-            msg=f"adding '.npz' extension, the file will be saved at '{path}'",
+            message=f"adding '.npz' extension, the file will be saved at '{path}'",
             stacklevel=1,
         )
 
