@@ -28,7 +28,6 @@ def ones_like(
     >>> import numpy as np
     >>> import equistore
     >>> from equistore import TensorBlock, TensorMap, Labels
-    ...
     >>> np.random.seed(1)
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
@@ -37,23 +36,19 @@ def ones_like(
     ...     properties=Labels.arange("property", 3),
     ... )
     >>> block.add_gradient(
-    ...    parameter="alpha",
-    ...    data=np.random.rand(2, 3, 3),
-    ...    samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...    components=[Labels.arange("component", 3)],
+    ...     parameter="alpha",
+    ...     data=np.random.rand(2, 3, 3),
+    ...     samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
+    ...     components=[Labels.arange("component", 3)],
     ... )
-    ...
     >>> block.add_gradient(
-    ...    parameter="beta",
-    ...    data=np.random.rand(1, 3),
-    ...    samples=Labels(["sample"], np.array([[0]])),
-    ...    components=[],
+    ...     parameter="beta",
+    ...     data=np.random.rand(1, 3),
+    ...     samples=Labels(["sample"], np.array([[0]])),
+    ...     components=[],
     ... )
-    ...
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    ...
     >>> tensor = TensorMap(keys, [block])
-    ...
     >>> print(tensor.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -65,7 +60,6 @@ def ones_like(
     with the same metadata as ``tensor``, but with all values set equal to 1.
 
     >>> tensor_ones = equistore.ones_like(tensor)
-    ...
     >>> print(tensor_ones.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -77,7 +71,7 @@ def ones_like(
      [1. 1. 1.]
      [1. 1. 1.]
      [1. 1. 1.]]
-    >>> print(tensor_ones.block(0).gradient('alpha').data)
+    >>> print(tensor_ones.block(0).gradient("alpha").data)
     [[[1. 1. 1.]
       [1. 1. 1.]
       [1. 1. 1.]]
@@ -89,8 +83,7 @@ def ones_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_ones = equistore.ones_like(tensor,  parameters='alpha')
-    ...
+    >>> tensor_ones = equistore.ones_like(tensor, parameters="alpha")
     >>> print(tensor_ones.block(0).gradients_list())
     ['alpha']
     """

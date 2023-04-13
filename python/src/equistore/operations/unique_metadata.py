@@ -66,7 +66,7 @@ def unique_metadata(
 
         Labels(
             [(0,), (1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,)],
-            dtype=[('structure', '<i4')],
+            dtype=[("structure", "<i4")],
         )
 
     Then, the following code will split the :py:class:`TensorMap` into 2
