@@ -12,6 +12,10 @@ from equistore import TensorMap
 from . import utils
 
 
+# using tmpdir as pytest-built-in fixture
+# https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
+
+
 @pytest.fixture
 def tensor():
     return utils.tensor()
@@ -68,6 +72,20 @@ def test_save(use_numpy, tmpdir, tensor):
             assert_equal(data[f"{prefix}/data"], gradient.data)
             assert_equal(data[f"{prefix}/samples"], gradient.samples)
             assert_equal(data[f"{prefix}/components/0"], gradient.components[0])
+
+
+def test_save_warning(tmpdir, tensor):
+    # does not have .npz ending and causes warning
+    tmpfile = "serialize-test"
+
+    with pytest.warns() as record:
+        with tmpdir.as_cwd():
+            equistore.save(tmpfile, tensor)
+
+    assert (
+        str(record[0].message)
+        == f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    )
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
