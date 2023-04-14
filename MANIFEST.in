@@ -1,6 +1,5 @@
-recursive-include equistore-core *
-prune equistore-core/tests
-
 include pyproject.toml
 include AUTHORS
 include LICENSE
+
+include python/equistore/version_from_git.py

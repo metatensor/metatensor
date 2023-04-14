@@ -9,8 +9,8 @@ Serialization
 
 --------------------------------------------------------------------------------
 
-.. autofunction:: equistore.io.load_custom_array
+.. autofunction:: equistore.core.io.load_custom_array
 
-.. autofunction:: equistore.io.create_numpy_array()
+.. autofunction:: equistore.core.io.create_numpy_array()
 
-.. autofunction:: equistore.io.create_torch_array()
+.. autofunction:: equistore.core.io.create_torch_array()

@@ -3,15 +3,20 @@
 Code organization
 =================
 
-The code is organized in three main modules, each in a separate directory:
+The code is organized in multiple modules, each in a separate directory:
 
 - ``equistore-core/`` contains the core library, implemented in Rust and exposed
   to the outside world through a C API. This is also where the C++ API lives,
   implemented as a header-only library in ``equistore.hpp``.
 - ``equistore/`` contains the Rust interface to equistore, using the C API
   defined in ``equistore-core``, as well as the corresponding tests and examples
-- ``python/`` contains the Python interface to equistore, and the corresponding
-  tests and examples
+- ``python/equistore-core`` contains the Python interface to the core equistore
+  types, and the corresponding tests;
+- ``python/equistore-operations`` contains a set of pure Python functions to
+  manipulate data in equistore format, and the corresponding tests;
+- ``python/equistore`` contains a small Python package re-exporting everything
+  from ``equistore-core`` and ``equistore-operations``. This is the main package
+  users should interact with.
 
 Finally, ``docs/`` contains the documentation for everything related to
 equistore.
