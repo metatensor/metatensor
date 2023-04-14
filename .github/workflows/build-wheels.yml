@@ -8,7 +8,7 @@ on:
     # Check all PR
 
 jobs:
-  build-wheels:
+  build-core-wheels:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
     strategy:
@@ -17,7 +17,7 @@ jobs:
           - name: x86_64 macOS
             os: macos-11
             rust-target: x86_64-apple-darwin
-            platform-name: macosx-10.9-x86_64
+            platform-name: macosx-11.0-x86_64
           - name: M1 macOS
             os: macos-11
             rust-target: aarch64-apple-darwin
@@ -40,21 +40,26 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: build wheel
+
+      - name: install dependencies
+        run: python -m pip install wheel
+      - name: build equistore-core wheel
         env:
           RUST_BUILD_TARGET: ${{ matrix.rust-target }}
         run: |
-          python -m pip install wheel
+          cd python/equistore-core
+          # using `setup.py bdist_wheel` to be able to set plat-name to something
+          # different from the host (on macos, we are cross-compiling to arm64/M1)
           python setup.py bdist_wheel --plat-name ${{ matrix.platform-name }}
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist/*.whl
+          path: python/equistore-core/dist/*.whl
       - name: upload wheel to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*.whl
+          files: python/equistore-core/dist/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -68,12 +73,20 @@ jobs:
           fetch-depth: 0
       - name: build manylinux with rust docker image
         run: docker build -t manylinux-with-rust python/scripts/build-wheels
-      - name: build wheel in docker
-        run: docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "cd /code && /opt/python/cp38-cp38/bin/python setup.py bdist_wheel"
+      - name: build equistore-core wheel in docker
+        run: |
+          docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "\
+              python3.8 -m build /code/python/equistore-core --wheel --outdir=/code/dist \
+          "
       - name: run auditwheel in docker
-        run: docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "auditwheel repair /code/dist/*.whl -w /code/dist"
-      - name: remove wheel with wrong tag
-        run: sudo rm dist/*linux_x86_64.whl
+        run: |
+          docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "\
+            auditwheel repair /code/dist/equistore_core-*.whl -w /code/dist\
+          "
+      - name: remove equistore-core wheel with wrong tag
+        run: |
+          ls dist/
+          sudo rm dist/equistore_core-*-linux_x86_64.whl
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
@@ -97,18 +110,28 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: build sdist
-        run: |
-          python -m pip install wheel
-          python setup.py sdist
+      - name: install dependencies
+        run: python -m pip install wheel build
+      - name: package vendored code
+        run: ./scripts/package-core.sh
+      - name: build equistore-core sdist
+        run: python -m build python/equistore-core --sdist --outdir=dist/
+      - name: build equistore-operations sdist and wheel
+        run: python -m build python/equistore-operations --outdir=dist/
+      - name: build equistore sdist and wheel
+        run: python -m build . --outdir=dist/
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist/*.tar.gz
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
       - name: upload sdist to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*.tar.gz
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,11 +4,11 @@ Miscelaneous
 Error handling
 ^^^^^^^^^^^^^^
 
-.. autoclass:: equistore.status.EquistoreError
+.. autoclass:: equistore.EquistoreError
 
 
 CMake integration
 ^^^^^^^^^^^^^^^^^
 
-.. autodata:: equistore.utils.cmake_prefix_path
+.. autodata:: equistore.core.utils.cmake_prefix_path
     :annotation:

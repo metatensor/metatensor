@@ -228,7 +228,14 @@ def generate_functions(file, functions):
 def generate_declarations():
     data = parse(EQUISTORE_HEADER)
 
-    outpath = os.path.join(ROOT, "python", "src", "equistore", "_c_api.py")
+    outpath = os.path.join(
+        ROOT,
+        "python",
+        "equistore-core",
+        "equistore",
+        "core",
+        "_c_api.py",
+    )
     with open(outpath, "w") as file:
         file.write(
             """# fmt: off

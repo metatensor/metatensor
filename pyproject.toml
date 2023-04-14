@@ -1,10 +1,54 @@
+[project]
+name = "equistore"
+dynamic = ["version", "authors", "dependencies"]
+requires-python = ">=3.7"
+
+readme = "README.rst"
+license = {text = "BSD-3-Clause"}
+description = "A specialized data storage format suited to atomistic machine learning needs and more"
+
+keywords = ["machine learning", "molecular modeling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+homepage = "https://lab-cosmo.github.io/equistore/latest/"
+documentation = "https://lab-cosmo.github.io/equistore/latest/"
+repository = "https://github.com/lab-cosmo/equistore"
+# changelog = "https://github.com/lab-cosmo/equistore/blob/master/CHANGELOG.rst"
+
+### ======================================================================== ###
+
 [build-system]
 requires = [
-    "setuptools >=44",
-    "wheel >=0.36",
-    "cmake",
+    "setuptools >=61",
+    "wheel >=0.38",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = true
+
+[tool.setuptools.packages.find]
+where = ["python/equistore"]
+include = ["equistore*"]
+namespaces = false
+
+### ======================================================================== ###
 
 [tool.isort]
 skip = "__init__.py"
@@ -14,9 +58,3 @@ indent = 4
 include_trailing_comma = true
 lines_after_imports = 2
 known_first_party = "equistore"
-
-[tool.pytest.ini_options]
-testpaths = [
-    "python/tests/*.py",
-    "python/tests/*/*.py",
-]

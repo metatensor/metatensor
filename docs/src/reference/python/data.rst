@@ -3,10 +3,10 @@
 Data arrays
 ===========
 
-.. autoclass:: equistore.data.Array()
+.. autoclass:: equistore.core.data.Array()
 
 --------------------------------------------------------------------------------
 
-.. autofunction:: equistore.data.register_external_data_wrapper
+.. autofunction:: equistore.core.data.register_external_data_wrapper
 
-.. autoclass:: equistore.data.ExternalCpuArray
+.. autoclass:: equistore.core.data.ExternalCpuArray

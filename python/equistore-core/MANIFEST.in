@@ -1,0 +1,6 @@
+include equistore-core-*.crate
+
+include pyproject.toml
+include AUTHORS
+include LICENSE
+include version_from_git.py

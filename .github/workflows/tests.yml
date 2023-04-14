@@ -112,31 +112,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pycparser
 
-      - name: check that Rust's C API declarations are up to date
+      - name: check that Rust/Python C API declarations are up to date
         run: |
           # bindgen is already installed on GitHub Actions VM
-          ./equistore/scripts/update-core.sh
-          git diff --exit-code
-
-      - name: check that Python's C API declarations are up to date
-        run: |
-          python python/scripts/generate-declarations.py
+          ./scripts/update-declarations.sh
           git diff --exit-code
 
   # check that we can build the Python wheel
   python-build:
     runs-on: ubuntu-20.04
     name: check Python build
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
     steps:
       - uses: actions/checkout@v3
 
-      - name: set up Python ${{ matrix.python-version }}
+      - name: set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: |
+            3.7
+            3.11
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
@@ -144,10 +138,18 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-gnu
 
-      - name: install python dependencies
+      # check that we can build the code with our lower-supported version of
+      # Python, to make sure we are not using too recent features
+      - name: check with Python 3.7
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox
+          rm -rf .tox
+          python3.7 -m pip install --upgrade pip tox
+          python3.7 -m tox -e build-tests
 
-      - name: python build tests
-        run: tox -e check-python-build
+      # check that we can build the code with our higher-supported version of
+      # Python, to make sure we are not using deprecated features
+      - name: check with Python 3.11
+        run: |
+          rm -rf .tox
+          python3.11 -m pip install --upgrade pip tox
+          python3.11 -m tox -e build-tests
