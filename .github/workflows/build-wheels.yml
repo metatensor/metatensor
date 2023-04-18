@@ -32,11 +32,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          default: true
           target: ${{ matrix.rust-target }}
       - name: Set up Python
         uses: actions/setup-python@v4
