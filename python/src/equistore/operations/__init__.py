@@ -20,7 +20,7 @@ from .dot import dot
 from .drop_blocks import drop_blocks
 from .empty_like import empty_like, empty_like_block
 from .equal import equal, equal_block, equal_block_raise, equal_raise, NotEqualError
-from .equal_metadata import equal_metadata
+from .equal_metadata import equal_metadata, equal_metadata_block
 from .join import join
 from .lstsq import lstsq
 from .multiply import multiply
@@ -67,6 +67,7 @@ __all__ = [
     "equal_block",
     "equal_block_raise",
     "equal_metadata",
+    "equal_metadata_block",
     "join",
     "lstsq",
     "mean_over_samples",
