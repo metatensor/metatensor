@@ -18,11 +18,11 @@ def equal_metadata(
     returning a bool.
 
     The equivalence of the keys of the two :py:class:`TensorMap` objects is
-    always checked. If `check` is none (the default), all metadata (i.e. the
+    always checked. If ``check`` is none (the default), all metadata (i.e. the
     samples, components, and properties of each block) is checked to contain the
     same values in the same order.
 
-    Passing `check` as a list of strings will only check the metadata specified.
+    Passing ``check`` as a list of strings will only check the metadata specified.
     Allowed values to pass are "samples", "components", and "properties".
 
     :param tensor_1: The first :py:class:`TensorMap`.
@@ -136,11 +136,11 @@ def equal_metadata_block(
     Checks if two :py:class:`TensorBlock` objects have the same metadata,
     returning a bool.
 
-    If `check` is none (the default), all metadata (i.e. the samples,
+    If ``check`` is none (the default), all metadata (i.e. the samples,
     components, and properties of each block) is checked to contain the same
     values in the same order.
 
-    Passing `check` as a list of strings will only check the metadata specified.
+    Passing ``check`` as a list of strings will only check the metadata specified.
     Allowed values to pass are "samples", "components", and "properties".
 
     :param block_1: The first :py:class:`TensorBlock`.
@@ -197,13 +197,13 @@ def equal_metadata_block(
 
     # Check metadata of the blocks
     try:
-        _check_blocks(block_1, block_2, check, "equal_metadata")
+        _check_blocks(block_1, block_2, check, "equal_metadata_block")
     except ValueError:
         return False
 
     # Check metadata of the gradients
     try:
-        _check_same_gradients(block_1, block_2, check, "equal_metadata")
+        _check_same_gradients(block_1, block_2, check, "equal_metadata_block")
     except ValueError:
         return False
     return True
