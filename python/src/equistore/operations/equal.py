@@ -110,25 +110,19 @@ def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock):
     if not _dispatch.all(block_1.values == block_2.values):
         raise NotEqualError("values are not equal")
 
-    try:
-        _check_blocks(
-            block_1,
-            block_2,
-            props=["samples", "properties", "components"],
-            fname="equal",
-        )
-    except ValueError as e:
-        raise NotEqualError(str(e))
+    _check_blocks(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="equal",
+    )
 
-    try:
-        _check_same_gradients(
-            block_1,
-            block_2,
-            props=["samples", "properties", "components"],
-            fname="equal",
-        )
-    except ValueError as e:
-        raise NotEqualError(str(e))
+    _check_same_gradients(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="equal",
+    )
 
     for parameter, gradient1 in block_1.gradients():
         gradient2 = block_2.gradient(parameter)

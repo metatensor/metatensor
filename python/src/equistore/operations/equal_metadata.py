@@ -5,6 +5,8 @@ from typing import List, Optional
 
 import numpy as np
 
+import equistore
+
 from ..block import TensorBlock
 from ..labels import Labels
 from ..tensor import TensorMap
@@ -107,7 +109,7 @@ def equal_metadata(
     # Check equivalence in keys
     try:
         _check_same_keys(tensor_1, tensor_2, "equal_metadata")
-    except ValueError:
+    except equistore.NotEqualError:
         return False
 
     # Loop over the blocks
@@ -118,13 +120,13 @@ def equal_metadata(
         # Check metadata of the blocks
         try:
             _check_blocks(block_1, block_2, check, "equal_metadata")
-        except ValueError:
+        except equistore.NotEqualError:
             return False
 
         # Check metadata of the gradients
         try:
             _check_same_gradients(block_1, block_2, check, "equal_metadata")
-        except ValueError:
+        except equistore.NotEqualError:
             return False
     return True
 
@@ -198,13 +200,13 @@ def equal_metadata_block(
     # Check metadata of the blocks
     try:
         _check_blocks(block_1, block_2, check, "equal_metadata_block")
-    except ValueError:
+    except equistore.NotEqualError:
         return False
 
     # Check metadata of the gradients
     try:
         _check_same_gradients(block_1, block_2, check, "equal_metadata_block")
-    except ValueError:
+    except equistore.NotEqualError:
         return False
     return True
 
@@ -226,19 +228,19 @@ def _check_same_keys(a: TensorMap, b: TensorMap, fname: str):
     keys_b = b.keys
 
     if keys_a.names != keys_b.names:
-        raise ValueError(
+        raise equistore.NotEqualError(
             f"inputs to {fname} should have the same keys names, "
             f"got '{keys_a.names}' and '{keys_b.names}'"
         )
 
     if len(keys_a) != len(keys_b):
-        raise ValueError(
+        raise equistore.NotEqualError(
             f"inputs to {fname} should have the same number of blocks, "
             f"got {len(keys_a)} and {len(keys_b)}"
         )
 
     if not np.all([key in keys_a for key in keys_b]):
-        raise ValueError(f"inputs to {fname} should have the same keys")
+        raise equistore.NotEqualError(f"inputs to {fname} should have the same keys")
 
 
 def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
@@ -260,31 +262,31 @@ def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
         err_msg_names = f"{prop} names are not the same or not in the same order"
         if prop == "samples":
             if not len(a.samples) == len(b.samples):
-                raise ValueError(err_msg + err_msg_len)
+                raise equistore.NotEqualError(err_msg + err_msg_len)
             if not a.samples.names == b.samples.names:
-                raise ValueError(err_msg + err_msg_names)
+                raise equistore.NotEqualError(err_msg + err_msg_names)
             if not np.all(a.samples == b.samples):
-                raise ValueError(err_msg + err_msg_1)
+                raise equistore.NotEqualError(err_msg + err_msg_1)
         elif prop == "properties":
             if not len(a.properties) == len(b.properties):
-                raise ValueError(err_msg + err_msg_len)
+                raise equistore.NotEqualError(err_msg + err_msg_len)
             if not a.properties.names == b.properties.names:
-                raise ValueError(err_msg + err_msg_names)
+                raise equistore.NotEqualError(err_msg + err_msg_names)
             if not np.all(a.properties == b.properties):
-                raise ValueError(err_msg + err_msg_1)
+                raise equistore.NotEqualError(err_msg + err_msg_1)
         elif prop == "components":
             if len(a.components) != len(b.components):
-                raise ValueError(err_msg + err_msg_len)
+                raise equistore.NotEqualError(err_msg + err_msg_len)
 
             for c1, c2 in zip(a.components, b.components):
                 if not (c1.names == c2.names):
-                    raise ValueError(err_msg + err_msg_names)
+                    raise equistore.NotEqualError(err_msg + err_msg_names)
 
                 if not (len(c1) == len(c2)):
-                    raise ValueError(err_msg + err_msg_1)
+                    raise equistore.NotEqualError(err_msg + err_msg_1)
 
                 if not np.all(c1 == c2):
-                    raise ValueError(err_msg + err_msg_1)
+                    raise equistore.NotEqualError(err_msg + err_msg_1)
 
         else:
             raise ValueError(
@@ -318,7 +320,9 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
     if len(gradients_list_a) != len(gradients_list_b) or (
         not np.all([parameter in gradients_list_b for parameter in gradients_list_a])
     ):
-        raise ValueError(f"inputs to {fname} should have the same gradient parameters")
+        raise equistore.NotEqualError(
+            f"inputs to {fname} should have the same gradient parameters"
+        )
 
     for parameter, grad_a in a.gradients():
         grad_b = b.gradient(parameter)
@@ -345,28 +349,28 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
 
                 if prop == "samples":
                     if not len(grad_a.samples) == len(grad_b.samples):
-                        raise ValueError(err_msg + err_msg_len)
+                        raise equistore.NotEqualError(err_msg + err_msg_len)
                     if not grad_a.samples.names == grad_b.samples.names:
-                        raise ValueError(err_msg + err_msg_names)
+                        raise equistore.NotEqualError(err_msg + err_msg_names)
                     if not np.all(grad_a.samples == grad_b.samples):
-                        raise ValueError(err_msg + err_msg_1)
+                        raise equistore.NotEqualError(err_msg + err_msg_1)
                 elif prop == "properties":
                     if not len(grad_a.properties) == len(grad_b.properties):
-                        raise ValueError(err_msg + err_msg_len)
+                        raise equistore.NotEqualError(err_msg + err_msg_len)
                     if not grad_a.properties.names == grad_b.properties.names:
-                        raise ValueError(err_msg + err_msg_names)
+                        raise equistore.NotEqualError(err_msg + err_msg_names)
                     if not np.all(grad_a.properties == grad_b.properties):
-                        raise ValueError(err_msg + err_msg_1)
+                        raise equistore.NotEqualError(err_msg + err_msg_1)
                 elif prop == "components":
                     if len(grad_a.components) != len(grad_b.components):
-                        raise ValueError(err_msg + err_msg_len)
+                        raise equistore.NotEqualError(err_msg + err_msg_len)
 
                     for c1, c2 in zip(grad_a.components, grad_b.components):
                         if not (c1.names == c2.names):
-                            raise ValueError(err_msg + err_msg_names)
+                            raise equistore.NotEqualError(err_msg + err_msg_names)
 
                         if not np.all(c1 == c2):
-                            raise ValueError(err_msg + err_msg_1)
+                            raise equistore.NotEqualError(err_msg + err_msg_1)
                 elif prop != "parameters":
                     # parameters are already checked at the beginning but i want
                     # to give the opportunity to the 'user' to use it, without
