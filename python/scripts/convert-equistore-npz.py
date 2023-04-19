@@ -40,5 +40,5 @@ if __name__ == "__main__":
         data = transform_equistore_npz(path)
         if data is not None:
             shutil.copyfile(path, path + ".bak")
-            np.savez_compressed(path, **data)
+            np.savez(path, **data)
             print(f"converted {path}, a backup is at {path}.bak")
