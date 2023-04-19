@@ -2,6 +2,7 @@
 
 members = [
     "equistore-core",
+    "equistore-torch",
     "equistore",
     "python",
 ]

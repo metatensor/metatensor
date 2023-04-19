@@ -415,10 +415,18 @@ public:
         eqs_labels_free(&labels_);
     }
 
-    /// Labels is not copy-constructible
-    Labels(const Labels&) = delete;
-    /// Labels can not be copy-assigned
-    Labels& operator=(const Labels& other) = delete;
+    /// Labels is copy-constructible
+    Labels(const Labels& other): Labels() {
+        *this = other;
+    }
+
+    /// Labels can be copy-assigned
+    Labels& operator=(const Labels& other) {
+        eqs_labels_free(&labels_);
+        std::memset(&labels_, 0, sizeof(labels_));
+        details::check_status(eqs_labels_clone(other.labels_, &labels_));
+        return *this;
+    }
 
     /// Labels is move-constructible
     Labels(Labels&& other) noexcept: Labels() {

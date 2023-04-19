@@ -1,0 +1,73 @@
+name: TorchScript tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    # Check all PR
+
+concurrency:
+  group: torch-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  rust-tests:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / Torch ${{ matrix.torch-version }}
+    container: ${{ matrix.container }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            torch-version: 1.11.*
+            cargo-test-flags: --release
+
+          - os: ubuntu-20.04
+            torch-version: 2.0.*
+            cargo-test-flags: --release
+            do-valgrind: true
+
+          - os: macos-11
+            torch-version: 2.0.*
+            cargo-test-flags: --release
+
+          - os: windows-2019
+            torch-version: 2.0.*
+            cargo-test-flags: --release
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        if: "!matrix.container"
+        with:
+          toolchain: stable
+
+      # we get torch from pip to run the C++ test
+      - name: setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: install valgrind
+        if: matrix.do-valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Setup sccache environnement variables
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
+      - name: run TorchScript C++ tests
+        run: cargo test --package equistore-torch ${{ matrix.cargo-test-flags }}
+        env:
+          # Use the CPU only version of torch when building/running the code
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          EQUISTORE_TORCH_TEST_VERSION: ${{ matrix.torch-version }}
