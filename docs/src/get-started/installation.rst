@@ -60,21 +60,25 @@ The build and installation can be configures with a few cmake options, using
 ``-D<OPTION>=<VALUE>`` on the cmake command line, or one of the cmake GUI
 (``cmake-gui`` or ``ccmake``). Here are the main configuration options:
 
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| Option                               | Description                                                                          | Default        |
-+======================================+======================================================================================+================+
-| CMAKE_BUILD_TYPE                     | Type of build: debug or release                                                      | release        |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| CMAKE_INSTALL_PREFIX                 | Prefix in which the library will be installed                                        | ``/usr/local`` |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| INCLUDE_INSTALL_DIR                  | Path relative to ``CMAKE_INSTALL_PREFIX`` where the headers will be installed        | ``include``    |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| LIB_INSTALL_DIR                      | Path relative to ``CMAKE_INSTALL_PREFIX`` where the shared library will be installed | ``lib``        |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| BUILD_SHARED_LIBS                    | Default to installing and using a shared library instead of a static one             | ON             |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
-| EQUISTORE_INSTALL_BOTH_STATIC_SHARED | Install both the shared and static version of the library                            | ON             |
-+--------------------------------------+--------------------------------------------------------------------------------------+----------------+
++--------------------------------------+-----------------------------------------------+----------------+
+| Option                               | Description                                   | Default        |
++======================================+===============================================+================+
+| CMAKE_BUILD_TYPE                     | Type of build: debug or release               | release        |
++--------------------------------------+-----------------------------------------------+----------------+
+| CMAKE_INSTALL_PREFIX                 | Prefix in which the library will be installed | ``/usr/local`` |
++--------------------------------------+-----------------------------------------------+----------------+
+| INCLUDE_INSTALL_DIR                  | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``include``    |
+|                                      |  where the headers will be installed          |                |
++--------------------------------------+-----------------------------------------------+----------------+
+| LIB_INSTALL_DIR                      | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``lib``        |
+|                                      | where the shared library will be installed    |                |
++--------------------------------------+-----------------------------------------------+----------------+
+| BUILD_SHARED_LIBS                    | Default to installing and using a shared      | ON             |
+|                                      | library instead of a static one               |                |
++--------------------------------------+-----------------------------------------------+----------------+
+| EQUISTORE_INSTALL_BOTH_STATIC_SHARED | Install both the shared and static version    | ON             |
+|                                      | of the library                                |                |
++--------------------------------------+-----------------------------------------------+----------------+
 
 
 Using the Rust library
@@ -86,3 +90,36 @@ Add the following to your project ``Cargo.toml``
 
     [dependencies]
     equistore = {git = "https://github.com/lab-cosmo/equistore.git"}
+
+
+Installing the TorchScript bindings
+-----------------------------------
+
+For usage from C++
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    git clone https://github.com/lab-cosmo/equistore
+    cd equistore/equistore-torch
+    mkdir build && cd build
+    cmake ..
+    # configure cmake if needed
+    cmake --build . --target install
+
+Compiling the TorchScript bindings requires you to already have :ref:`the C++
+interface to equistore installed <install-c-lib>`. If it is not in a standard
+location, you should give the installation directory when configuring cmake with
+``CMAKE_PREFIX_PATH``. Other valid configuration options are
+
++--------------------------------------+-----------------------------------------------+----------------+
+| Option                               | Description                                   | Default        |
++======================================+===============================================+================+
+| CMAKE_BUILD_TYPE                     | Type of build: debug or release               | release        |
++--------------------------------------+-----------------------------------------------+----------------+
+| CMAKE_INSTALL_PREFIX                 | Prefix in which the library will be installed | ``/usr/local`` |
++--------------------------------------+-----------------------------------------------+----------------+
+| CMAKE_PREFIX_PATH                    | ``;``-separated list of path where CMake will |                |
+|                                      | search for dependencies. This list should     |                |
+|                                      | include the path to equistore and torch       |                |
++--------------------------------------+-----------------------------------------------+----------------+
