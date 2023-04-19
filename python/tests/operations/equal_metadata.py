@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import equistore
-from equistore import Labels, TensorBlock, TensorMap, equal_metadata
+from equistore import Labels, TensorBlock, TensorMap
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -29,6 +29,16 @@ def test_tensor_map_2() -> TensorMap:
         # the npz is using DEFLATE compression, equistore only supports STORED
         use_numpy=True,
     )
+
+
+@pytest.fixture
+def test_tensor_block_1(test_tensor_map_1) -> TensorBlock:
+    return test_tensor_map_1.block(0)
+
+
+@pytest.fixture
+def test_tensor_block_2(test_tensor_map_2) -> TensorBlock:
+    return test_tensor_map_2.block(0)
 
 
 @pytest.fixture
@@ -125,12 +135,22 @@ def tensor_map() -> TensorMap:
 
 def test_self(test_tensor_map_1):
     # check if the metadata of the same tensor are equal
-    assert equal_metadata(test_tensor_map_1, test_tensor_map_1)
+    assert equistore.equal_metadata(test_tensor_map_1, test_tensor_map_1)
+
+
+def test_self_block(test_tensor_block_1):
+    # check if the metadata of the same tensor are equal
+    assert equistore.equal_metadata_block(test_tensor_block_1, test_tensor_block_1)
 
 
 def test_two_tensors(test_tensor_map_1, test_tensor_map_2):
     # check if the metadata of two tensor maps are equal
-    assert not equal_metadata(test_tensor_map_1, test_tensor_map_2)
+    assert not equistore.equal_metadata(test_tensor_map_1, test_tensor_map_2)
+
+
+def test_two_tensors_block(test_tensor_block_1, test_tensor_block_2):
+    # check if the metadata of two tensor maps are equal
+    assert not equistore.equal_metadata_block(test_tensor_block_1, test_tensor_block_2)
 
 
 def test_after_drop(test_tensor_map_1):
@@ -139,7 +159,7 @@ def test_after_drop(test_tensor_map_1):
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
     new_tesnor = equistore.drop_blocks(test_tensor_map_1, new_key)
-    assert not equal_metadata(test_tensor_map_1, new_tesnor)
+    assert not equistore.equal_metadata(test_tensor_map_1, new_tesnor)
 
 
 def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
@@ -148,13 +168,13 @@ def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
     wrong_meta = "species"
     error_message = f"Invalid metadata to check: {wrong_meta}"
     with pytest.raises(ValueError, match=error_message):
-        equal_metadata(
+        equistore.equal_metadata(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[wrong_meta],
         )
     with pytest.raises(ValueError, match=error_message):
-        equal_metadata(
+        equistore.equal_metadata(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_2,
             check=[wrong_meta],
@@ -162,15 +182,48 @@ def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
     # wrong metadata key with another correct one
     correct_meta = "properties"
     with pytest.raises(ValueError, match=error_message):
-        equal_metadata(
+        equistore.equal_metadata(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[correct_meta, wrong_meta],
         )
     with pytest.raises(ValueError, match=error_message):
-        equal_metadata(
+        equistore.equal_metadata(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_2,
+            check=[correct_meta, wrong_meta],
+        )
+
+
+def test_single_nonexisting_meta_block(test_tensor_block_1, test_tensor_block_2):
+    # check behavior if non existing metadata is provided
+    # wrong metadata key alone
+    wrong_meta = "species"
+    error_message = f"Invalid metadata to check: {wrong_meta}"
+    with pytest.raises(ValueError, match=error_message):
+        equistore.equal_metadata_block(
+            block_1=test_tensor_block_1,
+            block_2=test_tensor_block_1,
+            check=[wrong_meta],
+        )
+    with pytest.raises(ValueError, match=error_message):
+        equistore.equal_metadata_block(
+            block_1=test_tensor_block_1,
+            block_2=test_tensor_block_2,
+            check=[wrong_meta],
+        )
+    # wrong metadata key with another correct one
+    correct_meta = "properties"
+    with pytest.raises(ValueError, match=error_message):
+        equistore.equal_metadata_block(
+            block_1=test_tensor_block_1,
+            block_2=test_tensor_block_1,
+            check=[correct_meta, wrong_meta],
+        )
+    with pytest.raises(ValueError, match=error_message):
+        equistore.equal_metadata_block(
+            block_1=test_tensor_block_1,
+            block_2=test_tensor_block_2,
             check=[correct_meta, wrong_meta],
         )
 
@@ -181,7 +234,7 @@ def test_changing_tensor_key_order(test_tensor_map_1):
     new_keys = keys[::-1]
     new_blocks = [test_tensor_map_1[key].copy() for key in new_keys]
     new_tensor = TensorMap(keys=new_keys, blocks=new_blocks)
-    assert equal_metadata(test_tensor_map_1, new_tensor)
+    assert equistore.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_changing_samples_key_order(test_tensor_map_1):
@@ -209,7 +262,31 @@ def test_changing_samples_key_order(test_tensor_map_1):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=test_tensor_map_1.keys, blocks=new_blocks)
-    assert not equal_metadata(test_tensor_map_1, new_tensor)
+    assert not equistore.equal_metadata(test_tensor_map_1, new_tensor)
+
+
+def test_changing_samples_key_order_block(test_tensor_block_1):
+    # changing the order of the values of the samples should yield False
+    block = test_tensor_block_1.copy()
+    samples = block.samples[::-1]
+    new_block = TensorBlock(
+        values=block.values,
+        samples=samples,
+        properties=block.properties,
+        components=block.components,
+    )
+    for parameter, gradient in block.gradients():
+        new_block.add_gradient(
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient.values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=new_block.properties,
+            ),
+        )
+
+    assert not equistore.equal_metadata_block(test_tensor_block_1, new_block)
 
 
 def test_changing_properties_key_order(test_tensor_map_1):
@@ -237,7 +314,31 @@ def test_changing_properties_key_order(test_tensor_map_1):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=test_tensor_map_1.keys, blocks=new_blocks)
-    assert not equal_metadata(test_tensor_map_1, new_tensor)
+    assert not equistore.equal_metadata(test_tensor_map_1, new_tensor)
+
+
+def test_changing_properties_key_order_block(test_tensor_block_1):
+    # changing the order of the values of the samples should yield False
+    block = test_tensor_block_1.copy()
+    properties = block.properties[::-1]
+    new_block = TensorBlock(
+        values=block.values,
+        samples=block.samples,
+        properties=properties,
+        components=block.components,
+    )
+    for parameter, gradient in block.gradients():
+        new_block.add_gradient(
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient.values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=new_block.properties,
+            ),
+        )
+
+    assert not equistore.equal_metadata_block(test_tensor_block_1, new_block)
 
 
 def test_add_components_key_order(tensor_map):
@@ -265,7 +366,7 @@ def test_add_components_key_order(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not equal_metadata(tensor_map, new_tensor)
+    assert not equistore.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_sample(tensor_map):
@@ -292,7 +393,7 @@ def test_remove_last_sample(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not equal_metadata(tensor_map, new_tensor)
+    assert not equistore.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_property(tensor_map):
@@ -319,7 +420,7 @@ def test_remove_last_property(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not equal_metadata(tensor_map, new_tensor)
+    assert not equistore.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_component(tensor_map):
@@ -353,4 +454,4 @@ def test_remove_last_component(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not equal_metadata(tensor_map, new_tensor)
+    assert not equistore.equal_metadata(tensor_map, new_tensor)

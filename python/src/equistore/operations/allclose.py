@@ -226,7 +226,7 @@ def allclose_raise(
     """
     try:
         _check_same_keys(tensor_1, tensor_2, "allclose")
-    except ValueError as e:
+    except NotEqualError as e:
         raise NotEqualError("the tensor maps have different keys") from e
 
     for key, block_1 in tensor_1:
@@ -434,15 +434,12 @@ def allclose_block_raise(
     except ValueError as e:
         raise NotEqualError(str(e))
 
-    try:
-        _check_same_gradients(
-            block_1,
-            block_2,
-            props=["samples", "properties", "components"],
-            fname="allclose",
-        )
-    except ValueError as e:
-        raise NotEqualError(str(e))
+    _check_same_gradients(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="allclose",
+    )
 
     for parameter, gradient1 in block_1.gradients():
         gradient2 = block_2.gradient(parameter)
