@@ -3,8 +3,22 @@
 # This API is implemented in Rust, in the equistore-core crate, but Rust users
 # of the API should use the equistore crate instead, wrapping equistore-core in
 # an easier to use, idiomatic Rust API.
-
 cmake_minimum_required(VERSION 3.10)
+
+# Is equistore the main project configured by the user? Or is this being used
+# as a submodule/subdirectory?
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+    set(EQUISTORE_MAIN_PROJECT ON)
+else()
+    set(EQUISTORE_MAIN_PROJECT OFF)
+endif()
+
+if(${EQUISTORE_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_VERSION}" VERSION_EQUAL ${CMAKE_VERSION})
+    # We use CACHED_LAST_CMAKE_VERSION to only print the cmake version
+    # once in the configuration log
+    set(CACHED_LAST_CMAKE_VERSION ${CMAKE_VERSION} CACHE INTERNAL "Last version of cmake used to configure")
+    message(STATUS "Running CMake version ${CMAKE_VERSION}")
+endif()
 
 if (POLICY CMP0077)
     # use variables to set OPTIONS
@@ -13,7 +27,6 @@ endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
 
 file(STRINGS "Cargo.toml" CARGO_TOML_CONTENT)
 foreach(line ${CARGO_TOML_CONTENT})
@@ -28,7 +41,6 @@ project(equistore
     VERSION ${EQUISTORE_VERSION}
     LANGUAGES C # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
 )
-
 
 # We follow the standard CMake convention of using BUILD_SHARED_LIBS to provide
 # either a shared or static library as a default target. But since cargo always
@@ -50,7 +62,7 @@ set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. L
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
 
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+if (${EQUISTORE_MAIN_PROJECT})
     if("${CMAKE_BUILD_TYPE}" STREQUAL "" AND "${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
         message(STATUS "Setting build type to 'release' as none was specified.")
         set(CMAKE_BUILD_TYPE "release"
@@ -61,7 +73,10 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
-message(STATUS "Building in ${CMAKE_BUILD_TYPE} mode")
+if(${EQUISTORE_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_BUILD_TYPE}" STREQUAL ${CMAKE_BUILD_TYPE})
+    set(CACHED_LAST_CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE INTERNAL "Last build type used in configuration")
+    message(STATUS "Building equistore in ${CMAKE_BUILD_TYPE} mode")
+endif()
 
 # TODO: support multiple configuration generators (MSVC, ...)
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
@@ -117,7 +132,10 @@ if (${CARGO_VERSION} VERSION_LESS ${REQUIRED_RUST_VERSION})
         at least ${REQUIRED_RUST_VERSION} is required"
     )
 else()
-    message(STATUS "Using cargo version ${CARGO_VERSION} at ${CARGO_EXE}")
+    if(NOT "${CACHED_LAST_CARGO_VERSION}" STREQUAL ${CARGO_VERSION})
+        set(CACHED_LAST_CARGO_VERSION ${CARGO_VERSION} CACHE INTERNAL "Last version of cargo used in configuration")
+        message(STATUS "Using cargo version ${CARGO_VERSION} at ${CARGO_EXE}")
+    endif()
 endif()
 
 file(GLOB_RECURSE ALL_RUST_SOURCES
@@ -175,6 +193,7 @@ add_custom_command(TARGET cargo-build-equistore
     COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_SHARED_LOCATION} ${EQUISTORE_SHARED_LOCATION}
     COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_STATIC_LOCATION} ${EQUISTORE_STATIC_LOCATION}
     DEPENDS cargo-build-equistore
+    BYPRODUCTS ${EQUISTORE_SHARED_LOCATION} ${EQUISTORE_STATIC_LOCATION}
 )
 
 add_dependencies(equistore::shared cargo-build-equistore)

@@ -16,8 +16,9 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
-set(EQUISTORE_SERIALIZATION ON)
 add_subdirectory(../../ equistore)
+get_target_property(EQUISTORE_IMPORTED_LOCATION equistore::shared IMPORTED_LOCATION)
+get_filename_component(EQUISTORE_DIR ${EQUISTORE_IMPORTED_LOCATION} DIRECTORY)
 
 add_subdirectory(external)
 
@@ -54,6 +55,15 @@ foreach(_file_ ${ALL_TESTS})
     get_filename_component(_name_ ${_file_} NAME_WE)
     add_executable(${_name_} ${_file_})
     target_link_libraries(${_name_} equistore catch)
+
+    set_target_properties(${_name_} PROPERTIES
+        # Ensure that the binaries find the right shared library.
+        #
+        # Without this, when configuring with cmake before the library is built,
+        # cmake does not find the library on the filesystem and does not add the
+        # RPATH to executables linking to it
+        BUILD_RPATH ${EQUISTORE_DIR}
+    )
     target_compile_definitions(${_name_} PRIVATE "-DDATA_NPZ=\"${CMAKE_CURRENT_SOURCE_DIR}/../../../equistore/tests/data.npz\"")
 
     add_test(
