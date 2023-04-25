@@ -39,6 +39,12 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+        if self.keys.is_empty() {
+            return Err(Error::InvalidParameter(
+                "there are no keys to move in an empty TensorMap".into()
+            ));
+        }
+
         let names_to_move = keys_to_move.names();
         let splitted_keys = remove_dimensions_from_keys(&self.keys, &names_to_move)?;
 

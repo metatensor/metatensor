@@ -4,7 +4,7 @@ import os
 import pickle
 import sys
 import tempfile
-from typing import List, Union
+from typing import List, Sequence, Tuple, Union
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
@@ -39,7 +39,7 @@ class TensorMap:
     representation of the data to a dense one.
     """
 
-    def __init__(self, keys: Labels, blocks: List[TensorBlock]):
+    def __init__(self, keys: Labels, blocks: Sequence[TensorBlock]):
         """
         :param keys: keys associated with each block
         :param blocks: set of blocks containing the actual data
@@ -263,11 +263,14 @@ class TensorMap:
             return f"'{', '.join(kv)}'"
 
         if len(matching) == 0:
-            selection = next(selection.as_namedtuples())
-            raise ValueError(
-                "Couldn't find any block matching the selection "
-                f"{_format_selection(selection)}"
-            )
+            if len(self.keys) == 0:
+                raise ValueError("there are no blocks in this TensorMap")
+            else:
+                selection = next(selection.as_namedtuples())
+                raise ValueError(
+                    "Couldn't find any block matching the selection "
+                    f"{_format_selection(selection)}"
+                )
         elif len(matching) > 1:
             selection = next(selection.as_namedtuples())
             raise ValueError(
@@ -307,12 +310,16 @@ class TensorMap:
             raise ValueError(
                 f"only one non-keyword argument is supported, {len(args)} are given"
             )
+
         if args and isinstance(args[0], int):
             return [self._get_block_by_id(args[0])]
 
         matching, selection = self.blocks_matching(
             *args, **kwargs, __return_selection=True
         )
+
+        if len(self.keys) == 0:
+            return []
 
         if len(matching) == 0:
             selection = next(selection.as_namedtuples())
@@ -388,7 +395,7 @@ class TensorMap:
 
     def keys_to_samples(
         self,
-        keys_to_move: Union[str, List[str]],
+        keys_to_move: Union[str, Sequence[str]],
         *,
         sort_samples=True,
     ) -> "TensorMap":
@@ -424,7 +431,7 @@ class TensorMap:
         return TensorMap._from_ptr(ptr)
 
     def components_to_properties(
-        self, dimensions: Union[str, List[str]]
+        self, dimensions: Union[str, Sequence[str]]
     ) -> "TensorMap":
         """
         Move the given dimensions from the component labels to the property labels
@@ -441,7 +448,7 @@ class TensorMap:
 
     def keys_to_properties(
         self,
-        keys_to_move: Union[str, List[str], Labels],
+        keys_to_move: Union[str, Sequence[str], Labels],
         *,
         sort_samples=True,
     ) -> "TensorMap":
@@ -484,26 +491,35 @@ class TensorMap:
         return TensorMap._from_ptr(ptr)
 
     @property
-    def sample_names(self) -> List[str]:
+    def sample_names(self) -> Tuple[str]:
         """Names of the sample labels for all blocks in this tensor map"""
+        if len(self.keys) == 0:
+            return tuple()
+
         return self.block(0).samples.names
 
     @property
-    def components_names(self) -> List[List[str]]:
+    def components_names(self) -> List[Tuple[str]]:
         """Names of the component labels for all blocks in this tensor map"""
+        if len(self.keys) == 0:
+            return []
+
         return [c.names for c in self.block(0).components]
 
     @property
-    def property_names(self) -> List[str]:
+    def property_names(self) -> Tuple[str]:
         """Names of the property labels for all blocks in this tensor map"""
+        if len(self.keys) == 0:
+            return tuple()
+
         return self.block(0).properties.names
 
 
-def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
+def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]):
     if isinstance(keys_to_move, str):
         keys_to_move = [keys_to_move]
 
-    if isinstance(keys_to_move, list):
+    if not isinstance(keys_to_move, Labels):
         for key in keys_to_move:
             assert isinstance(key, str)
 
@@ -512,12 +528,10 @@ def _normalize_keys_to_move(keys_to_move: Union[str, List[str], Labels]):
             values=np.zeros((0, len(keys_to_move))),
         )
 
-    assert isinstance(keys_to_move, Labels)
-
     return keys_to_move
 
 
-def _list_or_str_to_array_c_char(strings: Union[str, List[str]]):
+def _list_or_str_to_array_c_char(strings: Union[str, Sequence[str]]):
     if isinstance(strings, str):
         strings = [strings]
 

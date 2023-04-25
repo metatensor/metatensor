@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
+from equistore.core import EquistoreError, Labels, TensorMap
+
 from . import utils
 
 
@@ -361,3 +363,55 @@ def test_components_to_properties(tensor):
     assert tuple(block.properties[0]) == (0, 0)
     assert tuple(block.properties[1]) == (1, 0)
     assert tuple(block.properties[2]) == (2, 0)
+
+
+def test_empty_tensor():
+    empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])
+
+    assert empty_tensor.keys.names == ("key",)
+
+    assert empty_tensor.sample_names == tuple()
+    assert empty_tensor.components_names == []
+    assert empty_tensor.property_names == tuple()
+
+    # check the `blocks` function
+    assert empty_tensor.blocks() == []
+
+    assert empty_tensor.blocks(key=3) == []
+    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.blocks(not_a_key=3)
+
+    # check the `block` function
+    message = "there are no blocks in this TensorMap"
+    with pytest.raises(ValueError, match=message):
+        assert empty_tensor.block()
+
+    with pytest.raises(ValueError, match=message):
+        empty_tensor.block(key=3)
+
+    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.block(not_a_key=3)
+
+    # check the `blocks_matching` function
+    assert empty_tensor.blocks_matching(key=3) == []
+
+    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.blocks_matching(not_a_key=3)
+
+    message = (
+        "invalid parameter: block index out of bounds: we have "
+        "0 blocks but the index is 3"
+    )
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.block(3)
+
+    # check the `keys_to_xxx` function
+    message = "invalid parameter: there are no keys to move in an empty TensorMap"
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.keys_to_samples("key")
+
+    with pytest.raises(EquistoreError, match=message):
+        empty_tensor.keys_to_properties("key")

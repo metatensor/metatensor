@@ -29,6 +29,12 @@ impl TensorMap {
     /// This function is only implemented if all merged block have the same
     /// property labels.
     pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+        if self.keys.is_empty() {
+            return Err(Error::InvalidParameter(
+                "there are no keys to move in an empty TensorMap".into()
+            ));
+        }
+
         if keys_to_move.count() > 0 {
             return Err(Error::InvalidParameter(
                 "user provided values for the keys to move is not yet implemented, \
