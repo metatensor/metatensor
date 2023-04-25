@@ -78,7 +78,7 @@ def test_save(use_numpy, tmpdir, tensor):
             assert_equal(data[f"{prefix}/components/0"], gradient.components[0])
 
 
-def test_save_warning(tmpdir, tensor):
+def test_save_warning_errors(tmpdir, tensor):
     # does not have .npz ending and causes warning
     tmpfile = "serialize-test"
 
@@ -86,10 +86,17 @@ def test_save_warning(tmpdir, tensor):
         with tmpdir.as_cwd():
             equistore.core.save(tmpfile, tensor)
 
-    assert (
-        str(record[0].message)
-        == f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    assert str(record[0].message) == expected
+
+    tmpfile = "serialize-test.npz"
+
+    message = (
+        "tensor should be a 'TensorMap', not <class 'equistore.core.block.TensorBlock'>"
     )
+    with pytest.raises(TypeError, match=message):
+        with tmpdir.as_cwd():
+            equistore.core.save(tmpfile, tensor.block(0))
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
