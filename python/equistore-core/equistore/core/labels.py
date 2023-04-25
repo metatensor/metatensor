@@ -73,7 +73,7 @@ class Labels(np.ndarray):
             if len(names) == 0:
                 names = tuple()
             else:
-                names = tuple(names)
+                names = (names,)
         else:
             names = tuple(str(n) for n in names)
 
