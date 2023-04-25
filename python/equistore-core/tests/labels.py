@@ -25,15 +25,15 @@ def test_python_labels():
 def test_single_str_name():
     """check we can use single str for single name"""
     labels = Labels(
-        names=["a"],
+        names=["abc"],
         values=np.array([[1]]),
     )
     labels_str = Labels(
-        names="a",
+        names="abc",
         values=np.array([[1]]),
     )
 
-    assert labels.names == ("a",)
+    assert labels.names == ("abc",)
     assert labels.names == labels_str.names
     assert len(labels) == 1
     assert len(labels_str) == 1
