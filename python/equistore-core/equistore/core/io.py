@@ -117,6 +117,9 @@ def save(path: str, tensor: TensorMap, use_numpy=False):
         which is limited to float64, but the native implementation is usually
         faster than going through numpy.
     """
+    if not isinstance(tensor, TensorMap):
+        raise TypeError(f"tensor should be a 'TensorMap', not {type(tensor)}")
+
     if not path.endswith(".npz"):
         path += ".npz"
         warnings.warn(
