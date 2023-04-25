@@ -215,7 +215,18 @@ pub unsafe extern fn eqs_tensormap_block_by_id(
     catch_unwind(|| {
         check_pointers!(tensor, block);
 
-        (*block) = (&mut (*tensor).blocks_mut()[index] as *mut TensorBlock).cast();
+        let blocks = (*tensor).blocks_mut();
+        match blocks.get_mut(index) {
+            Some(b) => {
+                (*block) = (b as *mut TensorBlock).cast();
+            }
+            None => {
+                return Err(Error::InvalidParameter(format!(
+                    "block index out of bounds: we have {} blocks but the index is {}",
+                    blocks.len(), index
+                )));
+            }
+        }
 
         Ok(())
     })

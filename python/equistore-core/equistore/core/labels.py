@@ -1,6 +1,6 @@
 import ctypes
 from collections import namedtuple
-from typing import List, Optional, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -57,7 +57,7 @@ class Labels(np.ndarray):
             ...
     """
 
-    def __new__(cls, names: Union[List[str], str], values: np.ndarray, **kwargs):
+    def __new__(cls, names: Union[Sequence[str], str], values: np.ndarray, **kwargs):
         """
         :param names: names of the dimensions in the new labels, in the case of a single
                       name also a single string can be given: ``names = "name"``
@@ -141,7 +141,7 @@ class Labels(np.ndarray):
             self._lib.eqs_labels_free(self._eqs_labels_t)
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> Tuple[str]:
         """Names of the columns/dimensions used for these labels"""
         return self.dtype.names or []
 
