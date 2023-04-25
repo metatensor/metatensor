@@ -30,7 +30,8 @@ def block_components():
     )
 
 
-def test_gradient_no_sample_error(block):
+def test_gradient_errors(block):
+    # missing "sample" column
     gradient = TensorBlock(
         values=np.zeros((0, 2)),
         samples=Labels([], np.empty((0, 2))),
@@ -38,11 +39,41 @@ def test_gradient_no_sample_error(block):
         properties=block.properties,
     )
 
-    msg = (
+    message = (
         "invalid parameter: gradients samples must have at least "
-        "one dimension named 'sample', we got none"
+        "one dimension, named 'sample', we got none"
     )
-    with pytest.raises(EquistoreError, match=msg):
+    with pytest.raises(EquistoreError, match=message):
+        block.add_gradient("g", gradient)
+
+    # negative values for "sample" column
+    gradient = TensorBlock(
+        values=np.zeros((1, 2)),
+        samples=Labels(["sample"], np.array([[-3]])),
+        components=[],
+        properties=block.properties,
+    )
+
+    message = (
+        "invalid parameter: invalid value for the 'sample' in gradient samples: "
+        "we got -3, but the values contain 3 samples"
+    )
+    with pytest.raises(EquistoreError, match=message):
+        block.add_gradient("g", gradient)
+
+    # values too large for "sample" column
+    gradient = TensorBlock(
+        values=np.zeros((1, 2)),
+        samples=Labels(["sample"], np.array([[42]])),
+        components=[],
+        properties=block.properties,
+    )
+
+    message = (
+        "invalid parameter: invalid value for the 'sample' in gradient samples: "
+        "we got 42, but the values contain 3 samples"
+    )
+    with pytest.raises(EquistoreError, match=message):
         block.add_gradient("g", gradient)
 
 

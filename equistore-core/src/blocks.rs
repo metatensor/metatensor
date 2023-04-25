@@ -205,7 +205,7 @@ impl TensorBlock {
         if self.gradients.contains_key(parameter) {
             return Err(Error::InvalidParameter(format!(
                 "gradient with respect to '{}' already exists for this block", parameter
-            )))
+            )));
         }
 
         if gradient.values.origin()? != self.values.origin()? {
@@ -213,20 +213,30 @@ impl TensorBlock {
                 "the gradient data has a different origin ('{}') than the value data ('{}')",
                 get_data_origin(gradient.values.origin()?),
                 get_data_origin(self.values.origin()?),
-            )))
+            )));
         }
 
         if gradient.samples.size() == 0 {
             return Err(Error::InvalidParameter(
-                "gradients samples must have at least one dimension named 'sample', we got none".into()
-            ))
+                "gradients samples must have at least one dimension, named 'sample', we got none".into()
+            ));
         }
 
         if gradient.samples.size() < 1 || gradient.samples.names()[0] != "sample" {
             return Err(Error::InvalidParameter(format!(
                 "'{}' is not valid for the first dimension in the gradients \
-                samples labels. It must must be 'sample'", gradient.samples.names()[0])
-            ))
+                samples labels, it should be 'sample'", gradient.samples.names()[0]
+            )));
+        }
+
+        let max_sample = self.samples.count();
+        for sample in &*gradient.samples {
+            if sample[0].isize() < 0 || sample[0].usize() >= max_sample {
+                return Err(Error::InvalidParameter(format!(
+                    "invalid value for the 'sample' in gradient samples: we got \
+                    {}, but the values contain {} samples", sample[0], max_sample
+                )));
+            }
         }
 
         check_component_labels(&gradient.components)?;
@@ -234,7 +244,7 @@ impl TensorBlock {
             return Err(Error::InvalidParameter(
                 "gradients components should contain at least as many labels \
                 as the values components".into()
-            ))
+            ));
         }
 
         if gradient.properties != self.properties {
@@ -253,7 +263,7 @@ impl TensorBlock {
                         "gradients and values components mismatch for values \
                         component {} (the corresponding names are [{}])",
                         component_i, values_labels.names().join(", ")
-                    )))
+                    )));
                 }
             }
 
@@ -262,7 +272,7 @@ impl TensorBlock {
         let parameter = ConstCString::new(CString::new(parameter.to_owned()).expect("invalid C string"));
         self.gradient_parameters.push(parameter);
 
-        return Ok(())
+        return Ok(());
     }
 
     /// Move components to properties for this block and all gradients in this

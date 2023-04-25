@@ -236,7 +236,7 @@ def test_self_allclose_exceptions_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.full((2, 1), 11.0),
-            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [1, 3]])),
             components=[],
             properties=block_1.properties,
         ),
@@ -253,7 +253,7 @@ def test_self_allclose_exceptions_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.full((2, 1), 11.0),
-            samples=Labels(["sample", "other_g"], np.array([[0, -2], [2, 3]])),
+            samples=Labels(["sample", "other_g"], np.array([[0, -2], [1, 3]])),
             components=[],
             properties=block_2.properties,
         ),
@@ -277,7 +277,7 @@ def test_self_allclose_exceptions_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.full((2, 1), 1.0),
-            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [1, 3]])),
             components=[],
             properties=block_3.properties,
         ),
@@ -298,7 +298,7 @@ def test_self_allclose_exceptions_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.full((2, 3, 1), 1.0),
-            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [1, 3]])),
             components=[Labels.arange("c_1", -1, 2)],
             properties=block_4.properties,
         ),
@@ -315,7 +315,7 @@ def test_self_allclose_exceptions_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.full((2, 3, 1), 1.0),
-            samples=Labels(["sample", "g"], np.array([[0, -2], [2, 3]])),
+            samples=Labels(["sample", "g"], np.array([[0, -2], [1, 3]])),
             components=[Labels(["c_1"], np.array([[-1], [6], [1]]))],
             properties=block_5.properties,
         ),
