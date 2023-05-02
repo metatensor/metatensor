@@ -86,7 +86,7 @@ workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
 - ``cargo test --test=<test-name>`` to run only the tests in ``tests/<test-name>.rs``;
-    - ``cargo test --test=python-api`` (or ``tox`` directly, see below) to run
+    - ``cargo test --package=python`` (or ``tox`` directly, see below) to run
       Python tests only;
     - ``cargo test --test=c-api-tests`` to run the C/C++ API tests only. For these
       tests, if `valgrind`_ is installed, it will be used to check for memory
@@ -109,11 +109,13 @@ specific functionalities, for example:
 
 .. code-block:: bash
 
-    tox -e tests         # unit tests
-    tox -e lint          # code style
-    tox -e build-python  # python packaging
+    tox -e core-tests           # unit tests for equistore-core
+    tox -e operations-tests     # unit tests for equistore-operations
+    tox -e docs-tests           # doctests (checking inline examples) for all packages
+    tox -e lint                 # code style
+    tox -e build-python         # python packaging
 
-    tox -e format        # format all files
+    tox -e format               # format all files
 
 The last command ``tox -e format`` will use tox to do actual formatting instead
 of just checking it.

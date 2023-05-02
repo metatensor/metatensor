@@ -1,4 +1,4 @@
-name: Test
+name: Rust tests
 
 on:
   push:
@@ -7,9 +7,9 @@ on:
     # Check all PR
 
 jobs:
-  tests:
+  rust-tests:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / rust ${{ matrix.rust-version }} / ${{ matrix.build-type }} ${{ matrix.extra-name }}
+    name: ${{ matrix.os }} / Rust ${{ matrix.rust-version }}${{ matrix.extra-name }}
     container: ${{ matrix.container }}
     strategy:
       matrix:
@@ -18,21 +18,20 @@ jobs:
           - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
-            build-type: debug
+            extra-name: ", no features"
 
           # test with all features (i.e static build + ndarray)
           - os: ubuntu-20.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
-            build-type: release
             cargo-build-flags: --release --all-features
             do-valgrind: true
+            extra-name: ", all features, release"
 
           # MSRV (Minimally Supported Rust Version)
           - os: ubuntu-20.04
             rust-version: 1.61
             rust-target: x86_64-unknown-linux-gnu
-            build-type: debug
             cargo-build-flags: --features=rayon
 
           # check the build on a stock Ubuntu 18.04, including cmake 3.10
@@ -40,14 +39,14 @@ jobs:
             rust-version: from Ubuntu
             container: ubuntu:18.04
             rust-target: x86_64-unknown-linux-gnu
-            build-type: debug
             cargo-build-flags: --all-features
+            extra-name: ", all features"
 
           - os: macos-11
             rust-version: stable
             rust-target: x86_64-apple-darwin
-            build-type: debug
             cargo-build-flags: --all-features
+            extra-name: ", all features"
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:18.04'
@@ -62,12 +61,6 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - name: setup Python
-        uses: actions/setup-python@v4
-        if: "!matrix.container"
-        with:
-          python-version: "3.10"
-
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
         if: "!matrix.container"
@@ -81,15 +74,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
 
-      - name: install tests dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox
-
       - name: run tests
-        run: cargo test --all --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
+        run: cargo test --package equistore --package equistore-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
-  # check that the C API declarations are correctly mirrored to Rust and Python
+
+  # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:
     runs-on: ubuntu-20.04
     name: check C API declarations
@@ -117,39 +106,3 @@ jobs:
           # bindgen is already installed on GitHub Actions VM
           ./scripts/update-declarations.sh
           git diff --exit-code
-
-  # check that we can build the Python wheel
-  python-build:
-    runs-on: ubuntu-20.04
-    name: check Python build
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: |
-            3.7
-            3.11
-
-      - name: setup rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          target: x86_64-unknown-linux-gnu
-
-      # check that we can build the code with our lower-supported version of
-      # Python, to make sure we are not using too recent features
-      - name: check with Python 3.7
-        run: |
-          rm -rf .tox
-          python3.7 -m pip install --upgrade pip tox
-          python3.7 -m tox -e build-tests
-
-      # check that we can build the code with our higher-supported version of
-      # Python, to make sure we are not using deprecated features
-      - name: check with Python 3.11
-        run: |
-          rm -rf .tox
-          python3.11 -m pip install --upgrade pip tox
-          python3.11 -m tox -e build-tests

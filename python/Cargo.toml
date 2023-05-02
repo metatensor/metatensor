@@ -1,0 +1,12 @@
+[package]
+name = "equistore-python"
+version = "0.0.0"
+edition = "2021"
+publish = false
+rust-version = "1.61"
+
+[lib]
+path = "lib.rs"
+
+[dev-dependencies]
+which = "4"
