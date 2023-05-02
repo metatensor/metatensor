@@ -32,6 +32,16 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Setup sccache environnement variables
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
       - name: install tests dependencies
         run: |
           python -m pip install --upgrade pip
