@@ -3,4 +3,5 @@
 members = [
     "equistore-core",
     "equistore",
+    "python",
 ]

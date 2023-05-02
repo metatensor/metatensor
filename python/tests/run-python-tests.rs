@@ -1,19 +1,21 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+#[path = "../../equistore-core/tests/utils/mod.rs"]
 mod utils;
 
 #[test]
-fn check_python() {
+fn run_python_tests() {
     let tox = which::which("tox").expect("could not find tox");
 
-    let root = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let mut root = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    root.pop();
 
     let mut tox = Command::new(tox);
     tox.arg("--");
     if cfg!(debug_assertions) {
         // assume that debug assertion means that we are building the code in
-        // debug mode, even if that could be not true in some cases
+        // debug mode, even if optimizations could be enabled
         tox.env("EQUISTORE_BUILD_TYPE", "debug");
     } else {
         tox.env("EQUISTORE_BUILD_TYPE", "release");
