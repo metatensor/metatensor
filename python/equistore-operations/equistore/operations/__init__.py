@@ -56,6 +56,7 @@ from .remove_gradients import remove_gradients
 from .slice import slice, slice_block
 from .solve import solve
 from .split import split, split_block
+from .to import block_to, to
 from .subtract import subtract
 from .unique_metadata import unique_metadata, unique_metadata_block
 from .checks import checks_enabled, unsafe_disable_checks, unsafe_enable_checks
@@ -70,6 +71,7 @@ __all__ = [
     "allclose_block",
     "allclose_block_raise",
     "block_from_array",
+    "block_to",
     "checks_enabled",
     "divide",
     "dot",
