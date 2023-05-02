@@ -74,6 +74,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Setup sccache environnement variables
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
       - name: run tests
         run: cargo test --package equistore --package equistore-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
