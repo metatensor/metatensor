@@ -52,6 +52,7 @@ project(equistore
 option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
 option(EQUISTORE_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
 
+set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install binaries/DLL")
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
 set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
@@ -75,6 +76,50 @@ if(${EQUISTORE_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_BUILD_TYPE}" STREQUAL 
     message(STATUS "Building equistore in ${CMAKE_BUILD_TYPE} mode")
 endif()
 
+find_program(CARGO_EXE "cargo" DOC "path to cargo (Rust build system)")
+if (NOT CARGO_EXE)
+    message(FATAL_ERROR
+        "could not find cargo, please make sure the Rust compiler is installed \
+        (see https://www.rust-lang.org/tools/install) or set CARGO_EXE"
+    )
+endif()
+
+execute_process(
+    COMMAND ${CARGO_EXE} "--version" "--verbose"
+    RESULT_VARIABLE CARGO_STATUS
+    OUTPUT_VARIABLE CARGO_VERSION_RAW
+)
+
+if(CARGO_STATUS AND NOT CARGO_STATUS EQUAL 0)
+    message(FATAL_ERROR
+        "could not run cargo, please make sure the Rust compiler is installed \
+        (see https://www.rust-lang.org/tools/install)"
+    )
+endif()
+
+set(REQUIRED_RUST_VERSION "1.53.0")
+if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+\\.[0-9]+\\.[0-9]+).*")
+    set(CARGO_VERSION "${CMAKE_MATCH_1}")
+else()
+    message(FATAL_ERROR "failed to determine cargo version, output was: ${CARGO_VERSION_RAW}")
+endif()
+
+if (${CARGO_VERSION} VERSION_LESS ${REQUIRED_RUST_VERSION})
+    message(FATAL_ERROR
+        "your Rust installation is too old (you have version ${CARGO_VERSION}), \
+        at least ${REQUIRED_RUST_VERSION} is required"
+    )
+else()
+    if(NOT "${CACHED_LAST_CARGO_VERSION}" STREQUAL ${CARGO_VERSION})
+        set(CACHED_LAST_CARGO_VERSION ${CARGO_VERSION} CACHE INTERNAL "Last version of cargo used in configuration")
+        message(STATUS "Using cargo version ${CARGO_VERSION} at ${CARGO_EXE}")
+        set(CARGO_VERSION_CHANGED TRUE)
+    endif()
+endif()
+
+# ============================================================================ #
+# determine Cargo flags
+
 # TODO: support multiple configuration generators (MSVC, ...)
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
 if ("${BUILD_TYPE}" STREQUAL "debug")
@@ -94,56 +139,79 @@ set(CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/target)
 set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target-dir=${CARGO_TARGET_DIR}")
 # Handle cross compilation with RUST_BUILD_TARGET
 if ("${RUST_BUILD_TARGET}" STREQUAL "")
-    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${CARGO_BUILD_TYPE}")
-else()
-    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
-    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
-endif()
-
-find_program(CARGO_EXE "cargo" DOC "path to cargo (Rust build system)")
-if (NOT CARGO_EXE)
-    message(FATAL_ERROR
-        "could not find cargo, please make sure the Rust compiler is installed \
-        (see https://www.rust-lang.org/tools/install) or set CARGO_EXE"
-    )
-endif()
-
-execute_process(
-    COMMAND ${CARGO_EXE} "--version"
-    RESULT_VARIABLE CARGO_STATUS
-    OUTPUT_VARIABLE CARGO_VERSION
-)
-
-if(CARGO_STATUS AND NOT CARGO_STATUS EQUAL 0)
-    message(FATAL_ERROR
-        "could not run cargo, please make sure the Rust compiler is installed \
-        (see https://www.rust-lang.org/tools/install)"
-    )
-endif()
-
-set(REQUIRED_RUST_VERSION "1.53.0")
-string(REGEX REPLACE "cargo ([0-9]+\\.[0-9]+\\.[0-9]+).*" "\\1" CARGO_VERSION ${CARGO_VERSION})
-if (${CARGO_VERSION} VERSION_LESS ${REQUIRED_RUST_VERSION})
-    message(FATAL_ERROR
-        "your Rust installation is too old (you have version ${CARGO_VERSION}), \
-        at least ${REQUIRED_RUST_VERSION} is required"
-    )
-else()
-    if(NOT "${CACHED_LAST_CARGO_VERSION}" STREQUAL ${CARGO_VERSION})
-        set(CACHED_LAST_CARGO_VERSION ${CARGO_VERSION} CACHE INTERNAL "Last version of cargo used in configuration")
-        message(STATUS "Using cargo version ${CARGO_VERSION} at ${CARGO_EXE}")
+    if (CARGO_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
+        set(RUST_BUILD_TARGET "${CMAKE_MATCH_1}")
+    else()
+        message(FATAL_ERROR "failed to determine host target, output was: ${CARGO_VERSION_RAW}")
     endif()
 endif()
+
+set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
+set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
+
+
+# Get the list of libraries linked by default by cargo/rustc to add when linking
+# to equistore::static
+if (CARGO_VERSION_CHANGED)
+    # Adapted from https://github.com/corrosion-rs/corrosion/blob/dc1e4e5/cmake/FindRust.cmake
+    file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs")
+    execute_process(
+        COMMAND "${CARGO_EXE}" new --lib _cargo_required_libs
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        RESULT_VARIABLE cargo_new_result
+        ERROR_QUIET
+    )
+
+    if (cargo_new_result)
+        message(FATAL_ERRPR "could not create empty project to find default static libs: ${cargo_new_result}")
+    endif()
+
+    file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs/Cargo.toml"
+        "[workspace]\nmembers=[]\n[lib]\ncrate-type=[\"staticlib\"]")
+    execute_process(
+        COMMAND ${CARGO_EXE} rustc --verbose --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs"
+        RESULT_VARIABLE cargo_build_result
+        ERROR_VARIABLE cargo_build_error_message
+    )
+
+    if(cargo_build_result)
+        message(FATAL_ERROR "could extract default static libs: ${cargo_build_result}")
+    endif()
+
+    # The pattern starts with `native-static-libs:` and goes to the end of the line.
+    if(cargo_build_error_message MATCHES "native-static-libs: ([^\r\n]+)\r?\n")
+        string(REPLACE " " ";" "libs_list" "${CMAKE_MATCH_1}")
+        set(stripped_lib_list "")
+        foreach(lib ${libs_list})
+            # Strip leading `-l` (unix) and potential .lib suffix (windows)
+            string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
+            string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
+            list(APPEND stripped_lib_list "${stripped_lib}")
+        endforeach()
+        # Special case `msvcrt` to link with the debug version in Debug mode.
+        list(TRANSFORM stripped_lib_list REPLACE "^msvcrt$" "\$<\$<CONFIG:Debug>:msvcrtd>")
+
+        set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
+        message(STATUS "Cargo default link libraries are: ${CARGO_DEFAULT_LIBRARIES}")
+    else()
+        message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_build_error_message}`")
+    endif()
+endif()
+
+# ============================================================================ #
 
 file(GLOB_RECURSE ALL_RUST_SOURCES
     ${PROJECT_SOURCE_DIR}/Cargo.toml
     ${PROJECT_SOURCE_DIR}/src/**.rs
 )
 
-
 add_library(equistore::shared SHARED IMPORTED GLOBAL)
 set(EQUISTORE_CORE_SHARED_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}equistore_core${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(EQUISTORE_CORE_IMPLIB_LOCATION "${EQUISTORE_CORE_SHARED_LOCATION}.lib")
+
 set(EQUISTORE_SHARED_LIB_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}equistore${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(EQUISTORE_IMPLIB_NAME "${EQUISTORE_SHARED_LIB_NAME}.lib")
 
 add_library(equistore::static STATIC IMPORTED GLOBAL)
 set(EQUISTORE_CORE_STATIC_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}equistore_core${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -151,6 +219,7 @@ set(EQUISTORE_STATIC_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}equistore${CMAKE_ST
 
 get_filename_component(EQUISTORE_SHARED_DIRECTORY ${EQUISTORE_CORE_SHARED_LOCATION} DIRECTORY)
 set(EQUISTORE_SHARED_LOCATION "${EQUISTORE_SHARED_DIRECTORY}/${EQUISTORE_SHARED_LIB_NAME}")
+set(EQUISTORE_IMPLIB_LOCATION "${EQUISTORE_SHARED_LOCATION}.lib")
 
 get_filename_component(EQUISTORE_STATIC_DIRECTORY ${EQUISTORE_CORE_STATIC_LOCATION} DIRECTORY)
 set(EQUISTORE_STATIC_LOCATION "${EQUISTORE_STATIC_DIRECTORY}/${EQUISTORE_STATIC_LIB_NAME}")
@@ -188,11 +257,29 @@ add_custom_target(cargo-build-equistore ALL
 
 add_custom_command(TARGET cargo-build-equistore
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_SHARED_LOCATION} ${EQUISTORE_SHARED_LOCATION}
-    COMMAND ${CMAKE_COMMAND} -E copy ${EQUISTORE_CORE_STATIC_LOCATION} ${EQUISTORE_STATIC_LOCATION}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${EQUISTORE_CORE_SHARED_LOCATION} ${EQUISTORE_SHARED_LOCATION}
     DEPENDS cargo-build-equistore
-    BYPRODUCTS ${EQUISTORE_SHARED_LOCATION} ${EQUISTORE_STATIC_LOCATION}
+    BYPRODUCTS ${EQUISTORE_SHARED_LOCATION}
+    COMMENT "copying ${EQUISTORE_CORE_SHARED_LOCATION} to ${EQUISTORE_SHARED_LOCATION}"
 )
+
+add_custom_command(TARGET cargo-build-equistore
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${EQUISTORE_CORE_STATIC_LOCATION} ${EQUISTORE_STATIC_LOCATION}
+    DEPENDS cargo-build-equistore
+    BYPRODUCTS ${EQUISTORE_STATIC_LOCATION}
+    COMMENT "copying ${EQUISTORE_CORE_STATIC_LOCATION} to ${EQUISTORE_STATIC_LOCATION}"
+)
+
+if (WIN32)
+    add_custom_command(TARGET cargo-build-equistore
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${EQUISTORE_CORE_IMPLIB_LOCATION} ${EQUISTORE_IMPLIB_LOCATION}
+        DEPENDS cargo-build-equistore
+        BYPRODUCTS ${EQUISTORE_IMPLIB_LOCATION}
+        COMMENT "copying ${EQUISTORE_CORE_IMPLIB_LOCATION} to ${EQUISTORE_IMPLIB_LOCATION}"
+    )
+endif()
 
 add_dependencies(equistore::shared cargo-build-equistore)
 add_dependencies(equistore::static cargo-build-equistore)
@@ -208,11 +295,20 @@ set_target_properties(equistore::shared PROPERTIES
 )
 target_compile_features(equistore::shared INTERFACE cxx_std_11)
 
+if (WIN32)
+    set_target_properties(equistore::shared PROPERTIES
+        IMPORTED_IMPLIB ${EQUISTORE_IMPLIB_LOCATION}
+    )
+endif()
+
+
 set_target_properties(equistore::static PROPERTIES
     IMPORTED_LOCATION ${EQUISTORE_STATIC_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
+    INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
 )
 target_compile_features(equistore::static INTERFACE cxx_std_11)
+
 
 if (BUILD_SHARED_LIBS)
     add_library(equistore ALIAS equistore::shared)
@@ -240,7 +336,14 @@ configure_file(
 install(FILES ${EQUISTORE_HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR})
 
 if (EQUISTORE_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
-    install(FILES ${EQUISTORE_SHARED_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+    if (WIN32)
+        # DLL files should go in <prefix>/bin
+        install(FILES ${EQUISTORE_SHARED_LOCATION} DESTINATION ${BIN_INSTALL_DIR})
+        # .lib files should go in <prefix>/lib
+        install(FILES ${EQUISTORE_IMPLIB_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+    else()
+        install(FILES ${EQUISTORE_SHARED_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+    endif()
 endif()
 
 if (EQUISTORE_INSTALL_BOTH_STATIC_SHARED OR NOT BUILD_SHARED_LIBS)

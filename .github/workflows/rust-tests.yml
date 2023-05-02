@@ -46,6 +46,12 @@ jobs:
             rust-target: x86_64-apple-darwin
             cargo-build-flags: --all-features
             extra-name: ", all features"
+
+          - os: windows-2019
+            rust-version: stable
+            rust-target: x86_64-pc-windows-msvc
+            cargo-build-flags: --all-features
+            extra-name: ", all features"
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:20.04'
@@ -90,7 +96,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 

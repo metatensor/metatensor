@@ -20,6 +20,7 @@ fn main() {
             include_version: false,
             documentation: true,
             documentation_style: cbindgen::DocumentationStyle::Doxy,
+            line_endings: cbindgen::LineEndingStyle::LF,
             header: Some(generated_comment.into()),
             ..Default::default()
         })
