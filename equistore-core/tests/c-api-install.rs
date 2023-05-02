@@ -59,7 +59,7 @@ fn check_c_api_build_install() {
     let mut ctest = Command::new(ctest);
     ctest.current_dir(&build_dir);
     ctest.arg("--output-on-failure");
-    ctest.arg("--C");
+    ctest.arg("--build-config");
     ctest.arg(build_type);
     let status = ctest.status().expect("failed to run tests");
     assert!(status.success());
