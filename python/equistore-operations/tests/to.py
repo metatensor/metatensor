@@ -1,12 +1,10 @@
 import numpy as np
 import pytest
+import torch
+from numpy.testing import assert_equal
 
 import equistore
 from equistore import Labels, TensorMap
-
-
-# import torch
-# from numpy.testing import assert_equal
 
 
 @pytest.fixture
@@ -30,16 +28,16 @@ def tmap():
     block1 = equistore.block_from_array(values1)
     values2 = np.arange(100, dtype=np.float64).reshape(10, 5, 2)
     block2 = equistore.block_from_array(values2)
-    tmap = TensorMap(keys=Labels.arange(2), blocks=[block1, block2])
+    tmap = TensorMap(keys=Labels.arange("dummy", 2), blocks=[block1, block2])
     return tmap
 
 
 def test_wrong_arguments_block(block):
-    """Test the `to` function with incorrect arguments."""
+    """Test the `block_to` function with incorrect arguments."""
     with pytest.raises(
         TypeError, match="``block`` should be an equistore `TensorBlock`"
     ):
-        equistore.block_to(100, backend="numpy")
+        equistore.block_to(100)
     with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
         equistore.block_to(block, backend=10)
     with pytest.raises(
@@ -51,38 +49,200 @@ def test_wrong_arguments_block(block):
 
 
 def test_numpy_to_torch_block(block):
-    """Test a conversion from numpy to torch."""
-    _ = equistore.block_to(block, backend="torch")
-    # assert equistore.equal_metadata_block(block, new_block)
+    """Test a `block_to` conversion from numpy to torch."""
+    new_block = equistore.block_to(block, backend="torch")
+    assert_equal(new_block.properties, block.properties)
+    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").components,
+        block.gradient("grad").gradient("grad_grad").components,
+    )
+    assert isinstance(new_block.values, torch.Tensor)
+    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
+    assert isinstance(
+        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
+    )
+    assert_equal(new_block.values.numpy(), block.values)
+    assert_equal(
+        new_block.gradient("grad").values.numpy(), block.gradient("grad").values
+    )
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").values.numpy(),
+        block.gradient("grad").gradient("grad_grad").values,
+    )
 
 
 def test_torch_to_numpy_block(block):
-    """Test error with unknown `axis` keyword."""
+    """Test a `block_to` conversion from torch to numpy."""
+    block = equistore.block_to(block, backend="torch")
+    new_block = equistore.block_to(block, backend="numpy")
+    assert_equal(new_block.samples, block.samples)
+    assert_equal(
+        new_block.gradient("grad").components, block.gradient("grad").components
+    )
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").properties,
+        block.gradient("grad").gradient("grad_grad").properties,
+    )
+    assert isinstance(new_block.values, np.ndarray)
+    assert isinstance(new_block.gradient("grad").values, np.ndarray)
+    assert isinstance(
+        new_block.gradient("grad").gradient("grad_grad").values, np.ndarray
+    )
+    assert_equal(new_block.values, block.values.numpy())
+    assert_equal(
+        new_block.gradient("grad").values, block.gradient("grad").values.numpy()
+    )
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").values,
+        block.gradient("grad").gradient("grad_grad").values.numpy(),
+    )
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+def test_numpy_to_torch_gpu_block(block):
+    """Test a `block_to` conversion from numpy to a torch GPU tensor."""
+    new_block = equistore.block_to(block, backend="torch", device="cuda")
+    assert_equal(new_block.properties, block.properties)
+    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").components,
+        block.gradient("grad").gradient("grad_grad").components,
+    )
+    assert isinstance(new_block.values, torch.Tensor)
+    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
+    assert isinstance(
+        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
+    )
+    assert new_block.values.is_cuda
+    assert new_block.gradient("grad").values.is_cuda
+    assert new_block.gradient("grad").gradient("grad_grad").values.is_cuda
+    assert_equal(new_block.values.cpu().numpy(), block.values)
+    assert_equal(
+        new_block.gradient("grad").values.cpu().numpy(), block.gradient("grad").values
+    )
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").values.cpu().numpy(),
+        block.gradient("grad").gradient("grad_grad").values,
+    )
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
 def test_torch_to_gpu_block(block):
-    """Test error with unknown `axis` keyword."""
+    """Test a `block_to` conversion from a torch CPU tensor to a torch GPU tensor."""
+    block = equistore.block_to(block, backend="torch")
+    new_block = equistore.block_to(block, device="cuda")
+    assert_equal(new_block.properties, block.properties)
+    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").components,
+        block.gradient("grad").gradient("grad_grad").components,
+    )
+    assert isinstance(new_block.values, torch.Tensor)
+    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
+    assert isinstance(
+        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
+    )
+    assert new_block.values.is_cuda
+    assert new_block.gradient("grad").values.is_cuda
+    assert new_block.gradient("grad").gradient("grad_grad").values.is_cuda
+    assert_equal(new_block.values.cpu().numpy(), block.values.numpy())
+    assert_equal(
+        new_block.gradient("grad").values.cpu().numpy(),
+        block.gradient("grad").values.numpy(),
+    )
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").values.cpu().numpy(),
+        block.gradient("grad").gradient("grad_grad").values.numpy(),
+    )
 
 
 def test_change_dtype_block(block):
-    """Test error with unknown `axis` keyword."""
+    """Test a `block_to` change of dtype"""
+    new_block = equistore.block_to(block, dtype=np.float32)
+    assert_equal(new_block.properties, block.properties)
+    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
+    assert_equal(
+        new_block.gradient("grad").gradient("grad_grad").components,
+        block.gradient("grad").gradient("grad_grad").components,
+    )
+    assert isinstance(new_block.values, np.ndarray)
+    assert isinstance(new_block.gradient("grad").values, np.ndarray)
+    assert isinstance(
+        new_block.gradient("grad").gradient("grad_grad").values, np.ndarray
+    )
+    assert new_block.values.dtype == np.float32
+    assert new_block.gradient("grad").values.dtype == np.float32
+    assert new_block.gradient("grad").gradient("grad_grad").values.dtype == np.float32
+    assert np.allclose(new_block.values, block.values)
+    assert np.allclose(
+        new_block.gradient("grad").values,
+        block.gradient("grad").values,
+    )
+    assert np.allclose(
+        new_block.gradient("grad").gradient("grad_grad").values,
+        block.gradient("grad").gradient("grad_grad").values,
+    )
 
 
-def test_wrong_arguments(block):
-    """Test error with unknown `axis` keyword."""
+def test_wrong_arguments(tmap):
+    """Test the `to` function with incorrect arguments."""
+    with pytest.raises(
+        TypeError, match="``tensor`` should be an equistore `TensorMap`"
+    ):
+        equistore.to(100)
+    with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
+        equistore.to(tmap, backend=10)
+    with pytest.raises(
+        ValueError, match="The `numpy` backend option does not support gradients"
+    ):
+        equistore.to(tmap, backend="numpy", requires_grad=True)
+    with pytest.raises(ValueError, match="not supported"):
+        equistore.to(tmap, backend="jax")
 
 
-def test_numpy_to_torch(block):
-    """Test error with unknown `axis` keyword."""
+def test_numpy_to_torch(tmap):
+    """Test a `to` conversion from numpy to torch."""
+    new_tmap = equistore.to(tmap, backend="torch")
+    assert equistore.equal_metadata(new_tmap, tmap)
+    for _, new_block in new_tmap:
+        assert isinstance(new_block.values, torch.Tensor)
 
 
-def test_torch_to_numpy(block):
-    """Test error with unknown `axis` keyword."""
+def test_torch_to_numpy(tmap):
+    """Test a `to` conversion from torch to numpy."""
+    tmap = equistore.to(tmap, backend="torch")
+    new_tmap = equistore.to(tmap, backend="numpy")
+    assert equistore.equal_metadata(new_tmap, tmap)
+    for _, new_block in new_tmap:
+        assert isinstance(new_block.values, np.ndarray)
 
 
-def test_torch_to_gpu(block):
-    """Test error with unknown `axis` keyword."""
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+def test_numpy_to_torch_gpu(tmap):
+    """Test a `to` conversion from numpy to a torch GPU tensor."""
+    new_tmap = equistore.to(tmap, backend="torch", device="cuda")
+    assert equistore.equal_metadata(new_tmap, tmap)
+    for _, new_block in new_tmap:
+        assert isinstance(new_block.values, torch.Tensor)
+        assert new_block.values.is_cuda
 
 
-def test_change_dtype(block):
-    """Test error with unknown `axis` keyword."""
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+def test_torch_to_gpu(tmap):
+    """Test a `block_to` conversion from a torch CPU tensor to a torch GPU tensor."""
+    tmap = equistore.to(tmap, backend="torch")
+    new_tmap = equistore.to(tmap, device="cuda")
+    assert equistore.equal_metadata(new_tmap, tmap)
+    for _, new_block in new_tmap:
+        assert isinstance(new_block.values, torch.Tensor)
+        assert new_block.values.is_cuda
+
+
+def test_change_dtype(tmap):
+    """Test a `to` change of dtype"""
+    new_tmap = equistore.to(tmap, dtype=np.float32)
+    assert equistore.equal_metadata(new_tmap, tmap)
+    for _, new_block in new_tmap:
+        assert isinstance(new_block.values, np.ndarray)
+        assert new_block.values.dtype == np.float32

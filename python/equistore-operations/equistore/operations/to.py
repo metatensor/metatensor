@@ -13,7 +13,7 @@ from equistore.core import TensorBlock, TensorMap
 
 def to(
     tensor,
-    backend,
+    backend=None,
     dtype=None,
     device=None,
     requires_grad=False,
@@ -59,7 +59,7 @@ def to(
 
 def block_to(
     block: TensorBlock,
-    backend: str,
+    backend=None,
     dtype=None,
     device=None,
     requires_grad=False,
@@ -83,20 +83,30 @@ def block_to(
     :return: a :py:class:`TensorMap` or :py:class:`TensorBlock` converted to the
         specified backend.
     """
+
     if not isinstance(block, TensorBlock):
         raise TypeError(
             f"``block`` should be an equistore `TensorBlock`, got {type(block)}"
         )
+
+    if backend is None:
+        if isinstance(block.values, np.ndarray):
+            backend = "numpy"
+        elif isinstance(block.values, torch.Tensor):
+            backend = "torch"
+        else:
+            raise TypeError("detected unsupported backend in the provided block")
     if not isinstance(backend, str):
         raise TypeError("`backend` should be passed as a `str`")
+
     if backend == "torch":
         return _to_torch_block(block, dtype, device, requires_grad)
     elif backend == "numpy":
         if requires_grad:
             raise ValueError("The `numpy` backend option does not support gradients")
         return _to_numpy_block(block, dtype)
-    # `backend` is not "numpy" or "torch"
-    raise ValueError(f"backend ``{backend}`` not supported")
+    else:
+        raise ValueError(f"backend ``{backend}`` not supported")
 
 
 def _to_torch_block(
@@ -123,11 +133,21 @@ def _to_torch_block(
     :return: a :py:class:`TensorBlock` whose values tensor is now of type
         :py:class:`torch.tensor`.
     """
+
     # Create new block, with the values tensor converted to a torch tensor.
-    new_block = TensorBlock(
-        values=torch.tensor(
+
+    if isinstance(block.values, np.ndarray):
+        new_values = torch.tensor(
             block.values, dtype=dtype, device=device, requires_grad=requires_grad
-        ),
+        )
+    elif isinstance(block.values, torch.Tensor):
+        # we need this to keep gradients of the tensor
+        new_values = block.values.to(dtype=dtype, device=device)
+    else:
+        raise ValueError("backend not supported")
+
+    new_block = TensorBlock(
+        values=new_values,
         samples=block.samples,
         components=block.components,
         properties=block.properties,
@@ -151,12 +171,10 @@ def _to_numpy_block(block, dtype) -> TensorBlock:
     converts them to numpy arrays of dtype np.float64. Returns a new TensorBlock
     object.
     """
-    if isinstance(block.values, np.ndarray):
-        return block.copy()
 
-    # Create new block, with the values tensor converted to a torch tensor.
+    # Create new block, with the values tensor converted to a numpy array.
     new_block = TensorBlock(
-        values=np.array(block.values.detach().numpy(), dtype=dtype),
+        values=np.array(block.values, dtype=dtype),
         samples=block.samples,
         components=block.components,
         properties=block.properties,
