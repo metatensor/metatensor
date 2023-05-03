@@ -1,6 +1,6 @@
 @PACKAGE_INIT@
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 if(equistore_FOUND)
     return()
@@ -29,11 +29,7 @@ if (@EQUISTORE_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
         INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE}
     )
 
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
-        # we can not set compile features for imported targets before cmake 3.11
-        # users will have to manually request C++11
-        target_compile_features(equistore::shared INTERFACE cxx_std_11)
-    endif()
+    target_compile_features(equistore::shared INTERFACE cxx_std_11)
 endif()
 
 
@@ -59,31 +55,13 @@ if (@EQUISTORE_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
         target_link_libraries(equistore::static INTERFACE m)
     endif()
 
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
-        # we can not set compile features for imported targets before cmake 3.11
-        # users will have to manually request C++11
-        target_compile_features(equistore::static INTERFACE cxx_std_11)
-    endif()
+    target_compile_features(equistore::static INTERFACE cxx_std_11)
 endif()
 
 
 # Export either the shared or static library as the equistore target
 if (@BUILD_SHARED_LIBS@)
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
-        add_library(equistore ALIAS equistore::shared)
-    else()
-        # CMake 3.10 (default on Ubuntu 20.04) does not support ALIAS for IMPORTED
-        # libraries
-        add_library(equistore INTERFACE)
-        target_link_libraries(equistore INTERFACE equistore::shared)
-    endif()
+    add_library(equistore ALIAS equistore::shared)
 else()
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
-        add_library(equistore ALIAS equistore::static)
-    else()
-        # CMake 3.10 (default on Ubuntu 20.04) does not support ALIAS for IMPORTED
-        # libraries
-        add_library(equistore INTERFACE)
-        target_link_libraries(equistore INTERFACE equistore::static)
-    endif()
+    add_library(equistore ALIAS equistore::static)
 endif()

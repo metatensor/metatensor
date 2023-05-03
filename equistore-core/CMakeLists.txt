@@ -3,7 +3,7 @@
 # This API is implemented in Rust, in the equistore-core crate, but Rust users
 # of the API should use the equistore crate instead, wrapping equistore-core in
 # an easier to use, idiomatic Rust API.
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 # Is equistore the main project configured by the user? Or is this being used
 # as a submodule/subdirectory?
@@ -24,9 +24,6 @@ if (POLICY CMP0077)
     # use variables to set OPTIONS
     cmake_policy(SET CMP0077 NEW)
 endif()
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(STRINGS "Cargo.toml" CARGO_TOML_CONTENT)
 foreach(line ${CARGO_TOML_CONTENT})
@@ -209,27 +206,18 @@ set_target_properties(equistore::shared PROPERTIES
     IMPORTED_LOCATION ${EQUISTORE_SHARED_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
 )
+target_compile_features(equistore::shared INTERFACE cxx_std_11)
 
 set_target_properties(equistore::static PROPERTIES
     IMPORTED_LOCATION ${EQUISTORE_STATIC_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${EQUISTORE_INCLUDE_DIR}
 )
+target_compile_features(equistore::static INTERFACE cxx_std_11)
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.11)
-    if (BUILD_SHARED_LIBS)
-        add_library(equistore ALIAS equistore::shared)
-    else()
-        add_library(equistore ALIAS equistore::static)
-    endif()
+if (BUILD_SHARED_LIBS)
+    add_library(equistore ALIAS equistore::shared)
 else()
-    # CMake 3.10 (default on Ubuntu 20.04) does not support ALIAS for IMPORTED
-    # libraries
-    add_library(equistore INTERFACE)
-    if (BUILD_SHARED_LIBS)
-        target_link_libraries(equistore INTERFACE equistore::shared)
-    else()
-        target_link_libraries(equistore INTERFACE equistore::static)
-    endif()
+    add_library(equistore ALIAS equistore::static)
 endif()
 
 #------------------------------------------------------------------------------#
