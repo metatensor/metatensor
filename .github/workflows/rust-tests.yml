@@ -28,19 +28,14 @@ jobs:
             do-valgrind: true
             extra-name: ", all features, release"
 
-          # MSRV (Minimally Supported Rust Version)
+          # check the build on a stock Ubuntu 20.04, which uses cmake 3.16, and
+          # with our minimal supported rust version
           - os: ubuntu-20.04
             rust-version: 1.61
+            container: ubuntu:20.04
             rust-target: x86_64-unknown-linux-gnu
             cargo-build-flags: --features=rayon
-
-          # check the build on a stock Ubuntu 18.04, including cmake 3.10
-          - os: ubuntu-20.04
-            rust-version: from Ubuntu
-            container: ubuntu:18.04
-            rust-target: x86_64-unknown-linux-gnu
-            cargo-build-flags: --all-features
-            extra-name: ", all features"
+            extra-name: ", cmake 3.16, all features"
 
           - os: macos-11
             rust-version: stable
@@ -49,21 +44,16 @@ jobs:
             extra-name: ", all features"
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:18.04'
+        if: matrix.container == 'ubuntu:20.04'
         run: |
           apt update
           apt install -y software-properties-common
-          add-apt-repository -y ppa:git-core/ppa
-          add-apt-repository ppa:deadsnakes/ppa
-          apt install -y cmake make gcc g++ git curl rustc cargo
-          apt install -y python3.7 python3-pip
-          ln -s /usr/bin/python3.7 /usr/bin/python
+          apt install -y cmake make gcc g++ git curl
 
       - uses: actions/checkout@v3
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
-        if: "!matrix.container"
         with:
           toolchain: ${{ matrix.rust-version }}
           target: ${{ matrix.rust-target }}

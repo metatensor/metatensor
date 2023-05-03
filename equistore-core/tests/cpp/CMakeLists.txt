@@ -1,9 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(equistore-tests)
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     if("${CMAKE_BUILD_TYPE}" STREQUAL "" AND "${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
@@ -63,6 +59,7 @@ foreach(_file_ ${ALL_TESTS})
         # cmake does not find the library on the filesystem and does not add the
         # RPATH to executables linking to it
         BUILD_RPATH ${EQUISTORE_DIR}
+        NO_SYSTEM_FROM_IMPORTED ON
     )
     target_compile_definitions(${_name_} PRIVATE "-DDATA_NPZ=\"${CMAKE_CURRENT_SOURCE_DIR}/../../../equistore/tests/data.npz\"")
 
