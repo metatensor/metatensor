@@ -1,9 +1,7 @@
-from typing import Optional, Union
-
-import numpy as np
-import torch
+from typing import Optional
 
 from equistore.core import TensorBlock, TensorMap
+
 from . import _dispatch
 
 
@@ -92,30 +90,22 @@ def block_to(
     :return: a :py:class:`TensorBlock` converted to the specified backend, data
         type, and/or device.
     """
-    # Check input types
+    # Check inputs
     if not isinstance(block, TensorBlock):
         raise TypeError(
             f"`block` should be an equistore `TensorBlock`, got {type(block)}"
         )
-
-    if backend is None:  # infer the target backend from the current one
-        if isinstance(block.values, np.ndarray):
-            backend = "numpy"
-        elif isinstance(block.values, torch.Tensor):
-            backend = "torch"
+    if backend is not None:
+        if not isinstance(backend, str):
+            raise TypeError("`backend` should be passed as a `str`")
         else:
-            raise TypeError(
-                f"detected unsupported backend {backend} in the provided block"
-            )
-
-    if not isinstance(backend, str):
-        raise TypeError("`backend` should be passed as a `str`")
-    if backend not in ["numpy", "torch"]:
-        raise ValueError(f"backend ``{backend}`` not supported")
-    if backend == "numpy" and requires_grad:
-        raise ValueError(
-            "the `numpy` backend option does not support autograd gradient tracking"
-        )
+            if backend not in ["numpy", "torch"]:
+                raise ValueError(f"backend ``{backend}`` not supported")
+            if backend == "numpy" and requires_grad:
+                raise ValueError(
+                    "the `numpy` backend option does not support autograd"
+                    " gradient tracking"
+                )
 
     return _block_to(block, backend, dtype, device, requires_grad)
 

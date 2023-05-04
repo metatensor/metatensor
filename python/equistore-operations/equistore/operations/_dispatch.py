@@ -402,25 +402,44 @@ def rand_like(array, shape=None, requires_grad=False):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def to(array, backend: str, dtype=None, device=None, requires_grad=False):
+def to(array, backend: str = None, dtype=None, device=None, requires_grad=False):
     """
     Convert the array to the specified backend.
     """
-    if backend == "numpy":
-        if not isinstance(array, (np.ndarray, TorchTensor())):
-            raise TypeError(UNKNOWN_ARRAY_TYPE)
-        return np.array(array, dtype=dtype)
+    # Convert numpy array
+    if isinstance(array, np.ndarray):
+        if backend is None:  # Infer the target backend
+            backend = "numpy"
 
-    elif backend == "torch":
-        if isinstance(array, np.ndarray):
+        # Perform the conversion
+        if backend == "numpy":
+            return np.array(array, dtype=dtype)
+
+        elif backend == "torch":
             return torch.tensor(
                 array, dtype=dtype, device=device, requires_grad=requires_grad
             )
-        elif isinstance(array, torch.Tensor):
-            # we need this to keep gradients of the tensor
-            return array.to(dtype=dtype, device=device)
+
         else:
-            raise TypeError(UNKNOWN_ARRAY_TYPE)
+            raise ValueError(f"Unknown backend: {backend}")
+
+    # Convert torch Tensor
+    elif isinstance(array, torch.Tensor):
+        if backend is None:  # Infer the target backend
+            backend = "torch"
+
+        # Perform the conversion
+        if backend == "numpy":
+            return array.detach().cpu().numpy()
+
+        elif backend == "torch":
+            # We need this to keep gradients of the tensor
+            return array.to(dtype=dtype, device=device)
+
+        else:
+            raise ValueError(f"Unknown backend: {backend}")
+        return np.array(array, dtype=dtype)
 
     else:
-        raise ValueError(f"Unknown backend: {backend}")
+        # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)

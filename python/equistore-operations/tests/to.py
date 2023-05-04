@@ -34,14 +34,13 @@ def tensor():
 
 def test_wrong_arguments_block(block):
     """Test the `block_to` function with incorrect arguments."""
-    with pytest.raises(
-        TypeError, match="``block`` should be an equistore `TensorBlock`"
-    ):
+    with pytest.raises(TypeError, match="`block` should be an equistore `TensorBlock`"):
         equistore.block_to(100)
     with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
         equistore.block_to(block, backend=10)
     with pytest.raises(
-        ValueError, match="The `numpy` backend option does not support gradients"
+        ValueError,
+        match="the `numpy` backend option does not support autograd gradient tracking",
     ):
         equistore.block_to(block, backend="numpy", requires_grad=True)
     with pytest.raises(ValueError, match="not supported"):
@@ -187,14 +186,13 @@ def test_change_dtype_block(block):
 
 def test_wrong_arguments(tensor):
     """Test the `to` function with incorrect arguments."""
-    with pytest.raises(
-        TypeError, match="``tensor`` should be an equistore `TensorMap`"
-    ):
+    with pytest.raises(TypeError, match="`tensor` should be an equistore `TensorMap`"):
         equistore.to(100)
     with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
         equistore.to(tensor, backend=10)
     with pytest.raises(
-        ValueError, match="The `numpy` backend option does not support gradients"
+        ValueError,
+        match="the `numpy` backend option does not support autograd gradient tracking",
     ):
         equistore.to(tensor, backend="numpy", requires_grad=True)
     with pytest.raises(ValueError, match="not supported"):
