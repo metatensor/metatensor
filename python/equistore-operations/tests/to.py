@@ -22,14 +22,14 @@ def block():
 
 
 @pytest.fixture
-def tmap():
+def tensor():
     # Returns a TensorMap with two blocks
     values1 = np.arange(42, dtype=np.float64).reshape(7, 3, 2)
     block1 = equistore.block_from_array(values1)
     values2 = np.arange(100, dtype=np.float64).reshape(10, 5, 2)
     block2 = equistore.block_from_array(values2)
-    tmap = TensorMap(keys=Labels.arange("dummy", 2), blocks=[block1, block2])
-    return tmap
+    tensor = TensorMap(keys=Labels.arange("dummy", 2), blocks=[block1, block2])
+    return tensor
 
 
 def test_wrong_arguments_block(block):
@@ -185,64 +185,64 @@ def test_change_dtype_block(block):
     )
 
 
-def test_wrong_arguments(tmap):
+def test_wrong_arguments(tensor):
     """Test the `to` function with incorrect arguments."""
     with pytest.raises(
         TypeError, match="``tensor`` should be an equistore `TensorMap`"
     ):
         equistore.to(100)
     with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
-        equistore.to(tmap, backend=10)
+        equistore.to(tensor, backend=10)
     with pytest.raises(
         ValueError, match="The `numpy` backend option does not support gradients"
     ):
-        equistore.to(tmap, backend="numpy", requires_grad=True)
+        equistore.to(tensor, backend="numpy", requires_grad=True)
     with pytest.raises(ValueError, match="not supported"):
-        equistore.to(tmap, backend="jax")
+        equistore.to(tensor, backend="jax")
 
 
-def test_numpy_to_torch(tmap):
+def test_numpy_to_torch(tensor):
     """Test a `to` conversion from numpy to torch."""
-    new_tmap = equistore.to(tmap, backend="torch")
-    assert equistore.equal_metadata(new_tmap, tmap)
-    for _, new_block in new_tmap:
+    new_tensor = equistore.to(tensor, backend="torch")
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
 
 
-def test_torch_to_numpy(tmap):
+def test_torch_to_numpy(tensor):
     """Test a `to` conversion from torch to numpy."""
-    tmap = equistore.to(tmap, backend="torch")
-    new_tmap = equistore.to(tmap, backend="numpy")
-    assert equistore.equal_metadata(new_tmap, tmap)
-    for _, new_block in new_tmap:
+    tensor = equistore.to(tensor, backend="torch")
+    new_tensor = equistore.to(tensor, backend="numpy")
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
         assert isinstance(new_block.values, np.ndarray)
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
-def test_numpy_to_torch_gpu(tmap):
+def test_numpy_to_torch_gpu(tensor):
     """Test a `to` conversion from numpy to a torch GPU tensor."""
-    new_tmap = equistore.to(tmap, backend="torch", device="cuda")
-    assert equistore.equal_metadata(new_tmap, tmap)
-    for _, new_block in new_tmap:
+    new_tensor = equistore.to(tensor, backend="torch", device="cuda")
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
         assert new_block.values.is_cuda
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
-def test_torch_to_gpu(tmap):
+def test_torch_to_gpu(tensor):
     """Test a `block_to` conversion from a torch CPU tensor to a torch GPU tensor."""
-    tmap = equistore.to(tmap, backend="torch")
-    new_tmap = equistore.to(tmap, device="cuda")
-    assert equistore.equal_metadata(new_tmap, tmap)
-    for _, new_block in new_tmap:
+    tensor = equistore.to(tensor, backend="torch")
+    new_tensor = equistore.to(tensor, device="cuda")
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
         assert new_block.values.is_cuda
 
 
-def test_change_dtype(tmap):
+def test_change_dtype(tensor):
     """Test a `to` change of dtype"""
-    new_tmap = equistore.to(tmap, dtype=np.float32)
-    assert equistore.equal_metadata(new_tmap, tmap)
-    for _, new_block in new_tmap:
+    new_tensor = equistore.to(tensor, dtype=np.float32)
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
         assert isinstance(new_block.values, np.ndarray)
         assert new_block.values.dtype == np.float32
