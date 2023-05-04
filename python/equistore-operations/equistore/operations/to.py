@@ -6,6 +6,10 @@ from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
 
+# TODO: Discuss: if the backend is "torch" and the input is already a
+# torch-based tensor, should we allow switching off autograd? In this case
+# should the default value of requires_grad be None?
+
 
 def to(
     tensor: TensorMap,
@@ -39,11 +43,12 @@ def to(
     :return: a :py:class:`TensorMap` converted to the specified backend, data
         type, and/or device.
     """
+    # Check types
     if not isinstance(tensor, TensorMap):
         raise TypeError(
             f"`tensor` should be an equistore `TensorMap`, got {type(tensor)}"
         )
-
+    # Convert each block and build the return TensorMap
     keys = tensor.keys
     new_blocks = [
         block_to(
@@ -91,7 +96,7 @@ def block_to(
     :return: a :py:class:`TensorBlock` converted to the specified backend, data
         type, and/or device.
     """
-
+    # Check input types
     if not isinstance(block, TensorBlock):
         raise TypeError(
             f"`block` should be an equistore `TensorBlock`, got {type(block)}"
@@ -106,52 +111,35 @@ def block_to(
             raise TypeError(
                 f"detected unsupported backend {backend} in the provided block"
             )
+
     if not isinstance(backend, str):
         raise TypeError("`backend` should be passed as a `str`")
-
-    if backend == "torch":
-        return _to_torch_block(block, dtype, device, requires_grad)
-    elif backend == "numpy":
-        if requires_grad:
-            raise ValueError(
-                "the `numpy` backend option does not support autograd gradient tracking"
-            )
-        return _to_numpy_block(block, dtype)
-    else:
+    if backend not in ["numpy", "torch"]:
         raise ValueError(f"backend ``{backend}`` not supported")
+    if backend == "numpy" and requires_grad:
+        raise ValueError(
+            "the `numpy` backend option does not support autograd gradient tracking"
+        )
+
+    return _block_to(block, backend, dtype, device, requires_grad)
 
 
-def _to_torch_block(
+def _block_to(
     block: TensorBlock,
-    dtype,
-    device,
-    requires_grad: bool,
+    backend: str,
+    dtype=None,
+    device=None,
+    requires_grad: bool = False,
 ) -> TensorBlock:
     """
-    Creates a new :py:class:`TensorBlock` where block values are
-    :py:class:`torch.Tensor` objects.
-
-    :param block: input :py:class:`TensorBlock`.
-    :param dtype: the dtype of the data in the resulting
-        :py:class:`TensorBlock`. This is passed directly to torch, so can be
-        specified as a variety of objects, such as (but not limited to)
-        :py:class:`torch.dtype`, :py:class:`str`, or :py:class:`type`.
-    :param device: the device on which the :py:class:`torch.Tensor` of the
-        resulting :py:class:`TensorBlock` should be stored. Can be specified as
-        a variety of objects such as (but not limited to)
-        :py:class:`torch.device` or :py:class:`str`.
-    :param requires_grad: :py:class:`bool`, whether or not torch's autograd
-        should record operations on this tensor.
-
-    :return: a :py:class:`TensorBlock` whose values tensor is of type
-        :py:class:`torch.Tensor`, according to the specified parameters.
+    Converts a :py:class:`TensorBlock` and all its gradients to a different
+    ``backend``.
     """
-
-    # Create new block, with the values tensor converted to a torch tensor.
+    # Create new block, with the values tensor converted
     new_block = TensorBlock(
         values=_dispatch.to(
-            block.values,
-            backend="torch",
+            array=block.values,
+            backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
@@ -160,47 +148,15 @@ def _to_torch_block(
         components=block.components,
         properties=block.properties,
     )
-
+    # Recursively convert all gradient blocks to numpy
     for parameter, gradient_block in block.gradients():
-        # Recursively convert all gradient blocks to torch
-        new_gradient_block = _to_torch_block(
-            gradient_block, dtype=dtype, device=device, requires_grad=requires_grad
+        new_gradient_block = _block_to(
+            block=gradient_block,
+            backend=backend,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
         )
-        new_block.add_gradient(
-            parameter,
-            new_gradient_block,
-        )
-
-    return new_block
-
-
-def _to_numpy_block(block: TensorBlock, dtype) -> TensorBlock:
-    """
-    Converts a :py:class:`TensorBlock` object to a new :py:class:`TensorBlock`
-    object whose ``values`` (and gradients) are a :py:class:`numpy.ndarray`,
-    with the desired data type.
-
-    :param block: input :py:class:`TensorBlock`.
-    :param dtype: the dtype of the data in the resulting
-        :py:class:`TensorBlock`. This is passed directly to numpy, so can be
-        specified as a variety of objects, such as (but not limited to)
-        :py:class:`numpy.dtype`, :py:class:`str`, or :py:class:`type`.
-
-    :return: a :py:class:`TensorBlock` whose values array is a
-        :py:class:`numpy.ndarray`, with the specified ``dtype``.
-    """
-
-    # Create new block, with the values tensor converted to a numpy array.
-    new_block = TensorBlock(
-        values=_dispatch.to(block.values, backend="numpy", dtype=dtype),
-        samples=block.samples,
-        components=block.components,
-        properties=block.properties,
-    )
-
-    for parameter, gradient_block in block.gradients():
-        # Recursively convert all gradient blocks to numpy
-        new_gradient_block = _to_numpy_block(gradient_block, dtype=dtype)
         new_block.add_gradient(
             parameter,
             new_gradient_block,
