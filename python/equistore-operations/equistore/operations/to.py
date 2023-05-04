@@ -14,8 +14,8 @@ from equistore.core import TensorBlock, TensorMap
 def to(
     tensor: TensorMap,
     backend: Optional[str] = None,
-    dtype: Optional[Union[np.dtype, torch.dtype]] = None,
-    device: Optional[torch.device] = None,
+    dtype=None,
+    device=None,
     requires_grad: bool = False,
 ) -> TensorMap:
     """
@@ -23,20 +23,24 @@ def to(
     supports converting to and from numpy- or torch-based tensors.
 
     :param tensor: input :py:class:`TensorMap`.
-    :param backend: :py:class:`str`, the backend to convert to. Currently only
-        supports ``"numpy"`` or ``"torch"``. If not provided, the backend of the
-        input ``tensor`` will be used.
-    :param dtype: :py:class:`numpy.dtype` or :py:class:`torch.dtype`, according
-        to the desired ``backend``. It is the dtype of the data in the resulting
-        :py:class:`TensorMap`.
-    :param device: :py:class:`torch.device`, the device on which the tensors of
-        the resulting :py:class:`TensorMap` should be stored, only applicable if
-        `backend` is set to ``"torch"``.
-    :param requires_grad: :py:class:`bool`, whether or not to use torch's
-        autograd to record operations on this tensor. Only applicable if
-        `backend` is set to ``"torch"``.
+    :param backend: :py:class:`str` indicating the backend to convert to.
+        Currently only supports ``"numpy"`` or ``"torch"``. If not provided, the
+        backend of the input ``tensor`` will be used.
 
-    :return: a :py:class:`TensorMap`` converted to the specified backend, data
+    :param dtype: the dtype of the data in the resulting :py:class:`TensorMap`.
+        This is passed directly to numpy/torch, so can be specified as a variety
+        of objects, such as (but not limited to) :py:class:`numpy.dtype`,
+        :py:class:`torch.dtype`, :py:class:`str`, or :py:class:`type`.
+    :param device: only applicable if ``backend`` is ``"torch"``. The device on
+        which the :py:class:`torch.Tensor` objects of the resulting
+        :py:class:`TensorMap` should be stored. Can be specified as a variety
+        of objects such as (but not limited to) :py:class:`torch.device` or
+        :py:class:`str`.
+    :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
+        :py:class:`bool` indicating whether or not to use torch's autograd to
+        record operations on this block's data. Default is false.
+
+    :return: a :py:class:`TensorMap` converted to the specified backend, data
         type, and/or device.
     """
     if not isinstance(tensor, TensorMap):
@@ -62,29 +66,33 @@ def to(
 def block_to(
     block: TensorBlock,
     backend: Optional[str] = None,
-    dtype: Optional[Union[np.dtype, torch.dtype]] = None,
-    device: Optional[torch.device] = None,
+    dtype=None,
+    device=None,
     requires_grad: bool = False,
 ) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock` to a different ``backend``. Currently
     only supports converting to and from numpy- or torch-based tensors.
 
-    :param tensor: input :py:class:`TensorBlock`.
+    :param block: input :py:class:`TensorBlock`.
     :param backend: :py:class:`str`, the backend to convert to. Currently only
-        supports ``"numpy"`` or ``"torch"``. If not specified, the backend will
-        be set according to the backend of the input ``block``.
-    :param dtype: :py:class:`numpy.dtype` or :py:class:`torch.dtype`, according
-        to the desired ``backend``. It is the dtype of the data in the resulting
-        :py:class:`TensorBlock`.
-    :param device: :py:class:`torch.device`, the device on which the data of the
-        resulting :py:class:`TensorBlock` should be stored, only applicable if
-        ``backend`` is set to ``"torch"``.
-    :param requires_grad: :py:class:`bool`, whether or not to use torch's
-        autograd to record operations on this block's data. Only applicable if
-        ``backend`` is set to ``"torch"``. Default is false.
+        supports ``"numpy"`` or ``"torch"``. If not specified, the backend is
+        set to match the current backend of the input ``block``.
+    :param dtype: the dtype of the data in the resulting
+        :py:class:`TensorBlock`. This is passed directly to numpy/torch, so can
+        be specified as a variety of objects, such as (but not limited to)
+        :py:class:`numpy.dtype`, :py:class:`torch.dtype`, :py:class:`str`, or
+        :py:class:`type`.
+    :param device: only applicable if ``backend`` is ``"torch"``. The device on
+        which the :py:class:`torch.Tensor` of the resulting
+        :py:class:`TensorBlock` should be stored. Can be specified as a variety
+        of objects such as (but not limited to) :py:class:`torch.device` or
+        :py:class:`str`.
+    :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
+        :py:class:`bool` indicating whether or not to use torch's autograd to
+        record operations on this block's data. Default is false.
 
-    :return: a :py:class:`TensorBlock`` converted to the specified backend, data
+    :return: a :py:class:`TensorBlock` converted to the specified backend, data
         type, and/or device.
     """
 
@@ -106,21 +114,8 @@ def block_to(
         raise TypeError("`backend` should be passed as a `str`")
 
     if backend == "torch":
-        if not isinstance(dtype, torch.dtype):
-            raise TypeError(
-                f"`dtype` should be a `torch.dtype` when converting to the `torch` backend, got {type(dtype)}"
-            )
-        if not isinstance(device, torch.device):
-            raise TypeError(
-                f"`device` should be a `torch.device` when converting to the `torch` backend, got {type(device)}"
-            )
-
         return _to_torch_block(block, dtype, device, requires_grad)
     elif backend == "numpy":
-        if not isinstance(dtype, np.dtype):
-            raise TypeError(
-                f"`dtype` should be a `numpy.dtype` when converting to the `numpy` backend, got {type(dtype)}"
-            )
         if requires_grad:
             raise ValueError(
                 "the `numpy` backend option does not support autograd gradient tracking"
@@ -132,8 +127,8 @@ def block_to(
 
 def _to_torch_block(
     block: TensorBlock,
-    dtype: torch.dtype,
-    device: torch.device,
+    dtype,
+    device,
     requires_grad: bool,
 ) -> TensorBlock:
     """
@@ -141,11 +136,16 @@ def _to_torch_block(
     :py:class:`torch.Tensor` objects.
 
     :param block: input :py:class:`TensorBlock`.
-    :param dtype: :py:class:`torch.dtype`, the base dtype of the resulting torch tensor
-    :param device: :py:class:`torch.device`, the device on which the resulting torch
-        tensor should be stored.
-    :param requires_grad: :py:class:`bool`, whether or not torch's autograd should record
-        operations on this tensor.
+    :param dtype: the dtype of the data in the resulting
+        :py:class:`TensorBlock`. This is passed directly to torch, so can be
+        specified as a variety of objects, such as (but not limited to)
+        :py:class:`torch.dtype`, :py:class:`str`, or :py:class:`type`.
+    :param device: the device on which the :py:class:`torch.Tensor` of the
+        resulting :py:class:`TensorBlock` should be stored. Can be specified as
+        a variety of objects such as (but not limited to)
+        :py:class:`torch.device` or :py:class:`str`.
+    :param requires_grad: :py:class:`bool`, whether or not torch's autograd
+        should record operations on this tensor.
 
     :return: a :py:class:`TensorBlock` whose values tensor is of type
         :py:class:`torch.Tensor`, according to the specified parameters.
@@ -182,15 +182,17 @@ def _to_torch_block(
     return new_block
 
 
-def _to_numpy_block(block: TensorBlock, dtype: np.dtype) -> TensorBlock:
+def _to_numpy_block(block: TensorBlock, dtype) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock` object to a new :py:class:`TensorBlock`
     object whose ``values`` (and gradients) are a :py:class:`numpy.ndarray`,
     with the desired data type.
 
     :param block: input :py:class:`TensorBlock`.
-    :param dtype: :py:class:`numpy.dtype`, the base dtype of the resulting
-        block.
+    :param dtype: the dtype of the data in the resulting
+        :py:class:`TensorBlock`. This is passed directly to numpy, so can be
+        specified as a variety of objects, such as (but not limited to)
+        :py:class:`numpy.dtype`, :py:class:`str`, or :py:class:`type`.
 
     :return: a :py:class:`TensorBlock` whose values array is a
         :py:class:`numpy.ndarray`, with the specified ``dtype``.
