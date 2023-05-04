@@ -39,7 +39,7 @@ endforeach()
 
 project(equistore
     VERSION ${EQUISTORE_VERSION}
-    LANGUAGES C # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
+    LANGUAGES C CXX # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
 )
 
 # We follow the standard CMake convention of using BUILD_SHARED_LIBS to provide
@@ -182,6 +182,7 @@ add_custom_target(cargo-build-equistore ALL
     COMMAND
         ${CMAKE_COMMAND} -E env
         MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
+        RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
