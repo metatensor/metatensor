@@ -438,7 +438,6 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=False)
 
         else:
             raise ValueError(f"Unknown backend: {backend}")
-        return np.array(array, dtype=dtype)
 
     else:
         # Only numpy and torch arrays currently supported
