@@ -402,7 +402,7 @@ def rand_like(array, shape=None, requires_grad=False):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def to(array, backend: str = None, dtype=None, device=None, requires_grad=False):
+def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
     """
     Convert the array to the specified backend.
     """
@@ -416,9 +416,11 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=False)
             return np.array(array, dtype=dtype)
 
         elif backend == "torch":
-            return torch.tensor(
-                array, dtype=dtype, device=device, requires_grad=requires_grad
-            )
+            # If requires_grad is None, it is set to False by torch here
+            new_array = torch.tensor(array, dtype=dtype, device=device)
+            if requires_grad is not None:
+                new_array.requires_grad = requires_grad
+            return new_array
 
         else:
             raise ValueError(f"Unknown backend: {backend}")
@@ -434,7 +436,10 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=False)
 
         elif backend == "torch":
             # We need this to keep gradients of the tensor
-            return array.to(dtype=dtype, device=device)
+            new_array = array.to(dtype=dtype, device=device)
+            if requires_grad is not None:
+                new_array.requires_grad = requires_grad
+            return new_array
 
         else:
             raise ValueError(f"Unknown backend: {backend}")

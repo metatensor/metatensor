@@ -207,6 +207,23 @@ def test_numpy_to_torch(tensor):
         assert isinstance(new_block.values, torch.Tensor)
 
 
+def test_numpy_to_torch_switching_requires_grad(tensor):
+    """Test a `to` conversion from numpy to torch, switching requires_grad on
+    and off."""
+    new_tensor = equistore.to(tensor, backend="torch")
+    assert equistore.equal_metadata(new_tensor, tensor)
+    for _, new_block in new_tensor:
+        assert not new_block.values.requires_grad
+
+    new_tensor = equistore.to(tensor, backend="torch", requires_grad=True)
+    for _, new_block in new_tensor:
+        assert new_block.values.requires_grad
+
+    new_tensor = equistore.to(tensor, backend="torch", requires_grad=False)
+    for _, new_block in new_tensor:
+        assert not new_block.values.requires_grad
+
+
 def test_torch_to_numpy(tensor):
     """Test a `to` conversion from torch to numpy."""
     tensor = equistore.to(tensor, backend="torch")

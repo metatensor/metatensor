@@ -10,7 +10,7 @@ def to(
     backend: Optional[str] = None,
     dtype=None,
     device=None,
-    requires_grad: bool = False,
+    requires_grad: Optional[bool] = None,
 ) -> TensorMap:
     """
     Converts a :py:class:`TensorMap` to a different backend. Currently only
@@ -27,12 +27,17 @@ def to(
         :py:class:`torch.dtype`, :py:class:`str`, or :py:class:`type`.
     :param device: only applicable if ``backend`` is ``"torch"``. The device on
         which the :py:class:`torch.Tensor` objects of the resulting
-        :py:class:`TensorMap` should be stored. Can be specified as a variety
-        of objects such as (but not limited to) :py:class:`torch.device` or
+        :py:class:`TensorMap` should be stored. Can be specified as a variety of
+        objects such as (but not limited to) :py:class:`torch.device` or
         :py:class:`str`.
     :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
         :py:class:`bool` indicating whether or not to use torch's autograd to
-        record operations on this block's data. Default is false.
+        record operations on this block's data. If not specified (i.e.
+        ``requires_grad=None``), in the case that the input ``tensor`` is
+        already torch-based, the value of ``requires_grad`` will be preserved at
+        its current setting. In the case that ``tensor`` is numpy-based, upon
+        conversion to a torch tensor, torch will by default set
+        ``requires_grad`` to ``False``.
 
     :return: a :py:class:`TensorMap` converted to the specified backend, data
         type, and/or device.
@@ -63,7 +68,7 @@ def block_to(
     backend: Optional[str] = None,
     dtype=None,
     device=None,
-    requires_grad: bool = False,
+    requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock` to a different ``backend``. Currently
@@ -85,7 +90,11 @@ def block_to(
         :py:class:`str`.
     :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
         :py:class:`bool` indicating whether or not to use torch's autograd to
-        record operations on this block's data. Default is false.
+        record operations on this block's data. If not specified (i.e.
+        ``None``), in the case that the input ``block`` is already torch-based,
+        the value of ``requires_grad`` will be preserved. In the case that
+        ``block`` is numpy-based, upon conversion to a torch tensor, torch will
+        by default set ``requires_grad`` to ``False``.
 
     :return: a :py:class:`TensorBlock` converted to the specified backend, data
         type, and/or device.
@@ -101,11 +110,12 @@ def block_to(
         else:
             if backend not in ["numpy", "torch"]:
                 raise ValueError(f"backend ``{backend}`` not supported")
-            if backend == "numpy" and requires_grad:
-                raise ValueError(
-                    "the `numpy` backend option does not support autograd"
-                    " gradient tracking"
-                )
+            if backend == "numpy":
+                if requires_grad is not None:
+                    raise ValueError(
+                        "the `numpy` backend option does not support autograd"
+                        " gradient tracking"
+                    )
 
     return _block_to(block, backend, dtype, device, requires_grad)
 
@@ -115,7 +125,7 @@ def _block_to(
     backend: str,
     dtype=None,
     device=None,
-    requires_grad: bool = False,
+    requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock` and all its gradients to a different
