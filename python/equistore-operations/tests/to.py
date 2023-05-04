@@ -245,7 +245,7 @@ def test_numpy_to_torch_gpu(tensor):
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
 def test_torch_to_gpu(tensor):
-    """Test a `block_to` conversion from a torch CPU tensor to a torch GPU tensor."""
+    """Test a `to` conversion from a torch CPU tensor to a torch GPU tensor."""
     tensor = equistore.to(tensor, backend="torch")
     new_tensor = equistore.to(tensor, device="cuda")
     assert equistore.equal_metadata(new_tensor, tensor)
