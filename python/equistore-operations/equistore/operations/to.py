@@ -1,14 +1,10 @@
 from typing import Optional, Union
+
 import numpy as np
 
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-
 from equistore.core import TensorBlock, TensorMap
+
+from . import _dispatch
 
 
 def to(
@@ -152,18 +148,14 @@ def _to_torch_block(
     """
 
     # Create new block, with the values tensor converted to a torch tensor.
-    if isinstance(block.values, np.ndarray):
-        new_values = torch.tensor(
-            block.values, dtype=dtype, device=device, requires_grad=requires_grad
-        )
-    elif isinstance(block.values, torch.Tensor):
-        # we need this to keep gradients of the tensor
-        new_values = block.values.to(dtype=dtype, device=device)
-    else:
-        raise ValueError(f"`backend` {type(block.values)} not supported")
-
     new_block = TensorBlock(
-        values=new_values,
+        values=_dispatch.to(
+            block.values,
+            backend="torch",
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+        ),
         samples=block.samples,
         components=block.components,
         properties=block.properties,
@@ -200,7 +192,7 @@ def _to_numpy_block(block: TensorBlock, dtype) -> TensorBlock:
 
     # Create new block, with the values tensor converted to a numpy array.
     new_block = TensorBlock(
-        values=np.array(block.values, dtype=dtype),
+        values=_dispatch.to(block.values, backend="numpy", dtype=dtype),
         samples=block.samples,
         components=block.components,
         properties=block.properties,
