@@ -6,10 +6,6 @@ from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
 
-# TODO: Discuss: if the backend is "torch" and the input is already a
-# torch-based tensor, should we allow switching off autograd? In this case
-# should the default value of requires_grad be None?
-
 
 def to(
     tensor: TensorMap,
