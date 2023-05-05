@@ -18,14 +18,14 @@ TEST_CASE("Blocks") {
         CHECK(torch::all(block.values() == 11.0).item<bool>());
 
         CHECK(*block.samples() == equistore::Labels({"s"}, {{0}, {2}, {1}}));
-        CHECK(block.samples()->names().toTupleRef().size() == 1);
-        CHECK(block.samples()->names().toTupleRef().elements()[0].toStringRef() == "s");
+        CHECK(block.samples()->names().size() == 1);
+        CHECK(block.samples()->names()[0] == "s");
 
         CHECK(block.components().empty());
 
         CHECK(*block.properties() == equistore::Labels({"p"}, {{0}, {1}}));
-        CHECK(block.properties()->names().toTupleRef().size() == 1);
-        CHECK(block.properties()->names().toTupleRef().elements()[0].toStringRef() == "p");
+        CHECK(block.properties()->names().size() == 1);
+        CHECK(block.properties()->names()[0] == "p");
     }
 
     SECTION("clone") {
@@ -68,15 +68,13 @@ TEST_CASE("Blocks") {
         auto gradient = block.gradient("g");
         CHECK((gradient->values().sizes() == std::vector<int64_t>{1, 3, 2}));
 
-        auto sample_names = gradient->samples()->names().toTupleRef().elements();
+        auto sample_names = gradient->samples()->names();
         CHECK(sample_names.size() == 2);
-        CHECK(sample_names[0].toStringRef() == "sample");
-        CHECK(sample_names[1].toStringRef() == "g");
+        CHECK(sample_names[0] == "sample");
+        CHECK(sample_names[1] == "g");
 
-        auto gradients = block.gradients().toGenericDict();
-
-        for (const auto& entry: gradients) {
-            CHECK(entry.key().toStringRef() == "g");
+        for (const auto& entry: block.gradients()) {
+            CHECK(entry.first == "g");
         }
     }
 }

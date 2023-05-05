@@ -1,5 +1,8 @@
+from typing import List, Optional
+
 import pytest
 import torch
+from torch import Tensor
 
 from equistore.torch import Labels
 
@@ -10,19 +13,18 @@ def test_constructor():
 
     assert len(labels) == 2
 
-    assert isinstance(labels.names, tuple)
-    assert labels.names == ("a", "b")
+    assert labels.names == ["a", "b"]
     assert torch.all(labels.values == torch.Tensor([[0, 0], [0, 1]]))
 
     # positional arguments + names is a list
     labels = Labels(["c"], torch.LongTensor([[0], [2], [-1]]))
-    assert labels.names == ("c",)
+    assert labels.names == ["c"]
     assert torch.all(labels.values == torch.Tensor([[0], [2], [-1]]))
 
     # single string for names
     labels = Labels(names="test", values=torch.IntTensor([[0], [1]]))
 
-    assert labels.names == ("test",)
+    assert labels.names == ["test"]
     assert torch.all(labels.values == torch.Tensor([[0], [1]]))
 
 
@@ -81,3 +83,31 @@ def test_position():
     )
     with pytest.raises(TypeError, match=message):
         _ = labels.position(3)
+
+
+# define a wrapper class to make sure the types TorchScript uses for of all
+# C-defined functions matches what we expect
+class LabelsWrap:
+    def __init__(self, names: List[str], values: Tensor):
+        self._c = Labels(names, values)
+
+    def __len__(self) -> int:
+        return self._c.__len__()
+
+    def names(self) -> List[str]:
+        return self._c.names
+
+    def values(self) -> Tensor:
+        return self._c.values
+
+    def position(self, entry: List[int]) -> Optional[int]:
+        return self._c.position(entry=entry)
+
+
+def test_script():
+    class TestModule(torch.nn.Module):
+        def forward(self, x: LabelsWrap) -> LabelsWrap:
+            return x
+
+    module = TestModule()
+    module = torch.jit.script(module)

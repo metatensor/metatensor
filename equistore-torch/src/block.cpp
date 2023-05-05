@@ -91,13 +91,10 @@ TorchTensorBlock TensorBlockHolder::gradient(const std::string& parameter) const
     return torch::make_intrusive<TensorBlockHolder>(block_.gradient(std::move(parameter)));
 }
 
-torch::IValue TensorBlockHolder::gradients() {
-    auto result = c10::Dict<torch::IValue, torch::IValue>(
-        c10::getTypePtr<std::string>(),
-        c10::getTypePtr<TorchTensorBlock>()
-    );
+std::unordered_map<std::string, TorchTensorBlock> TensorBlockHolder::gradients() {
+    auto result = std::unordered_map<std::string, TorchTensorBlock>();
     for (const auto& parameter: this->gradients_list()) {
-        result.insert(parameter, this->gradient(parameter));
+        result.emplace(parameter, this->gradient(parameter));
     }
     return result;
 }
