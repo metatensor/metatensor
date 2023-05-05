@@ -49,9 +49,7 @@ public:
     ~LabelsHolder() override = default;
 
     /// Get the names of the dimensions/columns of these Labels
-    ///
-    /// @return a torch::IValue containing the names as a `Tuple[str]`
-    torch::IValue names() const {
+    const std::vector<std::string>& names() const {
         return names_;
     }
 
@@ -62,16 +60,16 @@ public:
 
     /// Get the number of entries in this set of Labels.
     ///
-    /// This is the same as `values().sizes()[0]`
+    /// This is the same as `values().size(0)`
     int64_t count() const {
-        return static_cast<int64_t>(labels_.count());
+        return values_.size(0);
     }
 
     /// Get the number of dimensions in this set of Labels.
     ///
-    /// This is the same as `values().sizes()[1]`
+    /// This is the same as `values().size(1)`
     int64_t size() const {
-        return static_cast<int64_t>(labels_.size());
+        return values_.size(1);
     }
 
     /// Get the position of the given `entry` in this set of Labels, or None if
@@ -81,18 +79,15 @@ public:
     ///    - a 1-D torch::Tensor containing integers;
     ///    - a list of integers;
     ///    - a tuple of integers;
-    ///
-    /// @return either a 64-bit integer or `None`
-    torch::IValue position(torch::IValue entry) const;
+    torch::optional<int64_t> position(torch::IValue entry) const;
 
     /// Get the underlying equistore::Labels
     const equistore::Labels& as_equistore() const {
         return labels_;
     }
 private:
-    /// Tuple[str] containing the names of the Labels, stored as `torch::IValue`
-    /// for easier retrieval from Python
-    torch::IValue names_;
+    /// names of the Labels, stored here for easier retrieval from Python
+    std::vector<std::string> names_;
 
     /// Keep the values of the Labels inside a Tensor as well
     torch::Tensor values_;

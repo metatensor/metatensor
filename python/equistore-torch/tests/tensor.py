@@ -1,7 +1,9 @@
+from typing import List, Union
+
 import pytest
 import torch
 
-from equistore.torch import Labels, TensorMap
+from equistore.torch import Labels, TensorBlock, TensorMap
 
 from . import utils
 
@@ -12,7 +14,7 @@ def tensor():
 
 
 def test_keys(tensor):
-    assert tensor.keys.names == ("key_1", "key_2")
+    assert tensor.keys.names == ["key_1", "key_2"]
     assert len(tensor.keys) == 4
     assert len(tensor) == 4
 
@@ -52,9 +54,9 @@ keys: ['key_1' 'key_2']
 
 
 def test_labels_names(tensor):
-    assert tensor.sample_names == ("s",)
-    assert tensor.components_names == [("c",)]
-    assert tensor.property_names == ("p",)
+    assert tensor.sample_names == ["s"]
+    assert tensor.components_names == [["c"]]
+    assert tensor.property_names == ["p"]
 
 
 @pytest.mark.skip("not implemented")
@@ -152,7 +154,7 @@ def test_iter(tensor):
 def test_keys_to_properties(tensor):
     tensor = tensor.keys_to_properties("key_1")
 
-    assert tensor.keys.names == ("key_2",)
+    assert tensor.keys.names == ["key_2"]
     assert torch.all(tensor.keys.values == torch.tensor([(0,), (2,), (3,)]))
 
     # The new first block contains the old first two blocks merged
@@ -166,7 +168,7 @@ def test_keys_to_properties(tensor):
     assert len(block.components), 1
     assert tuple(block.components[0].values[0]), (0,)
 
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties.values[0]) == (0, 0)
     assert tuple(block.properties.values[1]) == (1, 3)
     assert tuple(block.properties.values[2]) == (1, 4)
@@ -201,14 +203,14 @@ def test_keys_to_properties(tensor):
 
     # The new second block contains the old third block
     block = tensor.block_by_id(1)
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties.values[0]) == (2, 0)
 
     assert torch.all(block.values == torch.full((4, 3, 1), 3.0))
 
     # The new third block contains the old fourth block
     block = tensor.block_by_id(2)
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties.values[0]) == (2, 0)
 
     assert torch.all(block.values == torch.full((4, 3, 1), 4.0))
@@ -217,14 +219,14 @@ def test_keys_to_properties(tensor):
 def test_keys_to_samples(tensor):
     tensor = tensor.keys_to_samples("key_2", sort_samples=True)
 
-    assert tensor.keys.names == ("key_1",)
+    assert tensor.keys.names == ["key_1"]
     assert tuple(tensor.keys.values[0]) == (0,)
     assert tuple(tensor.keys.values[1]) == (1,)
     assert tuple(tensor.keys.values[2]) == (2,)
 
     # The first two blocks are not modified
     block = tensor.block_by_id(0)
-    assert block.samples.names, ("s", "key_2")
+    assert block.samples.names, ["s", "key_2"]
     assert tuple(block.samples.values[0]) == (0, 0)
     assert tuple(block.samples.values[1]) == (2, 0)
     assert tuple(block.samples.values[2]) == (4, 0)
@@ -232,7 +234,7 @@ def test_keys_to_samples(tensor):
     assert torch.all(block.values == torch.full((3, 1, 1), 1.0))
 
     block = tensor.block_by_id(1)
-    assert block.samples.names == ("s", "key_2")
+    assert block.samples.names == ["s", "key_2"]
     assert tuple(block.samples.values[0]) == (0, 0)
     assert tuple(block.samples.values[1]) == (1, 0)
     assert tuple(block.samples.values[2]) == (3, 0)
@@ -242,7 +244,7 @@ def test_keys_to_samples(tensor):
     # The new third block contains the old third and fourth blocks merged
     block = tensor.block_by_id(2)
 
-    assert block.samples.names == ("s", "key_2")
+    assert block.samples.names == ["s", "key_2"]
     assert tuple(block.samples.values[0]) == (0, 2)
     assert tuple(block.samples.values[1]) == (0, 3)
     assert tuple(block.samples.values[2]) == (1, 3)
@@ -267,7 +269,7 @@ def test_keys_to_samples(tensor):
     assert torch.all(block.values == expected)
 
     gradient = block.gradient("g")
-    assert gradient.samples.names == ("sample", "g")
+    assert gradient.samples.names == ["sample", "g"]
     assert tuple(gradient.samples.values[0]) == (1, 1)
     assert tuple(gradient.samples.values[1]) == (4, -2)
     assert tuple(gradient.samples.values[2]) == (5, 3)
@@ -286,7 +288,7 @@ def test_keys_to_samples_unsorted(tensor):
     tensor = tensor.keys_to_samples("key_2", sort_samples=False)
 
     block = tensor.block_by_id(2)
-    assert block.samples.names, ("s", "key_2")
+    assert block.samples.names == ["s", "key_2"]
     assert tuple(block.samples.values[0]) == (0, 2)
     assert tuple(block.samples.values[1]) == (3, 2)
     assert tuple(block.samples.values[2]) == (6, 2)
@@ -301,18 +303,18 @@ def test_components_to_properties(tensor):
     tensor = tensor.components_to_properties("c")
 
     block = tensor.block_by_id(0)
-    assert block.samples.names == ("s",)
+    assert block.samples.names == ["s"]
     assert tuple(block.samples.values[0]) == (0,)
     assert tuple(block.samples.values[1]) == (2,)
     assert tuple(block.samples.values[2]) == (4,)
 
     assert block.components == []
 
-    assert block.properties.names == ("c", "p")
+    assert block.properties.names == ["c", "p"]
     assert tuple(block.properties.values[0]) == (0, 0)
 
     block = tensor.block_by_id(3)
-    assert block.samples.names, ("s",)
+    assert block.samples.names, ["s"]
     assert tuple(block.samples.values[0]) == (0,)
     assert tuple(block.samples.values[1]) == (1,)
     assert tuple(block.samples.values[2]) == (2,)
@@ -320,7 +322,7 @@ def test_components_to_properties(tensor):
 
     assert block.components == []
 
-    assert block.properties.names == ("c", "p")
+    assert block.properties.names == ["c", "p"]
     assert tuple(block.properties.values[0]) == (0, 0)
     assert tuple(block.properties.values[1]) == (1, 0)
     assert tuple(block.properties.values[2]) == (2, 0)
@@ -330,7 +332,7 @@ def test_components_to_properties(tensor):
 def test_empty_tensor():
     empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])
 
-    assert empty_tensor.keys.names == ("key",)
+    assert empty_tensor.keys.names == ["key"]
 
     assert empty_tensor.sample_names == tuple()
     assert empty_tensor.components_names == []
@@ -357,3 +359,69 @@ def test_empty_tensor():
 
     # with pytest.raises(EquistoreError, match=message):
     #     empty_tensor.keys_to_properties("key")
+
+
+# define a wrapper class to make sure the types TorchScript uses for of all
+# C-defined functions matches what we expect
+class TensorMapWrap:
+    def __init__(self, keys: Labels, blocks: List[TensorBlock]):
+        self._c = TensorMap(keys=keys, blocks=blocks)
+
+    def __len__(self) -> int:
+        return self._c.__len__()
+
+    def copy(self) -> TensorMap:
+        return self._c.copy()
+
+    def keys(self) -> Labels:
+        return self._c.keys
+
+    def blocks_matching(self, selection: Labels) -> List[int]:
+        return self._c.blocks_matching(selection=selection)
+
+    def block_by_id(self, index: int) -> TensorBlock:
+        return self._c.block_by_id(index=index)
+
+    def keys_to_samples(
+        self,
+        keys_to_move: Union[str, List[str], Labels],
+        sort_samples: bool,
+    ) -> TensorMap:
+        return self._c.keys_to_samples(
+            keys_to_move=keys_to_move,
+            sort_samples=sort_samples,
+        )
+
+    def keys_to_properties(
+        self,
+        keys_to_move: Union[str, List[str], Labels],
+        sort_samples: bool,
+    ) -> TensorMap:
+        return self._c.keys_to_properties(
+            keys_to_move=keys_to_move,
+            sort_samples=sort_samples,
+        )
+
+    def components_to_properties(
+        self,
+        dimensions: Union[str, List[str]],
+    ) -> TensorMap:
+        return self._c.components_to_properties(dimensions=dimensions)
+
+    def sample_names(self) -> List[str]:
+        return self._c.sample_names
+
+    def components_names(self) -> List[List[str]]:
+        return self._c.components_names
+
+    def property_names(self) -> List[str]:
+        return self._c.property_names
+
+
+def test_script():
+    class TestModule(torch.nn.Module):
+        def forward(self, x: TensorMapWrap) -> TensorMapWrap:
+            return x
+
+    module = TestModule()
+    module = torch.jit.script(module)

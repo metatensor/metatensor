@@ -103,11 +103,8 @@ public:
     // Get a gradient from this TensorBlock
     TorchTensorBlock gradient(const std::string& parameter) const;
 
-    /// Get a dictionary containing all gradients and associated parameters
-    ///
-    /// @return a torch::IValue containing the gradients as a
-    ///         `Dict[str, TorchTensorBlock]`
-    torch::IValue gradients();
+    /// Get a all gradients and associated parameters in this block
+    std::unordered_map<std::string, TorchTensorBlock> gradients();
 
     /// Get the underlying equistore TensorBlock
     const equistore::TensorBlock& as_equistore() const {
