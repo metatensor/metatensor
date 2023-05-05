@@ -141,30 +141,47 @@ TorchTensorMap TensorMapHolder::components_to_properties(torch::IValue dimension
     return torch::make_intrusive<TensorMapHolder>(std::move(tensor));
 }
 
-torch::IValue TensorMapHolder::sample_names() {
-    if (this->keys()->as_equistore().count() == 0) {
-        return c10::ivalue::Tuple::create({});
+static std::vector<std::string> labels_names(const equistore::TensorBlock& block, size_t dimension) {
+    auto result = std::vector<std::string>();
+
+    auto labels = block.labels(dimension);
+    for (const auto& name: labels.names()) {
+        result.push_back(std::string(name));
     }
 
-    return this->block_by_id(0)->samples()->names();
+    return result;
 }
 
-torch::IValue TensorMapHolder::components_names() {
-    auto result = c10::List<torch::IValue>(c10::TupleType::create({c10::getTypePtr<c10::IValue>()}));
+std::vector<std::string> TensorMapHolder::sample_names() {
+    if (tensor_.keys().count() == 0) {
+        return {};
+    }
 
-    if (this->keys()->as_equistore().count() != 0) {
-        for (const auto& component: this->block_by_id(0)->components()) {
-            result.push_back(component->names());
+    return labels_names(this->block_by_id(0)->as_equistore(), 0);
+}
+
+std::vector<std::vector<std::string>> TensorMapHolder::components_names() {
+    auto result = std::vector<std::vector<std::string>>();
+
+    if (tensor_.keys().count() != 0) {
+        auto block = this->block_by_id(0);
+        auto n_dimensions = block->values().sizes().size();
+
+        for (size_t dimension=1; dimension<n_dimensions-1; dimension++) {
+            result.push_back(labels_names(block->as_equistore(), dimension));
         }
     }
 
     return result;
 }
 
-torch::IValue TensorMapHolder::property_names() {
-    if (this->keys()->as_equistore().count() == 0) {
-        return c10::ivalue::Tuple::create({});
+std::vector<std::string> TensorMapHolder::property_names() {
+    if (tensor_.keys().count() == 0) {
+        return {};
     }
 
-    return this->block_by_id(0)->properties()->names();
+    auto block = this->block_by_id(0);
+    auto n_dimensions = block->values().sizes().size();
+
+    return labels_names(block->as_equistore(), n_dimensions - 1);
 }

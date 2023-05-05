@@ -20,10 +20,12 @@ TORCH_LIBRARY(equistore, m) {
             torch::init<torch::IValue, torch::Tensor>(), DOCSTRING,
             {torch::arg("names"), torch::arg("values")}
         )
+        .def("__len__", &LabelsHolder::count)
         .def_property("names", &LabelsHolder::names)
         .def_property("values", &LabelsHolder::values)
-        .def("position", &LabelsHolder::position)
-        .def("__len__", &LabelsHolder::count)
+        .def("position", &LabelsHolder::position, DOCSTRING,
+            {torch::arg("entry")}
+        )
         ;
 
     m.class_<TensorBlockHolder>("TensorBlock")
@@ -54,9 +56,9 @@ TORCH_LIBRARY(equistore, m) {
             torch::init<TorchLabels, std::vector<TorchTensorBlock>>(), DOCSTRING,
             {torch::arg("keys"), torch::arg("blocks")}
         )
+        .def("__len__", [](const TorchTensorMap& tensor){ return tensor->keys()->count(); })
         .def("copy", &TensorMapHolder::copy)
         .def_property("keys", &TensorMapHolder::keys)
-        .def("__len__", [](const TorchTensorMap& tensor){ return tensor->keys()->count(); })
         .def("blocks_matching", &TensorMapHolder::blocks_matching, DOCSTRING,
             {torch::arg("selection")}
         )

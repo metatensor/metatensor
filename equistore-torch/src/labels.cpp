@@ -51,9 +51,10 @@ static torch::Tensor initializer_list_to_tensor(
     return tensor.reshape({static_cast<int64_t>(count), static_cast<int64_t>(size)});
 }
 
-static torch::IValue normalize_names(torch::IValue names) {
+static std::vector<std::string> normalize_names(torch::IValue names) {
+    auto results = std::vector<std::string>();
     if (names.isString()) {
-        return c10::ivalue::Tuple::create(names.toString());
+        results.push_back(names.toStringRef());
     } else if (names.isList()) {
         const auto& names_list = names.toListRef();
         for (const auto& name: names_list) {
@@ -62,8 +63,8 @@ static torch::IValue normalize_names(torch::IValue names) {
                     "names must be a list of strings"
                 );
             }
+            results.push_back(name.toStringRef());
         }
-        return c10::ivalue::Tuple::create(names_list);
     } else if (names.isTuple()) {
         for (const auto& name: names.toTupleRef().elements()) {
             if (!name.isString()) {
@@ -71,22 +72,21 @@ static torch::IValue normalize_names(torch::IValue names) {
                     "names must be a tuple of strings"
                 );
             }
+            results.push_back(name.toStringRef());
         }
-        return names;
     } else {
         C10_THROW_ERROR(ValueError,
             "names must be a list of strings"
         );
     }
+    return results;
 }
 
-eqs_labels_t labels_from_torch(const torch::IValue& names, const torch::Tensor& values) {
+static eqs_labels_t labels_from_torch(const std::vector<std::string>& names, const torch::Tensor& values) {
     // extract the names from the Python IValue
     auto c_names = std::vector<const char*>();
-    assert(names.isTuple());
-    for (const auto& name: names.toTupleRef().elements()) {
-        assert(name.isString());
-        c_names.push_back(name.toString()->string().c_str());
+    for (const auto& name: names) {
+        c_names.push_back(name.c_str());
     }
 
     // check the values
@@ -114,12 +114,12 @@ eqs_labels_t labels_from_torch(const torch::IValue& names, const torch::Tensor& 
     return labels;
 }
 
-static torch::IValue names_from_equistore(const equistore::Labels& labels) {
-    auto names = std::vector<torch::IValue>();
+static std::vector<std::string> names_from_equistore(const equistore::Labels& labels) {
+    auto names = std::vector<std::string>();
     for (const auto name: labels.names()) {
         names.push_back(std::string(name));
     }
-    return c10::ivalue::Tuple::create(names);
+    return names;
 }
 
 
@@ -165,7 +165,7 @@ LabelsHolder::LabelsHolder(equistore::Labels labels):
 {}
 
 
-torch::IValue LabelsHolder::position(torch::IValue entry) const {
+torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     int64_t position = -1;
     if (entry.isTensor()) {
         auto tensor = normalize_int32_tensor(entry.toTensor(), 1, "entry passed to Labels::position");
@@ -210,8 +210,8 @@ torch::IValue LabelsHolder::position(torch::IValue entry) const {
     }
 
     if (position == -1) {
-        return torch::IValue();
+        return {};
     } else {
-        return torch::IValue(position);
+        return position;
     }
 }

@@ -15,9 +15,9 @@ TEST_CASE("Labels") {
         CHECK(labels.size() == 2);
 
         // check the TorchScript version of the functions
-        CHECK(labels.names().toTupleRef().size() == 2);
-        CHECK(labels.names().toTupleRef().elements()[0].toStringRef() == "a");
-        CHECK(labels.names().toTupleRef().elements()[1].toStringRef() == "bb");
+        CHECK(labels.names().size() == 2);
+        CHECK(labels.names()[0] == "a");
+        CHECK(labels.names()[1] == "bb");
 
         CHECK((labels.values().sizes() == std::vector<int64_t>{4, 2}));
         CHECK(labels.values()[0][0].item<int64_t>() == 0);
@@ -37,9 +37,9 @@ TEST_CASE("Labels") {
         auto labels = LabelsHolder::create({"a", "bb"}, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
         auto i = labels->position(std::vector<int64_t>{0, 1});
-        CHECK(i.toInt() == 2);
+        CHECK(i.value() == 2);
 
         i = labels->position(std::vector<int64_t>{0, 4});
-        CHECK(i.isNone());
+        CHECK_FALSE(i.has_value());
     }
 }

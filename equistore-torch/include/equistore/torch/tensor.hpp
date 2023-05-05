@@ -82,19 +82,13 @@ public:
     TorchTensorMap components_to_properties(torch::IValue dimensions) const;
 
     /// Get the sample names used for all block in this `TensorMap`
-    ///
-    /// @return a torch::IValue containing the names as a `Tuple[str]`
-    torch::IValue sample_names();
+    std::vector<std::string> sample_names();
 
     /// Get the components names used for all block in this `TensorMap`
-    ///
-    /// @return a torch::IValue containing the names as a `List[Tuple[str]]`
-    torch::IValue components_names();
+    std::vector<std::vector<std::string>> components_names();
 
     /// Get the property names used for all block in this `TensorMap`
-    ///
-    /// @return a torch::IValue containing the names as a `Tuple[str]`
-    torch::IValue property_names();
+    std::vector<std::string> property_names();
 
     /// Get the underlying equistore TensorMap
     const equistore::TensorMap& as_equistore() const {
