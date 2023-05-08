@@ -68,17 +68,15 @@ class LibraryFinder(object):
 def _lib_path():
     if sys.platform.startswith("darwin"):
         windows = False
-        name = "libequistore.dylib"
+        path = os.path.join(_HERE, "lib", "libequistore.dylib")
     elif sys.platform.startswith("linux"):
         windows = False
-        name = "libequistore.so"
+        path = os.path.join(_HERE, "lib", "libequistore.so")
     elif sys.platform.startswith("win"):
         windows = True
-        name = "equistore.dll"
+        path = os.path.join(_HERE, "bin", "equistore.dll")
     else:
         raise ImportError("Unknown platform. Please edit this file")
-
-    path = os.path.join(os.path.join(_HERE, "lib"), name)
 
     if os.path.isfile(path):
         if windows:
