@@ -32,7 +32,12 @@ def all(a, axis=None):
     if isinstance(a, np.ndarray):
         return np.all(a=a, axis=axis)
     elif isinstance(a, TorchTensor):
-        return torch.all(input=a, dim=axis)
+        # torch.all has two implementation, and picks one depending if more than one
+        # parameter is given. The second one does not supports setting dim to `None`
+        if axis is None:
+            return torch.all(input=a)
+        else:
+            return torch.all(input=a, dim=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
