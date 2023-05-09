@@ -67,4 +67,13 @@ foreach(_file_ ${ALL_TESTS})
         NAME ${_name_}
         COMMAND ${TEST_COMMAND} $<TARGET_FILE:${_name_}>
     )
+
+    if(WIN32)
+        # We need to set the path to allow access to equistore.dll
+        # this does a similar job to the BUILD_RPATH above
+        STRING(REPLACE ";" "\\;" PATH_STRING "$ENV{PATH}")
+        set_tests_properties(${_name_} PROPERTIES
+            ENVIRONMENT "PATH=${PATH_STRING}\;$<TARGET_FILE_DIR:equistore>"
+        )
+    endif()
 endforeach()

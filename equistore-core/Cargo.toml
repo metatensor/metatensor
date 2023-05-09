@@ -11,7 +11,8 @@ exclude = [
 [lib]
 # When our minimal Rust version becomes 1.64, we can pass these options directly
 # to Cargo. Until then, we build all the crate-type we need.
-crate-type = ["cdylib", "staticlib", "rlib"]
+name = "equistore"
+crate-type = ["cdylib", "staticlib"]
 bench = false
 
 [dependencies]
