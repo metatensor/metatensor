@@ -8,8 +8,8 @@
 
 using namespace equistore_torch;
 
-/// Check that `values` is a `shape_length`-dimensional contiguous array of
-/// 32-bit integers on CPU, or convert it to be so.
+/// Check that `values` is a `shape_length`-dimensional array of 32-bit
+/// integers, or convert it to be so.
 static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_length, const std::string& context) {
     if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
         C10_THROW_ERROR(ValueError,
@@ -23,7 +23,7 @@ static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_l
         );
     }
 
-    return values.to(torch::kCPU, torch::kI32).contiguous();
+    return values.to(torch::kI32);
 }
 
 static torch::Tensor initializer_list_to_tensor(
@@ -51,7 +51,7 @@ static torch::Tensor initializer_list_to_tensor(
     return tensor.reshape({static_cast<int64_t>(count), static_cast<int64_t>(size)});
 }
 
-static std::vector<std::string> normalize_names(torch::IValue names) {
+std::vector<std::string> equistore_torch::details::normalize_names(torch::IValue names, std::string argument_name) {
     auto results = std::vector<std::string>();
     if (names.isString()) {
         results.push_back(names.toStringRef());
@@ -59,8 +59,9 @@ static std::vector<std::string> normalize_names(torch::IValue names) {
         const auto& names_list = names.toListRef();
         for (const auto& name: names_list) {
             if (!name.isString()) {
-                C10_THROW_ERROR(ValueError,
-                    "names must be a list of strings"
+                C10_THROW_ERROR(TypeError,
+                    argument_name + " must be a list of strings, got element with type '"
+                    + name.type()->str() + "' instead"
                 );
             }
             results.push_back(name.toStringRef());
@@ -68,15 +69,17 @@ static std::vector<std::string> normalize_names(torch::IValue names) {
     } else if (names.isTuple()) {
         for (const auto& name: names.toTupleRef().elements()) {
             if (!name.isString()) {
-                C10_THROW_ERROR(ValueError,
-                    "names must be a tuple of strings"
+                C10_THROW_ERROR(TypeError,
+                    argument_name + " must be a tuple of strings, got element with type '"
+                    + name.type()->str() + "' instead"
                 );
             }
             results.push_back(name.toStringRef());
         }
     } else {
-        C10_THROW_ERROR(ValueError,
-            "names must be a list of strings"
+        C10_THROW_ERROR(TypeError,
+            argument_name + " must be a string, list of strings or tuple of string, got '"
+            + names.type()->str() + "' instead"
         );
     }
     return results;
@@ -133,8 +136,6 @@ static torch::Tensor values_from_equistore(const equistore::Labels& labels) {
         // Unfortunately, we can not prevent writing to this tensor since torch
         // does not support read-only tensor:
         // https://github.com/pytorch/pytorch/issues/44027
-        //
-        // TODO: should we make a copy here instead?
         const_cast<int32_t*>(labels.data()),
         sizes,
         torch::TensorOptions().dtype(torch::kInt32)
@@ -142,11 +143,11 @@ static torch::Tensor values_from_equistore(const equistore::Labels& labels) {
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
-    names_(normalize_names(names)),
-    values_(normalize_int32_tensor(std::move(values), 2, "Labels values")),
-    labels_(labels_from_torch(names_, values_))
-{}
-
+    names_(details::normalize_names(names, "names")),
+    values_(normalize_int32_tensor(std::move(values), 2, "Labels values"))
+{
+    labels_ = equistore::Labels(labels_from_torch(names_, values_.to(torch::kCPU).contiguous()));
+}
 
 TorchLabels LabelsHolder::create(
     const std::vector<std::string>& names,
@@ -158,6 +159,36 @@ TorchLabels LabelsHolder::create(
     );
 }
 
+
+LabelsHolder::LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView):
+    names_(std::move(names)),
+    values_(std::move(values))
+{}
+
+TorchLabels LabelsHolder::view(const TorchLabels& labels, std::vector<std::string> names) {
+    if (names.empty()) {
+        C10_THROW_ERROR(ValueError,
+            "can not index Labels with an empty list of dimension names"
+        );
+    }
+
+    auto dimensions = std::vector<int64_t>();
+    for (const auto& name: names) {
+        auto it = std::find(std::begin(labels->names_), std::end(labels->names_), name);
+        if (it == std::end(labels->names_)) {
+            C10_THROW_ERROR(ValueError,
+                "'" + name + "' not found in the dimensions of these Labels"
+            );
+        }
+
+        auto index = std::distance(std::begin(labels->names_), it);
+        dimensions.push_back(static_cast<int64_t>(index));
+    }
+
+    auto new_values = labels->values_.index({torch::indexing::Slice(), torch::tensor(std::move(dimensions))});
+    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values), CreateView{});
+}
+
 LabelsHolder::LabelsHolder(equistore::Labels labels):
     names_(names_from_equistore(labels)),
     values_(values_from_equistore(labels)),
@@ -165,20 +196,70 @@ LabelsHolder::LabelsHolder(equistore::Labels labels):
 {}
 
 
+TorchLabels LabelsHolder::single() {
+    auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
+    auto values = torch::tensor({0}, options).reshape({1, 1});
+    return torch::make_intrusive<LabelsHolder>("_", std::move(values));
+}
+
+
+TorchLabels LabelsHolder::empty(torch::IValue names_ivalue) {
+    auto names = details::normalize_names(names_ivalue, "empty");
+    auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
+    auto values = torch::tensor(std::vector<int>(), options).reshape({0, static_cast<int64_t>(names.size())});
+    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(values));
+}
+
+
+TorchLabels LabelsHolder::range(std::string name, int64_t end) {
+    auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
+    auto values = torch::arange(end, options).reshape({end, 1});
+    return torch::make_intrusive<LabelsHolder>(std::move(name), std::move(values));
+
+}
+
+const equistore::Labels& LabelsHolder::as_equistore() const {
+    if (!labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    return labels_.value();
+}
+
+LabelsHolder LabelsHolder::to_owned() const {
+    if (labels_.has_value()) {
+        return *this;
+    } else {
+        return LabelsHolder(this->names_, values_);
+    }
+}
+
 torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
+    const auto& labels = this->as_equistore();
+
     int64_t position = -1;
-    if (entry.isTensor()) {
+    if (entry.isCustomClass()) {
+        const auto& labels_entry = entry.toCustomClass<LabelsEntryHolder>();
+        auto values = labels_entry->values().to(torch::kCPU).contiguous();
+        position = labels.position(
+            static_cast<const int32_t*>(values.data_ptr()),
+            values.size(0)
+        );
+    } else if (entry.isTensor()) {
         auto tensor = normalize_int32_tensor(entry.toTensor(), 1, "entry passed to Labels::position");
-        position = labels_.position(
+        tensor = tensor.to(torch::kCPU).contiguous();
+        position = labels.position(
             static_cast<const int32_t*>(tensor.data_ptr()),
-            tensor.sizes()[0]
+            tensor.size(0)
         );
     } else if (entry.isIntList()) {
         auto int32_values = std::vector<int32_t>();
         for (const auto& value: entry.toIntList()) {
             int32_values.push_back(static_cast<int32_t>(value));
         }
-        position = labels_.position(int32_values);
+        position = labels.position(int32_values);
     } else if (entry.isList()) {
         auto int32_values = std::vector<int32_t>();
         for (auto value: entry.toListRef()) {
@@ -186,11 +267,12 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
                 int32_values.push_back(static_cast<int32_t>(value.toInt()));
             } else {
                 C10_THROW_ERROR(TypeError,
-                    "parameter to Labels::positions must be a tensor or list/tuple of integers"
+                    "list parameter to Labels::positions must be list of integers, "
+                    "got element with type '" + entry.type()->str() + "'"
                 );
             }
         }
-        position = labels_.position(int32_values);
+        position = labels.position(int32_values);
     } else if (entry.isTuple()) {
         auto int32_values = std::vector<int32_t>();
         for (auto value: entry.toTupleRef().elements()) {
@@ -198,20 +280,230 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
                 int32_values.push_back(static_cast<int32_t>(value.toInt()));
             } else {
                 C10_THROW_ERROR(TypeError,
-                    "parameter to Labels::positions must be a tensor or list/tuple of integers"
+                    "tuple parameter to Labels::positions must be a tuple of integers, "
+                    "got element with type '" + entry.type()->str() + "'"
                 );
             }
         }
-        position = labels_.position(int32_values);
+        position = labels.position(int32_values);
     } else {
         C10_THROW_ERROR(TypeError,
-            "parameter to Labels::positions must be a tensor or list/tuple of integers"
+            "parameter to Labels::positions must be a LabelsEntry, tensor, or list/tuple of integers, "
+            "got '" + entry.type()->str() + "' instead"
         );
     }
 
     if (position == -1) {
         return {};
     } else {
-        return position;
+       return position;
+    }
+}
+
+struct LabelsPrintData {
+    LabelsPrintData(const std::vector<std::string>& names) {
+        for (const auto& name: names) {
+            // use at least one space on each side of the name
+            this->widths.push_back(name.size() + 2);
+        }
+    }
+
+    /// widths of each column
+    std::vector<size_t> widths;
+    /// first half of the values
+    std::vector<std::vector<std::string>> values_first;
+    /// second half of the values
+    std::vector<std::vector<std::string>> values_second;
+
+    void add_values_first(torch::Tensor entry) {
+        assert(entry.sizes().size() == 1);
+        assert(this->widths.size() == entry.size(0));
+
+        auto n_elements = this->widths.size();
+        auto strings = std::vector<std::string>();
+        strings.reserve(n_elements);
+
+        for (int i=0; i<n_elements; i++) {
+            auto entry_str = std::to_string(entry[i].item<int32_t>());
+            this->widths[i] = std::max(entry_str.size() + 2, this->widths[i]);
+
+            strings.emplace_back(std::move(entry_str));
+        }
+
+        this->values_first.emplace_back(std::move(strings));
+    }
+
+    void add_values_second(torch::Tensor entry) {
+        assert(entry.sizes().size() == 1);
+        assert(this->widths.size() == entry.size(0));
+
+        auto n_elements = this->widths.size();
+        auto strings = std::vector<std::string>();
+        strings.reserve(n_elements);
+
+        for (int i=0; i<n_elements; i++) {
+            auto entry_str = std::to_string(entry[i].item<int32_t>());
+            this->widths[i] = std::max(entry_str.size() + 2, this->widths[i]);
+
+            strings.emplace_back(std::move(entry_str));
+        }
+
+        this->values_second.emplace_back(std::move(strings));
+    }
+};
+
+void print_string_center(std::ostringstream& output, std::string string, size_t width, bool last) {
+    assert(string.length() < width);
+
+    auto delta = width - string.size();
+    auto n_before = delta / 2;
+    auto n_after = delta - n_before;
+    string.insert(0, n_before, ' ');
+
+    if (!last) {
+        // don't add spaces after the last element
+        string.insert(string.size(), n_after, ' ');
+    }
+
+    output << string;
+}
+
+std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
+    auto print_data = LabelsPrintData(names_);
+
+    auto n_elements = this->count();
+    if (max_entries < 0 || n_elements <= max_entries) {
+        for (int i=0; i<n_elements; i++) {
+            print_data.add_values_first(values_[i]);
+        }
+    } else {
+        if (max_entries < 2) {
+            max_entries = 2;
+        }
+
+        auto n_after = max_entries / 2;
+        auto n_before = max_entries - n_after;
+
+        for (int i=0; i<n_before; i++) {
+            print_data.add_values_first(values_[i]);
+        }
+
+        for (int i=(n_elements - n_after); i<n_elements; i++) {
+            print_data.add_values_second(values_[i]);
+        }
+    }
+
+    auto output = std::ostringstream();
+    auto indent_str = std::string(indent, ' ');
+
+    auto n_dimensions = this->size();
+    for (int i=0; i<n_dimensions; i++) {
+        auto last = i == n_dimensions - 1;
+        print_string_center(output, names_[i], print_data.widths[i], last);
+    }
+    output << '\n';
+
+    for (auto strings: std::move(print_data.values_first)) {
+        output << indent_str;
+        for (int i=0; i<n_dimensions; i++) {
+            auto last = i == n_dimensions - 1;
+            print_string_center(output, std::move(strings[i]), print_data.widths[i], last);
+        }
+        output << '\n';
+    }
+
+
+    if (!print_data.values_second.empty()) {
+        auto half_header_widths = 0;
+        for (auto w: print_data.widths) {
+            half_header_widths += w;
+        }
+        half_header_widths /= 2;
+
+        if (half_header_widths > 3) {
+            // 3 characters in '...'
+            half_header_widths -= 3;
+        }
+        output << indent_str << std::string(half_header_widths + 1, ' ') << "...\n";
+
+        for (auto strings: std::move(print_data.values_second)) {
+            output << indent_str;
+            for (int i=0; i<n_dimensions; i++) {
+                auto last = i == n_dimensions - 1;
+                print_string_center(output, std::move(strings[i]), print_data.widths[i], last);
+            }
+            output << '\n';
+        }
+    }
+
+    return output.str();
+}
+
+std::string LabelsHolder::__str__() const {
+    auto output = std::ostringstream();
+    if (labels_.has_value()) {
+        output << "Labels(\n   ";
+    } else {
+        output << "LabelsView(\n   ";
+    }
+
+    output << this->print(4, 3) << ")";
+    return output.str();
+}
+
+std::string LabelsHolder::__repr__() const {
+    auto output = std::ostringstream();
+    if (labels_.has_value()) {
+        output << "Labels(\n   ";
+    } else {
+        output << "LabelsView(\n   ";
+    }
+
+    output << this->print(-1, 3) << ")";
+    return output.str();
+}
+
+/******************************************************************************/
+
+std::string LabelsEntryHolder::__repr__() const {
+    auto output = std::stringstream();
+
+    output << "LabelsEntry(";
+    for (size_t i=0; i<this->size(); i++) {
+        output << this->names()[i] << "=" << values_[i].item<int32_t>();
+
+        if (i < this->size() - 1) {
+            output << ", ";
+        }
+    }
+    output << ")";
+
+    return output.str();
+}
+
+int32_t LabelsEntryHolder::operator[](const std::string& name) const {
+    const auto& names = labels_->names();
+    auto it = std::find(std::begin(names), std::end(names), name);
+    if (it == std::end(names)) {
+        C10_THROW_ERROR(ValueError,
+            "'" + name + "' not found in the dimensions of this LabelsEntry"
+        );
+    }
+
+    auto index = std::distance(std::begin(names), it);
+    return this->operator[](index);
+}
+
+
+int64_t LabelsEntryHolder::getitem(torch::IValue index) const {
+    if (index.isInt()) {
+        return static_cast<int64_t>(this->operator[](index.toInt()));
+    } else if (index.isString()) {
+        return static_cast<int64_t>(this->operator[](index.toStringRef()));
+    } else {
+        C10_THROW_ERROR(TypeError,
+            "LabelsEntry can only be indexed by int or str, got '"
+            + index.type()->str() + "' instead"
+        );
     }
 }

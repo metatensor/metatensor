@@ -18,6 +18,7 @@ else:
 _load_library()
 
 Labels = torch.classes.equistore.Labels
+LabelsEntry = torch.classes.equistore.LabelsEntry
 TensorBlock = torch.classes.equistore.TensorBlock
 TensorMap = torch.classes.equistore.TensorMap
 
