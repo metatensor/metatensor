@@ -103,19 +103,29 @@ pub struct LabelsBuilder {
 
 impl LabelsBuilder {
     /// Create a new empty `LabelsBuilder` with the given `names`
-    pub fn new(names: Vec<&str>) -> LabelsBuilder {
+    pub fn new(names: Vec<&str>) -> Result<LabelsBuilder, Error> {
         for name in &names {
-            assert!(is_valid_label_name(name), "all labels names must be valid identifiers, '{}' is not", name);
+            if !is_valid_label_name(name) {
+                return Err(Error::InvalidParameter(format!(
+                    "all labels names must be valid identifiers, '{}' is not", name
+                )));
+            }
         }
 
-        let n_unique_names = names.iter().collect::<BTreeSet<_>>().len();
-        assert!(n_unique_names == names.len(), "invalid labels: the same name is used multiple times");
+        let mut unique_names = BTreeSet::new();
+        for name in &names {
+            if !unique_names.insert(name) {
+                return Err(Error::InvalidParameter(format!(
+                    "labels names must be unique, got '{}' multiple times", name
+                )));
+            }
+        }
 
-        LabelsBuilder {
+        Ok(LabelsBuilder {
             names: names.into_iter().map(|s| s.into()).collect(),
             values: Vec::new(),
             positions: Default::default(),
-        }
+        })
     }
 
     /// Reserve space for `additional` other entries in the labels.
@@ -330,5 +340,19 @@ impl std::ops::Index<usize> for Labels {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
         &self.values[start..stop]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_names() {
+        let e = LabelsBuilder::new(vec!["not an ident"]).err().unwrap();
+        assert_eq!(e.to_string(), "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not");
+
+        let e = LabelsBuilder::new(vec!["not", "there", "not"]).err().unwrap();
+        assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
     }
 }

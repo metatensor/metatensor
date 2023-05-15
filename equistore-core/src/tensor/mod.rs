@@ -427,28 +427,28 @@ mod tests {
 
         let tensor = TensorMap::new((*keys).clone(), blocks).unwrap();
 
-        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
         selection.add(&[1, 1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection.finish()).unwrap(),
             [2]
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_1"]);
+        let mut selection = LabelsBuilder::new(vec!["key_1"]).unwrap();
         selection.add(&[1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection.finish()).unwrap(),
             [2, 3]
         );
 
-        let selection = LabelsBuilder::new(vec!["key_1"]);
+        let selection = LabelsBuilder::new(vec!["key_1"]).unwrap();
         let result = tensor.blocks_matching(&selection.finish());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection labels must contain a single row, got 0"
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]);
+        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
         selection.add(&[3, 4]).unwrap();
         selection.add(&[1, 2]).unwrap();
         let result = tensor.blocks_matching(&selection.finish());
@@ -457,7 +457,7 @@ mod tests {
             "invalid parameter: block selection labels must contain a single row, got 2"
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_3"]);
+        let mut selection = LabelsBuilder::new(vec!["key_3"]).unwrap();
         selection.add(&[1]).unwrap();
         let result = tensor.blocks_matching(&selection.finish());
         assert_eq!(

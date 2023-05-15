@@ -118,7 +118,7 @@ unsafe fn create_rust_labels(labels: &eqs_labels_t) -> Result<Arc<Labels>, Error
         names.push(name);
     }
 
-    let mut builder = LabelsBuilder::new(names);
+    let mut builder = LabelsBuilder::new(names)?;
     builder.reserve(labels.count);
 
     let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);

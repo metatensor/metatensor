@@ -54,7 +54,7 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
     }
 
     let remaining_keys = if remaining_i.is_empty() {
-        let mut builder = LabelsBuilder::new(vec!["_"]);
+        let mut builder = LabelsBuilder::new(vec!["_"])?;
         builder.add(&[0])?;
         builder.finish()
     } else {
@@ -67,7 +67,7 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
             remaining_keys.insert(label);
         }
 
-        let mut remaining_keys_builder = LabelsBuilder::new(remaining_names);
+        let mut remaining_keys_builder = LabelsBuilder::new(remaining_names)?;
         for entry in remaining_keys {
             remaining_keys_builder.add(&entry)?;
         }
@@ -107,7 +107,10 @@ pub fn merge_gradient_samples(
         }
     }
 
-    let mut new_gradient_samples_builder = LabelsBuilder::new(new_gradient_samples_names.expect("missing gradient samples names"));
+    let mut new_gradient_samples_builder = LabelsBuilder::new(
+        new_gradient_samples_names.expect("missing gradient samples names")
+    )?;
+
     for sample in new_gradient_samples {
         new_gradient_samples_builder.add(&sample)?;
     }
@@ -140,7 +143,7 @@ pub fn merge_samples(
         merged_samples.sort_unstable();
     }
 
-    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names);
+    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names).expect("invalid new samples names");
     for sample in merged_samples {
         merged_samples_builder.add(&sample).expect("got duplicated samples");
     }
@@ -179,7 +182,7 @@ mod tests_utils {
     use crate::labels::{Labels, LabelsBuilder, LabelValue};
 
     pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Arc<Labels> {
-        let mut labels = LabelsBuilder::new(names);
+        let mut labels = LabelsBuilder::new(names).unwrap();
         for entry in values {
             labels.add(
                 &entry.iter().copied().map(LabelValue::from).collect::<Vec<_>>()

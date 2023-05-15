@@ -28,7 +28,7 @@ pub fn read_npy_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error>
 
     check_for_extra_bytes(&mut reader)?;
 
-    let mut builder = LabelsBuilder::new(names.iter().map(|s| &**s).collect());
+    let mut builder = LabelsBuilder::new(names.iter().map(|s| &**s).collect())?;
     for chunk in data.chunks_exact(names.len()) {
         builder.add(&chunk.iter().map(|&i| LabelValue::new(i)).collect::<Vec<_>>())?;
     }

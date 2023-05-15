@@ -303,7 +303,7 @@ impl TensorBlock {
             .copied()
             .collect();
 
-        let mut new_properties_builder = LabelsBuilder::new(new_property_names);
+        let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
         for new_property in moved_component.iter() {
             for old_property in old_properties.iter() {
                 let mut property = new_property.to_vec();
@@ -340,7 +340,7 @@ mod tests {
     use super::*;
 
     fn example_labels(name: &str, count: usize) -> Arc<Labels> {
-        let mut labels = LabelsBuilder::new(vec![name]);
+        let mut labels = LabelsBuilder::new(vec![name]).expect("invalid names");
         for i in 0..count {
             labels.add(&[LabelValue::from(i)]).unwrap();
         }
@@ -425,7 +425,7 @@ mod tests {
         );
 
         let values = TestArray::new(vec![3, 1, 2]);
-        let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]);
+        let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]).expect("invalid names");
         components.add(&[LabelValue::from(0), LabelValue::from(1)]).unwrap();
 
         let result = TensorBlock::new(values, samples, vec![Arc::new(components.finish())], properties);
@@ -447,7 +447,7 @@ mod tests {
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
-            let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]);
+            let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]).expect("invalid names");
             gradient_samples.add(&[0, 0]).unwrap();
             gradient_samples.add(&[1, 1]).unwrap();
             gradient_samples.add(&[3, -2]).unwrap();
