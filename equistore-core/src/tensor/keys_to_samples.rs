@@ -71,7 +71,7 @@ impl TensorMap {
             new_blocks.push(block);
         } else {
             for entry in splitted_keys.new_keys.iter() {
-                let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names());
+                let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names())?;
                 selection.add(entry)?;
 
                 let matching = self.blocks_matching(&selection.finish())?;

@@ -75,7 +75,12 @@ class Labels(np.ndarray):
             else:
                 names = (names,)
         else:
-            names = tuple(str(n) for n in names)
+            names = tuple(names)
+            for name in names:
+                if not isinstance(name, str):
+                    raise TypeError(
+                        f"Labels names must be strings, got {type(name)} instead"
+                    )
 
         if not isinstance(values, np.ndarray):
             raise ValueError("values parameter must be a numpy ndarray")

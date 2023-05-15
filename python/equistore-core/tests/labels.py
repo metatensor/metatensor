@@ -205,50 +205,40 @@ def test_arange_three_arguments():
 
 
 def test_arange_incorrect_arguments():
-    with pytest.raises(
-        ValueError,
-        match="the maximum number of integer arguments accepted by "
-        r"`Labels.arange\(\)` is 3. 4 were provided",
-    ):
+    message = (
+        "the maximum number of integer arguments accepted by "
+        r"`Labels.arange\(\)` is 3. 4 were provided"
+    )
+    with pytest.raises(ValueError, match=message):
         Labels.arange("dummy", 0, 10, 2, 4)
 
-    with pytest.raises(
-        ValueError, match=r"please provide at least one integer for `Labels.arange\(\)`"
-    ):
+    message = r"please provide at least one integer for `Labels.arange\(\)`"
+    with pytest.raises(ValueError, match=message):
         Labels.arange("dummy")
 
-    with pytest.raises(
-        EquistoreError, match="invalid parameter: '0' is not a valid label name"
-    ):
+    message = "Labels names must be strings, got <class 'int'> instead"
+    with pytest.raises(TypeError, match=message):
         Labels.arange(0, 1, 2)
 
-    with pytest.raises(
-        ValueError,
-        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
-    ):
+    message = r"all numbers provided to `Labels.arange\(\)` must be integers"
+    with pytest.raises(ValueError, match=message):
         Labels.arange(0.0, 1.0, 2)
 
-    with pytest.raises(
-        ValueError,
-        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
-    ):
+    message = r"all numbers provided to `Labels.arange\(\)` must be integers"
+    with pytest.raises(ValueError, match=message):
         Labels.arange("dummy", 0, 5, 0.2)
 
-    with pytest.raises(
-        ValueError,
-        match="the only valid names for integer arguments to "
-        r"`Labels.arange\(\)` are start, stop and step",
-    ):
+    message = (
+        "the only valid names for integer arguments to "
+        + r"`Labels.arange\(\)` are start, stop and step"
+    )
+    with pytest.raises(ValueError, match=message):
         Labels.arange("dummy", random=10)
 
-    with pytest.raises(
-        ValueError,
-        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
-    ):
+    message = r"all numbers provided to `Labels.arange\(\)` must be integers"
+    with pytest.raises(ValueError, match=message):
         Labels.arange(name="dummy", start=0.0, stop=1.0, step=2)
 
-    with pytest.raises(
-        ValueError,
-        match=r"all numbers provided to `Labels.arange\(\)` must be integers",
-    ):
+    message = r"all numbers provided to `Labels.arange\(\)` must be integers"
+    with pytest.raises(ValueError, match=message):
         Labels.arange("dummy", start=0, stop=0.2)
