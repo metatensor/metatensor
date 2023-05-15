@@ -34,9 +34,9 @@ marked as `good first issue`_.
 .. _`contribution guidelines`: CONTRIBUTING.rst
 .. _`good first issue`: https://github.com/lab-cosmo/equistore/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
 
-.. |test| image:: https://github.com/lab-cosmo/equistore/actions/workflows/tests.yml/badge.svg
-   :alt: Github Actions Tests Job Status
-   :target: https://github.com/lab-cosmo/equistore/actions/workflows/tests.yml
+.. |test| image:: https://img.shields.io/github/checks-status/lab-cosmo/equistore/master
+   :alt: Github Actions tests status
+   :target: https://github.com/lab-cosmo/equistore/actions?query=branch%3Amaster
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
