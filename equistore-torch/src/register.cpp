@@ -100,6 +100,8 @@ TORCH_LIBRARY(equistore, m) {
             torch::init<torch::Tensor, TorchLabels, std::vector<TorchLabels>, TorchLabels>(), DOCSTRING,
             {torch::arg("values"), torch::arg("samples"), torch::arg("components"), torch::arg("properties")}
         )
+        .def("__repr__", &TensorBlockHolder::__repr__)
+        .def("__str__", &TensorBlockHolder::__repr__)
         .def("copy", &TensorBlockHolder::copy)
         .def_property("values", &TensorBlockHolder::values)
         .def_property("samples", &TensorBlockHolder::samples)

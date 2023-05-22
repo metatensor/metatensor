@@ -22,14 +22,16 @@ using TorchTensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
 /// of instances of `TensorBlockHolder`.
 class EQUISTORE_TORCH_EXPORT TensorBlockHolder: public torch::CustomClassHolder {
 public:
-    TensorBlockHolder(equistore::TensorBlock);
-
+    /// Create a new TensorBlockHolder with the given data and metadata
     TensorBlockHolder(
         torch::Tensor data,
         TorchLabels samples,
         std::vector<TorchLabels> components,
         TorchLabels properties
     );
+
+    /// Create a torch TensorBlockHolder from a pre-existing equistore::TensorBlock
+    TensorBlockHolder(equistore::TensorBlock block);
 
     /// Make a copy of this `TensorBlockHolder`, including all the data
     /// contained inside
@@ -106,14 +108,25 @@ public:
     /// Get a all gradients and associated parameters in this block
     std::unordered_map<std::string, TorchTensorBlock> gradients();
 
+    /// Implementation of __repr__/__str__ for Python
+    std::string __repr__() const;
+
     /// Get the underlying equistore TensorBlock
     const equistore::TensorBlock& as_equistore() const {
         return block_;
     }
 
 private:
+    /// Create a TensorBlockHolder containing gradients with respect to
+    /// `parameter`
+    TensorBlockHolder(equistore::TensorBlock block, std::string parameter);
+    friend class torch::intrusive_ptr<TensorBlockHolder>;
+
     /// Underlying equistore TensorBlock
     equistore::TensorBlock block_;
+    /// If this TensorBlock contains gradients, these are gradients w.r.t. this
+    /// parameter
+    std::string parameter_;
 };
 
 }
