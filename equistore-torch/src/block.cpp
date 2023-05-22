@@ -35,6 +35,11 @@ TensorBlockHolder::TensorBlockHolder(equistore::TensorBlock block):
     block_(std::move(block))
 {}
 
+TensorBlockHolder::TensorBlockHolder(equistore::TensorBlock block, std::string parameter):
+    block_(std::move(block)),
+    parameter_(std::move(parameter))
+{}
+
 torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::copy() const {
     return torch::make_intrusive<TensorBlockHolder>(this->block_.clone());
 }
@@ -88,7 +93,15 @@ bool TensorBlockHolder::has_gradient(const std::string& parameter) const {
 }
 
 TorchTensorBlock TensorBlockHolder::gradient(const std::string& parameter) const {
-    return torch::make_intrusive<TensorBlockHolder>(block_.gradient(std::move(parameter)));
+    // handle recursive gradients
+    std::string gradient_parameter;
+    if (!parameter_.empty()) {
+        gradient_parameter = parameter_ + "/" + parameter;
+    } else {
+        gradient_parameter = parameter;
+    }
+
+    return torch::make_intrusive<TensorBlockHolder>(block_.gradient(parameter), gradient_parameter);
 }
 
 std::unordered_map<std::string, TorchTensorBlock> TensorBlockHolder::gradients() {
@@ -97,4 +110,74 @@ std::unordered_map<std::string, TorchTensorBlock> TensorBlockHolder::gradients()
         result.emplace(parameter, this->gradient(parameter));
     }
     return result;
+}
+
+static void print_labels(std::ostringstream& output, const equistore::Labels& labels, const char* labels_kind) {
+    output << "    " << labels_kind << " (" << labels.count() << "): ";
+    output << "[";
+    auto first = true;
+    for (const auto& name: labels.names()) {
+        if (!first) {
+            output << ", ";
+        }
+        output << '\'' << name << '\'';
+        first = false;
+    }
+    output << "]\n";
+}
+
+std::string TensorBlockHolder::__repr__() const {
+    auto output = std::ostringstream();
+
+    if (parameter_.empty()) {
+        output << "TensorBlock\n";
+    } else {
+        output << "Gradient TensorBlock ('" << parameter_ << "')\n";
+    }
+
+    print_labels(output, block_.samples(), "samples");
+
+    auto components = block_.components();
+    output << "    components (";
+    auto first = true;
+    for (const auto& component: components) {
+        if (!first) {
+            output << ", ";
+        }
+        output << component.count();
+        first = false;
+    }
+
+    output << "): [";
+    first = true;
+    for (const auto& component: components) {
+        if (!first) {
+            output << ", ";
+        }
+        assert(component.size() == 1);
+        output << '\'' << component.names()[0] << '\'';
+        first = false;
+    }
+    output << "]\n";
+
+    print_labels(output, block_.properties(), "properties");
+
+    auto gradients = block_.gradients_list();
+    output << "    gradients: ";
+    if (gradients.empty()) {
+        output << "None\n";
+    } else {
+        first = true;
+        output << "[";
+        for (const auto& parameter: gradients) {
+            if (!first) {
+                output << ", ";
+            }
+            output << '\'' << parameter << '\'';
+            first = false;
+        }
+        output << "]\n";
+    }
+
+    return output.str();
 }
