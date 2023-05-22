@@ -35,7 +35,76 @@ def test_constructor():
     assert block.properties.names == ["p"]
 
 
-def test_clone():
+def test_repr():
+    block = TensorBlock(
+        values=torch.full((3, 2), 11),
+        samples=Labels(names=["s"], values=torch.IntTensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.IntTensor([[1], [0]])),
+    )
+
+    expected = """TensorBlock
+    samples (3): ['s']
+    components (): []
+    properties (2): ['p']
+    gradients: None
+"""
+
+    assert str(block) == expected
+
+    block = TensorBlock(
+        values=torch.full((3, 3, 1, 2, 5), 11),
+        samples=Labels(
+            names=["s_1", "s_2"], values=torch.IntTensor([[0, 0], [1, 1], [2, 2]])
+        ),
+        components=[
+            Labels(names=["c_1"], values=torch.IntTensor([[0], [1], [2]])),
+            Labels(names=["c_2"], values=torch.IntTensor([[0]])),
+            Labels(names=["c_3"], values=torch.IntTensor([[0], [1]])),
+        ],
+        properties=Labels(
+            names=["p_1", "p_2"],
+            values=torch.IntTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]]),
+        ),
+    )
+
+    block.add_gradient(
+        "g",
+        TensorBlock(
+            values=torch.full((3, 3, 1, 2, 5), 11),
+            samples=Labels(
+                names=["sample", "g"], values=torch.IntTensor([[0, 0], [1, 1], [2, 2]])
+            ),
+            components=[
+                Labels(names=["c_1"], values=torch.IntTensor([[0], [1], [2]])),
+                Labels(names=["c_2"], values=torch.IntTensor([[0]])),
+                Labels(names=["c_3"], values=torch.IntTensor([[0], [1]])),
+            ],
+            properties=Labels(
+                names=["p_1", "p_2"],
+                values=torch.IntTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]]),
+            ),
+        ),
+    )
+
+    expected = """TensorBlock
+    samples (3): ['s_1', 's_2']
+    components (3, 1, 2): ['c_1', 'c_2', 'c_3']
+    properties (5): ['p_1', 'p_2']
+    gradients: ['g']
+"""
+    assert str(block) == expected
+
+    expected = """Gradient TensorBlock ('g')
+    samples (3): ['sample', 'g']
+    components (3, 1, 2): ['c_1', 'c_2', 'c_3']
+    properties (5): ['p_1', 'p_2']
+    gradients: None
+"""
+    assert str(block.gradient("g")) == expected
+
+
+def test_copy():
     values = torch.full((3, 2), 11)
     block = TensorBlock(
         values=values,
@@ -110,6 +179,12 @@ class TensorBlockWrap:
             components=components,
             properties=properties,
         )
+
+    def __str__(self) -> str:
+        return self._c.__str__()
+
+    def __repr__(self) -> str:
+        return self._c.__repr__()
 
     def copy(self) -> TensorBlock:
         return self._c.copy()
