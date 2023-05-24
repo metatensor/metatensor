@@ -56,6 +56,7 @@ set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX wher
 set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
 set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
 set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
+set(EXTRA_RUST_FLAGS "" CACHE STRING "Flags used to build rust code")
 
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
@@ -231,10 +232,8 @@ else()
     set(CARGO_RUSTC_ARGS "")
 endif()
 
-# TODO: introduce a generic RUST_FLAGS variable and use that instead
-if (EQUISTORE_BUILD_FOR_PYTHON)
-    # strip dynamic library for smaller wheels to download/install
-    set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};-Cstrip=symbols")
+if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
+    set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
 add_custom_target(cargo-build-equistore ALL

@@ -18,8 +18,6 @@ if EQUISTORE_BUILD_TYPE not in ["debug", "release"]:
         "expected 'debug' or 'release'"
     )
 
-RUST_BUILD_TARGET = os.environ.get("RUST_BUILD_TARGET", None)
-
 EQUISTORE_CORE = os.path.join(ROOT, "..", "..", "equistore-core")
 if not os.path.exists(EQUISTORE_CORE):
     # we are building from a sdist, which should include equistore-core Rust
@@ -73,14 +71,48 @@ class cmake_ext(build_ext):
             f"-DCMAKE_BUILD_TYPE={EQUISTORE_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
             "-DEQUISTORE_INSTALL_BOTH_STATIC_SHARED=OFF",
-            "-DEQUISTORE_BUILD_FOR_PYTHON=ON",
+            # strip dynamic library for smaller wheels to download/install
+            "-DEXTRA_RUST_FLAGS=-Cstrip=symbols",
         ]
-
-        if RUST_BUILD_TARGET is not None:
-            cmake_options.append(f"-DRUST_BUILD_TARGET={RUST_BUILD_TARGET}")
 
         if "CARGO" in os.environ:
             cmake_options.append(f"-DCARGO_EXE={os.environ['CARGO']}")
+
+        # Handle cross-compilation by detecting cibuildwheels environnement
+        # variables
+        if sys.platform.startswith("darwin"):
+            # ARCHFLAGS is set by cibuildwheels
+            ARCHFLAGS = os.environ.get("ARCHFLAGS")
+            if ARCHFLAGS is not None:
+                archs = filter(
+                    lambda u: bool(u),
+                    ARCHFLAGS.strip().split("-arch "),
+                )
+                archs = list(archs)
+                assert len(archs) == 1
+                arch = archs[0].strip()
+
+                if arch == "x86_64":
+                    cmake_options.append("-DRUST_BUILD_TARGET=x86_64-apple-darwin")
+                elif arch == "arm64":
+                    cmake_options.append("-DRUST_BUILD_TARGET=aarch64-apple-darwin")
+                else:
+                    raise ValueError(f"unknown arch: {arch}")
+
+        elif sys.platform.startswith("linux"):
+            # we set RUST_BUILD_TARGET in out custom docker image
+            RUST_BUILD_TARGET = os.environ.get("RUST_BUILD_TARGET")
+            if RUST_BUILD_TARGET is not None:
+                cmake_options.append(f"-DRUST_BUILD_TARGET={RUST_BUILD_TARGET}")
+
+        elif sys.platform.startswith("win32"):
+            # CARGO_BUILD_TARGET is set by cibuildwheels
+            CARGO_BUILD_TARGET = os.environ.get("CARGO_BUILD_TARGET")
+            if CARGO_BUILD_TARGET is not None:
+                cmake_options.append(f"-DRUST_BUILD_TARGET={CARGO_BUILD_TARGET}")
+
+        else:
+            raise ValueError(f"unknown platform: {sys.platform}")
 
         subprocess.run(
             ["cmake", source_dir, *cmake_options],
