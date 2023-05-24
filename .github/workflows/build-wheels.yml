@@ -19,19 +19,23 @@ jobs:
     strategy:
       matrix:
         include:
+          - name: x86_64 Linux
+            os: ubuntu-20.04
+            rust-target: x86_64-unknown-linux-gnu
+            cibw_arch: x86_64
           - name: x86_64 macOS
             os: macos-11
             rust-target: x86_64-apple-darwin
-            platform-name: macosx-11.0-x86_64
+            cibw_arch: x86_64
           - name: M1 macOS
             os: macos-11
             rust-target: aarch64-apple-darwin
-            platform-name: macosx-11.0-arm64
+            cibw_arch: arm64
           - name: x86_64 Windows
             os: windows-2019
             # TODO: add a 32-bit windows builder?
             rust-target: x86_64-pc-windows-msvc
-            platform-name: win_amd64
+            cibw_arch: AMD64
     steps:
       - uses: actions/checkout@v3
         with:
@@ -41,72 +45,42 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.rust-target }}
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
       - name: install dependencies
-        run: python -m pip install wheel
-      - name: build equistore-core wheel
-        env:
-          RUST_BUILD_TARGET: ${{ matrix.rust-target }}
-        run: |
-          cd python/equistore-core
-          # using `setup.py bdist_wheel` to be able to set plat-name to something
-          # different from the host (on macos, we are cross-compiling to arm64/M1)
-          python setup.py bdist_wheel --plat-name ${{ matrix.platform-name }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path: python/equistore-core/dist/*.whl
-      - name: upload wheel to GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: python/equistore-core/dist/*.whl
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m pip install cibuildwheel
 
-  build-manylinux-wheels:
-    runs-on: ubuntu-20.04
-    # TODO: add other arch for linux?
-    name: x86_64 manylinux
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: build manylinux with rust docker image
-        run: docker build -t manylinux-with-rust python/scripts/build-wheels
-      - name: build equistore-core wheel in docker
-        run: |
-          docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "\
-              python3.8 -m build /code/python/equistore-core --wheel --outdir=/code/dist \
-          "
-      - name: run auditwheel in docker
-        run: |
-          docker run --rm -v $(pwd):/code manylinux-with-rust bash -c "\
-            auditwheel repair /code/dist/equistore_core-*.whl -w /code/dist\
-          "
-      - name: remove equistore-core wheel with wrong tag
-        run: |
-          ls dist/
-          sudo rm dist/equistore_core-*-linux_x86_64.whl
+        if: matrix.os == 'ubuntu-20.04'
+        run: docker build -t rustc-manylinux2010_x86_64 python/scripts/rustc-manylinux2010_x86_64
+
+      - name: build equistore-core wheel
+        run: python -m cibuildwheel python/equistore-core
+        env:
+          CIBW_BUILD: cp310-*
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD_VERBOSITY: 2
+          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2010_x86_64
+
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist/*.whl
+          path: ./wheelhouse/*.whl
       - name: upload wheel to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*.whl
+          files: ./wheelhouse/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-sdist:
+  build-others:
     runs-on: ubuntu-20.04
-    name: sdist
     steps:
       - uses: actions/checkout@v3
         with:
@@ -131,7 +105,7 @@ jobs:
           path: |
             dist/*.tar.gz
             dist/*.whl
-      - name: upload sdist to GitHub release
+      - name: upload to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
