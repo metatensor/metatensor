@@ -215,7 +215,7 @@ impl TensorMap {
 
         if selection.count() != 1 {
             return Err(Error::InvalidParameter(format!(
-                "block selection labels must contain a single row, got {}",
+                "block selection must contain exactly one entry, got {}",
                 selection.count()
             )));
         }
@@ -445,7 +445,7 @@ mod tests {
         let result = tensor.blocks_matching(&selection.finish());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: block selection labels must contain a single row, got 0"
+            "invalid parameter: block selection must contain exactly one entry, got 0"
         );
 
         let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
@@ -454,7 +454,7 @@ mod tests {
         let result = tensor.blocks_matching(&selection.finish());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: block selection labels must contain a single row, got 2"
+            "invalid parameter: block selection must contain exactly one entry, got 2"
         );
 
         let mut selection = LabelsBuilder::new(vec!["key_3"]).unwrap();

@@ -65,8 +65,231 @@ std::vector<int64_t> TensorMapHolder::blocks_matching(const TorchLabels& selecti
 }
 
 TorchTensorBlock TensorMapHolder::block_by_id(int64_t index) {
+    if (index >= this->keys()->count()) {
+        // this needs to be an IndexError to enable iteration over a TensorMap
+        C10_THROW_ERROR(IndexError,
+            "block index out of bounds: we have " + std::to_string(this->keys()->count())
+            + " blocks but the index is " + std::to_string(index)
+        );
+    }
     return torch::make_intrusive<TensorBlockHolder>(tensor_.block_by_id(index));
 }
+
+
+TorchTensorBlock TensorMapHolder::block(const std::map<std::string, int32_t>& selection_dict) {
+    auto names = std::vector<std::string>();
+    auto values = std::vector<int32_t>();
+    for (const auto& it: selection_dict) {
+        names.push_back(it.first);
+        values.push_back(static_cast<int32_t>(it.second));
+    }
+
+    auto selection = equistore::Labels(names, values.data(), 1);
+    return this->block(torch::make_intrusive<LabelsHolder>(std::move(selection)));
+}
+
+TorchTensorBlock TensorMapHolder::block(TorchLabels selection) {
+    if (selection->count() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "block selection must contain exactly one entry, got " + std::to_string(selection->count())
+        );
+    }
+
+    return this->block(torch::make_intrusive<LabelsEntryHolder>(selection, 0));
+}
+
+TorchTensorBlock TensorMapHolder::block(TorchLabelsEntry torch_selection) {
+    auto cpu_values = torch_selection->values().to(torch::kCPU);
+    auto selection = equistore::Labels(
+        torch_selection->names(), cpu_values.data_ptr<int32_t>(), 1
+    );
+
+    auto matching = tensor_.blocks_matching(selection);
+    if (matching.size() == 0) {
+        auto selection_str = torch_selection->__repr__();
+        // remove the starting 'LabelsEntry(' and final ')'
+        selection_str = selection_str.substr(12);
+        selection_str = selection_str.substr(0, selection_str.length() - 1);
+        C10_THROW_ERROR(ValueError,
+            "could not find blocks matching the selection '" + selection_str + "'"
+        );
+    } else if (matching.size() != 1) {
+        auto selection_str = torch_selection->__repr__();
+        // remove the starting 'LabelsEntry(' and final ')'
+        selection_str = selection_str.substr(12);
+        selection_str = selection_str.substr(0, selection_str.length() - 1);
+        C10_THROW_ERROR(ValueError,
+            "got more than one matching block for '" + selection_str +
+            "', use the `blocks` function to select more than one block"
+        );
+    }
+
+    return this->block_by_id(matching[0]);
+}
+
+TorchTensorBlock TensorMapHolder::block_torch(torch::IValue index) {
+    if (index.isInt()) {
+        return this->block_by_id(index.toInt());
+    } else if (index.isGenericDict()) {
+        auto selection = std::map<std::string, int32_t>();
+        for (const auto& it: index.toGenericDict()) {
+            const auto& key = it.key();
+            const auto& value = it.value();
+            if (it.key().isString() && value.isInt()) {
+                selection.emplace(key.toString()->string(), static_cast<int32_t>(value.toInt()));
+            } else {
+                C10_THROW_ERROR(ValueError,
+                    "expected argument to be Dict[str, int], got Dict["
+                    + key.type()->str() + ", " + value.type()->str() + "]"
+                );
+            }
+        }
+        return this->block(selection);
+    } else if (index.isCustomClass()) {
+        torch::optional<TorchLabels> labels = torch::nullopt;
+        torch::optional<TorchLabelsEntry> entry = torch::nullopt;
+        try {
+            labels = index.toCustomClass<LabelsHolder>();
+        } catch (const c10::Error&) {
+            try {
+                entry = index.toCustomClass<LabelsEntryHolder>();
+            } catch (const c10::Error&) {
+                C10_THROW_ERROR(TypeError,
+                    "expected argument to be Labels or LabelsEntry, got"
+                    + index.type()->str()
+                );
+            }
+        }
+
+        if (labels.has_value()) {
+            return this->block(labels.value());
+        } else if (entry.has_value()) {
+            return this->block(entry.value());
+        } else {
+            // this should never be reached, the code above should throw a
+            // TypeError before
+            throw std::runtime_error("internal error: not a labels nor a labels entry");
+        }
+    } else {
+        C10_THROW_ERROR(ValueError,
+            "expected argument to be int, Dict[str, int], Labels, or LabelsEntry, got "
+            + index.type()->str()
+        );
+    }
+}
+
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks_by_id(const std::vector<int64_t>& indices) {
+    auto result = std::vector<TorchTensorBlock>();
+    for (auto i: indices) {
+        result.push_back(this->block_by_id(i));
+    }
+    return result;
+}
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks() {
+    auto result = std::vector<TorchTensorBlock>();
+    for (size_t i=0; i<tensor_.keys().count(); i++) {
+        result.push_back(this->block_by_id(i));
+    }
+    return result;
+}
+
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks(const std::map<std::string, int32_t>& selection_dict) {
+    auto names = std::vector<std::string>();
+    auto values = std::vector<int32_t>();
+    for (const auto& it: selection_dict) {
+        names.push_back(it.first);
+        values.push_back(static_cast<int32_t>(it.second));
+    }
+
+    auto selection = equistore::Labels(names, values.data(), 1);
+    return this->blocks(torch::make_intrusive<LabelsHolder>(std::move(selection)));
+}
+
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks(TorchLabels selection) {
+    if (selection->count() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "block selection must contain exactly one entry, got " + std::to_string(selection->count())
+        );
+    }
+
+    return this->blocks(torch::make_intrusive<LabelsEntryHolder>(selection, 0));
+}
+
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks(TorchLabelsEntry torch_selection) {
+    auto cpu_values = torch_selection->values().to(torch::kCPU);
+    auto selection = equistore::Labels(
+        torch_selection->names(), cpu_values.data_ptr<int32_t>(), 1
+    );
+
+    auto matching = std::vector<int64_t>();
+    for (auto m: tensor_.blocks_matching(selection)) {
+        matching.push_back(static_cast<int64_t>(m));
+    }
+
+    return this->blocks_by_id(matching);
+}
+
+
+std::vector<TorchTensorBlock> TensorMapHolder::blocks_torch(torch::IValue index) {
+    if (index.isNone()) {
+        return this->blocks();
+    } else if (index.isInt()) {
+        return {this->block_by_id(index.toInt())};
+    } else if (index.isIntList()) {
+        return this->blocks_by_id(index.toIntVector());
+    } else if (index.isGenericDict()) {
+        auto selection = std::map<std::string, int32_t>();
+        for (const auto& it: index.toGenericDict()) {
+            const auto& key = it.key();
+            const auto& value = it.value();
+            if (it.key().isString() && value.isInt()) {
+                selection.emplace(key.toString()->string(), static_cast<int32_t>(value.toInt()));
+            } else {
+                C10_THROW_ERROR(ValueError,
+                    "expected argument to be Dict[str, int], got Dict["
+                    + key.type()->str() + ", " + value.type()->str() + "]"
+                );
+            }
+        }
+        return this->blocks(selection);
+    } else if (index.isCustomClass()) {
+        torch::optional<TorchLabels> labels = torch::nullopt;
+        torch::optional<TorchLabelsEntry> entry = torch::nullopt;
+        try {
+            labels = index.toCustomClass<LabelsHolder>();
+        } catch (const c10::Error&) {
+            try {
+                entry = index.toCustomClass<LabelsEntryHolder>();
+            } catch (const c10::Error&) {
+                C10_THROW_ERROR(TypeError,
+                    "expected argument to be Labels or LabelsEntry, got"
+                    + index.type()->str()
+                );
+            }
+        }
+
+        if (labels.has_value()) {
+            return this->blocks(labels.value());
+        } else if (entry.has_value()) {
+            return this->blocks(entry.value());
+        } else {
+            // this should never be reached, the code above should throw a
+            // TypeError before
+            throw std::runtime_error("internal error: not a labels nor a labels entry");
+        }
+    } else {
+        C10_THROW_ERROR(ValueError,
+            "expected argument to be None, int, List[int], Dict[str, int], Labels, or LabelsEntry, got "
+            + index.type()->str()
+        );
+    }
+}
+
 
 /// Transform a torch::IValue containing either a single string, a list of
 /// strings or a tuple of strings to something C++ can use
@@ -184,4 +407,26 @@ std::vector<std::string> TensorMapHolder::property_names() {
     auto n_dimensions = block->values().sizes().size();
 
     return labels_names(block->as_equistore(), n_dimensions - 1);
+}
+
+std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> TensorMapHolder::items() {
+    auto result = std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>>();
+
+    auto keys = this->keys();
+    for (size_t i = 0; i<keys->count(); i++) {
+        result.push_back({
+            torch::make_intrusive<LabelsEntryHolder>(keys, i),
+            this->block_by_id(i)
+        });
+    }
+    return result;
+}
+
+
+std::string TensorMapHolder::print(int64_t max_keys) const {
+    std::ostringstream output;
+    auto keys = this->keys();
+    output << "TensorMap with " << keys->count() << " blocks\n";
+    output << "keys:" << keys->print(max_keys, 5);
+    return output.str();
 }
