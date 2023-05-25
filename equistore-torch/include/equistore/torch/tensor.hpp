@@ -51,6 +51,34 @@ public:
     /// `TensorMap`, and is only valid as long as the `TensorMap` is kept alive.
     TorchTensorBlock block_by_id(int64_t index);
 
+    /// Get the block in this `TensorMap` with the key matching the name=>values
+    /// passed in `selection`
+    TorchTensorBlock block(const std::map<std::string, int32_t>& selection);
+
+    TorchTensorBlock block(TorchLabels selection);
+    TorchTensorBlock block(TorchLabelsEntry selection);
+
+    /// TorchScript implementation of `block`, dispatching to one of the
+    /// functions above
+    TorchTensorBlock block_torch(torch::IValue index);
+
+    /// Similar to `block_by_id`, but get all blocks with the given indices
+    std::vector<TorchTensorBlock> blocks_by_id(const std::vector<int64_t>& indices);
+
+    /// Get all blocks in this TensorMap
+    std::vector<TorchTensorBlock> blocks();
+
+    /// Similar to `block`, but allow getting multiple matching blocks
+    std::vector<TorchTensorBlock> blocks(const std::map<std::string, int32_t>& selection);
+
+    /// Similar to `block`, but allow getting multiple matching blocks
+    std::vector<TorchTensorBlock> blocks(TorchLabels selection);
+    std::vector<TorchTensorBlock> blocks(TorchLabelsEntry selection);
+
+    /// TorchScript implementation of `blocks`, dispatching to one of the
+    /// functions above.
+    std::vector<TorchTensorBlock> blocks_torch(torch::IValue index);
+
     /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
     ///
@@ -89,6 +117,13 @@ public:
 
     /// Get the property names used for all block in this `TensorMap`
     std::vector<std::string> property_names();
+
+    /// Get all (key => block) pairs in this `TensorMap`
+    std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> items();
+
+    /// Print this TensorMap to a string, including at most `max_keys` in the
+    /// output (-1 to include all keys).
+    std::string print(int64_t max_keys) const;
 
     /// Get the underlying equistore TensorMap
     const equistore::TensorMap& as_equistore() const {

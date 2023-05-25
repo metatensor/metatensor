@@ -26,6 +26,7 @@
 namespace equistore_torch {
     class LabelsHolder;
     class TensorBlockHolder;
+    class TensorMapHolder;
 }
 
 namespace equistore {
@@ -408,7 +409,6 @@ public:
     Labels(const std::vector<std::string>& names, std::vector<std::initializer_list<int32_t>> values):
         Labels(details::labels_from_cxx(names, NDArray(std::move(values), names.size()))) {}
 
-
     /// Create an empty set of Labels with the given names
     Labels(const std::vector<std::string>& names):
         Labels(details::labels_from_cxx(
@@ -523,11 +523,15 @@ private:
         }
     }
 
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
+        Labels(details::labels_from_cxx(names, NDArray(values, {count, names.size()}))) {}
+
     friend Labels details::labels_from_cxx(const std::vector<std::string>&, NDArray<int32_t>);
     friend class TensorMap;
     friend class TensorBlock;
 
     friend class equistore_torch::LabelsHolder;
+    friend class equistore_torch::TensorMapHolder;
 
     std::vector<const char*> names_;
     eqs_labels_t labels_;

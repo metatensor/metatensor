@@ -1,9 +1,9 @@
-from typing import List, Union
+from typing import Dict, List, Tuple, Union
 
 import pytest
 import torch
 
-from equistore.torch import Labels, TensorBlock, TensorMap
+from equistore.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
 from . import utils
 
@@ -11,6 +11,11 @@ from . import utils
 @pytest.fixture
 def tensor():
     return utils.tensor()
+
+
+@pytest.fixture
+def large_tensor():
+    return utils.large_tensor()
 
 
 def test_keys(tensor):
@@ -22,35 +27,40 @@ def test_keys(tensor):
     assert torch.all(tensor.keys.values == expected)
 
 
-@pytest.mark.skip("not implemented")
 def test_print(tensor):
-    """
-    Test routine for the print function of the TensorBlock.
-    It compare the results with those in a file.
-    """
-    repr = tensor.__repr__()
     expected = """TensorMap with 4 blocks
-keys: ['key_1' 'key_2']
-          0       0
-          1       0
-          2       2
-          2       3"""
-    assert expected == repr
+keys: key_1  key_2
+        0      0
+        1      0
+        2      2
+        2      3
+"""
+    assert expected == str(tensor)
+    assert expected == tensor.print(6)
 
 
-@pytest.mark.skip("not implemented")
 def test_print_large(large_tensor):
-    _print = large_tensor.__repr__()
     expected = """TensorMap with 12 blocks
-keys: ['key_1' 'key_2']
-          0       0
-          1       0
-          2       2
-       ...
-          1       5
-          2       5
-          3       5"""
-    assert expected == _print
+keys: key_1  key_2
+        0      0
+        1      0
+          ...
+        2      5
+        3      5
+"""
+    assert expected == str(large_tensor)
+
+    expected = """TensorMap with 12 blocks
+keys: key_1  key_2
+        0      0
+        1      0
+        2      2
+          ...
+        1      5
+        2      5
+        3      5
+"""
+    assert expected == large_tensor.print(6)
 
 
 def test_labels_names(tensor):
@@ -59,7 +69,6 @@ def test_labels_names(tensor):
     assert tensor.property_names == ["p"]
 
 
-@pytest.mark.skip("not implemented")
 def test_block(tensor):
     # block by index
     block = tensor.block(2)
@@ -69,8 +78,8 @@ def test_block(tensor):
     block = tensor[2]
     assert torch.all(block.values == torch.full((4, 3, 1), 3.0))
 
-    # block by kwargs
-    block = tensor.block(key_1=1, key_2=0)
+    # block by dict
+    block = tensor.block(dict(key_1=1, key_2=0))
     assert torch.all(block.values == torch.full((3, 1, 3), 2.0))
 
     # block by Label entry
@@ -81,62 +90,69 @@ def test_block(tensor):
     block = tensor[tensor.keys[0]]
     assert torch.all(block.values == torch.full((3, 1, 1), 1.0))
 
-    # More arguments than needed: two integers
-    # by index
-    msg = "only one non-keyword argument is supported, 2 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(3, 4)
-
-    # 4 input with the first as integer by __getitem__
-    msg = "only one non-keyword argument is supported, 4 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor[3, 4, 7.0, "r"]
-
-    # More arguments than needed: 3 Labels
-    msg = "only one non-keyword argument is supported, 3 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(tensor.keys[0], tensor.keys[1], tensor.keys[3])
-
-    # by __getitem__
-    msg = "only one non-keyword argument is supported, 2 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor[tensor.keys[1], 4]
-
     # 0 blocks matching criteria
-    msg = "Couldn't find any block matching the selection 'key_1 = 3'"
+    msg = "could not find blocks matching the selection 'key_1=4, key_2=3'"
     with pytest.raises(ValueError, match=msg):
-        tensor.block(key_1=3)
+        tensor.block({"key_2": 3, "key_1": 4})
 
     # more than one block matching criteria
     msg = (
-        "more than one block matched 'key_2 = 0', use `TensorMap.blocks` "
-        "if you want to get all of them"
+        "got more than one matching block for 'key_2=0', use the `blocks` "
+        "function to select more than one block"
     )
     with pytest.raises(ValueError, match=msg):
-        tensor.block(key_2=0)
+        tensor.block({"key_2": 0})
+
+    # Type errors
+    msg = (
+        "expected argument to be int, Dict\\[str, int\\], Labels, or "
+        "LabelsEntry, got str"
+    )
+    with pytest.raises(ValueError, match=msg):
+        tensor.block("key_2")
+
+    msg = "expected argument to be Dict\\[str, int\\], got Dict\\[str, str\\]"
+    with pytest.raises(ValueError, match=msg):
+        tensor.block({"key_2": "0"})
 
 
-@pytest.mark.skip("not implemented")
 def test_blocks(tensor):
     # block by index
     blocks = tensor.blocks(2)
     assert len(blocks) == 1
     assert torch.all(blocks[0].values == torch.full((4, 3, 1), 3.0))
 
+    blocks = tensor.blocks([2, 3, 0])
+    assert len(blocks) == 3
+    assert torch.all(blocks[0].values == torch.full((4, 3, 1), 3.0))
+    assert torch.all(blocks[1].values == torch.full((4, 3, 1), 4.0))
+    assert torch.all(blocks[2].values == torch.full((3, 1, 1), 1.0))
+
     # block by kwargs
-    blocks = tensor.blocks(key_1=1, key_2=0)
+    blocks = tensor.blocks(dict(key_1=1, key_2=0))
     assert len(blocks) == 1
     assert torch.all(blocks[0].values == torch.full((3, 1, 3), 2.0))
 
     # more than one block
-    blocks = tensor.blocks(key_2=0)
+    blocks = tensor.blocks(dict(key_2=0))
     assert len(blocks) == 2
 
     assert torch.all(blocks[0].values == torch.full((3, 1, 1), 1.0))
     assert torch.all(blocks[1].values == torch.full((3, 1, 3), 2.0))
 
+    # Type errors
+    msg = (
+        "expected argument to be None, int, List\\[int\\], Dict\\[str, int\\], "
+        "Labels, or LabelsEntry, got str"
+    )
+    with pytest.raises(ValueError, match=msg):
+        tensor.blocks("key_2")
 
-@pytest.mark.skip("not implemented")
+    msg = "expected argument to be Dict\\[str, int\\], got Dict\\[str, str\\]"
+    with pytest.raises(ValueError, match=msg):
+        tensor.blocks({"key_2": "0"})
+
+
 def test_iter(tensor):
     expected = [
         ((0, 0), torch.full((3, 1, 1), 1.0)),
@@ -144,10 +160,16 @@ def test_iter(tensor):
         ((2, 2), torch.full((4, 3, 1), 3.0)),
         ((2, 3), torch.full((4, 3, 1), 4.0)),
     ]
-    for i, (sparse, block) in enumerate(tensor):
-        expected_sparse, expected_values = expected[i]
+    for i, (key, block) in enumerate(tensor.items()):
+        expected_key, expected_values = expected[i]
 
-        assert tuple(sparse) == expected_sparse
+        assert tuple(key) == expected_key
+        assert torch.all(block.values == expected_values)
+
+    # We can iterate over a TensorMap since it implements __len__ and __getitem__
+    for i, block in enumerate(tensor):
+        _, expected_values = expected[i]
+
         assert torch.all(block.values == expected_values)
 
 
@@ -328,37 +350,36 @@ def test_components_to_properties(tensor):
     assert tuple(block.properties.values[2]) == (2, 0)
 
 
-@pytest.mark.skip("Labels.empty not implemented")
 def test_empty_tensor():
     empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])
 
     assert empty_tensor.keys.names == ["key"]
 
-    assert empty_tensor.sample_names == tuple()
+    assert empty_tensor.sample_names == []
     assert empty_tensor.components_names == []
-    assert empty_tensor.property_names == tuple()
+    assert empty_tensor.property_names == []
 
-    assert empty_tensor.blocks() == []
+    # TODO
+    # assert empty_tensor.blocks() == []
 
-    assert empty_tensor.blocks_matching(key=3) == []
+    selection = Labels(names="key", values=torch.IntTensor([[3]]))
+    assert empty_tensor.blocks_matching(selection) == []
 
-    # message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
-    # with pytest.raises(EquistoreError, match=message):
-    #     empty_tensor.blocks_matching(not_a_key=3)
+    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    with pytest.raises(RuntimeError, match=message):
+        selection = Labels(names="not_a_key", values=torch.IntTensor([[3]]))
+        empty_tensor.blocks_matching(selection)
 
-    # message = (
-    #     "invalid parameter: block index out of bounds: we have "
-    #     "0 blocks but the index is 3"
-    # )
-    # with pytest.raises(EquistoreError, match=message):
-    #     empty_tensor.block(3)
+    message = "block index out of bounds: we have 0 blocks but the index is 3"
+    with pytest.raises(IndexError, match=message):
+        empty_tensor.block_by_id(3)
 
-    # message = "invalid parameter: there are no keys to move in an empty TensorMap"
-    # with pytest.raises(EquistoreError, match=message):
-    #     empty_tensor.keys_to_samples("key")
+    message = "invalid parameter: there are no keys to move in an empty TensorMap"
+    with pytest.raises(RuntimeError, match=message):
+        empty_tensor.keys_to_samples("key")
 
-    # with pytest.raises(EquistoreError, match=message):
-    #     empty_tensor.keys_to_properties("key")
+    with pytest.raises(RuntimeError, match=message):
+        empty_tensor.keys_to_properties("key")
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all
@@ -370,8 +391,17 @@ class TensorMapWrap:
     def __len__(self) -> int:
         return self._c.__len__()
 
+    def __str__(self) -> str:
+        return self._c.__str__()
+
+    def __repr__(self) -> str:
+        return self._c.__repr__()
+
     def copy(self) -> TensorMap:
         return self._c.copy()
+
+    def items(self) -> List[Tuple[LabelsEntry, TensorBlock]]:
+        return self._c.items()
 
     def keys(self) -> Labels:
         return self._c.keys
@@ -381,6 +411,20 @@ class TensorMapWrap:
 
     def block_by_id(self, index: int) -> TensorBlock:
         return self._c.block_by_id(index=index)
+
+    def blocks_by_id(self, indices: List[int]) -> List[TensorBlock]:
+        return self._c.blocks_by_id(indices=indices)
+
+    def block(
+        self, selection: Union[int, Dict[str, int], Labels, LabelsEntry]
+    ) -> TensorBlock:
+        return self._c.block(selection=selection)
+
+    def blocks(
+        self,
+        selection: Union[None, List[int], Dict[str, int], Labels, LabelsEntry] = None,
+    ) -> List[TensorBlock]:
+        return self._c.blocks(selection=selection)
 
     def keys_to_samples(
         self,
@@ -416,6 +460,9 @@ class TensorMapWrap:
 
     def property_names(self) -> List[str]:
         return self._c.property_names
+
+    def print_(self, max_keys: int) -> str:
+        return self._c.print(max_keys=max_keys)
 
 
 def test_script():

@@ -125,14 +125,29 @@ TORCH_LIBRARY(equistore, m) {
             torch::init<TorchLabels, std::vector<TorchTensorBlock>>(), DOCSTRING,
             {torch::arg("keys"), torch::arg("blocks")}
         )
-        .def("__len__", [](const TorchTensorMap& tensor){ return tensor->keys()->count(); })
+        .def("__len__", [](const TorchTensorMap& self){ return self->keys()->count(); })
+        .def("__repr__", [](const TorchTensorMap& self){ return self->print(-1); })
+        .def("__str__", [](const TorchTensorMap& self){ return self->print(4); })
+        .def("__getitem__", &TensorMapHolder::block_torch, DOCSTRING,
+            {torch::arg("selection")}
+        )
         .def("copy", &TensorMapHolder::copy)
+        .def("items", &TensorMapHolder::items)
         .def_property("keys", &TensorMapHolder::keys)
         .def("blocks_matching", &TensorMapHolder::blocks_matching, DOCSTRING,
             {torch::arg("selection")}
         )
         .def("block_by_id", &TensorMapHolder::block_by_id, DOCSTRING,
             {torch::arg("index")}
+        )
+        .def("blocks_by_id", &TensorMapHolder::blocks_by_id, DOCSTRING,
+            {torch::arg("indices")}
+        )
+        .def("block", &TensorMapHolder::block_torch, DOCSTRING,
+            {torch::arg("selection")}
+        )
+        .def("blocks", &TensorMapHolder::blocks_torch, DOCSTRING,
+            {torch::arg("selection") = torch::IValue()}
         )
         .def("keys_to_samples", &TensorMapHolder::keys_to_samples, DOCSTRING,
             {torch::arg("keys_to_move"), torch::arg("sort_samples") = true}
@@ -146,6 +161,9 @@ TORCH_LIBRARY(equistore, m) {
         .def_property("sample_names", &TensorMapHolder::sample_names)
         .def_property("components_names", &TensorMapHolder::components_names)
         .def_property("property_names", &TensorMapHolder::property_names)
+        .def("print", &TensorMapHolder::print, DOCSTRING,
+            {torch::arg("max_keys")}
+        )
         // TODO
         // .def_pickle(
         //     // __getstate__
