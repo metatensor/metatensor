@@ -179,10 +179,10 @@ def test_iter(tensor):
         ((2, 2), np.full((4, 3, 1), 3.0)),
         ((2, 3), np.full((4, 3, 1), 4.0)),
     ]
-    for i, (sparse, block) in enumerate(tensor):
-        expected_sparse, expected_values = expected[i]
+    for i, (key, block) in enumerate(tensor):
+        expected_key, expected_values = expected[i]
 
-        assert tuple(sparse) == expected_sparse
+        assert tuple(key) == expected_key
         assert_equal(block.values, expected_values)
 
 

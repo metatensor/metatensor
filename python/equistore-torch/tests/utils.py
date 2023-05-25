@@ -77,3 +77,47 @@ def tensor():
     )
 
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
+
+
+def large_tensor():
+    t = tensor()
+    blocks = [block.copy() for _, block in t.items()]
+
+    for i in range(8):
+        block = TensorBlock(
+            values=torch.full((4, 3, 1), 4.0),
+            samples=Labels(["s"], torch.IntTensor([[0], [1], [4], [5]])),
+            components=[Labels(["c"], torch.IntTensor([[0], [1], [2]]))],
+            properties=Labels(["p"], torch.IntTensor([[i]])),
+        )
+        block.add_gradient(
+            parameter="g",
+            gradient=TensorBlock(
+                values=torch.full((2, 3, 1), 14.0),
+                samples=Labels(["sample", "g"], torch.IntTensor([[0, 1], [3, 3]])),
+                components=block.components,
+                properties=block.properties,
+            ),
+        )
+        blocks.append(block)
+
+    keys = Labels(
+        names=["key_1", "key_2"],
+        values=torch.IntTensor(
+            [
+                [0, 0],
+                [1, 0],
+                [2, 2],
+                [2, 3],
+                [0, 4],
+                [1, 4],
+                [2, 4],
+                [3, 4],
+                [0, 5],
+                [1, 5],
+                [2, 5],
+                [3, 5],
+            ],
+        ),
+    )
+    return TensorMap(keys, blocks)
