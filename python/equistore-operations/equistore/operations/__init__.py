@@ -34,7 +34,12 @@ from .dot import dot
 from .drop_blocks import drop_blocks
 from .empty_like import empty_like, empty_like_block
 from .equal import equal, equal_block, equal_block_raise, equal_raise
-from .equal_metadata import equal_metadata, equal_metadata_block
+from .equal_metadata import (
+    equal_metadata,
+    equal_metadata_block,
+    equal_metadata_raise,
+    equal_metadata_block_raise,
+)
 from .join import join
 from .lstsq import lstsq
 from .multiply import multiply
@@ -67,9 +72,9 @@ __all__ = [
     "abs",
     "add",
     "allclose",
-    "allclose_raise",
     "allclose_block",
     "allclose_block_raise",
+    "allclose_raise",
     "block_from_array",
     "block_to",
     "checks_enabled",
@@ -79,30 +84,32 @@ __all__ = [
     "empty_like",
     "empty_like_block",
     "equal",
-    "equal_raise",
     "equal_block",
     "equal_block_raise",
     "equal_metadata",
     "equal_metadata_block",
+    "equal_metadata_block_raise",
+    "equal_metadata_raise",
+    "equal_raise",
     "join",
     "lstsq",
     "mean_over_samples",
     "mean_over_samples_block",
+    "multiply",
     "one_hot",
     "ones_like",
     "ones_like_block",
+    "pow",
     "random_uniform_like",
     "random_uniform_like_block",
-    "multiply",
-    "pow",
     "remove_gradients",
     "slice",
     "slice_block",
-    "std_over_samples",
-    "std_over_samples_block",
     "solve",
     "split",
     "split_block",
+    "std_over_samples",
+    "std_over_samples_block",
     "subtract",
     "sum_over_samples",
     "sum_over_samples_block",
