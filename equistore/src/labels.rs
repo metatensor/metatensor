@@ -234,9 +234,15 @@ impl Labels {
     /// Get the names of the entries/columns in this set of labels
     #[inline]
     pub fn names(&self) -> Vec<&str> {
-        unsafe {
-            let names = std::slice::from_raw_parts(self.raw.names, self.raw.size);
-            names.iter().map(|&ptr| CStr::from_ptr(ptr).to_str().expect("invalid UTF8")).collect()
+        if self.raw.size == 0 {
+            return Vec::new();
+        } else {
+            unsafe {
+                let names = std::slice::from_raw_parts(self.raw.names, self.raw.size);
+                return names.iter()
+                            .map(|&ptr| CStr::from_ptr(ptr).to_str().expect("invalid UTF8"))
+                            .collect();
+            }
         }
     }
 
@@ -310,8 +316,12 @@ impl Labels {
     }
 
     pub(crate) fn values(&self) -> &[LabelValue] {
-        unsafe {
-            std::slice::from_raw_parts(self.raw.values.cast(), self.count() * self.size())
+        if self.count() == 0 || self.size() == 0 {
+            return &[]
+        } else {
+            unsafe {
+                std::slice::from_raw_parts(self.raw.values.cast(), self.count() * self.size())
+            }
         }
     }
 }

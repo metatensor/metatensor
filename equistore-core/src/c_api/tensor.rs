@@ -68,23 +68,26 @@ pub unsafe extern fn eqs_tensormap(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers!(blocks);
+        let mut blocks_vec = Vec::new();
+        if blocks_count != 0 {
+            check_pointers!(blocks);
 
-        let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count);
-        // check for uniqueness of the pointers: we don't want to move out
-        // the same value twice
-        if blocks_slice.iter().collect::<BTreeSet<_>>().len() != blocks_slice.len() {
-            return Err(Error::InvalidParameter(
-                "got the same block more than once when constructing a tensor map".into()
-            ));
-        }
+            let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count);
+            // check for uniqueness of the pointers: we don't want to move out
+            // the same value twice
+            if blocks_slice.iter().collect::<BTreeSet<_>>().len() != blocks_slice.len() {
+                return Err(Error::InvalidParameter(
+                    "got the same block more than once when constructing a tensor map".into()
+                ));
+            }
 
-        let blocks_vec = blocks_slice.iter_mut().map(|ptr| {
-            // move out of the blocks pointers
-            let block = Box::from_raw(*ptr).into_block();
-            *ptr = std::ptr::null_mut();
-            return block;
-        }).collect();
+            for block_ptr in blocks_slice {
+                // move out of the blocks pointers
+                let block = Box::from_raw(*block_ptr).into_block();
+                *block_ptr = std::ptr::null_mut();
+                blocks_vec.push(block);
+            }
+        };
 
         let keys = eqs_labels_to_rust(&keys)?;
         let tensor = TensorMap::new((*keys).clone(), blocks_vec)?;
@@ -260,7 +263,7 @@ pub unsafe extern fn eqs_tensormap_blocks_matching(
     selection: eqs_labels_t,
 ) -> eqs_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, block_indexes, count);
+        check_pointers!(tensor, count);
 
         if *count != (*tensor).keys().count() {
             return Err(Error::InvalidParameter(format!(
@@ -271,8 +274,14 @@ pub unsafe extern fn eqs_tensormap_blocks_matching(
 
         let selection = eqs_labels_to_rust(&selection)?;
         let rust_blocks = (*tensor).blocks_matching(&selection)?;
-        let block_indexes = std::slice::from_raw_parts_mut(block_indexes, *count);
 		*count = rust_blocks.len();
+
+        if (*tensor).keys().is_empty() {
+            return Ok(());
+        }
+
+        check_pointers!(block_indexes);
+        let block_indexes = std::slice::from_raw_parts_mut(block_indexes, *count);
 		for (idx,block) in rust_blocks.into_iter().enumerate() {
             block_indexes[idx] = block;
 		}
@@ -374,6 +383,7 @@ pub unsafe extern fn eqs_tensormap_components_to_properties(
     let status = catch_unwind(move || {
         check_pointers!(tensor, dimensions);
 
+        assert!(dimensions_count != 0);
         let mut rust_dimensions = Vec::new();
         for &dimension in std::slice::from_raw_parts(dimensions, dimensions_count) {
             check_pointers!(dimension);

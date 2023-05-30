@@ -80,6 +80,7 @@ unsafe extern fn create_ndarray(
     c_array: *mut eqs_array_t,
 ) -> eqs_status_t {
     crate::errors::catch_unwind(|| {
+        assert!(shape_count != 0);
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
         let array = ndarray::ArrayD::from_elem(shape, 0.0);
         *c_array = (Box::new(array) as Box<dyn Array>).into();

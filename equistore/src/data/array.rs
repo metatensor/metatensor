@@ -140,6 +140,7 @@ unsafe extern fn rust_array_reshape(
     shape_count: usize,
 ) -> eqs_status_t {
     crate::errors::catch_unwind(|| {
+        assert!(shape_count > 0);
         check_pointers!(array);
         let array = array.cast::<Box<dyn Array>>();
         let shape = std::slice::from_raw_parts(shape, shape_count);
@@ -170,7 +171,8 @@ unsafe extern fn rust_array_create(
     array_storage: *mut eqs_array_t,
 ) -> eqs_status_t {
     crate::errors::catch_unwind(|| {
-        check_pointers!(array, array_storage);
+        assert!(shape_count > 0);
+        check_pointers!(array, shape, array_storage);
         let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
@@ -231,7 +233,13 @@ unsafe extern fn rust_array_move_samples_from(
         let output = output.cast::<Box<dyn Array>>();
         let input = input.cast::<Box<dyn Array>>();
 
-        let samples = std::slice::from_raw_parts(samples, samples_count);
+        let samples = if samples_count == 0 {
+            &[]
+        } else {
+            check_pointers!(samples);
+            std::slice::from_raw_parts(samples, samples_count)
+        };
+
         (*output).move_samples_from(&**input, samples, property_start..property_end);
     })
 }
