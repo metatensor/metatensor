@@ -69,8 +69,11 @@ pub unsafe extern fn eqs_block(
         let samples = eqs_labels_to_rust(&samples)?;
 
         let mut rust_components = Vec::new();
-        for component in std::slice::from_raw_parts(components, components_count) {
-            rust_components.push(eqs_labels_to_rust(component)?);
+        if components_count != 0 {
+            check_pointers!(components);
+            for component in std::slice::from_raw_parts(components, components_count) {
+                rust_components.push(eqs_labels_to_rust(component)?);
+            }
         }
 
         let properties = eqs_labels_to_rust(&properties)?;

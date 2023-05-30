@@ -192,6 +192,7 @@ impl<'a> TensorBlockRef<'a> {
             )).expect("failed to get gradient list");
         }
 
+        assert!(!parameters_ptr.is_null());
         unsafe {
             let parameters = std::slice::from_raw_parts(parameters_ptr, parameters_count);
             return parameters.iter()

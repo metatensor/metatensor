@@ -121,8 +121,9 @@ unsafe fn create_rust_labels(labels: &eqs_labels_t) -> Result<Arc<Labels>, Error
     let mut builder = LabelsBuilder::new(names)?;
     builder.reserve(labels.count);
 
-    let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
-    if !slice.is_empty() {
+    if labels.count != 0 && labels.size != 0 {
+        assert!(!labels.values.is_null());
+        let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
         for chunk in slice.chunks_exact(labels.size) {
             builder.add(chunk)?;
         }
@@ -153,6 +154,7 @@ pub unsafe extern fn eqs_labels_position(
     result: *mut i64
 ) -> eqs_status_t {
     catch_unwind(|| {
+        check_pointers!(values, result);
         if !labels.is_rust() {
             return Err(Error::InvalidParameter(
                 "these labels do not support calling eqs_labels_position, \
@@ -168,6 +170,7 @@ pub unsafe extern fn eqs_labels_position(
             )));
         }
 
+        assert!(values_count != 0);
         let label = std::slice::from_raw_parts(values.cast(), values_count);
         *result = labels.position(label).map_or(-1, |p| p as i64);
 

@@ -279,6 +279,8 @@ impl eqs_array_t {
             });
         }
 
+        assert!(len > 0);
+        assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts(data_ptr, len)
         };
@@ -311,6 +313,8 @@ impl eqs_array_t {
             });
         }
 
+        assert!(len > 0);
+        assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts_mut(data_ptr, len)
         };
@@ -340,6 +344,8 @@ impl eqs_array_t {
             });
         }
 
+        assert!(shape_count > 0);
+        assert!(!shape.is_null());
         let shape = unsafe {
             std::slice::from_raw_parts(shape, shape_count)
         };
