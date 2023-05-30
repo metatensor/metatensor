@@ -5,6 +5,7 @@ import pytest
 
 import equistore
 from equistore import Labels, TensorBlock, TensorMap
+from equistore.operations._utils import NotEqualError
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -134,27 +135,51 @@ def tensor_map() -> TensorMap:
 
 
 def test_self(test_tensor_map_1):
-    # check if the metadata of the same tensor are equal
+    """check if the metadata of the same tensor are equal"""
     assert equistore.equal_metadata(test_tensor_map_1, test_tensor_map_1)
 
 
+def test_self_raise(test_tensor_map_1):
+    """check no error raise the metadata of the same tensor are equal"""
+    equistore.equal_metadata_raise(test_tensor_map_1, test_tensor_map_1)
+
+
 def test_self_block(test_tensor_block_1):
-    # check if the metadata of the same tensor are equal
+    """check if the metadata of the same tensor are equal"""
     assert equistore.equal_metadata_block(test_tensor_block_1, test_tensor_block_1)
 
 
+def test_self_block_raise(test_tensor_block_1):
+    """check no error raise if the metadata of the same tensor are equal"""
+    equistore.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_1)
+
+
 def test_two_tensors(test_tensor_map_1, test_tensor_map_2):
-    # check if the metadata of two tensor maps are equal
+    """check if the metadata of two tensor maps are equal"""
     assert not equistore.equal_metadata(test_tensor_map_1, test_tensor_map_2)
 
 
+def test_two_tensors_raise(test_tensor_map_1, test_tensor_map_2):
+    """check error raise if the metadata of two tensor maps are equal"""
+    error_message = "should have the same keys names"
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(test_tensor_map_1, test_tensor_map_2)
+
+
 def test_two_tensors_block(test_tensor_block_1, test_tensor_block_2):
-    # check if the metadata of two tensor maps are equal
+    """check if the metadata of two tensor maps are equal"""
     assert not equistore.equal_metadata_block(test_tensor_block_1, test_tensor_block_2)
 
 
+def test_two_tensors_block_raise(test_tensor_block_1, test_tensor_block_2):
+    """check error raise if the metadata of two tensor maps are equal"""
+    error_message = "components of the two `TensorBlock` have different lengths"
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_2)
+
+
 def test_after_drop(test_tensor_map_1):
-    # check if dropping an existing block changes the metadata
+    """check if dropping an existing block changes the metadata"""
     new_key = Labels(
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
@@ -162,8 +187,19 @@ def test_after_drop(test_tensor_map_1):
     assert not equistore.equal_metadata(test_tensor_map_1, new_tesnor)
 
 
+def test_after_drop_raise(test_tensor_map_1):
+    """check if dropping an existing block changes the metadata"""
+    new_key = Labels(
+        test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
+    )
+    new_tesnor = equistore.drop_blocks(test_tensor_map_1, new_key)
+    error_message = "should have the same number of blocks, got 17 and 16"
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(test_tensor_map_1, new_tesnor)
+
+
 def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
-    # check behavior if non existing metadata is provided
+    """check behavior if non existing metadata is provided"""
     # wrong metadata key alone
     wrong_meta = "species"
     error_message = f"Invalid metadata to check: {wrong_meta}"
@@ -196,7 +232,7 @@ def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
 
 
 def test_single_nonexisting_meta_block(test_tensor_block_1, test_tensor_block_2):
-    # check behavior if non existing metadata is provided
+    """check behavior if non existing metadata is provided"""
     # wrong metadata key alone
     wrong_meta = "species"
     error_message = f"Invalid metadata to check: {wrong_meta}"
@@ -229,7 +265,7 @@ def test_single_nonexisting_meta_block(test_tensor_block_1, test_tensor_block_2)
 
 
 def test_changing_tensor_key_order(test_tensor_map_1):
-    # check changing the key order
+    """check changing the key order"""
     keys = test_tensor_map_1.keys
     new_keys = keys[::-1]
     new_blocks = [test_tensor_map_1[key].copy() for key in new_keys]
@@ -238,7 +274,7 @@ def test_changing_tensor_key_order(test_tensor_map_1):
 
 
 def test_changing_samples_key_order(test_tensor_map_1):
-    # changing the order of the values of the samples should yield False
+    """Test changing the order of the values of the samples should yield False"""
     new_blocks = []
     for key in test_tensor_map_1.keys:
         block = test_tensor_map_1[key].copy()
@@ -266,7 +302,7 @@ def test_changing_samples_key_order(test_tensor_map_1):
 
 
 def test_changing_samples_key_order_block(test_tensor_block_1):
-    # changing the order of the values of the samples should yield False
+    """Changing the order of the values of the samples should yield False"""
     block = test_tensor_block_1.copy()
     samples = block.samples[::-1]
     new_block = TensorBlock(
@@ -290,7 +326,7 @@ def test_changing_samples_key_order_block(test_tensor_block_1):
 
 
 def test_changing_properties_key_order(test_tensor_map_1):
-    # changing the order of the values of the properties should yield False
+    """changing the order of the values of the properties should yield False"""
     new_blocks = []
     for key in test_tensor_map_1.keys:
         block = test_tensor_map_1[key].copy()
@@ -318,7 +354,7 @@ def test_changing_properties_key_order(test_tensor_map_1):
 
 
 def test_changing_properties_key_order_block(test_tensor_block_1):
-    # changing the order of the values of the samples should yield False
+    """changing the order of the values of the samples should yield False"""
     block = test_tensor_block_1.copy()
     properties = block.properties[::-1]
     new_block = TensorBlock(
@@ -342,7 +378,7 @@ def test_changing_properties_key_order_block(test_tensor_block_1):
 
 
 def test_add_components_key_order(tensor_map):
-    # changing the order of the values of the components should yield False
+    """changing the order of the values of the components should yield False"""
     new_blocks = []
     for key in tensor_map.keys:
         block = tensor_map[key].copy()
@@ -370,7 +406,7 @@ def test_add_components_key_order(tensor_map):
 
 
 def test_remove_last_sample(tensor_map):
-    # removing the last sample should yield False
+    """removing the last sample should yield False"""
     new_blocks = []
     for key in tensor_map.keys:
         block = tensor_map[key].copy()
@@ -397,7 +433,7 @@ def test_remove_last_sample(tensor_map):
 
 
 def test_remove_last_property(tensor_map):
-    # removing the last property should yield False
+    """removing the last property should yield False"""
     new_blocks = []
     for key in tensor_map.keys:
         block = tensor_map[key].copy()
@@ -424,7 +460,7 @@ def test_remove_last_property(tensor_map):
 
 
 def test_remove_last_component(tensor_map):
-    # removing the last component should yield False
+    """removing the last component should yield False"""
     new_blocks = []
     for key in tensor_map.keys:
         block = tensor_map[key].copy()
