@@ -189,7 +189,10 @@ typedef struct eqs_array_t {
    *
    * The new array should be filled with zeros.
    */
-  eqs_status_t (*create)(const void *array, const uintptr_t *shape, uintptr_t shape_count, struct eqs_array_t *new_array);
+  eqs_status_t (*create)(const void *array,
+                         const uintptr_t *shape,
+                         uintptr_t shape_count,
+                         struct eqs_array_t *new_array);
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
    *
@@ -215,7 +218,12 @@ typedef struct eqs_array_t {
    * `array[samples[i].output, ..., property_start:property_end]` for `i` up
    * to `samples_count`. All indexes are 0-based.
    */
-  eqs_status_t (*move_samples_from)(void *output, const void *input, const struct eqs_sample_mapping_t *samples, uintptr_t samples_count, uintptr_t property_start, uintptr_t property_end);
+  eqs_status_t (*move_samples_from)(void *output,
+                                    const void *input,
+                                    const struct eqs_sample_mapping_t *samples,
+                                    uintptr_t samples_count,
+                                    uintptr_t property_start,
+                                    uintptr_t property_end);
 } eqs_array_t;
 
 /**
@@ -230,7 +238,9 @@ typedef struct eqs_array_t {
  * data, and live on CPU, since equistore will use `eqs_array_t.data` to get
  * the data pointer and write to it.
  */
-typedef eqs_status_t (*eqs_create_array_callback_t)(const uintptr_t *shape, uintptr_t shape_count, struct eqs_array_t *array);
+typedef eqs_status_t (*eqs_create_array_callback_t)(const uintptr_t *shape,
+                                                    uintptr_t shape_count,
+                                                    struct eqs_array_t *array);
 
 #ifdef __cplusplus
 extern "C" {

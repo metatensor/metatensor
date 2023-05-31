@@ -27,7 +27,8 @@ num-traits = {version = "0.2", default-features = false}
 zip = {version = "0.6", default-features = false}
 
 [build-dependencies]
-cbindgen = { version = "0.24", default-features = false }
+# pin cbdingen until https://github.com/mozilla/cbindgen/issues/841 is fixed
+cbindgen = { version = "=0.24.5", default-features = false }
 
 [dev-dependencies]
 which = "4"
