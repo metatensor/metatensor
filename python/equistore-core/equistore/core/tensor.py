@@ -110,8 +110,7 @@ class TensorMap:
 
     def copy(self) -> "TensorMap":
         """
-        Get a deep copy of this TensorMap, including all the (potentially
-        non Python-owned) data and metadata
+        Get a deep copy of this TensorMap, including all the data and metadata
         """
         return copy.deepcopy(self)
 
@@ -400,28 +399,32 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys dimensions along the
-        samples axis.
+        Merge blocks along the samples axis, adding ``keys_to_move`` to the end
+        of the samples labels dimensions.
 
-        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
-        the sample labels, and blocks with the same remaining keys dimensions
-        will be merged together along the sample axis.
+        This function will remove ``keys_to_move`` from the keys, and find all
+        blocks with the same remaining keys values. It will then merge these
+        blocks along the samples direction (i.e. do a *vertical* concatenation),
+        adding ``keys_to_move`` to the end of the samples labels dimensions.
+        The values taken by  ``keys_to_move`` in the new samples labels will be
+        the values of these dimensions in the merged blocks' keys.
 
         If ``keys_to_move`` is a set of :py:class:`Labels`, it must be empty
-        (``keys_to_move.shape[0] == 0``). The new sample labels will contain
-        entries corresponding to the merged blocks' keys.
+        (``keys_to_move.values.shape[0] == 0``), and only the
+        :py:class:`Labels.names` will be used.
 
         The order of the samples is controlled by ``sort_samples``. If
         ``sort_samples`` is true, samples are re-ordered to keep them
         lexicographically sorted. Otherwise they are kept in the order in which
         they appear in the blocks.
 
-        This function is only implemented if all merged block have the same
-        property labels.
+        This function is only implemented when the blocks to merge have the same
+        properties values.
 
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
+        :return: a new :py:class:`TensorMap` with merged blocks
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
 
@@ -434,10 +437,11 @@ class TensorMap:
         self, dimensions: Union[str, Sequence[str]]
     ) -> "TensorMap":
         """
-        Move the given dimensions from the component labels to the property labels
-        for each block.
+        Move the given ``dimensions`` from the component labels to the property
+        labels for each block.
 
-        :param dimensions: name of the component dimensions to move to the properties
+        :param dimensions: name of the component dimensions to move to the
+            properties
         """
         c_dimensions = _list_or_str_to_array_c_char(dimensions)
 
@@ -453,36 +457,46 @@ class TensorMap:
         sort_samples=True,
     ) -> "TensorMap":
         """
-        Merge blocks with the same value for selected keys dimensions along the
-        property axis.
+        Merge blocks along the properties direction, adding ``keys_to_move`` at
+        the beginning of the properties labels dimensions.
 
-        The dimensions (names) of ``keys_to_move`` will be moved from the keys to
-        the property labels, and blocks with the same remaining keys dimensions
-        will be merged together along the property axis.
+        This function will remove ``keys_to_move`` from the keys, and find all
+        blocks with the same remaining keys values. Then it will merge these
+        blocks along the properties direction (i.e. do an *horizontal*
+        concatenation).
 
-        If ``keys_to_move`` does not contains any entries (i.e.
-        ``keys_to_move.shape[0] == 0``), then the new property labels will
-        contain entries corresponding to the merged blocks only. For example,
+        If ``keys_to_move`` is given as strings, then the new property labels
+        will **only** contain entries from the existing blocks. For example,
         merging a block with key ``a=0`` and properties ``p=1, 2`` with a block
         with key ``a=2`` and properties ``p=1, 3`` will produce a block with
         properties ``a, p = (0, 1), (0, 2), (2, 1), (2, 3)``.
 
-        If ``keys_to_move`` contains entries, then the property labels must be
-        the same for all the merged blocks. In that case, the merged property
-        labels will contains each of the entries of ``keys_to_move`` and then
-        the current property labels. For example, using ``a=2, 3`` in
-        ``keys_to_move``, and blocks with properties ``p=1, 2`` will result in
-        ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``.
+        If ``keys_to_move`` is a set of :py:class:`Labels` and it is empty
+        (``len(keys_to_move) == 0``), the :py:class:`Labels.names` will be used
+        as if they where passed directly.
 
-        The new sample labels will contains all of the merged blocks sample
-        labels. The order of the samples is controlled by ``sort_samples``. If
-        ``sort_samples`` is true, samples are re-ordered to keep them
-        lexicographically sorted. Otherwise they are kept in the order in which
-        they appear in the blocks.
+        Finally, if ``keys_to_move`` is a non empty set of :py:class:`Labels`,
+        the new properties labels will contains **all** of the entries of
+        ``keys_to_move`` (regardless of the values taken by
+        ``keys_to_move.names`` in the merged blocks' keys) followed by the
+        existing properties labels. For example, using ``a=2, 3`` in
+        ``keys_to_move``, blocks with properties ``p=1, 2`` will result in
+        ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no
+        block/missing sample) for a given property in the merged block, then the
+        value will be set to zero.
+
+        When using a non empty :py:class:`Labels` for ``keys_to_move``, the
+        properties labels of all the merged blocks must take the same values.
+
+        The order of the samples in the merged blocks is controlled by
+        ``sort_samples``. If ``sort_samples`` is :py:obj:`True`, samples are
+        re-ordered to keep them lexicographically sorted. Otherwise they are
+        kept in the order in which they appear in the blocks.
 
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
+        :return: a new :py:class:`TensorMap` with merged blocks
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         ptr = self._lib.eqs_tensormap_keys_to_properties(
@@ -492,7 +506,7 @@ class TensorMap:
 
     @property
     def sample_names(self) -> Tuple[str]:
-        """Names of the sample labels for all blocks in this tensor map"""
+        """names of the sample labels for all blocks in this tensor map"""
         if len(self.keys) == 0:
             return tuple()
 
@@ -500,7 +514,7 @@ class TensorMap:
 
     @property
     def components_names(self) -> List[Tuple[str]]:
-        """Names of the component labels for all blocks in this tensor map"""
+        """names of the component labels for all blocks in this tensor map"""
         if len(self.keys) == 0:
             return []
 
@@ -508,7 +522,7 @@ class TensorMap:
 
     @property
     def property_names(self) -> Tuple[str]:
-        """Names of the property labels for all blocks in this tensor map"""
+        """names of the property labels for all blocks in this tensor map"""
         if len(self.keys) == 0:
             return tuple()
 

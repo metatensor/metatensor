@@ -12,9 +12,11 @@
 namespace equistore_torch {
 
 class LabelsHolder;
+/// TorchScript will always manipulate `LabelsHolder` through a `torch::intrusive_ptr`
 using TorchLabels = torch::intrusive_ptr<LabelsHolder>;
 
 class LabelsEntryHolder;
+/// TorchScript will always manipulate `LabelsEntryHolder` through a `torch::intrusive_ptr`
 using TorchLabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
 
 namespace details {
@@ -66,12 +68,6 @@ public:
     /// Create a `LabelsHolder` from a pre-existing `equistore::Labels`
     LabelsHolder(equistore::Labels labels);
 
-    LabelsHolder(const LabelsHolder&) = default;
-    LabelsHolder& operator=(const LabelsHolder&) = default;
-    LabelsHolder(LabelsHolder&&) = default;
-    LabelsHolder& operator=(LabelsHolder&&) = default;
-    ~LabelsHolder() override = default;
-
     /// Get the names of the dimensions/columns of these Labels
     const std::vector<std::string>& names() const {
         return names_;
@@ -111,16 +107,16 @@ public:
     /// indenting all lines after the first with `indent` spaces.
     std::string print(int64_t max_entries, int64_t indent) const;
 
-    /// Implementation of __str__ for Python
+    /// Implementation of `__str__` for Python
     std::string __str__() const;
 
-    /// Implementation of __repr__ for Python
+    /// Implementation of `__repr__` for Python
     std::string __repr__() const;
 
     /// Get the underlying equistore::Labels
     const equistore::Labels& as_equistore() const;
 
-    /// Is this a LabelsView or a Labels?
+    /// Is this a view inside existing Labels or an owned Labels?
     bool is_view() const {
         return !labels_.has_value();
     }
@@ -138,7 +134,8 @@ private:
     /// marker type to differentiate the private constructor below from the main
     /// one
     struct CreateView {};
-    /// Create a view for an existing LabelsHolder
+
+    /// Create a view for an existing `LabelsHolder`
     LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView);
 
     friend class torch::intrusive_ptr<LabelsHolder>;
@@ -154,45 +151,47 @@ private:
     torch::optional<equistore::Labels> labels_;
 };
 
+/// Check two `LabelsHolder` for equality
 inline bool operator==(const LabelsHolder& lhs, const LabelsHolder& rhs) {
     return lhs.as_equistore() == rhs.as_equistore();
 }
 
+/// Check two `LabelsHolder` for inequality
 inline bool operator!=(const LabelsHolder& lhs, const LabelsHolder& rhs) {
     return !(lhs == rhs);
 }
 
+/// Check for equality between `LabelsHolder` and `equistore::Labels`
 inline bool operator==(const LabelsHolder& lhs, const equistore::Labels& rhs) {
     return lhs.as_equistore() == rhs;
 }
 
+/// Check for inequality between `LabelsHolder` and `equistore::Labels`
 inline bool operator!=(const LabelsHolder& lhs, const equistore::Labels& rhs) {
     return !(lhs == rhs);
 }
 
+/// Check for equality between `LabelsHolder` and `equistore::Labels`
 inline bool operator==(const equistore::Labels& lhs, const LabelsHolder& rhs) {
     return lhs == rhs.as_equistore();
 }
 
+/// Check for inequality between `LabelsHolder` and `equistore::Labels`
 inline bool operator!=(const equistore::Labels& lhs, const LabelsHolder& rhs) {
     return !(lhs == rhs);
 }
 
 
-/// A single entry inside a TorchLabels
+/// A single entry inside a `TorchLabels`
 class EQUISTORE_TORCH_EXPORT LabelsEntryHolder: public torch::CustomClassHolder {
 public:
+    /// Create a new `LabelsEntryHolder` corresponding to the entry at the given
+    /// `index` in the given `labels`
     LabelsEntryHolder(TorchLabels labels, int64_t index):
         labels_(std::move(labels))
     {
         values_ = labels_->values()[index];
     }
-
-    LabelsEntryHolder(const LabelsEntryHolder&) = default;
-    LabelsEntryHolder& operator=(const LabelsEntryHolder&) = default;
-    LabelsEntryHolder(LabelsEntryHolder&&) = default;
-    LabelsEntryHolder& operator=(LabelsEntryHolder&&) = default;
-    ~LabelsEntryHolder() override = default;
 
     /// Get the names of the dimensions/columns of these Labels
     const std::vector<std::string>& names() const {
@@ -231,11 +230,14 @@ private:
     TorchLabels labels_;
 };
 
+
+/// Check two `LabelsEntryHolder` for equality
 inline bool operator==(const LabelsEntryHolder& lhs, const LabelsEntryHolder& rhs) {
     std::cout << "names = " << (lhs.names() == rhs.names()) << ", values = " << torch::all(lhs.values() == rhs.values()).item<bool>() << std::endl;
     return lhs.names() == rhs.names() && torch::all(lhs.values() == rhs.values()).item<bool>();
 }
 
+/// Check two `LabelsEntryHolder` for inequality
 inline bool operator!=(const LabelsEntryHolder& lhs, const LabelsEntryHolder& rhs) {
     return !(lhs == rhs);
 }

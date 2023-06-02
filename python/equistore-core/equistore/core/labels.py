@@ -222,25 +222,21 @@ class Labels(np.ndarray):
                 values=np.empty(shape=(0, len(names)), dtype=np.int32),
             )
 
-    def position(self, label) -> Optional[int]:
+    def position(self, entry) -> Optional[int]:
         """
-        Get the position of the given ``label`` entry in this set of labels.
-
-        This is only available if the labels comes from a
-        :py:class:`TensorBlock` or a :py:class:`TensorMap`. If you need it for
-        standalone labels, please let us know!
+        Get the position of the given ``entry`` in this set of :py:class:`Labels`.
         """
         lib = _get_library()
 
         result = ctypes.c_int64()
-        values = ctypes.ARRAY(ctypes.c_int32, len(label))()
-        for i, v in enumerate(label):
+        values = ctypes.ARRAY(ctypes.c_int32, len(entry))()
+        for i, v in enumerate(entry):
             values[i] = ctypes.c_int32(v)
 
         lib.eqs_labels_position(
             self._eqs_labels_t,
             values,
-            len(label),
+            len(entry),
             result,
         )
 
@@ -253,8 +249,8 @@ class Labels(np.ndarray):
         """Get a view of these ``Labels`` as a raw 2D array of integers"""
         return self.view(dtype=np.int32).reshape(self.shape[0], -1)
 
-    def __contains__(self, label):
-        return self.position(label) is not None
+    def __contains__(self, entry):
+        return self.position(entry) is not None
 
     @staticmethod
     def arange(name, *args, **kwargs):
