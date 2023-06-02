@@ -1,4 +1,5 @@
 import sys
+import os
 import torch
 
 from ._c_lib import _load_library
@@ -14,13 +15,14 @@ else:
 
     __version__ = get_distribution("equistore-torch").version
 
-
-_load_library()
-
-Labels = torch.classes.equistore.Labels
-LabelsEntry = torch.classes.equistore.LabelsEntry
-TensorBlock = torch.classes.equistore.TensorBlock
-TensorMap = torch.classes.equistore.TensorMap
+if os.environ.get("EQUISTORE_IMPORT_FOR_SPHINX") is not None:
+    from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap
+else:
+    _load_library()
+    Labels = torch.classes.equistore.Labels
+    LabelsEntry = torch.classes.equistore.LabelsEntry
+    TensorBlock = torch.classes.equistore.TensorBlock
+    TensorMap = torch.classes.equistore.TensorMap
 
 
 __all__ = [

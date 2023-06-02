@@ -11,7 +11,7 @@ from .status import _check_pointer
 
 class TensorBlock:
     """
-    Basic building block for a tensor map.
+    Basic building block for a :py:class:`TensorMap`.
 
     A single block contains a n-dimensional :py:class:`equistore.core.data.Array`,
     and n sets of :py:class:`Labels` (one for each dimension). The first
@@ -37,13 +37,13 @@ class TensorBlock:
         properties: Labels,
     ):
         """
-        :param values: array containing the data for this block
+        :param values: array containing the values for this block
         :param samples: labels describing the samples (first dimension of the
             array)
-        :param components: labels describing the components (second dimension of
-            the array). This is set to :py:func:`Labels.single` when dealing
-            with scalar/invariant values.
-        :param properties: labels describing the samples (third dimension of the
+        :param components: labels describing the components (intermediary
+            dimensions of the array). This should be an empty list for
+            scalar/invariant data.
+        :param properties: labels describing the samples (last dimension of the
             array)
         """
         self._lib = _get_library()
@@ -120,8 +120,7 @@ class TensorBlock:
 
     def copy(self) -> "TensorBlock":
         """
-        Get a deep copy of this block, including all the (potentially non
-        Python-owned) data and metadata
+        get a deep copy of this block, including all the data and metadata
         """
         return copy.deepcopy(self)
 
@@ -165,7 +164,7 @@ class TensorBlock:
     @property
     def values(self) -> Array:
         """
-        Access the values for this block.
+        Get the values for this block.
 
         The array type depends on how the block was created. Currently, numpy
         ``ndarray`` and torch ``Tensor`` are supported.
@@ -177,7 +176,7 @@ class TensorBlock:
     @property
     def samples(self) -> Labels:
         """
-        Access the sample :py:class:`Labels` for this block.
+        Get the sample :py:class:`Labels` for this block.
 
         The entries in these labels describe the first dimension of the
         ``values`` array.
@@ -187,7 +186,7 @@ class TensorBlock:
     @property
     def components(self) -> List[Labels]:
         """
-        Access the component :py:class:`Labels` for this block.
+        Get the component :py:class:`Labels` for this block.
 
         The entries in these labels describe intermediate dimensions of the
         ``values`` array.
@@ -203,7 +202,7 @@ class TensorBlock:
     @property
     def properties(self) -> Labels:
         """
-        Access the property :py:class:`Labels` for this block.
+        Get the property :py:class:`Labels` for this block.
 
         The entries in these labels describe the last dimension of the
         ``values`` array. The properties are guaranteed to be the same for
@@ -291,12 +290,13 @@ class TensorBlock:
             a :py:class:`TensorBlock` whose values contain the gradients with
             respect to the ``parameter``. The labels of the gradient
             :py:class:`TensorBlock` should be organized as follows: its
-            ``samples`` must contain ``"sample"`` as the first label, which
-            establishes a correspondence with the ``samples`` of the original
-            :py:class:`TensorBlock`; its components must contain at least the
-            same components as the original :py:class:`TensorBlock`, with any
-            additional :py:class:`Labels` coming before those; its properties
-            must match those of the original :py:class:`TensorBlock`.
+            ``samples`` must contain ``"sample"`` as the first label, with
+            values containing the index of the corresponding ``samples`` in the
+            :py:class:`TensorBlock` containing values; its components must
+            contain at least the same components as the :py:class:`TensorBlock`
+            containing values, with any additional components coming before
+            those; its properties must match exactly those of the
+            :py:class:`TensorBlock` containing values.
 
         >>> import numpy as np
         >>> from equistore import TensorBlock, Labels
@@ -338,7 +338,7 @@ class TensorBlock:
         )
 
     def gradients_list(self) -> List[str]:
-        """Get a list of all gradients defined in this block."""
+        """get a list of all gradients defined in this block"""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
         self._lib.eqs_block_gradients_list(self._ptr, parameters, count)

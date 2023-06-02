@@ -21,8 +21,9 @@ installation):
     # Link to equistore, this makes the header accessible
     target_link_libraries(MyExecutable equistore)
 
-    # alternatively, use the static build of equistore
+    # alternatively, you can explicitly use the static or shared build of equistore
     # target_link_libraries(MyExecutable equistore::static)
+    # target_link_libraries(MyExecutable equistore::shared)
 
 The functions and types provided in ``equistore.hpp`` can be grouped as follow:
 

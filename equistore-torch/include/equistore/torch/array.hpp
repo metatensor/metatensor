@@ -18,6 +18,7 @@ extern eqs_data_origin_t TORCH_DATA_ORIGIN;
 /// the data
 class EQUISTORE_TORCH_EXPORT TorchDataArray: public equistore::DataArrayBase {
 public:
+    /// Create a `TorchDataArray` containing the given `tensor`
     TorchDataArray(torch::Tensor tensor);
 
     virtual ~TorchDataArray() override = default;

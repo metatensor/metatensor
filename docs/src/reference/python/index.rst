@@ -16,10 +16,10 @@ provided in ``equistore`` can be grouped as follows:
 - advanced functionalities like the :ref:`array format <python-api-array>` for
   data storage
 
-The Python interface also provides multiple :ref:`operations
-<python-api-operations>` including mathematical, logical, and other utility
-functions that can applied on these core objects. These are documented in the
-next section.
+The Python interface also provides multiple operations, including mathematical,
+logical, and other utility functions that can applied on these core objects.
+These are documented in the next :ref:`documentation section
+<python-api-operations>`.
 
 .. toctree::
     :maxdepth: 1

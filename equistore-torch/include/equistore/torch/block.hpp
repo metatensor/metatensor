@@ -13,6 +13,7 @@
 namespace equistore_torch {
 
 class TensorBlockHolder;
+/// TorchScript will always manipulate `TensorBlockHolder` through a `torch::intrusive_ptr`
 using TorchTensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
 
 /// Wrapper around `equistore::TensorBlock` for integration with TorchScript
@@ -102,7 +103,7 @@ public:
     /// Check if a given gradient is defined in this TensorBlock
     bool has_gradient(const std::string& parameter) const;
 
-    // Get a gradient from this TensorBlock
+    /// Get a gradient from this TensorBlock
     TorchTensorBlock gradient(const std::string& parameter) const;
 
     /// Get a all gradients and associated parameters in this block

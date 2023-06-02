@@ -14,6 +14,7 @@
 namespace equistore_torch {
 
 class TensorMapHolder;
+/// TorchScript will always manipulate `TensorMapHolder` through a `torch::intrusive_ptr`
 using TorchTensorMap = torch::intrusive_ptr<TensorMapHolder>;
 
 /// Wrapper around `equistore::TensorMap` for integration with TorchScript
@@ -23,6 +24,7 @@ using TorchTensorMap = torch::intrusive_ptr<TensorMapHolder>;
 /// of instances of `TensorMapHolder`.
 class EQUISTORE_TORCH_EXPORT TensorMapHolder: public torch::CustomClassHolder {
 public:
+    /// Wrap an existing `equistore::TensorMap` into a `TensorMapHolder`
     TensorMapHolder(equistore::TensorMap tensor);
 
     /// Create a new `TensorMapHolder` for TorchScript.
@@ -55,7 +57,12 @@ public:
     /// passed in `selection`
     TorchTensorBlock block(const std::map<std::string, int32_t>& selection);
 
+    /// Get the block in this `TensorMap` with the key matching the name=>values
+    /// passed in `selection`. The `selection` must contain a single entry.
     TorchTensorBlock block(TorchLabels selection);
+
+    /// Get the block in this `TensorMap` with the key matching the name=>values
+    /// passed in `selection`
     TorchTensorBlock block(TorchLabelsEntry selection);
 
     /// TorchScript implementation of `block`, dispatching to one of the
@@ -73,6 +80,8 @@ public:
 
     /// Similar to `block`, but allow getting multiple matching blocks
     std::vector<TorchTensorBlock> blocks(TorchLabels selection);
+
+    /// Similar to `block`, but allow getting multiple matching blocks
     std::vector<TorchTensorBlock> blocks(TorchLabelsEntry selection);
 
     /// TorchScript implementation of `blocks`, dispatching to one of the
