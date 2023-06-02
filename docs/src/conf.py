@@ -7,6 +7,10 @@ import toml
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# when importing equistore-torch, this will change the definition of the classes
+# to include the documentation
+os.environ["EQUISTORE_IMPORT_FOR_SPHINX"] = "1"
+
 # -- Project information -----------------------------------------------------
 
 project = "equistore"

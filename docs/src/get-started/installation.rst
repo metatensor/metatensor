@@ -91,6 +91,7 @@ Add the following to your project ``Cargo.toml``
     [dependencies]
     equistore = {git = "https://github.com/lab-cosmo/equistore.git"}
 
+.. _install-torch-script-lib:
 
 Installing the TorchScript bindings
 -----------------------------------

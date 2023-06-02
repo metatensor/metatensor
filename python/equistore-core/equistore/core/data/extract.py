@@ -31,7 +31,9 @@ This data is manipulated by ``equistore`` in a completely opaque way: this
 library does not know what's inside the arrays appart from a small set of
 constrains:
 
-- array contains numeric data;
+- the array contains numeric data (loading and saving
+  :py:class:`equistore.TensorMap` additionally assumes arrays of 64-bit IEEE-754
+  floating points numbers);
 - they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
 - it is possible to create new arrays and move data from one array to another.
 

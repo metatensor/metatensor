@@ -9,11 +9,6 @@
 using namespace equistore_torch;
 
 
-// There is no way to access the docstrings from Python, so we don't bother
-// setting them to something useful.
-const std::string DOCSTRING = "";
-
-
 static TorchLabelsEntry labels_entry(const TorchLabels& self, int64_t index) {
     return torch::make_intrusive<LabelsEntryHolder>(self, index);
 }
@@ -32,6 +27,15 @@ static torch::IValue labels_getitem(const TorchLabels& self, torch::IValue index
 
 
 TORCH_LIBRARY(equistore, m) {
+    // There is no way to access the docstrings from Python, so we don't bother
+    // setting them to something useful here.
+    //
+    // Whenever this file is changed, please also reproduce the changes in
+    // python/equistore-torch/equistore/torch/documentation.py, and include the
+    // docstring over there
+    const std::string DOCSTRING = "";
+
+
     m.class_<LabelsEntryHolder>("LabelsEntry")
         .def("__str__", &LabelsEntryHolder::__repr__)
         .def("__repr__", &LabelsEntryHolder::__repr__)
@@ -61,8 +65,8 @@ TORCH_LIBRARY(equistore, m) {
         // https://github.com/pytorch/pytorch/pull/100724 (hopefully torch 2.1)
         .def("__repr__", &LabelsHolder::__repr__)
         .def("__len__", &LabelsHolder::count)
-        .def("__contains__", [](const TorchLabels& self, torch::IValue entry){
-            return self->position(entry).has_value();
+        .def("__contains__", [](const TorchLabels& self, torch::IValue entry) {
+                return self->position(entry).has_value();
             }, DOCSTRING,
             {torch::arg("entry")}
         )
