@@ -105,7 +105,7 @@ if __name__ == "__main__":
         install_requires.append(f"equistore-core @ file://{EQUISTORE_CORE}?{uuid}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("equistore-core ~=0.1.0")
+        install_requires.append("equistore-core ==0.1.0")
 
     setup(
         version=version,

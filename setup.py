@@ -49,8 +49,8 @@ if __name__ == "__main__":
         )
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("equistore-core ~=0.1.0")
-        install_requires.append("equistore-operations ~=0.1.0")
+        install_requires.append("equistore-core ==0.1.0")
+        install_requires.append("equistore-operations ==0.1.0")
 
     setup(
         version=version,
