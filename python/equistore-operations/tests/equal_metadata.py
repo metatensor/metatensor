@@ -4,8 +4,7 @@ import numpy as np
 import pytest
 
 import equistore
-from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations._utils import NotEqualError
+from equistore import Labels, NotEqualError, TensorBlock, TensorMap
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -197,28 +196,28 @@ def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
     # wrong metadata key alone
     wrong_meta = "species"
     error_message = f"Invalid metadata to check: {wrong_meta}"
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[wrong_meta],
         )
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_2,
             check=[wrong_meta],
         )
     # wrong metadata key with another correct one
     correct_meta = "properties"
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[correct_meta, wrong_meta],
         )
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_2,
             check=[correct_meta, wrong_meta],
@@ -230,28 +229,28 @@ def test_single_nonexisting_meta_block(test_tensor_block_1, test_tensor_block_2)
     # wrong metadata key alone
     wrong_meta = "species"
     error_message = f"Invalid metadata to check: {wrong_meta}"
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata_block(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_1,
             check=[wrong_meta],
         )
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata_block(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_2,
             check=[wrong_meta],
         )
     # wrong metadata key with another correct one
     correct_meta = "properties"
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata_block(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_1,
             check=[correct_meta, wrong_meta],
         )
-    with pytest.raises(ValueError, match=error_message):
-        equistore.equal_metadata_block(
+    with pytest.raises(NotEqualError, match=error_message):
+        equistore.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_2,
             check=[correct_meta, wrong_meta],

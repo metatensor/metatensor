@@ -1,10 +1,81 @@
-import numpy as np
-
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_blocks, _check_same_gradients, _check_same_keys
-from .equal import NotEqualError
+from ._utils import (
+    NotEqualError,
+    _check_blocks_impl,
+    _check_same_gradients_impl,
+    _check_same_keys_impl,
+)
+
+
+def _allclose_impl(
+    tensor_1: TensorMap, tensor_2: TensorMap, rtol: float, atol: float, equal_nan: bool
+) -> str:
+    """Abstract function to perform an allclose operation between two TensorMaps."""
+    message = _check_same_keys_impl(tensor_1, tensor_2, "allclose")
+    if message != "":
+        return f"the tensor maps have different keys: {message}"
+
+    for key, block_1 in tensor_1.items():
+        message = _allclose_block_impl(
+            block_1=block_1,
+            block_2=tensor_2.block(key),
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan,
+        )
+        if message != "":
+            return f"blocks for key {key.print()} are different: {message}"
+    return ""
+
+
+def _allclose_block_impl(
+    block_1: TensorBlock,
+    block_2: TensorBlock,
+    rtol: float,
+    atol: float,
+    equal_nan: bool,
+) -> str:
+    """Abstract function to perform an allclose operation between two TensorBlocks."""
+    if not block_1.values.shape == block_2.values.shape:
+        return "values shapes are different"
+
+    if not _dispatch.allclose(
+        block_1.values, block_2.values, rtol=rtol, atol=atol, equal_nan=equal_nan
+    ):
+        return "values are not allclose"
+
+    check_blocks_message = _check_blocks_impl(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="allclose",
+    )
+    if check_blocks_message != "":
+        return check_blocks_message
+
+    check_same_gradient_message = _check_same_gradients_impl(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="allclose",
+    )
+    if check_same_gradient_message != "":
+        return check_same_gradient_message
+
+    for parameter, gradient1 in block_1.gradients():
+        gradient2 = block_2.gradient(parameter)
+
+        if not _dispatch.allclose(
+            gradient1.values,
+            gradient2.values,
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan,
+        ):
+            return f"gradient '{parameter}' values are not allclose"
+    return ""
 
 
 def allclose(
@@ -37,9 +108,13 @@ def allclose(
     :param atol: absolute tolerance for ``allclose``
     :param equal_nan: should two ``NaN`` be considered equal?
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from equistore import Labels, TensorBlock
 
-    >>> from equistore import Labels
-    >>> # Create simple block
+    Create simple block
+
     >>> block_1 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -59,7 +134,9 @@ def allclose(
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Create a second block that is equivalent to block_1
+
+    Create a second block that is equivalent to ``block_1``.
+
     >>> block_2 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -79,17 +156,23 @@ def allclose(
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Create tensors from blocks, using keys with different names
+
+    Create tensors from blocks, using keys with different names
+
     >>> keys1 = Labels(names=["key1"], values=np.array([[0]]))
     >>> keys2 = Labels(names=["key2"], values=np.array([[0]]))
     >>> tensor_1 = TensorMap(keys1, [block_1])
     >>> tensor_2 = TensorMap(keys2, [block_2])
-    >>> # Call allclose, which should fail as the blocks have different keys
-    >>> # associated with them
+
+    Call :py:func:`equistore.allclose()`, which should fail as the blocks have different
+    keys associated with them.
+
     >>> allclose(tensor_1, tensor_2)
     False
-    >>> # Create a third tensor, which differs from tensor_1 only by 1e-5 in a
-    >>> # single block value
+
+    Create a third tensor, which differs from ``tensor_1`` only by ``1e-5`` in a single
+    block value.
+
     >>> block3 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -109,31 +192,35 @@ def allclose(
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Create tensors from blocks, using key with same name as block_1
+
+    Create tensors from blocks, using a key with same name as ``block_1``.
+
     >>> keys3 = Labels(names=["key1"], values=np.array([[0]]))
     >>> tensor3 = TensorMap(keys3, [block3])
-    >>> # Call allclose, which should return False because the default rtol
-    >>> # is 1e-13, and the difference in the first value between the blocks
-    >>> # of the two tensors is 1e-5
+
+    Call :py:func:`equistore.allclose()`, which should return False because the default
+    ``rtol`` is ``1e-13``, and the difference in the first value between the blocks of
+    the two tensors is ``1e-5``.
+
     >>> allclose(tensor_1, tensor3)
     False
-    >>> # Calling allclose again with the optional argument rtol=1e-5 should
-    >>> # return True, as the difference in the first value between the blocks
-    >>> # of the two tensors is within the tolerance limit
+
+    Calling allclose again with the optional argument ``rtol=1e-5`` should return
+    :py:obj:`True`, as the difference in the first value between the blocks of the two
+    tensors is within the tolerance limit
+
     >>> allclose(tensor_1, tensor3, rtol=1e-5)
     True
     """
-    try:
-        allclose_raise(
+    return not bool(
+        _allclose_impl(
             tensor_1=tensor_1,
             tensor_2=tensor_2,
             rtol=rtol,
             atol=atol,
             equal_nan=equal_nan,
         )
-        return True
-    except NotEqualError:
-        return False
+    )
 
 
 def allclose_raise(
@@ -159,9 +246,14 @@ def allclose_raise(
     :param atol: absolute tolerance for ``allclose``
     :param equal_nan: should two ``NaN`` be considered equal?
 
+    Examples
+    --------
+    >>> import numpy as np
     >>> import equistore
-    >>> from equistore import Labels
-    >>> # Create simple block, with one np.nan value
+    >>> from equistore import Labels, TensorBlock
+
+    Create simple block, with one py:obj:`np.nan` value.
+
     >>> block_1 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -181,8 +273,9 @@ def allclose_raise(
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Create a second block that differs from block_1 by 1e-5 in its
-    >>> # first value
+
+    Create a second block that differs from ``block_1`` by ``1e-5`` in its first value.
+
     >>> block_2 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -202,44 +295,42 @@ def allclose_raise(
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Create tensors from blocks, using same keys
+
+    Create tensors from blocks, using same keys
+
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor_1 = TensorMap(keys, [block_1])
     >>> tensor_2 = TensorMap(keys, [block_2])
-    >>> # Call allclose_raise, which should raise NotEqualError because:
-    >>> # 1. The two NaNs are not considered equal,
-    >>> # 2. The difference between the first value in the blocks
-    >>> # is greater than the default rtol of 1e-13
-    >>> # If this is executed yourself, you will see a nested exception
-    >>> # explaining that the values of the two blocks are not allclose
+
+    Call :py:func:`equistore.allclose_raise()`, which should raise
+    :py:class:`equistore.NotEqualError` because:
+
+    1. The two ``NaN`` are not considered `equal`.
+    2. The difference between the first value in the blocks is greater than the default
+       ``rtol`` of ``1e-13``.
+
+    If this is executed yourself, you will see a nested exception explaining that the
+    ``values`` of the two blocks are not `allclose`.
+
     >>> try:
     ...     allclose_raise(tensor_1, tensor_2)
     ... except equistore.NotEqualError as e:
     ...     print(f"got an exception: {e}")
     ...
-    got an exception: blocks for (key=0) are different
-    >>> # call allclose_raise again, but use equal_nan=True and rtol=1e-5
-    >>> # This passes, as the two NaNs are now considered equal, and the
-    >>> # difference between the first values of the blocks of the two tensors
-    >>> # is within the rtol limit of 1e-5
+    got an exception: blocks for key (key=0) are different: values are not allclose
+
+    call :py:func:`equistore.allclose_raise()` again, but use ``equal_nan=True`` and
+    ``rtol=1e-5`` This passes, as the two ``NaN`` are now considered equal, and the
+    difference between the first value of the blocks of the two tensors is within the
+    ``rtol`` limit of ``1e-5``.
+
     >>> allclose_raise(tensor_1, tensor_2, equal_nan=True, rtol=1e-5)
     """
-    try:
-        _check_same_keys(tensor_1, tensor_2, "allclose")
-    except NotEqualError as e:
-        raise NotEqualError("the tensor maps have different keys") from e
-
-    for key, block_1 in tensor_1.items():
-        try:
-            allclose_block_raise(
-                block_1,
-                tensor_2.block(key),
-                rtol=rtol,
-                atol=atol,
-                equal_nan=equal_nan,
-            )
-        except NotEqualError as e:
-            raise NotEqualError(f"blocks for {key.print()} are different") from e
+    message = _allclose_impl(
+        tensor_1=tensor_1, tensor_2=tensor_2, rtol=rtol, atol=atol, equal_nan=equal_nan
+    )
+    if message != "":
+        raise NotEqualError(message)
 
 
 def allclose_block(
@@ -271,8 +362,13 @@ def allclose_block(
     :param equal_nan: should two ``NaN`` be considered equal?
 
 
-    >>> from equistore import Labels
-    >>> # Create simple block
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from equistore import Labels, TensorBlock
+
+    Create simple block
+
     >>> block_1 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -292,7 +388,9 @@ def allclose_block(
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Recreate block_1, but change first value in the block from 1 to 1.00001
+
+    Recreate ``block_1``, but change first value in the block from ``1`` to ``1.00001``.
+
     >>> block_2 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -312,28 +410,26 @@ def allclose_block(
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Call allclose_block, which should return False because the default
-    >>> # rtol is 1e-13, and the difference in the first value between the
-    >>> # two blocks is 1e-5
+
+    Call :py:func:`equistore.allclose_block()`, which should return :py:obj:`False`
+    because the default ``rtol`` is ``1e-13``, and the difference in the first value
+    between the two blocks is ``1e-5``.
+
     >>> allclose_block(block_1, block_2)
     False
-    >>> # Calling allclose_block with the optional argument rtol=1e-5 should
-    >>> # return True, as the difference in the first value between the two
-    >>> # blocks is within the tolerance limit
+
+    Calling :py:func:`equistore.allclose_block()` with the optional argument
+    ``rtol=1e-5`` should return :py:obj:`True`, as the difference in the first value
+    between the two blocks is within the tolerance limit.
+
     >>> allclose_block(block_1, block_2, rtol=1e-5)
     True
     """
-    try:
-        allclose_block_raise(
-            block_1=block_1,
-            block_2=block_2,
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
+    return not bool(
+        _allclose_block_impl(
+            block_1=block_1, block_2=block_2, rtol=rtol, atol=atol, equal_nan=equal_nan
         )
-        return True
-    except NotEqualError:
-        return False
+    )
 
 
 def allclose_block_raise(
@@ -359,9 +455,14 @@ def allclose_block_raise(
     :param atol: absolute tolerance for ``allclose``
     :param equal_nan: should two ``NaN`` be considered equal?
 
+    Examples
+    --------
+    >>> import numpy as np
     >>> import equistore
-    >>> from equistore import Labels
-    >>> # Create simple block
+    >>> from equistore import Labels, TensorBlock
+
+    Create simple block
+
     >>> block_1 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -381,7 +482,10 @@ def allclose_block_raise(
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Recreate block_1, but rename properties label 'property_1' to 'property_2'
+
+    Recreate ``block_1``, but rename properties label ``'property_1'`` to
+    ``'property_2'``.
+
     >>> block_2 = TensorBlock(
     ...     values=np.array(
     ...         [
@@ -401,8 +505,11 @@ def allclose_block_raise(
     ...     components=[],
     ...     properties=Labels(["property_2"], np.array([[0], [1], [2]])),
     ... )
-    >>> # Call allclose_block_raise, which should raise NotEqualError because the
-    >>> # properties of the two blocks are not equal
+
+    Call :py:func:`equistore.allclose_block_raise()`, which should raise
+    :py:func:`equistore.NotEqualError` because the properties of the two blocks are not
+    `equal`.
+
     >>> try:
     ...     allclose_block_raise(block_1, block_2)
     ... except equistore.NotEqualError as e:
@@ -411,44 +518,8 @@ def allclose_block_raise(
     got an exception: inputs to 'allclose' should have the same properties:
     properties names are not the same or not in the same order
     """
-
-    if not np.all(block_1.values.shape == block_2.values.shape):
-        raise NotEqualError("values shapes are different")
-
-    if not _dispatch.allclose(
-        block_1.values,
-        block_2.values,
-        rtol=rtol,
-        atol=atol,
-        equal_nan=equal_nan,
-    ):
-        raise NotEqualError("values are not allclose")
-
-    try:
-        _check_blocks(
-            block_1,
-            block_2,
-            props=["samples", "properties", "components"],
-            fname="allclose",
-        )
-    except ValueError as e:
-        raise NotEqualError(str(e))
-
-    _check_same_gradients(
-        block_1,
-        block_2,
-        props=["samples", "properties", "components"],
-        fname="allclose",
+    message = _allclose_block_impl(
+        block_1=block_1, block_2=block_2, rtol=rtol, atol=atol, equal_nan=equal_nan
     )
-
-    for parameter, gradient1 in block_1.gradients():
-        gradient2 = block_2.gradient(parameter)
-
-        if not _dispatch.allclose(
-            gradient1.values,
-            gradient2.values,
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        ):
-            raise NotEqualError(f"gradient '{parameter}' values are not allclose")
+    if message != "":
+        raise NotEqualError(message)
