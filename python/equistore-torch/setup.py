@@ -6,6 +6,7 @@ import uuid
 from setuptools import Extension, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
@@ -140,6 +141,22 @@ class bdist_egg_disabled(bdist_egg):
         )
 
 
+class sdist_git_version(sdist):
+    """
+    Create a sdist with an additional generated file containing the extra
+    version from git.
+    """
+
+    def run(self):
+        with open("git_extra_version", "w") as fd:
+            fd.write(git_extra_version())
+
+        # run original sdist
+        super().run()
+
+        os.unlink("git_extra_version")
+
+
 def git_extra_version():
     """
     If git is available, it is used to check if we are installing a development
@@ -198,6 +215,16 @@ def git_extra_version():
 
 
 if __name__ == "__main__":
+    if os.path.exists("git_extra_version"):
+        # we are building from a sdist, without git available, but the git
+        # version was recorded in a git_extra_version file
+        with open("git_extra_version") as fd:
+            extra_version = fd.read()
+    else:
+        extra_version = git_extra_version()
+
+    version = "0.1.0" + extra_version
+
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
         authors = fd.read().splitlines()
 
@@ -206,9 +233,7 @@ if __name__ == "__main__":
         with open(os.path.join(ROOT, authors[0])) as fd:
             authors = fd.read().splitlines()
 
-    version = "0.1.0" + git_extra_version()
-
-    install_requires = ["torch >= 1.13"]
+    install_requires = ["torch >= 1.11"]
     if os.path.exists(EQUISTORE_CORE):
         # we are building from a git checkout
 
@@ -230,6 +255,7 @@ if __name__ == "__main__":
         cmdclass={
             "build_ext": cmake_ext,
             "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
+            "sdist": sdist_git_version,
         },
         package_data={
             "equistore-torch": [
