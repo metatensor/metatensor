@@ -6,6 +6,7 @@ import sys
 from setuptools import Extension, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 from wheel.bdist_wheel import bdist_wheel
 
 
@@ -141,6 +142,22 @@ class bdist_egg_disabled(bdist_egg):
         )
 
 
+class sdist_git_version(sdist):
+    """
+    Create a sdist with an additional generated file containing the extra
+    version from git.
+    """
+
+    def run(self):
+        with open("git_extra_version", "w") as fd:
+            fd.write(git_extra_version())
+
+        # run original sdist
+        super().run()
+
+        os.unlink("git_extra_version")
+
+
 def get_rust_version():
     # read version from Cargo.toml
     with open(os.path.join(EQUISTORE_CORE, "Cargo.toml")) as fd:
@@ -214,6 +231,16 @@ def git_extra_version():
 
 
 if __name__ == "__main__":
+    if os.path.exists("git_extra_version"):
+        # we are building from a sdist, without git available, but the git
+        # version was recorded in a git_extra_version file
+        with open("git_extra_version") as fd:
+            extra_version = fd.read()
+    else:
+        extra_version = git_extra_version()
+
+    version = get_rust_version() + extra_version
+
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
         authors = fd.read().splitlines()
 
@@ -221,8 +248,6 @@ if __name__ == "__main__":
         # handle "raw" symlink files (on Windows or from full repo tarball)
         with open(os.path.join(ROOT, authors[0])) as fd:
             authors = fd.read().splitlines()
-
-    version = get_rust_version() + git_extra_version()
 
     setup(
         version=version,
@@ -236,6 +261,7 @@ if __name__ == "__main__":
             "build_ext": cmake_ext,
             "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
             "bdist_wheel": universal_wheel,
+            "sdist": sdist_git_version,
         },
         package_data={
             "equistore-core": [

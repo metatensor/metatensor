@@ -2,4 +2,4 @@ include pyproject.toml
 include AUTHORS
 include LICENSE
 
-include python/equistore/version_from_git.py
+include git_extra_version
