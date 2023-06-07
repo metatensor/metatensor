@@ -1,14 +1,59 @@
-import numpy as np
-
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
 from ._utils import (
     NotEqualError,
-    _check_blocks,
-    _check_same_gradients,
-    _check_same_keys,
+    _check_blocks_impl,
+    _check_same_gradients_impl,
+    _check_same_keys_impl,
 )
+
+
+def _equal_impl(tensor_1: TensorMap, tensor_2: TensorMap) -> str:
+    """Abstract function to perform an equal operation between two TensorMaps."""
+    message = _check_same_keys_impl(tensor_1, tensor_2, "equal")
+    if message != "":
+        return f"the tensor maps have different keys: {message}"
+
+    for key, block_1 in tensor_1.items():
+        message = _equal_block_impl(block_1=block_1, block_2=tensor_2.block(key))
+        if message != "":
+            return f"blocks for key {key.print()} are different: {message}"
+    return ""
+
+
+def _equal_block_impl(block_1: TensorBlock, block_2: TensorBlock) -> str:
+    """Abstract function to perform an equal operation between two TensorBlocks."""
+    if not block_1.values.shape == block_2.values.shape:
+        return "values shapes are different"
+
+    if not _dispatch.all(block_1.values == block_2.values):
+        return "values are not equal"
+
+    check_blocks_message = _check_blocks_impl(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="equal",
+    )
+    if check_blocks_message != "":
+        return check_blocks_message
+
+    check_same_gradient_message = _check_same_gradients_impl(
+        block_1,
+        block_2,
+        props=["samples", "properties", "components"],
+        fname="equal",
+    )
+    if check_same_gradient_message != "":
+        return check_same_gradient_message
+
+    for parameter, gradient1 in block_1.gradients():
+        gradient2 = block_2.gradient(parameter)
+
+        if not _dispatch.all(gradient1.values == gradient2.values):
+            return f"gradient '{parameter}' values are not equal"
+    return ""
 
 
 def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
@@ -29,14 +74,10 @@ def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
     :param tensor_1: first :py:class:`TensorMap`.
     :param tensor_2: second :py:class:`TensorMap`.
     """
-    try:
-        equal_raise(tensor_1=tensor_1, tensor_2=tensor_2)
-        return True
-    except NotEqualError:
-        return False
+    return not bool(_equal_impl(tensor_1=tensor_1, tensor_2=tensor_2))
 
 
-def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap):
+def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap) -> None:
     """
     Compare two :py:class:`TensorMap`, raising :py:class:`NotEqualError` if they
     are not the same.
@@ -51,16 +92,9 @@ def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap):
     :param tensor_1: first :py:class:`TensorMap`.
     :param tensor_2: second :py:class:`TensorMap`.
     """
-    try:
-        _check_same_keys(tensor_1, tensor_2, "equal")
-    except ValueError as e:
-        raise NotEqualError("the tensor maps have different keys") from e
-
-    for key, block_1 in tensor_1.items():
-        try:
-            equal_block_raise(block_1, tensor_2.block(key))
-        except NotEqualError as e:
-            raise NotEqualError(f"blocks for {key.print()} are different") from e
+    message = _equal_impl(tensor_1=tensor_1, tensor_2=tensor_2)
+    if message != "":
+        raise NotEqualError(message)
 
 
 def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
@@ -81,14 +115,10 @@ def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
     :param block_1: first :py:class:`TensorBlock`.
     :param block_2: second :py:class:`TensorBlock`.
     """
-    try:
-        equal_block_raise(block_1=block_1, block_2=block_2)
-        return True
-    except NotEqualError:
-        return False
+    return not bool(_equal_block_impl(block_1=block_1, block_2=block_2))
 
 
-def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock):
+def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock) -> None:
     """
     Compare two :py:class:`TensorBlock`, raising
     :py:class:`equistore.NotEqualError` if they are not the same.
@@ -102,29 +132,6 @@ def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock):
     :param block_1: first :py:class:`TensorBlock`.
     :param block_2: second :py:class:`TensorBlock`.
     """
-
-    if not np.all(block_1.values.shape == block_2.values.shape):
-        raise NotEqualError("values shapes are different")
-
-    if not _dispatch.all(block_1.values == block_2.values):
-        raise NotEqualError("values are not equal")
-
-    _check_blocks(
-        block_1,
-        block_2,
-        props=["samples", "properties", "components"],
-        fname="equal",
-    )
-
-    _check_same_gradients(
-        block_1,
-        block_2,
-        props=["samples", "properties", "components"],
-        fname="equal",
-    )
-
-    for parameter, gradient1 in block_1.gradients():
-        gradient2 = block_2.gradient(parameter)
-
-        if not _dispatch.all(gradient1.values == gradient2.values):
-            raise NotEqualError(f"gradient '{parameter}' values are not equal")
+    message = _equal_block_impl(block_1=block_1, block_2=block_2)
+    if message != "":
+        raise NotEqualError(message)

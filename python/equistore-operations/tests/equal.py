@@ -43,7 +43,10 @@ def test_equal_no_gradient():
     Y = TensorMap(keys, [block_3, block_4])
     assert not equistore.equal(X, Y)
 
-    message = "blocks for \\(key_1=0, key_2=0\\) are different"
+    message = (
+        r"blocks for key \(key_1=0, key_2=0\) are different: values shapes are "
+        r"different"
+    )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_raise(X, Y)
 
@@ -133,8 +136,8 @@ def test_self_equal_grad():
     assert not equistore.equal(tensor_1, tensor_1_e6)
 
     message = (
-        "blocks for \\(spherical_harmonics_l=0, species_center=1, "
-        "species_neighbor=1\\) are different"
+        r"blocks for key \(spherical_harmonics_l=0, species_center=1, "
+        r"species_neighbor=1\) are different: values are not equal"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_raise(tensor_1, tensor_1_e6)

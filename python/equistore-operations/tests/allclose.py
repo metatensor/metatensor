@@ -42,7 +42,10 @@ def test_allclose_nograd():
     Y = TensorMap(keys, [block_3, block_4])
     assert not equistore.allclose(X, Y)
 
-    message = "blocks for \\(key_1=0, key_2=0\\) are different"
+    message = (
+        r"blocks for key \(key_1=0, key_2=0\) are different: values shapes are "
+        r"different"
+    )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_raise(X, Y)
 
@@ -135,8 +138,8 @@ def test_self_allclose_grad():
     assert equistore.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5)
 
     message = (
-        "blocks for \\(spherical_harmonics_l=0, species_center=1, "
-        "species_neighbor=1\\) are different"
+        r"blocks for key \(spherical_harmonics_l=0, species_center=1, "
+        r"species_neighbor=1\) are different: values are not allclose"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_raise(tensor1, tensor1_e6)
