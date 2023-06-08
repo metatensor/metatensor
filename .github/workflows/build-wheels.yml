@@ -98,6 +98,8 @@ jobs:
         run: python -m build python/equistore-core --sdist --outdir=dist/
       - name: build equistore-operations sdist and wheel
         run: python -m build python/equistore-operations --outdir=dist/
+      - name: build equistore-torch sdist
+        run: python -m build python/equistore-torch --sdist --outdir=dist/
       - name: build equistore sdist and wheel
         run: python -m build . --outdir=dist/
       - uses: actions/upload-artifact@v3

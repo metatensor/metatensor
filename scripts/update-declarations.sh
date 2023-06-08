@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This script update the declaration corresponding to equistore-core C-API
+# in the equistore Rust sources (`bindgen` below) and the equistore-core
+# Python package
+
 ROOT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 set -eux
 

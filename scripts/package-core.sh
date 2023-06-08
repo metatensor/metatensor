@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This script creates an archive containing the sources for the equistore-core
+# Rust crate, and copy it to be included in the equistore crate source release,
+# and the equistore-core python package sdist.
+
 ROOT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 set -eux
 
