@@ -95,6 +95,21 @@ Add the following to your project ``Cargo.toml``
 Installing the TorchScript bindings
 -----------------------------------
 
+For usage from Python
+^^^^^^^^^^^^^^^^^^^^^
+
+Building from source:
+
+.. code-block:: bash
+
+    git clone https://github.com/lab-cosmo/equistore
+    cd equistore/python/equistore-torch
+    pip install .
+
+    # alternatively, the same thing in a single command
+    pip install git+https://github.com/lab-cosmo/equistore#subdirectory=python/equistore-torch
+
+
 For usage from C++
 ^^^^^^^^^^^^^^^^^^
 

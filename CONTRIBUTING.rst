@@ -36,6 +36,29 @@ not have to interact with them directly:
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest
 
+.. admonition:: Optional tools
+
+  Depending on which part of the code you are working on, you might experience a
+  lot of time spend re-compiling Rust or C++ code, even if you did not change
+  them. If you'd like faster builds (and in turn faster tests), you can use
+  `sccache`_ or the classic `ccache`_ to only re-run the compiler if the
+  corresponding source code changed. To do this, you should install and configure
+  one of these tools (we suggest sccache since it also supports Rust), and then
+  configure cmake and cargo to use them by setting environnement variables. On
+  Linux and macOS, you should set the following (look up how to do set environment
+  variable with your shell):
+
+  .. code-block:: bash
+
+      CMAKE_C_COMPILER_LAUNCHER=sccache
+      CMAKE_CXX_COMPILER_LAUNCHER=sccache
+      # only if you have sccache and not ccache
+      RUSTC_WRAPPER=sccache
+
+
+  .. _sccache: https://github.com/mozilla/sccache
+  .. _ccache: https://ccache.dev/
+
 Getting the code
 ----------------
 
@@ -111,6 +134,7 @@ specific functionalities, for example:
 
     tox -e core-tests           # unit tests for equistore-core
     tox -e operations-tests     # unit tests for equistore-operations
+    tox -e torch-tests          # unit tests for equistore-torch
     tox -e docs-tests           # doctests (checking inline examples) for all packages
     tox -e lint                 # code style
     tox -e build-python         # python packaging
@@ -123,6 +147,20 @@ of just checking it.
 You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
 replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
 ``tox -e tests -- python/tests/operations/abs.py``.
+
+When running the equistore-torch unit tests, you might get an error about CUDA
+not being available if you try to build the code against the default PyPI
+version of PyTorch. A possible workaround is to use the CPU-only version of
+PyTorch in the tests, by setting the ``PIP_EXTRA_INDEX_URL`` environnement
+variable to ``https://download.pytorch.org/whl/cpu``, for example in bash and
+related shells:
+
+.. code-block:: bash
+
+    export PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+    tox -e torch-tests
+    # or
+    cargo test
 
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/

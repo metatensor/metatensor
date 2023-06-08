@@ -8,6 +8,7 @@ API reference
 
     python/index
     operations/index
+    torch/index
     cxx/index
     c/index
     rust/index
