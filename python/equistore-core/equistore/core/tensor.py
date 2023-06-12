@@ -15,7 +15,7 @@ import numpy as np
 from ._c_api import c_uintptr_t, eqs_block_t, eqs_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
-from .labels import Labels, _is_namedtuple, _print_labels
+from .labels import Labels, LabelsEntry
 from .status import _check_pointer
 
 
@@ -143,17 +143,13 @@ class TensorMap:
         return len(self.keys)
 
     def __repr__(self) -> str:
-        result = f"TensorMap with {len(self)} blocks\n"
-        result += _print_labels(self.keys, header="keys")
+        result = f"TensorMap with {len(self)} blocks\nkeys:"
+        result += self.keys.print(4, 5)
         return result
 
     def __str__(self) -> str:
-        result = f"TensorMap with {len(self)} blocks\n"
-        result += _print_labels(
-            self.keys,
-            header="keys",
-            print_limit=len(self) + 1,
-        )
+        result = f"TensorMap with {len(self)} blocks\nkeys:"
+        result += self.keys.print(-1, 5)
         return result
 
     def __getitem__(self, *args) -> TensorBlock:
@@ -265,15 +261,16 @@ class TensorMap:
             if len(self.keys) == 0:
                 raise ValueError("there are no blocks in this TensorMap")
             else:
-                selection = next(selection.as_namedtuples())
+                selection_string = (
+                    str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
+                )
                 raise ValueError(
-                    "Couldn't find any block matching the selection "
-                    f"{_format_selection(selection)}"
+                    f"Couldn't find any block matching '{selection_string}'"
                 )
         elif len(matching) > 1:
-            selection = next(selection.as_namedtuples())
+            selection_string = str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
             raise ValueError(
-                f"more than one block matched {_format_selection(selection)}, "
+                f"more than one block matched '{selection_string}', "
                 "use `TensorMap.blocks` if you want to get all of them"
             )
         else:
@@ -321,9 +318,9 @@ class TensorMap:
             return []
 
         if len(matching) == 0:
-            selection = next(selection.as_namedtuples())
+            selection_string = str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
             raise ValueError(
-                f"Couldn't find any block matching the selection {selection.as_dict()}"
+                f"Couldn't find any block matching the selection '{selection_string}'"
             )
         else:
             return [self._get_block_by_id(i) for i in matching]
@@ -346,15 +343,9 @@ class TensorMap:
             arg = args[0]
             if isinstance(arg, Labels):
                 selection = arg
-            elif isinstance(arg, np.void):
-                # single entry from an Labels array
+            elif isinstance(arg, LabelsEntry):
                 return self.blocks_matching(
-                    **{name: arg[i] for i, name in enumerate(arg.dtype.names)},
-                    __return_selection=return_selection,
-                )
-            elif _is_namedtuple(arg):
-                return self.blocks_matching(
-                    **arg.as_dict(),
+                    Labels(names=arg.names, values=arg.values.reshape(1, -1)),
                     __return_selection=return_selection,
                 )
             else:

@@ -436,7 +436,12 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
         }
     }
 
-    return output.str();
+    // remove the final \n
+    auto output_string = output.str();
+    assert(output_string[output_string.size() - 1] == '\n');
+    output_string.pop_back();
+
+    return output_string;
 }
 
 std::string LabelsHolder::__str__() const {
@@ -447,7 +452,7 @@ std::string LabelsHolder::__str__() const {
         output << "LabelsView(\n   ";
     }
 
-    output << this->print(4, 3) << ")";
+    output << this->print(4, 3) << "\n)";
     return output.str();
 }
 
@@ -459,7 +464,7 @@ std::string LabelsHolder::__repr__() const {
         output << "LabelsView(\n   ";
     }
 
-    output << this->print(-1, 3) << ")";
+    output << this->print(-1, 3) << "\n)";
     return output.str();
 }
 

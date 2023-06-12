@@ -1,6 +1,6 @@
 import ctypes
-from collections import namedtuple
-from typing import Optional, Sequence, Tuple, Union
+import io
+from typing import List, Optional, Sequence, Union, overload
 
 import numpy as np
 
@@ -9,94 +9,225 @@ from ._c_lib import _get_library
 from .utils import _ptr_to_const_ndarray
 
 
-class Labels(np.ndarray):
+class LabelsEntry:
+    """A single entry (i.e. row) in a set of :py:class:`Labels`.
+
+    The main way to create a :py:class:`LabelsEntry` is to index a
+    :py:class:`Labels` or iterate over them.
+
+    >>> from equistore import Labels
+    >>> import numpy as np
+    >>> labels = Labels(
+    ...     names=["structure", "atom", "species_center"],
+    ...     values=np.array([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
+    ... )
+    >>> entry = labels[0]  # or labels.entry(0)
+    >>> entry.names
+    ['structure', 'atom', 'species_center']
+    >>> print(entry.values)
+    [0 1 8]
     """
-    A set of labels used to carry metadata associated with a tensor map.
 
-    This is similar to a list of ``n_entries`` named tuples, but stored as a 2D
-    array of shape ``(n_entries, n_dimensions)``, with a set of names associated
-    with the columns of this array (often called *dimensions*). Each row/entry in
-    this array is unique, and they are often (but not always) sorted in
-    lexicographic order.
+    def __init__(self, names: List[str], values: np.ndarray):
+        self._names = names
 
-    In Python, :py:class:`Labels` are implemented as a wrapper around a 2D
-    ``numpy.ndarray`` with a custom ``dtype`` allowing direct access to the
-    different columns:
+        if len(values.shape) != 1 or values.dtype != np.int32:
+            raise ValueError(
+                "LabelsEntry values must be a 1-dimensional array of 32-bit integers"
+            )
 
-    .. code-block:: python
+        self._values = values
 
-        labels = Labels(
-            names=["structure", "atom", "center_species"],
-            values=...,
+    @property
+    def names(self) -> List[str]:
+        """names of the dimensions for this Labels entry"""
+        return self._names
+
+    @property
+    def values(self) -> np.ndarray:
+        """
+        values associated with each dimensions of this Labels entry, stored as
+        32-bit integers.
+        """
+        return self._values
+
+    def __repr__(self) -> str:
+        values = [f"{n}={v}" for n, v in zip(self.names, self.values)]
+        return f"LabelsEntry({', '.join(values)})"
+
+    def __len__(self) -> int:
+        """number of dimensions in this labels entry"""
+        return self._values.shape[0]
+
+    def __getitem__(self, dimension: Union[str, int]) -> int:
+        """get the value associated with the dimension in this entry"""
+        if isinstance(dimension, int):
+            return self._values[dimension]
+        elif isinstance(dimension, str):
+            try:
+                i = self._names.index(dimension)
+            except ValueError:
+                raise ValueError(
+                    f"'{dimension}' not found in the dimensions of these Labels"
+                )
+
+            return self._values[i]
+
+        else:
+            raise TypeError(
+                f"can only index LabelsEntry with str or int, got {type(dimension)}"
+            )
+
+    def __eq__(self, other: "LabelsEntry") -> bool:
+        """
+        check if ``self`` and ``other`` are equal (same dimensions/names and
+        same values)
+        """
+
+        if not isinstance(other, LabelsEntry):
+            raise TypeError(
+                f"can only compare between LabelsEntry for equality, got {type(other)}"
+            )
+
+        return (
+            self._names == other._names
+            and self._values.shape == other._values.shape
+            and np.all(self._values == other._values)
         )
 
-        # access all values in a column by name
-        structures = labels["structures"]
+    def __ne__(self, other: "LabelsEntry") -> bool:
+        """
+        check if ``self`` and ``other`` are not equal (different
+        dimensions/names or different values)
+        """
+        return not self.__eq__(other)
 
-        # multiple columns at once
-        data = labels[["structures", "center_species"]]
 
-        # we can still use all the usual numpy operations
-        unique_structures = np.unique(labels["structures"])
+class Labels:
+    """
+    A set of labels carrying metadata associated with a :py:class:`TensorMap`.
 
-    One can also check for the presence of a given entry in Labels, but only if
-    the Labels come from a :py:class:`TensorBlock` or a :py:class:`TensorMap`.
+    The metadata can be though as a list of tuples, where each value in the
+    tuple also has an associated dimension name. In practice, the dimensions
+    ``names`` are stored separately from the ``values``, and the values are in a
+    2-dimensional array integers with the shape ``(n_entries, n_dimensions)``.
+    Each row/entry in this array is unique, and they are often (but not always)
+    sorted in lexicographic order.
 
-    .. code-block:: python
+    >>> from equistore import Labels
+    >>> import numpy as np
+    >>> labels = Labels(
+    ...     names=["structure", "atom", "species_center"],
+    ...     values=np.array([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
+    ... )
+    >>> labels
+    Labels(
+        structure  atom  species_center
+            0       1          8
+            0       2          1
+            0       5          1
+    )
+    >>> labels.names
+    ['structure', 'atom', 'species_center']
+    >>> print(labels.values)
+    [[0 1 8]
+     [0 2 1]
+     [0 5 1]]
 
-        # create a block in some way
 
-        samples = block.samples
+    It is possible to create a view inside a :py:class:`Labels`, selecting only
+    a subset of columns/dimensions:
 
-        position = samples.position((1, 3))
-        # either None if the sample is not there or the
-        # position in the samples of (1, 3)
+    >>> # single dimension
+    >>> view = labels["atom"]  # or labels.view("atom")
+    >>> view.names
+    ['atom']
+    >>> print(view.values)
+    [[1]
+     [2]
+     [5]]
+    >>> # multiple dimensions
+    >>> view = labels[["atom", "structure"]]
+    >>> view.names
+    ['atom', 'structure']
+    >>> print(view.values)
+    [[1 0]
+     [2 0]
+     [5 0]]
+    >>> view.is_view()
+    True
+    >>> # we can convert a view back to a full, owned Labels
+    >>> owned_labels = view.to_owned()
+    >>> owned_labels.is_view()
+    False
 
-        # this also works with __contains__
-        if (1, 3) in samples:
-            ...
+
+    One can also iterate over labels entries, or directly index the
+    :py:class:`Labels` to get them
+
+    >>> entry = labels[0]  # or labels.entry(0)
+    >>> entry.names
+    ['structure', 'atom', 'species_center']
+    >>> print(entry.values)
+    [0 1 8]
+    >>> for entry in labels:
+    ...     print(entry)
+    ...
+    LabelsEntry(structure=0, atom=1, species_center=8)
+    LabelsEntry(structure=0, atom=2, species_center=1)
+    LabelsEntry(structure=0, atom=5, species_center=1)
+
+
+    Labels can be checked for equality:
+
+    >>> owned_labels == labels
+    False
+    >>> labels == labels
+    True
+
+
+    Finally, it is possible to check if a value is inside (non-view) labels, and
+    get the corresponding position:
+
+    >>> labels.position([0, 2, 1])
+    1
+    >>> print(labels.position([0, 2, 4]))
+    None
+    >>> (0, 2, 4) in labels
+    False
+    >>> labels[2] in labels
+    True
     """
 
-    def __new__(cls, names: Union[Sequence[str], str], values: np.ndarray, **kwargs):
+    def __init__(self, names: Union[str, Sequence[str]], values: np.ndarray):
         """
-        :param names: names of the dimensions in the new labels, in the case of a single
-                      name also a single string can be given: ``names = "name"``
-        :param values: values of the dimensions, this needs to be a 2D array of
-            ``np.int32`` values
+        :param names: names of the dimensions in the new labels. A single string
+                      is transformed into a list with one element, i.e.
+                      ``names="a"`` is the same as ``names=["a"]``.
+
+        :param values: values of the labels, this needs to be a 2-dimensional
+                       array of integers.
         """
 
-        for key in kwargs.keys():
-            if key != "_eqs_labels_t":
-                raise ValueError(f"unexpected kwarg to Labels: {key}")
-
-        if isinstance(names, str):
-            if len(names) == 0:
-                names = tuple()
-            else:
-                names = (names,)
-        else:
-            names = tuple(names)
-            for name in names:
-                if not isinstance(name, str):
-                    raise TypeError(
-                        f"Labels names must be strings, got {type(name)} instead"
-                    )
+        names = _normalize_names_type(names)
 
         if not isinstance(values, np.ndarray):
-            raise ValueError("values parameter must be a numpy ndarray")
+            raise ValueError("`values` must be a numpy ndarray")
 
         if len(values) == 0:
-            # if empty array of values we use the required correct 2d shape
+            # make sure the array is 2D
             values = np.zeros((0, len(names)), dtype=np.int32)
         elif len(values.shape) != 2:
-            raise ValueError("values parameter must be a 2D array")
+            raise ValueError("`values` must be a 2D array")
 
         if len(names) != values.shape[1]:
             raise ValueError(
-                "names parameter must have an entry for each column of the array"
+                "`names` must have an entry for each column of the `values` array"
             )
 
         try:
+            # We need to make sure the data is C-contiguous to take a pointer to
+            # it, and that it has the right type
             values = np.ascontiguousarray(
                 values.astype(
                     np.int32,
@@ -109,134 +240,208 @@ class Labels(np.ndarray):
         except TypeError as e:
             raise TypeError("Labels values must be convertible to integers") from e
 
-        dtype = [(name, np.int32) for name in names]
-
-        if values.shape[1] != 0:
-            values = values.view(dtype=dtype).reshape((values.shape[0],))
-
-        obj = values.view(cls)
-
-        obj._lib = _get_library()
-
-        obj._eqs_labels_t = kwargs.get("_eqs_labels_t")
-        if obj._eqs_labels_t is not None:
-            # ensure we have a valid Rust pointer
-            assert obj._eqs_labels_t.internal_ptr_ is not None
-        else:
-            # create a new Rust pointer for these Labels
-            obj._eqs_labels_t = _eqs_labels_view(obj)
-            obj._lib.eqs_labels_create(obj._eqs_labels_t)
-
-        return obj
-
-    def __array_finalize__(self, obj):
-        # do not keep the Rust pointer around around, since one could be taking only a
-        # subset of the dimensions (`samples[["structure", "center"]]`) and this
-        # would break `position` and `__contains__`
-        self._eqs_labels_t = None
-
-        self._lib = getattr(obj, "_lib", None)
-
-    def __del__(self):
-        if (
-            hasattr(self, "_lib")
-            and self._lib is not None
-            and hasattr(self, "_eqs_labels_t")
-        ):
-            self._lib.eqs_labels_free(self._eqs_labels_t)
-
-    @property
-    def names(self) -> Tuple[str]:
-        """Names of the columns/dimensions used for these labels"""
-        return self.dtype.names or []
+        self._lib = _get_library()
+        self._labels = _create_new_labels(self._lib, names, values)
+        self._names = names
+        self._values = _labels_values(self._labels)
 
     @staticmethod
     def single() -> "Labels":
         """
-        Get the labels to use when there is no relevant metadata and only one
-        entry in the corresponding dimension (e.g. keys when a tensor map
-        contains a single block).
+        Create :py:class:`Labels` to use when there is no relevant metadata and
+        only one entry in the corresponding dimension (e.g. keys when a tensor
+        map contains a single block).
         """
         return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
 
     @staticmethod
-    def empty(names) -> "Labels":
-        """Label with given names but no values.
+    def empty(names: Union[str, Sequence[str]]) -> "Labels":
+        """
+        Create :py:class:`Labels` with given ``names`` but no values.
 
-        :param names: names of the dimensions in the new labels, in the case of a single
-                      name also a single string can be given: ``names = "name"``
+        :param names: names of the dimensions in the new labels. A single string
+                      is transformed into a list with one element, i.e.
+                      ``names="a"`` is the same as ``names=["a"]``.
         """
         return Labels(names=names, values=np.array([]))
 
-    def as_namedtuples(self):
+    @staticmethod
+    def range(name: str, end: int) -> "Labels":
         """
-        Iterator over the entries in these Labels as namedtuple instances.
+        Create :py:class:`Labels` with a single dimension using the given
+        ``name`` and values in the ``[0, end)`` range.
 
-        .. code-block:: python
+        :param name: name of the single dimension in the new labels.
+        :param end: end of the range for labels
 
-            labels = Labels(
-                names=["structure", "atom", "center_species"],
-                values=np.array([[0, 2, 4]]),
+        >>> from equistore import Labels
+        >>> labels = Labels.range("dummy", 7)
+        >>> labels.names
+        ['dummy']
+        >>> print(labels.values)
+        [[0]
+         [1]
+         [2]
+         [3]
+         [4]
+         [5]
+         [6]]
+        """
+        return Labels(
+            names=[name],
+            values=np.arange(end, dtype=np.int32).reshape(-1, 1),
+        )
+
+    @classmethod
+    def _from_eqs_labels_t(cls, labels: eqs_labels_t):
+        assert labels.internal_ptr_ is not None
+
+        obj = cls.__new__(cls)
+        obj._lib = _get_library()
+        obj._labels = labels
+
+        names = []
+        for i in range(labels.size):
+            names.append(labels.names[i].decode("utf8"))
+        obj._names = names
+
+        obj._values = _labels_values(obj._labels)
+
+        return obj
+
+    def __del__(self):
+        if hasattr(self, "_lib") and self._lib is not None:
+            if hasattr(self, "_labels") and self._labels is not None:
+                self._lib.eqs_labels_free(self._labels)
+
+    def __deepcopy__(self, _memodict):
+        labels = eqs_labels_t()
+        self._lib.eqs_labels_clone(self._labels, labels)
+        return Labels._from_eqs_labels_t(labels)
+
+    def __copy__(self):
+        return self.__deepcopy__({})
+
+    def __str__(self) -> str:
+        printed = self.print(4, 3)
+        if self._labels is None:
+            return f"LabelsView(\n   {printed}\n)"
+        else:
+            return f"Labels(\n   {printed}\n)"
+
+    def __repr__(self) -> str:
+        printed = self.print(-1, 3)
+        if self._labels is None:
+            return f"LabelsView(\n   {printed}\n)"
+        else:
+            return f"Labels(\n   {printed}\n)"
+
+    def __len__(self) -> int:
+        """number of entries in these labels"""
+        return self._values.shape[0]
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield LabelsEntry(self._names, self._values[i, :])
+
+    @overload
+    def __getitem__(self, dimensions: Union[str, Sequence[str]]) -> "Labels":
+        pass
+
+    @overload
+    def __getitem__(self, index: int) -> LabelsEntry:
+        pass
+
+    def __getitem__(self, index):
+        """
+        When indexing with a string or list of string, create a view containing
+        only the specified dimensions.
+
+        When indexing with an integer, get the corresponding row/labels entry.
+        """
+        if isinstance(index, int):
+            return self.entry(index)
+        else:
+            return self.view(index)
+
+    def __contains__(
+        self,
+        entry: Union[LabelsEntry, Sequence[int]],
+    ) -> bool:
+        """check if these :py:class:`Labels` contain the given ``entry``"""
+        if self.is_view():
+            raise ValueError(
+                "can not call `__contains__` on a Labels view, call `to_owned` before"
             )
 
-            for label in labels.as_namedtuples():
-                print(label)
-                print(label.as_dict())
+        return self.position(entry) is not None
 
-            # outputs
-            # LabelTuple(structure=0, atom=2, center_species=4)
-            # {'structure': 0, 'atom': 2, 'center_species': 4}
+    def __eq__(self, other: "Labels") -> bool:
         """
-        named_tuple_class = namedtuple("LabelTuple", self.names)
-        named_tuple_class.as_dict = named_tuple_class._asdict
+        check if two set of labels are equal (same dimension names and same
+        values)
+        """
+        if not isinstance(other, Labels):
+            raise TypeError(
+                f"can only compare between Labels for equality, got {type(other)}"
+            )
 
-        for entry in self:
-            yield named_tuple_class(*entry)
+        return (
+            self._names == other._names
+            and self._values.shape == other._values.shape
+            and np.all(self._values == other._values)
+        )
+
+    def __ne__(self, other: "Labels") -> bool:
+        """
+        check if two set of labels are not equal (different dimension names or
+        different values)
+        """
+        return not self.__eq__(other)
 
     def _as_eqs_labels_t(self):
-        """transform these labels into eqs_labels_t"""
-        if self._eqs_labels_t is None:
-            return _eqs_labels_view(self)
-        else:
-            return self._eqs_labels_t
-
-    @staticmethod
-    def _from_eqs_labels_t(eqs_labels):
-        """
-        Convert an eqs_labels_t into a Labels instance.
-        """
-        names = []
-        for i in range(eqs_labels.size):
-            names.append(eqs_labels.names[i].decode("utf8"))
-
-        if eqs_labels.count != 0:
-            shape = (eqs_labels.count, eqs_labels.size)
-            values = _ptr_to_const_ndarray(
-                ptr=eqs_labels.values, shape=shape, dtype=np.int32
+        if self.is_view():
+            raise ValueError(
+                "can not use a Labels view with the equistore shared library, "
+                "call `to_owned` before"
             )
-            values.flags.writeable = False
-            return Labels(names, values, _eqs_labels_t=eqs_labels)
         else:
-            return Labels(
-                names=names,
-                values=np.empty(shape=(0, len(names)), dtype=np.int32),
-            )
+            return self._labels
 
-    def position(self, entry) -> Optional[int]:
+    @property
+    def names(self) -> List[str]:
+        """names of the dimensions for these :py:class:`Labels`"""
+        return self._names
+
+    @property
+    def values(self) -> np.ndarray:
         """
-        Get the position of the given ``entry`` in this set of :py:class:`Labels`.
+        values associated with each dimensions of the :py:class:`Labels`, stored
+        as 2-dimensional tensor of 32-bit integers
         """
-        lib = _get_library()
+        return self._values
+
+    def position(self, entry: Union[LabelsEntry, Sequence[int]]) -> Optional[int]:
+        """
+        Get the position of the given ``entry`` in this set of
+        :py:class:`Labels`, or ``None`` if the entry is not present in the
+        labels.
+        """
+
+        if self.is_view():
+            raise ValueError(
+                "can not call `position` on a Labels view, call `to_owned` before"
+            )
 
         result = ctypes.c_int64()
-        values = ctypes.ARRAY(ctypes.c_int32, len(entry))()
+        c_entry = ctypes.ARRAY(ctypes.c_int32, len(entry))()
         for i, v in enumerate(entry):
-            values[i] = ctypes.c_int32(v)
+            c_entry[i] = ctypes.c_int32(v)
 
-        lib.eqs_labels_position(
-            self._eqs_labels_t,
-            values,
-            len(entry),
+        self._lib.eqs_labels_position(
+            self._labels,
+            c_entry,
+            c_entry._length_,
             result,
         )
 
@@ -245,212 +450,225 @@ class Labels(np.ndarray):
         else:
             return None
 
-    def asarray(self):
-        """Get a view of these ``Labels`` as a raw 2D array of integers"""
-        return self.view(dtype=np.int32).reshape(self.shape[0], -1)
+    def print(self, max_entries: int, indent: int = 0) -> str:
+        """print these :py:class:`Labels` to a string
 
-    def __contains__(self, entry):
-        return self.position(entry) is not None
-
-    @staticmethod
-    def arange(name, *args, **kwargs):
+        :param max_entries: how many entries to print, use ``-1`` to print everything
+        :param indent: indent the output by ``indent`` spaces
         """
-        A `Labels` instance with evenly spaced integers within a given interval.
+        return _print_labels(
+            self._names,
+            self._values,
+            max_entries=max_entries,
+            indent=indent,
+        )
 
-        The resulting `Labels` only contain one label, whose name
-        must be specified. The values of the labels depend on a set of
-        integer arguments, whose meaning is the same as those of the
-        `numpy.arange` function.
-        In particular:
+    def entry(self, index: int) -> LabelsEntry:
+        """get a single entry in these labels, see also :py:func:`Labels.__getitem__`"""
+        return LabelsEntry(self._names, self._values[index, :])
 
-        :param `name`: Name of the resulting labels
-        :param `start`: (Optional) Lower bound of the range. If not specified,
-            it defaults to zero
-        :param `stop`: Upper bound of the range
-        :param `step`: (Optional) Spacing within the range of values. If not
-            specified, it defaults to one
+    def view(self, dimensions: Union[str, Sequence[str]]) -> "Labels":
+        """get a view for the specified columns in these labels, see also
+        :py:func:`Labels.__getitem__`"""
 
-        :returns: A new :py:class:`Labels` object with the provided name and
-            values corresponding to the specified range bounds and step.
+        names = _normalize_names_type(dimensions)
+        indices = []
+        for name in names:
+            try:
+                i = self.names.index(name)
+                indices.append(i)
+            except ValueError:
+                raise ValueError(
+                    f"'{name}' not found in the dimensions of these Labels"
+                )
 
-        >>> from equistore import Labels
-        >>> # Construct a labels object using Labels.arange():
-        >>> labels = Labels.arange("dummy", 7)
-        >>> # Inspect the labels object:
-        >>> print(labels.names)
-        ('dummy',)
-        >>> print(labels)
-        [(0,) (1,) (2,) (3,) (4,) (5,) (6,)]
-        >>> # The same can be accomplished by using keyword arguments
-        >>> # for start/stop/step. For example:
-        >>> labels = Labels.arange("dummy", start=2, stop=6)
-        >>> print(labels)
-        [(2,) (3,) (4,) (5,)]
-        >>> # However, a mixture of the two will not work:
-        >>> labels = Labels.arange("dummy", 2, stop=6)
-        Traceback (most recent call last):
-            ...
-        ValueError: please use either positional or keyword arguments for \
-start/stop/step in `Labels.arange()`, but not a mixture of the two
+        values = self.values[:, indices]
+
+        obj = self.__new__(Labels)
+        obj._lib = _get_library()
+        obj._labels = None
+        obj._names = names
+        obj._values = values
+
+        return obj
+
+    def is_view(self) -> bool:
+        """are these labels a view inside another set of labels?
+
+        A view is created with :py:func:`Labels.__getitem__` or
+        :py:func:`Labels.view`, and does not implement :py:func:`Labels.position`
+        or :py:func:`Labels.__contains__`.
         """
+        return self._labels is None
 
-        args_len = len(args)
-        kwargs_len = len(kwargs)
+    def to_owned(self) -> "Labels":
+        """convert a view to owned labels, which implement the full API"""
+        labels = _create_new_labels(self._lib, self._names, self._values)
+        return Labels._from_eqs_labels_t(labels)
 
-        if args_len == 0 and kwargs_len == 0:
-            raise ValueError(
-                "please provide at least one integer for `Labels.arange()`"
-            )
-        if args_len != 0 and kwargs_len != 0:
-            raise ValueError(
-                "please use either positional or keyword arguments for start/stop/step "
-                "in `Labels.arange()`, but not a mixture of the two"
-            )
-        if args_len == 0:
-            has_args = False
+
+def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
+    """
+    Transform Labels names from any of the accepted types into the canonical
+    representation (list of strings).
+    """
+
+    if isinstance(names, str):
+        if len(names) == 0:
+            names = []
         else:
-            has_args = True
-
-        if has_args:
-            if args_len > 3:
-                raise ValueError(
-                    "the maximum number of integer arguments accepted by "
-                    f"`Labels.arange()` is 3. {args_len} were provided"
+            names = [names]
+    else:
+        names = list(names)
+        for name in names:
+            if not isinstance(name, str):
+                raise TypeError(
+                    f"Labels names must be strings, got {type(name)} instead"
                 )
-            for arg in args:
-                # check for integer arguments, otherwise np.arange will later
-                # return a range of floats
-                if not np.issubdtype(type(arg), np.integer):
-                    raise ValueError(
-                        "all numbers provided to `Labels.arange()` must be integers"
-                    )
-        else:  # kwargs were provided instead of args
-            possible_kwargs = ["start", "stop", "step"]
-            for key in kwargs.keys():
-                if key not in possible_kwargs:
-                    raise ValueError(
-                        "the only valid names for integer arguments to "
-                        "`Labels.arange()` are start, stop and step"
-                    )
-            if "stop" not in kwargs.keys():
-                raise ValueError(
-                    "a `stop` argument must be provided to `Labels.arange()`"
-                )
-            for value in kwargs.values():
-                # check for integer arguments, otherwise np.arange will later
-                # return a range of floats
-                if not np.issubdtype(type(value), np.integer):
-                    raise ValueError(
-                        "all numbers provided to `Labels.arange()` must be integers"
-                    )
 
-        if has_args:
-            labels = Labels(names=[name], values=np.arange(*args).reshape(-1, 1))
-        else:
-            labels = Labels(names=[name], values=np.arange(**kwargs).reshape(-1, 1))
-
-        return labels
+    return names
 
 
-def _eqs_labels_view(array):
-    """Create a new eqs_label_t where the values are a view inside the array"""
+def _create_new_labels(lib, names: List[str], values: np.ndarray) -> eqs_labels_t:
     labels = eqs_labels_t()
-    names = ctypes.ARRAY(ctypes.c_char_p, len(array.names))()
-    for i, n in enumerate(array.names):
-        names[i] = n.encode("utf8")
+
+    c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
+    for i, n in enumerate(names):
+        c_names[i] = n.encode("utf8")
 
     labels.internal_ptr_ = None
-    labels.names = names
-    labels.size = len(array.names)
+    labels.names = c_names
+    labels.size = len(names)
 
-    # We need to make sure the data is C-contiguous to take a pointer to it
-    contiguous = np.ascontiguousarray(array)
-    ptr = contiguous.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-
-    labels.values = ptr
-    labels.count = array.shape[0]
+    labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+    labels.count = values.shape[0]
+    lib.eqs_labels_create(labels)
 
     return labels
 
 
-def _is_namedtuple(x):
-    t = type(x)
-    b = t.__bases__
-    if len(b) != 1 or b[0] != tuple:
-        return False
-    f = getattr(t, "_fields", None)
-    if not isinstance(f, tuple):
-        return False
-    return all(type(n) == str for n in f)
-
-
-def _print_labels(Labels: Labels, header: str, print_limit=10) -> str:
+def _labels_values(labels: eqs_labels_t):
     """
-    Utility function to print a Label in a table-like format, with the number
-    aligned under names of the corresponding column.
+    Get a numpy array corresponding to the values of the given raw labels
 
-    If ``len(Labels) > print_limit`` it will print only the first three columns
-    and the last three.
-
-    The result will look like
-
-    .. code-block:: text
-
-        <header>: ['name_1', 'name_2', 'name_3']
-                     v11       v12       v13
-                     v21       v22       v23
-                     v31       v32       v33
-
-    :param Labels: the input label
-    :param header: header to place before the names of the columns
-    :param print_limit: the maximum number of line you want to print without skipping
+    The numpy array is a view into Rust-owned memory, and only valid as long as
+    the Rust labels itself stays alive.
     """
+    return _ptr_to_const_ndarray(labels.values, (labels.count, labels.size), np.int32)
 
-    if print_limit < 6:
-        print_limit = 6
 
-    ln = len(Labels)
-    width = []
-    s = header + ": ["
-    for i in Labels.names:
-        s += "'{}' ".format(i)
-        width.append(len(i) + 3)
-    if ln > 0:
-        s = s[:-1]  # cancel last " "
-    s += "]\n"
-    header_len = len(header)
-    prev = header_len + 3
-    if ln <= print_limit:
-        for ik in Labels:
-            for iw, i in zip(width, ik):
-                s += _make_padding(value=i, width=iw, prev=prev)
-                prev = iw // 2
-            s += "\n"
-            prev = header_len + 3
+def _print_string_center(output, string, width, last):
+    delta = width - len(string)
+    n_before = delta // 2
+    n_after = delta - n_before
+
+    if last:
+        # don't add spaces after the last element
+        output.write(" " * n_before)
+        output.write(string)
     else:
-        for ik in Labels[:3]:
-            for iw, i in zip(width, ik):
-                s += _make_padding(value=i, width=iw, prev=prev)
-                prev = iw // 2
-            s += "\n"
-            prev = header_len + 3
-        s += "...\n".rjust(prev + width[0] // 2)
-        for ik in Labels[-3:]:
-            for iw, i in zip(width, ik):
-                s += _make_padding(value=i, width=iw, prev=prev)
-                prev = iw // 2
-            s += "\n"
-            prev = header_len + 3
-    return s[:-1]
+        output.write(" " * n_before)
+        output.write(string)
+        output.write(" " * n_after)
 
 
-def _make_padding(value, width: int, prev=0):
-    """
-    Utility to make the padding in the output string
+def _print_labels(
+    names: List[str],
+    values: np.ndarray,
+    max_entries: int,
+    indent: int,
+) -> str:
+    # ================================================================================ #
+    # Step 1: determine the width of all the columns (at least the width of the names  #
+    # plus 2, might be wider for large values)                                         #
+    # ================================================================================ #
 
-    :param value: value to write
-    :param width: width of the name of that column
-    :param prev: additional padding
-    """
-    pad = prev + width // 2
-    return ("{:>" + str(pad) + "}").format(value)
+    # the +2 is here use at least one space on each side of the name
+    widths = [len(n) + 2 for n in names]
+
+    # first set of values to print (before the "...")
+    values_first = []
+    # second set of values to print (after the "...")
+    values_second = []
+
+    n_elements = values.shape[0]
+
+    # first, determine the width of each column by looking through all the
+    # values and names lengths
+    if max_entries < 0 or n_elements <= max_entries:
+        for entry in values:
+            entry_strings = []
+            for i, e in enumerate(entry):
+                element_str = str(e)
+                entry_strings.append(element_str)
+                widths[i] = max(widths[i], len(element_str) + 2)
+
+            values_first.append(entry_strings)
+    else:
+        if max_entries < 2:
+            max_entries = 2
+
+        n_after = max_entries // 2
+        n_before = max_entries - n_after
+
+        # values before the "..."
+        for entry in values[:n_before, :]:
+            entry_strings = []
+            for i, e in enumerate(entry):
+                element_str = str(e)
+                entry_strings.append(element_str)
+                widths[i] = max(widths[i], len(element_str) + 2)
+
+            values_first.append(entry_strings)
+
+        # values after the "..."
+        for entry in values[n_elements - n_after :, :]:
+            entry_strings = []
+            for i, e in enumerate(entry):
+                element_str = str(e)
+                entry_strings.append(element_str)
+                widths[i] = max(widths[i], len(element_str) + 2)
+
+            values_second.append(entry_strings)
+
+    # ================================================================================ #
+    # Step 2: actually create the output string, using io.StringIO to incrementally    #
+    # append to the output                                                             #
+    # ================================================================================ #
+
+    indent_str = " " * indent
+    n_dimensions = values.shape[1]
+
+    output = io.StringIO()
+    for i in range(n_dimensions):
+        last = i == n_dimensions - 1
+        _print_string_center(output, names[i], widths[i], last)
+    output.write("\n")
+
+    for strings in values_first:
+        output.write(indent_str)
+        for i in range(n_dimensions):
+            last = i == n_dimensions - 1
+            _print_string_center(output, strings[i], widths[i], last)
+        output.write("\n")
+
+    if len(values_second) != 0:
+        half_header_widths = sum(widths) // 2
+        if half_header_widths > 3:
+            # 3 characters in '...'
+            half_header_widths -= 3
+
+        output.write(indent_str)
+        output.write((half_header_widths + 1) * " ")
+        output.write("...\n")
+
+        for strings in values_second:
+            output.write(indent_str)
+            for i in range(n_dimensions):
+                last = i == n_dimensions - 1
+                _print_string_center(output, strings[i], widths[i], last)
+            output.write("\n")
+
+    output = output.getvalue()
+    assert output[-1] == "\n"
+    return output[:-1]

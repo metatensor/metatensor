@@ -158,15 +158,13 @@ def test_repr():
   3    3
   4    4
   5    5
-  6    6
-"""
+  6    6"""
     assert labels.print(max_entries=-1) == expected
 
     expected = """ aaa  bbb
   0    0
    ...
-  6    6
-"""
+  6    6"""
     assert labels.print(max_entries=0) == expected
     assert labels.print(max_entries=1) == expected
     assert labels.print(max_entries=2) == expected
@@ -177,16 +175,14 @@ def test_repr():
   2    2
    ...
   5    5
-  6    6
-"""
+  6    6"""
     assert labels.print(max_entries=5) == expected
 
     expected = """ aaa  bbb
      0    0
      1    1
       ...
-     6    6
-"""
+     6    6"""
     assert labels.print(max_entries=3, indent=3) == expected
 
     labels = Labels(names=("aaa", "bbb"), values=torch.IntTensor([[0, 0], [0, 1]]))
@@ -211,11 +207,11 @@ def test_indexing():
     # indexing labels with integer
     entry = labels[0]
     assert entry.names == ["a", "b"]
-    assert torch.all(entry.values == torch.IntTensor([[1, 2]]))
+    assert torch.all(entry.values == torch.IntTensor([1, 2]))
 
     entry = labels[-1]
     assert entry.names == ["a", "b"]
-    assert torch.all(entry.values == torch.IntTensor([[3, 4]]))
+    assert torch.all(entry.values == torch.IntTensor([3, 4]))
 
     # indexing labels errors
     message = "out of range for tensor of size \\[2, 2\\] at dimension 0"

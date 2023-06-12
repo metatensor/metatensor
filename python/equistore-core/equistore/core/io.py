@@ -145,13 +145,15 @@ def _array_to_numpy(array):
 
 
 def _tensor_map_to_dict(tensor_map):
-    result = {"keys": tensor_map.keys}
+    result = {
+        "keys": _labels_to_npz(tensor_map.keys),
+    }
 
     for block_i, (_, block) in enumerate(tensor_map):
         prefix = f"blocks/{block_i}"
 
         result.update(_block_to_dict(block, prefix))
-        result[f"{prefix}/properties"] = block.properties
+        result[f"{prefix}/properties"] = _labels_to_npz(block.properties)
 
     return result
 
@@ -159,9 +161,9 @@ def _tensor_map_to_dict(tensor_map):
 def _block_to_dict(block, prefix):
     result = {}
     result[f"{prefix}/values"] = _array_to_numpy(block.values)
-    result[f"{prefix}/samples"] = block.samples
+    result[f"{prefix}/samples"] = _labels_to_npz(block.samples)
     for i, component in enumerate(block.components):
-        result[f"{prefix}/components/{i}"] = component
+        result[f"{prefix}/components/{i}"] = _labels_to_npz(component)
 
     for parameter, gradient in block.gradients():
         result.update(_block_to_dict(gradient, f"{prefix}/gradients/{parameter}"))
@@ -172,6 +174,11 @@ def _block_to_dict(block, prefix):
 def _labels_from_npz(data):
     names = data.dtype.names
     return Labels(names=names, values=data.view(dtype=np.int32).reshape(-1, len(names)))
+
+
+def _labels_to_npz(labels):
+    dtype = [(name, np.int32) for name in labels.names]
+    return labels.values.view(dtype=dtype).reshape((labels.values.shape[0],))
 
 
 def _read_npz(path):

@@ -133,7 +133,7 @@ def test_repr_zero_samples_gradient(block):
 def test_block_no_components(block):
     assert_equal(block.values, np.full((3, 2), -1.0))
 
-    assert block.samples.names == ("s",)
+    assert block.samples.names == ["s"]
     assert len(block.samples) == 3
     assert tuple(block.samples[0]) == (0,)
     assert tuple(block.samples[1]) == (2,)
@@ -141,7 +141,7 @@ def test_block_no_components(block):
 
     assert len(block.components) == 0
 
-    assert block.properties.names == ("p",)
+    assert block.properties.names == ["p"]
     assert len(block.properties) == 2
     assert tuple(block.properties[0]) == (5,)
     assert tuple(block.properties[1]) == (3,)
@@ -157,7 +157,7 @@ def test_block_with_components(block_components):
 
     assert_equal(block_components.values, np.full((3, 3, 2, 2), -1.0))
 
-    assert block_components.samples.names == ("s",)
+    assert block_components.samples.names == ["s"]
     assert len(block_components.samples) == 3
     assert tuple(block_components.samples[0]) == (0,)
     assert tuple(block_components.samples[1]) == (2,)
@@ -165,19 +165,19 @@ def test_block_with_components(block_components):
 
     assert len(block_components.components) == 2
     component_1 = block_components.components[0]
-    assert component_1.names == ("c_1",)
+    assert component_1.names == ["c_1"]
     assert len(component_1) == 3
     assert tuple(component_1[0]) == (-1,)
     assert tuple(component_1[1]) == (0,)
     assert tuple(component_1[2]) == (1,)
 
     component_2 = block_components.components[1]
-    assert component_2.names == ("c_2",)
+    assert component_2.names == ["c_2"]
     assert len(component_2) == 2
     assert tuple(component_2[0]) == (-4,)
     assert tuple(component_2[1]) == (1,)
 
-    assert block_components.properties.names, ("p",)
+    assert block_components.properties.names, ["p"]
     assert len(block_components.properties) == 2
     assert tuple(block_components.properties[0]) == (5,)
     assert tuple(block_components.properties[1]) == (3,)
@@ -216,7 +216,7 @@ def test_gradients(block_components):
     gradients: None"""
     assert gradient.__repr__() == expected_grad
 
-    assert gradient.samples.names == ("sample", "g")
+    assert gradient.samples.names == ["sample", "g"]
     assert len(gradient.samples) == 2
     assert tuple(gradient.samples[0]) == (0, -2)
     assert tuple(gradient.samples[1]) == (2, 3)
@@ -243,7 +243,7 @@ def test_copy():
     assert id(clone.values) != block_values_id
 
     assert_equal(clone.values, np.full((3, 3, 2), 2.0))
-    assert clone.samples.names == ("s",)
+    assert clone.samples.names == ["s"]
     assert len(clone.samples) == 3
     assert tuple(clone.samples[0]) == (0,)
     assert tuple(clone.samples[1]) == (2,)
@@ -272,14 +272,14 @@ def test_nested_gradients():
     """
     grad_grad = TensorBlock(
         values=np.array([[2.0]]),
-        samples=Labels.arange("sample", 1),
+        samples=Labels.range("sample", 1),
         components=[],
         properties=Labels.single(),
     )
 
     grad = TensorBlock(
         values=np.array([[1.0]]),
-        samples=Labels.arange("sample", 1),
+        samples=Labels.range("sample", 1),
         components=[],
         properties=Labels.single(),
     )
