@@ -261,17 +261,13 @@ class TensorMap:
             if len(self.keys) == 0:
                 raise ValueError("there are no blocks in this TensorMap")
             else:
-                selection_string = (
-                    str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
-                )
                 raise ValueError(
-                    f"Couldn't find any block matching '{selection_string}'"
+                    f"couldn't find any block matching {selection[0].print()}"
                 )
         elif len(matching) > 1:
-            selection_string = str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
             raise ValueError(
-                f"more than one block matched '{selection_string}', "
-                "use `TensorMap.blocks` if you want to get all of them"
+                f"more than one block matched {selection[0].print()}, "
+                "use `TensorMap.blocks` to get all of them"
             )
         else:
             return self._get_block_by_id(matching[0])
@@ -318,9 +314,8 @@ class TensorMap:
             return []
 
         if len(matching) == 0:
-            selection_string = str(selection[0]).split("LabelsEntry(")[1].split(")")[0]
             raise ValueError(
-                f"Couldn't find any block matching the selection '{selection_string}'"
+                f"Couldn't find any block matching '{selection[0].print()}'"
             )
         else:
             return [self._get_block_by_id(i) for i in matching]

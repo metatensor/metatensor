@@ -106,21 +106,13 @@ TorchTensorBlock TensorMapHolder::block(TorchLabelsEntry torch_selection) {
 
     auto matching = tensor_.blocks_matching(selection);
     if (matching.size() == 0) {
-        auto selection_str = torch_selection->__repr__();
-        // remove the starting 'LabelsEntry(' and final ')'
-        selection_str = selection_str.substr(12);
-        selection_str = selection_str.substr(0, selection_str.length() - 1);
         C10_THROW_ERROR(ValueError,
-            "could not find blocks matching the selection '" + selection_str + "'"
+            "could not find blocks matching the selection " + torch_selection->print()
         );
     } else if (matching.size() != 1) {
-        auto selection_str = torch_selection->__repr__();
-        // remove the starting 'LabelsEntry(' and final ')'
-        selection_str = selection_str.substr(12);
-        selection_str = selection_str.substr(0, selection_str.length() - 1);
         C10_THROW_ERROR(ValueError,
-            "got more than one matching block for '" + selection_str +
-            "', use the `blocks` function to select more than one block"
+            "got more than one matching block for " + torch_selection->print() +
+            ", use the `blocks` function to select more than one block"
         );
     }
 

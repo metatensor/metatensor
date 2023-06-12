@@ -51,9 +51,15 @@ class LabelsEntry:
         """
         return self._values
 
-    def __repr__(self) -> str:
+    def print(self) -> str:
+        """
+        print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
+        """
         values = [f"{n}={v}" for n, v in zip(self.names, self.values)]
-        return f"LabelsEntry({', '.join(values)})"
+        return f"({', '.join(values)})"
+
+    def __repr__(self) -> str:
+        return "LabelsEntry" + self.print()
 
     def __len__(self) -> int:
         """number of dimensions in this labels entry"""

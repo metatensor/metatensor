@@ -470,10 +470,10 @@ std::string LabelsHolder::__repr__() const {
 
 /******************************************************************************/
 
-std::string LabelsEntryHolder::__repr__() const {
+std::string LabelsEntryHolder::print() const {
     auto output = std::stringstream();
 
-    output << "LabelsEntry(";
+    output << "(";
     for (size_t i=0; i<this->size(); i++) {
         output << this->names()[i] << "=" << values_[i].item<int32_t>();
 
@@ -484,6 +484,10 @@ std::string LabelsEntryHolder::__repr__() const {
     output << ")";
 
     return output.str();
+}
+
+std::string LabelsEntryHolder::__repr__() const {
+    return "LabelsEntry" + this->print();
 }
 
 int32_t LabelsEntryHolder::operator[](const std::string& name) const {
