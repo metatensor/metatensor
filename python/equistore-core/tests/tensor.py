@@ -53,7 +53,7 @@ def test_shallow_copy_error(tensor):
 
 
 def test_keys(tensor):
-    assert tensor.keys.names == ("key_1", "key_2")
+    assert tensor.keys.names == ["key_1", "key_2"]
     assert len(tensor.keys) == 4
     assert len(tensor) == 4
     assert tuple(tensor.keys[0]) == (0, 0)
@@ -69,32 +69,30 @@ def test_print(tensor):
     """
     repr = tensor.__repr__()
     expected = """TensorMap with 4 blocks
-keys: ['key_1' 'key_2']
-          0       0
-          1       0
-          2       2
-          2       3"""
+keys: key_1  key_2
+        0      0
+        1      0
+        2      2
+        2      3"""
     assert expected == repr
 
 
 def test_print_large(large_tensor):
     _print = large_tensor.__repr__()
     expected = """TensorMap with 12 blocks
-keys: ['key_1' 'key_2']
-          0       0
-          1       0
-          2       2
-       ...
-          1       5
-          2       5
-          3       5"""
+keys: key_1  key_2
+        0      0
+        1      0
+          ...
+        2      5
+        3      5"""
     assert expected == _print
 
 
 def test_labels_names(tensor):
-    assert tensor.sample_names == ("s",)
-    assert tensor.components_names == [("c",)]
-    assert tensor.property_names == ("p",)
+    assert tensor.sample_names == ["s"]
+    assert tensor.components_names == [["c"]]
+    assert tensor.property_names == ["p"]
 
 
 def test_block(tensor):
@@ -140,13 +138,13 @@ def test_block(tensor):
         tensor[tensor.keys[1], 4]
 
     # 0 blocks matching criteria
-    msg = "Couldn't find any block matching the selection 'key_1 = 3'"
+    msg = "Couldn't find any block matching 'key_1=3'"
     with pytest.raises(ValueError, match=msg):
         tensor.block(key_1=3)
 
     # more than one block matching criteria
     msg = (
-        "more than one block matched 'key_2 = 0', use `TensorMap.blocks` "
+        "more than one block matched 'key_2=0', use `TensorMap.blocks` "
         "if you want to get all of them"
     )
     with pytest.raises(ValueError, match=msg):
@@ -189,7 +187,7 @@ def test_iter(tensor):
 def test_keys_to_properties(tensor):
     tensor = tensor.keys_to_properties("key_1")
 
-    assert tensor.keys.names == ("key_2",)
+    assert tensor.keys.names == ["key_2"]
     assert tuple(tensor.keys[0]) == (0,)
     assert tuple(tensor.keys[1]) == (2,)
     assert tuple(tensor.keys[2]) == (3,)
@@ -205,7 +203,7 @@ def test_keys_to_properties(tensor):
     assert len(block.components), 1
     assert tuple(block.components[0][0]), (0,)
 
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties[0]) == (0, 0)
     assert tuple(block.properties[1]) == (1, 3)
     assert tuple(block.properties[2]) == (1, 4)
@@ -240,14 +238,14 @@ def test_keys_to_properties(tensor):
 
     # The new second block contains the old third block
     block = tensor.block(1)
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties[0]) == (2, 0)
 
     assert_equal(block.values, np.full((4, 3, 1), 3.0))
 
     # The new third block contains the old fourth block
     block = tensor.block(2)
-    assert block.properties.names == ("key_1", "p")
+    assert block.properties.names == ["key_1", "p"]
     assert tuple(block.properties[0]) == (2, 0)
 
     assert_equal(block.values, np.full((4, 3, 1), 4.0))
@@ -256,7 +254,7 @@ def test_keys_to_properties(tensor):
 def test_keys_to_samples(tensor):
     tensor = tensor.keys_to_samples("key_2", sort_samples=True)
 
-    assert tensor.keys.names == ("key_1",)
+    assert tensor.keys.names == ["key_1"]
     assert tuple(tensor.keys[0]) == (0,)
     assert tuple(tensor.keys[1]) == (1,)
     assert tuple(tensor.keys[2]) == (2,)
@@ -271,7 +269,7 @@ def test_keys_to_samples(tensor):
     assert_equal(block.values, np.full((3, 1, 1), 1.0))
 
     block = tensor.block(1)
-    assert block.samples.names == ("s", "key_2")
+    assert block.samples.names == ["s", "key_2"]
     assert tuple(block.samples[0]) == (0, 0)
     assert tuple(block.samples[1]) == (1, 0)
     assert tuple(block.samples[2]) == (3, 0)
@@ -281,7 +279,7 @@ def test_keys_to_samples(tensor):
     # The new third block contains the old third and fourth blocks merged
     block = tensor.block(2)
 
-    assert block.samples.names == ("s", "key_2")
+    assert block.samples.names == ["s", "key_2"]
     assert tuple(block.samples[0]) == (0, 2)
     assert tuple(block.samples[1]) == (0, 3)
     assert tuple(block.samples[2]) == (1, 3)
@@ -306,7 +304,7 @@ def test_keys_to_samples(tensor):
     assert_equal(block.values, expected)
 
     gradient = block.gradient("g")
-    assert gradient.samples.names == ("sample", "g")
+    assert gradient.samples.names == ["sample", "g"]
     assert tuple(gradient.samples[0]) == (1, 1)
     assert tuple(gradient.samples[1]) == (4, -2)
     assert tuple(gradient.samples[2]) == (5, 3)
@@ -340,14 +338,14 @@ def test_components_to_properties(tensor):
     tensor = tensor.components_to_properties("c")
 
     block = tensor.block(0)
-    assert block.samples.names == ("s",)
+    assert block.samples.names == ["s"]
     assert tuple(block.samples[0]) == (0,)
     assert tuple(block.samples[1]) == (2,)
     assert tuple(block.samples[2]) == (4,)
 
     assert block.components == []
 
-    assert block.properties.names == ("c", "p")
+    assert block.properties.names == ["c", "p"]
     assert tuple(block.properties[0]) == (0, 0)
 
     block = tensor.block(3)
@@ -359,7 +357,7 @@ def test_components_to_properties(tensor):
 
     assert block.components == []
 
-    assert block.properties.names == ("c", "p")
+    assert block.properties.names == ["c", "p"]
     assert tuple(block.properties[0]) == (0, 0)
     assert tuple(block.properties[1]) == (1, 0)
     assert tuple(block.properties[2]) == (2, 0)
@@ -368,7 +366,7 @@ def test_components_to_properties(tensor):
 def test_empty_tensor():
     empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])
 
-    assert empty_tensor.keys.names == ("key",)
+    assert empty_tensor.keys.names == ["key"]
 
     assert empty_tensor.sample_names == tuple()
     assert empty_tensor.components_names == []

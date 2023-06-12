@@ -33,8 +33,7 @@ keys: key_1  key_2
         0      0
         1      0
         2      2
-        2      3
-"""
+        2      3"""
     assert expected == str(tensor)
     assert expected == tensor.print(6)
 
@@ -46,8 +45,7 @@ keys: key_1  key_2
         1      0
           ...
         2      5
-        3      5
-"""
+        3      5"""
     assert expected == str(large_tensor)
 
     expected = """TensorMap with 12 blocks
@@ -58,8 +56,7 @@ keys: key_1  key_2
           ...
         1      5
         2      5
-        3      5
-"""
+        3      5"""
     assert expected == large_tensor.print(6)
 
 

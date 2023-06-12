@@ -46,7 +46,7 @@ TEST_CASE("Labels") {
     SECTION("print") {
         auto labels = LabelsHolder::create({"aaa", "bbb"}, {{1, 2}, {3, 4}});
 
-        auto expected = " aaa  bbb\n     1    2\n     3    4\n";
+        auto expected = " aaa  bbb\n     1    2\n     3    4";
         CHECK(labels->print(-1, 3) == expected);
     }
 

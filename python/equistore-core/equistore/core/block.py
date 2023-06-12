@@ -229,29 +229,29 @@ class TensorBlock:
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 5), 1.0),
         ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
-        ...     components=[Labels.arange("component", 1)],
-        ...     properties=Labels.arange("property", 5),
+        ...     components=[Labels.range("component", 1)],
+        ...     properties=Labels.range("property", 5),
         ... )
         >>> positions_gradient = TensorBlock(
         ...     values=np.full((2, 3, 1, 5), 11.0),
         ...     samples=Labels(["sample", "atom"], np.array([[0, 2], [2, 3]])),
         ...     components=[
-        ...         Labels.arange("direction", 3),
-        ...         Labels.arange("component", 1),
+        ...         Labels.range("direction", 3),
+        ...         Labels.range("component", 1),
         ...     ],
-        ...     properties=Labels.arange("property", 5),
+        ...     properties=Labels.range("property", 5),
         ... )
 
         >>> block.add_gradient("positions", positions_gradient)
         >>> cell_gradient = TensorBlock(
         ...     values=np.full((2, 3, 3, 1, 5), 15.0),
-        ...     samples=Labels.arange("sample", 2),
+        ...     samples=Labels.range("sample", 2),
         ...     components=[
-        ...         Labels.arange("direction_1", 3),
-        ...         Labels.arange("direction_2", 3),
-        ...         Labels.arange("component", 1),
+        ...         Labels.range("direction_1", 3),
+        ...         Labels.range("direction_2", 3),
+        ...         Labels.range("component", 1),
         ...     ],
-        ...     properties=Labels.arange("property", 5),
+        ...     properties=Labels.range("property", 5),
         ... )
         >>> block.add_gradient("cell", cell_gradient)
 
@@ -303,14 +303,14 @@ class TensorBlock:
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 1), 1.0),
         ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
-        ...     components=[Labels.arange("component", 1)],
-        ...     properties=Labels.arange("property", 1),
+        ...     components=[Labels.range("component", 1)],
+        ...     properties=Labels.range("property", 1),
         ... )
         >>> gradient = TensorBlock(
         ...     values=np.full((2, 1, 1), 11.0),
         ...     samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
-        ...     components=[Labels.arange("component", 1)],
-        ...     properties=Labels.arange("property", 1),
+        ...     components=[Labels.range("component", 1)],
+        ...     properties=Labels.range("property", 1),
         ... )
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
