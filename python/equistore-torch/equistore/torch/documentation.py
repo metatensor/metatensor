@@ -48,6 +48,11 @@ class LabelsEntry:
         32-bit integers.
         """
 
+    def print(self) -> str:
+        """
+        print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
+        """
+
     def __len__(self) -> int:
         """number of dimensions in this labels entry"""
 

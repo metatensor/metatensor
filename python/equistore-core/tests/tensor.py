@@ -138,14 +138,14 @@ def test_block(tensor):
         tensor[tensor.keys[1], 4]
 
     # 0 blocks matching criteria
-    msg = "Couldn't find any block matching 'key_1=3'"
+    msg = "couldn't find any block matching \\(key_1=3\\)"
     with pytest.raises(ValueError, match=msg):
         tensor.block(key_1=3)
 
     # more than one block matching criteria
     msg = (
-        "more than one block matched 'key_2=0', use `TensorMap.blocks` "
-        "if you want to get all of them"
+        "more than one block matched \\(key_2=0\\), use `TensorMap.blocks` "
+        "to get all of them"
     )
     with pytest.raises(ValueError, match=msg):
         tensor.block(key_2=0)

@@ -88,13 +88,13 @@ def test_block(tensor):
     assert torch.all(block.values == torch.full((3, 1, 1), 1.0))
 
     # 0 blocks matching criteria
-    msg = "could not find blocks matching the selection 'key_1=4, key_2=3'"
+    msg = "could not find blocks matching the selection \\(key_1=4, key_2=3\\)"
     with pytest.raises(ValueError, match=msg):
         tensor.block({"key_2": 3, "key_1": 4})
 
     # more than one block matching criteria
     msg = (
-        "got more than one matching block for 'key_2=0', use the `blocks` "
+        "got more than one matching block for \\(key_2=0\\), use the `blocks` "
         "function to select more than one block"
     )
     with pytest.raises(ValueError, match=msg):

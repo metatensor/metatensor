@@ -143,6 +143,7 @@ def test_repr():
     expected = "LabelsEntry(aaa=1, bbb=2)"
     assert str(labels[0]) == expected
     # assert repr(labels[0]) == expected
+    assert labels[0].print() == "(aaa=1, bbb=2)"
 
     labels = Labels(
         names=("aaa", "bbb"),
@@ -407,6 +408,9 @@ class LabelsEntryWrap:
 
     def values(self) -> Tensor:
         return self._c.values
+
+    def _print(self) -> str:
+        return self._c.print()
 
 
 def test_script():

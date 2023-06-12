@@ -53,6 +53,7 @@ TORCH_LIBRARY(equistore, m) {
         )
         .def_property("names", &LabelsEntryHolder::names)
         .def_property("values", &LabelsEntryHolder::values)
+        .def("print", &LabelsEntryHolder::print)
         ;
 
     m.class_<LabelsHolder>("Labels")

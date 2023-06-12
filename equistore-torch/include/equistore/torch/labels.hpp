@@ -221,6 +221,9 @@ public:
     /// implementation of __getitem__, forwarding to one of the operator[]
     int64_t getitem(torch::IValue index) const;
 
+    /// Print this entry as a named tuple (i.e. `(key=value, key=value)`).
+    std::string print() const;
+
     /// Implementation of __repr__ for Python
     std::string __repr__() const;
 
