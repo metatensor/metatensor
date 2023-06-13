@@ -16,38 +16,38 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_3 = TensorBlock(
             values=np.array([[1.5, 2.1], [6.7, 10.2]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_4 = TensorBlock(
             values=np.array([[10, 200.8], [3.76, 4.432], [545, 26]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
 
         block_res_1 = TensorBlock(
             values=np.array([[1.5, 4.2], [20.1, 51.0]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_res_2 = TensorBlock(
             values=np.array([[10.0, 401.6], [11.28, 17.728], [2725.0, 156.0]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         A = TensorMap(keys, [block_1, block_2])
@@ -67,14 +67,14 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[14, 24], [43, 45]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_1.add_gradient(
             parameter="g",
             gradient=TensorBlock(
                 values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-                samples=Labels.arange("sample", 2),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 2),
+                components=[Labels.range("c", 2)],
                 properties=block_1.properties,
             ),
         )
@@ -83,7 +83,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[15, 25], [53, 54], [55, 65]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_2.add_gradient(
             parameter="g",
@@ -91,8 +91,8 @@ class TestMultiply(unittest.TestCase):
                 values=np.array(
                     [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
                 ),
-                samples=Labels.arange("sample", 3),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 3),
+                components=[Labels.range("c", 2)],
                 properties=block_2.properties,
             ),
         )
@@ -101,14 +101,14 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[1.45, 2.41], [6.47, 10.42]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_3.add_gradient(
             parameter="g",
             gradient=TensorBlock(
                 values=np.array([[[1, 0.1], [2, 0.2]], [[3, 0.3], [4.5, 0.4]]]),
-                samples=Labels.arange("sample", 2),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 2),
+                components=[Labels.range("c", 2)],
                 properties=block_3.properties,
             ),
         )
@@ -117,7 +117,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[105, 200.58], [3.756, 4.4325], [545.5, 26.05]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_4.add_gradient(
             parameter="g",
@@ -129,8 +129,8 @@ class TestMultiply(unittest.TestCase):
                         [[1.2, 1.3], [1.4, 1.5]],
                     ]
                 ),
-                samples=Labels.arange("sample", 3),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 3),
+                components=[Labels.range("c", 2)],
                 properties=block_4.properties,
             ),
         )
@@ -139,7 +139,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[20.3, 57.84], [278.21, 468.9]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_res_1.add_gradient(
             parameter="g",
@@ -147,8 +147,8 @@ class TestMultiply(unittest.TestCase):
                 values=np.array(
                     [[[22.7, 4.81], [38.15, 9.62]], [[180.76, 44.76], [251.73, 59.68]]]
                 ),
-                samples=Labels.arange("sample", 2),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 2),
+                components=[Labels.range("c", 2)],
                 properties=block_res_1.properties,
             ),
         )
@@ -157,7 +157,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[1575.0, 5014.5], [199.068, 239.355], [30002.5, 1693.25]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_res_2.add_gradient(
             parameter="g",
@@ -169,8 +169,8 @@ class TestMultiply(unittest.TestCase):
                         [[6612.0, 423.15], [7714.0, 488.25]],
                     ]
                 ),
-                samples=Labels.arange("sample", 3),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 3),
+                components=[Labels.range("c", 2)],
                 properties=block_res_2.properties,
             ),
         )
@@ -193,14 +193,14 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_1.add_gradient(
             parameter="g",
             gradient=TensorBlock(
                 values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
-                samples=Labels.arange("sample", 2),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 2),
+                components=[Labels.range("c", 2)],
                 properties=block_1.properties,
             ),
         )
@@ -209,7 +209,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[11, 12], [13, 14], [15, 16]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_2.add_gradient(
             parameter="g",
@@ -217,8 +217,8 @@ class TestMultiply(unittest.TestCase):
                 values=np.array(
                     [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
                 ),
-                samples=Labels.arange("sample", 3),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 3),
+                components=[Labels.range("c", 2)],
                 properties=block_2.properties,
             ),
         )
@@ -227,7 +227,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[5.1, 10.2], [15.3, 25.5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_res_1.add_gradient(
             parameter="g",
@@ -235,8 +235,8 @@ class TestMultiply(unittest.TestCase):
                 values=np.array(
                     [[[30.6, 5.1], [35.7, 10.2]], [[40.8, 15.3], [45.9, 20.4]]]
                 ),
-                samples=Labels.arange("sample", 2),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 2),
+                components=[Labels.range("c", 2)],
                 properties=block_res_1.properties,
             ),
         )
@@ -245,7 +245,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[56.1, 61.2], [66.3, 71.4], [76.5, 81.6]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_res_2.add_gradient(
             parameter="g",
@@ -257,8 +257,8 @@ class TestMultiply(unittest.TestCase):
                         [[61.2, 66.3], [71.4, 76.5]],
                     ]
                 ),
-                samples=Labels.arange("sample", 3),
-                components=[Labels.arange("c", 2)],
+                samples=Labels.range("sample", 3),
+                components=[Labels.range("c", 2)],
                 properties=block_res_2.properties,
             ),
         )
@@ -280,7 +280,7 @@ class TestMultiply(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
         A = TensorMap(keys, [block_1])

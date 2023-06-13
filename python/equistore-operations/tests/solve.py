@@ -16,13 +16,13 @@ class TestSolve(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),

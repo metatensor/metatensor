@@ -113,14 +113,20 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
 
         values_grad = []
         for i_sample in range(len(block_1.samples)):
-            i_sample_grad_1 = np.where(gradient_1.samples["sample"] == i_sample)[0]
-            i_sample_grad_2 = np.where(gradient_2.samples["sample"] == i_sample)[0]
-            values_grad.append(
+            samples_1 = gradient_1.samples["sample"].values
+            i_sample_grad_1 = np.where(samples_1 == i_sample)[0]
+
+            samples_2 = gradient_2.samples["sample"].values
+            i_sample_grad_2 = np.where(samples_2 == i_sample)[0]
+
+            value_grad = (
                 -block_1.values[i_sample]
                 * gradient_2.values[i_sample_grad_2]
                 / block_2.values[i_sample] ** 2
-                + gradient_1.values[i_sample_grad_1] / block_2.values[i_sample]
             )
+            value_grad += gradient_1.values[i_sample_grad_1] / block_2.values[i_sample]
+            values_grad.append(value_grad)
+
         values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(

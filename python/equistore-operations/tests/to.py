@@ -28,7 +28,7 @@ def tensor():
     block1 = equistore.block_from_array(values1)
     values2 = np.arange(100, dtype=np.float64).reshape(10, 5, 2)
     block2 = equistore.block_from_array(values2)
-    tensor = TensorMap(keys=Labels.arange("dummy", 2), blocks=[block1, block2])
+    tensor = TensorMap(keys=Labels.range("dummy", 2), blocks=[block1, block2])
     return tensor
 
 

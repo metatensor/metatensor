@@ -40,9 +40,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
     ...     blocks=[
     ...         TensorBlock(
-    ...             samples=Labels.arange("sample", 2),
+    ...             samples=Labels.range("sample", 2),
     ...             components=[],
-    ...             properties=Labels.arange("properties_for_regression", 2),
+    ...             properties=Labels.range("properties_for_regression", 2),
     ...             values=covariance,
     ...         )
     ...     ],
@@ -51,9 +51,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
     ...     blocks=[
     ...         TensorBlock(
-    ...             samples=Labels.arange("sample", 2),
+    ...             samples=Labels.range("sample", 2),
     ...             components=[],
-    ...             properties=Labels.arange("property_to_regress", 1),
+    ...             properties=Labels.range("property_to_regress", 1),
     ...             values=y_regression,
     ...         )
     ...     ],

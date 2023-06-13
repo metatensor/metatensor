@@ -78,7 +78,7 @@ def test_join_properties_metadata(tensor):
 
     # test property names
     names = tensor.block(0).properties.names
-    assert joined_tensor.block(0).properties.names == ("tensor",) + names
+    assert joined_tensor.block(0).properties.names == ["tensor"] + names
 
     # test property values
     tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
@@ -92,16 +92,21 @@ def test_join_properties_metadata(tensor):
 
 def test_join_properties_values(tensor):
     """Test values for joining along `properties`"""
-    slice_1 = equistore.slice(
-        tensor, axis="properties", labels=tensor[0].properties[:1]
+    first_property = Labels(
+        tensor[0].properties.names,
+        tensor[0].properties.values[:1],
     )
-    slice_2 = equistore.slice(
-        tensor, axis="properties", labels=tensor[0].properties[1:]
+    slice_1 = equistore.slice(tensor, axis="properties", labels=first_property)
+
+    other_properties = Labels(
+        tensor[0].properties.names,
+        tensor[0].properties.values[1:],
     )
+    slice_2 = equistore.slice(tensor, axis="properties", labels=other_properties)
 
     joined_tensor = equistore.join([slice_1, slice_2], axis="properties")
 
-    # We can not use #equistore.equal_raise for the checks because the meta data
+    # We can not use `equistore.equal_raise` for the checks because the meta data
     # differs by the tensor entry.
     for key, block in tensor:
         joined_block = joined_tensor[key]
@@ -120,7 +125,7 @@ def test_join_properties_with_same_property_names(tensor):
 
     # test property names
     names = tensor.block(0).properties.names
-    assert joined_tensor.block(0).properties.names == ("tensor",) + names
+    assert joined_tensor.block(0).properties.names == ["tensor"] + names
 
     # test property values
     tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
@@ -135,9 +140,9 @@ def test_join_properties_with_same_property_names(tensor):
 def test_join_properties_with_different_property_names():
     """Test join function with tensors of different `property` names"""
 
-    keys = Labels.arange("frame_a", 1)
+    keys = Labels.range("frame_a", 1)
     values = np.zeros([1, 1])
-    samples = Labels.arange("idx", 1)
+    samples = Labels.range("idx", 1)
 
     tensor_map_a = TensorMap(
         keys=keys,
@@ -146,7 +151,7 @@ def test_join_properties_with_different_property_names():
                 values=values,
                 samples=samples,
                 components=[],
-                properties=Labels.arange("p_1", 1),
+                properties=Labels.range("p_1", 1),
             )
         ],
     )
@@ -158,13 +163,13 @@ def test_join_properties_with_different_property_names():
                 values=np.zeros([1, 1]),
                 samples=samples,
                 components=[],
-                properties=Labels.arange("p_2", 1),
+                properties=Labels.range("p_2", 1),
             )
         ],
     )
 
     joined_tensor = equistore.join([tensor_map_a, tensor_map_b], axis="properties")
-    assert joined_tensor.property_names == ("tensor", "property")
+    assert joined_tensor.property_names == ["tensor", "property"]
     assert len(joined_tensor[0].properties) == 2
 
 
@@ -185,12 +190,21 @@ def test_join_samples_values(tensor):
     """Test values for joining along `samples`"""
     keys = Labels(
         names=tensor.keys.names,
-        values=np.array(tensor.keys[0].tolist()).reshape(1, -1),
+        values=tensor.keys.values[:1],
     )
 
     tensor = TensorMap(keys, [tensor[0].copy()])
-    slice_1 = equistore.slice(tensor, axis="samples", labels=tensor[0].samples[:1])
-    slice_2 = equistore.slice(tensor, axis="samples", labels=tensor[0].samples[1:])
+    first_samples = Labels(
+        tensor[0].samples.names,
+        tensor[0].samples.values[:1],
+    )
+    slice_1 = equistore.slice(tensor, axis="samples", labels=first_samples)
+
+    other_samples = Labels(
+        tensor[0].samples.names,
+        tensor[0].samples.values[1:],
+    )
+    slice_2 = equistore.slice(tensor, axis="samples", labels=other_samples)
 
     joined_tensor = equistore.join([slice_1, slice_2], axis="samples")
 
@@ -208,16 +222,16 @@ def test_join_samples_values(tensor):
 
 def test_join_samples_with_different_sample_names():
     """Test join function raises an error with different `sample` names"""
-    keys = Labels.arange("frame_a", 1)
+    keys = Labels.range("frame_a", 1)
     values = np.zeros([1, 1])
-    properties = Labels.arange("idx", 1)
+    properties = Labels.range("idx", 1)
 
     tensor_map_a = TensorMap(
         keys=keys,
         blocks=[
             TensorBlock(
                 values=values,
-                samples=Labels.arange("samp1", 1),
+                samples=Labels.range("samp1", 1),
                 components=[],
                 properties=properties,
             )
@@ -229,7 +243,7 @@ def test_join_samples_with_different_sample_names():
         blocks=[
             TensorBlock(
                 values=np.zeros([1, 1]),
-                samples=Labels.arange("samp2", 1),
+                samples=Labels.range("samp2", 1),
                 components=[],
                 properties=properties,
             )

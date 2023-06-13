@@ -78,12 +78,12 @@ def join(tensors: List[TensorMap], axis: str):
             "sample names will loose information and is not supported."
         )
 
-    keys_names = ("tensor",) + tensors[0].keys.names
+    keys_names = ["tensor"] + tensors[0].keys.names
     keys_values = []
     blocks = []
 
     for i, tensor in enumerate(tensors):
-        keys_values += [(i,) + value for value in tensor.keys.tolist()]
+        keys_values += [[i] + value.tolist() for value in tensor.keys.values]
 
         for _, block in tensor:
             # We would already raised an error if `axis == "samples"`. Therefore, we can
@@ -91,7 +91,7 @@ def join(tensors: List[TensorMap], axis: str):
             if names_are_same:
                 properties = block.properties
             else:
-                properties = Labels.arange("property", len(block.properties))
+                properties = Labels.range("property", len(block.properties))
 
             new_block = TensorBlock(
                 values=block.values,

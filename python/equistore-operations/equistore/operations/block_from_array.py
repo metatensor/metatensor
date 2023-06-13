@@ -50,13 +50,13 @@ def block_from_array(array: equistore.core.data.Array) -> TensorBlock:
         )
 
     components = [
-        Labels.arange(f"component_{component_index+1}", axis_size)
+        Labels.range(f"component_{component_index+1}", axis_size)
         for component_index, axis_size in enumerate(shape[1:-1])
     ]
 
     return TensorBlock(
         values=array,
-        samples=Labels.arange("sample", shape[0]),
+        samples=Labels.range("sample", shape[0]),
         components=components,
-        properties=Labels.arange("property", shape[-1]),
+        properties=Labels.range("property", shape[-1]),
     )

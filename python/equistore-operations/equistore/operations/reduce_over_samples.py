@@ -91,7 +91,7 @@ def _reduce_over_samples_block(
     ]
 
     # checks if it is a zero sample TensorBlock
-    if block.samples.shape[0] == 0:
+    if len(block.samples) == 0:
         # Here is different from the general case where we use Labels.single() if
         # if len(remaining_samples) == 0
         # Labels.single() cannot be used because Labels.single() has not
@@ -130,11 +130,9 @@ def _reduce_over_samples_block(
 
         return result_block
 
-    # reshaping the samples in a 2D array
-    samples = block_samples.view(dtype=np.int32).reshape(block_samples.shape[0], -1)
     # get which samples will still be there after reduction
     new_samples, index = np.unique(
-        samples[:, sample_selected], return_inverse=True, axis=0
+        block_samples.values[:, sample_selected], return_inverse=True, axis=0
     )
 
     block_values = block.values
@@ -195,7 +193,7 @@ def _reduce_over_samples_block(
             raise NotImplementedError("gradients of gradients are not supported")
 
         # check if all gradients are zeros
-        if gradient.samples.shape[0] == 0:
+        if len(gradient.samples) == 0:
             # The gradients does not change because, if they are all zeros, the
             # gradients after reducing operation is still zero.
 
@@ -215,11 +213,7 @@ def _reduce_over_samples_block(
 
         gradient_samples = gradient.samples
         # here we need to copy because we want to modify the samples array
-        samples = (
-            gradient_samples.view(dtype=np.int32)
-            .reshape(gradient_samples.shape[0], -1)
-            .copy()
-        )
+        samples = gradient_samples.values.copy()
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
@@ -391,11 +385,15 @@ def sum_over_samples_block(
     ...         ),
     ...     ),
     ...     components=[],
-    ...     properties=Labels.arange("properties", 3),
+    ...     properties=Labels.range("properties", 3),
     ... )
     >>> block_sum = sum_over_samples_block(block, sample_names="center")
     >>> print(block_sum.samples)
-    [(0,) (1,)]
+    Labels(
+        structure
+            0
+            1
+    )
     >>> print(block_sum.values)
     [[ 4  7 10]
      [17 19 21]]
@@ -453,7 +451,7 @@ def sum_over_samples(
     ...         ),
     ...     ),
     ...     components=[],
-    ...     properties=Labels.arange("properties", 3),
+    ...     properties=Labels.range("properties", 3),
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
@@ -466,7 +464,11 @@ def sum_over_samples(
         properties (3): ['properties']
         gradients: None
     >>> print(tensor_sum.block(0).samples)
-    [(0,) (1,)]
+    Labels(
+        structure
+            0
+            1
+    )
     >>> print(tensor_sum.block(0).values)
     [[ 4  7 10]
      [17 19 21]]

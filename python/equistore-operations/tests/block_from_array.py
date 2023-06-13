@@ -17,14 +17,14 @@ def test_without_components():
     block = equistore.block_from_array(array)
     assert block.values is array
 
-    assert block.samples.names == ("sample",)
+    assert block.samples.names == ["sample"]
     np.testing.assert_equal(
-        block.samples.asarray(), np.arange(array.shape[0]).reshape((-1, 1))
+        block.samples.values, np.arange(array.shape[0]).reshape((-1, 1))
     )
 
-    assert block.properties.names == ("property",)
+    assert block.properties.names == ["property"]
     np.testing.assert_equal(
-        block.properties.asarray(), np.arange(array.shape[1]).reshape((-1, 1))
+        block.properties.values, np.arange(array.shape[1]).reshape((-1, 1))
     )
 
 
@@ -34,19 +34,19 @@ def test_with_components():
     block = equistore.block_from_array(array)
     assert block.values is array
 
-    assert block.samples.names == ("sample",)
+    assert block.samples.names == ["sample"]
     np.testing.assert_equal(
-        block.samples.asarray(), np.arange(array.shape[0]).reshape((-1, 1))
+        block.samples.values, np.arange(array.shape[0]).reshape((-1, 1))
     )
 
     assert len(block.components) == 1
     component = block.components[0]
-    assert component.names == ("component_1",)
+    assert component.names == ["component_1"]
     np.testing.assert_equal(
-        component.asarray(), np.arange(array.shape[1]).reshape((-1, 1))
+        component.values, np.arange(array.shape[1]).reshape((-1, 1))
     )
 
-    assert block.properties.names == ("property",)
+    assert block.properties.names == ["property"]
     np.testing.assert_equal(
-        block.properties.asarray(), np.arange(array.shape[2]).reshape((-1, 1))
+        block.properties.values, np.arange(array.shape[2]).reshape((-1, 1))
     )

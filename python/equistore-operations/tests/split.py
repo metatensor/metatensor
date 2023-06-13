@@ -6,12 +6,30 @@ import numpy as np
 
 import equistore
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations._utils import _labels_equal
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 TEST_FILE_1 = "qm7-spherical-expansion.npz"
 TEST_FILE_2 = "qm7-power-spectrum.npz"
+
+
+def _equivalent_labels(a: Labels, b: Labels):
+    """
+    Check that two labels are equivalent, i.e. contain the same values, potentially in a
+    different order.
+    """
+
+    if a.names != b.names:
+        return False
+
+    if len(a) != len(b):
+        return False
+
+    for entry in a:
+        if entry not in b:
+            return False
+
+    return True
 
 
 class TestSplitSamples(unittest.TestCase):
@@ -46,7 +64,7 @@ class TestSplitSamples(unittest.TestCase):
             actual_idxs = _unique_indices(
                 split_block, axis="samples", names=target_names
             )
-            self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
+            self.assertTrue(_equivalent_labels(actual_idxs, target_idxs))
             # No properties split
             self.assertEqual(len(split_block.properties), p_size)
             # No components split
@@ -71,11 +89,14 @@ class TestSplitSamples(unittest.TestCase):
                     np.max(split_gradient.samples["sample"]),
                     split_block.values.shape[0],
                 )
+
                 # other columns in the gradient samples have been sliced correctly
-                gradient_sample_filter = samples_filter[gradient.samples["sample"]]
-                if len(gradient.samples.names) > 0:
-                    expected = gradient.samples.asarray()[gradient_sample_filter, 1:]
-                    sliced_gradient_samples = split_gradient.samples.asarray()[:, 1:]
+
+                gradient_samples_sample = gradient.samples["sample"].values[:, 0]
+                gradient_sample_filter = samples_filter[gradient_samples_sample]
+                if len(gradient.samples.names) > 1:
+                    expected = gradient.samples.values[gradient_sample_filter, 1:]
+                    sliced_gradient_samples = split_gradient.samples.values[:, 1:]
                     self.assertTrue(np.all(sliced_gradient_samples == expected))
 
                 # No splitting of components
@@ -83,7 +104,7 @@ class TestSplitSamples(unittest.TestCase):
                     len(gradient.components), len(split_gradient.components)
                 )
                 for sliced_c, c in zip(split_gradient.components, gradient.components):
-                    self.assertTrue(np.all(sliced_c == c))
+                    self.assertEqual(sliced_c, c)
                 expected = gradient.values[gradient_sample_filter]
                 self.assertTrue(np.all(split_gradient.values == expected))
 
@@ -267,7 +288,7 @@ class TestSplitProperties(unittest.TestCase):
             actual_idxs = _unique_indices(
                 split_block, axis="properties", names=target_names
             )
-            self.assertTrue(_labels_equal(actual_idxs, target_idxs, exact_order=False))
+            self.assertTrue(_equivalent_labels(actual_idxs, target_idxs))
             # No samples split
             self.assertEqual(len(split_block.samples), s_size)
             # No components split

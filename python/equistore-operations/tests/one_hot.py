@@ -70,7 +70,9 @@ def test_wrong_name():
         values=np.array([[0, 6], [1, 1], [2, 1], [3, 1], [4, 6], [5, 1]]),
     )
     possible_labels = Labels(names=["not_present"], values=np.array([[1], [6], [8]]))
-    with pytest.raises(ValueError, match="dimension provided was not found"):
+
+    message = "'not_present' not found in the dimensions of these Labels"
+    with pytest.raises(ValueError, match=message):
         equistore.one_hot(original_labels, possible_labels)
 
 
@@ -82,8 +84,7 @@ def test_missing_value():
         values=np.array([[0, 6], [1, 1], [2, 1], [3, 1], [4, 6], [5, 1]]),
     )
     possible_labels = Labels(names=["species"], values=np.array([[1], [8]]))
-    with pytest.raises(
-        ValueError,
-        match="some values not present in the dimension were found in the labels",
-    ):
+
+    message = "species=6 is present in the labels, but was not found in the dimension"
+    with pytest.raises(ValueError, match=message):
         equistore.one_hot(original_labels, possible_labels)

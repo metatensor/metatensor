@@ -170,45 +170,37 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced
         input.
     """
-    # Store current values for later modification
-    new_values = block.values
-    if axis == "samples":
-        new_samples = block.samples
-    else:
-        assert axis == "properties"
-        new_properties = block.properties
 
-    # Generate arrays of bools indicating which samples indices to keep upon slicing.
     if axis == "samples":
-        all_samples = block.samples[list(labels.names)].tolist()
-        set_samples_to_slice = set(labels.tolist())
-        samples_filter = np.array(
-            [sample in set_samples_to_slice for sample in all_samples]
+        # only keep the same names as `labels`
+        all_samples = block.samples[labels.names]
+        # create an arrays of bools indicating which samples indices to keep
+        samples_mask = np.array([s in labels for s in all_samples])
+        new_values = block.values[samples_mask]
+        new_samples = Labels(
+            block.samples.names,
+            block.samples.values[samples_mask],
         )
-        new_values = new_values[samples_filter]
-        new_samples = new_samples[samples_filter]
 
-    # Generate array of bools indicating which properties indices to keep upon slicing.
-    else:
-        assert axis == "properties"
-        all_properties = block.properties[list(labels.names)].tolist()
-        set_properties_to_slice = set(labels.tolist())
-        properties_filter = np.array(
-            [prop in set_properties_to_slice for prop in all_properties]
-        )
-        new_values = new_values[..., properties_filter]
-        new_properties = new_properties[properties_filter]
-
-    # Create a new TensorBlock, sliced along the samples and properties dimension.
-    if axis == "samples":
         new_block = TensorBlock(
             values=new_values,
             samples=new_samples,
             components=block.components,
             properties=block.properties,
         )
+
     else:
         assert axis == "properties"
+        # only keep the same names as `labels`
+        all_properties = block.properties[list(labels.names)]
+        # create an arrays of bools indicating which samples indices to keep
+        properties_mask = np.array([p in labels for p in all_properties])
+        new_values = block.values[..., properties_mask]
+        new_properties = Labels(
+            block.properties.names,
+            block.properties.values[properties_mask],
+        )
+
         new_block = TensorBlock(
             values=new_values,
             samples=block.samples,
@@ -221,9 +213,9 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     if axis == "samples":
         # sample_map contains at position old_sample the index of the
         # corresponding new sample
-        sample_map = np.full(shape=len(samples_filter), fill_value=-1)
+        sample_map = np.full(shape=len(samples_mask), fill_value=-1)
         last = 0
-        for i, picked in enumerate(samples_filter):
+        for i, picked in enumerate(samples_mask):
             if picked:
                 sample_map[i] = last
                 last += 1
@@ -233,33 +225,28 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
         if len(gradient.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 
-        new_grad_values = gradient.values
-        new_grad_samples = gradient.samples
-
         # Create a samples filter for the Gradient TensorBlock
         if axis == "samples":
-            grad_samples_filter = samples_filter[gradient.samples["sample"]]
-            new_grad_samples = new_grad_samples[grad_samples_filter]
+            grad_samples_mask = samples_mask[gradient.samples["sample"].values[:, 0]]
+            new_grad_samples = gradient.samples.values[grad_samples_mask]
 
             if new_grad_samples.shape[0] != 0:
                 # update the "sample" column of the gradient samples
                 # to refer to the new samples
-                new_grad_samples = (
-                    new_grad_samples.view(dtype=np.int32)
-                    .reshape(new_grad_samples.shape[0], -1)
-                    .copy()
-                )
                 new_grad_samples[:, 0] = sample_map[new_grad_samples[:, 0]]
 
                 new_grad_samples = Labels(
                     names=gradient.samples.names,
                     values=new_grad_samples,
                 )
+            else:
+                new_grad_samples = Labels.empty(names=gradient.samples.names)
 
-            new_grad_values = new_grad_values[grad_samples_filter]
+            new_grad_values = gradient.values[grad_samples_mask]
         else:
             assert axis == "properties"
-            new_grad_values = new_grad_values[..., properties_filter]
+            new_grad_values = gradient.values[..., properties_mask]
+            new_grad_samples = gradient.samples
 
         # Add sliced gradient to the TensorBlock
         new_block.add_gradient(
