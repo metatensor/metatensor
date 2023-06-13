@@ -37,16 +37,16 @@ def zeros_like(
 
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
-    ...     samples=Labels.arange("sample", 4),
+    ...     samples=Labels.range("sample", 4),
     ...     components=[],
-    ...     properties=Labels.arange("property", 3),
+    ...     properties=Labels.range("property", 3),
     ... )
     >>> block.add_gradient(
     ...     parameter="alpha",
     ...     gradient=TensorBlock(
     ...         values=np.random.rand(2, 3, 3),
     ...         samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...         components=[Labels.arange("component", 3)],
+    ...         components=[Labels.range("component", 3)],
     ...         properties=block.properties,
     ...     ),
     ... )

@@ -44,6 +44,8 @@ class TensorMap:
         :param keys: keys associated with each block
         :param blocks: set of blocks containing the actual data
         """
+        assert isinstance(keys, Labels)
+
         self._lib = _get_library()
 
         blocks_array_t = ctypes.POINTER(eqs_block_t) * len(blocks)

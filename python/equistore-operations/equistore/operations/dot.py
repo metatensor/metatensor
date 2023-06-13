@@ -53,7 +53,11 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
         properties (2): ['structure']
         gradients: None
     >>> print(tensor_dot.block(0).samples)
-    [(0,) (1,)]
+    Labels(
+        structure
+            0
+            1
+    )
     >>> print(tensor_dot.block(0).values)
     [[14 32]
      [32 77]]

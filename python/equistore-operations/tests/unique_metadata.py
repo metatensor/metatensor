@@ -5,7 +5,6 @@ import pytest
 
 import equistore
 from equistore import Labels
-from equistore.operations._utils import _labels_equal
 
 from . import utils
 
@@ -37,7 +36,7 @@ def test_unique_metadata_block(large_tensor):
         axis="samples",
         names="s",
     )
-    assert _labels_equal(target_samples, actual_samples, exact_order=True)
+    assert target_samples == actual_samples
 
     # unique metadata of gradient along sample axis
     names = ["sample", "g"]
@@ -48,7 +47,7 @@ def test_unique_metadata_block(large_tensor):
         names=names,
         gradient="g",
     )
-    assert _labels_equal(target_samples, actual_samples, exact_order=True)
+    assert target_samples == actual_samples
 
     # unique metadata along properties axis
     properties = [3, 4, 5]
@@ -56,7 +55,7 @@ def test_unique_metadata_block(large_tensor):
     actual_properties = equistore.unique_metadata_block(
         large_tensor.block(1), axis="properties", names="p"
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
+    assert target_properties == actual_properties
 
     # unique metadata of gradient along properties axis
     names = ["p"]
@@ -67,7 +66,7 @@ def test_unique_metadata_block(large_tensor):
         names=names,
         gradient="g",
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
+    assert target_properties == actual_properties
 
 
 def test_empty_block(real_tensor):
@@ -83,7 +82,7 @@ def test_empty_block(real_tensor):
         axis="samples",
         names="structure",
     )
-    assert _labels_equal(target_samples, actual_samples, exact_order=True)
+    assert target_samples == actual_samples
     assert len(actual_samples) == 0
 
     target_properties = Labels(names=["n"], values=np.empty((0, 1)))
@@ -97,7 +96,7 @@ def test_empty_block(real_tensor):
         axis="properties",
         names="n",
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
+    assert target_properties == actual_properties
     assert len(actual_properties) == 0
 
 
@@ -108,10 +107,10 @@ def test_unique_metadata(tensor, large_tensor):
         values=np.array([0, 1, 2, 3, 4, 5, 6, 8]).reshape(-1, 1),
     )
     actual_samples = equistore.unique_metadata(tensor, "samples", "s")
-    assert _labels_equal(target_samples, actual_samples, exact_order=True)
+    assert target_samples == actual_samples
 
     actual_samples = equistore.unique_metadata(large_tensor, "samples", "s")
-    assert _labels_equal(actual_samples, target_samples, exact_order=True)
+    assert actual_samples == target_samples
 
     # unique metadata along samples for gradients
     names = ["sample", "g"]
@@ -125,7 +124,7 @@ def test_unique_metadata(tensor, large_tensor):
         names=names,
         gradient="g",
     )
-    assert _labels_equal(actual_samples, target_samples, exact_order=True)
+    assert actual_samples == target_samples
 
     # unique metadata along properties
     target_properties = Labels(
@@ -136,7 +135,7 @@ def test_unique_metadata(tensor, large_tensor):
         axis="properties",
         names=["p"],  # names passed as list
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
+    assert target_properties == actual_properties
 
     target_properties = Labels(
         names=["p"], values=np.array([0, 1, 2, 3, 4, 5, 6, 7]).reshape(-1, 1)
@@ -146,7 +145,7 @@ def test_unique_metadata(tensor, large_tensor):
         axis="properties",
         names=("p",),  # names passed as tuple
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
+    assert target_properties == actual_properties
 
     names = ["p"]
     target_properties = Labels(
@@ -156,33 +155,7 @@ def test_unique_metadata(tensor, large_tensor):
     actual_properties = equistore.unique_metadata(
         tensor, axis="properties", names=names, gradient="g"
     )
-    assert _labels_equal(target_properties, actual_properties, exact_order=True)
-
-
-def test_unique_metadata_different_names(tensor):
-    # these names are not in the samples/properties
-    names = ["ciao", "bonjour", "hello"]
-    target_labels = Labels(names=names, values=np.arange(len(names)).reshape(1, -1))[:0]
-
-    # block/samples
-    actual_labels = equistore.unique_metadata_block(
-        tensor.block(0), axis="samples", names=names
-    )
-    assert _labels_equal(target_labels, actual_labels, exact_order=True)
-
-    # tensor/samples
-    actual_labels = equistore.unique_metadata(tensor, axis="samples", names=names)
-    assert _labels_equal(target_labels, actual_labels, exact_order=True)
-
-    # block/properties
-    actual_labels = equistore.unique_metadata_block(
-        tensor.block(0), axis="properties", names=names
-    )
-    assert _labels_equal(target_labels, actual_labels, exact_order=True)
-
-    # tensor/properties
-    actual_labels = equistore.unique_metadata(tensor, axis="properties", names=names)
-    assert _labels_equal(target_labels, actual_labels, exact_order=True)
+    assert target_properties == actual_properties
 
 
 def test_unique_metadata_block_errors(real_tensor):
@@ -249,3 +222,7 @@ def test_unique_metadata_block_errors(real_tensor):
             names=["structure"],
             gradient=3.14,
         )
+
+    message = "'ciao' not found in the dimensions of these Labels"
+    with pytest.raises(ValueError, match=message):
+        equistore.unique_metadata(real_tensor, axis="samples", names=["ciao"])

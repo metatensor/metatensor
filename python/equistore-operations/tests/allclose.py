@@ -15,13 +15,13 @@ def test_allclose_nograd():
         values=np.array([[1, 2], [3, 5]], dtype=np.float64),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
     block_2 = TensorBlock(
         values=np.array([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
-        samples=Labels.arange("s", 6),
+        samples=Labels.range("s", 6),
         components=[],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
 
     block_3 = TensorBlock(
@@ -42,7 +42,7 @@ def test_allclose_nograd():
     Y = TensorMap(keys, [block_3, block_4])
     assert not equistore.allclose(X, Y)
 
-    message = r"blocks for key '\(0, 0\)' are different"
+    message = "blocks for \\(key_1=0, key_2=0\\) are different"
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_raise(X, Y)
 
@@ -64,19 +64,19 @@ def test_allclose_nograd():
         ),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[
-            Labels.arange("c_1", 3),
-            Labels.arange("c_2", 3),
+            Labels.range("c_1", 3),
+            Labels.range("c_2", 3),
         ],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
     block_1_c_copy = TensorBlock(
         values=block_1_c.values + 0.1e-6,
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[
-            Labels.arange("c_1", 3),
-            Labels.arange("c_2", 3),
+            Labels.range("c_1", 3),
+            Labels.range("c_2", 3),
         ],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
 
     block_2_c = TensorBlock(
@@ -89,21 +89,21 @@ def test_allclose_nograd():
                 [[[1, 2], [17.7, 27.7]], [[77.1, 22.2], [1.11, 3.42]]],
             ]
         ),
-        samples=Labels.arange("s", 5),
+        samples=Labels.range("s", 5),
         components=[
             Labels(["c_1"], np.array([[3], [5]])),
             Labels(["c_2"], np.array([[6], [8]])),
         ],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
     block_2_c_copy = TensorBlock(
         values=block_2_c.values + 0.1e-6,
-        samples=Labels.arange("s", 5),
+        samples=Labels.range("s", 5),
         components=[
             Labels(["c_1"], np.array([[3], [5]])),
             Labels(["c_2"], np.array([[6], [8]])),
         ],
-        properties=Labels.arange("p", 2),
+        properties=Labels.range("p", 2),
     )
     X_c = TensorMap(keys, [block_1_c, block_2_c])
     X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
@@ -134,7 +134,10 @@ def test_self_allclose_grad():
     assert not equistore.allclose(tensor1, tensor1_e6)
     assert equistore.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5)
 
-    message = r"blocks for key '\(0, 1, 1\)' are different"
+    message = (
+        "blocks for \\(spherical_harmonics_l=0, species_center=1, "
+        "species_neighbor=1\\) are different"
+    )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_raise(tensor1, tensor1_e6)
 
@@ -299,7 +302,7 @@ def test_self_allclose_exceptions_gradient():
         gradient=TensorBlock(
             values=np.full((2, 3, 1), 1.0),
             samples=Labels(["sample", "g"], np.array([[0, -2], [1, 3]])),
-            components=[Labels.arange("c_1", -1, 2)],
+            components=[Labels(["c_1"], np.array([[-1], [0], [1]]))],
             properties=block_4.properties,
         ),
     )

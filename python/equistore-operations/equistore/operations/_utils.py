@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
+from equistore.core import TensorBlock, TensorMap
 
 
 class NotEqualError(Exception):
@@ -193,21 +193,3 @@ def _check_gradient_presence(block: TensorBlock, parameters: List[str], fname: s
                 f"requested gradient '{parameter}' in {fname} is not defined "
                 "in this tensor"
             )
-
-
-def _labels_equal(a: Labels, b: Labels, exact_order: bool):
-    """
-    For 2 :py:class:`Labels` objects ``a`` and ``b``, returns true if they are
-    exactly equivalent in names, values, and elemental positions. Assumes that
-    the Labels are already searchable, i.e. they belong to a parent TensorBlock
-    or TensorMap.
-    """
-    # They can only be equivalent if the same length
-    if len(a) != len(b):
-        return False
-    # Check the names
-    if not np.all(a.names == b.names):
-        return False
-    if exact_order:
-        return np.all(np.array(a == b))
-    return np.all([a_i in b for a_i in a])

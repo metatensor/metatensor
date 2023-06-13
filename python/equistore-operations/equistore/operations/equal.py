@@ -60,7 +60,7 @@ def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap):
         try:
             equal_block_raise(block_1, tensor_2.block(key))
         except NotEqualError as e:
-            raise NotEqualError(f"blocks for key '{key}' are different") from e
+            raise NotEqualError(f"blocks for {key.print()} are different") from e
 
 
 def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:

@@ -45,7 +45,7 @@ def tensor():
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
         samples=Labels(["s"], np.array([[0], [3], [6], [8]])),
-        components=[Labels.arange("c", 3)],
+        components=[Labels.range("c", 3)],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_3.add_gradient(
@@ -61,7 +61,7 @@ def tensor():
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
         samples=Labels(["s"], np.array([[0], [1], [2], [5]])),
-        components=[Labels.arange("c", 3)],
+        components=[Labels.range("c", 3)],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4.add_gradient(
@@ -93,7 +93,7 @@ def large_tensor():
         block = TensorBlock(
             values=np.full((4, 3, 1), 4.0),
             samples=Labels(["s"], np.array([[0], [1], [4], [5]])),
-            components=[Labels.arange("c", 3)],
+            components=[Labels.range("c", 3)],
             properties=Labels(["p"], np.array([[i]])),
         )
         block.add_gradient(

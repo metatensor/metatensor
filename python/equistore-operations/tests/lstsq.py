@@ -16,13 +16,13 @@ class TestLstsq(unittest.TestCase):
             values=np.array([[1, 2], [3, 5]]),
             samples=Labels(["s"], np.array([[0], [2]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
             samples=Labels(["s"], np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
 
         block_3 = TensorBlock(
@@ -70,23 +70,23 @@ class TestLstsq(unittest.TestCase):
         x, x_grad, y, y_grad = get_value_linear_solve()
         block_X = TensorBlock(
             values=x,
-            samples=Labels.arange("s", 5),
+            samples=Labels.range("s", 5),
             components=[],
-            properties=Labels.arange("p", 2),
+            properties=Labels.range("p", 2),
         )
         block_X.add_gradient(
             parameter="z",
             gradient=TensorBlock(
                 values=x_grad,
-                samples=Labels.arange("sample", 5),
-                components=[Labels.arange("c", 3)],
+                samples=Labels.range("sample", 5),
+                components=[Labels.range("c", 3)],
                 properties=block_X.properties,
             ),
         )
 
         block_Y = TensorBlock(
             values=y,
-            samples=Labels.arange("s", 5),
+            samples=Labels.range("s", 5),
             components=[],
             properties=Labels(["p"], np.array([[2]])),
         )
@@ -94,8 +94,8 @@ class TestLstsq(unittest.TestCase):
             parameter="z",
             gradient=TensorBlock(
                 values=y_grad,
-                samples=Labels.arange("sample", 5),
-                components=[Labels.arange("c", 3)],
+                samples=Labels.range("sample", 5),
+                components=[Labels.range("c", 3)],
                 properties=block_Y.properties,
             ),
         )
@@ -124,17 +124,17 @@ class TestLstsq(unittest.TestCase):
         block_X = TensorBlock(
             values=x.reshape((1, x.shape[0], x.shape[1])),
             samples=Labels(["s"], np.array([[0]])),
-            components=[Labels.arange("c", 5)],
-            properties=Labels.arange("p", 2),
+            components=[Labels.range("c", 5)],
+            properties=Labels.range("p", 2),
         )
         block_X.add_gradient(
             parameter="z",
             gradient=TensorBlock(
                 values=x_grad.reshape(1, 3, len(x), x.shape[-1]),
-                samples=Labels.arange("sample", 1),
+                samples=Labels.range("sample", 1),
                 components=[
-                    Labels.arange("der_components", 3),
-                    Labels.arange("c", 5),
+                    Labels.range("der_components", 3),
+                    Labels.range("c", 5),
                 ],
                 properties=block_X.properties,
             ),
@@ -143,17 +143,17 @@ class TestLstsq(unittest.TestCase):
         block_Y = TensorBlock(
             values=y.reshape((1, len(y), y.shape[-1])),
             samples=Labels(["s"], np.array([[0]])),
-            components=[Labels.arange("c", 5)],
+            components=[Labels.range("c", 5)],
             properties=Labels(["p"], np.array([[2]])),
         )
         block_Y.add_gradient(
             parameter="z",
             gradient=TensorBlock(
                 values=y_grad.reshape((1, 3, len(y), y.shape[-1])),
-                samples=Labels.arange("sample", 1),
+                samples=Labels.range("sample", 1),
                 components=[
-                    Labels.arange("der_components", 3),
-                    Labels.arange("c", 5),
+                    Labels.range("der_components", 3),
+                    Labels.range("c", 5),
                 ],
                 properties=block_Y.properties,
             ),

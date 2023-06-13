@@ -44,29 +44,41 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         )
 
     # Find the difference between key of the original tensor and those to drop
-    diff = np.setdiff1d(keys, tensor.keys)
-    if len(diff) > 0:
-        raise ValueError(
-            "some keys in `keys` are not present in `tensor`."
-            f" Non-existent keys: {diff}"
-        )
-    new_keys = np.setdiff1d(tensor.keys, keys)
+    tensor_keys = tensor.keys
+    to_remove_indices = set()
+    for key in keys:
+        position = tensor_keys.position(key)
+        if position is None:
+            raise ValueError(f"{key.print()} is not present in this tensor")
+        to_remove_indices.add(position)
 
     # Create the new TensorMap
-    if copy:
-        new_blocks = [tensor[key].copy() for key in new_keys]
-    else:
-        new_blocks = []
-        for key in new_keys:
-            # Create new block
+    new_blocks = []
+    new_keys_values = []
+    for i in range(len(tensor_keys)):
+        if i in to_remove_indices:
+            continue
+
+        new_keys_values.append(tensor_keys[i].values)
+        block = tensor[i]
+
+        if copy:
+            new_blocks.append(block.copy())
+        else:
+            # just increase the reference count on everything
             new_block = TensorBlock(
-                values=tensor[key].values,
-                samples=tensor[key].samples,
-                components=tensor[key].components,
-                properties=tensor[key].properties,
+                values=block.values,
+                samples=block.samples,
+                components=block.components,
+                properties=block.properties,
             )
-            # Add gradients
-            for parameter, gradient in tensor[key].gradients():
+
+            for parameter, gradient in block.gradients():
+                if len(gradient.gradients_list()) != 0:
+                    raise NotImplementedError(
+                        "gradients of gradients are not supported"
+                    )
+
                 new_block.add_gradient(
                     parameter=parameter,
                     gradient=TensorBlock(
@@ -76,6 +88,12 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
                         properties=new_block.properties,
                     ),
                 )
+
             new_blocks.append(new_block)
+
+    if len(new_keys_values) != 0:
+        new_keys = Labels(keys.names, np.vstack(new_keys_values))
+    else:
+        new_keys = Labels.empty(keys.names)
 
     return TensorMap(keys=new_keys, blocks=new_blocks)

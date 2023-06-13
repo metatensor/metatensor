@@ -15,7 +15,7 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
         A ``Labels`` object from which one label will be extracted and
         transformed into a one-hot-encoded array.
     :param dimension:
-        A ``Labels`` object that contains a single label. The name of
+        A ``Labels`` object that contains a single dimension. The name of
         this label is the same that will be selected from ``labels``,
         and its values correspond to all possible values that the label
         can take.
@@ -59,19 +59,16 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
         )
 
     name = dimension.names[0]
-    possible_labels = dimension[name]
-    try:
-        original_labels = labels[name]
-    except ValueError:
-        raise ValueError("the dimension provided was not found among the labels")
 
-    indices = np.where(
-        original_labels.reshape(original_labels.size, 1) == possible_labels
-    )[1]
-    if indices.shape[0] != labels.asarray().shape[0]:
-        raise ValueError(
-            "some values not present in the dimension were found in the labels"
-        )
-    one_hot_array = np.eye(possible_labels.shape[0])[indices]
+    indices = np.zeros(len(labels), dtype=np.int64)
+    for i, entry in enumerate(labels[name].values):
+        position = dimension.position(entry)
+        if position is None:
+            raise ValueError(
+                f"{name}={entry[0]} is present in the labels, but was not found in "
+                "the dimension"
+            )
+        indices[i] = position
 
+    one_hot_array = np.eye(len(dimension))[indices]
     return one_hot_array

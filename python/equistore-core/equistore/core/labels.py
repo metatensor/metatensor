@@ -365,7 +365,7 @@ class Labels:
 
         When indexing with an integer, get the corresponding row/labels entry.
         """
-        if isinstance(index, int):
+        if isinstance(index, (int, np.int8, np.int16, np.int32, np.int64)):
             return self.entry(index)
         else:
             return self.view(index)
@@ -525,7 +525,13 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
         else:
             names = [names]
     else:
-        names = list(names)
+        try:
+            names = list(names)
+        except TypeError:
+            raise TypeError(
+                f"Labels names must be a sequence of strings, got {type(names)} instead"
+            )
+
         for name in names:
             if not isinstance(name, str):
                 raise TypeError(

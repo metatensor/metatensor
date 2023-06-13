@@ -18,7 +18,7 @@ def unique_metadata(
     Returns a :py:class:`Labels` object containing the unique metadata across
     all blocks of the input :py:class:`TensorMap`  ``tensor``. Unique Labels are
     returned for the specified ``axis`` (either ``"samples"`` or
-    ``"properties"``) and metatdata ``names``.
+    ``"properties"``) and metadata ``names``.
 
     Passing ``gradient`` as a ``str`` corresponding to a gradient parameter (for
     instance ``"cell"`` or ``"positions"``) returns the unique indices only for
@@ -113,7 +113,7 @@ def unique_metadata(
     else:
         blocks = [block.gradient(gradient) for block in tensor.blocks()]
 
-    return _unique_from_blocks(blocks, axis, names, gradient)
+    return _unique_from_blocks(blocks, axis, names)
 
 
 def unique_metadata_block(
@@ -125,7 +125,7 @@ def unique_metadata_block(
     """
     Returns a :py:class:`Labels` object containing the unique metadata in the
     input :py:class:`TensorBlock`  ``block``, for the specified ``axis`` (either
-    ``"samples"`` or ``"properties"``) and metatdata ``names``.
+    ``"samples"`` or ``"properties"``) and metadata ``names``.
 
     Passing ``gradient`` as a ``str`` corresponding to a gradient parameter (for
     instance ``"cell"`` or ``"positions"``) returns the unique indices only for
@@ -188,53 +188,35 @@ def unique_metadata_block(
         else (list(names) if isinstance(names, tuple) else names)
     )
     _check_args(block, axis, names, gradient)
+
     # Make a list of the blocks to find unique indices for
     if gradient is None:
         blocks = [block]
     else:
         blocks = [block.gradient(gradient)]
 
-    return _unique_from_blocks(blocks, axis, names, gradient)
+    return _unique_from_blocks(blocks, axis, names)
 
 
 def _unique_from_blocks(
     blocks: List[TensorBlock],
     axis: str,
     names: List[str],
-    gradient: Optional[str],
 ) -> Labels:
     """
     Finds the unique metadata of a list of blocks along the given ``axis`` and
-    for the specified ``names``. If ``gradient`` is specified, only finds the
-    unique indices for gradient blocks under the specified parameter name. If
-    the full list of names is not present in the metadata of any block, an empty
-    :py:class:`Labels` object is returned.
+    for the specified ``names``.
     """
-    # Extract indices from each block
-    all_idxs = []
+    all_values = []
     for block in blocks:
-        try:
-            if axis == "samples":
-                idxs = block.samples[names]
-            else:  # "properties"
-                idxs = block.properties[names]
-            all_idxs += idxs.tolist()
-        except KeyError:
-            # If the block does not have the specified metadata, skip it
-            continue
+        if axis == "samples":
+            all_values.append(block.samples[names].values)
+        else:
+            assert axis == "properties"
+            all_values.append(block.properties[names].values)
 
-    # If no matching indices across all blocks return a empty Labels w/ the
-    # correct names
-    if len(all_idxs) == 0:
-        # Create Labels with single entry
-        labels = Labels(names=names, values=np.arange(len(names)).reshape(1, -1))
-        return labels[:0]  # Slice to zero length
-
-    # Define the unique and sorted indices
-    unique_idxs = np.unique(all_idxs, axis=0)
-
-    # Return as Labels
-    return Labels(names=names, values=np.array([[j for j in i] for i in unique_idxs]))
+    unique_values = np.unique(np.vstack(all_values), axis=0)
+    return Labels(names=names, values=unique_values)
 
 
 def _check_args(

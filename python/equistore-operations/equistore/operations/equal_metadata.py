@@ -51,13 +51,13 @@ def equal_metadata(
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...     ],
@@ -71,13 +71,13 @@ def equal_metadata(
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...     ],
@@ -129,13 +129,13 @@ def equal_metadata_block(
     >>> block_1 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
     ...     samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...     components=[Labels.arange("components", 3)],
+    ...     components=[Labels.range("components", 3)],
     ...     properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ... )
     >>> block_2 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
     ...     samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...     components=[Labels.arange("components", 3)],
+    ...     components=[Labels.range("components", 3)],
     ...     properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ... )
     >>> equal_metadata_block(block_1, block_2)
@@ -190,13 +190,13 @@ def equal_metadata_raise(
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ...         ),
     ...     ],
@@ -210,13 +210,13 @@ def equal_metadata_raise(
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...         TensorBlock(
     ...             values=np.full((4, 3, 1), 4.0),
     ...             samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...             components=[Labels.arange("components", 3)],
+    ...             components=[Labels.range("components", 3)],
     ...             properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ...         ),
     ...     ],
@@ -283,13 +283,13 @@ def equal_metadata_block_raise(
     >>> block_1 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
     ...     samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...     components=[Labels.arange("components", 3)],
+    ...     components=[Labels.range("components", 3)],
     ...     properties=Labels(["p_1", "p_2"], np.array([[0, 1]])),
     ... )
     >>> block_2 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
     ...     samples=Labels(["samples"], np.array([[0], [1], [4], [5]])),
-    ...     components=[Labels.arange("components", 3)],
+    ...     components=[Labels.range("components", 3)],
     ...     properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ... )
     >>> equistore.equal_metadata_block_raise(block_1, block_2)

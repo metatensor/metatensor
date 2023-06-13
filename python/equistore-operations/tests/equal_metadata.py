@@ -11,9 +11,6 @@ from equistore.operations._utils import NotEqualError
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
-# ===== Fixtures =====
-
-
 @pytest.fixture
 def test_tensor_map_1() -> TensorMap:
     return equistore.load(
@@ -86,7 +83,7 @@ def tensor_map() -> TensorMap:
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
         samples=Labels(["s"], np.array([[0], [3], [6], [8]])),
-        components=[Labels.arange("c", 3)],
+        components=[Labels.range("c", 3)],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_3.add_gradient(
@@ -97,7 +94,7 @@ def tensor_map() -> TensorMap:
                 ["sample", "g"],
                 np.array([[1, -2]]),
             ),
-            components=[Labels.arange("c", 3)],
+            components=[Labels.range("c", 3)],
             properties=block_3.properties,
         ),
     )
@@ -105,7 +102,7 @@ def tensor_map() -> TensorMap:
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
         samples=Labels(["s"], np.array([[0], [1], [2], [5]])),
-        components=[Labels.arange("c", 3)],
+        components=[Labels.range("c", 3)],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4.add_gradient(
@@ -116,7 +113,7 @@ def tensor_map() -> TensorMap:
                 ["sample", "g"],
                 np.array([[0, 1], [3, 3]]),
             ),
-            components=[Labels.arange("c", 3)],
+            components=[Labels.range("c", 3)],
             properties=block_4.properties,
         ),
     )
@@ -129,9 +126,6 @@ def tensor_map() -> TensorMap:
     )
 
     return TensorMap(keys, [block_1, block_2, block_3, block_4])
-
-
-# ===== Tests =====
 
 
 def test_self(test_tensor_map_1):
@@ -264,21 +258,21 @@ def test_single_nonexisting_meta_block(test_tensor_block_1, test_tensor_block_2)
         )
 
 
-def test_changing_tensor_key_order(test_tensor_map_1):
+def test_key_order(test_tensor_map_1):
     """check changing the key order"""
     keys = test_tensor_map_1.keys
-    new_keys = keys[::-1]
+    new_keys = Labels(keys.names, keys.values[::-1])
     new_blocks = [test_tensor_map_1[key].copy() for key in new_keys]
     new_tensor = TensorMap(keys=new_keys, blocks=new_blocks)
     assert equistore.equal_metadata(test_tensor_map_1, new_tensor)
 
 
-def test_changing_samples_key_order(test_tensor_map_1):
+def test_samples_order(test_tensor_map_1):
     """Test changing the order of the values of the samples should yield False"""
     new_blocks = []
     for key in test_tensor_map_1.keys:
         block = test_tensor_map_1[key].copy()
-        samples = block.samples[::-1]
+        samples = Labels(block.samples.names, block.samples.values[::-1])
         new_block = TensorBlock(
             values=block.values,
             samples=samples,
@@ -301,10 +295,10 @@ def test_changing_samples_key_order(test_tensor_map_1):
     assert not equistore.equal_metadata(test_tensor_map_1, new_tensor)
 
 
-def test_changing_samples_key_order_block(test_tensor_block_1):
+def test_samples_order_block(test_tensor_block_1):
     """Changing the order of the values of the samples should yield False"""
     block = test_tensor_block_1.copy()
-    samples = block.samples[::-1]
+    samples = Labels(block.samples.names, block.samples.values[::-1])
     new_block = TensorBlock(
         values=block.values,
         samples=samples,
@@ -325,12 +319,12 @@ def test_changing_samples_key_order_block(test_tensor_block_1):
     assert not equistore.equal_metadata_block(test_tensor_block_1, new_block)
 
 
-def test_changing_properties_key_order(test_tensor_map_1):
+def test_properties_order(test_tensor_map_1):
     """changing the order of the values of the properties should yield False"""
     new_blocks = []
     for key in test_tensor_map_1.keys:
         block = test_tensor_map_1[key].copy()
-        properties = block.properties[::-1]
+        properties = Labels(block.properties.names, block.properties.values[::-1])
         new_block = TensorBlock(
             values=block.values,
             samples=block.samples,
@@ -353,10 +347,10 @@ def test_changing_properties_key_order(test_tensor_map_1):
     assert not equistore.equal_metadata(test_tensor_map_1, new_tensor)
 
 
-def test_changing_properties_key_order_block(test_tensor_block_1):
-    """changing the order of the values of the samples should yield False"""
+def test_properties_order_block(test_tensor_block_1):
+    """changing the order of the values of the properties should yield False"""
     block = test_tensor_block_1.copy()
-    properties = block.properties[::-1]
+    properties = Labels(block.properties.names, block.properties.values[::-1])
     new_block = TensorBlock(
         values=block.values,
         samples=block.samples,
@@ -377,12 +371,12 @@ def test_changing_properties_key_order_block(test_tensor_block_1):
     assert not equistore.equal_metadata_block(test_tensor_block_1, new_block)
 
 
-def test_add_components_key_order(tensor_map):
+def test_components_order(tensor_map):
     """changing the order of the values of the components should yield False"""
     new_blocks = []
     for key in tensor_map.keys:
         block = tensor_map[key].copy()
-        components = [comp[::-1] for comp in block.components]
+        components = [Labels(c.names, c.values[::-1]) for c in block.components]
         new_block = TensorBlock(
             values=block.values,
             samples=block.samples,
@@ -412,7 +406,7 @@ def test_remove_last_sample(tensor_map):
         block = tensor_map[key].copy()
         new_block = TensorBlock(
             values=block.values[:-1],
-            samples=block.samples[:-1],
+            samples=Labels(block.samples.names, block.samples.values[:-1]),
             properties=block.properties,
             components=block.components,
         )
@@ -421,7 +415,10 @@ def test_remove_last_sample(tensor_map):
                 parameter=parameter,
                 gradient=TensorBlock(
                     values=gradient.values[:-1],
-                    samples=gradient.samples[:-1],
+                    samples=Labels(
+                        gradient.samples.names,
+                        gradient.samples.values[:-1],
+                    ),
                     components=gradient.components,
                     properties=new_block.properties,
                 ),
@@ -440,7 +437,7 @@ def test_remove_last_property(tensor_map):
         new_block = TensorBlock(
             values=block.values[..., :-1],
             samples=block.samples,
-            properties=block.properties[..., :-1],
+            properties=Labels(block.properties.names, block.properties.values[:-1]),
             components=block.components,
         )
         for parameter, gradient in block.gradients():
@@ -468,7 +465,7 @@ def test_remove_last_component(tensor_map):
         can_remove = np.all([len(c) > 2 for c in block.components])
 
         if can_remove:
-            components = [c[:-1] for c in block.components]
+            components = [Labels(c.names, c.values[:-1]) for c in block.components]
             new_block = TensorBlock(
                 values=block.values[:, :-1],
                 samples=block.samples,

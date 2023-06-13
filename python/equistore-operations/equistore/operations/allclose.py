@@ -217,7 +217,7 @@ def allclose_raise(
     ... except equistore.NotEqualError as e:
     ...     print(f"got an exception: {e}")
     ...
-    got an exception: blocks for key '(0,)' are different
+    got an exception: blocks for (key=0) are different
     >>> # call allclose_raise again, but use equal_nan=True and rtol=1e-5
     >>> # This passes, as the two NaNs are now considered equal, and the
     >>> # difference between the first values of the blocks of the two tensors
@@ -239,7 +239,7 @@ def allclose_raise(
                 equal_nan=equal_nan,
             )
         except NotEqualError as e:
-            raise NotEqualError(f"blocks for key '{key}' are different") from e
+            raise NotEqualError(f"blocks for {key.print()} are different") from e
 
 
 def allclose_block(
