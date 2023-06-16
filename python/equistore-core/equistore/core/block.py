@@ -48,6 +48,7 @@ class TensorBlock:
         """
         self._lib = _get_library()
         self._parent = None
+        self._gradient_parameters = []
 
         components_array = ctypes.ARRAY(eqs_labels_t, len(components))()
         for i, component in enumerate(components):
@@ -73,6 +74,7 @@ class TensorBlock:
         _check_pointer(ptr)
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
+        obj._gradient_parameters = []
         obj._actual_ptr = ptr
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from beeing garbage-collected & removing this block
@@ -114,8 +116,8 @@ class TensorBlock:
 
     def __reduce__(self):
         raise NotImplementedError(
-            "Pickling for TensorBlocks does not work. Please wrap it into a TensorMap"
-            " to save it."
+            "Pickling for is not implemented for TensorBlocks, wrap the block in a "
+            "TensorMap first"
         )
 
     def copy(self) -> "TensorBlock":
@@ -125,9 +127,8 @@ class TensorBlock:
         return copy.deepcopy(self)
 
     def __repr__(self) -> str:
-        if isinstance(self._parent, TensorBlock):
-            # TODO: print the gradient parameter as well
-            s = "Gradient TensorBlock\n"
+        if len(self._gradient_parameters) != 0:
+            s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
         else:
             s = "TensorBlock\n"
         s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
@@ -257,7 +258,7 @@ class TensorBlock:
 
         >>> positions_gradient = block.gradient("positions")
         >>> print(positions_gradient)
-        Gradient TensorBlock
+        Gradient TensorBlock ('positions')
             samples (2): ['sample', 'atom']
             components (3, 1): ['direction', 'component']
             properties (5): ['property']
@@ -265,7 +266,7 @@ class TensorBlock:
 
         >>> cell_gradient = block.gradient("cell")
         >>> print(cell_gradient)
-        Gradient TensorBlock
+        Gradient TensorBlock ('cell')
             samples (2): ['sample']
             components (3, 3, 1): ['direction_1', 'direction_2', 'component']
             properties (5): ['property']
@@ -276,7 +277,12 @@ class TensorBlock:
             self._ptr, parameter.encode("utf8"), gradient_block
         )
 
-        return TensorBlock._from_ptr(gradient_block, parent=self)
+        gradient = TensorBlock._from_ptr(gradient_block, parent=self)
+
+        gradient._gradient_parameters = copy.deepcopy(self._gradient_parameters)
+        gradient._gradient_parameters.append(parameter)
+
+        return gradient
 
     def add_gradient(self, parameter: str, gradient: "TensorBlock"):
         """
