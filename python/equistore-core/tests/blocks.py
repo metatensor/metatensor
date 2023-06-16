@@ -120,7 +120,7 @@ def test_repr_zero_samples_gradient(block):
 
     assert block.__repr__() == expected_block
 
-    expected_grad = """Gradient TensorBlock
+    expected_grad = """Gradient TensorBlock ('g')
     samples (0): ['sample']
     components (): []
     properties (2): ['p']
@@ -209,7 +209,7 @@ def test_gradients(block_components):
 
     gradient = block_components.gradient("g")
 
-    expected_grad = """Gradient TensorBlock
+    expected_grad = """Gradient TensorBlock ('g')
     samples (2): ['sample', 'g']
     components (3, 2): ['c_1', 'c_2']
     properties (2): ['p']
