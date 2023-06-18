@@ -49,9 +49,9 @@ class TestSolve(unittest.TestCase):
         self.assertTrue(
             np.allclose(w.block(1).values, np.array([-2.0, 2.0]), rtol=1e-7)
         )
-        for key, blockw in w:
-            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
-            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
+        for key, block_w in w.items():
+            self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
+            self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
         Ydot = equistore.dot(X, w)
         self.assertTrue(equistore.allclose(Ydot, Y))

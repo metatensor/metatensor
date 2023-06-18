@@ -102,7 +102,7 @@ def random_uniform_like(
     ['alpha']
     """
     blocks = []
-    for block in tensor.blocks():
+    for block in tensor:
         blocks.append(
             random_uniform_like_block(
                 block=block,

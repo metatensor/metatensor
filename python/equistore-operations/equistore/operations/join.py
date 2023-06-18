@@ -85,7 +85,7 @@ def join(tensors: List[TensorMap], axis: str):
     for i, tensor in enumerate(tensors):
         keys_values += [[i] + value.tolist() for value in tensor.keys.values]
 
-        for _, block in tensor:
+        for block in tensor:
             # We would already raised an error if `axis == "samples"`. Therefore, we can
             # neglect the check for `axis == "properties"`.
             if names_are_same:

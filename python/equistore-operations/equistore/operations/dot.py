@@ -74,7 +74,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     _check_same_keys(tensor_1, tensor_2, "dot")
 
     blocks = []
-    for key, block_1 in tensor_1:
+    for key, block_1 in tensor_1.items():
         block_2 = tensor_2.block(key)
         blocks.append(_dot_block(block_1=block_1, block_2=block_2))
 

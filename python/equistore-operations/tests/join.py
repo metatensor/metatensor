@@ -108,7 +108,7 @@ def test_join_properties_values(tensor):
 
     # We can not use `equistore.equal_raise` for the checks because the meta data
     # differs by the tensor entry.
-    for key, block in tensor:
+    for key, block in tensor.items():
         joined_block = joined_tensor[key]
 
         assert_equal(joined_block.values, block.values)
@@ -210,7 +210,7 @@ def test_join_samples_values(tensor):
 
     # We can not use #equistore.equal_raise for the checks because the meta data
     # differs by the tensor entry.
-    for key, block in tensor:
+    for key, block in tensor.items():
         joined_block = joined_tensor[key]
 
         assert_equal(joined_block.values, block.values)

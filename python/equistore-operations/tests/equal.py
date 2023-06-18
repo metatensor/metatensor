@@ -115,32 +115,32 @@ def test_equal_no_gradient():
 
 
 def test_self_equal_grad():
-    tensor1 = equistore.load(
+    tensor_1 = equistore.load(
         os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
         use_numpy=True,
     )
     blocks = []
     blocks_e6 = []
-    for _, block in tensor1:
+    for block in tensor_1:
         blocks.append(block.copy())
         be6 = block.copy()
         be6.values[:] += 1e-6
         blocks_e6.append(be6)
 
-    tensor1_copy = TensorMap(tensor1.keys, blocks)
-    tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
-    assert equistore.equal(tensor1, tensor1_copy)
-    assert not equistore.equal(tensor1, tensor1_e6)
+    tensor1_copy = TensorMap(tensor_1.keys, blocks)
+    tensor_1_e6 = TensorMap(tensor_1.keys, blocks_e6)
+    assert equistore.equal(tensor_1, tensor1_copy)
+    assert not equistore.equal(tensor_1, tensor_1_e6)
 
     message = (
         "blocks for \\(spherical_harmonics_l=0, species_center=1, "
         "species_neighbor=1\\) are different"
     )
     with pytest.raises(NotEqualError, match=message):
-        equistore.equal_raise(tensor1, tensor1_e6)
+        equistore.equal_raise(tensor_1, tensor_1_e6)
 
     with pytest.raises(NotEqualError, match="values are not equal"):
-        equistore.equal_block_raise(tensor1.block(0), tensor1_e6.block(0))
+        equistore.equal_block_raise(tensor_1.block(0), tensor_1_e6.block(0))
 
 
 def test_self_equal_exceptions():

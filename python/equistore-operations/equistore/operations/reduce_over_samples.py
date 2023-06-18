@@ -328,7 +328,7 @@ def _reduce_over_samples(
     ]
 
     blocks = []
-    for _, block in tensor:
+    for block in tensor:
         blocks.append(
             _reduce_over_samples_block(
                 block=block,

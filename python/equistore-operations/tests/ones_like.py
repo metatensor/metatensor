@@ -24,7 +24,7 @@ def test_ones_like():
     assert equistore.equal_metadata(ones_tensor_positions, tensor_no_cell)
 
     # check the values
-    for key, block in tensor:
+    for key, block in tensor.items():
         one_block = ones_tensor[key]
 
         assert np.all(one_block.values == np.ones_like(block.values))

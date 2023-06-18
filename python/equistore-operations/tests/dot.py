@@ -22,7 +22,7 @@ class TestDot(unittest.TestCase):
         dot_tensor = equistore.dot(tensor_1=tensor_1, tensor_2=tensor_2)
         self.assertTrue(np.all(tensor_1.keys == dot_tensor.keys))
 
-        for key, block_1 in tensor_1:
+        for key, block_1 in tensor_1.items():
             dot_block = dot_tensor.block(key)
 
             block_2 = tensor_2.block(key)
@@ -65,7 +65,7 @@ class TestDot(unittest.TestCase):
 
         tensor_2 = []
         n_samples = 42
-        for _, block_1 in tensor_1:
+        for block_1 in tensor_1:
             value2 = np.arange(n_samples * len(block_1.properties)).reshape(
                 n_samples, len(block_1.properties)
             )
@@ -86,7 +86,7 @@ class TestDot(unittest.TestCase):
         dot_tensor = equistore.dot(tensor_1=tensor_1, tensor_2=tensor_2)
         self.assertTrue(np.all(tensor_1.keys == dot_tensor.keys))
 
-        for key, block_1 in tensor_1:
+        for key, block_1 in tensor_1.items():
             block_2 = tensor_2.block(key)
             dot_block = dot_tensor.block(key)
 

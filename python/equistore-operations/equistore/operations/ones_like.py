@@ -101,7 +101,7 @@ def ones_like(
     """
 
     blocks = []
-    for block in tensor.blocks():
+    for block in tensor:
         blocks.append(
             ones_like_block(
                 block=block, gradients=gradients, requires_grad=requires_grad

@@ -106,10 +106,10 @@ def block_to(
         )
     if backend is not None:
         if not isinstance(backend, str):
-            raise TypeError("`backend` should be passed as a `str`")
+            raise TypeError("'backend' should be given as a string")
         else:
             if backend not in ["numpy", "torch"]:
-                raise ValueError(f"backend ``{backend}`` not supported")
+                raise ValueError(f"backend '{backend}' is not supported")
             if backend == "numpy":
                 if requires_grad is not None:
                     raise ValueError(

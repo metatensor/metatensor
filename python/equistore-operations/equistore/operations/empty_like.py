@@ -88,7 +88,7 @@ def empty_like(
     """
 
     blocks = []
-    for _k, block in tensor:
+    for block in tensor:
         blocks.append(
             empty_like_block(
                 block=block, gradients=gradients, requires_grad=requires_grad

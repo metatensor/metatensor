@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import torch
-from numpy.testing import assert_equal
 
 import equistore
 from equistore import Labels, TensorMap
@@ -24,11 +23,11 @@ def block():
 @pytest.fixture
 def tensor():
     # Returns a TensorMap with two blocks
-    values1 = np.arange(42, dtype=np.float64).reshape(7, 3, 2)
-    block1 = equistore.block_from_array(values1)
-    values2 = np.arange(100, dtype=np.float64).reshape(10, 5, 2)
-    block2 = equistore.block_from_array(values2)
-    tensor = TensorMap(keys=Labels.range("dummy", 2), blocks=[block1, block2])
+    values_1 = np.arange(42, dtype=np.float64).reshape(7, 3, 2)
+    block_1 = equistore.block_from_array(values_1)
+    values_2 = np.arange(100, dtype=np.float64).reshape(10, 5, 2)
+    block_2 = equistore.block_from_array(values_2)
+    tensor = TensorMap(keys=Labels.range("dummy", 2), blocks=[block_1, block_2])
     return tensor
 
 
@@ -36,94 +35,103 @@ def test_wrong_arguments_block(block):
     """Test the `block_to` function with incorrect arguments."""
     with pytest.raises(TypeError, match="`block` should be an equistore `TensorBlock`"):
         equistore.block_to(100)
-    with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
+
+    with pytest.raises(TypeError, match="'backend' should be given as a string"):
         equistore.block_to(block, backend=10)
-    with pytest.raises(
-        ValueError,
-        match="the `numpy` backend option does not support autograd gradient tracking",
-    ):
+
+    message = "the `numpy` backend option does not support autograd gradient tracking"
+    with pytest.raises(ValueError, match=message):
         equistore.block_to(block, backend="numpy", requires_grad=True)
-    with pytest.raises(ValueError, match="not supported"):
+
+    with pytest.raises(ValueError, match="backend 'jax' is not supported"):
         equistore.block_to(block, backend="jax")
 
 
 def test_numpy_to_torch_block(block):
     """Test a `block_to` conversion from numpy to torch."""
     new_block = equistore.block_to(block, backend="torch")
-    assert_equal(new_block.properties, block.properties)
-    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").components,
-        block.gradient("grad").gradient("grad_grad").components,
-    )
+
     assert isinstance(new_block.values, torch.Tensor)
-    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
-    assert isinstance(
-        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
-    )
-    assert_equal(new_block.values.numpy(), block.values)
-    assert_equal(
-        new_block.gradient("grad").values.numpy(), block.gradient("grad").values
-    )
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").values.numpy(),
-        block.gradient("grad").gradient("grad_grad").values,
-    )
+    assert equistore.equal_metadata_block(new_block, block)
+    np.testing.assert_equal(new_block.values.numpy(), block.values)
+
+    for parameter, gradient in block.gradients():
+        new_gradient = new_block.gradient(parameter)
+
+        assert isinstance(new_gradient.values, torch.Tensor)
+        assert equistore.equal_metadata_block(new_gradient, gradient)
+        np.testing.assert_equal(new_gradient.values.numpy(), gradient.values)
+
+        for parameter_2, gradient_gradient in gradient.gradients():
+            new_gradient_gradient = new_gradient.gradient(parameter_2)
+
+            assert isinstance(new_gradient_gradient.values, torch.Tensor)
+            assert equistore.equal_metadata_block(
+                new_gradient_gradient, gradient_gradient
+            )
+            np.testing.assert_equal(
+                new_gradient_gradient.values.numpy(), gradient_gradient.values
+            )
 
 
 def test_torch_to_numpy_block(block):
     """Test a `block_to` conversion from torch to numpy."""
     block = equistore.block_to(block, backend="torch")
     new_block = equistore.block_to(block, backend="numpy")
-    assert_equal(new_block.samples, block.samples)
-    assert_equal(
-        new_block.gradient("grad").components, block.gradient("grad").components
-    )
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").properties,
-        block.gradient("grad").gradient("grad_grad").properties,
-    )
+
+    assert isinstance(block.values, torch.Tensor)
     assert isinstance(new_block.values, np.ndarray)
-    assert isinstance(new_block.gradient("grad").values, np.ndarray)
-    assert isinstance(
-        new_block.gradient("grad").gradient("grad_grad").values, np.ndarray
-    )
-    assert_equal(new_block.values, block.values.numpy())
-    assert_equal(
-        new_block.gradient("grad").values, block.gradient("grad").values.numpy()
-    )
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").values,
-        block.gradient("grad").gradient("grad_grad").values.numpy(),
-    )
+    assert equistore.equal_metadata_block(new_block, block)
+    np.testing.assert_equal(new_block.values, block.values.numpy())
+
+    for parameter, gradient in block.gradients():
+        new_gradient = new_block.gradient(parameter)
+
+        assert isinstance(gradient.values, torch.Tensor)
+        assert isinstance(new_gradient.values, np.ndarray)
+        assert equistore.equal_metadata_block(new_gradient, gradient)
+        np.testing.assert_equal(new_gradient.values, gradient.values.numpy())
+
+        for parameter_2, gradient_gradient in gradient.gradients():
+            new_gradient_gradient = new_gradient.gradient(parameter_2)
+
+            assert isinstance(gradient_gradient.values, torch.Tensor)
+            assert isinstance(new_gradient_gradient.values, np.ndarray)
+            assert equistore.equal_metadata_block(
+                new_gradient_gradient, gradient_gradient
+            )
+            np.testing.assert_equal(
+                new_gradient_gradient.values, gradient_gradient.values.numpy()
+            )
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
 def test_numpy_to_torch_gpu_block(block):
     """Test a `block_to` conversion from numpy to a torch GPU tensor."""
     new_block = equistore.block_to(block, backend="torch", device="cuda")
-    assert_equal(new_block.properties, block.properties)
-    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").components,
-        block.gradient("grad").gradient("grad_grad").components,
-    )
+
     assert isinstance(new_block.values, torch.Tensor)
-    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
-    assert isinstance(
-        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
-    )
-    assert new_block.values.is_cuda
-    assert new_block.gradient("grad").values.is_cuda
-    assert new_block.gradient("grad").gradient("grad_grad").values.is_cuda
-    assert_equal(new_block.values.cpu().numpy(), block.values)
-    assert_equal(
-        new_block.gradient("grad").values.cpu().numpy(), block.gradient("grad").values
-    )
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").values.cpu().numpy(),
-        block.gradient("grad").gradient("grad_grad").values,
-    )
+    assert equistore.equal_metadata_block(new_block, block)
+    assert new_block.device.is_cuda()
+    np.testing.assert_equal(new_block.values.cpu().numpy(), block.values)
+
+    for parameter, gradient in block.gradients():
+        new_gradient = new_block.gradient(parameter)
+
+        assert isinstance(new_gradient.values, torch.Tensor)
+        assert equistore.equal_metadata_block(new_gradient, gradient)
+        np.testing.assert_equal(new_gradient.values.cpu().numpy(), gradient.values)
+
+        for parameter_2, gradient_gradient in gradient.gradients():
+            new_gradient_gradient = new_gradient.gradient(parameter_2)
+
+            assert isinstance(new_gradient_gradient.values, torch.Tensor)
+            assert equistore.equal_metadata_block(
+                new_gradient_gradient, gradient_gradient
+            )
+            np.testing.assert_equal(
+                new_gradient_gradient.values.cpu().numpy(), gradient_gradient.values
+            )
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
@@ -131,71 +139,83 @@ def test_torch_to_gpu_block(block):
     """Test a `block_to` conversion from a torch CPU tensor to a torch GPU tensor."""
     block = equistore.block_to(block, backend="torch")
     new_block = equistore.block_to(block, device="cuda")
-    assert_equal(new_block.properties, block.properties)
-    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").components,
-        block.gradient("grad").gradient("grad_grad").components,
-    )
+
     assert isinstance(new_block.values, torch.Tensor)
-    assert isinstance(new_block.gradient("grad").values, torch.Tensor)
-    assert isinstance(
-        new_block.gradient("grad").gradient("grad_grad").values, torch.Tensor
-    )
-    assert new_block.values.is_cuda
-    assert new_block.gradient("grad").values.is_cuda
-    assert new_block.gradient("grad").gradient("grad_grad").values.is_cuda
-    assert_equal(new_block.values.cpu().numpy(), block.values.numpy())
-    assert_equal(
-        new_block.gradient("grad").values.cpu().numpy(),
-        block.gradient("grad").values.numpy(),
-    )
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").values.cpu().numpy(),
-        block.gradient("grad").gradient("grad_grad").values.numpy(),
-    )
+    assert equistore.equal_metadata_block(new_block, block)
+    np.testing.assert_equal(new_block.values.cpu().numpy(), block.values.numpy())
+    assert new_block.values.device.is_cuda()
+    assert block.values.device.is_cpu()
+
+    for parameter, gradient in block.gradients():
+        new_gradient = new_block.gradient(parameter)
+
+        assert isinstance(new_gradient.values, torch.Tensor)
+        assert equistore.equal_metadata_block(new_gradient, gradient)
+        np.testing.assert_equal(
+            new_gradient.values.cpu().numpy(), gradient.values.numpy()
+        )
+        assert new_gradient.values.device.is_cuda()
+        assert gradient.values.device.is_cpu()
+
+        for parameter_2, gradient_gradient in gradient.gradients():
+            new_gradient_gradient = new_gradient.gradient(parameter_2)
+
+            assert isinstance(new_gradient_gradient.values, torch.Tensor)
+            assert equistore.equal_metadata_block(
+                new_gradient_gradient, gradient_gradient
+            )
+            np.testing.assert_equal(
+                new_gradient_gradient.values.cpu().numpy(),
+                gradient_gradient.values.numpy(),
+            )
+            assert new_gradient_gradient.values.device.is_cuda()
+            assert gradient_gradient.values.device.is_cpu()
 
 
 def test_change_dtype_block(block):
     """Test a `block_to` change of dtype"""
     new_block = equistore.block_to(block, dtype=np.float32)
-    assert_equal(new_block.properties, block.properties)
-    assert_equal(new_block.gradient("grad").samples, block.gradient("grad").samples)
-    assert_equal(
-        new_block.gradient("grad").gradient("grad_grad").components,
-        block.gradient("grad").gradient("grad_grad").components,
-    )
-    assert isinstance(new_block.values, np.ndarray)
-    assert isinstance(new_block.gradient("grad").values, np.ndarray)
-    assert isinstance(
-        new_block.gradient("grad").gradient("grad_grad").values, np.ndarray
-    )
-    assert new_block.values.dtype == np.float32
-    assert new_block.gradient("grad").values.dtype == np.float32
-    assert new_block.gradient("grad").gradient("grad_grad").values.dtype == np.float32
+
+    assert equistore.equal_metadata_block(new_block, block)
     assert np.allclose(new_block.values, block.values)
-    assert np.allclose(
-        new_block.gradient("grad").values,
-        block.gradient("grad").values,
-    )
-    assert np.allclose(
-        new_block.gradient("grad").gradient("grad_grad").values,
-        block.gradient("grad").gradient("grad_grad").values,
-    )
+
+    assert block.values.dtype == np.float64
+    assert new_block.values.dtype == np.float32
+
+    for parameter, gradient in block.gradients():
+        new_gradient = new_block.gradient(parameter)
+
+        assert equistore.equal_metadata_block(new_gradient, gradient)
+        assert np.allclose(new_gradient.values, gradient.values)
+
+        assert gradient.values.dtype == np.float64
+        assert new_gradient.values.dtype == np.float32
+
+        for parameter_2, gradient_gradient in gradient.gradients():
+            new_gradient_gradient = new_gradient.gradient(parameter_2)
+
+            assert equistore.equal_metadata_block(
+                new_gradient_gradient, gradient_gradient
+            )
+            assert np.allclose(new_gradient_gradient.values, gradient_gradient.values)
+
+            assert gradient_gradient.values.dtype == np.float64
+            assert new_gradient_gradient.values.dtype == np.float32
 
 
 def test_wrong_arguments(tensor):
     """Test the `to` function with incorrect arguments."""
     with pytest.raises(TypeError, match="`tensor` should be an equistore `TensorMap`"):
         equistore.to(100)
-    with pytest.raises(TypeError, match="`backend` should be passed as a `str`"):
+
+    with pytest.raises(TypeError, match="'backend' should be given as a string"):
         equistore.to(tensor, backend=10)
-    with pytest.raises(
-        ValueError,
-        match="the `numpy` backend option does not support autograd gradient tracking",
-    ):
+
+    message = "the `numpy` backend option does not support autograd gradient tracking"
+    with pytest.raises(ValueError, match=message):
         equistore.to(tensor, backend="numpy", requires_grad=True)
-    with pytest.raises(ValueError, match="not supported"):
+
+    with pytest.raises(ValueError, match="backend 'jax' is not supported"):
         equistore.to(tensor, backend="jax")
 
 
@@ -203,24 +223,25 @@ def test_numpy_to_torch(tensor):
     """Test a `to` conversion from numpy to torch."""
     new_tensor = equistore.to(tensor, backend="torch")
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
 
 
 def test_numpy_to_torch_switching_requires_grad(tensor):
-    """Test a `to` conversion from numpy to torch, switching requires_grad on
-    and off."""
+    """
+    Test a `to` conversion from numpy to torch, switching requires_grad on and off.
+    """
     new_tensor = equistore.to(tensor, backend="torch")
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert not new_block.values.requires_grad
 
     new_tensor = equistore.to(tensor, backend="torch", requires_grad=True)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert new_block.values.requires_grad
 
     new_tensor = equistore.to(tensor, backend="torch", requires_grad=False)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert not new_block.values.requires_grad
 
 
@@ -229,7 +250,7 @@ def test_torch_to_numpy(tensor):
     tensor = equistore.to(tensor, backend="torch")
     new_tensor = equistore.to(tensor, backend="numpy")
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert isinstance(new_block.values, np.ndarray)
 
 
@@ -238,7 +259,7 @@ def test_numpy_to_torch_gpu(tensor):
     """Test a `to` conversion from numpy to a torch GPU tensor."""
     new_tensor = equistore.to(tensor, backend="torch", device="cuda")
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
         assert new_block.values.is_cuda
 
@@ -249,7 +270,7 @@ def test_torch_to_gpu(tensor):
     tensor = equistore.to(tensor, backend="torch")
     new_tensor = equistore.to(tensor, device="cuda")
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
         assert new_block.values.is_cuda
 
@@ -258,6 +279,6 @@ def test_change_dtype(tensor):
     """Test a `to` change of dtype"""
     new_tensor = equistore.to(tensor, dtype=np.float32)
     assert equistore.equal_metadata(new_tensor, tensor)
-    for _, new_block in new_tensor:
+    for new_block in new_tensor:
         assert isinstance(new_block.values, np.ndarray)
         assert new_block.values.dtype == np.float32

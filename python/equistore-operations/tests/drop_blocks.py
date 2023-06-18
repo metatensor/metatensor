@@ -31,6 +31,7 @@ def test_drop_all(test_tensor_map):
 def test_drop_two_random_keys(test_tensor_map):
     # test the behavior when two random keys are dropped
     n_blocks = len(test_tensor_map.keys)
+    np.random.seed(0xFEA123)
     indices_to_drop = np.random.randint(0, n_blocks, 2)
 
     values_to_drop = [test_tensor_map.keys[i].values for i in indices_to_drop]

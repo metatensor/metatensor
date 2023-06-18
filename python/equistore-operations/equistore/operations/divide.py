@@ -38,29 +38,29 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     blocks = []
     if isinstance(B, TensorMap):
         _check_same_keys(A, B, "divide")
-        for key, blockA in A:
-            blockB = B.block(key)
+        for key, block_A in A.items():
+            block_B = B.block(key)
             _check_blocks(
-                blockA,
-                blockB,
+                block_A,
+                block_B,
                 props=["samples", "components", "properties"],
                 fname="divide",
             )
             _check_same_gradients(
-                blockA,
-                blockB,
+                block_A,
+                block_B,
                 props=["samples", "components", "properties"],
                 fname="divide",
             )
-            blocks.append(_divide_block_block(block_1=blockA, block_2=blockB))
+            blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
     else:
         # check if can be converted in float (so if it is a constant value)
         try:
             float(B)
         except TypeError as e:
             raise TypeError("B should be a TensorMap or a scalar value. ") from e
-        for blockA in A.blocks():
-            blocks.append(_divide_block_constant(block=blockA, constant=B))
+        for block_A in A:
+            blocks.append(_divide_block_constant(block=block_A, constant=B))
 
     return TensorMap(A.keys, blocks)
 

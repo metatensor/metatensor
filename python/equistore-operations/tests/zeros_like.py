@@ -24,7 +24,7 @@ def test_zeros_like():
     assert equistore.equal_metadata(zeros_tensor_positions, tensor_no_cell)
 
     # check the values
-    for key, block in tensor:
+    for key, block in tensor.items():
         zeros_block = zeros_tensor[key]
 
         assert np.all(zeros_block.values == np.zeros_like(block.values))
