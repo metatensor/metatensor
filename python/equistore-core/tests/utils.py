@@ -87,7 +87,7 @@ def large_tensor():
     Create a dummy tensor map of 16 blocks to be used in tests. This is the same
     tensor map used in `tensor.rs` tests.
     """
-    blocks = [block.copy() for _, block in tensor()]
+    blocks = [block.copy() for block in tensor().blocks()]
 
     for i in range(8):
         block = TensorBlock(

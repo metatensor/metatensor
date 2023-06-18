@@ -116,27 +116,6 @@ def test_block(tensor):
     block = tensor[tensor.keys[0]]
     assert_equal(block.values, np.full((3, 1, 1), 1.0))
 
-    # More arguments than needed: two integers
-    # by index
-    msg = "only one non-keyword argument is supported, 2 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(3, 4)
-
-    # 4 input with the first as integer by __getitem__
-    msg = "only one non-keyword argument is supported, 4 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor[3, 4, 7.0, "r"]
-
-    # More arguments than needed: 3 Labels
-    msg = "only one non-keyword argument is supported, 3 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(tensor.keys[0], tensor.keys[1], tensor.keys[3])
-
-    # by __getitem__
-    msg = "only one non-keyword argument is supported, 2 are given"
-    with pytest.raises(ValueError, match=msg):
-        tensor[tensor.keys[1], 4]
-
     # 0 blocks matching criteria
     msg = "couldn't find any block matching \\(key_1=3\\)"
     with pytest.raises(ValueError, match=msg):
@@ -177,10 +156,16 @@ def test_iter(tensor):
         ((2, 2), np.full((4, 3, 1), 3.0)),
         ((2, 3), np.full((4, 3, 1), 4.0)),
     ]
-    for i, (key, block) in enumerate(tensor):
+
+    for i, (key, block) in enumerate(tensor.items()):
         expected_key, expected_values = expected[i]
 
         assert tuple(key) == expected_key
+        assert_equal(block.values, expected_values)
+
+    for i, block in enumerate(tensor):
+        _, expected_values = expected[i]
+
         assert_equal(block.values, expected_values)
 
 
@@ -393,17 +378,14 @@ def test_empty_tensor():
         empty_tensor.block(not_a_key=3)
 
     # check the `blocks_matching` function
-    assert empty_tensor.blocks_matching(key=3) == []
+    assert empty_tensor.blocks_matching(Labels("key", np.array([[3]]))) == []
 
     message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
     with pytest.raises(EquistoreError, match=message):
-        empty_tensor.blocks_matching(not_a_key=3)
+        empty_tensor.blocks_matching(Labels("not_a_key", np.array([[3]])))
 
-    message = (
-        "invalid parameter: block index out of bounds: we have "
-        "0 blocks but the index is 3"
-    )
-    with pytest.raises(EquistoreError, match=message):
+    message = "block index out of bounds: we have 0 blocks but the index is 3"
+    with pytest.raises(IndexError, match=message):
         empty_tensor.block(3)
 
     # check the `keys_to_xxx` function

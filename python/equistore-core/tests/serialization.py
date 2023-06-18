@@ -62,7 +62,7 @@ def test_save(use_numpy, tmpdir, tensor):
     assert len(data.keys()) == 29
 
     assert _npz_labels(data["keys"]) == tensor.keys
-    for i, (_, block) in enumerate(tensor):
+    for i, block in enumerate(tensor.blocks()):
         prefix = f"blocks/{i}"
 
         np.testing.assert_equal(data[f"{prefix}/values"], block.values)
@@ -122,7 +122,7 @@ def test_pickle(protocol, tmpdir, tensor):
             tensor_loaded = pickle.load(f)
 
     np.testing.assert_equal(tensor.keys, tensor_loaded.keys)
-    for key, block in tensor_loaded:
+    for key, block in tensor_loaded.items():
         ref_block = tensor.block(key)
 
         assert isinstance(block.values, np.ndarray)
@@ -183,7 +183,7 @@ def test_nested_gradients(tmpdir, use_numpy):
     assert _npz_labels(data["keys"]) == tensor.keys
     assert _npz_labels(data["keys"]) == loaded.keys
 
-    for i, (key, block) in enumerate(tensor):
+    for i, (key, block) in enumerate(tensor.items()):
         loaded_block = loaded.block(key)
 
         prefix = f"blocks/{i}"
