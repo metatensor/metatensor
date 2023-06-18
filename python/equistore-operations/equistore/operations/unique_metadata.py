@@ -111,7 +111,7 @@ def unique_metadata(
     if gradient is None:
         blocks = tensor.blocks()
     else:
-        blocks = [block.gradient(gradient) for block in tensor.blocks()]
+        blocks = [block.gradient(gradient) for block in tensor]
 
     return _unique_from_blocks(blocks, axis, names)
 

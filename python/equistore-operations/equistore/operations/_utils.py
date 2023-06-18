@@ -130,8 +130,7 @@ def _check_same_gradients(a: TensorBlock, b: TensorBlock, props: List[str], fnam
     for parameter, grad_a in a.gradients():
         grad_b = b.gradient(parameter)
 
-        if len(grad_a.gradients_list()) != 0 or len(grad_b.gradients_list()) != 0:
-            raise NotImplementedError("gradients of gradients are not supported")
+        _check_same_gradients(grad_a, grad_b, props=props, fname=fname)
 
         if props is not None:
             for prop in props:

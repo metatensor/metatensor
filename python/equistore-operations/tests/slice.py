@@ -224,7 +224,7 @@ def test_slice_samples(tensor):
         labels=samples,
     )
 
-    for key, block in tensor:
+    for key, block in tensor.items():
         sliced_block = sliced_tensor.block(key)
         _check_sliced_block_samples(block, sliced_block, structures_to_keep)
 
@@ -244,7 +244,7 @@ def test_slice_samples(tensor):
         labels=samples,
     )
 
-    for _, block in sliced_tensor:
+    for block in sliced_tensor:
         # all blocks are empty
         _check_empty_block(block, sliced_tensor.block(key), "s")
 
@@ -298,7 +298,7 @@ def test_slice_properties(tensor):
         labels=properties,
     )
 
-    for key, block in tensor:
+    for key, block in tensor.items():
         sliced_block = sliced_tensor.block(key)
         _check_sliced_block_properties(block, sliced_block, radial_to_keep)
 
@@ -318,7 +318,7 @@ def test_slice_properties(tensor):
         labels=properties,
     )
 
-    for key, block in tensor:
+    for key, block in tensor.items():
         sliced_block = sliced_tensor.block(key)
         _check_empty_block(block, sliced_block, "p")
 
@@ -431,7 +431,7 @@ def test_slicing_by_empty(tensor):
     # Empty tensor returned if no samples to slice by are passed
     block_list = [
         _construct_empty_slice_block(block, "samples", empty_labels_samples)
-        for block in tensor.blocks()
+        for block in tensor
     ]
     reference_tensor = TensorMap(tensor.keys, block_list)
     assert equistore.equal(
@@ -454,7 +454,7 @@ def test_slicing_by_empty(tensor):
     # Empty tensor returned if no properties to slice by are passed
     block_list = [
         _construct_empty_slice_block(block, "properties", empty_labels_properties)
-        for block in tensor.blocks()
+        for block in tensor
     ]
     reference_tensor = TensorMap(tensor.keys, block_list)
     assert equistore.equal(

@@ -18,7 +18,7 @@ def tensor():
 def tensor_map_complex(tensor):
     """Manipulate tensor to be a suitable test for the `abs` function."""
     blocks = []
-    for _, block in tensor:
+    for block in tensor:
         new_block = TensorBlock(
             values=-block.values + 3j,
             samples=block.samples,
@@ -45,7 +45,7 @@ def tensor_map_complex(tensor):
 @pytest.fixture
 def tensor_map_result(tensor_map_complex):
     blocks = []
-    for _, block in tensor_map_complex:
+    for block in tensor_map_complex:
         new_block = TensorBlock(
             values=np.abs(block.values),
             samples=block.samples,

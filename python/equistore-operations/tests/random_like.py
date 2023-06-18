@@ -26,7 +26,7 @@ def test_random_uniform_like():
     assert equistore.equal_metadata(random_tensor_positions, tensor_no_cell)
 
     # check the values
-    for _, random_block in random_tensor:
+    for random_block in random_tensor:
         assert np.all(random_block.values >= 0)
         assert np.all(random_block.values < 1)
 

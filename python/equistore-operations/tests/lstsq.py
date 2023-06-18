@@ -59,9 +59,9 @@ class TestLstsq(unittest.TestCase):
             np.allclose(w.block(0).values, np.array([-1.0, 1.0]), rtol=1e-13)
         )
         self.assertTrue(np.allclose(w.block(1).values, np.array([7, 8]), rtol=1e-7))
-        for key, blockw in w:
-            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
-            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
+        for key, block_w in w.items():
+            self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
+            self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
         Ydot = equistore.dot(X, w)
         self.assertTrue(equistore.allclose(Ydot, Y))
@@ -112,7 +112,7 @@ class TestLstsq(unittest.TestCase):
             np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
         )
 
-        for key, block_w in w:
+        for key, block_w in w.items():
             self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
             self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
@@ -171,9 +171,9 @@ class TestLstsq(unittest.TestCase):
             np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
         )
 
-        for key, blockw in w:
-            self.assertTrue(np.all(blockw.samples == Y.block(key).properties))
-            self.assertTrue(np.all(blockw.properties == X.block(key).properties))
+        for key, block_w in w.items():
+            self.assertTrue(np.all(block_w.samples == Y.block(key).properties))
+            self.assertTrue(np.all(block_w.properties == X.block(key).properties))
 
         Ydot = equistore.dot(X, w)
         self.assertTrue(equistore.allclose(Ydot, Y))

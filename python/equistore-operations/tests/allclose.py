@@ -122,7 +122,7 @@ def test_self_allclose_grad():
     )
     blocks = []
     blocks_e6 = []
-    for _, block in tensor1:
+    for block in tensor1:
         blocks.append(block.copy())
         be6 = block.copy()
         be6.values[:] += 1e-6

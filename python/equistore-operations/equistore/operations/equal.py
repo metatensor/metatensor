@@ -56,7 +56,7 @@ def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap):
     except ValueError as e:
         raise NotEqualError("the tensor maps have different keys") from e
 
-    for key, block_1 in tensor_1:
+    for key, block_1 in tensor_1.items():
         try:
             equal_block_raise(block_1, tensor_2.block(key))
         except NotEqualError as e:

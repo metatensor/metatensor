@@ -71,7 +71,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     """
     _check_same_keys(X, Y, "solve")
 
-    for _, X_block in X:
+    for X_block in X:
         shape = X_block.values.shape
         if len(shape) != 2 or (not (shape[0] == shape[1])):
             raise ValueError(
@@ -79,7 +79,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
             )
 
     blocks = []
-    for key, X_block in X:
+    for key, X_block in X.items():
         Y_block = Y.block(key)
         blocks.append(_solve_block(X_block, Y_block))
 

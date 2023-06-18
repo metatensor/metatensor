@@ -101,7 +101,7 @@ def zeros_like(
     """
 
     blocks = []
-    for block in tensor.blocks():
+    for block in tensor:
         blocks.append(
             zeros_like_block(
                 block=block, gradients=gradients, requires_grad=requires_grad

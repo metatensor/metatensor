@@ -229,7 +229,7 @@ def allclose_raise(
     except NotEqualError as e:
         raise NotEqualError("the tensor maps have different keys") from e
 
-    for key, block_1 in tensor_1:
+    for key, block_1 in tensor_1.items():
         try:
             allclose_block_raise(
                 block_1,
