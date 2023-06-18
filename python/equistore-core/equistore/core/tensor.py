@@ -4,7 +4,7 @@ import os
 import pickle
 import sys
 import tempfile
-from typing import List, Sequence, Tuple, Union
+from typing import Dict, List, Sequence, Tuple, Union
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
@@ -118,9 +118,8 @@ class TensorMap:
 
     def __reduce_ex__(self, protocol: int):
         """
-        Used by the Pickler to dump TensorMap object to bytes object.
-        When protocol >= 5 it supports PickleBuffer which reduces number of
-        copyies needed
+        Used by the Pickler to dump TensorMap object to bytes object. When protocol >= 5
+        it supports PickleBuffer which reduces number of copies needed
         """
         import equistore.core
 
@@ -136,31 +135,18 @@ class TensorMap:
         else:
             return self._from_pickle, (data,)
 
-    def __iter__(self):
-        keys = self.keys
-        for i, key in enumerate(keys):
-            yield key, self._get_block_by_id(i)
-
     def __len__(self):
         return len(self.keys)
 
     def __repr__(self) -> str:
-        result = f"TensorMap with {len(self)} blocks\nkeys:"
-        result += self.keys.print(4, 5)
-        return result
+        return self.print(4)
 
     def __str__(self) -> str:
-        result = f"TensorMap with {len(self)} blocks\nkeys:"
-        result += self.keys.print(-1, 5)
-        return result
+        return self.print(-1)
 
-    def __getitem__(self, *args) -> TensorBlock:
-        """This is equivalent to self.block(*args)"""
-        if args and isinstance(args[0], tuple):
-            raise ValueError(
-                f"only one non-keyword argument is supported, {len(args[0])} are given"
-            )
-        return self.block(*args)
+    def __getitem__(self, selection) -> TensorBlock:
+        """This is equivalent to self.block(selection)"""
+        return self.block(selection)
 
     def __eq__(self, other):
         from equistore.operations import equal
@@ -217,145 +203,43 @@ class TensorMap:
         self._lib.eqs_tensormap_keys(self._ptr, result)
         return Labels._from_eqs_labels_t(result)
 
-    def block(self, *args, **kwargs) -> TensorBlock:
+    def block_by_id(self, index: int) -> TensorBlock:
         """
-        Get the block in this tensor map matching the selection made with
-        positional and keyword arguments.
+        Get the block at ``index`` in this :py:class:`TensorMap`.
 
-        There are a couple of different ways to call this function:
-
-        .. code-block:: python
-
-            # with a numeric index, this gives a block by its position
-            block = tensor.block(3)
-            # this block corresponds to tensor.keys[3]
-
-            # with a key
-            block = tensor.block(tensor.keys[3])
-
-            # with keyword arguments selecting the block
-            block = tensor.block(key=-3, symmetric=4)
-            # this assumes `tensor.keys.names == ("key", "symmetric")`
-
-            # with Labels containing a single entry
-            labels = Labels(names=["key", "symmetric"], values=np.array([[-3, 4]]))
-            block = tensor.block(labels)
+        :param index: index of the block to retrieve
         """
-        if len(args) > 1:
-            raise ValueError(
-                f"only one non-keyword argument is supported, {len(args)} are given"
+        if index >= len(self):
+            # we need to raise IndexError to make sure TensorMap supports iterations
+            # over blocks with `for block in tensor:` which calls `__getitem__` with
+            # integers from 0 to whenever IndexError is raised.
+            raise IndexError(
+                f"block index out of bounds: we have {len(self)} blocks but the "
+                f"index is {index}"
             )
 
-        if args and isinstance(args[0], int):
-            return self._get_block_by_id(args[0])
+        block = ctypes.POINTER(eqs_block_t)()
+        self._lib.eqs_tensormap_block_by_id(self._ptr, block, index)
+        return TensorBlock._from_ptr(block, parent=self)
 
-        matching, selection = self.blocks_matching(
-            *args, **kwargs, __return_selection=True
-        )
-
-        def _format_selection(selection):
-            kv = []
-            for key, value in selection.as_dict().items():
-                kv.append(f"{key} = {value}")
-            return f"'{', '.join(kv)}'"
-
-        if len(matching) == 0:
-            if len(self.keys) == 0:
-                raise ValueError("there are no blocks in this TensorMap")
-            else:
-                raise ValueError(
-                    f"couldn't find any block matching {selection[0].print()}"
-                )
-        elif len(matching) > 1:
-            raise ValueError(
-                f"more than one block matched {selection[0].print()}, "
-                "use `TensorMap.blocks` to get all of them"
-            )
-        else:
-            return self._get_block_by_id(matching[0])
-
-    def blocks(self, *args, **kwargs) -> List[TensorBlock]:
+    def blocks_by_id(self, indices: Sequence[int]) -> TensorBlock:
         """
-        Get blocks in this tensor map, matching the selection made with
-        positional and keyword arguments. Returns a list of all blocks matching
-        the criteria.
+        Get the blocks with the given ``indices`` in this :py:class:`TensorMap`.
 
-        There are a couple of different ways to call this function:
-
-        .. code-block:: python
-
-            # with a numeric index, this gives a block by its position
-            blocks = tensor.blocks(3)
-            # this block corresponds to tensor.keys[3]
-
-            # with a key
-            blocks = tensor.blocks(tensor.keys[3])
-
-            # with keyword arguments selecting the blocks
-            blocks = tensor.blocks(key=-3, symmetric=4)
-            # this assumes `tensor.keys.names == ("key", "symmetric")`
-
-            # with Labels containing a single entry
-            labels = Labels(names=["key"], values=np.array([[-3]]))
-            blocks = tensor.blocks(labels)
+        :param indices: indices of the block to retrieve
         """
+        return [self.block_by_id(i) for i in indices]
 
-        if len(args) > 1:
-            raise ValueError(
-                f"only one non-keyword argument is supported, {len(args)} are given"
-            )
-
-        if args and isinstance(args[0], int):
-            return [self._get_block_by_id(args[0])]
-
-        matching, selection = self.blocks_matching(
-            *args, **kwargs, __return_selection=True
-        )
-
-        if len(self.keys) == 0:
-            return []
-
-        if len(matching) == 0:
-            raise ValueError(
-                f"Couldn't find any block matching '{selection[0].print()}'"
-            )
-        else:
-            return [self._get_block_by_id(i) for i in matching]
-
-    def blocks_matching(self, *args, **kwargs) -> List[int]:
+    def blocks_matching(self, selection: Labels) -> List[int]:
         """
-        Get a (possibly empty) list of block indexes matching the selection made
-        with positional and keyword arguments. This function can be called with
-        different kinds of argument, similarly to :py:func:`TensorMap.block`.
+        Get a (possibly empty) list of block indexes matching the ``selection``.
+
+        This function finds all keys in this :py:class:`TensorMap` with the same
+        values as ``selection`` for the dimensions/names contained in the
+        ``selection``; and return the corresponding indexes.
+
+        The ``selection`` should contain a single entry.
         """
-        return_selection = kwargs.pop("__return_selection", False)
-
-        selection = None
-        if args:
-            if len(args) > 1:
-                raise ValueError(
-                    f"only one non-keyword argument is supported, {len(args)} are given"
-                )
-
-            arg = args[0]
-            if isinstance(arg, Labels):
-                selection = arg
-            elif isinstance(arg, LabelsEntry):
-                return self.blocks_matching(
-                    Labels(names=arg.names, values=arg.values.reshape(1, -1)),
-                    __return_selection=return_selection,
-                )
-            else:
-                raise ValueError(
-                    f"got unexpected object in `TensorMap.blocks_matching`: {type(arg)}"
-                )
-
-        if selection is None:
-            selection = Labels(
-                kwargs.keys(),
-                np.array(list(kwargs.values()), dtype=np.int32).reshape(1, -1),
-            )
-
         block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
         count = c_uintptr_t(block_indexes._length_)
 
@@ -370,15 +254,161 @@ class TensorMap:
         for i in range(count.value):
             result.append(int(block_indexes[i]))
 
-        if return_selection:
-            return result, selection
-        else:
-            return result
+        return result
 
-    def _get_block_by_id(self, id) -> TensorBlock:
-        block = ctypes.POINTER(eqs_block_t)()
-        self._lib.eqs_tensormap_block_by_id(self._ptr, block, id)
-        return TensorBlock._from_ptr(block, parent=self)
+    def block(
+        self,
+        selection: Union[None, int, Labels, LabelsEntry, Dict[str, int]] = None,
+        **kwargs,
+    ) -> TensorBlock:
+        """
+        Get the single block in this :py:class:`TensorMap` matching the ``selection``.
+
+        When ``selection`` is an ``int``, this is equivalent to
+        :py:func:`TensorMap.block_by_id`.
+
+        When ``selection`` is an :py:class:`Labels`, it should only contain a single
+        entry, which will be used for the selection.
+
+        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
+        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
+        being joined together to form the :py:class:`LabelsEntry` values), which is then
+        used for the selection.
+
+        When ``selection`` is a :py:class:`LabelsEntry`, this function finds the key in
+        this :py:class:`TensorMap` with the same values as ``selection`` for the
+        dimensions/names contained in the ``selection``; and return the corresponding
+        indexes.
+
+        If ``selection`` is :py:obj:`None`, the selection can be passed as keyword
+        arguments, which will be converted to a ``Dict[str, int]``.
+
+        :param selection: description of the block to extract
+
+        >>> from equistore import TensorMap, TensorBlock, Labels
+        >>> keys = Labels(["key_1", "key_2"], np.array([[0, 0], [6, 8]]))
+        >>> block_1 = TensorBlock(
+        ...     values=np.full((3, 5), 1.0),
+        ...     samples=Labels.range("sample", 3),
+        ...     components=[],
+        ...     properties=Labels.range("property", 5),
+        ... )
+        >>> block_2 = TensorBlock(
+        ...     values=np.full((5, 3), 2.0),
+        ...     samples=Labels.range("sample", 5),
+        ...     components=[],
+        ...     properties=Labels.range("property", 3),
+        ... )
+        >>> tensor = TensorMap(keys, [block_1, block_2])
+        >>> # numeric index selection, this gives a block by its position
+        >>> block = tensor.block(0)
+        >>> block
+        TensorBlock
+            samples (3): ['sample']
+            components (): []
+            properties (5): ['property']
+            gradients: None
+        >>> # This is the first block
+        >>> block.values.mean()
+        1.0
+        >>> # use a single key entry (i.e. LabelsEntry) for the selection
+        >>> tensor.block(tensor.keys[0]).values.mean()
+        1.0
+        >>> # Labels with a single entry selection
+        >>> labels = Labels(names=["key_1", "key_2"], values=np.array([[6, 8]]))
+        >>> tensor.block(labels).values.mean()
+        2.0
+        >>> # keyword arguments selection
+        >>> tensor.block(key_1=0, key_2=0).values.mean()
+        1.0
+        >>> # dictionary selection
+        >>> tensor.block({"key_1": 6, "key_2": 8}).values.mean()
+        2.0
+        """
+        if selection is None:
+            return self.block(kwargs)
+        elif isinstance(selection, int):
+            return self.block_by_id(selection)
+        else:
+            selection = _normalize_selection(selection)
+
+        matching = self.blocks_matching(selection)
+
+        if len(matching) == 0:
+            if len(self.keys) == 0:
+                raise ValueError("there are no blocks in this TensorMap")
+            else:
+                raise ValueError(
+                    f"couldn't find any block matching {selection[0].print()}"
+                )
+        elif len(matching) > 1:
+            raise ValueError(
+                f"more than one block matched {selection[0].print()}, "
+                "use `TensorMap.blocks` to get all of them"
+            )
+        else:
+            return self.block_by_id(matching[0])
+
+    def blocks(
+        self,
+        selection: Union[
+            None, Sequence[int], int, Labels, LabelsEntry, Dict[str, int]
+        ] = None,
+        **kwargs,
+    ) -> List[TensorBlock]:
+        """
+        Get the blocks in this :py:class:`TensorMap` matching the ``selection``.
+
+        When ``selection`` is ``None`` (the default), all blocks are returned.
+
+        When ``selection`` is an ``int``, this is equivalent to
+        :py:func:`TensorMap.block_by_id`; and for a ``List[int]`` this is equivalent to
+        :py:func:`TensorMap.blocks_by_id`.
+
+        When ``selection`` is an :py:class:`Labels`, it should only contain a single
+        entry, which will be used for the selection.
+
+        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
+        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
+        being joined together to form the :py:class:`LabelsEntry` values), which is then
+        used for the selection.
+
+        When ``selection`` is a :py:class:`LabelsEntry`, this function finds all keys in
+        this :py:class:`TensorMap` with the same values as ``selection`` for the
+        dimensions/names contained in the ``selection``; and return the corresponding
+        blocks.
+
+        If ``selection`` is :py:obj:`None`, the selection can be passed as keyword
+        arguments, which will be converted to a ``Dict[str, int]``.
+
+        :param selection: description of the blocks to extract
+        """
+        if selection is None:
+            return self.blocks(kwargs)
+        elif isinstance(selection, int):
+            return [self.block_by_id(selection)]
+        else:
+            selection = _normalize_selection(selection)
+
+        matching = self.blocks_matching(selection)
+
+        if len(self.keys) == 0:
+            # return an empty list here instead of the top of this function
+            # to make sure the selection was validated
+            return []
+
+        if len(matching) == 0:
+            raise ValueError(
+                f"Couldn't find any block matching '{selection[0].print()}'"
+            )
+        else:
+            return self.blocks_by_id(matching)
+
+    def items(self):
+        """get an iterator over (key, block) pairs in this :py:class:`TensorMap`"""
+        keys = self.keys
+        for i, key in enumerate(keys):
+            yield key, self.block_by_id(i)
 
     def keys_to_samples(
         self,
@@ -516,8 +546,21 @@ class TensorMap:
 
         return self.block(0).properties.names
 
+    def print(self, max_keys: int) -> str:
+        """
+        Print this :py:class:`TensorMap` to a string, including at most
+        ``max_keys`` in the output.
 
-def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]):
+        :param max_keys: how many keys to include in the output. Use ``-1`` to
+            include all keys.
+        """
+
+        result = f"TensorMap with {len(self)} blocks\nkeys:"
+        result += self.keys.print(max_entries=max_keys, indent=5)
+        return result
+
+
+def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:
     if isinstance(keys_to_move, str):
         keys_to_move = (keys_to_move,)
 
@@ -543,3 +586,29 @@ def _list_or_str_to_array_c_char(strings: Union[str, Sequence[str]]):
         c_strings[i] = v.encode("utf8")
 
     return c_strings
+
+
+def _normalize_selection(
+    selection: Union[Labels, LabelsEntry, Dict[str, int]]
+) -> Labels:
+    if isinstance(selection, dict):
+        for key, value in selection.items():
+            if not np.can_cast(value, np.int32, casting="same_kind"):
+                raise TypeError(
+                    f"expected integer values in selection, got {key}={value} of "
+                    f"type {type(value)}"
+                )
+
+        return Labels(
+            list(selection.keys()),
+            np.array([[np.int32(v) for v in selection.values()]], dtype=np.int32),
+        )
+
+    elif isinstance(selection, Labels):
+        return selection
+
+    elif isinstance(selection, LabelsEntry):
+        return Labels(selection.names, selection.values.reshape(1, -1))
+
+    else:
+        raise TypeError(f"invalid type for block selection: {type(selection)}")

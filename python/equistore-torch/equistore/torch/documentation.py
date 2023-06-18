@@ -548,8 +548,8 @@ class TensorMap:
         selection: Union[int, Labels, LabelsEntry, Dict[str, int]],
     ) -> TensorBlock:
         """
-        Get a single block with indexing syntax. This calls
-        :py:func:`TensorMap.block` directly.
+        Get a single block with indexing syntax. This calls :py:func:`TensorMap.block`
+        directly.
         """
 
     def copy(self) -> "TensorMap":
@@ -682,24 +682,23 @@ class TensorMap:
         selection: Union[int, Labels, LabelsEntry, Dict[str, int]],
     ) -> TensorBlock:
         """
-        Get the single block in this :py:class:`TensorMap` matching the
-        ``selection``.
+        Get the single block in this :py:class:`TensorMap` matching the ``selection``.
 
         When ``selection`` is an ``int``, this is equivalent to
         :py:func:`TensorMap.block_by_id`.
 
-        When ``selection`` is an :py:class:`Labels`, it should only contain a
-        single entry, which will be used for the selection.
+        When ``selection`` is an :py:class:`Labels`, it should only contain a single
+        entry, which will be used for the selection.
 
-        When ``selection`` is a ``Dict[str, int]``, it is converted into a
-        single single :py:class:`LabelsEntry` (the dict keys becoming the names
-        and the dict values being joined together to form the
-        :py:class:`LabelsEntry` values), which is then used for the selection.
+        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
+        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
+        being joined together to form the :py:class:`LabelsEntry` values), which is then
+        used for the selection.
 
-        When ``selection`` is a :py:class:`LabelsEntry`, this function finds the
-        key in this :py:class:`TensorMap` with the same values as ``selection``
-        for the dimensions/names contained in the ``selection``; and return the
-        corresponding indexes.
+        When ``selection`` is a :py:class:`LabelsEntry`, this function finds the key in
+        this :py:class:`TensorMap` with the same values as ``selection`` for the
+        dimensions/names contained in the ``selection``; and return the corresponding
+        indexes.
 
         :param selection: description of the block to extract
         """
@@ -716,21 +715,21 @@ class TensorMap:
         When ``selection`` is ``None`` (the default), all blocks are returned.
 
         When ``selection`` is an ``int``, this is equivalent to
-        :py:func:`TensorMap.block_by_id`; and for a ``List[int]`` this is
-        equivalent to :py:func:`TensorMap.blocks_by_id`.
+        :py:func:`TensorMap.block_by_id`; and for a ``List[int]`` this is equivalent to
+        :py:func:`TensorMap.blocks_by_id`.
 
-        When ``selection`` is an :py:class:`Labels`, it should only contain a
-        single entry, which will be used for the selection.
+        When ``selection`` is an :py:class:`Labels`, it should only contain a single
+        entry, which will be used for the selection.
 
-        When ``selection`` is a ``Dict[str, int]``, it is converted into a
-        single single :py:class:`LabelsEntry` (the dict keys becoming the names
-        and the dict values being joined together to form the
-        :py:class:`LabelsEntry` values), which is then used for the selection.
+        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
+        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
+        being joined together to form the :py:class:`LabelsEntry` values), which is then
+        used for the selection.
 
-        When ``selection`` is a :py:class:`LabelsEntry`, this function finds all
-        keys in this :py:class:`TensorMap` with the same values as ``selection``
-        for the dimensions/names contained in the ``selection``; and return the
-        corresponding blocks.
+        When ``selection`` is a :py:class:`LabelsEntry`, this function finds all keys in
+        this :py:class:`TensorMap` with the same values as ``selection`` for the
+        dimensions/names contained in the ``selection``; and return the corresponding
+        blocks.
 
         :param selection: description of the blocks to extract
         """

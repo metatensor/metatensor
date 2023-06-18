@@ -149,7 +149,7 @@ def _tensor_map_to_dict(tensor_map):
         "keys": _labels_to_npz(tensor_map.keys),
     }
 
-    for block_i, (_, block) in enumerate(tensor_map):
+    for block_i, block in enumerate(tensor_map.blocks()):
         prefix = f"blocks/{block_i}"
 
         result.update(_block_to_dict(block, prefix))
