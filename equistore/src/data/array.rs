@@ -141,6 +141,7 @@ unsafe extern fn rust_array_reshape(
 ) -> eqs_status_t {
     crate::errors::catch_unwind(|| {
         assert!(shape_count > 0);
+        assert!(!shape.is_null());
         check_pointers!(array);
         let array = array.cast::<Box<dyn Array>>();
         let shape = std::slice::from_raw_parts(shape, shape_count);
@@ -172,6 +173,7 @@ unsafe extern fn rust_array_create(
 ) -> eqs_status_t {
     crate::errors::catch_unwind(|| {
         assert!(shape_count > 0);
+        assert!(!shape.is_null());
         check_pointers!(array, shape, array_storage);
         let array = array.cast::<Box<dyn Array>>();
 

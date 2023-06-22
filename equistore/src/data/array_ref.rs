@@ -318,8 +318,13 @@ impl eqs_array_t {
                 function(self.ptr, &mut data_ptr),
                 "eqs_array_t.data"
             )?;
-            assert!(len != 0);
-            std::slice::from_raw_parts_mut(data_ptr, len)
+
+            if len == 0 {
+                &mut []
+            } else {
+                assert!(!data_ptr.is_null());
+                std::slice::from_raw_parts_mut(data_ptr, len)
+            }
         };
 
         return Ok(data);
