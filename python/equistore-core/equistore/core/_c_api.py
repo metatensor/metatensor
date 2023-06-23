@@ -115,6 +115,28 @@ def setup_functions(lib):
     ]
     lib.eqs_labels_clone.restype = _check_status
 
+    lib.eqs_labels_union.argtypes = [
+        eqs_labels_t,
+        eqs_labels_t,
+        POINTER(eqs_labels_t),
+        POINTER(ctypes.c_int64),
+        c_uintptr_t,
+        POINTER(ctypes.c_int64),
+        c_uintptr_t,
+    ]
+    lib.eqs_labels_union.restype = _check_status
+
+    lib.eqs_labels_intersection.argtypes = [
+        eqs_labels_t,
+        eqs_labels_t,
+        POINTER(eqs_labels_t),
+        POINTER(ctypes.c_int64),
+        c_uintptr_t,
+        POINTER(ctypes.c_int64),
+        c_uintptr_t,
+    ]
+    lib.eqs_labels_intersection.restype = _check_status
+
     lib.eqs_labels_free.argtypes = [
         POINTER(eqs_labels_t),
     ]

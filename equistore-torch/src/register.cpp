@@ -98,6 +98,10 @@ TORCH_LIBRARY(equistore, m) {
         )
         .def("is_view", &LabelsHolder::is_view)
         .def("to_owned", [](const TorchLabels& self){ return torch::make_intrusive<LabelsHolder>(self->to_owned()); })
+        .def("union", &LabelsHolder::set_union, DOCSTRING, {torch::arg("other")})
+        .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
+        .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})
+        .def("intersection_and_mapping", &LabelsHolder::intersection_and_mapping, DOCSTRING, {torch::arg("other")})
         ;
 
     m.class_<TensorBlockHolder>("TensorBlock")

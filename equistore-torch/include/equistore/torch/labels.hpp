@@ -130,6 +130,22 @@ public:
     // `nullopt`)
     LabelsHolder to_owned() const;
 
+    /// Get the union of `this` and `other`
+    TorchLabels set_union(const TorchLabels& other) const;
+
+    /// Get the union of `this` and `other`, as well as the mapping from
+    /// positions of entries in the input to the position of entries in the
+    /// output.
+    std::tuple<TorchLabels, torch::Tensor, torch::Tensor> union_and_mapping(const TorchLabels& other) const;
+
+    /// Get the intersection of `this` and `other`
+    TorchLabels set_intersection(const TorchLabels& other) const;
+
+    /// Get the intersection of `this` and `other`, as well as the mapping from
+    /// positions of entries in the input to the position of entries in the
+    /// output.
+    std::tuple<TorchLabels, torch::Tensor, torch::Tensor> intersection_and_mapping(const TorchLabels& other) const;
+
 private:
     /// marker type to differentiate the private constructor below from the main
     /// one

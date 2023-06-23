@@ -260,6 +260,193 @@ pub unsafe extern fn eqs_labels_clone(
     })
 }
 
+/// common checks and transformations for the set operations
+unsafe fn labels_set_common<'a>(
+    operation: &str,
+    first: &eqs_labels_t,
+    second: &eqs_labels_t,
+    first_mapping: *mut i64,
+    first_mapping_count: usize,
+    second_mapping: *mut i64,
+    second_mapping_count: usize,
+) -> Result<(&'a mut [i64], &'a mut [i64]), Error> {
+    if !first.is_rust() {
+        return Err(Error::InvalidParameter(format!(
+            "the `first` labels do not support {}, call eqs_labels_create first",
+            operation
+        )));
+    }
+
+    if !second.is_rust() {
+        return Err(Error::InvalidParameter(format!(
+            "the `second` labels do not support {}, call eqs_labels_create first",
+            operation
+        )));
+    }
+
+    let first_mapping = if first_mapping.is_null() {
+        &mut []
+    } else {
+        if first_mapping_count != first.count {
+            return Err(Error::InvalidParameter(format!(
+                "`first_mapping_count` ({}) must match the number of elements \
+                in `first` ({}) but doesn't",
+                first_mapping_count,
+                first.count,
+            )));
+        }
+        std::slice::from_raw_parts_mut(first_mapping, first_mapping_count)
+    };
+
+    let second_mapping = if second_mapping.is_null() {
+        &mut []
+    } else {
+        if second_mapping_count != second.count {
+            return Err(Error::InvalidParameter(format!(
+                "`second_mapping_count` ({}) must match the number of elements \
+                in `second` ({}) but doesn't",
+                second_mapping_count,
+                second.count,
+            )));
+        }
+        std::slice::from_raw_parts_mut(second_mapping, second_mapping_count)
+    };
+
+    return Ok((first_mapping, second_mapping));
+}
+
+/// Take the union of two `eqs_labels_t`.
+///
+/// If requested, this function can also give the positions in the union where
+/// each entry of the input `eqs_labels_t` ended up.
+///
+/// This function allocates memory for `result` which must be released
+/// `eqs_labels_free` when you don't need it anymore.
+///
+/// @param first first set of labels
+/// @param second second set of labels
+/// @param result empty labels, on output will contain the union of `first` and
+///        `second`
+/// @param first_mapping if you want the mapping from the positions of entries
+///        in `first` to the positions in `result`, this should be a pointer
+///        to an array containing `first.count` elements, to be filled by this
+///        function. Otherwise it should be a `NULL` pointer.
+/// @param first_mapping_count number of elements in the `first_mapping` array
+/// @param second_mapping if you want the mapping from the positions of entries
+///        in `second` to the positions in `result`, this should be a pointer
+///        to an array containing `second.count` elements, to be filled by this
+///        function. Otherwise it should be a `NULL` pointer.
+/// @param second_mapping_count number of elements in the `second_mapping` array
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn eqs_labels_union(
+    first: eqs_labels_t,
+    second: eqs_labels_t,
+    result: *mut eqs_labels_t,
+    first_mapping: *mut i64,
+    first_mapping_count: usize,
+    second_mapping: *mut i64,
+    second_mapping_count: usize,
+) -> eqs_status_t {
+    let unwind_wrapper = std::panic::AssertUnwindSafe(result);
+    catch_unwind(|| {
+        let (first_mapping, second_mapping) = labels_set_common(
+            "union",
+            &first,
+            &second,
+            first_mapping,
+            first_mapping_count,
+            second_mapping,
+            second_mapping_count
+        )?;
+
+        let first = &*first.internal_ptr_.cast::<Labels>();
+        let second = &*second.internal_ptr_.cast::<Labels>();
+
+        let result_rust = first.union(
+            second,
+            first_mapping,
+            second_mapping,
+        )?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = rust_to_eqs_labels(Arc::new(result_rust));
+
+        Ok(())
+    })
+}
+
+/// Take the intersection of two `eqs_labels_t`.
+///
+/// If requested, this function can also give the positions in the intersection
+/// where each entry of the input `eqs_labels_t` ended up.
+///
+/// This function allocates memory for `result` which must be released
+/// `eqs_labels_free` when you don't need it anymore.
+///
+/// @param first first set of labels
+/// @param second second set of labels
+/// @param result empty labels, on output will contain the union of `first` and
+///        `second`
+/// @param first_mapping if you want the mapping from the positions of entries
+///        in `first` to the positions in `result`, this should be a pointer to
+///        an array containing `first.count` elements, to be filled by this
+///        function. Otherwise it should be a `NULL` pointer. If an entry in
+///        `first` is not used in `result`, the mapping will be set to -1.
+/// @param first_mapping_count number of elements in the `first_mapping` array
+/// @param second_mapping if you want the mapping from the positions of entries
+///        in `second` to the positions in `result`, this should be a pointer
+///        to an array containing `second.count` elements, to be filled by this
+///        function. Otherwise it should be a `NULL` pointer. If an entry in
+///        `first` is not used in `result`, the mapping will be set to -1.
+/// @param second_mapping_count number of elements in the `second_mapping` array
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn eqs_labels_intersection(
+    first: eqs_labels_t,
+    second: eqs_labels_t,
+    result: *mut eqs_labels_t,
+    first_mapping: *mut i64,
+    first_mapping_count: usize,
+    second_mapping: *mut i64,
+    second_mapping_count: usize,
+) -> eqs_status_t {
+    let unwind_wrapper = std::panic::AssertUnwindSafe(result);
+    catch_unwind(|| {
+        let (first_mapping, second_mapping) = labels_set_common(
+            "intersection",
+            &first,
+            &second,
+            first_mapping,
+            first_mapping_count,
+            second_mapping,
+            second_mapping_count
+        )?;
+
+        let first = &*first.internal_ptr_.cast::<Labels>();
+        let second = &*second.internal_ptr_.cast::<Labels>();
+
+        let result_rust = first.intersection(
+            second,
+            first_mapping,
+            second_mapping,
+        )?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = rust_to_eqs_labels(Arc::new(result_rust));
+
+        Ok(())
+    })
+}
+
 /// Decrease the reference count of `labels`, and release the corresponding
 /// memory once the reference count reaches 0.
 ///

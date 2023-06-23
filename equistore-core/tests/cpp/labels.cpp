@@ -42,3 +42,63 @@ TEST_CASE("Labels") {
         "invalid parameter: 'not an ident' is not a valid label name"
     );
 }
+
+
+TEST_CASE("Set operations") {
+    SECTION("union") {
+        auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto first_mapping = std::vector<int64_t>(first.count());
+        auto second_mapping = std::vector<int64_t>(second.count());
+
+        auto union_ = first.set_union(second, first_mapping, second_mapping);
+
+        CHECK(union_.size() == 2);
+        CHECK(union_.names()[0] == std::string("aa"));
+        CHECK(union_.names()[1] == std::string("bb"));
+
+        CHECK(union_.count() == 4);
+        CHECK(union_(0, 0) == 0);
+        CHECK(union_(0, 1) == 1);
+
+        CHECK(union_(1, 0) == 1);
+        CHECK(union_(1, 1) == 2);
+
+        CHECK(union_(2, 0) == 2);
+        CHECK(union_(2, 1) == 3);
+
+        CHECK(union_(3, 0) == 4);
+        CHECK(union_(3, 1) == 5);
+
+        auto expected = std::vector<int64_t>{0, 1};
+        CHECK(first_mapping == expected);
+
+        expected = std::vector<int64_t>{2, 1, 3};
+        CHECK(second_mapping == expected);
+    }
+
+    SECTION("intersection") {
+        auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto first_mapping = std::vector<int64_t>(first.count());
+        auto second_mapping = std::vector<int64_t>(second.count());
+
+        auto intersection = first.set_intersection(second, first_mapping, second_mapping);
+
+        CHECK(intersection.size() == 2);
+        CHECK(intersection.names()[0] == std::string("aa"));
+        CHECK(intersection.names()[1] == std::string("bb"));
+
+        CHECK(intersection.count() == 1);
+        CHECK(intersection(0, 0) == 1);
+        CHECK(intersection(0, 1) == 2);
+
+        auto expected = std::vector<int64_t>{-1, 0};
+        CHECK(first_mapping == expected);
+
+        expected = std::vector<int64_t>{-1, 0, -1};
+        CHECK(second_mapping == expected);
+    }
+}

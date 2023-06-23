@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import pytest
 import torch
@@ -318,6 +318,38 @@ def test_position():
         _ = labels.position(3)
 
 
+def test_union():
+    first = Labels(["aa", "bb"], torch.IntTensor([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], torch.IntTensor([[2, 3], [1, 2], [4, 5]]))
+
+    union = first.union(second)
+    assert union.names == ["aa", "bb"]
+    assert torch.all(union.values == torch.IntTensor([[0, 1], [1, 2], [2, 3], [4, 5]]))
+
+    union_2, first_mapping, second_mapping = first.union_and_mapping(second)
+
+    assert union == union_2
+    assert torch.all(first_mapping == torch.LongTensor([0, 1]))
+    assert torch.all(second_mapping == torch.LongTensor([2, 1, 3]))
+
+
+def test_intersection():
+    first = Labels(["aa", "bb"], torch.IntTensor([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], torch.IntTensor([[2, 3], [1, 2], [4, 5]]))
+
+    intersection = first.intersection(second)
+    assert intersection.names == ["aa", "bb"]
+    assert torch.all(intersection.values == torch.IntTensor([[1, 2]]))
+
+    intersection_2, first_mapping, second_mapping = first.intersection_and_mapping(
+        second
+    )
+
+    assert intersection == intersection_2
+    assert torch.all(first_mapping == torch.LongTensor([-1, 0]))
+    assert torch.all(second_mapping == torch.LongTensor([-1, 0, -1]))
+
+
 # define a wrapper class to make sure the types TorchScript uses for of all
 # C-defined functions matches what we expect
 class LabelsWrap:
@@ -376,6 +408,22 @@ class LabelsWrap:
 
     def range_(self, name: str, end: int) -> Labels:
         return Labels.range(name, end)
+
+    def union(self, other: Labels) -> Labels:
+        return self._c.union(other)
+
+    def union_and_mapping(
+        self, other: Labels
+    ) -> Tuple[Labels, torch.Tensor, torch.Tensor]:
+        return self._c.union_and_mapping(other)
+
+    def intersection(self, other: Labels) -> Labels:
+        return self._c.intersection(other)
+
+    def intersection_and_mapping(
+        self, other: Labels
+    ) -> Tuple[Labels, torch.Tensor, torch.Tensor]:
+        return self._c.intersection_and_mapping(other)
 
 
 class LabelsEntryWrap:

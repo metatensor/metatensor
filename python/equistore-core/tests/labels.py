@@ -302,3 +302,35 @@ def test_eq():
     assert labels_1[0] != labels_3[0]
     assert labels_1[0] != labels_4[0]
     assert labels_1[1] == labels_3[1]
+
+
+def test_union():
+    first = Labels(["aa", "bb"], np.array([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], np.array([[2, 3], [1, 2], [4, 5]]))
+
+    union = first.union(second)
+    assert union.names == ["aa", "bb"]
+    assert np.all(union.values == np.array([[0, 1], [1, 2], [2, 3], [4, 5]]))
+
+    union_2, first_mapping, second_mapping = first.union_and_mapping(second)
+
+    assert union == union_2
+    assert np.all(first_mapping == np.array([0, 1]))
+    assert np.all(second_mapping == np.array([2, 1, 3]))
+
+
+def test_intersection():
+    first = Labels(["aa", "bb"], np.array([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], np.array([[2, 3], [1, 2], [4, 5]]))
+
+    intersection = first.intersection(second)
+    assert intersection.names == ["aa", "bb"]
+    assert np.all(intersection.values == np.array([[1, 2]]))
+
+    intersection_2, first_mapping, second_mapping = first.intersection_and_mapping(
+        second
+    )
+
+    assert intersection == intersection_2
+    assert np.all(first_mapping == np.array([-1, 0]))
+    assert np.all(second_mapping == np.array([-1, 0, -1]))

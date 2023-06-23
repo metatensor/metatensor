@@ -285,6 +285,53 @@ class Labels:
         labels.
         """
 
+    def union(self, other: "Labels") -> "Labels":
+        """
+        Take the union of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` and ``other`` ends up in the
+        union, you can use :py:meth:`Labels.union_and_mapping`.
+        """
+
+    def union_and_mapping(
+        self, other: "Labels"
+    ) -> Tuple["Labels", torch.Tensor, torch.Tensor]:
+        """
+        Take the union of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the union where each entry of the
+        input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the union, a :py:class:`torch.Tensor` containing the
+            position in the union of the entries from ``self``, and a
+            :py:class:`torch.Tensor` containing the position in the union of the
+            entries from ``other``.
+        """
+
+    def intersection(self, other: "Labels") -> "Labels":
+        """
+        Take the intersection of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` and ``other`` ends up in the
+        intersection, you can use :py:meth:`Labels.intersection_and_mapping`.
+        """
+
+    def intersection_and_mapping(
+        self, other: "Labels"
+    ) -> Tuple["Labels", torch.Tensor, torch.Tensor]:
+        """
+        Take the intersection of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the intersection where each entry of
+        the input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the intersection, a :py:class:`torch.Tensor`
+            containing the position in the intersection of the entries from ``self``,
+            and a :py:class:`torch.Tensor` containing the position in the intersection
+            of the entries from ``other``. If entries in ``self`` or ``other`` are not
+            used in the output, the mapping for them is set to ``-1``.
+        """
+
     def print(self, max_entries: int, indent: int) -> str:
         """print these :py:class:`Labels` to a string
 
@@ -330,7 +377,7 @@ class TensorBlock:
     a separate set of samples and possibly components, but which shares the same
     property labels as the original :py:class:`TensorBlock`.
 
-    ..  seealso::
+    .. seealso::
 
         The pure Python version of this class
         :py:class:`equistore.core.TensorBlock`, and the :ref:`differences

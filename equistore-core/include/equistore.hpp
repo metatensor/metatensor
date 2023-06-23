@@ -507,6 +507,184 @@ public:
         return NDArray<int32_t>::operator()(i, j);
     }
 
+    /// Take the union of these `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// union where each entry of the input `Labels` ended up.
+    ///
+    /// @param other the `Labels` we want to take the union with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the union, this should be
+    ///        a pointer to an array containing `this->count()` elements, to be
+    ///        filled by this function. Otherwise it should be a `nullptr`.
+    /// @param first_mapping_count number of elements in `first_mapping`
+    /// @param second_mapping if you want the mapping from the positions of
+    ///        entries in `other` to the positions in the union, this should be
+    ///        a pointer to an array containing `other.count()` elements, to be
+    ///        filled by this function. Otherwise it should be a `nullptr`.
+    /// @param second_mapping_count number of elements in `second_mapping`
+    /// @returns The status code of this operation. If the status is not
+    ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+    ///          error message.
+    Labels set_union(
+        const Labels& other,
+        int64_t* first_mapping = nullptr,
+        size_t first_mapping_count = 0,
+        int64_t* second_mapping = nullptr,
+        size_t second_mapping_count = 0
+    ) const {
+        eqs_labels_t result;
+        std::memset(&result, 0, sizeof(result));
+
+        details::check_status(eqs_labels_union(
+            labels_,
+            other.labels_,
+            &result,
+            first_mapping,
+            first_mapping_count,
+            second_mapping,
+            second_mapping_count
+        ));
+
+        return Labels(result);
+    }
+
+    /// Take the union of these `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// union where each entry of the input `Labels` ended up.
+    ///
+    /// @param other the `Labels` we want to take the union with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the union, this should be
+    ///        a vector containing `this->count()` elements, to be filled by
+    ///        this function. Otherwise it should be an empty vector.
+    /// @param second_mapping if you want the mapping from the positions of
+    ///        entries in `other` to the positions in the union, this should be
+    ///        a vector containing `other.count()` elements, to be filled by
+    ///        this function. Otherwise it should be an empty vector.
+    /// @returns The status code of this operation. If the status is not
+    ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+    ///          error message.
+    Labels set_union(
+        const Labels& other,
+        std::vector<int64_t>& first_mapping,
+        std::vector<int64_t>& second_mapping
+    ) const {
+        auto first_mapping_ptr = first_mapping.data();
+        auto first_mapping_count = first_mapping.size();
+        if (first_mapping_count == 0) {
+            first_mapping_ptr = nullptr;
+        }
+
+        auto second_mapping_ptr = second_mapping.data();
+        auto second_mapping_count = second_mapping.size();
+        if (second_mapping_count == 0) {
+            second_mapping_ptr = nullptr;
+        }
+
+        return this->set_union(
+            other,
+            first_mapping_ptr,
+            first_mapping_count,
+            second_mapping_ptr,
+            second_mapping_count
+        );
+    }
+
+    /// Take the intersection of these `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// intersection where each entry of the input `Labels` ended up.
+    ///
+    /// @param other the `Labels` we want to take the intersection with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the intersection, this
+    ///        should be a pointer to an array containing `this->count()`
+    ///        elements, to be filled by this function. Otherwise it should be a
+    ///        `nullptr`. If an entry in `this` is not used in the intersection,
+    ///        the mapping will be set to -1.
+    /// @param first_mapping_count number of elements in `first_mapping`
+    /// @param second_mapping if you want the mapping from the positions of
+    ///        entries in `other` to the positions in the intersection, this
+    ///        should be a pointer to an array containing `other.count()`
+    ///        elements, to be filled by this function. Otherwise it should be a
+    ///        `nullptr`. If an entry in `other` is not used in the
+    ///        intersection, the mapping will be set to -1.
+    /// @param second_mapping_count number of elements in `second_mapping`
+    /// @returns The status code of this operation. If the status is not
+    ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+    ///          error message.
+    Labels set_intersection(
+        const Labels& other,
+        int64_t* first_mapping = nullptr,
+        size_t first_mapping_count = 0,
+        int64_t* second_mapping = nullptr,
+        size_t second_mapping_count = 0
+    ) const {
+        eqs_labels_t result;
+        std::memset(&result, 0, sizeof(result));
+
+        details::check_status(eqs_labels_intersection(
+            labels_,
+            other.labels_,
+            &result,
+            first_mapping,
+            first_mapping_count,
+            second_mapping,
+            second_mapping_count
+        ));
+
+        return Labels(result);
+    }
+
+    /// Take the intersection of this `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// intersection where each entry of the input `Labels` ended up.
+    ///
+    /// @param other the `Labels` we want to take the intersection with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the intersection, this
+    ///        should be a vector containing `this->count()` elements, to be
+    ///        filled by this function. Otherwise it should be an empty vector.
+    ///        If an entry in `this` is not used in the intersection, the
+    ///        mapping will be set to -1.
+    /// @param second_mapping if you want the mapping from the positions of
+    ///        entries in `other` to the positions in the intersection, this
+    ///        should be a vector containing `other.count()` elements, to be
+    ///        filled by this function. Otherwise it should be an empty vector.
+    ///        If an entry in `other` is not used in the intersection, the
+    ///        mapping will be set to -1.
+    /// @returns The status code of this operation. If the status is not
+    ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+    ///          error message.
+    Labels set_intersection(
+        const Labels& other,
+        std::vector<int64_t>& first_mapping,
+        std::vector<int64_t>& second_mapping
+    ) const {
+        auto first_mapping_ptr = first_mapping.data();
+        auto first_mapping_count = first_mapping.size();
+        if (first_mapping_count == 0) {
+            first_mapping_ptr = nullptr;
+        }
+
+        auto second_mapping_ptr = second_mapping.data();
+        auto second_mapping_count = second_mapping.size();
+        if (second_mapping_count == 0) {
+            second_mapping_ptr = nullptr;
+        }
+
+        return this->set_intersection(
+            other,
+            first_mapping_ptr,
+            first_mapping_count,
+            second_mapping_ptr,
+            second_mapping_count
+        );
+    }
+
 private:
     Labels(): NDArray(static_cast<const int32_t*>(nullptr), {0, 0}) {
         std::memset(&labels_, 0, sizeof(labels_));
