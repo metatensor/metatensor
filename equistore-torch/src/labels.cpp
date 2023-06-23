@@ -300,6 +300,84 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     }
 }
 
+TorchLabels LabelsHolder::set_union(const TorchLabels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto result = labels_->set_union(other->labels_.value());
+    return torch::make_intrusive<LabelsHolder>(std::move(result));
+}
+
+std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const TorchLabels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
+    auto first_mapping = torch::zeros({this->count()}, options);
+    auto second_mapping = torch::zeros({other->count()}, options);
+
+    auto result = labels_->set_union(
+        other->labels_.value(),
+        first_mapping.data_ptr<int64_t>(),
+        first_mapping.size(0),
+        second_mapping.data_ptr<int64_t>(),
+        second_mapping.size(0)
+    );
+    auto torch_result = torch::make_intrusive<LabelsHolder>(std::move(result));
+
+
+    return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
+        std::move(torch_result),
+        std::move(first_mapping),
+        std::move(second_mapping)
+    );
+}
+
+TorchLabels LabelsHolder::set_intersection(const TorchLabels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto result = labels_->set_intersection(other->labels_.value());
+    return torch::make_intrusive<LabelsHolder>(std::move(result));
+}
+
+std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const TorchLabels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
+    auto first_mapping = torch::zeros({this->count()}, options);
+    auto second_mapping = torch::zeros({other->count()}, options);
+
+    auto result = labels_->set_intersection(
+        other->labels_.value(),
+        first_mapping.data_ptr<int64_t>(),
+        first_mapping.size(0),
+        second_mapping.data_ptr<int64_t>(),
+        second_mapping.size(0)
+    );
+    auto torch_result = torch::make_intrusive<LabelsHolder>(std::move(result));
+
+
+    return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
+        std::move(torch_result),
+        std::move(first_mapping),
+        std::move(second_mapping)
+    );
+}
+
 struct LabelsPrintData {
     LabelsPrintData(const std::vector<std::string>& names) {
         for (const auto& name: names) {

@@ -326,6 +326,78 @@ eqs_status_t eqs_labels_create(struct eqs_labels_t *labels);
 eqs_status_t eqs_labels_clone(struct eqs_labels_t labels, struct eqs_labels_t *clone);
 
 /**
+ * Take the union of two `eqs_labels_t`.
+ *
+ * If requested, this function can also give the positions in the union where
+ * each entry of the input `eqs_labels_t` ended up.
+ *
+ * This function allocates memory for `result` which must be released
+ * `eqs_labels_free` when you don't need it anymore.
+ *
+ * @param first first set of labels
+ * @param second second set of labels
+ * @param result empty labels, on output will contain the union of `first` and
+ *        `second`
+ * @param first_mapping if you want the mapping from the positions of entries
+ *        in `first` to the positions in `result`, this should be a pointer
+ *        to an array containing `first.count` elements, to be filled by this
+ *        function. Otherwise it should be a `NULL` pointer.
+ * @param first_mapping_count number of elements in the `first_mapping` array
+ * @param second_mapping if you want the mapping from the positions of entries
+ *        in `second` to the positions in `result`, this should be a pointer
+ *        to an array containing `second.count` elements, to be filled by this
+ *        function. Otherwise it should be a `NULL` pointer.
+ * @param second_mapping_count number of elements in the `second_mapping` array
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+ *          error message.
+ */
+eqs_status_t eqs_labels_union(struct eqs_labels_t first,
+                              struct eqs_labels_t second,
+                              struct eqs_labels_t *result,
+                              int64_t *first_mapping,
+                              uintptr_t first_mapping_count,
+                              int64_t *second_mapping,
+                              uintptr_t second_mapping_count);
+
+/**
+ * Take the intersection of two `eqs_labels_t`.
+ *
+ * If requested, this function can also give the positions in the intersection
+ * where each entry of the input `eqs_labels_t` ended up.
+ *
+ * This function allocates memory for `result` which must be released
+ * `eqs_labels_free` when you don't need it anymore.
+ *
+ * @param first first set of labels
+ * @param second second set of labels
+ * @param result empty labels, on output will contain the union of `first` and
+ *        `second`
+ * @param first_mapping if you want the mapping from the positions of entries
+ *        in `first` to the positions in `result`, this should be a pointer to
+ *        an array containing `first.count` elements, to be filled by this
+ *        function. Otherwise it should be a `NULL` pointer. If an entry in
+ *        `first` is not used in `result`, the mapping will be set to -1.
+ * @param first_mapping_count number of elements in the `first_mapping` array
+ * @param second_mapping if you want the mapping from the positions of entries
+ *        in `second` to the positions in `result`, this should be a pointer
+ *        to an array containing `second.count` elements, to be filled by this
+ *        function. Otherwise it should be a `NULL` pointer. If an entry in
+ *        `first` is not used in `result`, the mapping will be set to -1.
+ * @param second_mapping_count number of elements in the `second_mapping` array
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+ *          error message.
+ */
+eqs_status_t eqs_labels_intersection(struct eqs_labels_t first,
+                                     struct eqs_labels_t second,
+                                     struct eqs_labels_t *result,
+                                     int64_t *first_mapping,
+                                     uintptr_t first_mapping_count,
+                                     int64_t *second_mapping,
+                                     uintptr_t second_mapping_count);
+
+/**
  * Decrease the reference count of `labels`, and release the corresponding
  * memory once the reference count reaches 0.
  *

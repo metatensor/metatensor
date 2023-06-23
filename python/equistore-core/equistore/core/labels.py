@@ -1,6 +1,6 @@
 import ctypes
 import io
-from typing import List, Optional, Sequence, Union, overload
+from typing import List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
@@ -455,6 +455,175 @@ class Labels:
             return result.value
         else:
             return None
+
+    def union(self, other: "Labels") -> "Labels":
+        """
+        Take the union of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` and ``other`` ends up in the
+        union, you can use :py:meth:`Labels.union_and_mapping`.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
+        >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
+        >>> first.union(second)
+        Labels(
+            a  b
+            0  1
+            1  2
+            0  3
+            1  3
+        )
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `union` with Labels view, call `to_owned` before"
+            )
+
+        output = eqs_labels_t()
+        self._lib.eqs_labels_union(
+            self._as_eqs_labels_t(), other._as_eqs_labels_t(), output, None, 0, None, 0
+        )
+
+        return Labels._from_eqs_labels_t(output)
+
+    def union_and_mapping(
+        self, other: "Labels"
+    ) -> Tuple["Labels", np.ndarray, np.ndarray]:
+        """
+        Take the union of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the union where each entry of the
+        input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the union, a :py:class:`numpy.ndarray` containing the
+            position in the union of the entries from ``self``, and a
+            :py:class:`numpy.ndarray` containing the position in the union of the
+            entries from ``other``.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
+        >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
+        >>> union, mapping_1, mapping_2 = first.union_and_mapping(second)
+        >>> union
+        Labels(
+            a  b
+            0  1
+            1  2
+            0  3
+            1  3
+        )
+        >>> print(mapping_1)
+        [0 1 2]
+        >>> print(mapping_2)
+        [2 3 1]
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `union_and_mapping` with Labels view, call `to_owned` "
+                "before"
+            )
+
+        output = eqs_labels_t()
+        first_mapping = np.zeros(len(self), dtype=np.int64)
+        second_mapping = np.zeros(len(other), dtype=np.int64)
+
+        self._lib.eqs_labels_union(
+            self._as_eqs_labels_t(),
+            other._as_eqs_labels_t(),
+            output,
+            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            len(first_mapping),
+            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            len(second_mapping),
+        )
+
+        return Labels._from_eqs_labels_t(output), first_mapping, second_mapping
+
+    def intersection(self, other: "Labels") -> "Labels":
+        """
+        Take the intersection of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` and ``other`` ends up in the
+        intersection, you can use :py:meth:`Labels.intersection_and_mapping`.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
+        >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
+        >>> first.intersection(second)
+        Labels(
+            a  b
+            1  2
+            0  3
+        )
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `intersection` with Labels view, call `to_owned` before"
+            )
+
+        output = eqs_labels_t()
+        self._lib.eqs_labels_intersection(
+            self._as_eqs_labels_t(), other._as_eqs_labels_t(), output, None, 0, None, 0
+        )
+
+        return Labels._from_eqs_labels_t(output)
+
+    def intersection_and_mapping(
+        self, other: "Labels"
+    ) -> Tuple["Labels", np.ndarray, np.ndarray]:
+        """
+        Take the intersection of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the intersection where each entry of
+        the input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the intersection, a :py:class:`numpy.ndarray`
+            containing the position in the intersection of the entries from ``self``,
+            and a :py:class:`numpy.ndarray` containing the position in the intersection
+            of the entries from ``other``. If entries in ``self`` or ``other`` are not
+            used in the output, the mapping for them is set to ``-1``.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
+        >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
+        >>> intersection, mapping_1, mapping_2 = first.intersection_and_mapping(second)
+        >>> intersection
+        Labels(
+            a  b
+            1  2
+            0  3
+        )
+        >>> print(mapping_1)
+        [-1  0  1]
+        >>> print(mapping_2)
+        [ 1 -1  0]
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `intersection_and_mapping` with Labels view, call "
+                "`to_owned` before"
+            )
+
+        output = eqs_labels_t()
+        first_mapping = np.zeros(len(self), dtype=np.int64)
+        second_mapping = np.zeros(len(other), dtype=np.int64)
+
+        self._lib.eqs_labels_intersection(
+            self._as_eqs_labels_t(),
+            other._as_eqs_labels_t(),
+            output,
+            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            len(first_mapping),
+            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            len(second_mapping),
+        )
+
+        return Labels._from_eqs_labels_t(output), first_mapping, second_mapping
 
     def print(self, max_entries: int, indent: int = 0) -> str:
         """print these :py:class:`Labels` to a string

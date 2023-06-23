@@ -342,6 +342,26 @@ extern "C" {
     #[must_use]
     pub fn eqs_labels_clone(labels: eqs_labels_t, clone: *mut eqs_labels_t) -> eqs_status_t;
     #[must_use]
+    pub fn eqs_labels_union(
+        first: eqs_labels_t,
+        second: eqs_labels_t,
+        result: *mut eqs_labels_t,
+        first_mapping: *mut i64,
+        first_mapping_count: usize,
+        second_mapping: *mut i64,
+        second_mapping_count: usize,
+    ) -> eqs_status_t;
+    #[must_use]
+    pub fn eqs_labels_intersection(
+        first: eqs_labels_t,
+        second: eqs_labels_t,
+        result: *mut eqs_labels_t,
+        first_mapping: *mut i64,
+        first_mapping_count: usize,
+        second_mapping: *mut i64,
+        second_mapping_count: usize,
+    ) -> eqs_status_t;
+    #[must_use]
     pub fn eqs_labels_free(labels: *mut eqs_labels_t) -> eqs_status_t;
     #[must_use]
     pub fn eqs_register_data_origin(

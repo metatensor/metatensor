@@ -6,7 +6,7 @@ use std::iter::FusedIterator;
 use smallvec::SmallVec;
 
 use crate::c_api::eqs_labels_t;
-use crate::errors::check_status;
+use crate::errors::{Error, check_status};
 
 impl eqs_labels_t {
     /// Create an `eqs_labels_t` with all members set to null pointers/zero
@@ -281,6 +281,96 @@ impl Labels {
         }
 
         return result.try_into().ok();
+    }
+
+    /// Take the union of `self` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the union
+    /// where each entry of the input `Labels` ended up.
+    ///
+    /// If `first_mapping` (respectively `second_mapping`) is `Some`, it should
+    /// contain a slice of length `self.count()` (respectively `other.count()`)
+    /// that will be filled with the position of the entries in `self`
+    /// (respectively `other`) in the union.
+    #[inline]
+    pub fn union(
+        &self,
+        other: &Labels,
+        first_mapping: Option<&mut [i64]>,
+        second_mapping: Option<&mut [i64]>,
+    ) -> Result<Labels, Error> {
+        let mut output = eqs_labels_t::null();
+        let (first_mapping, first_mapping_count) = if let Some(m) = first_mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        let (second_mapping, second_mapping_count) = if let Some(m) = second_mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        unsafe {
+            check_status(crate::c_api::eqs_labels_union(
+                self.raw,
+                other.raw,
+                &mut output,
+                first_mapping,
+                first_mapping_count,
+                second_mapping,
+                second_mapping_count,
+            ))?;
+
+            return Ok(Labels::from_raw(output));
+        }
+    }
+
+    /// Take the intersection of self with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// intersection where each entry of the input `Labels` ended up.
+    ///
+    /// If `first_mapping` (respectively `second_mapping`) is `Some`, it should
+    /// contain a slice of length `self.count()` (respectively `other.count()`)
+    /// that will be filled by with the position of the entries in `self`
+    /// (respectively `other`) in the intersection. If an entry in `self` or
+    /// `other` are not used in the intersection, the mapping for this entry
+    /// will be set to `-1`.
+    #[inline]
+    pub fn intersection(
+        &self,
+        other: &Labels,
+        first_mapping: Option<&mut [i64]>,
+        second_mapping: Option<&mut [i64]>,
+    ) -> Result<Labels, Error> {
+        let mut output = eqs_labels_t::null();
+        let (first_mapping, first_mapping_count) = if let Some(m) = first_mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        let (second_mapping, second_mapping_count) = if let Some(m) = second_mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        unsafe {
+            check_status(crate::c_api::eqs_labels_intersection(
+                self.raw,
+                other.raw,
+                &mut output,
+                first_mapping,
+                first_mapping_count,
+                second_mapping,
+                second_mapping_count,
+            ))?;
+
+            return Ok(Labels::from_raw(output));
+        }
     }
 
     /// Iterate over the entries in this set of labels
@@ -693,5 +783,37 @@ mod tests {
             labels.as_eqs_labels_t().internal_ptr_
         );
         assert_eq!(format!("{:?}", labels), expected);
+    }
+
+    #[test]
+    fn union() {
+        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+
+        let mut first_mapping = vec![0; first.count()];
+        let mut second_mapping = vec![0; second.count()];
+        let union = first.union(&second, Some(&mut first_mapping), Some(&mut second_mapping)).unwrap();
+
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values(), [0, 1, 1, 2, 2, 3, 4, 5]);
+
+        assert_eq!(first_mapping, [0, 1]);
+        assert_eq!(second_mapping, [2, 1, 3]);
+    }
+
+    #[test]
+    fn intersection() {
+        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+
+        let mut first_mapping = vec![0_i64; first.count()];
+        let mut second_mapping = vec![0_i64; second.count()];
+        let union = first.intersection(&second, Some(&mut first_mapping), Some(&mut second_mapping)).unwrap();
+
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values(), [1, 2]);
+
+        assert_eq!(first_mapping, [-1, 0]);
+        assert_eq!(second_mapping, [-1, 0, -1]);
     }
 }

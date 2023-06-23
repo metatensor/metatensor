@@ -81,10 +81,60 @@ TEST_CASE("Labels") {
         CHECK(*labels_1 == *labels_2);
         CHECK(*labels_1 != *labels_3);
     }
+
+    SECTION("union") {
+        auto first = LabelsHolder::create({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = LabelsHolder::create({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto union_ = first->set_union(second);
+
+        CHECK(union_->size() == 2);
+        CHECK(union_->names()[0] == std::string("aa"));
+        CHECK(union_->names()[1] == std::string("bb"));
+
+        CHECK(union_->count() == 4);
+        auto expected = torch::tensor({0, 1, 1, 2, 2, 3, 4, 5}).reshape({4, 2});
+        CHECK(torch::all(union_->values() == expected).item<bool>());
+
+        auto result = first->union_and_mapping(second);
+
+        CHECK(*union_ == *std::get<0>(result));
+
+        expected = torch::tensor({0, 1});
+        CHECK(torch::all(std::get<1>(result) == expected).item<bool>());
+
+        expected = torch::tensor({2, 1, 3});
+        CHECK(torch::all(std::get<2>(result) == expected).item<bool>());
+    }
+
+    SECTION("intersection") {
+        auto first = LabelsHolder::create({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = LabelsHolder::create({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto intersection = first->set_intersection(second);
+
+        CHECK(intersection->size() == 2);
+        CHECK(intersection->names()[0] == std::string("aa"));
+        CHECK(intersection->names()[1] == std::string("bb"));
+
+        CHECK(intersection->count() == 1);
+        auto expected = torch::tensor({1, 2}).reshape({1, 2});
+        CHECK(torch::all(intersection->values() == expected).item<bool>());
+
+        auto result = first->intersection_and_mapping(second);
+
+        CHECK(*intersection == *std::get<0>(result));
+
+        expected = torch::tensor({-1, 0});
+        CHECK(torch::all(std::get<1>(result) == expected).item<bool>());
+
+        expected = torch::tensor({-1, 0, -1});
+        CHECK(torch::all(std::get<2>(result) == expected).item<bool>());
+    }
 }
 
-TEST_CASE("LabelsEntry") {
 
+TEST_CASE("LabelsEntry") {
     auto labels = LabelsHolder::create({"aaa", "bbb"}, {{1, 2}, {3, 4}});
 
     auto entry = LabelsEntryHolder(labels, 0);

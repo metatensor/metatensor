@@ -6,6 +6,7 @@ TensorMap
 The following functions operate on :c:type:`eqs_tensormap_t`:
 
 - :c:func:`eqs_tensormap`: create new tensor map
+- :c:func:`eqs_tensormap_copy`: copy existing tensor maps
 - :c:func:`eqs_tensormap_free`: free allocated tensor maps
 - :c:func:`eqs_tensormap_keys`: get the keys defined in a tensor map as :c:struct:`eqs_labels_t`
 - :c:func:`eqs_tensormap_block_by_id`: get a :c:struct:`eqs_block_t` in a tensor map from its index
@@ -15,9 +16,11 @@ The following functions operate on :c:type:`eqs_tensormap_t`:
 - :c:func:`eqs_tensormap_components_to_properties`: move entries from component labels to properties labels
 
 
----------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 .. doxygenfunction:: eqs_tensormap
+
+.. doxygenfunction:: eqs_tensormap_copy
 
 .. doxygenfunction:: eqs_tensormap_free
 

@@ -1,8 +1,10 @@
 #![allow(clippy::default_trait_access, clippy::module_name_repetitions)]
 
 use std::ffi::CString;
-use std::collections::{BTreeSet, HashMap};
-use std::collections::hash_map::Entry;
+use std::collections::BTreeSet;
+
+use hashbrown::HashMap;
+use hashbrown::hash_map::RawEntryMut;
 
 use smallvec::SmallVec;
 
@@ -93,12 +95,14 @@ impl LabelValue {
     }
 }
 
+type DefaultHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
+
 /// Builder for `Labels`, this should be used to construct `Labels`.
 pub struct LabelsBuilder {
     // cf `Labels` for the documentation of the fields
-    names: Vec<String>,
+    names: Vec<ConstCString>,
     values: Vec<LabelValue>,
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, ahash::RandomState>,
+    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
 }
 
 impl LabelsBuilder {
@@ -121,8 +125,12 @@ impl LabelsBuilder {
             }
         }
 
+        let names = names.into_iter()
+            .map(|s| ConstCString::new(CString::new(s).expect("invalid C string")))
+            .collect::<Vec<_>>();
+
         Ok(LabelsBuilder {
-            names: names.into_iter().map(|s| s.into()).collect(),
+            names: names,
             values: Vec::new(),
             positions: Default::default(),
         })
@@ -139,35 +147,55 @@ impl LabelsBuilder {
         self.names.len()
     }
 
+    /// Get the current number of entries
+    pub fn count(&self) -> usize {
+        if self.size() == 0 {
+            return 0;
+        } else {
+            return self.values.len() / self.size();
+        }
+    }
+
     /// Add a single `entry` to this set of labels.
     ///
-    /// This function will panic when attempting to add the same `label` more
-    /// than once.
-    pub fn add<T>(&mut self, entry: &[T]) -> Result<(), Error> where T: Copy + Into<LabelValue> {
-        assert_eq!(
-            self.size(), entry.len(),
-            "wrong size for added label: got {}, but expected {}",
-            entry.len(), self.size()
-        );
-
+    /// This function will return an `Error` when attempting to add the same
+    /// `label` more than once.
+    pub fn add<T>(&mut self, entry: &[T]) -> Result<(), Error>
+        where T: Copy + Into<LabelValue>
+    {
         let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
-        self.values.extend(&entry);
-
-        let new_position = self.positions.len();
-        match self.positions.entry(entry) {
-            Entry::Occupied(entry) => {
-                let values_display = entry.key().iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+        match self.add_or_get_position(entry) {
+            Ok(_) => return Ok(()),
+            Err((existing, entry)) => {
+                let values_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 return Err(Error::InvalidParameter(format!(
                     "can not have the same label value multiple time: [{}] is already present at position {}",
-                    values_display, entry.get()
+                    values_display, existing
                 )));
+            }
+        }
+    }
+
+    fn add_or_get_position(&mut self, labels_entry: SmallVec<[LabelValue; 4]>) -> Result<usize, (usize, SmallVec<[LabelValue; 4]>)> {
+        assert_eq!(
+            self.size(), labels_entry.len(),
+            "wrong size for added label: got {}, but expected {}",
+            labels_entry.len(), self.size()
+        );
+
+        let new_position = self.positions.len();
+
+        match self.positions.raw_entry_mut().from_key(&labels_entry) {
+            RawEntryMut::Occupied(entry) => {
+                return Err((*entry.get(), labels_entry));
             },
-            Entry::Vacant(entry) => {
-                entry.insert(new_position);
+            RawEntryMut::Vacant(entry) => {
+                self.values.extend(&labels_entry);
+                entry.insert(labels_entry, new_position);
             }
         }
 
-        Ok(())
+        return Ok(new_position);
     }
 
     /// Finish building the `Labels`
@@ -181,12 +209,8 @@ impl LabelsBuilder {
             }
         }
 
-        let names = self.names.into_iter()
-            .map(|s| ConstCString::new(CString::new(s).expect("invalid C string")))
-            .collect::<Vec<_>>();
-
         return Labels {
-            names: names,
+            names: self.names,
             values: self.values,
             positions: self.positions,
         };
@@ -232,7 +256,7 @@ pub struct Labels {
     /// This uses `XxHash64` instead of the default hasher in std since
     /// `XxHash64` is much faster and we don't need the cryptographic strength
     /// hash from std.
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, ahash::RandomState>,
+    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
 }
 
 impl std::fmt::Debug for Labels {
@@ -305,6 +329,97 @@ impl Labels {
             chunks: self.values.chunks_exact(self.names.len())
         };
     }
+
+    /// Compute the union of two labels, and optionally the mapping from the
+    /// position of entries in the inputs to positions of entries in the output.
+    ///
+    /// Mapping will be computed only if slices are not empty.
+    #[allow(clippy::needless_range_loop)]
+    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+        if self.names != other.names {
+            return Err(Error::InvalidParameter(
+                "can not take the union of these Labels, they have different names".into()
+            ));
+        }
+
+        let new_labels = self.clone();
+        let mut builder = LabelsBuilder {
+            names: new_labels.names,
+            values: new_labels.values,
+            positions: new_labels.positions,
+        };
+
+        if !first_mapping.is_empty() {
+            assert!(first_mapping.len() == self.count());
+            for i in 0..self.count() {
+                first_mapping[i] = i as i64;
+            }
+        }
+
+        for (i, entry) in other.iter().enumerate() {
+            let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
+            let position = builder.add_or_get_position(entry);
+
+            if !second_mapping.is_empty() {
+                let index = match position {
+                    Ok(index) | Err((index, _)) => {
+                        index as i64
+                    }
+                };
+                second_mapping[i] = index;
+            }
+        }
+
+        return Ok(builder.finish());
+    }
+
+    /// Compute the intersection of two labels, and optionally the mapping from
+    /// the position of entries in the inputs to positions of entries in the
+    /// output.
+    ///
+    /// Mapping will be computed only if slices are not empty.
+    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+        if self.names != other.names {
+            return Err(Error::InvalidParameter(
+                "can not take the intersection of these Labels, they have different names".into()
+            ));
+        }
+
+        // make `first` the Labels with fewest entries
+        let (first, first_indexes, second, second_indexes) = if self.count() <= other.count() {
+            (&self, first_mapping, &other, second_mapping)
+        } else {
+            (&other, second_mapping, &self, first_mapping)
+        };
+
+        if !first_indexes.is_empty() {
+            assert!(first_indexes.len() == first.count());
+            first_indexes.fill(-1);
+        }
+
+        if !second_indexes.is_empty() {
+            assert!(second_indexes.len() == second.count());
+            second_indexes.fill(-1);
+        }
+
+        let mut builder = LabelsBuilder::new(self.names()).expect("should be valid names");
+        for (i, entry) in first.iter().enumerate() {
+            if let Some(position) = second.position(entry) {
+                let new_position = builder.count() as i64;
+                builder.add(entry).expect("should not already exist");
+
+                if !first_indexes.is_empty() {
+                    first_indexes[i] = new_position;
+                }
+
+                if !second_indexes.is_empty() {
+                    second_indexes[position] = new_position;
+                }
+            }
+        }
+
+        return Ok(builder.finish());
+    }
 }
 
 /// iterator over `Labels` entries
@@ -354,5 +469,105 @@ mod tests {
 
         let e = LabelsBuilder::new(vec!["not", "there", "not"]).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
+    }
+
+    #[test]
+    fn union() {
+        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
+        builder.add(&[0, 1]).unwrap();
+        builder.add(&[1, 2]).unwrap();
+        let first = builder.finish();
+
+        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
+        builder.add(&[2, 3]).unwrap();
+        builder.add(&[1, 2]).unwrap();
+        builder.add(&[4, 5]).unwrap();
+        let second = builder.finish();
+
+        let first_mapping = &mut vec![0; first.count()];
+        let second_mapping = &mut vec![0; second.count()];
+
+        let union = first.union(&second, first_mapping, second_mapping).unwrap();
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values, &[0, 1, 1, 2, 2, 3, 4, 5]);
+        assert_eq!(first_mapping, &[0, 1]);
+        assert_eq!(second_mapping, &[2, 1, 3]);
+
+        let first_mapping = &mut vec![0; second.count()];
+        let second_mapping = &mut vec![0; first.count()];
+
+        let union = second.union(&first, first_mapping, second_mapping).unwrap();
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values, &[2, 3, 1, 2, 4, 5, 0, 1]);
+        assert_eq!(first_mapping, &[0, 1, 2]);
+        assert_eq!(second_mapping, &[3, 1]);
+
+        let labels = LabelsBuilder::new(vec!["aa"]).unwrap().finish();
+        let err = first.union(&labels, &mut [], &mut []).unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "invalid parameter: can not take the union of these Labels, they have different names"
+        );
+
+        // Take the union with an empty set of labels
+        let empty = LabelsBuilder::new(vec!["aa", "bb"]).unwrap().finish();
+        let first_mapping = &mut vec![0; first.count()];
+        let second_mapping = &mut vec![0; empty.count()];
+
+        let union = first.union(&empty, first_mapping, second_mapping).unwrap();
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values, &[0, 1, 1, 2]);
+        assert_eq!(first_mapping, &[0, 1]);
+        assert_eq!(second_mapping, &[]);
+    }
+
+    #[test]
+    fn intersection() {
+        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
+        builder.add(&[0, 1]).unwrap();
+        builder.add(&[1, 2]).unwrap();
+        let first = builder.finish();
+
+        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
+        builder.add(&[2, 3]).unwrap();
+        builder.add(&[1, 2]).unwrap();
+        builder.add(&[4, 5]).unwrap();
+        let second = builder.finish();
+
+        let first_mapping = &mut vec![0; first.count()];
+        let second_mapping = &mut vec![0; second.count()];
+
+        let intersection = first.intersection(&second, first_mapping, second_mapping).unwrap();
+        assert_eq!(intersection.names(), ["aa", "bb"]);
+        assert_eq!(intersection.values, &[1, 2]);
+        assert_eq!(first_mapping, &[-1, 0]);
+        assert_eq!(second_mapping, &[-1, 0, -1]);
+
+        let first_mapping = &mut vec![0; second.count()];
+        let second_mapping = &mut vec![0; first.count()];
+
+        let intersection = second.intersection(&first, first_mapping, second_mapping).unwrap();
+        assert_eq!(intersection.names(), ["aa", "bb"]);
+        assert_eq!(intersection.values, &[1, 2]);
+        assert_eq!(first_mapping, &[-1, 0, -1]);
+        assert_eq!(second_mapping, &[-1, 0]);
+
+        let labels = LabelsBuilder::new(vec!["aa"]).unwrap().finish();
+        let err = first.intersection(&labels, &mut [], &mut []).unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "invalid parameter: can not take the intersection of these Labels, they have different names"
+        );
+
+        // Take the intersection with an empty set of labels
+        let empty = LabelsBuilder::new(vec!["aa", "bb"]).unwrap().finish();
+        let first_mapping = &mut vec![0; first.count()];
+        let second_mapping = &mut vec![0; empty.count()];
+
+        let intersection = first.intersection(&empty, first_mapping, second_mapping).unwrap();
+        assert_eq!(intersection.names(), ["aa", "bb"]);
+        assert_eq!(intersection.count(), 0);
+        assert_eq!(first_mapping, &[-1, -1]);
+        assert_eq!(second_mapping, &[]);
     }
 }
