@@ -9,7 +9,14 @@ if(NOT "${LAST_CMAKE_VERSION}" VERSION_EQUAL ${CMAKE_VERSION})
     endif()
 endif()
 
-project(equistore_torch CXX)
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION EQUISTORE_TORCH_VERSION)
+string(STRIP ${EQUISTORE_TORCH_VERSION} EQUISTORE_TORCH_VERSION)
+
+project(equistore_torch
+    VERSION ${EQUISTORE_TORCH_VERSION}
+    LANGUAGES CXX
+)
 
 option(EQUISTORE_TORCH_TESTS "Build equistore-torch C++ tests" OFF)
 set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install binaries/DLL")

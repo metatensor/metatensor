@@ -223,7 +223,9 @@ if __name__ == "__main__":
     else:
         extra_version = git_extra_version()
 
-    version = "0.1.0" + extra_version
+    with open(os.path.join(EQUISTORE_TORCH, "VERSION")) as fd:
+        version = fd.read().strip()
+    version += extra_version
 
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
         authors = fd.read().splitlines()
