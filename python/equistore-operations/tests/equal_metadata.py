@@ -177,8 +177,8 @@ def test_after_drop(test_tensor_map_1):
     new_key = Labels(
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
-    new_tesnor = equistore.drop_blocks(test_tensor_map_1, new_key)
-    assert not equistore.equal_metadata(test_tensor_map_1, new_tesnor)
+    new_tensor = equistore.drop_blocks(test_tensor_map_1, new_key)
+    assert not equistore.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_after_drop_raise(test_tensor_map_1):
@@ -186,10 +186,10 @@ def test_after_drop_raise(test_tensor_map_1):
     new_key = Labels(
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
-    new_tesnor = equistore.drop_blocks(test_tensor_map_1, new_key)
+    new_tensor = equistore.drop_blocks(test_tensor_map_1, new_key)
     error_message = "should have the same number of blocks, got 17 and 16"
     with pytest.raises(NotEqualError, match=error_message):
-        equistore.equal_metadata_raise(test_tensor_map_1, new_tesnor)
+        equistore.equal_metadata_raise(test_tensor_map_1, new_tensor)
 
 
 def test_single_nonexisting_meta(test_tensor_map_1, test_tensor_map_2):
