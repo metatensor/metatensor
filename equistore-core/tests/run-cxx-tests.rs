@@ -3,10 +3,10 @@ use std::path::PathBuf;
 mod utils;
 
 #[test]
-fn check_cpp_api() {
+fn run_cxx_tests() {
     const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
     let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
-    build_dir.push("c-api-tests");
+    build_dir.push("cxx-tests");
     std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
 
     let mut source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());

@@ -103,11 +103,12 @@ fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
 
 
 #[test]
-fn check_torch_api() {
+fn run_torch_tests() {
     const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
 
     // ====================================================================== //
-    // build and install equistore with cmake
+    // setup depdendencies for the torch tests
+
     let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
     build_dir.push("torch-tests-dependencies");
     std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
