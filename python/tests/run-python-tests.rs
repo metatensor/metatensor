@@ -1,9 +1,6 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-#[path = "../../equistore-core/tests/utils/mod.rs"]
-mod utils;
-
 #[test]
 fn run_python_tests() {
     let tox = which::which("tox").expect("could not find tox");

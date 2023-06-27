@@ -108,14 +108,28 @@ These are exactly the same tests that will be performed online in our Github CI
 workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
-- ``cargo test --test=<test-name>`` to run only the tests in ``tests/<test-name>.rs``;
-    - ``cargo test --package=python`` (or ``tox`` directly, see below) to run
-      Python tests only;
-    - ``cargo test --test=c-api-tests`` to run the C/C++ API tests only. For these
-      tests, if `valgrind`_ is installed, it will be used to check for memory
-      errors. You can disable this by setting the `EQUISTORE_DISABLE_VALGRIND`
-      environment variable to 1 (`export EQUISTORE_DISABLE_VALGRIND=1` for most
-      Linux/macOS shells);
+- ``cargo test --package=equistore-core`` to run the C/C++ tests only;
+
+  - ``cargo test --test=run-cxx-tests`` will run the unit tests for the C/C++
+    API. If `valgrind`_ is installed, it will be used to check for memory
+    errors. You can disable this by setting the `EQUISTORE_DISABLE_VALGRIND`
+    environment variable to 1 (`export EQUISTORE_DISABLE_VALGRIND=1` for most
+    Linux/macOS shells);
+  - ``cargo test --test=check-cxx-install`` will build the C/C++ interfaces,
+    install them and the associated CMake files and then try to build a basic
+    project depending on this interface with CMake;
+
+- ``cargo test --package=equistore-torch`` to run the C++ TorchScript extension
+  tests only;
+
+  - ``cargo test --test=run-torch-tests`` will run the unit tests for the
+    TorchScript C++ extension;
+  - ``cargo test --test=check-cxx-install`` will build the C++ TorchScript
+    extension, install it and then try to build a basic project depending on
+    this extension with CMake;
+
+- ``cargo test --package=equistore-python`` (or ``tox`` directly, see below) to
+  run Python tests only;
 - ``cargo test --lib`` to run unit tests;
 - ``cargo test --doc`` to run documentation tests;
 - ``cargo bench --test`` compiles and run the benchmarks once, to quickly ensure
@@ -127,8 +141,8 @@ should run:
 - ``--release`` to run tests in release mode (default is to run tests in debug mode)
 - ``-- <filter>`` to only run tests whose name contains filter, for example ``cargo test -- keys_to_properties``
 
-Also, you can run individual python tests using `tox`_ if you wish to test only
-specific functionalities, for example:
+Also, you can run individual python tests using `tox`_ if you wish to run a
+subset of Python tests, for example:
 
 .. code-block:: bash
 
@@ -142,7 +156,8 @@ specific functionalities, for example:
     tox -e format               # format all files
 
 The last command ``tox -e format`` will use tox to do actual formatting instead
-of just checking it.
+of just checking it, you can use to automatically fix some of the issues
+detected by ``tox -e lint``.
 
 You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
 replacing ``<test/file.py>`` with the path to the files you want to test, e.g.

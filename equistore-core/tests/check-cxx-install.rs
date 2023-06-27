@@ -3,13 +3,13 @@ use std::path::PathBuf;
 mod utils;
 
 #[test]
-fn check_c_api_build_install() {
+fn check_cxx_install() {
     const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
 
     // ====================================================================== //
     // build and install equistore with cmake
     let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
-    build_dir.push("c-api-install");
+    build_dir.push("cxx-install");
     std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
 
     let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -35,7 +35,7 @@ fn check_c_api_build_install() {
     // ====================================================================== //
     // try to use the installed equistore from cmake
     let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
-    build_dir.push("c-api-sample-project");
+    build_dir.push("cxx-sample-project");
     std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
 
     let mut source_dir = PathBuf::from(&cargo_manifest_dir);
