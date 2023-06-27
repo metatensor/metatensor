@@ -37,20 +37,15 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
     if not isinstance(copy, bool):
         raise TypeError(f"`copy` flag must be a boolean, got '{type(copy)}' instead")
 
-    if not np.all(tensor.keys.names == keys.names):
-        raise ValueError(
-            "The input tensor's keys must have the same names as the specified"
-            f" keys to drop. Should be {tensor.keys.names} but got {keys.names}"
-        )
-
-    # Find the difference between key of the original tensor and those to drop
+    # Find the indices of keys to remove
     tensor_keys = tensor.keys
-    to_remove_indices = set()
-    for key in keys:
-        position = tensor_keys.position(key)
-        if position is None:
-            raise ValueError(f"{key.print()} is not present in this tensor")
-        to_remove_indices.add(position)
+    _, to_remove, used_in_intersection = tensor_keys.intersection_and_mapping(keys)
+    to_remove_indices = np.where(to_remove != -1)[0]
+
+    not_present_in_tensor = np.where(used_in_intersection == -1)[0]
+    if len(not_present_in_tensor) != 0:
+        key = keys[not_present_in_tensor[0]]
+        raise ValueError(f"{key.print()} is not present in this tensor")
 
     # Create the new TensorMap
     new_blocks = []
