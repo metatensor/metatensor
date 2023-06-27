@@ -286,18 +286,16 @@ endif()
 #------------------------------------------------------------------------------#
 # Installation configuration
 #------------------------------------------------------------------------------#
-
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/cmake/equistore-config.in.cmake"
-    "${PROJECT_BINARY_DIR}/equistore-config.cmake"
+    ${PROJECT_SOURCE_DIR}/cmake/equistore-config.in.cmake
+    ${PROJECT_BINARY_DIR}/equistore-config.cmake
     INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/equistore
 )
-
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/equistore-config-version.in.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/equistore-config-version.cmake"
-    @ONLY
+write_basic_package_version_file(
+    equistore-config-version.cmake
+    VERSION ${EQUISTORE_VERSION}
+    COMPATIBILITY SameMinorVersion
 )
 
 install(FILES ${EQUISTORE_HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR})

@@ -37,7 +37,8 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
-find_package(equistore 0.1 CONFIG REQUIRED)
+set(REQUIRED_EQUISTORE_VERSION "0.1")
+find_package(equistore ${REQUIRED_EQUISTORE_VERSION} CONFIG REQUIRED)
 
 # FindCUDNN.cmake distributed with PyTorch is a bit broken, so we have a
 # fixed version in `cmake/FindCUDNN.cmake`
@@ -66,13 +67,12 @@ add_library(equistore_torch SHARED
     ${EQUISTORE_TORCH_SOURCE}
 )
 
-
 target_link_libraries(equistore_torch PUBLIC torch equistore::shared)
 target_compile_features(equistore_torch PUBLIC cxx_std_14)
 target_include_directories(equistore_torch PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:${INCLUDE_INSTALL_DIR}>
 )
 
 # Create a header defining EQUISTORE_TORCH_EXPORT for to export classes/functions
@@ -90,7 +90,6 @@ generate_export_header(equistore_torch
 target_compile_definitions(equistore_torch PRIVATE equistore_torch_EXPORTS)
 
 
-
 if (EQUISTORE_TORCH_TESTS)
     enable_testing()
     add_subdirectory(tests)
@@ -99,11 +98,33 @@ endif()
 #------------------------------------------------------------------------------#
 # Installation configuration
 #------------------------------------------------------------------------------#
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    equistore_torch-config-version.cmake
+    VERSION ${EQUISTORE_TORCH_VERSION}
+    COMPATIBILITY SameMinorVersion
+)
 
 install(TARGETS equistore_torch
+    EXPORT equistore_torch-targets
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
     LIBRARY DESTINATION ${LIB_INSTALL_DIR}
     RUNTIME DESTINATION ${BIN_INSTALL_DIR}
 )
+install(EXPORT equistore_torch-targets
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/equistore_torch
+)
 
-install(DIRECTORY "include" DESTINATION ${INCLUDE_INSTALL_DIR})
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include DESTINATION ${INCLUDE_INSTALL_DIR})
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/equistore_torch-config.in.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/equistore_torch-config.cmake
+    @ONLY
+)
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/equistore_torch-config-version.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/equistore_torch-config.cmake
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/equistore_torch
+)
+
+install(DIRECTORY "include/equistore" DESTINATION ${INCLUDE_INSTALL_DIR})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/equistore DESTINATION ${INCLUDE_INSTALL_DIR})
