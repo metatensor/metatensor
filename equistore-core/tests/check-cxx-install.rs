@@ -10,22 +10,24 @@ fn check_cxx_install() {
     // build and install equistore with cmake
     let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
     build_dir.push("cxx-install");
-    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
+
+    let deps_dir = build_dir.join("deps");
+    let equistore_dep = deps_dir.join("equistore-core");
+    std::fs::create_dir_all(&equistore_dep).expect("failed to create equistore dep dir");
 
     let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
     // configure cmake for equistore
-    let mut cmake_config = utils::cmake_config(&cargo_manifest_dir, &build_dir);
+    let mut cmake_config = utils::cmake_config(&cargo_manifest_dir, &equistore_dep);
 
-    let mut install_dir = build_dir.clone();
-    install_dir.push("usr");
-    cmake_config.arg(format!("-DCMAKE_INSTALL_PREFIX={}", install_dir.display()));
+    let equistore_cmake_prefix = equistore_dep.join("usr");
+    cmake_config.arg(format!("-DCMAKE_INSTALL_PREFIX={}", equistore_cmake_prefix.display()));
 
     let status = cmake_config.status().expect("could not run cmake");
     assert!(status.success(), "failed to run equistore cmake configuration");
 
     // build and install equistore
-    let mut cmake_build = utils::cmake_build(&build_dir);
+    let mut cmake_build = utils::cmake_build(&equistore_dep);
     cmake_build.arg("--target");
     cmake_build.arg("install");
 
@@ -34,16 +36,12 @@ fn check_cxx_install() {
 
     // ====================================================================== //
     // try to use the installed equistore from cmake
-    let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
-    build_dir.push("cxx-sample-project");
-    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
-
     let mut source_dir = PathBuf::from(&cargo_manifest_dir);
     source_dir.extend(["tests", "cmake-project"]);
 
     // configure cmake for the test cmake project
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
-    cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", install_dir.display()));
+    cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", equistore_cmake_prefix.display()));
     let status = cmake_config.status().expect("could not run cmake");
     assert!(status.success(), "failed to run test project cmake configuration");
 

@@ -3,6 +3,7 @@ import os
 import torch
 
 from ._c_lib import _load_library
+from . import utils  # noqa
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
