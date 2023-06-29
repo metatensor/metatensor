@@ -1931,7 +1931,7 @@ public:
         return TensorMap(ptr);
     }
 
-    /// "Save the given `TensorMap` to a file at `path`.
+    /// Save the given `TensorMap` to a file at `path`.
     ///
     /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP
     /// file without compression (storage method is `STORED`), where each file

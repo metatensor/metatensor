@@ -158,6 +158,38 @@ TEST_CASE("TensorMap") {
     }
 }
 
+TEST_CASE("TensorMap serialization") {
+    SECTION("loading file") {
+        // DATA_NPZ is defined by cmake and expand to the path of tests/data.npz
+        auto tensor = equistore_torch::load(DATA_NPZ);
+
+        auto keys = tensor->keys();
+        CHECK(keys->names().size() == 3);
+        CHECK(keys->names()[0] == std::string("spherical_harmonics_l"));
+        CHECK(keys->names()[1] == std::string("center_species"));
+        CHECK(keys->names()[2] == std::string("neighbor_species"));
+        CHECK(keys->count() == 27);
+
+        auto block = tensor->block_by_id(21);
+
+        auto samples = block->samples();
+        CHECK(samples->names().size() == 2);
+        CHECK(samples->names()[0] == std::string("structure"));
+        CHECK(samples->names()[1] == std::string("center"));
+
+        CHECK(block->values().sizes() == std::vector<int64_t>{9, 5, 3});
+
+        auto gradient = block->gradient("positions");
+        samples = gradient->samples();
+        CHECK(samples->names().size() == 3);
+        CHECK(samples->names()[0] == std::string("sample"));
+        CHECK(samples->names()[1] == std::string("structure"));
+        CHECK(samples->names()[2] == std::string("atom"));
+
+        CHECK(gradient->values().sizes() == std::vector<int64_t>{59, 3, 5, 3});
+    }
+}
+
 
 TorchTensorMap test_tensor_map() {
     auto blocks = std::vector<TorchTensorBlock>();
