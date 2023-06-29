@@ -36,6 +36,7 @@ foreach(_file_ ${ALL_TESTS})
     get_filename_component(_name_ ${_file_} NAME_WE)
     add_executable(torch-${_name_} ${_file_})
     target_link_libraries(torch-${_name_} equistore_torch catch)
+    target_compile_definitions(torch-${_name_} PRIVATE "-DDATA_NPZ=\"${CMAKE_CURRENT_SOURCE_DIR}/../../equistore/tests/data.npz\"")
 
     add_test(
         NAME torch-${_name_}

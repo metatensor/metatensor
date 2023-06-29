@@ -5,6 +5,7 @@
 #include "equistore/torch/labels.hpp"
 #include "equistore/torch/block.hpp"
 #include "equistore/torch/tensor.hpp"
+#include "equistore/torch/misc.hpp"
 
 using namespace equistore_torch;
 
@@ -191,4 +192,7 @@ TORCH_LIBRARY(equistore, m) {
         //         // TODO
         //     })
         ;
+
+    m.def("load", equistore_torch::load);
+    m.def("save", equistore_torch::save);
 }

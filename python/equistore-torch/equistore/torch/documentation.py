@@ -838,3 +838,30 @@ class TensorMap:
         :param max_keys: how many keys to include in the output. Use ``-1`` to
             include all keys.
         """
+
+
+def load(path: str) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given path.
+
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
+    ZIP file without compression (storage method is ``STORED``), where each file
+    is stored as a ``.npy`` array. See the C API documentation for more
+    information on the format.
+
+    :param path: path of the file to load
+    """
+
+
+def save(path: str, tensor: TensorMap):
+    """
+    Save the given :py:class:`TensorMap` to a file at ``path``.
+
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
+    ZIP file without compression (storage method is ``STORED``), where each file
+    is stored as a ``.npy`` array. See the C API documentation for more
+    information on the format.
+
+    :param path: path of the file where to save the data
+    :param tensor: tensor to save
+    """

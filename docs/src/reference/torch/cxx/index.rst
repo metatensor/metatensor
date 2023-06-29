@@ -13,3 +13,4 @@ To use equistore's TorchScript C++ API, you should ``#include
     tensor
     block
     labels
+    serialization

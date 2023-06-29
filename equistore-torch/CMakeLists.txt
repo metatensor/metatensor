@@ -59,6 +59,7 @@ set(EQUISTORE_TORCH_SOURCE
     "src/labels.cpp"
     "src/block.cpp"
     "src/tensor.cpp"
+    "src/misc.cpp"
     "src/register.cpp"
 )
 

@@ -41,8 +41,8 @@ the following pages:
     tensor
     block
     labels
+    serialization
 
-.. TODO: I/O functions are not yet implemented
 .. TODO: operations are not yet available
 
 --------------------------------------------------------------------------------

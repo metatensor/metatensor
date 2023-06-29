@@ -18,12 +18,16 @@ else:
 
 if os.environ.get("EQUISTORE_IMPORT_FOR_SPHINX") is not None:
     from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap
+    from .documentation import load, save
 else:
     _load_library()
     Labels = torch.classes.equistore.Labels
     LabelsEntry = torch.classes.equistore.LabelsEntry
     TensorBlock = torch.classes.equistore.TensorBlock
     TensorMap = torch.classes.equistore.TensorMap
+
+    load = torch.ops.equistore.load
+    save = torch.ops.equistore.save
 
 
 __all__ = [
