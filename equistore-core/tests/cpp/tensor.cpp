@@ -4,6 +4,9 @@
 using namespace equistore;
 
 static TensorMap test_tensor_map();
+static eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array);
+
+static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
 
 TEST_CASE("TensorMap") {
     SECTION("keys") {
@@ -228,6 +231,13 @@ TEST_CASE("TensorMap serialization") {
 
         CHECK(gradient.values().shape() == std::vector<size_t>{59, 3, 5, 3});
     }
+
+    SECTION("loading file with custom array creation") {
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 0);
+        auto tensor = TensorMap::load(DATA_NPZ, custom_create_array);
+        // 27 blocks, one array for values, one array for gradients
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
+    }
 }
 
 
@@ -309,4 +319,19 @@ TensorMap test_tensor_map() {
     );
 
     return TensorMap(std::move(keys), std::move(blocks));
+}
+
+
+static eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array) {
+    auto shape = std::vector<size_t>();
+    for (size_t i=0; i<shape_count; i++) {
+        shape.push_back(static_cast<size_t>(shape_ptr[i]));
+    }
+
+    CUSTOM_CREATE_ARRAY_CALL_COUNT += 1;
+
+    auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
+    *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
+
+    return EQS_SUCCESS;
 }
