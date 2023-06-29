@@ -1657,6 +1657,25 @@ private:
 /******************************************************************************/
 /******************************************************************************/
 
+namespace details {
+    /// Default callback for data array creating in `TensorMap::load`, which
+    /// will create a `SimpleDataArray`.
+    inline eqs_status_t default_create_array(
+        const uintptr_t* shape_ptr,
+        uintptr_t shape_count,
+        eqs_array_t* array
+    ) {
+        auto shape = std::vector<size_t>();
+        for (size_t i=0; i<shape_count; i++) {
+            shape.push_back(static_cast<size_t>(shape_ptr[i]));
+        }
+
+        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
+        *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
+
+        return EQS_SUCCESS;
+    }
+}
 
 /// A TensorMap is the main user-facing class of this library, and can store any
 /// kind of data used in atomistic machine learning.
@@ -1888,27 +1907,26 @@ public:
         return TensorMap(ptr);
     }
 
-    /// Load a previously saved `TensorMap` from the given path.
-    ///
-    /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP
-    /// file without compression (storage method is `STORED`), where each file
-    /// is stored as a `.npy` array. See the C API documentation for more
-    /// information on the format.
-    static TensorMap load(const std::string& path) {
-        auto ptr = eqs_tensormap_load(
-            path.c_str(),
-            [](const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array){
-                auto shape = std::vector<size_t>();
-                for (size_t i=0; i<shape_count; i++) {
-                    shape.push_back(static_cast<size_t>(shape_ptr[i]));
-                }
+    /*!
+     * Load a previously saved `TensorMap` from the given path.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`eqs_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     *
+     * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+     * without compression (storage method is `STORED`), where each file is
+     * stored as a `.npy` array. See the C API documentation for more
+     * information on the format.
+     */
+    static TensorMap load(const std::string& path, eqs_create_array_callback_t create_array = details::default_create_array) {
+        auto ptr = eqs_tensormap_load(path.c_str(), create_array);
 
-                auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
-                *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
-
-                return EQS_SUCCESS;
-            }
-        );
         details::check_pointer(ptr);
         return TensorMap(ptr);
     }
