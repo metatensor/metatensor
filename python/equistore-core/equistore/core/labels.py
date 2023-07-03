@@ -436,6 +436,14 @@ class Labels:
         """
         return self._values
 
+    def to(self, device):
+        """
+        Move the values for these Labels to the given ``device``.
+
+        This is a no-op for the Python version of equistore, and is only defined for
+        compatibility with the TorchScript version of equistore.
+        """
+
     def position(self, entry: Union[LabelsEntry, Sequence[int]]) -> Optional[int]:
         """
         Get the position of the given ``entry`` in this set of

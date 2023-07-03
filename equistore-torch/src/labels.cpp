@@ -265,6 +265,20 @@ LabelsHolder LabelsHolder::to_owned() const {
     }
 }
 
+void LabelsHolder::to(torch::Device device) {
+    // first move the values
+    values_ = values_.to(device);
+
+    // then make sure that when accessing these labels again we still have the
+    // values on the same device by updating the registered user data
+    auto user_data = equistore::LabelsUserData(
+        new torch::Tensor(values_),
+        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
+    );
+
+    labels_->set_user_data(std::move(user_data));
+}
+
 torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     const auto& labels = this->as_equistore();
 

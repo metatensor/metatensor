@@ -298,6 +298,9 @@ class Labels:
         different values)
         """
 
+    def to(self, device):
+        """move the values for these Labels to the given ``device``"""
+
     def position(
         self, entry: Union[LabelsEntry, torch.Tensor, List[int], Tuple[int, ...]]
     ) -> Optional[int]:

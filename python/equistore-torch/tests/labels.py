@@ -293,6 +293,25 @@ def test_eq():
     assert labels_1[1] == labels_3[1]
 
 
+def test_to():
+    devices = []
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
+
+    for device in devices:
+        labels = Labels(names=("a", "b"), values=torch.IntTensor([[0, 0], [0, 1]]))
+        assert labels.values.device.type == "cpu"
+
+        labels.to(device)
+        assert labels.values.device.type == torch.device(device).type
+
+
 def test_position():
     labels = Labels(names=("a", "b"), values=torch.IntTensor([[0, 0], [0, 1]]))
 
@@ -399,6 +418,9 @@ class LabelsWrap:
 
     def values(self) -> Tensor:
         return self._c.values
+
+    def to(self, device: torch.device):
+        return self._c.to(device)
 
     def position(self, entry: Union[List[int], LabelsEntry]) -> Optional[int]:
         return self._c.position(entry=entry)
