@@ -1,6 +1,7 @@
 #ifndef EQUISTORE_TORCH_LABELS_HPP
 #define EQUISTORE_TORCH_LABELS_HPP
 
+#include <c10/core/Device.h>
 #include <string>
 #include <vector>
 
