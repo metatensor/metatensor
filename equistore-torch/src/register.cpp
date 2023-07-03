@@ -94,6 +94,9 @@ TORCH_LIBRARY(equistore, m) {
         }, DOCSTRING, {torch::arg("names")})
         .def_property("names", &LabelsHolder::names)
         .def_property("values", &LabelsHolder::values)
+        .def("to", &LabelsHolder::to, DOCSTRING,
+            {torch::arg("device")}
+        )
         .def("position", &LabelsHolder::position, DOCSTRING,
             {torch::arg("entry")}
         )

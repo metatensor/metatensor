@@ -79,6 +79,9 @@ public:
         return values_;
     }
 
+    /// Move the values for these Labels to the given `device`
+    void to(torch::Device device);
+
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.
     torch::Tensor column(std::string dimension);
