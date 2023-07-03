@@ -44,8 +44,17 @@ class LabelsEntry:
     @property
     def values(self) -> torch.Tensor:
         """
-        values associated with each dimensions of this Labels entry, stored as
-        32-bit integers.
+        Values associated with each dimensions of this :py:class:`LabelsEntry`, stored
+        as 32-bit integers.
+
+        .. warning::
+
+            The ``values`` should be treated as immutable/read-only (we would like to
+            enforce this automatically, but PyTorch can not mark a
+            :py:class:`torch.Tensor` as immutable)
+
+            Any modification to this tensor can break the underlying data structure, or
+            make it out of sync with the ``values``.
         """
 
     def print(self) -> str:
@@ -195,8 +204,17 @@ class Labels:
     @property
     def values(self) -> torch.Tensor:
         """
-        values associated with each dimensions of the :py:class:`Labels`, stored
-        as 2-dimensional tensor of 32-bit integers
+        Values associated with each dimensions of the :py:class:`Labels`, stored
+        as 2-dimensional tensor of 32-bit integers.
+
+        .. warning::
+
+            The ``values`` should be treated as immutable/read-only (we would like to
+            enforce this automatically, but PyTorch can not mark a
+            :py:class:`torch.Tensor` as immutable)
+
+            Any modification to this tensor can break the underlying data structure, or
+            make it out of sync with the ``values``.
         """
 
     @staticmethod

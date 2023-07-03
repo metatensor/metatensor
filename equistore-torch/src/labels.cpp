@@ -126,17 +126,27 @@ static std::vector<std::string> names_from_equistore(const equistore::Labels& la
 }
 
 
-static torch::Tensor values_from_equistore(const equistore::Labels& labels) {
+static torch::Tensor values_from_equistore(equistore::Labels& labels) {
+    // check if the labels are already associated with a tensor
+    auto user_data = labels.user_data();
+    if (user_data != nullptr) {
+        // if we start using user_data for more than this exact case (storing
+        // tensors inside Labels), this code might fails and will need to start
+        // checking that `user_data` is actually a tensor.
+        return *static_cast<torch::Tensor*>(user_data);
+    }
+
+    // otherwise create a new tensor
     auto sizes = std::vector<int64_t>();
     for (auto dim: labels.shape()) {
         sizes.push_back(static_cast<int64_t>(dim));
     }
 
     return torch::from_blob(
-        // Unfortunately, we can not prevent writing to this tensor since torch
-        // does not support read-only tensor:
+        // This should really be a `const int32_t*`, but we can not prevent
+        // writing to this tensor since torch does not support read-only tensor:
         // https://github.com/pytorch/pytorch/issues/44027
-        const_cast<int32_t*>(labels.data()),
+        const_cast<int32_t*>((const_cast<const equistore::Labels&>(labels)).data()),
         sizes,
         torch::TensorOptions().dtype(torch::kInt32)
     );
@@ -144,9 +154,16 @@ static torch::Tensor values_from_equistore(const equistore::Labels& labels) {
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     names_(details::normalize_names(names, "names")),
-    values_(normalize_int32_tensor(std::move(values), 2, "Labels values"))
+    values_(normalize_int32_tensor(std::move(values), 2, "Labels values")),
+    labels_(equistore::Labels(labels_from_torch(names_, values_.to(torch::kCPU).contiguous())))
 {
-    labels_ = equistore::Labels(labels_from_torch(names_, values_.to(torch::kCPU).contiguous()));
+    // register the torch tensor as a custom user data in the labels
+    auto user_data = equistore::LabelsUserData(
+        new torch::Tensor(values_),
+        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
+    );
+
+    labels_->set_user_data(std::move(user_data));
 }
 
 TorchLabels LabelsHolder::create(

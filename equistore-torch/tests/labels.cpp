@@ -1,6 +1,7 @@
 #include <torch/torch.h>
 
 #include <equistore/torch.hpp>
+#include <torch/types.h>
 using namespace equistore_torch;
 
 #include <catch.hpp>
@@ -130,6 +131,16 @@ TEST_CASE("Labels") {
 
         expected = torch::tensor({-1, 0, -1});
         CHECK(torch::all(std::get<2>(result) == expected).item<bool>());
+    }
+
+    SECTION("Labels keep the values tensor alive") {
+        // see https://github.com/lab-cosmo/equistore/issues/290 for the use case
+        torch::IValue names = std::vector<std::string>{"a", "b"};
+        auto values = torch::tensor(std::vector<int32_t>{0, 0, 1, 0, 0, -1, 1, -2});
+        values = values.reshape({-1, 2}).to(torch::kInt32);
+        auto labels = LabelsHolder(names, values);
+
+        CHECK(labels.values().data_ptr<int32_t>() == values.data_ptr<int32_t>());
     }
 }
 
