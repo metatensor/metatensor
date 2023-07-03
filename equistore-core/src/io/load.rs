@@ -76,7 +76,7 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
         )?,);
     }
 
-    return TensorMap::new(keys, blocks);
+    return TensorMap::new(Arc::new(keys), blocks);
 }
 
 #[allow(clippy::needless_pass_by_value)]

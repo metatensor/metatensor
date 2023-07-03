@@ -213,6 +213,76 @@ pub unsafe extern fn eqs_labels_create(
     })
 }
 
+/// Update the registered user data in `labels`
+///
+/// This function changes the registered user data in the Rust Labels to be
+/// `user_data`; and store the corresponding `user_data_delete` function to be
+/// called once the labels go out of scope.
+///
+/// Any existing user data will be released (by calling the provided
+/// `user_data_delete` function) before overwriting with the new data.
+///
+/// @param labels set of labels where we want to add user data
+/// @param user_data pointer to the data
+/// @param user_data_delete function pointer that will be used (if not NULL)
+///                         to free the memory associated with `data` when the
+///                         `labels` are freed.
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn eqs_labels_set_user_data(
+    labels: eqs_labels_t,
+    user_data: *mut c_void,
+    user_data_delete: Option<unsafe extern fn(*mut c_void)>
+) -> eqs_status_t {
+    catch_unwind(|| {
+        if !labels.is_rust() {
+            return Err(Error::InvalidParameter(
+                "these labels do not support calling eqs_labels_set_user_data, \
+                call eqs_labels_create first".into()
+            ));
+        }
+
+        let rust_labels = &*labels.internal_ptr_.cast::<Labels>();
+        rust_labels.set_user_data(user_data, user_data_delete);
+
+        Ok(())
+    })
+}
+
+/// Get the registered user data in `labels` in `*user_data`.
+///
+/// If no data has been registered, `*user_data` will be NULL.
+///
+/// @param labels set of labels containing user data
+/// @param user_data this will be set to the pointer than was registered with
+///                  these `labels`
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn eqs_labels_user_data(
+    labels: eqs_labels_t,
+    user_data: *mut *mut c_void,
+) -> eqs_status_t {
+    catch_unwind(|| {
+        check_pointers!(user_data);
+
+        if !labels.is_rust() {
+            return Err(Error::InvalidParameter(
+                "these labels do not support calling eqs_labels_get_user_data, \
+                call eqs_labels_create first".into()
+            ));
+        }
+
+        let rust_labels = &*labels.internal_ptr_.cast::<Labels>();
+        *user_data = rust_labels.user_data();
+
+        Ok(())
+    })
+}
+
 /// Make a copy of `labels` inside `clone`.
 ///
 /// Since `eqs_labels_t` are immutable, the copy is actually just a reference
