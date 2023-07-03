@@ -35,12 +35,11 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     if isinstance(B, TensorMap):
         _check_same_keys(A, B, "subtract")
         B = multiply(B, -1)
+    elif isinstance(B, (float, int)):
+        B = -float(B)
     else:
-        # check if can be converted in float (so if it is a constant value)
-        try:
-            B = -float(B)
-        except TypeError as e:
-            raise TypeError("B should be a TensorMap or a scalar value. ") from e
+        raise TypeError("B should be a TensorMap or a scalar value")
+
     tensor_result = add(A=A, B=B)
 
     return tensor_result

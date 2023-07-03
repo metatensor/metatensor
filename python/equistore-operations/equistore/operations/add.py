@@ -34,30 +34,29 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     blocks = []
     if isinstance(B, TensorMap):
         _check_same_keys(A, B, "add")
-        for key in A.keys:
-            blockA = A[key]
-            blockB = B[key]
+        for key, block_A in A.items():
+            block_B = B[key]
             _check_blocks(
-                blockA,
-                blockB,
+                block_A,
+                block_B,
                 props=["samples", "components", "properties"],
                 fname="add",
             )
             _check_same_gradients(
-                blockA,
-                blockB,
+                block_A,
+                block_B,
                 props=["samples", "components", "properties"],
                 fname="add",
             )
-            blocks.append(_add_block_block(block_1=blockA, block_2=blockB))
+            blocks.append(_add_block_block(block_1=block_A, block_2=block_B))
+
+    elif isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
+            blocks.append(_add_block_constant(block=block_A, constant=B))
+
     else:
-        # check if can be converted in float (so if it is a constant value)
-        try:
-            float(B)
-        except TypeError as e:
-            raise TypeError("B should be a TensorMap or a scalar value. ") from e
-        for blockA in A.blocks():
-            blocks.append(_add_block_constant(block=blockA, constant=B))
+        raise TypeError("B should be a TensorMap or a scalar value")
 
     return TensorMap(A.keys, blocks)
 

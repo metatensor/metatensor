@@ -24,13 +24,13 @@ def pow(A: TensorMap, B: float) -> TensorMap:
 
     blocks = []
 
-    # check if can be converted in float (so if it is a constant value)
-    try:
-        float(B)
-    except TypeError as e:
-        raise TypeError("B should be a scalar value. ") from e
-    for blockA in A.blocks():
-        blocks.append(_pow_block_constant(block=blockA, constant=B))
+    if isinstance(B, (float, int)):
+        B = float(B)
+    else:
+        raise TypeError("B should be a scalar value")
+
+    for block_A in A.blocks():
+        blocks.append(_pow_block_constant(block=block_A, constant=B))
 
     return TensorMap(A.keys, blocks)
 

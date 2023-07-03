@@ -111,14 +111,10 @@ class TestPow:
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
-        C = np.array([2.0])
-
         tensor_sum = equistore.pow(A, B)
-        tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
         assert equistore.allclose(tensor_result, tensor_sum)
-        assert equistore.allclose(tensor_result, tensor_sum_array)
         # Check not modified in place
         assert equistore.equal(A, A_copy)
 
@@ -233,14 +229,10 @@ class TestPow:
         )
         keys = Labels(names=["key_1"], values=np.array([[0]]))
 
-        C = np.array([2.0])
-
         tensor_pow = equistore.pow(A, B)
-        tensor_pow_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res_1])
 
         assert equistore.allclose(tensor_result, tensor_pow)
-        assert equistore.allclose(tensor_result, tensor_pow_array)
 
     def test_self_pow_scalar_sqrt_gradient(self):
         b1_s0 = np.array([1, 2])
@@ -342,14 +334,10 @@ class TestPow:
 
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
-        C = np.array([0.5])
-
         tensor_sum = equistore.pow(A, B)
-        tensor_sum_array = equistore.pow(A, C)
         tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
         assert equistore.allclose(tensor_result, tensor_sum)
-        assert equistore.allclose(tensor_result, tensor_sum_array)
 
     def test_self_pow_error(self):
         block_1 = TensorBlock(
@@ -362,7 +350,7 @@ class TestPow:
         A = TensorMap(keys, [block_1])
         B = np.ones((3, 4))
 
-        with pytest.raises(TypeError, match="B should be a scalar value. "):
+        with pytest.raises(TypeError, match="B should be a scalar value"):
             keys = equistore.pow(A, B)
 
 
