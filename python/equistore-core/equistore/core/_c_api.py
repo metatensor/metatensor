@@ -109,6 +109,19 @@ def setup_functions(lib):
     ]
     lib.eqs_labels_create.restype = _check_status
 
+    lib.eqs_labels_set_user_data.argtypes = [
+        eqs_labels_t,
+        ctypes.c_void_p,
+        CFUNCTYPE(None, ctypes.c_void_p),
+    ]
+    lib.eqs_labels_set_user_data.restype = _check_status
+
+    lib.eqs_labels_user_data.argtypes = [
+        eqs_labels_t,
+        POINTER(POINTER(None)),
+    ]
+    lib.eqs_labels_user_data.restype = _check_status
+
     lib.eqs_labels_clone.argtypes = [
         eqs_labels_t,
         POINTER(eqs_labels_t),

@@ -13,6 +13,8 @@ The following functions operate on :c:type:`eqs_labels_t`:
 - :c:func:`eqs_labels_position`: get the position of an entry in the labels
 - :c:func:`eqs_labels_union`: get the union of two labels
 - :c:func:`eqs_labels_intersection`: get the intersection of two labels
+- :c:func:`eqs_labels_set_user_data`: store some data inside the labels for later retrieval
+- :c:func:`eqs_labels_user_data`: retrieve data stored earlier in the labels
 
 --------------------------------------------------------------------------------
 
@@ -27,3 +29,7 @@ The following functions operate on :c:type:`eqs_labels_t`:
 .. doxygenfunction:: eqs_labels_union
 
 .. doxygenfunction:: eqs_labels_intersection
+
+.. doxygenfunction:: eqs_labels_set_user_data
+
+.. doxygenfunction:: eqs_labels_user_data

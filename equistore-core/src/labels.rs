@@ -1,7 +1,8 @@
 #![allow(clippy::default_trait_access, clippy::module_name_repetitions)]
-
+use std::sync::RwLock;
 use std::ffi::CString;
 use std::collections::BTreeSet;
+use std::os::raw::c_void;
 
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
@@ -206,6 +207,7 @@ impl LabelsBuilder {
                 names: Vec::new(),
                 values: Vec::new(),
                 positions: Default::default(),
+                user_data: RwLock::new(UserData::null()),
             }
         }
 
@@ -213,6 +215,7 @@ impl LabelsBuilder {
             names: self.names,
             values: self.values,
             positions: self.positions,
+            user_data: RwLock::new(UserData::null()),
         };
     }
 }
@@ -237,6 +240,32 @@ pub fn is_valid_label_name(name: &str) -> bool {
     return true;
 }
 
+#[derive(Debug)]
+struct UserData {
+    ptr: *mut c_void,
+    delete: Option<unsafe extern fn(*mut c_void)>,
+}
+
+impl UserData {
+    /// Create an empty `UserData`
+    fn null() -> UserData {
+        UserData {
+            ptr: std::ptr::null_mut(),
+            delete: None,
+        }
+    }
+}
+
+impl Drop for UserData {
+    fn drop(&mut self) {
+        if let Some(delete) = self.delete {
+            unsafe {
+                delete(self.ptr);
+            }
+        }
+    }
+}
+
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
 /// This is similar to a list of named tuples, but stored as a 2D array of shape
@@ -245,7 +274,6 @@ pub fn is_valid_label_name(name: &str) -> bool {
 /// often (but not always) sorted in  lexicographic order.
 ///
 /// The main way to construct a new set of labels is to use a `LabelsBuilder`.
-#[derive(Clone, PartialEq, Eq)]
 pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
     /// with the C API
@@ -257,7 +285,19 @@ pub struct Labels {
     /// `XxHash64` is much faster and we don't need the cryptographic strength
     /// hash from std.
     positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
+    /// Some data provided by the user that we should keep around (this is
+    /// used to store a pointer to the on-GPU tensor in equistore-torch).
+    user_data: RwLock<UserData>,
 }
+
+impl PartialEq for Labels {
+    fn eq(&self, other: &Self) -> bool {
+        self.names == other.names && self.values == other.values
+    }
+}
+
+impl Eq for Labels {}
+
 
 impl std::fmt::Debug for Labels {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -293,6 +333,32 @@ impl Labels {
     /// C-compatible (null terminated) strings
     pub fn c_names(&self) -> &[ConstCString] {
         &self.names
+    }
+
+    /// Get the registered user data (this will be NULL if no data was
+    /// registered)
+    pub fn user_data(&self) -> *mut c_void {
+        let guard = self.user_data.read().expect("poisoned lock");
+        return guard.ptr;
+    }
+
+    /// Register user data for these Labels.
+    ///
+    /// The `user_data_delete` will be called with `user_data` when the Labels
+    /// are dropped, and should free the memory associated with `user_data`.
+    ///
+    /// Any existing user data will be released (by calling the provided
+    /// `user_data_delete` function) before overwriting with the new data.
+    pub fn set_user_data(
+        &self,
+        user_data: *mut c_void,
+        user_data_delete: Option<unsafe extern fn(*mut c_void)>,
+    ) {
+        let mut guard = self.user_data.write().expect("poisoned lock");
+        *guard = UserData {
+            ptr: user_data,
+            delete: user_data_delete,
+        };
     }
 
     /// Get the total number of entries in this set of labels
@@ -342,11 +408,10 @@ impl Labels {
             ));
         }
 
-        let new_labels = self.clone();
         let mut builder = LabelsBuilder {
-            names: new_labels.names,
-            values: new_labels.values,
-            positions: new_labels.positions,
+            names: self.names.clone(),
+            values: self.values.clone(),
+            positions: self.positions.clone(),
         };
 
         if !first_mapping.is_empty() {
@@ -569,5 +634,23 @@ mod tests {
         assert_eq!(intersection.count(), 0);
         assert_eq!(first_mapping, &[-1, -1]);
         assert_eq!(second_mapping, &[]);
+    }
+
+    #[test]
+    fn marker_traits() {
+        // ensure Arc<Labels> is Send and Sync, assuming the user data is
+        fn use_send(_: impl Send) {}
+        fn use_sync(_: impl Sync) {}
+
+        unsafe impl Sync for UserData {}
+        unsafe impl Send for UserData {}
+
+        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
+        builder.add(&[0, 1]).unwrap();
+        builder.add(&[1, 2]).unwrap();
+        let labels = std::sync::Arc::new(builder.finish());
+
+        use_send(labels.clone());
+        use_sync(labels);
     }
 }

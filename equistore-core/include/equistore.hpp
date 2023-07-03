@@ -385,6 +385,58 @@ namespace details {
     Labels labels_from_cxx(const std::vector<std::string>& names, NDArray<int32_t> values);
 }
 
+/// It is possible to store some user-provided data inside `Labels`, and access
+/// it later. This class is used to take ownership of the data and corresponding
+/// delete function before giving the data to equistore.
+///
+/// User data inside `Labels` is an advanced functionality, that most users
+/// should not need to interact with.
+class LabelsUserData {
+public:
+    /// Create `LabelsUserData` containing the given `data`.
+    ///
+    /// `deleter` will be called when the data is dropped, and should
+    /// free the corresponding memory.
+    LabelsUserData(void* data, void(*deleter)(void*)): data_(data), deleter_(deleter) {}
+
+    ~LabelsUserData() {
+        if (deleter_ !=  nullptr) {
+            deleter_(data_);
+        }
+    }
+
+    /// LabelsUserData is not copy-constructible
+    LabelsUserData(const LabelsUserData& other) = delete;
+    /// LabelsUserData can not be copy-assigned
+    LabelsUserData& operator=(const LabelsUserData& other) = delete;
+
+    /// LabelsUserData is move-constructible
+    LabelsUserData(LabelsUserData&& other): LabelsUserData(nullptr, nullptr) {
+        *this = std::move(other);
+    }
+
+    /// LabelsUserData be move-assigned
+    LabelsUserData& operator=(LabelsUserData&& other) {
+        if (deleter_ !=  nullptr) {
+            deleter_(data_);
+        }
+
+        data_ = other.data_;
+        deleter_ = other.deleter_;
+
+        other.data_ = nullptr;
+        other.deleter_ = nullptr;
+
+        return *this;
+    }
+
+private:
+    friend class Labels;
+
+    void* data_;
+    void(*deleter_)(void*);
+};
+
 
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
@@ -406,15 +458,17 @@ public:
     ///    {2, 3},
     /// });
     /// ```
-    Labels(const std::vector<std::string>& names, std::vector<std::initializer_list<int32_t>> values):
-        Labels(details::labels_from_cxx(names, NDArray(std::move(values), names.size()))) {}
+    Labels(
+        const std::vector<std::string>& names,
+        std::vector<std::initializer_list<int32_t>> values
+    ): Labels(details::labels_from_cxx(names, NDArray(std::move(values), names.size()))) {}
 
     /// Create an empty set of Labels with the given names
     Labels(const std::vector<std::string>& names):
         Labels(details::labels_from_cxx(
             names,
-            NDArray(static_cast<const int32_t*>(nullptr), {0, names.size()}))
-        ) {}
+            NDArray(static_cast<const int32_t*>(nullptr), {0, names.size()})
+        )) {}
 
     ~Labels() {
         eqs_labels_free(&labels_);
@@ -476,6 +530,36 @@ public:
         return labels_;
     }
 
+    /// Get the user data pointer registered with these `Labels`.
+    ///
+    /// If no user data have been registered, this function will return
+    /// `nullptr`.
+    void* user_data() {
+        assert(labels_.internal_ptr_ != nullptr);
+
+        void* data = nullptr;
+        details::check_status(eqs_labels_user_data(labels_, &data));
+        return data;
+    }
+
+    /// Register some user data pointer with these `Labels`.
+    ///
+    /// Any existing user data will be released (by calling the provided
+    /// `delete` function) before overwriting with the new data.
+    void set_user_data(LabelsUserData user_data) {
+        assert(labels_.internal_ptr_ != nullptr);
+
+        details::check_status(eqs_labels_set_user_data(
+            labels_,
+            user_data.data_,
+            user_data.deleter_
+        ));
+
+        // the user data was moved inside `labels_`
+        user_data.data_ = nullptr;
+        user_data.deleter_ = nullptr;
+    }
+
     /// Get the position of the `entry` in this set of Labels, or -1 if the
     /// entry is not part of these Labels.
     int64_t position(std::initializer_list<int32_t> entry) const {
@@ -509,8 +593,11 @@ public:
 
     /// Take the union of these `Labels` with `other`.
     ///
-    /// If requested, this function can also give the positions in the
-    /// union where each entry of the input `Labels` ended up.
+    /// If requested, this function can also give the positions in the union
+    /// where each entry of the input `Labels` ended up.
+    ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
     ///
     /// @param other the `Labels` we want to take the union with
     /// @param first_mapping if you want the mapping from the positions of
@@ -554,6 +641,9 @@ public:
     /// If requested, this function can also give the positions in the
     /// union where each entry of the input `Labels` ended up.
     ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
+    ///
     /// @param other the `Labels` we want to take the union with
     /// @param first_mapping if you want the mapping from the positions of
     ///        entries in `this` to the positions in the union, this should be
@@ -596,6 +686,9 @@ public:
     ///
     /// If requested, this function can also give the positions in the
     /// intersection where each entry of the input `Labels` ended up.
+    ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
     ///
     /// @param other the `Labels` we want to take the intersection with
     /// @param first_mapping if you want the mapping from the positions of
@@ -642,6 +735,9 @@ public:
     ///
     /// If requested, this function can also give the positions in the
     /// intersection where each entry of the input `Labels` ended up.
+    ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
     ///
     /// @param other the `Labels` we want to take the intersection with
     /// @param first_mapping if you want the mapping from the positions of
@@ -718,7 +814,10 @@ private:
 };
 
 namespace details {
-    inline equistore::Labels labels_from_cxx(const std::vector<std::string>& names, equistore::NDArray<int32_t> values) {
+    inline equistore::Labels labels_from_cxx(
+        const std::vector<std::string>& names,
+        equistore::NDArray<int32_t> values
+    ) {
         assert(values.shape().size() == 2);
 
         if (values.shape()[1] != names.size()) {

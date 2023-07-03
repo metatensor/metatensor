@@ -135,8 +135,8 @@ pub struct Labels {
 // Labels can be sent to other thread safely since eqs_labels_t uses an
 // `Arc<equistore_core::Labels>`, so freeing them from another thread is fine
 unsafe impl Send for Labels {}
-// &Labels can be sent to other thread safely since there is no interior
-// mutability
+// &Labels can be sent to other thread safely since there is no un-synchronized
+// interior mutability (`user_data` is protected by RwLock).
 unsafe impl Sync for Labels {}
 
 impl std::fmt::Debug for Labels {

@@ -340,6 +340,19 @@ extern "C" {
     #[must_use]
     pub fn eqs_labels_create(labels: *mut eqs_labels_t) -> eqs_status_t;
     #[must_use]
+    pub fn eqs_labels_set_user_data(
+        labels: eqs_labels_t,
+        user_data: *mut ::std::os::raw::c_void,
+        user_data_delete: ::std::option::Option<
+            unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void),
+        >,
+    ) -> eqs_status_t;
+    #[must_use]
+    pub fn eqs_labels_user_data(
+        labels: eqs_labels_t,
+        user_data: *mut *mut ::std::os::raw::c_void,
+    ) -> eqs_status_t;
+    #[must_use]
     pub fn eqs_labels_clone(labels: eqs_labels_t, clone: *mut eqs_labels_t) -> eqs_status_t;
     #[must_use]
     pub fn eqs_labels_union(

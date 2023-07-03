@@ -90,7 +90,7 @@ pub unsafe extern fn eqs_tensormap(
         };
 
         let keys = eqs_labels_to_rust(&keys)?;
-        let tensor = TensorMap::new((*keys).clone(), blocks_vec)?;
+        let tensor = TensorMap::new(keys, blocks_vec)?;
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0

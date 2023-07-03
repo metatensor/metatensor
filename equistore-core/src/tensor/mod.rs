@@ -123,7 +123,7 @@ impl TensorMap {
     /// must contain the same kind of data (same labels names, same gradients
     /// defined on all blocks).
     #[allow(clippy::similar_names)]
-    pub fn new(keys: Labels, blocks: Vec<TensorBlock>) -> Result<TensorMap, Error> {
+    pub fn new(keys: Arc<Labels>, blocks: Vec<TensorBlock>) -> Result<TensorMap, Error> {
         if blocks.len() != keys.count() {
             return Err(Error::InvalidParameter(format!(
                 "expected the same number of blocks as the number of \
@@ -169,7 +169,7 @@ impl TensorMap {
         }
 
         Ok(TensorMap {
-            keys: Arc::new(keys),
+            keys: keys,
             blocks,
         })
     }
@@ -299,7 +299,7 @@ mod tests {
         ).unwrap();
 
         let result = TensorMap::new(
-            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            example_labels(vec!["keys"], vec![[0], [1]]),
             vec![block_1, block_2],
         );
         assert!(result.is_ok());
@@ -320,7 +320,7 @@ mod tests {
         ).unwrap();
 
         let result = TensorMap::new(
-            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            example_labels(vec!["keys"], vec![[0], [1]]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -345,7 +345,7 @@ mod tests {
         ).unwrap();
 
         let result = TensorMap::new(
-            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            example_labels(vec!["keys"], vec![[0], [1]]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -371,7 +371,7 @@ mod tests {
         ).unwrap();
 
         let result = TensorMap::new(
-            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            example_labels(vec!["keys"], vec![[0], [1]]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -396,7 +396,7 @@ mod tests {
         ).unwrap();
 
         let result = TensorMap::new(
-            (*example_labels(vec!["keys"], vec![[0], [1]])).clone(),
+            example_labels(vec!["keys"], vec![[0], [1]]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -425,7 +425,7 @@ mod tests {
             [1, 2], [3, 0], [4, 3],
         ]);
 
-        let tensor = TensorMap::new((*keys).clone(), blocks).unwrap();
+        let tensor = TensorMap::new(keys, blocks).unwrap();
 
         let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
         selection.add(&[1, 1]).unwrap();

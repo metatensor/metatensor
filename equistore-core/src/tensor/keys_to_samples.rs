@@ -99,7 +99,7 @@ impl TensorMap {
             }
         }
 
-        return TensorMap::new(splitted_keys.new_keys, new_blocks);
+        return TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks);
     }
 }
 

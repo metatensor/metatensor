@@ -14,7 +14,7 @@ pub struct KeyAndBlock<'a> {
 }
 
 /// Result of the `remove_dimensions_from_keys` function
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RemovedDimensionsKeys {
     /// keys without the dimensions
     pub(super) new_keys: Labels,
