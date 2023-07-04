@@ -264,14 +264,11 @@ class TestSubtract(unittest.TestCase):
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         A = TensorMap(keys, [block_1, block_2])
         B = -5.1
-        C = np.array([-5.1])
 
         tensor_sum = equistore.subtract(A, B)
-        tensor_sum_array = equistore.subtract(A, C)
         tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
         self.assertTrue(equistore.allclose(tensor_result, tensor_sum))
-        self.assertTrue(equistore.allclose(tensor_result, tensor_sum_array))
 
     def test_self_subtract_error(self):
         block_1 = TensorBlock(
@@ -288,7 +285,7 @@ class TestSubtract(unittest.TestCase):
             keys = equistore.subtract(A, B)
         self.assertEqual(
             str(cm.exception),
-            "B should be a TensorMap or a scalar value. ",
+            "B should be a TensorMap or a scalar value",
         )
 
 

@@ -229,18 +229,17 @@ def test_self_add_tensors_gradient(tensor_A, tensor_B, tensor_res_1):
     equistore.allclose_raise(equistore.add(tensor_A, tensor_B), tensor_res_1)
 
 
-@pytest.mark.parametrize("tensor_B", [5.1, np.array([5.1])])
-def test_self_add_scalar_gradient(tensor_A, tensor_B, tensor_res_2):
+def test_self_add_scalar_gradient(tensor_A, tensor_res_2):
     tensor_A_copy = tensor_A.copy()
 
-    equistore.allclose_raise(equistore.add(tensor_A, tensor_B), tensor_res_2)
+    equistore.allclose_raise(equistore.add(tensor_A, 5.1), tensor_res_2)
 
     # Check the tensors haven't be modified in place
     equistore.equal_raise(tensor_A, tensor_A_copy)
 
 
 def test_self_add_error(tensor_A):
-    msg = "B should be a TensorMap or a scalar value."
+    msg = "B should be a TensorMap or a scalar value"
     with pytest.raises(TypeError, match=msg):
         equistore.add(tensor_A, np.ones((3, 4)))
 

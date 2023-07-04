@@ -53,14 +53,14 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 fname="divide",
             )
             blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
-    else:
-        # check if can be converted in float (so if it is a constant value)
-        try:
-            float(B)
-        except TypeError as e:
-            raise TypeError("B should be a TensorMap or a scalar value. ") from e
-        for block_A in A:
+
+    elif isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
             blocks.append(_divide_block_constant(block=block_A, constant=B))
+
+    else:
+        raise TypeError("B should be a TensorMap or a scalar value")
 
     return TensorMap(A.keys, blocks)
 
