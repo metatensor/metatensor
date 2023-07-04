@@ -40,6 +40,39 @@ public:
 };
 
 namespace details {
+    /// Singleton class storing the last exception throw by a C++ callback.
+    ///
+    /// When passing callbacks from C++ to Rust, we need to convert exceptions
+    /// into status code (see the `catch` blocks in this file). This class
+    /// allows to save the message associated with an exception, and rethrow an
+    /// exception with the same message later (the actual exception type is lost
+    /// in the process).
+    class LastCxxError {
+    public:
+        /// Set the last error message to `message`
+        static void set_message(std::string message) {
+            auto& stored_message = LastCxxError::get();
+            stored_message = std::move(message);
+        }
+
+        /// Get the last error message
+        static const std::string& message() {
+            return LastCxxError::get();
+        }
+
+    private:
+        static std::string& get() {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wexit-time-destructors"
+            /// we are using a per-thread static value to store the last C++
+            /// exception.
+            static thread_local std::string STORED_MESSAGE;
+            #pragma clang diagnostic pop
+
+            return STORED_MESSAGE;
+        }
+    };
+
     /// Check if a return status from the C API indicates an error, and if it is
     /// the case, throw an exception of type `equistore::Error` with the last
     /// error message from the library.
@@ -48,10 +81,8 @@ namespace details {
             return;
         } else if (status > 0) {
             throw Error(eqs_last_error());
-        } else if (status < 0) {
-            throw Error("error in callback");
-        } else {
-
+        } else { // status < 0
+            throw Error("error in C++ callback: " + LastCxxError::message());
         }
     }
 
@@ -913,9 +944,11 @@ public:
                 auto cxx_array = static_cast<const DataArrayBase*>(array);
                 *origin = cxx_array->origin();
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -926,9 +959,11 @@ public:
                 auto copy = cxx_array->copy();
                 *new_array = DataArrayBase::to_eqs_array_t(std::move(copy));
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -943,9 +978,11 @@ public:
                 auto copy = cxx_array->create(std::move(cxx_shape));
                 *new_array = DataArrayBase::to_eqs_array_t(std::move(copy));
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -956,9 +993,11 @@ public:
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 *data = cxx_array->data();
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -970,9 +1009,11 @@ public:
                 *shape = cxx_shape.data();
                 *shape_count = static_cast<uintptr_t>(cxx_shape.size());
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -983,9 +1024,11 @@ public:
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
                 cxx_array->reshape(std::move(cxx_shape));
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -994,9 +1037,11 @@ public:
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 cxx_array->swap_axes(axis_1, axis_2);
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
@@ -1017,9 +1062,11 @@ public:
 
                 cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
                 return EQS_SUCCESS;
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                details::LastCxxError::set_message(e.what());
                 return -1;
             } catch (...) {
+                details::LastCxxError::set_message("error was not an std::exception");
                 return -128;
             }
         };
