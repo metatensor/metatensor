@@ -62,8 +62,7 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         diff_components = len(gradient.components) - len(block.components)
         # The sign_values have the same dimensions as that of the block.values.
         # Reshape the sign_values to allow multiplication with gradient.values
-        gradient_samples_sample = gradient.samples["sample"].values[:, 0]
-        new_grad = gradient.values[:] * sign_values[gradient_samples_sample].reshape(
+        new_grad = gradient.values[:] * sign_values[gradient.samples["sample"]].reshape(
             (-1,) + (1,) * diff_components + _shape
         )
 

@@ -215,7 +215,19 @@ TorchLabels LabelsHolder::range(std::string name, int64_t end) {
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
     auto values = torch::arange(end, options).reshape({end, 1});
     return torch::make_intrusive<LabelsHolder>(std::move(name), std::move(values));
+}
 
+torch::Tensor LabelsHolder::column(std::string dimension) {
+    auto it = std::find(std::begin(names_), std::end(names_), dimension);
+
+    if (it == std::end(names_)) {
+        C10_THROW_ERROR(ValueError,
+            "'" + dimension + "' not found in the dimensions of these Labels"
+        );
+    }
+
+    int64_t index = std::distance(std::begin(names_), it);
+    return values_.index({torch::indexing::Slice(), index});
 }
 
 const equistore::Labels& LabelsHolder::as_equistore() const {
@@ -582,7 +594,7 @@ int32_t LabelsEntryHolder::operator[](const std::string& name) const {
 }
 
 
-int64_t LabelsEntryHolder::getitem(torch::IValue index) const {
+int64_t LabelsEntryHolder::__getitem__(torch::IValue index) const {
     if (index.isInt()) {
         return static_cast<int64_t>(this->operator[](index.toInt()));
     } else if (index.isString()) {

@@ -210,10 +210,10 @@ def _unique_from_blocks(
     all_values = []
     for block in blocks:
         if axis == "samples":
-            all_values.append(block.samples[names].values)
+            all_values.append(block.samples.view(names).values)
         else:
             assert axis == "properties"
-            all_values.append(block.properties[names].values)
+            all_values.append(block.properties.view(names).values)
 
     unique_values = np.unique(np.vstack(all_values), axis=0)
     return Labels(names=names, values=unique_values)

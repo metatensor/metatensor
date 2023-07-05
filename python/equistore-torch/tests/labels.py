@@ -84,38 +84,38 @@ def test_view():
 
     assert not labels.is_view()
 
-    view = labels["aaa"]
+    view = labels.view("aaa")
     assert view.is_view()
     assert view.names == ["aaa"]
     assert torch.all(view.values == torch.IntTensor([[1], [3]]))
 
-    view = labels["bbb"]
+    view = labels.view("bbb")
     assert view.names == ["bbb"]
     assert torch.all(view.values == torch.IntTensor([[2], [4]]))
 
-    view = labels[["bbb"]]
+    view = labels.view(["bbb"])
     assert view.is_view()
     assert view.names == ["bbb"]
     assert torch.all(view.values == torch.IntTensor([[2], [4]]))
 
-    view = labels[["bbb", "aaa"]]
+    view = labels.view(["bbb", "aaa"])
     assert view.is_view()
     assert view.names == ["bbb", "aaa"]
     assert torch.all(view.values == torch.IntTensor([[2, 1], [4, 3]]))
 
-    view = labels[["aaa", "aaa", "aaa"]]
+    view = labels.view(["aaa", "aaa", "aaa"])
     assert view.names == ["aaa", "aaa", "aaa"]
     assert torch.all(view.values == torch.IntTensor([[1, 1, 1], [3, 3, 3]]))
 
     message = "'ccc' not found in the dimensions of these Labels"
     with pytest.raises(ValueError, match=message):
-        labels["ccc"]
+        labels.view("ccc")
 
-    message = "index must be a tuple of strings, got element with type 'int' instead"
+    message = "names must be a tuple of strings, got element with type 'int' instead"
     with pytest.raises(TypeError, match=message):
-        labels[1, 2]
+        labels.view((1, 2))
 
-    view = labels["aaa"]
+    view = labels.view("aaa")
     message = "can not call this function on Labels view, call to_owned first"
     with pytest.raises(ValueError, match=message):
         view.position([1])
@@ -125,7 +125,7 @@ def test_view():
     assert owned.position([1]) == 0
     assert owned.position([-1]) is None
 
-    view = labels[["aaa", "aaa"]]
+    view = labels.view(["aaa", "aaa"])
     message = "invalid parameter: labels names must be unique, got 'aaa' multiple times"
     with pytest.raises(RuntimeError, match=message):
         view.to_owned()
@@ -188,7 +188,7 @@ def test_repr():
 
     labels = Labels(names=("aaa", "bbb"), values=torch.IntTensor([[0, 0], [0, 1]]))
     expected = "LabelsView(\n    bbb\n     0\n     1\n)"
-    assert str(labels["bbb"]) == expected
+    assert str(labels.view("bbb")) == expected
 
     labels = Labels(
         names=("aaa", "bbb"), values=torch.IntTensor([[111111111, 2], [3, 444444444]])
@@ -214,6 +214,13 @@ def test_indexing():
     assert entry.names == ["a", "b"]
     assert torch.all(entry.values == torch.IntTensor([3, 4]))
 
+    # indexing labels with string
+    column = labels["a"]
+    assert torch.all(column == torch.IntTensor([1, 3]))
+
+    column = labels["b"]
+    assert torch.all(column == torch.IntTensor([2, 4]))
+
     # indexing labels errors
     message = "out of range for tensor of size \\[2, 2\\] at dimension 0"
     with pytest.raises(IndexError, match=message):
@@ -221,6 +228,14 @@ def test_indexing():
 
     with pytest.raises(IndexError, match=message):
         labels[-7]
+
+    message = "Labels can only be indexed by int or str, got 'float' instead"
+    with pytest.raises(TypeError, match=message):
+        labels[3.4]
+
+    message = "'cc' not found in the dimensions of these Labels"
+    with pytest.raises(ValueError, match=message):
+        labels["cc"]
 
     # indexing entry with integer
     entry = labels[0]
@@ -307,7 +322,7 @@ def test_position():
     assert labels.position(other_labels[1]) is None
 
     # make sure nothing breaks when using the same column multiple time in a view
-    view = other_labels[["a", "a"]]
+    view = other_labels.view(["a", "a"])
     assert labels.position(view[0]) == 0
 
     message = (
@@ -373,7 +388,7 @@ class LabelsWrap:
 
     # we can not set the return type to Union[Labels, LabelsEntry] from C++
     # so it is set to Any
-    def __getitem__(self, index: Union[int, str, List[str]]) -> Any:
+    def __getitem__(self, index: Union[int, str]) -> Any:
         return self._c.__getitem__(index=index)
 
     def contains(self, entry: Union[List[int], LabelsEntry]) -> bool:
@@ -396,6 +411,9 @@ class LabelsWrap:
 
     def entry(self, index: int) -> LabelsEntry:
         return self._c.entry(index=index)
+
+    def column(self, dimension: str) -> torch.Tensor:
+        return self._c.column(dimension=dimension)
 
     def view(self, names: Union[str, List[str]]) -> Labels:
         return self._c.view(names=names)

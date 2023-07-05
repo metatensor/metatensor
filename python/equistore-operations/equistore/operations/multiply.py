@@ -112,11 +112,8 @@ def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorB
 
         gradient_values = []
         for i_sample in range(len(block_1.samples)):
-            gradient_samples_1 = gradient_1.samples["sample"].values
-            i_sample_grad_1 = np.where(gradient_samples_1 == i_sample)[0]
-
-            gradient_samples_2 = gradient_2.samples["sample"].values
-            i_sample_grad_2 = np.where(gradient_samples_2 == i_sample)[0]
+            i_sample_grad_1 = np.where(gradient_1.samples["sample"] == i_sample)[0]
+            i_sample_grad_2 = np.where(gradient_2.samples["sample"] == i_sample)[0]
 
             gradient_values.append(
                 block_1.values[i_sample] * gradient_2.values[i_sample_grad_2]

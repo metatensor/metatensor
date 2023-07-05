@@ -61,11 +61,11 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
     name = dimension.names[0]
 
     indices = np.zeros(len(labels), dtype=np.int64)
-    for i, entry in enumerate(labels[name].values):
-        position = dimension.position(entry)
+    for i, entry in enumerate(labels[name]):
+        position = dimension.position([entry])
         if position is None:
             raise ValueError(
-                f"{name}={entry[0]} is present in the labels, but was not found in "
+                f"{name}={entry} is present in the labels, but was not found in "
                 "the dimension"
             )
         indices[i] = position
