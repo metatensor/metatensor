@@ -115,3 +115,37 @@ jobs:
           # bindgen is already installed on GitHub Actions VM
           ./scripts/update-declarations.sh
           git diff --exit-code
+
+  # make sure no debug print stays in the code
+  check-debug-prints:
+    runs-on: ubuntu-20.04
+    name: check leftover debug print
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install ripgrep
+        run: |
+          wget https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          tar xf ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          echo "$(pwd)/ripgrep-13.0.0-x86_64-unknown-linux-musl" >> $GITHUB_PATH
+
+      - name: check for leftover dbg!
+        run: |
+          # use ripgrep (rg) to check for instances of `dbg!` in rust files.
+          # rg will return 1 if it fails to find a match, so we invert it again
+          # with the `!` builtin to get the error/success in CI
+
+          ! rg "dbg!" --type=rust --quiet
+
+      - name: check for leftover \#include <iostream>
+        run: |
+          ! rg "<iostream>" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
+
+      - name: check for leftover std::cout
+        run: |
+          ! rg "cout" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
+
+      - name: check for leftover std::cerr
+        run: |
+          ! rg "cerr" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
