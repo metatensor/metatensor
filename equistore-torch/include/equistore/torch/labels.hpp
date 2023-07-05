@@ -252,7 +252,6 @@ private:
 
 /// Check two `LabelsEntryHolder` for equality
 inline bool operator==(const LabelsEntryHolder& lhs, const LabelsEntryHolder& rhs) {
-    std::cout << "names = " << (lhs.names() == rhs.names()) << ", values = " << torch::all(lhs.values() == rhs.values()).item<bool>() << std::endl;
     return lhs.names() == rhs.names() && torch::all(lhs.values() == rhs.values()).item<bool>();
 }
 
