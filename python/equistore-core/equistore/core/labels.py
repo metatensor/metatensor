@@ -141,11 +141,11 @@ class Labels:
      [0 5 1]]
 
 
-    It is possible to create a view inside a :py:class:`Labels`, selecting only
-    a subset of columns/dimensions:
+    It is possible to create a view inside a :py:class:`Labels`, selecting a subset of
+    columns/dimensions:
 
     >>> # single dimension
-    >>> view = labels["atom"]  # or labels.view("atom")
+    >>> view = labels.view("atom")
     >>> view.names
     ['atom']
     >>> print(view.values)
@@ -153,7 +153,7 @@ class Labels:
      [2]
      [5]]
     >>> # multiple dimensions
-    >>> view = labels[["atom", "structure"]]
+    >>> view = labels.view(["atom", "structure"])
     >>> view.names
     ['atom', 'structure']
     >>> print(view.values)
@@ -167,9 +167,8 @@ class Labels:
     >>> owned_labels.is_view()
     False
 
-
-    One can also iterate over labels entries, or directly index the
-    :py:class:`Labels` to get them
+    One can also iterate over labels entries, or directly index the :py:class:`Labels`
+    to get a specific entry
 
     >>> entry = labels[0]  # or labels.entry(0)
     >>> entry.names
@@ -183,6 +182,12 @@ class Labels:
     LabelsEntry(structure=0, atom=2, species_center=1)
     LabelsEntry(structure=0, atom=5, species_center=1)
 
+    Or get all the values associated with a given dimension/column name
+
+    >>> print(labels.column("atom"))
+    [1 2 5]
+    >>> print(labels["atom"])  # alternative syntax for the above
+    [1 2 5]
 
     Labels can be checked for equality:
 
@@ -330,14 +335,14 @@ class Labels:
 
     def __str__(self) -> str:
         printed = self.print(4, 3)
-        if self._labels is None:
+        if self.is_view():
             return f"LabelsView(\n   {printed}\n)"
         else:
             return f"Labels(\n   {printed}\n)"
 
     def __repr__(self) -> str:
         printed = self.print(-1, 3)
-        if self._labels is None:
+        if self.is_view():
             return f"LabelsView(\n   {printed}\n)"
         else:
             return f"Labels(\n   {printed}\n)"
@@ -351,7 +356,7 @@ class Labels:
             yield LabelsEntry(self._names, self._values[i, :])
 
     @overload
-    def __getitem__(self, dimensions: Union[str, Sequence[str]]) -> "Labels":
+    def __getitem__(self, dimension: str) -> np.ndarray:
         pass
 
     @overload
@@ -360,15 +365,19 @@ class Labels:
 
     def __getitem__(self, index):
         """
-        When indexing with a string or list of string, create a view containing
-        only the specified dimensions.
+        When indexing with a string, get the values for the corresponding dimension as a
+        1-dimensional array (i.e. :py:func:`Labels.column`).
 
-        When indexing with an integer, get the corresponding row/labels entry.
+        When indexing with an integer, get the corresponding row/labels entry (i.e.
+        :py:func:`Labels.entry`).
+
+        See also :py:func:`Labels.view` to extract the values associated with multiple
+        columns/dimensions.
         """
         if isinstance(index, (int, np.int8, np.int16, np.int32, np.int64)):
             return self.entry(index)
         else:
-            return self.view(index)
+            return self.column(index)
 
     def __contains__(
         self,
@@ -639,12 +648,49 @@ class Labels:
         )
 
     def entry(self, index: int) -> LabelsEntry:
-        """get a single entry in these labels, see also :py:func:`Labels.__getitem__`"""
+        """
+        Get a single entry/row in these labels.
+
+        .. seealso::
+
+            :py:func:`Labels.__getitem__` as the main way to use this function
+        """
         return LabelsEntry(self._names, self._values[index, :])
 
+    def column(self, dimension: str) -> np.ndarray:
+        """
+        Get the values associated with a single dimension in these labels (i.e. a single
+        column of :py:attr:`Labels.values`) as a 1-dimensional array.
+
+        .. seealso::
+
+            :py:func:`Labels.__getitem__` as the main way to use this function
+
+            :py:func:`Labels.view` to access multiple columns simultaneously
+        """
+        if not isinstance(dimension, str):
+            raise TypeError(
+                f"column names must be a string, got {type(dimension)} instead"
+            )
+
+        try:
+            index = self.names.index(dimension)
+        except ValueError:
+            raise ValueError(
+                f"'{dimension}' not found in the dimensions of these Labels"
+            )
+
+        return self.values[:, index]
+
     def view(self, dimensions: Union[str, Sequence[str]]) -> "Labels":
-        """get a view for the specified columns in these labels, see also
-        :py:func:`Labels.__getitem__`"""
+        """
+        Get a view for the specified columns in these labels.
+
+        .. seealso::
+
+            :py:func:`Labels.column` to get the values associated with a single
+            dimension
+        """
 
         names = _normalize_names_type(dimensions)
         indices = []

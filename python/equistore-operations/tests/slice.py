@@ -93,7 +93,7 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
         assert np.max(sliced_gradient.samples["sample"]) < sliced_block.values.shape[0]
 
         # other columns in the gradient samples have been sliced correctly
-        gradient_sample_filter = samples_filter[gradient.samples["sample"].values[:, 0]]
+        gradient_sample_filter = samples_filter[gradient.samples["sample"]]
         if len(gradient.samples.names) > 1:
             expected = gradient.samples.values[gradient_sample_filter, 1:]
             sliced_gradient_samples = sliced_gradient.samples.values[:, 1:]

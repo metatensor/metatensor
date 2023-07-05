@@ -19,9 +19,12 @@ static TorchLabelsEntry labels_entry(const TorchLabels& self, int64_t index) {
 static torch::IValue labels_getitem(const TorchLabels& self, torch::IValue index) {
     if (index.isInt()) {
         return labels_entry(self, index.toInt());
+    } else if (index.isString()) {
+        return self->column(index.toStringRef());
     } else {
-        auto names = equistore_torch::details::normalize_names(std::move(index), "index");
-        return LabelsHolder::view(self, std::move(names));
+        C10_THROW_ERROR(TypeError,
+            "Labels can only be indexed by int or str, got '" + index.type()->str() + "' instead"
+        );
     }
 }
 
@@ -40,7 +43,7 @@ TORCH_LIBRARY(equistore, m) {
         .def("__str__", &LabelsEntryHolder::__repr__)
         .def("__repr__", &LabelsEntryHolder::__repr__)
         .def("__len__", &LabelsEntryHolder::size)
-        .def("__getitem__", &LabelsEntryHolder::getitem, DOCSTRING,
+        .def("__getitem__", &LabelsEntryHolder::__getitem__, DOCSTRING,
             {torch::arg("index")}
         )
         .def("__eq__", [](const TorchLabelsEntry& self, const TorchLabelsEntry& other){ return *self == *other; },
@@ -84,6 +87,7 @@ TORCH_LIBRARY(equistore, m) {
         .def_static("empty", &LabelsHolder::empty)
         .def_static("range", &LabelsHolder::range)
         .def("entry", labels_entry, DOCSTRING, {torch::arg("index")})
+        .def("column", &LabelsHolder::column, DOCSTRING, {torch::arg("dimension")})
         .def("view", [](const TorchLabels& self, torch::IValue names) {
             auto names_vector = equistore_torch::details::normalize_names(std::move(names), "names");
             return LabelsHolder::view(self, std::move(names_vector));

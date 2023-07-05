@@ -113,7 +113,7 @@ class Labels:
     a subset of columns/dimensions:
 
     >>> # single dimension
-    >>> view = labels["atom"]  # or labels.view("atom")
+    >>> view = labels.view("atom")
     >>> view.names
     ['atom']
     >>> view.values
@@ -121,7 +121,7 @@ class Labels:
             [2],
             [5]], dtype=torch.int32)
     >>> # multiple dimensions
-    >>> view = labels[["atom", "structure"]]
+    >>> view = labels.view(["atom", "structure"])
     >>> view.names
     ['atom', 'structure']
     >>> view.values
@@ -135,9 +135,8 @@ class Labels:
     >>> owned_labels.is_view()
     False
 
-
-    One can also iterate over labels entries, or directly index the
-    :py:class:`Labels` to get them
+    One can also iterate over labels entries, or directly index the :py:class:`Labels`
+    to get a specific entry
 
     >>> entry = labels[0]  # or labels.entry(0)
     >>> entry.names
@@ -151,6 +150,12 @@ class Labels:
     LabelsEntry(structure=0, atom=2, species_center=1)
     LabelsEntry(structure=0, atom=5, species_center=1)
 
+    Or get all the values associated with a given dimension/column name
+
+    >>> labels.column("atom")
+    tensor([1, 2, 5], dtype=torch.int32)
+    >>> labels["atom"]  # alternative syntax for the above
+    tensor([1, 2, 5], dtype=torch.int32)
 
     Labels can be checked for equality:
 
@@ -239,7 +244,7 @@ class Labels:
         """number of entries in these labels"""
 
     @overload
-    def __getitem__(self, dimensions: StrSequence) -> "Labels":
+    def __getitem__(self, dimension: str) -> torch.Tensor:
         pass
 
     @overload
@@ -248,15 +253,14 @@ class Labels:
 
     def __getitem__(self, index):
         """
-        When indexing with a string or list of string, create a view containing
-        only the specified dimensions.
+        When indexing with a string, get the values for the corresponding dimension as a
+        1-dimensional array (i.e. :py:func:`Labels.column`).
 
-        When indexing with an integer, get the corresponding row/labels entry.
+        When indexing with an integer, get the corresponding row/labels entry (i.e.
+        :py:func:`Labels.entry`).
 
-        If you get errors about the output of ``labels[index]`` being unknown
-        when using :py:func:`torch.jit.script`, you should use
-        :py:func:`Labels.entry` and :py:func:`Labels.view` instead to refine the
-        types.
+        See also :py:func:`Labels.view` to extract the values associated with multiple
+        columns/dimensions.
         """
 
     def __contains__(
@@ -341,6 +345,18 @@ class Labels:
 
     def entry(self, index: int) -> LabelsEntry:
         """get a single entry in these labels, see also :py:func:`Labels.__getitem__`"""
+
+    def column(self, dimension: str) -> torch.Tensor:
+        """
+        Get the values associated with a single dimension in these labels (i.e. a single
+        column of :py:attr:`Labels.values`) as a 1-dimensional array.
+
+        .. seealso::
+
+            :py:func:`Labels.__getitem__` as the main way to use this function
+
+            :py:func:`Labels.view` to access multiple columns simultaneously
+        """
 
     def view(self, dimensions: StrSequence) -> "Labels":
         """get a view for the specified columns in these labels, see also

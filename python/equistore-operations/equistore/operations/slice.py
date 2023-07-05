@@ -173,7 +173,7 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
 
     if axis == "samples":
         # only keep the same names as `labels`
-        all_samples = block.samples[labels.names]
+        all_samples = block.samples.view(labels.names)
         # create an arrays of bools indicating which samples indices to keep
         samples_mask = np.array([s in labels for s in all_samples])
         new_values = block.values[samples_mask]
@@ -192,7 +192,7 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     else:
         assert axis == "properties"
         # only keep the same names as `labels`
-        all_properties = block.properties[list(labels.names)]
+        all_properties = block.properties.view(list(labels.names))
         # create an arrays of bools indicating which samples indices to keep
         properties_mask = np.array([p in labels for p in all_properties])
         new_values = block.values[..., properties_mask]
@@ -227,7 +227,7 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
 
         # Create a samples filter for the Gradient TensorBlock
         if axis == "samples":
-            grad_samples_mask = samples_mask[gradient.samples["sample"].values[:, 0]]
+            grad_samples_mask = samples_mask[gradient.samples["sample"]]
             new_grad_samples = gradient.samples.values[grad_samples_mask]
 
             if new_grad_samples.shape[0] != 0:

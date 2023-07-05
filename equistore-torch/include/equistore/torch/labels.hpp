@@ -78,6 +78,10 @@ public:
         return values_;
     }
 
+    /// Get the values associated with a single dimension (i.e. a single column
+    /// of `values()`) in these labels.
+    torch::Tensor column(std::string dimension);
+
     /// Get the number of entries in this set of Labels.
     ///
     /// This is the same as `values().size(0)`
@@ -235,7 +239,7 @@ public:
     int32_t operator[](const std::string& name) const;
 
     /// implementation of __getitem__, forwarding to one of the operator[]
-    int64_t getitem(torch::IValue index) const;
+    int64_t __getitem__(torch::IValue index) const;
 
     /// Print this entry as a named tuple (i.e. `(key=value, key=value)`).
     std::string print() const;

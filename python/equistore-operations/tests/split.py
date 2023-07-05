@@ -72,7 +72,7 @@ class TestSplitSamples(unittest.TestCase):
                 self.assertEqual(len(split_block.components[c_i]), c_size)
             # Equal values tensor
             samples_filter = np.array(
-                [s in grouped_labels[i] for s in block.samples[target_names]]
+                [s in grouped_labels[i] for s in block.samples.view(target_names)]
             )
             self.assertTrue(
                 np.all(split_block.values == block.values[samples_filter, ...])
@@ -92,7 +92,7 @@ class TestSplitSamples(unittest.TestCase):
 
                 # other columns in the gradient samples have been sliced correctly
 
-                gradient_samples_sample = gradient.samples["sample"].values[:, 0]
+                gradient_samples_sample = gradient.samples["sample"]
                 gradient_sample_filter = samples_filter[gradient_samples_sample]
                 if len(gradient.samples.names) > 1:
                     expected = gradient.samples.values[gradient_sample_filter, 1:]
@@ -296,7 +296,7 @@ class TestSplitProperties(unittest.TestCase):
                 self.assertEqual(len(split_block.components[c_i]), c_size)
             # Equal values tensor
             properties_filter = np.array(
-                [p in grouped_labels[i] for p in block.properties[target_names]]
+                [p in grouped_labels[i] for p in block.properties.view(target_names)]
             )
             self.assertTrue(
                 np.all(split_block.values == block.values[..., properties_filter])
@@ -318,7 +318,7 @@ class TestSplitProperties(unittest.TestCase):
                     len(
                         [
                             p
-                            for p in gradient.properties[target_names]
+                            for p in gradient.properties.view(target_names)
                             if p in target_idxs
                         ]
                     ),
@@ -587,9 +587,9 @@ def _unique_indices(
     all_idxs = []
     for block in blocks:
         if axis == "samples":
-            block_idxs = block.samples[names]
+            block_idxs = block.samples.view(names)
         else:
-            block_idxs = block.properties[names]
+            block_idxs = block.properties.view(names)
 
         for idx in block_idxs:
             all_idxs.append(idx)
