@@ -182,15 +182,17 @@ TORCH_LIBRARY(equistore, m) {
             {torch::arg("max_keys")}
         )
         // TODO
-        // .def_pickle(
-        //     // __getstate__
-        //     [](const torch::intrusive_ptr<TorchTensorMap>& self) -> std::string {
-        //          // TODO
-        //     },
-        //     // __setstate__
-        //     [](std::string state) -> torch::intrusive_ptr<TorchCalculator> {
-        //         // TODO
-        //     })
+        .def_pickle(
+            // __getstate__
+            [](const TorchTensorMap& self) -> std::string {
+                throw std::runtime_error("NOT IMPLEMENTED");
+            },
+            // __setstate__
+            [](std::string buffer) -> TorchTensorMap {
+                return torch::make_intrusive<TensorMapHolder>(
+                    equistore::TensorMap::load_buffer(buffer, details::create_torch_array)
+                );
+            })
         ;
 
     m.def("load", equistore_torch::load);

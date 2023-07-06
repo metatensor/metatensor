@@ -105,6 +105,8 @@ def c_type_name(name):
         return "c_uintptr_t"
     elif name == "void":
         return "None"
+    elif name == "uint8_t":
+        return "ctypes.c_uint8"
     elif name == "int32_t":
         return "ctypes.c_int32"
     elif name == "uint32_t":
@@ -155,6 +157,8 @@ def type_to_ctypes(type):
             if name == "void":
                 return "ctypes.c_void_p"
             elif name == "char":
+                return "ctypes.c_char_p"
+            elif name == "uint8_t":
                 return "ctypes.c_char_p"
             else:
                 return f"POINTER({c_type_name(name)})"

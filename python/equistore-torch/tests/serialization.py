@@ -53,3 +53,8 @@ def test_save(tmpdir, tensor):
         data = equistore.torch.load(tmpfile)
 
     assert len(data.keys) == 4
+
+
+def test_pickle():
+    # TODO when we have save
+    pass

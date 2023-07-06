@@ -1,7 +1,27 @@
+use std::io::Read;
+
+use equistore::TensorMap;
+
 #[test]
 fn load_file() {
     let tensor = equistore::io::load("./tests/data.npz").unwrap();
 
+    check_tensor(&tensor);
+}
+
+
+#[test]
+fn load_buffer() {
+    let mut file = std::fs::File::open("./tests/data.npz").unwrap();
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).unwrap();
+
+    let tensor = equistore::io::load_buffer(&buffer).unwrap();
+    check_tensor(&tensor);
+}
+
+
+fn check_tensor(tensor: &TensorMap) {
     assert_eq!(tensor.keys().names(), ["spherical_harmonics_l", "center_species", "neighbor_species"]);
     assert_eq!(tensor.keys().count(), 27);
 

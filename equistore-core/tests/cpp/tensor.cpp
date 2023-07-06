@@ -1,3 +1,6 @@
+#include <fstream>
+#include <sstream>
+
 #include <catch.hpp>
 
 #include <equistore.hpp>
@@ -5,6 +8,7 @@ using namespace equistore;
 
 static TensorMap test_tensor_map();
 static eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array);
+static void check_loaded_tensor(equistore::TensorMap& tensor);
 
 static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
 
@@ -206,30 +210,7 @@ TEST_CASE("TensorMap serialization") {
         // DATA_NPZ is defined by cmake and expand to the path of tests/data.npz
         auto tensor = TensorMap::load(DATA_NPZ);
 
-        auto keys = tensor.keys();
-        CHECK(keys.names().size() == 3);
-        CHECK(keys.names()[0] == std::string("spherical_harmonics_l"));
-        CHECK(keys.names()[1] == std::string("center_species"));
-        CHECK(keys.names()[2] == std::string("neighbor_species"));
-        CHECK(keys.shape()[0] == 27);
-
-        auto block = tensor.block_by_id(21);
-
-        auto samples = block.samples();
-        CHECK(samples.names().size() == 2);
-        CHECK(samples.names()[0] == std::string("structure"));
-        CHECK(samples.names()[1] == std::string("center"));
-
-        CHECK(block.values().shape() == std::vector<size_t>{9, 5, 3});
-
-        auto gradient = block.gradient("positions");
-        samples = gradient.samples();
-        CHECK(samples.names().size() == 3);
-        CHECK(samples.names()[0] == std::string("sample"));
-        CHECK(samples.names()[1] == std::string("structure"));
-        CHECK(samples.names()[2] == std::string("atom"));
-
-        CHECK(gradient.values().shape() == std::vector<size_t>{59, 3, 5, 3});
+        check_loaded_tensor(tensor);
     }
 
     SECTION("loading file with custom array creation") {
@@ -237,6 +218,17 @@ TEST_CASE("TensorMap serialization") {
         auto tensor = TensorMap::load(DATA_NPZ, custom_create_array);
         // 27 blocks, one array for values, one array for gradients
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
+    }
+
+    SECTION("Load from buffer") {
+        // read the whole file into a buffer
+        std::ifstream file(DATA_NPZ, std::ios::binary);
+        std::ostringstream string_stream;
+        string_stream << file.rdbuf();
+        auto buffer = string_stream.str();
+
+        auto tensor = TensorMap::load_buffer(buffer);
+        check_loaded_tensor(tensor);
     }
 }
 
@@ -322,7 +314,7 @@ TensorMap test_tensor_map() {
 }
 
 
-static eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array) {
+eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t *array) {
     auto shape = std::vector<size_t>();
     for (size_t i=0; i<shape_count; i++) {
         shape.push_back(static_cast<size_t>(shape_ptr[i]));
@@ -334,4 +326,31 @@ static eqs_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t sh
     *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
 
     return EQS_SUCCESS;
+}
+
+void check_loaded_tensor(equistore::TensorMap& tensor) {
+    auto keys = tensor.keys();
+    CHECK(keys.names().size() == 3);
+    CHECK(keys.names()[0] == std::string("spherical_harmonics_l"));
+    CHECK(keys.names()[1] == std::string("center_species"));
+    CHECK(keys.names()[2] == std::string("neighbor_species"));
+    CHECK(keys.shape()[0] == 27);
+
+    auto block = tensor.block_by_id(21);
+
+    auto samples = block.samples();
+    CHECK(samples.names().size() == 2);
+    CHECK(samples.names()[0] == std::string("structure"));
+    CHECK(samples.names()[1] == std::string("center"));
+
+    CHECK(block.values().shape() == std::vector<size_t>{9, 5, 3});
+
+    auto gradient = block.gradient("positions");
+    samples = gradient.samples();
+    CHECK(samples.names().size() == 3);
+    CHECK(samples.names()[0] == std::string("sample"));
+    CHECK(samples.names()[1] == std::string("structure"));
+    CHECK(samples.names()[2] == std::string("atom"));
+
+    CHECK(gradient.values().shape() == std::vector<size_t>{59, 3, 5, 3});
 }

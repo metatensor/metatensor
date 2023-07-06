@@ -225,7 +225,7 @@ def test_parent_keepalive():
     path = os.path.join(
         os.path.dirname(__file__), "..", "..", "..", "equistore", "tests", "data.npz"
     )
-    tensor = equistore.core.io.load_custom_array(path, create_test_array)
+    tensor = equistore.core.io.load_custom_array(path.encode("utf8"), create_test_array)
 
     values = tensor.block(0).values
     assert isinstance(values, equistore.core.data.extract.ExternalCpuArray)

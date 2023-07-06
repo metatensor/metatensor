@@ -84,23 +84,7 @@ pub unsafe extern fn eqs_tensormap_load(
     let status = catch_unwind(move || {
         check_pointers!(path);
 
-        let create_array = |shape: Vec<usize>| {
-            let mut array = eqs_array_t::null();
-            let status = create_array(
-                shape.as_ptr(),
-                shape.len(),
-                &mut array
-            );
-
-            if status.is_success() {
-                return Ok(array);
-            } else {
-                return Err(Error::External {
-                    status: status,
-                    context: "failed to create a new array in eqs_tensormap_load".into()
-                });
-            }
-        };
+        let create_array = wrap_create_array(&create_array);
 
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufReader::new(File::open(path)?);
@@ -118,6 +102,78 @@ pub unsafe extern fn eqs_tensormap_load(
     }
 
     return result;
+}
+
+/// Load a tensor map from the given in-memory buffer.
+///
+/// Arrays for the values and gradient data will be created with the given
+/// `create_array` callback, and filled by this function with the corresponding
+/// data.
+///
+/// The memory allocated by this function should be released using
+/// `eqs_tensormap_free`.
+///
+/// @param buffer buffer containing a previously serialized `eqs_tensormap_t`
+/// @param buffer_count number of elements in the buffer
+/// @param create_array callback function that will be used to create data
+///                     arrays inside each block
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+///          case of error. In case of error, you can use `eqs_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern fn eqs_tensormap_load_buffer(
+    buffer: *const u8,
+    buffer_count: usize,
+    create_array: eqs_create_array_callback_t,
+) -> *mut eqs_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers!(buffer);
+        assert!(buffer_count > 0);
+
+        let create_array = wrap_create_array(&create_array);
+
+        let buffer = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+        let cursor = std::io::Cursor::new(buffer);
+
+        let tensor = crate::io::load(cursor, create_array)?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = eqs_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+fn wrap_create_array(create_array: &eqs_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<eqs_array_t, Error> + '_ {
+    |shape: Vec<usize>| {
+        let mut array = eqs_array_t::null();
+        let status = unsafe {
+            create_array(
+                shape.as_ptr(),
+                shape.len(),
+                &mut array
+            )
+        };
+
+        if status.is_success() {
+            return Ok(array);
+        } else {
+            return Err(Error::External {
+                status: status,
+                context: "failed to create a new array in eqs_tensormap_load".into()
+            });
+        }
+    }
 }
 
 

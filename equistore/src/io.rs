@@ -8,10 +8,6 @@ use crate::{TensorMap, Error, Array};
 
 /// Load the serialized tensor map from the given path.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
-///
 /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
 /// without compression (storage method is STORED), where each file is stored as
 /// a `.npy` array. Both the ZIP and NPY format are well documented:
@@ -50,6 +46,23 @@ pub fn load(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
     let ptr = unsafe {
         crate::c_api::eqs_tensormap_load(
             path.as_ptr(),
+            Some(create_ndarray)
+        )
+    };
+
+    check_ptr(ptr)?;
+
+    return Ok(unsafe { TensorMap::from_raw(ptr) });
+}
+
+/// Load a serialized `TensorMap` from a `buffer`.
+///
+/// See the [`load`] function for more information on the data format.
+pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
+    let ptr = unsafe {
+        crate::c_api::eqs_tensormap_load_buffer(
+            buffer.as_ptr(),
+            buffer.len(),
             Some(create_ndarray)
         )
     };

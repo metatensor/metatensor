@@ -1,3 +1,4 @@
+import io
 import os
 import pickle
 import sys
@@ -17,17 +18,29 @@ def tensor():
 
 
 @pytest.mark.parametrize("use_numpy", (True, False))
-def test_load(use_numpy):
+@pytest.mark.parametrize("memory_buffer", (True, False))
+def test_load(use_numpy, memory_buffer):
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "equistore",
+        "tests",
+        "data.npz",
+    )
+
+    if memory_buffer:
+        with open(path, "rb") as fd:
+            buffer = fd.read()
+
+        assert isinstance(buffer, bytes)
+        file = io.BytesIO(buffer)
+    else:
+        file = path
+
     tensor = equistore.core.load(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "equistore",
-            "tests",
-            "data.npz",
-        ),
+        file,
         use_numpy=use_numpy,
     )
 

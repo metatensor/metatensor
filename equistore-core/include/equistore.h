@@ -885,6 +885,29 @@ struct eqs_tensormap_t *eqs_tensormap_load(const char *path,
                                            eqs_create_array_callback_t create_array);
 
 /**
+ * Load a tensor map from the given in-memory buffer.
+ *
+ * Arrays for the values and gradient data will be created with the given
+ * `create_array` callback, and filled by this function with the corresponding
+ * data.
+ *
+ * The memory allocated by this function should be released using
+ * `eqs_tensormap_free`.
+ *
+ * @param buffer buffer containing a previously serialized `eqs_tensormap_t`
+ * @param buffer_count number of elements in the buffer
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `eqs_last_error()`
+ *          to get the error message.
+ */
+struct eqs_tensormap_t *eqs_tensormap_load_buffer(const uint8_t *buffer,
+                                                  uintptr_t buffer_count,
+                                                  eqs_create_array_callback_t create_array);
+
+/**
  * Save a tensor map to the file at the given path.
  *
  * If the file already exists, it is overwritten.
