@@ -1,7 +1,6 @@
 import copy
 import ctypes
 import os
-import pickle
 import sys
 import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
@@ -89,20 +88,15 @@ class TensorMap:
         return obj
 
     @classmethod
-    def _from_pickle(cls, data: bytes):
+    def _from_pickle(cls, buffer: bytes):
         """
         Passed to pickler to reconstruct TensorMap from bytes object
         """
-        import equistore.core
+        from .io import create_numpy_array, load_buffer_custom_array
 
-        path = os.path.join(tempfile.gettempdir(), str(id(data)))
-        try:
-            with open(path, "wb") as f:
-                pickle.dump(data, f)
-            tensor_map = equistore.core.load(path)
-        finally:
-            os.remove(path)
-        return tensor_map
+        # TODO: make it so when saving data in torch tensors, we load back data in torch
+        # tensors.
+        return load_buffer_custom_array(buffer, create_numpy_array)
 
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
@@ -138,7 +132,7 @@ class TensorMap:
         finally:
             os.remove(path)
         if protocol >= 5:
-            return self._from_pickle, (PickleBuffer(data),), None
+            return self._from_pickle, (PickleBuffer(data),)
         else:
             return self._from_pickle, (data,)
 

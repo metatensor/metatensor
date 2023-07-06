@@ -286,6 +286,13 @@ def setup_functions(lib):
     ]
     lib.eqs_tensormap_load.restype = POINTER(eqs_tensormap_t)
 
+    lib.eqs_tensormap_load_buffer.argtypes = [
+        ctypes.c_char_p,
+        c_uintptr_t,
+        eqs_create_array_callback_t,
+    ]
+    lib.eqs_tensormap_load_buffer.restype = POINTER(eqs_tensormap_t)
+
     lib.eqs_tensormap_save.argtypes = [
         ctypes.c_char_p,
         POINTER(eqs_tensormap_t),

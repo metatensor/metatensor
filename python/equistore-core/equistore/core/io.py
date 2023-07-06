@@ -1,6 +1,7 @@
 import ctypes
+import pathlib
 import warnings
-from typing import Callable
+from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
@@ -47,25 +48,39 @@ def create_torch_array(shape_ptr, shape_count, array):
     array[0] = wrapper.into_eqs_array()
 
 
-def load(path: str, use_numpy=False) -> TensorMap:
+def load(file: Union[str, bytes, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap:
     """
-    Load a previously saved :py:class:`TensorMap` from the given path.
+    Load a previously saved :py:class:`TensorMap` from the given file.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
-    ZIP file without compression (storage method is ``STORED``), where each file
-    is stored as a ``.npy`` array. See the C API documentation for more
-    information on the format.
+    ``file`` can be a string or :py:class:`pathlib.Path` containing the path to the file
+    to load, or a file-like object that should be opened in binary mode.
 
-    :param path: path of the file to load
-    :param use_numpy: should we use numpy or the native implementation? Numpy
-        should be able to process more dtypes than the native implementation,
-        which is limited to float64, but the native implementation is usually
-        faster than going through numpy.
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a ZIP file
+    without compression (storage method is ``STORED``), where each file is stored as a
+    ``.npy`` array. See the C API documentation for more information on the format.
+
+    :param file: file to load
+    :param use_numpy: should we use numpy or the native implementation? Numpy should be
+        able to process more dtypes than the native implementation, which is limited to
+        float64, but the native implementation is usually faster than going through
+        numpy.
     """
     if use_numpy:
-        return _read_npz(path)
+        return _read_npz(file)
     else:
-        return load_custom_array(path, create_numpy_array)
+        if isinstance(file, str):
+            file = file.encode("utf8")
+        elif isinstance(file, pathlib.Path):
+            file = bytes(file)
+
+        if isinstance(file, bytes):
+            return load_custom_array(file, create_numpy_array)
+        else:
+            # assume we have a file-like object
+            buffer = file.read()
+            assert isinstance(buffer, bytes)
+
+            return load_buffer_custom_array(buffer, create_numpy_array)
 
 
 CreateArrayCallback = Callable[
@@ -73,7 +88,7 @@ CreateArrayCallback = Callable[
 ]
 
 
-def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap:
+def load_custom_array(path: bytes, create_array: CreateArrayCallback) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given path using a
     custom array creation callback.
@@ -95,8 +110,40 @@ def load_custom_array(path: str, create_array: CreateArrayCallback) -> TensorMap
 
     lib = _get_library()
 
-    ptr = lib.eqs_tensormap_load(
-        path.encode("utf8"), eqs_create_array_callback_t(create_array)
+    ptr = lib.eqs_tensormap_load(path, eqs_create_array_callback_t(create_array))
+
+    return TensorMap._from_ptr(ptr)
+
+
+def load_buffer_custom_array(
+    buffer: bytes,
+    create_array: CreateArrayCallback,
+) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given buffer using a
+    custom array creation callback.
+
+    This is an advanced functionality, which should not be needed by most users.
+
+    This function allows to specify the kind of array to use when loading the
+    data through the `create_array` callback. This callback should take three
+    arguments: a pointer to the shape, the number of elements in the shape, and
+    a pointer to the ``eqs_array_t`` to be filled.
+
+    :py:func:`equistore.core.io.create_numpy_array` and
+    :py:func:`equistore.core.io.create_torch_array` can be used to load data
+    into numpy and torch arrays respectively.
+
+    :param buffer: in-memory buffer containing a saved :py:class:`TensorMap`
+    :param create_array: callback used to create arrays as needed
+    """
+
+    lib = _get_library()
+
+    ptr = lib.eqs_tensormap_load_buffer(
+        buffer,
+        len(buffer),
+        eqs_create_array_callback_t(create_array),
     )
 
     return TensorMap._from_ptr(ptr)
@@ -181,8 +228,8 @@ def _labels_to_npz(labels):
     return labels.values.view(dtype=dtype).reshape((labels.values.shape[0],))
 
 
-def _read_npz(path):
-    dictionary = np.load(path)
+def _read_npz(file):
+    dictionary = np.load(file)
 
     keys = _labels_from_npz(dictionary["keys"])
     blocks = []

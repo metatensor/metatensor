@@ -468,6 +468,11 @@ extern "C" {
         path: *const ::std::os::raw::c_char,
         create_array: eqs_create_array_callback_t,
     ) -> *mut eqs_tensormap_t;
+    pub fn eqs_tensormap_load_buffer(
+        buffer: *const u8,
+        buffer_count: usize,
+        create_array: eqs_create_array_callback_t,
+    ) -> *mut eqs_tensormap_t;
     #[must_use]
     pub fn eqs_tensormap_save(
         path: *const ::std::os::raw::c_char,

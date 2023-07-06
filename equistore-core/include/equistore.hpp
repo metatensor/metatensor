@@ -1,6 +1,7 @@
 #ifndef EQUISTORE_HPP
 #define EQUISTORE_HPP
 
+#include <_types/_uint8_t.h>
 #include <array>
 #include <vector>
 #include <string>
@@ -22,6 +23,8 @@
 /// API defined in `equistore.h`. This API uses the standard C++ library where
 /// convenient, but also allow to drop back to the C API if required, by
 /// providing functions to extract the C API handles (named `as_eqs_XXX`).
+
+static_assert(sizeof(char) == sizeof(uint8_t), "char must be 8-bits wide");
 
 namespace equistore_torch {
     class LabelsHolder;
@@ -1924,11 +1927,59 @@ public:
      * stored as a `.npy` array. See the C API documentation for more
      * information on the format.
      */
-    static TensorMap load(const std::string& path, eqs_create_array_callback_t create_array = details::default_create_array) {
+    static TensorMap load(
+        const std::string& path,
+        eqs_create_array_callback_t create_array = details::default_create_array
+    ) {
         auto ptr = eqs_tensormap_load(path.c_str(), create_array);
-
         details::check_pointer(ptr);
         return TensorMap(ptr);
+    }
+
+    /*!
+     * Load a previously saved `TensorMap` from the given `buffer`, containing
+     * `buffer_count` elements.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`eqs_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        eqs_create_array_callback_t create_array = details::default_create_array
+    ) {
+        auto ptr = eqs_tensormap_load_buffer(buffer, buffer_count, create_array);
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
+    }
+
+    /*!
+     * Load a previously saved `TensorMap` from the given `buffer`
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`eqs_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_buffer(
+        const std::string& buffer,
+        eqs_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return TensorMap::load_buffer(
+            reinterpret_cast<const uint8_t*>(buffer.data()),
+            buffer.size(),
+            create_array
+        );
     }
 
     /// Save the given `TensorMap` to a file at `path`.
