@@ -588,7 +588,7 @@ class Labels:
         Take the intersection of these :py:class:`Labels` with ``other``.
 
         This function also returns the position in the intersection where each entry of
-        the input :py:class::`Labels` ended up.
+        the input :py:class:`Labels` ended up.
 
         :return: Tuple containing the intersection, a :py:class:`numpy.ndarray`
             containing the position in the intersection of the entries from ``self``,
