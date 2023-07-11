@@ -5,7 +5,6 @@ use equistore::TensorMap;
 #[test]
 fn load_file() {
     let tensor = equistore::io::load("./tests/data.npz").unwrap();
-
     check_tensor(&tensor);
 }
 
@@ -18,6 +17,20 @@ fn load_buffer() {
 
     let tensor = equistore::io::load_buffer(&buffer).unwrap();
     check_tensor(&tensor);
+}
+
+#[test]
+fn save_buffer() {
+    let mut file = std::fs::File::open("./tests/data.npz").unwrap();
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).unwrap();
+
+    let tensor = equistore::io::load_buffer(&buffer).unwrap();
+
+    let mut saved = Vec::new();
+    equistore::io::save_buffer(&tensor, &mut saved).unwrap();
+
+    assert_eq!(buffer, saved);
 }
 
 

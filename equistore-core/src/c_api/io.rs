@@ -1,4 +1,4 @@
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_void};
 use std::ffi::CStr;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -198,6 +198,199 @@ pub unsafe extern fn eqs_tensormap_save(
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufWriter::new(File::create(path)?);
         crate::io::save(file, &*tensor)?;
+
+        Ok(())
+    })
+}
+
+
+/// Wrapper for an externally managed buffer, that can be grown to fit more data
+struct ExternalBuffer {
+    data: *mut *mut u8,
+    len: usize,
+
+    realloc_user_data: *mut c_void,
+    realloc: unsafe extern fn(*mut c_void, *mut u8, usize) -> *mut u8,
+
+    current: u64,
+}
+
+impl std::io::Write for ExternalBuffer {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut remaining_space = self.len - self.current as usize;
+
+        if remaining_space < buf.len() {
+            // find the new size to be able to fit all the data
+            let mut new_size = 0;
+            while remaining_space < buf.len() {
+                new_size = if self.len == 0 {
+                    1024
+                } else {
+                    2 * self.len
+                };
+                remaining_space = new_size - self.current as usize;
+            }
+
+            let new_ptr = unsafe {
+                (self.realloc)(self.realloc_user_data, *self.data, new_size)
+            };
+
+            if new_ptr.is_null() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::OutOfMemory,
+                    "failed to allocate memory with the realloc callback"
+                ));
+            }
+
+            unsafe {
+                *self.data = new_ptr;
+            }
+
+            self.len = new_size;
+        }
+
+        let mut output = unsafe {
+            let start = (*self.data).offset(self.current as isize);
+            std::slice::from_raw_parts_mut(start, remaining_space)
+        };
+
+        let count = output.write(buf).expect("failed to write to pre-allocated slice");
+        self.current += count as u64;
+        return Ok(count);
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        return Ok(());
+    }
+}
+
+
+#[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+impl std::io::Seek for ExternalBuffer {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        match pos {
+            std::io::SeekFrom::Start(offset) => {
+                if offset > self.len as u64 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof, "tried to seek past the end of the buffer")
+                    );
+                }
+
+                self.current = offset;
+            },
+
+            std::io::SeekFrom::End(offset) => {
+                if offset > 0 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof, "tried to seek past the end of the buffer")
+                    );
+                }
+
+                if -offset > self.len as i64 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof, "tried to seek past the beginning of the buffer")
+                    );
+                }
+
+                self.current = (self.len as i64 + offset) as u64;
+            },
+
+            std::io::SeekFrom::Current(offset) => {
+                let result = self.current as i64 + offset;
+                if result > self.len as i64 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof, "tried to seek past the end of the buffer")
+                    );
+                }
+
+                if result < 0 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof, "tried to seek past the beginning of the buffer")
+                    );
+                }
+
+                self.current = result as u64;
+            },
+        }
+
+        return Ok(self.current);
+    }
+
+    fn rewind(&mut self) -> std::io::Result<()> {
+        self.current = 0;
+        return Ok(());
+    }
+
+    fn stream_position(&mut self) -> std::io::Result<u64> {
+        return Ok(self.current);
+     }
+}
+
+
+/// Save a tensor map to an in-memory buffer.
+///
+/// The `realloc` callback should take an existing pointer and a new length, and
+/// grow the allocation. If the pointer is `NULL`, it should create a new
+/// allocation. If it is unable to allocate memory, it should return a `NULL`
+/// pointer. This follows the API of the standard C function `realloc`, with an
+/// additional parameter `user_data` that can be used to hold custom data.
+///
+/// On input, `*buffer` should contain the address of a starting buffer (which
+/// can be NULL) and `*buffer_count` should contain the size of the allocation.
+///
+/// On output, `*buffer` will contain the serialized data, and `*buffer_count`
+/// the total number of written bytes (which might be less than the allocation
+/// size).
+///
+/// Users of this function are responsible for freeing the `*buffer` when they
+/// are done with it, using the function matching the `realloc` callback.
+///
+/// @param buffer pointer to the buffer the tensor will be stored to, which can
+///        change due to reallocations.
+/// @param buffer_count pointer to the buffer size on input, number of written
+///        bytes on output
+/// @param realloc_user_data Custom data for the `realloc` callback. This will
+///        be passed as the first argument to `realloc` as-is.
+/// @param realloc function that allows to grow the buffer allocation
+/// @param tensor tensor map that will saved to the buffer
+///
+/// @returns The status code of this operation. If the status is not
+///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full error
+///          message.
+#[no_mangle]
+#[allow(clippy::cast_possible_truncation)]
+pub unsafe extern fn eqs_tensormap_save_buffer(
+    buffer: *mut *mut u8,
+    buffer_count: *mut usize,
+    realloc_user_data: *mut c_void,
+    realloc: Option<unsafe extern fn(user_data: *mut c_void, ptr: *mut u8, new_size: usize) -> *mut u8>,
+    tensor: *const eqs_tensormap_t,
+) -> eqs_status_t {
+    catch_unwind(|| {
+        check_pointers!(tensor, buffer_count, buffer);
+
+        if realloc.is_none() {
+            return Err(Error::InvalidParameter(
+                "realloc callback can not be NULL in eqs_tensormap_save_buffer".into()
+            ));
+        }
+
+        if (*buffer).is_null() {
+            assert_eq!(*buffer_count, 0);
+        }
+
+        let mut external_buffer = ExternalBuffer {
+            data: buffer,
+            len: *buffer_count,
+            realloc_user_data,
+            realloc: realloc.expect("we checked"),
+            current: 0,
+        };
+
+        crate::io::save(&mut external_buffer, &*tensor)?;
+
+        *buffer_count = external_buffer.current as usize;
 
         Ok(())
     })

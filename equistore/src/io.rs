@@ -1,8 +1,9 @@
 //! Input/Output facilities for storing [`TensorMap`] on disk
 
 use std::ffi::CString;
+use std::os::raw::c_void;
 
-use crate::c_api::{eqs_array_t, eqs_status_t};
+use crate::c_api::{eqs_array_t, eqs_status_t, EQS_SUCCESS};
 use crate::errors::{check_status, check_ptr};
 use crate::{TensorMap, Error, Array};
 
@@ -72,7 +73,7 @@ pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
     return Ok(unsafe { TensorMap::from_raw(ptr) });
 }
 
-/// Save the given tensor to a file (or any other writer).
+/// Save the given tensor to a file.
 ///
 /// The format used is documented in the [`load`] function, and is based on
 /// numpy's NPZ format (i.e. zip archive containing NPY files).
@@ -85,6 +86,50 @@ pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(),
     }
 }
 
+
+/// Implementation of realloc for `Vec<u8>`, used in `save_buffer`
+unsafe extern fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: usize) -> *mut u8 {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = crate::errors::catch_unwind(move || {
+        let vector = &mut *user_data.cast::<Vec<u8>>();
+        vector.resize(new_size, 0);
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = vector.as_mut_ptr();
+    });
+
+    if status != EQS_SUCCESS {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+/// Save the given `tensor` to an in-memory `buffer`.
+///
+/// This function will grow the buffer as required to fit the whole tensor.
+pub fn save_buffer(tensor: &TensorMap, buffer: &mut Vec<u8>) -> Result<(), Error> {
+    let mut buffer_ptr = buffer.as_mut_ptr();
+    let mut buffer_count = buffer.len();
+
+    unsafe {
+        check_status(crate::c_api::eqs_tensormap_save_buffer(
+            &mut buffer_ptr,
+            &mut buffer_count,
+            (buffer as *mut Vec<u8>).cast(),
+            Some(realloc_vec),
+            tensor.ptr,
+        ))?;
+    }
+
+    buffer.resize(buffer_count, 0);
+
+    Ok(())
+}
 
 /// callback used to create `ndarray::ArrayD` when loading a `TensorMap`
 unsafe extern fn create_ndarray(

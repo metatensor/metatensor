@@ -1,7 +1,6 @@
 #ifndef EQUISTORE_HPP
 #define EQUISTORE_HPP
 
-#include <_types/_uint8_t.h>
 #include <array>
 #include <vector>
 #include <string>
@@ -1982,6 +1981,29 @@ public:
         );
     }
 
+    /*!
+     * Load a previously saved `TensorMap` from the given `buffer`
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`eqs_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_buffer(
+        const std::vector<uint8_t>& buffer,
+        eqs_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return TensorMap::load_buffer(
+            buffer.data(),
+            buffer.size(),
+            create_array
+        );
+    }
+
     /// Save the given `TensorMap` to a file at `path`.
     ///
     /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP
@@ -1990,6 +2012,39 @@ public:
     /// information on the format.
     static void save(const std::string& path, const TensorMap& tensor) {
         details::check_status(eqs_tensormap_save(path.c_str(), tensor.tensor_));
+    }
+
+    /// Save a tensor map to an in-memory buffer.
+    static std::vector<uint8_t> save_buffer(const TensorMap& tensor) {
+        std::vector<uint8_t> buffer;
+
+        auto ptr = buffer.data();
+        auto size = buffer.size();
+
+        auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
+            auto buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
+            buffer->resize(new_size, '\0');
+            return buffer->data();
+        };
+
+        details::check_status(eqs_tensormap_save_buffer(
+            &ptr,
+            &size,
+            &buffer,
+            realloc,
+            tensor.tensor_
+        ));
+
+        buffer.resize(size, '\0');
+
+        return buffer;
+    }
+
+    /// Similar to `TensorMap::save_buffer`, but return the result as a
+    /// `std::string`.
+    static std::string save_string_buffer(const TensorMap& tensor) {
+        auto buffer = TensorMap::save_buffer(tensor);
+        return std::string(buffer.begin(), buffer.end());
     }
 
     /// Get the `eqs_tensormap_t` pointer corresponding to this `TensorMap`.

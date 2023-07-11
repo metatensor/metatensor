@@ -144,6 +144,8 @@ def type_to_ctypes(type):
                 name = _typedecl_name(type.type.type)
                 if name == "char":
                     return "POINTER(ctypes.c_char_p)"
+                elif name == "uint8_t":
+                    return "POINTER(ctypes.c_char_p)"
 
                 name = c_type_name(name)
                 return f"POINTER(POINTER({name}))"

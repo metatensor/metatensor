@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
 
 #include <catch.hpp>
 
@@ -220,7 +221,7 @@ TEST_CASE("TensorMap serialization") {
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
     }
 
-    SECTION("Load from buffer") {
+    SECTION("Load/Save with buffers") {
         // read the whole file into a buffer
         std::ifstream file(DATA_NPZ, std::ios::binary);
         std::ostringstream string_stream;
@@ -229,6 +230,28 @@ TEST_CASE("TensorMap serialization") {
 
         auto tensor = TensorMap::load_buffer(buffer);
         check_loaded_tensor(tensor);
+
+        auto saved = TensorMap::save_string_buffer(tensor);
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        // using the raw C API, without user_data in the callback, and making
+        // the callback a small wrapper around std::realloc
+        uint8_t* raw_buffer = nullptr;
+        uintptr_t buflen = 0;
+        auto status = eqs_tensormap_save_buffer(
+            &raw_buffer,
+            &buflen,
+            nullptr,
+            [](void*, uint8_t* ptr, uintptr_t new_size){
+                return static_cast<uint8_t*>(std::realloc(ptr, new_size));
+            },
+            tensor.as_eqs_tensormap_t()
+        );
+        REQUIRE(status == EQS_SUCCESS);
+        CHECK(saved == std::string(raw_buffer, raw_buffer + buflen));
+
+        std::free(raw_buffer);
     }
 }
 

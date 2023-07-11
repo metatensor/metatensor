@@ -478,4 +478,18 @@ extern "C" {
         path: *const ::std::os::raw::c_char,
         tensor: *const eqs_tensormap_t,
     ) -> eqs_status_t;
+    #[must_use]
+    pub fn eqs_tensormap_save_buffer(
+        buffer: *mut *mut u8,
+        buffer_count: *mut usize,
+        realloc_user_data: *mut ::std::os::raw::c_void,
+        realloc: ::std::option::Option<
+            unsafe extern "C" fn(
+                user_data: *mut ::std::os::raw::c_void,
+                ptr: *mut u8,
+                new_size: usize,
+            ) -> *mut u8,
+        >,
+        tensor: *const eqs_tensormap_t,
+    ) -> eqs_status_t;
 }

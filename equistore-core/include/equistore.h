@@ -921,6 +921,46 @@ struct eqs_tensormap_t *eqs_tensormap_load_buffer(const uint8_t *buffer,
  */
 eqs_status_t eqs_tensormap_save(const char *path, const struct eqs_tensormap_t *tensor);
 
+/**
+ * Save a tensor map to an in-memory buffer.
+ *
+ * The `realloc` callback should take an existing pointer and a new length, and
+ * grow the allocation. If the pointer is `NULL`, it should create a new
+ * allocation. If it is unable to allocate memory, it should return a `NULL`
+ * pointer. This follows the API of the standard C function `realloc`, with an
+ * additional parameter `user_data` that can be used to hold custom data.
+ *
+ * On input, `*buffer` should contain the address of a starting buffer (which
+ * can be NULL) and `*buffer_count` should contain the size of the allocation.
+ *
+ * On output, `*buffer` will contain the serialized data, and `*buffer_count`
+ * the total number of written bytes (which might be less than the allocation
+ * size).
+ *
+ * Users of this function are responsible for freeing the `*buffer` when they
+ * are done with it, using the function matching the `realloc` callback.
+ *
+ * @param buffer pointer to the buffer the tensor will be stored to, which can
+ *        change due to reallocations.
+ * @param buffer_count pointer to the buffer size on input, number of written
+ *        bytes on output
+ * @param realloc_user_data Custom data for the `realloc` callback. This will
+ *        be passed as the first argument to `realloc` as-is.
+ * @param realloc function that allows to grow the buffer allocation
+ * @param tensor tensor map that will saved to the buffer
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full error
+ *          message.
+ */
+eqs_status_t eqs_tensormap_save_buffer(uint8_t **buffer,
+                                       uintptr_t *buffer_count,
+                                       void *realloc_user_data,
+                                       uint8_t *(*realloc)(void *user_data,
+                                                           uint8_t *ptr,
+                                                           uintptr_t new_size),
+                                       const struct eqs_tensormap_t *tensor);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

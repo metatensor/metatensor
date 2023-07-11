@@ -1,6 +1,5 @@
 import os
 
-import pytest
 import torch
 
 import equistore.torch
@@ -8,24 +7,7 @@ import equistore.torch
 from . import utils
 
 
-@pytest.fixture
-def tensor():
-    return utils.tensor(dtype=torch.float64)
-
-
-def test_load():
-    tensor = equistore.torch.load(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "equistore",
-            "tests",
-            "data.npz",
-        ),
-    )
-
+def check_tensor(tensor):
     assert tensor.keys.names == [
         "spherical_harmonics_l",
         "center_species",
@@ -44,9 +26,27 @@ def test_load():
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
-def test_save(tmpdir, tensor):
+def test_load():
+    loaded = equistore.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "equistore",
+            "tests",
+            "data.npz",
+        ),
+    )
+
+    check_tensor(loaded)
+
+
+def test_save(tmpdir):
     """Check that we can save and load a tensor to a file"""
     tmpfile = "serialize-test.npz"
+
+    tensor = utils.tensor(dtype=torch.float64)
 
     with tmpdir.as_cwd():
         equistore.torch.save(tmpfile, tensor)
@@ -55,6 +55,22 @@ def test_save(tmpdir, tensor):
     assert len(data.keys) == 4
 
 
-def test_pickle():
-    # TODO when we have save
-    pass
+def test_pickle(tmpdir):
+    tensor = equistore.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "equistore",
+            "tests",
+            "data.npz",
+        ),
+    )
+    tmpfile = "serialize-test.npz"
+
+    with tmpdir.as_cwd():
+        torch.save(tensor, tmpfile)
+        loaded = torch.load(tmpfile)
+
+    check_tensor(loaded)

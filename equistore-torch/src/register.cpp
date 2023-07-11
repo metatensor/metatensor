@@ -181,16 +181,37 @@ TORCH_LIBRARY(equistore, m) {
         .def("print", &TensorMapHolder::print, DOCSTRING,
             {torch::arg("max_keys")}
         )
-        // TODO
         .def_pickle(
             // __getstate__
-            [](const TorchTensorMap& self) -> std::string {
-                throw std::runtime_error("NOT IMPLEMENTED");
+            [](const TorchTensorMap& self) -> torch::Tensor {
+                auto buffer = equistore::TensorMap::save_buffer(self->as_equistore());
+                // move the buffer to the heap so it can escape this function
+                // `torch::from_blob` does not take ownership of the data,
+                // so we need to register a custom deleter to clean up when
+                // the tensor is no longer used
+                auto buffer_data = new std::vector<uint8_t>(std::move(buffer));
+
+                auto options = torch::TensorOptions().dtype(torch::kU8).device(torch::kCPU);
+                auto deleter = [=](void* data) {
+                    delete buffer_data;
+                };
+
+                // use a tensor of bytes to store the data
+                return torch::from_blob(
+                    buffer_data->data(),
+                    {static_cast<int64_t>(buffer_data->size())},
+                    deleter,
+                    options
+                );
             },
             // __setstate__
-            [](std::string buffer) -> TorchTensorMap {
+            [](torch::Tensor buffer) -> TorchTensorMap {
                 return torch::make_intrusive<TensorMapHolder>(
-                    equistore::TensorMap::load_buffer(buffer, details::create_torch_array)
+                    equistore::TensorMap::load_buffer(
+                        buffer.data_ptr<uint8_t>(),
+                        buffer.size(0),
+                        details::create_torch_array
+                    )
                 );
             })
         ;
