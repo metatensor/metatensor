@@ -298,3 +298,12 @@ def setup_functions(lib):
         POINTER(eqs_tensormap_t),
     ]
     lib.eqs_tensormap_save.restype = _check_status
+
+    lib.eqs_tensormap_save_buffer.argtypes = [
+        POINTER(ctypes.c_char_p),
+        POINTER(c_uintptr_t),
+        ctypes.c_void_p,
+        CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t),
+        POINTER(eqs_tensormap_t),
+    ]
+    lib.eqs_tensormap_save_buffer.restype = _check_status

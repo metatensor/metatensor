@@ -64,13 +64,21 @@ def test_load(use_numpy, memory_buffer):
 # using tmpdir as pytest-built-in fixture
 # https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
 @pytest.mark.parametrize("use_numpy", (True, False))
-def test_save(use_numpy, tmpdir, tensor):
+@pytest.mark.parametrize("memory_buffer", (True, False))
+def test_save(use_numpy, memory_buffer, tmpdir, tensor):
     """Check that as saved file loads fine with numpy."""
-    tmpfile = "serialize-test.npz"
+
+    if memory_buffer:
+        file = io.BytesIO()
+    else:
+        file = "serialize-test.npz"
 
     with tmpdir.as_cwd():
-        equistore.core.save(tmpfile, tensor, use_numpy=use_numpy)
-        data = np.load(tmpfile)
+        equistore.core.save(file, tensor, use_numpy=use_numpy)
+        if memory_buffer:
+            file.seek(0)
+
+        data = np.load(file)
 
     assert len(data.keys()) == 29
 

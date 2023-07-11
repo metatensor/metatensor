@@ -1,8 +1,6 @@
 import copy
 import ctypes
-import os
 import sys
-import tempfile
 from typing import Dict, List, Sequence, Tuple, Union
 
 
@@ -88,7 +86,7 @@ class TensorMap:
         return obj
 
     @classmethod
-    def _from_pickle(cls, buffer: bytes):
+    def _from_pickle(cls, buffer: Union[bytes, bytearray]):
         """
         Passed to pickler to reconstruct TensorMap from bytes object
         """
@@ -124,17 +122,11 @@ class TensorMap:
         """
         import equistore.core
 
-        path = os.path.join(tempfile.gettempdir(), str(id(self)) + ".npz")
-        try:
-            equistore.core.save(path, self)
-            with open(path, "rb") as f:
-                data = f.read()
-        finally:
-            os.remove(path)
+        buffer = equistore.core.io.save_buffer_raw_(self)
         if protocol >= 5:
-            return self._from_pickle, (PickleBuffer(data),)
+            return self._from_pickle, (PickleBuffer(buffer),)
         else:
-            return self._from_pickle, (data,)
+            return self._from_pickle, (buffer.raw,)
 
     def __len__(self):
         return len(self.keys)

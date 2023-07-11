@@ -24,4 +24,8 @@ Serialization
 
 .. doxygenfunction:: eqs_tensormap_save
 
+.. doxygenfunction:: eqs_tensormap_load_buffer
+
+.. doxygenfunction:: eqs_tensormap_save_buffer
+
 .. doxygentypedef:: eqs_create_array_callback_t
