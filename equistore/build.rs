@@ -50,7 +50,7 @@ fn main() {
         equistore_core.push(splitted[..splitted.len() - 1].join("."));
     }
 
-    let mut install_dir = cmake::Config::new(equistore_core)
+    let mut install_dir = cmake::Config::new(&equistore_core)
         .define("CARGO_EXE", env!("CARGO"))
         .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
         .build();
@@ -60,7 +60,7 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", install_dir.display());
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=equistore-core");
+    println!("cargo:rerun-if-changed={}", equistore_core.display());
 
     if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
         println!("cargo:rustc-cfg=static_and_rustc_older_1_63");
