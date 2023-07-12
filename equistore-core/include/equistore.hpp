@@ -88,6 +88,24 @@ namespace details {
         }
     }
 
+    /// Call the given `function` with the given `args` (the function should
+    /// return an `eqs_status_t`), catching any C++ exception, and translating
+    /// them to negative equistore error code.
+    ///
+    /// This is required to prevent callbacks unwinding through the C API.
+    template<typename Function, typename ...Args>
+    inline eqs_status_t catch_exceptions(Function function, Args ...args) {
+        try {
+            return function(std::move(args)...);
+        } catch (const std::exception& e) {
+            details::LastCxxError::set_message(e.what());
+            return -1;
+        } catch (...) {
+            details::LastCxxError::set_message("error was not an std::exception");
+            return -128;
+        }
+    }
+
     /// Check if a pointer allocated by the C API is null, and if it is the
     /// case, throw an exception of type `equistore::Error` with the last error
     /// message from the library.
@@ -942,36 +960,29 @@ public:
         };
 
         array.origin = [](const void* array, eqs_data_origin_t* origin) {
-            try {
+            return details::catch_exceptions([](const void* array, eqs_data_origin_t* origin){
                 auto cxx_array = static_cast<const DataArrayBase*>(array);
                 *origin = cxx_array->origin();
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, origin);
         };
 
         array.copy = [](const void* array, eqs_array_t* new_array) {
-            try {
+            return details::catch_exceptions([](const void* array, eqs_array_t* new_array){
                 auto cxx_array = static_cast<const DataArrayBase*>(array);
                 auto copy = cxx_array->copy();
                 *new_array = DataArrayBase::to_eqs_array_t(std::move(copy));
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, new_array);
         };
 
         array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, eqs_array_t* new_array) {
-            try {
+            return details::catch_exceptions([](
+                const void* array,
+                const uintptr_t* shape,
+                uintptr_t shape_count,
+                eqs_array_t* new_array
+            ) {
                 auto cxx_array = static_cast<const DataArrayBase*>(array);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
@@ -980,74 +991,44 @@ public:
                 auto copy = cxx_array->create(std::move(cxx_shape));
                 *new_array = DataArrayBase::to_eqs_array_t(std::move(copy));
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, shape, shape_count, new_array);
         };
 
 
         array.data = [](void* array, double** data) {
-            try {
+            return details::catch_exceptions([](void* array, double** data){
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 *data = cxx_array->data();
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, data);
         };
 
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
-            try {
+            return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
                 auto cxx_array = static_cast<const DataArrayBase*>(array);
                 const auto& cxx_shape = cxx_array->shape();
                 *shape = cxx_shape.data();
                 *shape_count = static_cast<uintptr_t>(cxx_shape.size());
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, shape, shape_count);
         };
 
         array.reshape = [](void* array, const uintptr_t* shape, uintptr_t shape_count) {
-            try {
+            return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
                 cxx_array->reshape(std::move(cxx_shape));
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, shape, shape_count);
         };
+
         array.swap_axes = [](void* array, uintptr_t axis_1, uintptr_t axis_2) {
-            try {
+            return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 cxx_array->swap_axes(axis_1, axis_2);
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, axis_1, axis_2);
         };
-
 
         array.move_samples_from = [](
             void* array,
@@ -1057,20 +1038,21 @@ public:
             uintptr_t property_start,
             uintptr_t property_end
         ) {
-            try {
+            return details::catch_exceptions([](
+                void* array,
+                const void* input,
+                const eqs_sample_mapping_t* samples,
+                uintptr_t samples_count,
+                uintptr_t property_start,
+                uintptr_t property_end
+            ) {
                 auto cxx_array = static_cast<DataArrayBase*>(array);
                 auto cxx_input = static_cast<const DataArrayBase*>(input);
                 auto cxx_samples = std::vector<eqs_sample_mapping_t>(samples, samples + samples_count);
 
                 cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
                 return EQS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
-            } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
-            }
+            }, array, input, samples, samples_count, property_start, property_end);
         };
 
         return array;
@@ -1667,15 +1649,17 @@ namespace details {
         uintptr_t shape_count,
         eqs_array_t* array
     ) {
-        auto shape = std::vector<size_t>();
-        for (size_t i=0; i<shape_count; i++) {
-            shape.push_back(static_cast<size_t>(shape_ptr[i]));
-        }
+        return details::catch_exceptions([](const uintptr_t* shape_ptr, uintptr_t shape_count, eqs_array_t* array){
+            auto shape = std::vector<size_t>();
+            for (size_t i=0; i<shape_count; i++) {
+                shape.push_back(static_cast<size_t>(shape_ptr[i]));
+            }
 
-        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
-        *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
+            auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
+            *array = DataArrayBase::to_eqs_array_t(std::move(cxx_array));
 
-        return EQS_SUCCESS;
+            return EQS_SUCCESS;
+        }, shape_ptr, shape_count, array);
     }
 }
 
