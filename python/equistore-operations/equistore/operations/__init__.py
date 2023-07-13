@@ -44,6 +44,12 @@ from .equal_metadata import (
 )
 from .join import join
 from .lstsq import lstsq
+from .manipulate_dimension import (
+    append_dimension,
+    remove_dimension,
+    rename_dimension,
+    insert_dimension,
+)
 from .multiply import multiply
 from .one_hot import one_hot
 from .ones_like import ones_like, ones_like_block
@@ -77,6 +83,7 @@ __all__ = [
     "allclose_block",
     "allclose_block_raise",
     "allclose_raise",
+    "append_dimension",
     "block_from_array",
     "block_to",
     "checks_enabled",
@@ -93,6 +100,7 @@ __all__ = [
     "equal_metadata_block_raise",
     "equal_metadata_raise",
     "equal_raise",
+    "insert_dimension",
     "join",
     "lstsq",
     "mean_over_samples",
@@ -105,6 +113,8 @@ __all__ = [
     "random_uniform_like",
     "random_uniform_like_block",
     "remove_gradients",
+    "remove_dimension",
+    "rename_dimension",
     "slice",
     "slice_block",
     "solve",
