@@ -384,6 +384,41 @@ def test_intersection():
     assert torch.all(second_mapping == torch.LongTensor([-1, 0, -1]))
 
 
+def test_dimensions_manipulation():
+    label = Labels("foo", torch.tensor([[42]]))
+
+    # Labels.insert
+    new_label = label.insert(0, name="bar", values=torch.tensor([10]))
+    assert new_label.names == ["bar", "foo"]
+    assert torch.all(new_label.values == torch.tensor([[10, 42]]))
+
+    with pytest.raises(ValueError, match="`values` must be a 1D tensor"):
+        label.insert(0, name="bar", values=torch.tensor([[10]]))
+
+    # Labels.append
+    new_label = label.append(name="bar", values=torch.tensor([10]))
+    assert new_label.names == ["foo", "bar"]
+    assert torch.all(new_label.values == torch.tensor([[42, 10]]))
+
+    # Labels.remove
+    removed_label = new_label.remove(name="bar")
+    assert removed_label == label
+
+    with pytest.raises(
+        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+    ):
+        new_label.remove(name="baz")
+
+    # Labels.rename
+    new_label = label.rename("foo", "bar")
+    assert new_label.names == ["bar"]
+
+    with pytest.raises(
+        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+    ):
+        new_label.rename("baz", "foo")
+
+
 # define a wrapper class to make sure the types TorchScript uses for of all
 # C-defined functions matches what we expect
 class LabelsWrap:
@@ -450,20 +485,32 @@ class LabelsWrap:
         return Labels.range(name, end)
 
     def union(self, other: Labels) -> Labels:
-        return self._c.union(other)
+        return self._c.union(other=other)
 
     def union_and_mapping(
         self, other: Labels
     ) -> Tuple[Labels, torch.Tensor, torch.Tensor]:
-        return self._c.union_and_mapping(other)
+        return self._c.union_and_mapping(other=other)
 
     def intersection(self, other: Labels) -> Labels:
-        return self._c.intersection(other)
+        return self._c.intersection(other=other)
 
     def intersection_and_mapping(
         self, other: Labels
     ) -> Tuple[Labels, torch.Tensor, torch.Tensor]:
-        return self._c.intersection_and_mapping(other)
+        return self._c.intersection_and_mapping(other=other)
+
+    def append(self, name: str, values: torch.Tensor) -> Labels:
+        return self._c.append(name=name, values=values)
+
+    def insert(self, index: int, name: str, values: torch.Tensor) -> Labels:
+        return self._c.insert(index=index, name=name, values=values)
+
+    def remove(self, name: str) -> Labels:
+        return self._c.remove(name=name)
+
+    def rename(self, old: str, new: str) -> Labels:
+        return self._c.rename(old=old, new=new)
 
 
 class LabelsEntryWrap:

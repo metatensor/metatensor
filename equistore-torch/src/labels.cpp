@@ -265,6 +265,73 @@ LabelsHolder LabelsHolder::to_owned() const {
     }
 }
 
+TorchLabels LabelsHolder::append(std::string name, torch::Tensor values) {
+    return this->insert(this->size(), std::move(name), std::move(values));
+}
+
+
+TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) {
+    auto names = this->names();
+
+    auto it = std::begin(names) + index;
+    names.insert(it, name);
+
+    if (values.sizes().size() != 1) {
+        C10_THROW_ERROR(
+            ValueError,
+            "`values` must be a 1D tensor"
+        );
+    }
+
+    auto old_values = this->values();
+    auto first = old_values.index({torch::indexing::Slice(), torch::indexing::Slice(0, index)});
+    auto second = old_values.index({torch::indexing::Slice(), torch::indexing::Slice(index)});
+
+    auto new_values = torch::hstack({first, values.reshape({values.size(0), 1}), second});
+
+    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values));
+}
+
+
+TorchLabels LabelsHolder::remove(std::string name) {
+    auto names = this->names();
+
+    auto it = std::find(std::begin(names), std::end(names), name);
+    if (it == std::end(names)) {
+        C10_THROW_ERROR(
+            ValueError,
+            "'" + name + "' not found in the dimensions of these Labels"
+        );
+    }
+
+    auto column_index = it - std::begin(names);
+    names.erase(it);
+
+    auto values = this->values();
+    auto first = values.index({torch::indexing::Slice(), torch::indexing::Slice(0, column_index)});
+    auto second = values.index({torch::indexing::Slice(), torch::indexing::Slice(column_index + 1)});
+    auto new_values = torch::hstack({first, second});
+
+    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values));
+}
+
+
+TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) {
+    auto names = this->names();
+
+    auto it = std::find(std::begin(names), std::end(names), old_name);
+    if (it == std::end(names)) {
+        C10_THROW_ERROR(
+            ValueError,
+            "'" + old_name + "' not found in the dimensions of these Labels"
+        );
+    }
+    auto column_index = it - std::begin(names);
+
+    names[column_index] = new_name;
+    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(this->values()));
+}
+
 void LabelsHolder::to(torch::Device device) {
     // first move the values
     values_ = values_.to(device);

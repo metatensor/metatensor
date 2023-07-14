@@ -298,6 +298,111 @@ class Labels:
         different values)
         """
 
+    def append(self, name: str, values: torch.Tensor) -> "Labels":
+        """Append a new dimension to the end of the :py:class:`Labels`.
+
+        :param name: name of the new dimension
+        :param values: 1D array of values for the new dimension
+
+        >>> import torch
+        >>> from equistore.torch import Labels
+        >>> label = Labels("foo", torch.tensor([[42]]))
+        >>> print(label)
+        Labels(
+            foo
+            42
+        )
+        >>> print(label.append(name="bar", values=torch.tensor([10])))
+        Labels(
+            foo  bar
+            42   10
+        )
+        """
+
+    def insert(self, index: int, name: str, values: torch.Tensor) -> "Labels":
+        """Insert a new dimension before ``index`` in the :py:class:`Labels`.
+
+        :param index: index before the new dimension is inserted
+        :param name: name of the new dimension
+        :param values: 1D array of values for the new dimension
+
+        >>> import torch
+        >>> from equistore.torch import Labels
+        >>> label = Labels("foo", torch.tensor([[42]]))
+        >>> print(label)
+        Labels(
+            foo
+            42
+        )
+        >>> print(label.insert(0, name="bar", values=torch.tensor([10])))
+        Labels(
+            bar  foo
+            10   42
+        )
+        """
+
+    def remove(self, name: str) -> "Labels":
+        """Remove ``name`` from the dimensions of the :py:class:`Labels`.
+
+        Removal can only be performed if the resulting :py:class:`Labels` instance will
+        be unique.
+
+        :param name: name to be removed
+        :raises ValueError: if the name is not present.
+
+        >>> import torch
+        >>> from equistore.torch import Labels
+        >>> label = Labels(["foo", "bar"], torch.tensor([[42, 10]]))
+        >>> print(label)
+        Labels(
+            foo  bar
+            42   10
+        )
+        >>> print(label.remove(name="bar"))
+        Labels(
+            foo
+            42
+        )
+
+        If the new :py:class:`Labels` is not unique an error is raised.
+
+        >>> label = Labels(["foo", "bar"], torch.tensor([[42, 10], [42, 11]]))
+        >>> print(label)
+        Labels(
+            foo  bar
+            42   10
+            42   11
+        )
+        >>> try:
+        ...     label.remove(name="bar")
+        ... except RuntimeError as e:
+        ...     print(e)
+        ...
+        invalid parameter: can not have the same label value multiple time: [42] is already present at position 0
+        """  # noqa E501
+
+    def rename(self, old: str, new: str) -> "Labels":
+        """Rename the ``old`` dimension to ``new`` in the :py:class:`Labels`.
+
+        :param old: name to be replaced
+        :param new: name after the replacement
+        :raises ValueError: if old is not present.
+
+        >>> import torch
+        >>> from equistore.torch import Labels
+        >>> label = Labels("foo", torch.tensor([[42]]))
+        >>> print(label)
+        Labels(
+            foo
+            42
+        )
+        >>> print(label.rename("foo", "bar"))
+        Labels(
+            bar
+            42
+        )
+        """
+
     def to(self, device):
         """move the values for these Labels to the given ``device``"""
 
