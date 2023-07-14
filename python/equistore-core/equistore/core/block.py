@@ -226,7 +226,7 @@ class TensorBlock:
             (e.g. ``positions``, ``cell``, ...)
 
         >>> import numpy as np
-        >>> from equistore import TensorBlock, Labels
+        >>> from equistore import Labels, TensorBlock
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 5), 1.0),
         ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
@@ -305,7 +305,7 @@ class TensorBlock:
             :py:class:`TensorBlock` containing values.
 
         >>> import numpy as np
-        >>> from equistore import TensorBlock, Labels
+        >>> from equistore import Labels, TensorBlock
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 1), 1.0),
         ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
