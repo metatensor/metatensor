@@ -111,6 +111,44 @@ def test_custom_constructors():
         Labels.range(0, 1)
 
 
+def test_dimensions_manipulation():
+    label = Labels("foo", np.array([[42]]))
+
+    # Labels.insert
+    new_label = label.insert(0, name="bar", values=np.array([10]))
+    assert new_label.names == ["bar", "foo"]
+    np.testing.assert_equal(new_label.values, np.array([[10, 42]]))
+
+    with pytest.raises(ValueError, match="`values` must be a numpy ndarray"):
+        label.insert(0, name="bar", values=[10])
+
+    with pytest.raises(ValueError, match="`values` must be a 1D array"):
+        label.insert(0, name="bar", values=np.array([[10]]))
+
+    # Labels.append
+    new_label = label.append(name="bar", values=np.array([10]))
+    assert new_label.names == ["foo", "bar"]
+    np.testing.assert_equal(new_label.values, np.array([[42, 10]]))
+
+    # Labels.remove
+    removed_label = new_label.remove(name="bar")
+    assert removed_label == label
+
+    with pytest.raises(
+        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+    ):
+        new_label.remove(name="baz")
+
+    # Labels.rename
+    new_label = label.rename("foo", "bar")
+    assert new_label.names == ["bar"]
+
+    with pytest.raises(
+        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+    ):
+        new_label.rename("baz", "foo")
+
+
 def test_view():
     labels = Labels(names=("aaa", "bbb"), values=np.array([[1, 2], [3, 4]]))
 

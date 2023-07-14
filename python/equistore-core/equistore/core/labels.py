@@ -436,6 +436,144 @@ class Labels:
         """
         return self._values
 
+    def append(self, name: str, values: np.ndarray) -> "Labels":
+        """Append a new dimension to the end of the :py:class:`Labels`.
+
+        :param name: name of the new dimension
+        :param values: 1D array of values for the new dimension
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> label = Labels("foo", np.array([[42]]))
+        >>> label
+        Labels(
+            foo
+            42
+        )
+        >>> label.append(name="bar", values=np.array([10]))
+        Labels(
+            foo  bar
+            42   10
+        )
+        """
+        return self.insert(index=len(self), name=name, values=values)
+
+    def insert(self, index: int, name: str, values: np.ndarray) -> "Labels":
+        """Insert a new dimension before ``index`` in the :py:class:`Labels`.
+
+        :param index: index before the new dimension is inserted
+        :param name: name of the new dimension
+        :param values: 1D array of values for the new dimension
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> label = Labels("foo", np.array([[42]]))
+        >>> label
+        Labels(
+            foo
+            42
+        )
+        >>> label.insert(0, name="bar", values=np.array([10]))
+        Labels(
+            bar  foo
+            10   42
+        )
+        """
+        new_names = self.names.copy()
+        new_names.insert(index, name)
+
+        if not isinstance(values, np.ndarray):
+            raise ValueError("`values` must be a numpy ndarray")
+
+        if len(values.shape) != 1:
+            raise ValueError("`values` must be a 1D array")
+
+        new_values = np.insert(self.values, index, values, axis=1)
+
+        return Labels(names=new_names, values=new_values)
+
+    def remove(self, name: str) -> "Labels":
+        """Remove ``name`` from the dimensions of the :py:class:`Labels`.
+
+        Removal can only be performed if the resulting :py:class:`Labels` instance will
+        be unique.
+
+        :param name: name to be removed
+        :raises ValueError: if the name is not present.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> label = Labels(["foo", "bar"], np.array([[42, 10]]))
+        >>> label
+        Labels(
+            foo  bar
+            42   10
+        )
+        >>> label.remove(name="bar")
+        Labels(
+            foo
+            42
+        )
+
+        If the new :py:class:`Labels` is not unique an error is raised.
+
+        >>> from equistore import EquistoreError
+        >>> label = Labels(["foo", "bar"], np.array([[42, 10], [42, 11]]))
+        >>> label
+        Labels(
+            foo  bar
+            42   10
+            42   11
+        )
+        >>> try:
+        ...     label.remove(name="bar")
+        ... except EquistoreError as e:
+        ...     print(e)
+        ...
+        invalid parameter: can not have the same label value multiple time: [42] is already present at position 0
+        """  # noqa E501
+        if name not in self.names:
+            raise ValueError(f"'{name}' not found in the dimensions of these Labels")
+
+        new_names = self.names.copy()
+        new_names.remove(name)
+
+        index = self.names.index(name)
+        new_values = np.delete(self.values, index, axis=1)
+
+        return Labels(names=new_names, values=new_values)
+
+    def rename(self, old: str, new: str) -> "Labels":
+        """Rename the ``old`` dimension to ``new`` in the :py:class:`Labels`.
+
+        :param old: name to be replaced
+        :param new: name after the replacement
+        :raises ValueError: if old is not present.
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> label = Labels("foo", np.array([[42]]))
+        >>> label
+        Labels(
+            foo
+            42
+        )
+        >>> label.rename("foo", "bar")
+        Labels(
+            bar
+            42
+        )
+        """
+
+        if old not in self.names:
+            raise ValueError(f"'{old}' not found in the dimensions of these Labels")
+
+        names = self.names.copy()
+        index = names.index(old)
+        names[index] = new
+
+        return Labels(names=names, values=self.values)
+
     def to(self, device):
         """
         Move the values for these Labels to the given ``device``.

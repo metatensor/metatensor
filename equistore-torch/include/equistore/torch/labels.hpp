@@ -79,6 +79,18 @@ public:
         return values_;
     }
 
+    /// Append a new dimension with the given `name` and `values`  to the end of these `Labels`
+    TorchLabels append(std::string name, torch::Tensor values);
+
+    /// Insert a new dimension with the given `name` and `values` before `index` in these `Labels`
+    TorchLabels insert(int64_t index, std::string name, torch::Tensor values);
+
+    /// Remove `name` from the dimensions of these `Labels`
+    TorchLabels remove(std::string name);
+
+    /// Rename `old_name` dimensions in these Labels to `new_name`
+    TorchLabels rename(std::string old_name, std::string new_name);
+
     /// Move the values for these Labels to the given `device`
     void to(torch::Device device);
 
