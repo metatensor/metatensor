@@ -262,7 +262,7 @@ public:
     /// double value = array(2, 3, 1);
     /// ```
     template<typename ...Args>
-    T operator()(Args... args) const {
+    T operator()(Args... args) const & {
         auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
         if (index.size() != shape_.size()) {
             throw Error(
@@ -281,7 +281,7 @@ public:
     /// array(2, 3, 1) = 5.2;
     /// ```
     template<typename ...Args>
-    T& operator()(Args... args) {
+    T& operator()(Args... args) & {
         if (is_const_) {
             throw Error("This NDArray is const, can not get non const access to it");
         }
@@ -296,25 +296,32 @@ public:
         return data_[details::linear_index(shape_, index)];
     }
 
+    template<typename ...Args>
+    T& operator()(Args... args) && = delete;
+
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    const T* data() const {
+    const T* data() const & {
         return data_;
     }
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    T* data() {
+    T* data() & {
         if (is_const_) {
             throw Error("This NDArray is const, can not get non const access to it");
         }
         return data_;
     }
 
+    const T* data() && = delete;
+
     /// Get the shape of this array
-    const std::vector<size_t>& shape() const {
+    const std::vector<size_t>& shape() const & {
         return shape_;
     }
+
+    const std::vector<size_t>& shape() && = delete;
 
     /// Check if this array is empty, i.e. if at least one of the shape element
     /// is 0.
@@ -585,13 +592,15 @@ public:
     ///
     /// If no user data have been registered, this function will return
     /// `nullptr`.
-    void* user_data() {
+    void* user_data() & {
         assert(labels_.internal_ptr_ != nullptr);
 
         void* data = nullptr;
         details::check_status(eqs_labels_user_data(labels_, &data));
         return data;
     }
+
+    void* user_data() && = delete;
 
     /// Register some user data pointer with these `Labels`.
     ///
@@ -1083,10 +1092,14 @@ public:
     /// This function is allowed to fail if the data is not accessible in RAM,
     /// not stored as 64-bit floating point values, or not stored as a
     /// C-contiguous array.
-    virtual double* data() = 0;
+    virtual double* data() & = 0;
+
+    double* data() && = delete;
 
     /// Get the shape of this array
-    virtual const std::vector<uintptr_t>& shape() const = 0;
+    virtual const std::vector<uintptr_t>& shape() const & = 0;
+
+    const std::vector<uintptr_t>& shape() && = delete;
 
     /// Set the shape of this array to the given `shape`
     virtual void reshape(std::vector<uintptr_t> shape) = 0;
@@ -1158,11 +1171,11 @@ public:
         return origin;
     }
 
-    double* data() override {
+    double* data() & override {
         return data_.data();
     }
 
-    const std::vector<uintptr_t>& shape() const override {
+    const std::vector<uintptr_t>& shape() const & override {
         return shape_;
     }
 
@@ -1425,13 +1438,15 @@ public:
     }
 
     /// Get a view in the values in this block
-    NDArray<double> values() {
+    NDArray<double> values() & {
         auto array = this->eqs_array();
         double* data = nullptr;
         details::check_status(array.data(array.ptr, &data));
 
         return NDArray<double>(data, this->values_shape());
     }
+
+    NDArray<double> values() && = delete;
 
     /// Access the sample `Labels` for this block.
     ///
@@ -1530,7 +1545,7 @@ public:
     /// Get the `eqs_block_t` pointer corresponding to this block.
     ///
     /// The block pointer is still managed by the current `TensorBlock`
-    eqs_block_t* as_eqs_block_t() {
+    eqs_block_t* as_eqs_block_t() & {
         if (is_view_) {
             throw Error(
                 "can not call non-const TensorBlock::as_eqs_block_t on this "
@@ -1541,26 +1556,11 @@ public:
     }
 
     /// const version of `as_eqs_block_t`
-    const eqs_block_t* as_eqs_block_t() const {
+    const eqs_block_t* as_eqs_block_t() const & {
         return block_;
     }
 
-    /// Release the `eqs_block_t` pointer corresponding to this `TensorBlock`.
-    ///
-    /// The block pointer is **no longer** managed by the current `TensorBlock`,
-    /// and should manually be freed when no longer required.
-    eqs_block_t* release() {
-         if (is_view_) {
-            throw Error(
-                "can not call TensorBlock::release on this "
-                "block since it is a view inside a TensorMap"
-            );
-        }
-        auto ptr = block_;
-        block_ = nullptr;
-        is_view_ = false;
-        return ptr;
-    }
+    const eqs_block_t* as_eqs_block_t() && = delete;
 
     /// Create a new TensorBlock taking ownership of a raw `eqs_block_t` pointer.
     static TensorBlock unsafe_from_ptr(eqs_block_t* ptr) {
@@ -1630,6 +1630,24 @@ private:
         return array;
     }
 
+    /// Release the `eqs_block_t` pointer corresponding to this `TensorBlock`.
+    ///
+    /// The block pointer is **no longer** managed by the current `TensorBlock`,
+    /// and should manually be freed when no longer required.
+    eqs_block_t* release() {
+         if (is_view_) {
+            throw Error(
+                "can not call TensorBlock::release on this "
+                "block since it is a view inside a TensorMap"
+            );
+        }
+        auto ptr = block_;
+        block_ = nullptr;
+        is_view_ = false;
+        return ptr;
+    }
+
+    friend class TensorMap;
     friend class equistore_torch::TensorBlockHolder;
 
     eqs_block_t* block_;
@@ -1755,13 +1773,15 @@ public:
     ///
     /// The returned `TensorBlock` is a view inside memory owned by this
     /// `TensorMap`, and is only valid as long as the `TensorMap` is kept alive.
-    TensorBlock block_by_id(uintptr_t index) {
+    TensorBlock block_by_id(uintptr_t index) & {
         eqs_block_t* block = nullptr;
         details::check_status(eqs_tensormap_block_by_id(tensor_, &block, index));
         details::check_pointer(block);
 
         return TensorBlock::unsafe_view_from_ptr(block);
     }
+
+    TensorBlock block_by_id(uintptr_t index) && = delete;
 
     /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
@@ -2034,19 +2054,11 @@ public:
     /// Get the `eqs_tensormap_t` pointer corresponding to this `TensorMap`.
     ///
     /// The tensor map pointer is still managed by the current `TensorMap`
-    eqs_tensormap_t* as_eqs_tensormap_t() {
+    eqs_tensormap_t* as_eqs_tensormap_t() & {
         return tensor_;
     }
 
-    /// Release the `eqs_tensormap_t` pointer corresponding to this `TensorMap`.
-    ///
-    /// The tensor map pointer is **no longer** managed by the current
-    /// `TensorMap`, and should manually be freed when no longer required.
-    eqs_tensormap_t* release() {
-        auto ptr = tensor_;
-        tensor_ = nullptr;
-        return ptr;
-    }
+    eqs_tensormap_t* as_eqs_tensormap_t() && = delete;
 
     /// Create a C++ TensorMap from a C `eqs_tensormap_t` pointer. The C++
     /// tensor map takes ownership of the C pointer.

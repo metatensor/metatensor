@@ -94,7 +94,7 @@ TEST_CASE("Blocks") {
         CHECK(gradient.properties() == Labels({"properties"}, {{5}, {3}}));
 
         CHECK_THROWS_WITH(
-            block.gradient("not there").values(),
+            block.gradient("not there"),
             "invalid parameter: can not find gradients with respect to 'not there' in this block"
         );
     }
