@@ -108,6 +108,9 @@ class LabelsEntry:
         """
         return not self.__eq__(other)
 
+    def __hash__(self) -> None:
+        return hash(tuple(self._values) + tuple(self._names))
+
 
 class Labels:
     """

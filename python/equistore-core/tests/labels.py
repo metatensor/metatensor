@@ -300,6 +300,39 @@ def test_iter():
         assert b == i
 
 
+def test_hash_entry():
+    labels_1 = Labels(names=("a", "b"), values=np.array([[0, 0], [0, 1]]))
+    labels_2 = Labels(names=("a", "b"), values=np.array([[0, 0], [0, 1]]))
+    labels_3 = Labels(names=("a", "b"), values=np.array([[0, 2], [0, 1]]))
+    labels_4 = Labels(names=("a", "c"), values=np.array([[0, 0], [0, 1]]))
+
+    labels_6 = Labels(
+        names=["structure", "atom", "species_center"],
+        values=np.array([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
+    )
+
+    labels_7 = Labels(
+        names=["structure", "atom", "species_neighbor"],
+        values=np.array([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
+    )
+
+    assert hash(labels_1[0]) == hash(labels_1[0])
+    assert hash(labels_1[0]) == hash(labels_2[0])
+    assert hash(labels_1[0]) != hash(labels_3[0])
+    assert hash(labels_1[0]) != hash(labels_4[0])
+    assert hash(labels_1[1]) == hash(labels_3[1])
+    assert hash(labels_1[0]) != hash(labels_1[1])
+    assert hash(labels_6[0]) != hash(labels_7[0])
+    assert hash(labels_6[1]) != hash(labels_7[1])
+    assert hash(labels_6[2]) != hash(labels_7[2])
+    assert hash(labels_6[0]) != hash(labels_6[1])
+    assert hash(labels_6[0]) != hash(labels_6[2])
+    assert hash(labels_6[1]) != hash(labels_6[2])
+    assert hash(labels_7[0]) != hash(labels_7[1])
+    assert hash(labels_7[0]) != hash(labels_7[2])
+    assert hash(labels_7[1]) != hash(labels_7[2])
+
+
 def test_eq():
     labels_1 = Labels(names=("a", "b"), values=np.array([[0, 0], [0, 1]]))
     labels_2 = Labels(names=("a", "b"), values=np.array([[0, 0], [0, 1]]))
