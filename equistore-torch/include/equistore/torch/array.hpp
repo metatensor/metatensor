@@ -52,9 +52,9 @@ public:
 
     std::unique_ptr<equistore::DataArrayBase> create(std::vector<uintptr_t> shape) const override;
 
-    double* data() override;
+    double* data() & override;
 
-    const std::vector<uintptr_t>& shape() const override;
+    const std::vector<uintptr_t>& shape() const & override;
 
     void reshape(std::vector<uintptr_t> shape) override;
 

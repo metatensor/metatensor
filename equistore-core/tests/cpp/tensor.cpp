@@ -366,7 +366,8 @@ void check_loaded_tensor(equistore::TensorMap& tensor) {
     CHECK(samples.names()[0] == std::string("structure"));
     CHECK(samples.names()[1] == std::string("center"));
 
-    CHECK(block.values().shape() == std::vector<size_t>{9, 5, 3});
+    auto values = block.values();
+    CHECK(values.shape() == std::vector<size_t>{9, 5, 3});
 
     auto gradient = block.gradient("positions");
     samples = gradient.samples();
@@ -375,5 +376,6 @@ void check_loaded_tensor(equistore::TensorMap& tensor) {
     CHECK(samples.names()[1] == std::string("structure"));
     CHECK(samples.names()[2] == std::string("atom"));
 
-    CHECK(gradient.values().shape() == std::vector<size_t>{59, 3, 5, 3});
+    values = gradient.values();
+    CHECK(values.shape() == std::vector<size_t>{59, 3, 5, 3});
 }
