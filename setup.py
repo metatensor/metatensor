@@ -11,6 +11,7 @@ from setuptools.command.sdist import sdist
 ROOT = os.path.realpath(os.path.dirname(__file__))
 EQUISTORE_CORE = os.path.join(ROOT, "python", "equistore-core")
 EQUISTORE_OPERATIONS = os.path.join(ROOT, "python", "equistore-operations")
+EQUISTORE_TORCH = os.path.join(ROOT, "python", "equistore-torch")
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -114,9 +115,11 @@ if __name__ == "__main__":
     version = "0.1.0" + extra_version
 
     install_requires = []
+    extras_require = {}
     if os.path.exists(EQUISTORE_CORE):
         # we are building from a git checkout
         assert os.path.exists(EQUISTORE_OPERATIONS)
+        assert os.path.exists(EQUISTORE_TORCH)
 
         # add a random uuid to the file url to prevent pip from using a cached
         # wheel for equistore-core, and force it to re-build from scratch
@@ -127,15 +130,18 @@ if __name__ == "__main__":
         install_requires.append(
             f"equistore-operations @ file://{EQUISTORE_OPERATIONS}?{uuid}",
         )
+        extras_require["torch"] = f"equistore-torch @ file://{EQUISTORE_TORCH}?{uuid}"
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("equistore-core >=0.1.0.dev0,<0.2.0")
         install_requires.append("equistore-operations >=0.1.0.dev0,<0.2.0")
+        extras_require["torch"] = "equistore-torch >=0.1.0.dev0,<0.2.0"
 
     setup(
         version=version,
         author=", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines()),
         install_requires=install_requires,
+        extras_require=extras_require,
         cmdclass={
             "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
             "sdist": sdist_git_version,
