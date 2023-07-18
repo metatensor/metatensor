@@ -161,7 +161,7 @@ TORCH_LIBRARY(equistore, m) {
             {torch::arg("indices")}
         )
         .def("block", &TensorMapHolder::block_torch, DOCSTRING,
-            {torch::arg("selection")}
+            {torch::arg("selection") = torch::IValue()}
         )
         .def("blocks", &TensorMapHolder::blocks_torch, DOCSTRING,
             {torch::arg("selection") = torch::IValue()}

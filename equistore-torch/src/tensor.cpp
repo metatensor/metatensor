@@ -122,6 +122,17 @@ TorchTensorBlock TensorMapHolder::block(TorchLabelsEntry torch_selection) {
 TorchTensorBlock TensorMapHolder::block_torch(torch::IValue index) {
     if (index.isInt()) {
         return this->block_by_id(index.toInt());
+    } else if (index.isNone()) {
+        auto count = this->keys()->count();
+        if (count == 0) {
+            C10_THROW_ERROR(ValueError, "there is no block in this TensorMap");
+        } else if (count > 1) {
+            C10_THROW_ERROR(ValueError,
+                "there is more than one block in this TensorMap, provide a selection"
+            );
+        }
+
+        return this->block_by_id(0);
     } else if (index.isGenericDict()) {
         auto selection = std::map<std::string, int32_t>();
         for (const auto& it: index.toGenericDict()) {
@@ -130,7 +141,7 @@ TorchTensorBlock TensorMapHolder::block_torch(torch::IValue index) {
             if (it.key().isString() && value.isInt()) {
                 selection.emplace(key.toString()->string(), static_cast<int32_t>(value.toInt()));
             } else {
-                C10_THROW_ERROR(ValueError,
+                C10_THROW_ERROR(TypeError,
                     "expected argument to be Dict[str, int], got Dict["
                     + key.type()->str() + ", " + value.type()->str() + "]"
                 );
@@ -163,7 +174,7 @@ TorchTensorBlock TensorMapHolder::block_torch(torch::IValue index) {
             throw std::runtime_error("internal error: not a labels nor a labels entry");
         }
     } else {
-        C10_THROW_ERROR(ValueError,
+        C10_THROW_ERROR(TypeError,
             "expected argument to be int, Dict[str, int], Labels, or LabelsEntry, got "
             + index.type()->str()
         );

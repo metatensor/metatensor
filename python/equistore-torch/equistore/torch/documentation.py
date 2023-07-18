@@ -763,7 +763,7 @@ class TensorMap:
 
     def block(
         self,
-        selection: Union[int, Labels, LabelsEntry, Dict[str, int]],
+        selection: Union[None, int, Labels, LabelsEntry, Dict[str, int]] = None,
     ) -> TensorBlock:
         """
         Get the single block in this :py:class:`TensorMap` matching the ``selection``.
