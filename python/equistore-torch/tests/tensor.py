@@ -92,6 +92,11 @@ def test_block(tensor):
     with pytest.raises(ValueError, match=msg):
         tensor.block({"key_2": 3, "key_1": 4})
 
+    msg = "there is no block in this TensorMap"
+    with pytest.raises(ValueError, match=msg):
+        empty = TensorMap(Labels.empty("_"), [])
+        empty.block()
+
     # more than one block matching criteria
     msg = (
         "got more than one matching block for \\(key_2=0\\), use the `blocks` "
@@ -100,17 +105,28 @@ def test_block(tensor):
     with pytest.raises(ValueError, match=msg):
         tensor.block({"key_2": 0})
 
+    msg = "there is more than one block in this TensorMap, provide a selection"
+    with pytest.raises(ValueError, match=msg):
+        tensor.block()
+
     # Type errors
     msg = (
         "expected argument to be int, Dict\\[str, int\\], Labels, or "
         "LabelsEntry, got str"
     )
-    with pytest.raises(ValueError, match=msg):
+    with pytest.raises(TypeError, match=msg):
         tensor.block("key_2")
 
     msg = "expected argument to be Dict\\[str, int\\], got Dict\\[str, str\\]"
-    with pytest.raises(ValueError, match=msg):
+    with pytest.raises(TypeError, match=msg):
         tensor.block({"key_2": "0"})
+
+    # group everything in a single block
+    tensor = tensor.components_to_properties(["c"])
+    tensor = tensor.keys_to_properties(["key_1", "key_2"])
+
+    block = tensor.block()
+    assert block.values.shape == (8, 10)
 
 
 def test_blocks(tensor):
@@ -413,7 +429,7 @@ class TensorMapWrap:
         return self._c.blocks_by_id(indices=indices)
 
     def block(
-        self, selection: Union[int, Dict[str, int], Labels, LabelsEntry]
+        self, selection: Union[None, int, Dict[str, int], Labels, LabelsEntry] = None
     ) -> TensorBlock:
         return self._c.block(selection=selection)
 
