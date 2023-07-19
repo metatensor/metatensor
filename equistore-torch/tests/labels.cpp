@@ -32,6 +32,12 @@ TEST_CASE("Labels") {
 
         CHECK(equistore_labels(1, 1) == 0);
         CHECK(equistore_labels(3, 0) == 1);
+
+        auto empty = LabelsHolder::create({}, {});
+        CHECK(empty->size() == 0);
+        CHECK(empty->count() == 0);
+
+        CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
     }
 
     SECTION("position") {

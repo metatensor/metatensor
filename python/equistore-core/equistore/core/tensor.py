@@ -588,10 +588,13 @@ def _normalize_selection(
                     f"type {type(value)}"
                 )
 
-        return Labels(
-            list(selection.keys()),
-            np.array([[np.int32(v) for v in selection.values()]], dtype=np.int32),
-        )
+        if len(selection) == 0:
+            return Labels([], np.empty((0, 0), dtype=np.int32))
+        else:
+            return Labels(
+                list(selection.keys()),
+                np.array([[np.int32(v) for v in selection.values()]], dtype=np.int32),
+            )
 
     elif isinstance(selection, Labels):
         return selection

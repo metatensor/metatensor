@@ -621,18 +621,24 @@ impl LabelsBuilder {
     pub fn finish(self) -> Labels {
         let mut raw_names = Vec::new();
         let mut raw_names_ptr = Vec::new();
-        for name in &self.names {
-            let name = CString::new(&**name).expect("name contains a NULL byte");
-            raw_names_ptr.push(name.as_ptr());
-            raw_names.push(name);
-        }
 
-        let mut raw_labels = eqs_labels_t {
-            internal_ptr_: std::ptr::null_mut(),
-            names: raw_names_ptr.as_ptr(),
-            values: self.values.as_ptr().cast(),
-            size: self.size(),
-            count: self.values.len() / self.size(),
+        let mut raw_labels = if self.names.is_empty() {
+            assert!(self.values.is_empty());
+            eqs_labels_t::null()
+        } else {
+            for name in &self.names {
+                let name = CString::new(&**name).expect("name contains a NULL byte");
+                raw_names_ptr.push(name.as_ptr());
+                raw_names.push(name);
+            }
+
+            eqs_labels_t {
+                internal_ptr_: std::ptr::null_mut(),
+                names: raw_names_ptr.as_ptr(),
+                values: self.values.as_ptr().cast(),
+                size: self.size(),
+                count: self.values.len() / self.size(),
+            }
         };
 
         unsafe {
@@ -665,6 +671,11 @@ mod tests {
         assert_eq!(idx[0], [2, 3]);
         assert_eq!(idx[1], [1, 243]);
         assert_eq!(idx[2], [-4, -2413]);
+
+        let builder = LabelsBuilder::new(vec![]);
+        let labels = builder.finish();
+        assert_eq!(labels.size(), 0);
+        assert_eq!(labels.count(), 0);
     }
 
     #[test]

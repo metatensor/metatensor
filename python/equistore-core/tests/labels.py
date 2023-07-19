@@ -28,8 +28,8 @@ def test_constructor():
 
 def test_empty_labels():
     # labels without dimensions
-    labels = Labels(names=[], values=np.array([[]], dtype=np.int32))
-    labels_str = Labels(names="", values=np.array([[]], dtype=np.int32))
+    labels = Labels(names=[], values=np.empty((0, 0), dtype=np.int32))
+    labels_str = Labels(names="", values=np.empty((0, 0), dtype=np.int32))
 
     assert labels.names == []
     assert labels.names == labels_str.names
