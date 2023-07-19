@@ -41,6 +41,12 @@ TEST_CASE("Labels") {
         Labels({"not an ident"}, {{0}}),
         "invalid parameter: 'not an ident' is not a valid label name"
     );
+
+    auto empty = Labels({}, {});
+    CHECK(empty.size() == 0);
+    CHECK(empty.count() == 0);
+
+    CHECK_THROWS_WITH(Labels({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
 }
 
 

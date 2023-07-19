@@ -129,4 +129,13 @@ TEST_CASE("Blocks") {
 
         CHECK_THROWS_WITH(block.clone(), "external error: calling eqs_array_t.create failed (status -1)");
     }
+
+    SECTION("empty labels") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 0})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            {},
+            Labels({}, {})
+        );
+    }
 }

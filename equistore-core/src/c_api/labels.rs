@@ -98,6 +98,15 @@ pub unsafe fn eqs_labels_to_rust(labels: &eqs_labels_t) -> Result<Arc<Labels>, E
 unsafe fn create_rust_labels(labels: &eqs_labels_t) -> Result<Arc<Labels>, Error> {
     assert!(!labels.is_rust());
 
+    if labels.size == 0 {
+        if labels.count > 0 {
+            return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
+        }
+
+        let builder = LabelsBuilder::new(vec![]).expect("invalid builder");
+        return Ok(Arc::new(builder.finish()));
+    }
+
     if labels.names.is_null() {
         return Err(Error::InvalidParameter("labels.names can not be NULL in eqs_labels_t".into()))
     }
