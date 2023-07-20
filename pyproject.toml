@@ -1,6 +1,6 @@
 [project]
 name = "equistore"
-dynamic = ["version", "authors", "dependencies"]
+dynamic = ["version", "authors", "dependencies", "optional-dependencies"]
 requires-python = ">=3.7"
 
 readme = "README.rst"
