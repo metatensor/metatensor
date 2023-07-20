@@ -91,7 +91,7 @@ Add the following to your project ``Cargo.toml``
     [dependencies]
     equistore = {git = "https://github.com/lab-cosmo/equistore.git"}
 
-.. _install-torch-script-lib:
+.. _install-torch-script:
 
 Installing the TorchScript bindings
 -----------------------------------
@@ -123,10 +123,23 @@ For usage from C++
     # configure cmake if needed
     cmake --build . --target install
 
-Compiling the TorchScript bindings requires you to already have :ref:`the C++
-interface to equistore installed <install-c-lib>`. If it is not in a standard
-location, you should give the installation directory when configuring cmake with
-``CMAKE_PREFIX_PATH``. Other valid configuration options are
+Compiling the TorchScript bindings requires you to manually install some of the
+dependencies:
+
+- the C++ part of PyTorch, which you can install `on it's own
+  <https://pytorch.org/get-started/locally/>`_. You can also use the
+  installation that comes with a Python installation by adding the output of the
+  command below to ``CMAKE_PREFIX_PATH``:
+
+  .. code-block:: bash
+
+    python -c "import torch; print(torch.utils.cmake_prefix_path)"
+
+- :ref:`the C++ interface of equistore <install-c-lib>`
+
+If any of these dependencies is not in a standard location, you should specify
+the installation directory when configuring cmake with ``CMAKE_PREFIX_PATH``.
+Other useful configuration options are:
 
 +--------------------------------------+-----------------------------------------------+----------------+
 | Option                               | Description                                   | Default        |
