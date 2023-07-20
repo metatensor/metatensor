@@ -18,7 +18,7 @@ if os.path.exists(EQUISTORE_CORE):
     EQUISTORE_CORE_DEP = f"equistore-core @ file://{EQUISTORE_CORE}?{uuid}"
 else:
     # we are building from a sdist
-    EQUISTORE_CORE_DEP = "equistore-core == 0.1.0"
+    EQUISTORE_CORE_DEP = "equistore-core >=0.1.0.dev0,<0.2.0"
 
 
 prepare_metadata_for_build_wheel = build_meta.prepare_metadata_for_build_wheel
