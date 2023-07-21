@@ -1,10 +1,6 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-fn rustc_version_at_least(version: &str) -> bool {
-    rustc_version::version().unwrap() >= rustc_version::Version::parse(version).unwrap()
-}
-
 fn main() {
     let mut equistore_core = PathBuf::from("../equistore-core");
 
@@ -61,8 +57,4 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", install_dir.display());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed={}", equistore_core.display());
-
-    if cfg!(feature = "static") && !rustc_version_at_least("1.63.0") {
-        println!("cargo:rustc-cfg=static_and_rustc_older_1_63");
-    }
 }

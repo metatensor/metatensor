@@ -3,7 +3,7 @@ name = "equistore-core"
 version = "0.1.0"
 edition = "2021"
 publish = false
-rust-version = "1.61"
+rust-version = "1.63"
 exclude = [
     "tests"
 ]
@@ -16,7 +16,7 @@ crate-type = ["cdylib", "staticlib"]
 bench = false
 
 [dependencies]
-ahash = "0.7"
+ahash = "0.8"
 hashbrown = "0.13"
 indexmap = "1"
 once_cell = "1"

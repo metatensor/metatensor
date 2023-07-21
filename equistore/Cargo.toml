@@ -2,7 +2,7 @@
 name = "equistore"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.61"
+rust-version = "1.63"
 include = [
     "build.rs",
     "src/",
@@ -28,4 +28,3 @@ static = []
 cmake = "0.1.49"
 which = "4"
 glob = "0.3"
-rustc_version = "0.4"
