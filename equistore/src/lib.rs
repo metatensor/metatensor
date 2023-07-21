@@ -29,13 +29,6 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 #![allow(clippy::similar_names, clippy::borrow_as_ptr, clippy::uninlined_format_args)]
 
-#[cfg(all(test, static_and_rustc_older_1_63))]
-fn fail_build() {
-    // We need rustc>=1.63 for tests because of
-    // https://github.com/rust-lang/rust/issues/100066
-    compile_error!("the 'static' feature requires rustc>=1.63 for tests");
-}
-
 pub mod c_api;
 
 pub mod errors;
