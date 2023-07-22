@@ -15,11 +15,19 @@ UNKNOWN_ARRAY_TYPE = (
 )
 
 
-def _check_all_same_type(arrays, expected_type):
+def _check_all_torch_tensor(arrays):
     for array in arrays:
-        if not isinstance(array, expected_type):
+        if not isinstance(array, TorchTensor):
             raise TypeError(
-                f"expected argument to be a {expected_type}, but got {type(array)}"
+                f"expected argument to be a torch.Tensor, but got {type(array)}"
+            )
+
+
+def _check_all_np_ndarray(arrays):
+    for array in arrays:
+        if not isinstance(array, np.ndarray):
+            raise TypeError(
+                f"expected argument to be a np.ndarray, but got {type(array)}"
             )
 
 
@@ -29,15 +37,15 @@ def all(a, axis=None):
     This function has the same behavior as
     ``np.all(array,axis=axis)``.
     """
-    if isinstance(a, np.ndarray):
-        return np.all(a=a, axis=axis)
-    elif isinstance(a, TorchTensor):
+    if isinstance(a, TorchTensor):
         # torch.all has two implementation, and picks one depending if more than one
         # parameter is given. The second one does not supports setting dim to `None`
         if axis is None:
             return torch.all(input=a)
         else:
             return torch.all(input=a, dim=axis)
+    elif isinstance(a, np.ndarray):
+        return np.all(a=a, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -48,14 +56,14 @@ def allclose(a, b, rtol, atol, equal_nan=False):
     This function has the same behavior as
     ``np.allclose(array1, array2, rtol, atol, equal_nan)``.
     """
-    if isinstance(a, np.ndarray):
-        _check_all_same_type([b], np.ndarray)
-        return np.allclose(a=a, b=b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-    elif isinstance(a, TorchTensor):
-        _check_all_same_type([b], TorchTensor)
+    if isinstance(a, TorchTensor):
+        _check_all_torch_tensor([b])
         return torch.allclose(
             input=a, other=b, rtol=rtol, atol=atol, equal_nan=equal_nan
         )
+    elif isinstance(a, np.ndarray):
+        _check_all_np_ndarray([b])
+        return np.allclose(a=a, b=b, rtol=rtol, atol=atol, equal_nan=equal_nan)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -77,26 +85,26 @@ def bincount(input, weights=None, minlength=0):
         should follow this with a call to `_dispatch.array_like_data` to transform it
         in a ``TorchTensor`` with the desired properties.
     """
-    if isinstance(input, np.ndarray):
+    if isinstance(input, TorchTensor):
         if weights is not None:
-            _check_all_same_type([weights], np.ndarray)
-        return np.bincount(input, weights=weights, minlength=minlength)
-    elif isinstance(input, TorchTensor):
-        if weights is not None:
-            _check_all_same_type([weights], TorchTensor)
+            _check_all_torch_tensor([weights])
         return torch.bincount(input, weights=weights, minlength=minlength)
+    elif isinstance(input, np.ndarray):
+        if weights is not None:
+            _check_all_np_ndarray([weights])
+        return np.bincount(input, weights=weights, minlength=minlength)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
 def array_like_data(array, data):
     """Return `data` with the same data-type and array-type of array"""
-    if _check_all_same_type([array], type(data)):
-        return data
-    if isinstance(array, np.ndarray):
-        return np.array(data, dtype=array.dtype)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
+        _check_all_torch_tensor([data])
         return torch.Tensor(data, device=array.device)
+    elif isinstance(array, np.ndarray):
+        _check_all_np_ndarray([data])
+        return np.array(data, dtype=array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -107,9 +115,9 @@ def norm(array, axis=None):
     This calls the equivalent of ``np.linalg.norm(array, axis=axis)``, see this
     function for more documentation.
     """
-    if isinstance(array, np.ndarray):
+    if isinstance(array, TorchTensor):
         return np.linalg.norm(array, axis=axis)
-    elif isinstance(array, TorchTensor):
+    elif isinstance(array, np.ndarray):
         return torch.linalg.norm(array, dim=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -121,8 +129,12 @@ def dot(A, B):
     This function has the same behavior as  ``np.dot(A, B.T)``, and assumes the
     second array is 2-dimensional.
     """
-    if isinstance(A, np.ndarray):
-        _check_all_same_type([B], np.ndarray)
+    if isinstance(A, TorchTensor):
+        _check_all_torch_tensor([B])
+        assert len(B.shape) == 2
+        return A @ B.T
+    elif isinstance(A, np.ndarray):
+        _check_all_np_ndarray([B])
         shape1 = A.shape
         assert len(B.shape) == 2
         # Using matmul/@ is the recommended way in numpy docs for 2-dimensional
@@ -131,10 +143,6 @@ def dot(A, B):
             return A @ B.T
         else:
             return np.dot(A, B.T)
-    elif isinstance(A, TorchTensor):
-        _check_all_same_type([B], TorchTensor)
-        assert len(B.shape) == 2
-        return A @ B.T
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -146,13 +154,13 @@ def solve(X, Y):
 
     This function has the same behavior as ``numpy.linalg.solve(X, Y)``.
     """
-    if isinstance(X, np.ndarray):
-        _check_all_same_type([Y], np.ndarray)
-        return np.linalg.solve(X, Y)
-    elif isinstance(X, TorchTensor):
-        _check_all_same_type([Y], TorchTensor)
+    if isinstance(X, TorchTensor):
+        _check_all_torch_tensor([Y])
         result = torch.linalg.solve(X, Y)
         return result
+    elif isinstance(X, np.ndarray):
+        _check_all_np_ndarray([Y])
+        return np.linalg.solve(X, Y)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -163,10 +171,10 @@ def sqrt(array):
     This calls the equivalent of ``np.sqrt(array)``, see this
     function for more documentation.
     """
-    if isinstance(array, np.ndarray):
-        return np.sqrt(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.sqrt(array)
+    elif isinstance(array, np.ndarray):
+        return np.sqrt(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -198,23 +206,23 @@ def lstsq(X, Y, rcond, driver=None):
             If None, 'gelsy' is used for CPU inputs
             and 'gels' for CUDA inputs. Default: None
     """
-    if isinstance(X, np.ndarray):
-        _check_all_same_type([Y], np.ndarray)
-        return np.linalg.lstsq(X, Y, rcond=rcond)[0]
-    elif isinstance(X, TorchTensor):
-        _check_all_same_type([Y], TorchTensor)
+    if isinstance(X, TorchTensor):
+        _check_all_torch_tensor([Y])
         result = torch.linalg.lstsq(X, Y, rcond=rcond, driver=driver)[0]
+    elif isinstance(X, np.ndarray):
+        _check_all_np_ndarray([Y])
+        return np.linalg.lstsq(X, Y, rcond=rcond)[0]
         return result
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
 def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
-    """Equivalent to np.nan_to_num(X,nan,posinf, neginf)"""
-    if isinstance(X, np.ndarray):
-        return np.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
-    elif isinstance(X, TorchTensor):
+    """Equivalent to np.nan_to_num(X, nan, posinf, neginf)"""
+    if isinstance(X, TorchTensor):
         return torch.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
+    elif isinstance(X, np.ndarray):
+        return np.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -230,12 +238,12 @@ def concatenate(arrays, axis):
     :py:func:`numpy.hstack`, and ``2`` to :py:func:`numpy.dstack`, though any
     axis index > 0 is valid.
     """
-    if isinstance(arrays[0], np.ndarray):
-        _check_all_same_type(arrays, np.ndarray)
-        return np.concatenate(arrays, axis)
-    elif isinstance(arrays[0], TorchTensor):
-        _check_all_same_type(arrays, TorchTensor)
+    if isinstance(arrays[0], TorchTensor):
+        _check_all_torch_tensor(arrays)
         return torch.concatenate(arrays, axis)
+    elif isinstance(arrays[0], np.ndarray):
+        _check_all_np_ndarray(arrays)
+        return np.concatenate(arrays, axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -252,14 +260,14 @@ def index_add(output_array, input_array, index):
     """
     if len(index.shape) != 1:
         raise ValueError("index should be 1D array")
-    if isinstance(input_array, np.ndarray):
-        _check_all_same_type([output_array], np.ndarray)
-        np.add.at(output_array, index, input_array)
-    elif isinstance(input_array, TorchTensor):
-        _check_all_same_type([output_array], TorchTensor)
+    if isinstance(input_array, TorchTensor):
+        _check_all_torch_tensor([output_array])
         output_array.index_add_(
             0, torch.tensor(index, device=input_array.device), input_array
         )
+    elif isinstance(input_array, np.ndarray):
+        _check_all_np_ndarray([output_array])
+        np.add.at(output_array, index, input_array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -275,9 +283,7 @@ def zeros_like(array, shape=None, requires_grad=False):
 
     This is the equivalent to ``np.zeros_like(array, shape=shape)``.
     """
-    if isinstance(array, np.ndarray):
-        return np.zeros_like(array, shape=shape, subok=False)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
 
@@ -288,6 +294,8 @@ def zeros_like(array, shape=None, requires_grad=False):
             device=array.device,
             requires_grad=requires_grad,
         )
+    elif isinstance(array, np.ndarray):
+        return np.zeros_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
