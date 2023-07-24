@@ -103,11 +103,10 @@ TorchTensorBlock TensorBlockHolder::gradient(const std::string& parameter) const
 
     return torch::make_intrusive<TensorBlockHolder>(block_.gradient(parameter), gradient_parameter);
 }
-
-std::unordered_map<std::string, TorchTensorBlock> TensorBlockHolder::gradients() {
-    auto result = std::unordered_map<std::string, TorchTensorBlock>();
+std::vector<std::tuple<std::string, TorchTensorBlock>> TensorBlockHolder::gradients() {
+    auto result = std::vector<std::tuple<std::string, TorchTensorBlock>>();
     for (const auto& parameter: this->gradients_list()) {
-        result.emplace(parameter, this->gradient(parameter));
+        result.push_back(std::make_tuple(parameter, this->gradient(parameter)));
     }
     return result;
 }

@@ -74,7 +74,7 @@ TEST_CASE("Blocks") {
         CHECK(sample_names[1] == "g");
 
         for (const auto& entry: block.gradients()) {
-            CHECK(entry.first == "g");
+            CHECK(std::get<0>(entry) == "g");
         }
     }
 }

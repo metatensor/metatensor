@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List, Tuple
 
 import pytest
 import torch
@@ -159,8 +159,9 @@ def test_gradients():
         gradient = block.gradient("not-there")
 
     gradients = block.gradients()
-    assert isinstance(gradients, dict)
-    assert list(gradients.keys()) == ["g"]
+    assert isinstance(gradients, list)
+    assert len(gradients) == 1
+    assert gradients[0][0] == "g"
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all
@@ -213,7 +214,7 @@ class TensorBlockWrap:
     def gradient(self, parameter: str) -> TensorBlock:
         return self._c.gradient(parameter=parameter)
 
-    def gradients(self) -> Dict[str, TensorBlock]:
+    def gradients(self) -> List[Tuple[str, TensorBlock]]:
         return self._c.gradients()
 
 
