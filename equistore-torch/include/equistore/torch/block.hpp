@@ -107,7 +107,7 @@ public:
     TorchTensorBlock gradient(const std::string& parameter) const;
 
     /// Get a all gradients and associated parameters in this block
-    std::unordered_map<std::string, TorchTensorBlock> gradients();
+    std::vector<std::tuple<std::string, TorchTensorBlock>> gradients();
 
     /// Implementation of __repr__/__str__ for Python
     std::string __repr__() const;
