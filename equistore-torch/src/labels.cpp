@@ -293,6 +293,39 @@ TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor 
 }
 
 
+TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) {
+    auto names = this->names();
+
+    if (dimensions_indexes.size() != names.size()) {
+        C10_THROW_ERROR(
+            ValueError,
+            "the length of `dimensions_indexes` (" + std::to_string(dimensions_indexes.size()) + ") "
+            "does not match the number of dimensions in the Labels (" + std::to_string(names.size()) + ")"
+        );
+    }
+
+    auto new_names = std::vector<std::string>();
+
+    for (auto index : dimensions_indexes) {
+        if (index < 0) {
+            index += names.size();
+        }
+        if (index >= names.size()) {
+            C10_THROW_ERROR(
+                IndexError,
+                "out of range index "  + std::to_string(index) + " for labels dimensions (" +
+                std::to_string(names.size()) + ")"
+            );
+        }
+        new_names.push_back(names[index]);
+    }
+ 
+    auto new_values = this->values().index({torch::indexing::Slice(), torch::tensor(dimensions_indexes)});
+
+    return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
+}
+
+
 TorchLabels LabelsHolder::remove(std::string name) {
     auto names = this->names();
 

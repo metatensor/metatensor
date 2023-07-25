@@ -2,17 +2,21 @@
 Manipulating TensorMap dimensions
 =================================
 
-Functions for manipulating dimensions of a :py:class:`equistore.TensorMap` (i.e.
+Functions for manipulating dimensions of an :py:class:`equistore.TensorMap` (i.e.
 changing the columns of the :py:class:`equistore.Labels` within).
 
 .. autofunction:: equistore.append_dimension
 
 .. autofunction:: equistore.insert_dimension
 
+.. autofunction:: equistore.permute_dimensions
+
 .. autofunction:: equistore.remove_dimension
 
 .. autofunction:: equistore.rename_dimension
 """
+from typing import List
+
 import numpy as np
 
 from equistore.core import TensorBlock, TensorMap
@@ -21,15 +25,13 @@ from equistore.core import TensorBlock, TensorMap
 def _check_axis(axis: str):
     if axis not in ["keys", "samples", "properties"]:
         raise ValueError(
-            f"{axis} is not a valid axis. Choose from 'keys', 'samples' or 'properties'"
+            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
+            "'properties'."
         )
 
 
 def append_dimension(
-    tensor: TensorMap,
-    axis: str,
-    name: str,
-    values: np.ndarray,
+    tensor: TensorMap, axis: str, name: str, values: np.ndarray
 ) -> TensorMap:
     """Append a :py:class:`equistore.Labels` dimension along the given axis.
 
@@ -59,7 +61,10 @@ def append_dimension(
     keys: foo
            0
     >>> equistore.append_dimension(
-    ...     tensor, name="bar", values=np.array([1]), axis="keys"
+    ...     tensor,
+    ...     axis="keys",
+    ...     name="bar",
+    ...     values=np.array([1]),
     ... )
     TensorMap with 1 blocks
     keys: foo  bar
@@ -77,7 +82,8 @@ def append_dimension(
         return insert_dimension(index=index, **kwargs)
     else:
         raise ValueError(
-            f"{axis} is not a valid axis. Choose from 'keys', 'samples' or 'properties'"
+            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
+            "'properties'."
         )
 
 
@@ -117,7 +123,11 @@ def insert_dimension(
     keys: foo
            0
     >>> equistore.insert_dimension(
-    ...     tensor, index=0, name="bar", values=np.array([1]), axis="keys"
+    ...     tensor,
+    ...     axis="keys",
+    ...     index=0,
+    ...     name="bar",
+    ...     values=np.array([1]),
     ... )
     TensorMap with 1 blocks
     keys: bar  foo
@@ -138,6 +148,85 @@ def insert_dimension(
             samples = samples.insert(index=index, name=name, values=values)
         elif axis == "properties":
             properties = properties.insert(index=index, name=name, values=values)
+
+        new_block = TensorBlock(
+            values=block.values,
+            samples=samples,
+            components=block.components,
+            properties=properties,
+        )
+
+        for parameter, gradient in block.gradients():
+            new_block.add_gradient(
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=properties,
+                ),
+            )
+
+        blocks.append(new_block)
+
+    return TensorMap(keys=keys, blocks=blocks)
+
+
+def permute_dimensions(
+    tensor: TensorMap, axis: str, dimensions_indexes: List[int]
+) -> TensorMap:
+    """Permute dimensions of a :py:class:`Labels` of the given axis according to a
+    :py:class:`list` of indexes.
+
+    Values of ``dimensions_indexes`` have to be same as the indexes of
+    :py:class:`Labels` but can be in a different order.
+
+    For ``axis=="samples"`` gradients samples dimensions are not permuted.
+
+    :param tensor: the input :py:class:`TensorMap`.
+    :param axis: axis for which the ``name`` should be inserted. Allowed are ``"keys"``,
+                 ``"properties"`` or ``"samples"``.
+    :param dimensions_indexes: desired ordering of the dimensions
+
+    :raises ValueError: if ``axis`` is a not valid value
+
+    :return: a new :py:class:`equistore.TensorMap` with the labels dimension permuted
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import equistore
+    >>> values = np.array([[1, 2], [3, 4]])
+    >>> block = equistore.block_from_array(values)
+    >>> keys = equistore.Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
+    >>> tensor = equistore.TensorMap(keys=keys, blocks=[block])
+    >>> tensor
+    TensorMap with 1 blocks
+    keys: foo  bar  baz
+          42   10    3
+
+    Move the last (second) dimension to the first position.
+
+    >>> equistore.permute_dimensions(tensor, axis="keys", dimensions_indexes=[2, 0, 1])
+    TensorMap with 1 blocks
+    keys: baz  foo  bar
+           3   42   10
+    """
+    _check_axis(axis)
+
+    keys = tensor.keys
+    if axis == "keys":
+        keys = keys.permute(dimensions_indexes=dimensions_indexes)
+
+    blocks = []
+    for block in tensor:
+        samples = block.samples
+        properties = block.properties
+
+        if axis == "samples":
+            samples = samples.permute(dimensions_indexes=dimensions_indexes)
+        elif axis == "properties":
+            properties = properties.permute(dimensions_indexes=dimensions_indexes)
 
         new_block = TensorBlock(
             values=block.values,

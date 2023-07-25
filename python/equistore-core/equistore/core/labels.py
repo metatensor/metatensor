@@ -492,6 +492,39 @@ class Labels:
 
         return Labels(names=new_names, values=new_values)
 
+    def permute(self, dimensions_indexes: List[int]) -> "Labels":
+        """Permute dimensions according to ``dimensions_indexes`` in the
+        :py:class:`Labels`.
+
+        :param dimensions_indexes: desired ordering of the dimensions
+        :raises ValueError: if length of ``dimensions_indexes`` does not match the
+            Labels length
+        :raises ValueError: if duplicate values are present in ``dimensions_indexes``
+
+        >>> import numpy as np
+        >>> from equistore import Labels
+        >>> label = Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
+        >>> label
+        Labels(
+            foo  bar  baz
+            42   10    3
+        )
+        >>> label.permute([2, 0, 1])
+        Labels(
+            baz  foo  bar
+             3   42   10
+        )
+        """
+        if len(dimensions_indexes) != len(self.names):
+            raise ValueError(
+                f"the length of `dimensions_indexes` ({len(dimensions_indexes)}) does "
+                f"not match the number of dimensions in the Labels ({len(self.names)})"
+            )
+
+        names = [self.names[d] for d in dimensions_indexes]
+
+        return Labels(names=names, values=self.values[:, dimensions_indexes])
+
     def remove(self, name: str) -> "Labels":
         """Remove ``name`` from the dimensions of the :py:class:`Labels`.
 

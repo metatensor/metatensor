@@ -46,9 +46,10 @@ from .join import join
 from .lstsq import lstsq
 from .manipulate_dimension import (
     append_dimension,
+    insert_dimension,
+    permute_dimensions,
     remove_dimension,
     rename_dimension,
-    insert_dimension,
 )
 from .multiply import multiply
 from .one_hot import one_hot
@@ -109,6 +110,7 @@ __all__ = [
     "one_hot",
     "ones_like",
     "ones_like_block",
+    "permute_dimensions",
     "pow",
     "random_uniform_like",
     "random_uniform_like_block",

@@ -341,6 +341,30 @@ class Labels:
         )
         """
 
+    def permute(self, dimensions_indexes: List[int]) -> "Labels":
+        """Permute dimensions according to ``dimensions_indexes`` in the
+        :py:class:`Labels`.
+
+        :param dimensions_indexes: desired ordering of the dimensions
+        :raises ValueError: if length of ``dimensions_indexes`` does not match the
+            Labels length
+        :raises ValueError: if duplicate values are present in ``dimensions_indexes``
+
+        >>> import torch
+        >>> from equistore.torch import Labels
+        >>> label = Labels(["foo", "bar", "baz"], torch.tensor([[42, 10, 3]]))
+        >>> print(label)
+        Labels(
+            foo  bar  baz
+            42   10    3
+        )
+        >>> print(label.permute([2, 0, 1]))
+        Labels(
+            baz  foo  bar
+             3   42   10
+        )
+        """
+
     def remove(self, name: str) -> "Labels":
         """Remove ``name`` from the dimensions of the :py:class:`Labels`.
 

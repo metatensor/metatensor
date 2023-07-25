@@ -6,10 +6,10 @@ Manipulation operations
 
     drop_blocks() <drop-blocks>
     join() <join>
+    manipulate dimension <manipulate-dimension>
     one_hot() <one-hot>
+    remove_gradients() <remove-gradients>
+    samples reduction <samples-reduction>
     slice() <slice>
     split() <split>
-    [sum/mean/std/variance]_over_samples() <samples-reduction>
-    remove_gradients() <remove-gradients>
-    [append/insert/rename/remove]_dimension() <manipulate-dimension>
     to() <to>

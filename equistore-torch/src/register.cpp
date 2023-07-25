@@ -97,6 +97,7 @@ TORCH_LIBRARY(equistore, m) {
         .def_property("values", &LabelsHolder::values)
         .def("append", &LabelsHolder::append, DOCSTRING, {torch::arg("name"), torch::arg("values")})
         .def("insert", &LabelsHolder::insert, DOCSTRING, {torch::arg("index"), torch::arg("name"), torch::arg("values")})
+        .def("permute", &LabelsHolder::permute, DOCSTRING, {torch::arg("dimensions_indexes")})
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
         .def("to", &LabelsHolder::to, DOCSTRING,
