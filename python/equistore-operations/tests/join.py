@@ -252,3 +252,36 @@ def test_join_samples_with_different_sample_names():
 
     with pytest.raises(ValueError, match="Sample names are not the same!"):
         equistore.join([tensor_map_a, tensor_map_b], axis="samples")
+
+
+def test_split_join_samples(tensor):
+    """Test if split and joining along `samples` results in the same TensorMap."""
+
+    labels_1 = Labels(names=["structure"], values=np.arange(4).reshape(-1, 1))
+    labels_2 = Labels(names=["structure"], values=np.arange(4, 10).reshape(-1, 1))
+
+    split_tensors = equistore.split(
+        tensor=tensor, axis="samples", grouped_labels=[labels_1, labels_2]
+    )
+    joined_tensor = equistore.join(
+        split_tensors, axis="samples", remove_tensor_name=True
+    )
+
+    assert joined_tensor == tensor
+
+
+def test_split_join_properties(tensor):
+    """Test if split and joining along `properties` results in the same TensorMap."""
+    properties = tensor[0].properties
+
+    labels_1 = Labels(names=properties.names, values=properties.values[:5])
+    labels_2 = Labels(names=properties.names, values=properties.values[5:])
+
+    split_tensors = equistore.split(
+        tensor=tensor, axis="properties", grouped_labels=[labels_1, labels_2]
+    )
+    joined_tensor = equistore.join(
+        split_tensors, axis="properties", remove_tensor_name=True
+    )
+
+    assert joined_tensor == tensor
