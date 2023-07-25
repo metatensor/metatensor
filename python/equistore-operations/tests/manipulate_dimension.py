@@ -80,7 +80,7 @@ def test_append_properties():
 
 
 def test_append_unknown_axis():
-    with pytest.raises(ValueError, match="foo is not a valid axis."):
+    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
         equistore.append_dimension(tensor(), axis="foo", name="foo", values=10)
 
 
@@ -138,8 +138,66 @@ def test_insert_properties():
 
 
 def test_insert_unknown_axis():
-    with pytest.raises(ValueError, match="foo is not a valid axis."):
+    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
         equistore.insert_dimension(tensor(), axis="foo", index=0, name="foo", values=10)
+
+
+def test_permute_keys():
+    dimensions_indexes = [2, 0, 1]
+    ref_tensor = tensor()
+    new_tensor = equistore.permute_dimensions(
+        ref_tensor, axis="keys", dimensions_indexes=dimensions_indexes
+    )
+
+    assert new_tensor.keys.names == [
+        "species_neighbor_2",
+        "species_center",
+        "species_neighbor_1",
+    ]
+    assert_equal(new_tensor.keys.values, ref_tensor.keys.values[:, dimensions_indexes])
+
+
+def test_permute_samples():
+    dimensions_indexes = [1, 0]
+    ref_tensor = tensor()
+    new_tensor = equistore.permute_dimensions(
+        ref_tensor, axis="samples", dimensions_indexes=dimensions_indexes
+    )
+
+    assert new_tensor.sample_names == ["center", "structure"]
+
+    for key, block in new_tensor.items():
+        ref_block = ref_tensor.block(key)
+        assert_equal(
+            block.samples.values, ref_block.samples.values[:, dimensions_indexes]
+        )
+        for parameter, gradient in block.gradients():
+            if parameter == "positions":
+                gradient_sample_names = ["sample", "structure", "atom"]
+            elif parameter == "cell":
+                gradient_sample_names = ["sample"]
+            assert gradient.samples.names == gradient_sample_names
+
+
+def test_permute_properties():
+    dimensions_indexes = [2, 0, 1]
+    ref_tensor = tensor()
+    new_tensor = equistore.permute_dimensions(
+        ref_tensor, axis="properties", dimensions_indexes=dimensions_indexes
+    )
+
+    assert new_tensor.property_names == ["n2", "l", "n1"]
+
+    for key, block in new_tensor.items():
+        ref_block = ref_tensor.block(key)
+        assert_equal(
+            block.properties.values, ref_block.properties.values[:, dimensions_indexes]
+        )
+
+
+def test_permute_unknown_axis():
+    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+        equistore.permute_dimensions(tensor(), axis="foo", dimensions_indexes=[1])
 
 
 def test_rename_keys():
@@ -151,7 +209,10 @@ def test_rename_keys():
 
 def test_rename_samples():
     new_tensor = equistore.rename_dimension(
-        tensor(), old="structure", new="foo", axis="samples"
+        tensor(),
+        axis="samples",
+        old="structure",
+        new="foo",
     )
     assert new_tensor.sample_names[0] == "foo"
 
@@ -181,13 +242,8 @@ def test_rename_properties():
 
 
 def test_rename_unknown_axis():
-    with pytest.raises(ValueError, match="foo is not a valid axis."):
-        equistore.rename_dimension(
-            tensor(),
-            axis="foo",
-            old="foo",
-            new="foo",
-        )
+    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+        equistore.rename_dimension(tensor(), axis="foo", old="foo", new="foo")
 
 
 def test_remove_keys():
@@ -218,12 +274,8 @@ def test_remove_properties():
 
 
 def test_remove_unknown_axis():
-    with pytest.raises(ValueError, match="foo is not a valid axis."):
-        equistore.remove_dimension(
-            tensor(),
-            axis="foo",
-            name="foo",
-        )
+    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+        equistore.remove_dimension(tensor(), axis="foo", name="foo")
 
 
 def test_not_unique_after():
@@ -233,4 +285,4 @@ def test_not_unique_after():
         r"is already present at position 0"
     )
     with pytest.raises(equistore.core.status.EquistoreError, match=match):
-        equistore.remove_dimension(tensor(), name="species_center", axis="keys")
+        equistore.remove_dimension(tensor(), axis="keys", name="species_center")

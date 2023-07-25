@@ -85,6 +85,9 @@ public:
     /// Insert a new dimension with the given `name` and `values` before `index` in these `Labels`
     TorchLabels insert(int64_t index, std::string name, torch::Tensor values);
 
+    /// Permute dimensions of these `Labels`
+    TorchLabels permute(std::vector<int64_t> dimensions_indexes);
+
     /// Remove `name` from the dimensions of these `Labels`
     TorchLabels remove(std::string name);
 

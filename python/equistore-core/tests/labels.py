@@ -135,7 +135,7 @@ def test_dimensions_manipulation():
     assert removed_label == label
 
     with pytest.raises(
-        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+        ValueError, match="'baz' not found in the dimensions of these Labels"
     ):
         new_label.remove(name="baz")
 
@@ -144,9 +144,23 @@ def test_dimensions_manipulation():
     assert new_label.names == ["bar"]
 
     with pytest.raises(
-        ValueError, match=r"'baz' not found in the dimensions of these Labels"
+        ValueError, match="'baz' not found in the dimensions of these Labels"
     ):
         new_label.rename("baz", "foo")
+
+    # Labels.permute
+    label = Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
+
+    new_label = label.permute([-1, 0, 1])
+    assert new_label.names == ["baz", "foo", "bar"]
+    np.testing.assert_equal(new_label.values, np.array([[3, 42, 10]]))
+
+    match = (
+        r"the length of `dimensions_indexes` \(2\) does not match the number of "
+        r"dimensions in the Labels \(3\)"
+    )
+    with pytest.raises(ValueError, match=match):
+        label.permute([2, 0])
 
 
 def test_view():
