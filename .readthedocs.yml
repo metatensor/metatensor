@@ -11,7 +11,7 @@ build:
     - cmake
   tools:
     # Set the version of Python and other tools we need
-    python: "3.10"
+    python: "3.11"
     rust: "1.64"  # RDT does not offer our minimal version 1.63
   jobs:
     post_install:

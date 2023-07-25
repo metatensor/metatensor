@@ -9,14 +9,11 @@ from equistore import TensorBlock, TensorMap
 from . import utils
 
 
-@pytest.fixture
-def tensor():
-    return utils.tensor()
-
-
-@pytest.fixture
-def tensor_map_complex(tensor):
+def tensor_complex():
     """Manipulate tensor to be a suitable test for the `abs` function."""
+
+    tensor = utils.tensor()
+
     blocks = []
     for block in tensor:
         new_block = TensorBlock(
@@ -42,10 +39,10 @@ def tensor_map_complex(tensor):
     return TensorMap(keys=tensor.keys, blocks=blocks)
 
 
-@pytest.fixture
-def tensor_map_result(tensor_map_complex):
+def tensor_complex_result():
     blocks = []
-    for block in tensor_map_complex:
+    tensor = tensor_complex()
+    for block in tensor:
         new_block = TensorBlock(
             values=np.abs(block.values),
             samples=block.samples,
@@ -66,19 +63,20 @@ def tensor_map_result(tensor_map_complex):
 
         blocks.append(new_block)
 
-    return TensorMap(keys=tensor_map_complex.keys, blocks=blocks)
+    return TensorMap(keys=tensor.keys, blocks=blocks)
 
 
 @pytest.mark.parametrize("gradients", (True, False))
-def test_abs(gradients, tensor_map_complex, tensor_map_result):
+def test_abs(gradients):
     if not gradients:
-        tensor_map_complex = equistore.remove_gradients(tensor_map_complex)
-        tensor_map_result = equistore.remove_gradients(tensor_map_result)
+        tensor = equistore.remove_gradients(tensor_complex())
+        tensor_result = equistore.remove_gradients(tensor_complex_result())
+    else:
+        tensor = tensor_complex()
+        tensor_result = tensor_complex_result()
 
-    tensor_map_copy = tensor_map_complex.copy()
-
-    tensor_abs = equistore.abs(tensor_map_complex)
-    assert equistore.equal(tensor_abs, tensor_map_result)
+    tensor_abs = equistore.abs(tensor)
+    assert equistore.equal(tensor_abs, tensor_result)
 
     # Check the tensors haven't be modified in place
-    assert equistore.equal(tensor_map_complex, tensor_map_copy)
+    assert not equistore.equal(tensor_abs, tensor)
