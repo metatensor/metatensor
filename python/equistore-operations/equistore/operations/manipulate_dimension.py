@@ -197,7 +197,26 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     TensorMap with 1 blocks
     keys: key
            0
-    """
+
+    Removing a dimension can only be performed if the resulting :py:class:`Labels` will
+    contain unique entries.
+
+    >>> from equistore import EquistoreError
+    >>> block = equistore.block_from_array(values)
+    >>> keys = equistore.Labels(["key", "extra"], np.array([[0, 0], [0, 1]]))
+    >>> tensor = equistore.TensorMap(keys=keys, blocks=[block.copy(), block.copy()])
+    >>> tensor
+    TensorMap with 2 blocks
+    keys: key  extra
+           0     0
+           0     1
+    >>> try:
+    ...     equistore.remove_dimension(tensor, axis="keys", name="extra")
+    ... except EquistoreError as e:
+    ...     print(e)
+    ...
+    invalid parameter: can not have the same label value multiple time: [0] is already present at position 0
+    """  # noqa E501
     _check_axis(axis)
 
     keys = tensor.keys
