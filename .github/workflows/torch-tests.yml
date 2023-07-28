@@ -14,7 +14,6 @@ jobs:
   rust-tests:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / Torch ${{ matrix.torch-version }}
-    container: ${{ matrix.container }}
     strategy:
       matrix:
         include:
@@ -43,7 +42,6 @@ jobs:
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
-        if: "!matrix.container"
         with:
           toolchain: stable
 
