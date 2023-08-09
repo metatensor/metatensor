@@ -3,7 +3,7 @@ from typing import List, Union
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_gradient_presence
+from ._utils import _check_gradient_presence_raise
 
 
 def random_uniform_like(
@@ -152,7 +152,7 @@ def random_uniform_like_block(
     if gradients is None:
         gradients = block.gradients_list()
     else:
-        _check_gradient_presence(
+        _check_gradient_presence_raise(
             block=block, parameters=gradients, fname="random_uniform_like"
         )
 

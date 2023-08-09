@@ -1,11 +1,13 @@
 import warnings
 
-import numpy as np
-
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_same_gradients, _check_same_keys
+from ._utils import (
+    _check_blocks_raise,
+    _check_same_gradients_raise,
+    _check_same_keys_raise,
+)
 
 
 def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
@@ -70,31 +72,22 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     ...         [0.0, 1.0],
     ...     ]
     ... )
-    >>> samples = Labels(
-    ...     ["structure"],
-    ...     np.array([[0], [1]]),
-    ... )
+    >>> samples = Labels("structure", np.array([[0], [1]]))
     >>> components = []
-    >>> properties = Labels(["properties"], np.array([[0], [1]]))
-    >>> keys = Labels(names=["key"], values=np.array([[0]]))
-    >>> block_X = TensorBlock(
-    ...     values_X,
-    ...     samples,
-    ...     components,
-    ...     properties,
-    ... )
-    >>> block_Y = TensorBlock(
-    ...     values_Y,
-    ...     samples,
-    ...     components,
-    ...     properties,
-    ... )
+    >>> properties = Labels("properties", np.array([[0], [1]]))
+    >>> keys = Labels(names="key", values=np.array([[0]]))
+    >>> block_X = TensorBlock(values_X, samples, components, properties)
+    >>> block_Y = TensorBlock(values_Y, samples, components, properties)
     >>> X = TensorMap(keys, [block_X])
     >>> Y = TensorMap(keys, [block_Y])
     >>> w = equistore.lstsq(X, Y, rcond=1e-10)
-    >>> # Note: we take the transpose here
+
+    We take the transpose here
+
     >>> y = X.block(0).values @ w.block(0).values.T
-    >>> # Set small entries in y to 0, they are numerical noise
+
+    Set small entries in y to 0, they are numerical noise
+
     >>> mask = np.abs(y) < 1e-15
     >>> y[mask] = 0.0
     >>> print(y)
@@ -109,7 +102,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
             stacklevel=1,
         )
 
-    _check_same_keys(X, Y, "lstsq")
+    _check_same_keys_raise(X, Y, "lstsq")
 
     blocks = []
     for key, X_block in X.items():
@@ -120,26 +113,8 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
 
 
 def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
-    # TODO handle properties and samples not in the same order?
-
-    if not np.all(X.samples == Y.samples):
-        raise ValueError(
-            "X and Y blocks in `lstsq` should have the same samples in the same order"
-        )
-
-    if len(X.components) > 0:
-        if len(X.components) != len(Y.components):
-            raise ValueError(
-                "X and Y blocks in `lstsq` should have the same components \
-                in the same order"
-            )
-
-        for x_component, y_component in zip(X.components, Y.components):
-            if not np.all(x_component == y_component):
-                raise ValueError(
-                    "X and Y blocks in `lstsq` should have the same components \
-                    in the same order"
-                )
+    _check_blocks_raise(X, Y, check=("samples", "components"), fname="lstsq")
+    _check_same_gradients_raise(X, Y, check=("samples", "components"), fname="lstsq")
 
     # reshape components together with the samples
     X_n_properties = X.values.shape[-1]
@@ -147,8 +122,6 @@ def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
 
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
-
-    _check_same_gradients(X, Y, props=None, fname="lstsq")
 
     for parameter, X_gradient in X.gradients():
         X_gradient_values = X_gradient.values.reshape(-1, X_n_properties)

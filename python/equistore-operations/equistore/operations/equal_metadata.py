@@ -1,7 +1,7 @@
 """
 Module for checking equivalence in metadata between 2 TensorMaps
 """
-from typing import List, Optional
+from typing import Optional, Sequence
 
 from equistore.core import TensorBlock, TensorMap
 
@@ -14,21 +14,19 @@ from ._utils import (
 
 
 def _equal_metadata_impl(
-    tensor_1: TensorMap, tensor_2: TensorMap, check: Optional[List] = None
+    tensor_1: TensorMap,
+    tensor_2: TensorMap,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ) -> str:
     if not isinstance(tensor_1, TensorMap):
         return f"`tensor_1` must be a TensorMap, not {type(tensor_1)}"
     if not isinstance(tensor_2, TensorMap):
         return f"`tensor_2` must be a TensorMap, not {type(tensor_2)}"
-    if not isinstance(check, (list, type(None))):
-        return f"`check` must be a list, not {type(check)}"
-    if check is None:
-        check = ["samples", "components", "properties"]
     for metadata in check:
         if not isinstance(metadata, str):
             return f"`check` must be a list of strings, got list of {type(metadata)}"
 
-        if metadata not in ["samples", "components", "properties"]:
+        if metadata not in ("samples", "components", "properties"):
             return f"Invalid metadata to check: {metadata}"
 
     message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
@@ -44,29 +42,33 @@ def _equal_metadata_impl(
 
 
 def _equal_metadata_block_impl(
-    block_1: TensorBlock, block_2: TensorBlock, check: Optional[List] = None
+    block_1: TensorBlock,
+    block_2: TensorBlock,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ) -> str:
     if not isinstance(block_1, TensorBlock):
         return f"`block_1` must be a TensorBlock, not {type(block_1)}"
     if not isinstance(block_2, TensorBlock):
         return f"`block_2` must be a TensorBlock, not {type(block_2)}"
-    if not isinstance(check, (list, type(None))):
-        return f"`check` must be a list, not {type(check)}"
-    if check is None:
-        check = ["samples", "components", "properties"]
     for metadata in check:
         if not isinstance(metadata, str):
             return f"`check` must be a list of strings, got list of {type(metadata)}"
-        if metadata not in ["samples", "components", "properties"]:
+        if metadata not in ("samples", "components", "properties"):
             return f"Invalid metadata to check: {metadata}"
 
     check_blocks_message = _check_blocks_impl(
-        block_1, block_2, check, "equal_metadata_block_raise"
+        block_1,
+        block_2,
+        "equal_metadata_block_raise",
+        check=check,
     )
     if check_blocks_message != "":
         return check_blocks_message
     check_same_gradient_message = _check_same_gradients_impl(
-        block_1, block_2, check, "equal_metadata_block_raise"
+        block_1,
+        block_2,
+        "equal_metadata_block_raise",
+        check=check,
     )
     if check_same_gradient_message != "":
         return check_same_gradient_message
@@ -75,7 +77,9 @@ def _equal_metadata_block_impl(
 
 
 def equal_metadata(
-    tensor_1: TensorMap, tensor_2: TensorMap, check: Optional[List] = None
+    tensor_1: TensorMap,
+    tensor_2: TensorMap,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Checks if two :py:class:`TensorMap` objects have the same metadata,
@@ -91,7 +95,7 @@ def equal_metadata(
 
     :param tensor_1: The first :py:class:`TensorMap`.
     :param tensor_2: The second :py:class:`TensorMap` to compare to the first.
-    :param check: A list of strings specifying which metadata of each block to
+    :param check: A sequence of strings specifying which metadata of each block to
         check. If none, all metadata is checked. Allowed values are "samples",
         "components", and "properties".
 
@@ -148,7 +152,7 @@ def equal_metadata(
     >>> equistore.equal_metadata(
     ...     tensor_1,
     ...     tensor_2,
-    ...     check=["samples", "components"],
+    ...     check=("samples", "components"),
     ... )
     True
     """
@@ -156,7 +160,9 @@ def equal_metadata(
 
 
 def equal_metadata_raise(
-    tensor_1: TensorMap, tensor_2: TensorMap, check: Optional[List] = None
+    tensor_1: TensorMap,
+    tensor_2: TensorMap,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorMap` have unequal
@@ -172,7 +178,7 @@ def equal_metadata_raise(
 
     :param tensor_1: The first :py:class:`TensorMap`.
     :param tensor_2: The second :py:class:`TensorMap` to compare to the first.
-    :param check: A list of strings specifying which metadata of each block to
+    :param check: A sequence of strings specifying which metadata of each block to
         check. If none, all metadata is checked. Allowed values are "samples",
         "components", and "properties".
     :raises NotEqualError: If the metadata is not the same.
@@ -230,7 +236,7 @@ def equal_metadata_raise(
     >>> equistore.equal_metadata_raise(
     ...     tensor_1,
     ...     tensor_2,
-    ...     check=["samples", "components"],
+    ...     check=("samples", "components"),
     ... )
     """  # noqa: E501
     message = _equal_metadata_impl(tensor_1, tensor_2, check)
@@ -239,7 +245,9 @@ def equal_metadata_raise(
 
 
 def equal_metadata_block(
-    block_1: TensorBlock, block_2: TensorBlock, check: Optional[List] = None
+    block_1: TensorBlock,
+    block_2: TensorBlock,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Checks if two :py:class:`TensorBlock` objects have the same metadata,
@@ -283,7 +291,7 @@ def equal_metadata_block(
     >>> equal_metadata_block(
     ...     block_1,
     ...     block_2,
-    ...     check=["samples", "components"],
+    ...     check=("samples", "components"),
     ... )
     True
     """
@@ -291,7 +299,9 @@ def equal_metadata_block(
 
 
 def equal_metadata_block_raise(
-    block_1: TensorBlock, block_2: TensorBlock, check: Optional[List] = None
+    block_1: TensorBlock,
+    block_2: TensorBlock,
+    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorBlock` have unequal
@@ -306,7 +316,7 @@ def equal_metadata_block_raise(
 
     :param block_1: The first :py:class:`TensorBlock`.
     :param block_2: The second :py:class:`TensorBlock` to compare to the first.
-    :param check: A list of strings specifying which metadata of each block to
+    :param check: A sequence of strings specifying which metadata of each block to
         check. If none, all metadata is checked. Allowed values are "samples",
         "components", and "properties".
     :raises NotEqualError: If the metadata is not the same.
@@ -334,7 +344,7 @@ def equal_metadata_block_raise(
     equistore.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' should have the same properties:
     properties names are not the same or not in the same order
     >>> equistore.equal_metadata_block_raise(
-    ...     block_1, block_2, check=["samples", "components"]
+    ...     block_1, block_2, check=("samples", "components")
     ... )
     """  # noqa: E501
     message = _equal_metadata_block_impl(block_1, block_2, check)

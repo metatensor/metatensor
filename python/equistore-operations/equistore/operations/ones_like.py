@@ -3,7 +3,7 @@ from typing import List, Union
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_gradient_presence
+from ._utils import _check_gradient_presence_raise
 
 
 def ones_like(
@@ -146,7 +146,9 @@ def ones_like_block(
     if gradients is None:
         gradients = block.gradients_list()
     else:
-        _check_gradient_presence(block=block, parameters=gradients, fname="ones_like")
+        _check_gradient_presence_raise(
+            block=block, parameters=gradients, fname="ones_like"
+        )
 
     for parameter in gradients:
         gradient = block.gradient(parameter)

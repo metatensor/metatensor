@@ -30,20 +30,12 @@ def _equal_block_impl(block_1: TensorBlock, block_2: TensorBlock) -> str:
     if not _dispatch.all(block_1.values == block_2.values):
         return "values are not equal"
 
-    check_blocks_message = _check_blocks_impl(
-        block_1,
-        block_2,
-        props=["samples", "properties", "components"],
-        fname="equal",
-    )
+    check_blocks_message = _check_blocks_impl(block_1, block_2, fname="equal")
     if check_blocks_message != "":
         return check_blocks_message
 
     check_same_gradient_message = _check_same_gradients_impl(
-        block_1,
-        block_2,
-        props=["samples", "properties", "components"],
-        fname="equal",
+        block_1, block_2, fname="equal"
     )
     if check_same_gradient_message != "":
         return check_same_gradient_message

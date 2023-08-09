@@ -2,7 +2,6 @@ from typing import Union
 
 from equistore.core import TensorMap
 
-from ._utils import _check_same_keys
 from .add import add
 from .multiply import multiply
 
@@ -33,7 +32,6 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if isinstance(B, TensorMap):
-        _check_same_keys(A, B, "subtract")
         B = multiply(B, -1)
     elif isinstance(B, (float, int)):
         B = -float(B)

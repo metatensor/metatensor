@@ -14,28 +14,28 @@ class TestLstsq(unittest.TestCase):
     def test_self_lstsq_nograd(self):
         block_1 = TensorBlock(
             values=np.array([[1, 2], [3, 5]]),
-            samples=Labels(["s"], np.array([[0], [2]])),
+            samples=Labels("s", np.array([[0], [2]])),
             components=[],
             properties=Labels.range("p", 2),
         )
         block_2 = TensorBlock(
             values=np.array([[1, 2], [3, 4], [5, 6]]),
-            samples=Labels(["s"], np.array([[0], [2], [7]])),
+            samples=Labels("s", np.array([[0], [2], [7]])),
             components=[],
             properties=Labels.range("p", 2),
         )
 
         block_3 = TensorBlock(
             values=np.array([[1], [2]]),
-            samples=Labels(["s"], np.array([[0], [2]])),
+            samples=Labels("s", np.array([[0], [2]])),
             components=[],
-            properties=Labels(["p"], np.array([[0]])),
+            properties=Labels("p", np.array([[0]])),
         )
         block_4 = TensorBlock(
             values=np.array([[23], [53], [83]]),
-            samples=Labels(["s"], np.array([[0], [2], [7]])),
+            samples=Labels("s", np.array([[0], [2], [7]])),
             components=[],
-            properties=Labels(["p"], np.array([[6]])),
+            properties=Labels("p", np.array([[6]])),
         )
         keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
         X = TensorMap(keys, [block_1, block_2])
@@ -88,7 +88,7 @@ class TestLstsq(unittest.TestCase):
             values=y,
             samples=Labels.range("s", 5),
             components=[],
-            properties=Labels(["p"], np.array([[2]])),
+            properties=Labels("p", np.array([[2]])),
         )
         block_Y.add_gradient(
             parameter="z",
@@ -123,7 +123,7 @@ class TestLstsq(unittest.TestCase):
         x, x_grad, y, y_grad = get_value_linear_solve()
         block_X = TensorBlock(
             values=x.reshape((1, x.shape[0], x.shape[1])),
-            samples=Labels(["s"], np.array([[0]])),
+            samples=Labels("s", np.array([[0]])),
             components=[Labels.range("c", 5)],
             properties=Labels.range("p", 2),
         )
@@ -142,9 +142,9 @@ class TestLstsq(unittest.TestCase):
 
         block_Y = TensorBlock(
             values=y.reshape((1, len(y), y.shape[-1])),
-            samples=Labels(["s"], np.array([[0]])),
+            samples=Labels("s", np.array([[0]])),
             components=[Labels.range("c", 5)],
-            properties=Labels(["p"], np.array([[2]])),
+            properties=Labels("p", np.array([[2]])),
         )
         block_Y.add_gradient(
             parameter="z",
