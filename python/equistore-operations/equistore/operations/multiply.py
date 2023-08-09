@@ -5,7 +5,11 @@ import numpy as np
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_blocks, _check_same_gradients, _check_same_keys
+from ._utils import (
+    _check_blocks_raise,
+    _check_same_gradients_raise,
+    _check_same_keys_raise,
+)
 
 
 def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -36,21 +40,11 @@ def multiply(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     """
     blocks = []
     if isinstance(B, TensorMap):
-        _check_same_keys(A, B, "multiply")
+        _check_same_keys_raise(A, B, "multiply")
         for key, block_A in A.items():
             block_B = B[key]
-            _check_blocks(
-                block_A,
-                block_B,
-                props=["samples", "components", "properties"],
-                fname="multiply",
-            )
-            _check_same_gradients(
-                block_A,
-                block_B,
-                props=["samples", "components", "properties"],
-                fname="multiply",
-            )
+            _check_blocks_raise(block_A, block_B, fname="multiply")
+            _check_same_gradients_raise(block_A, block_B, fname="multiply")
             blocks.append(_multiply_block_block(block_1=block_A, block_2=block_B))
 
     elif isinstance(B, (float, int)):

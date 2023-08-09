@@ -2,7 +2,11 @@ from typing import Union
 
 from equistore.core import TensorBlock, TensorMap
 
-from ._utils import _check_blocks, _check_same_gradients, _check_same_keys
+from ._utils import (
+    _check_blocks_raise,
+    _check_same_gradients_raise,
+    _check_same_keys_raise,
+)
 
 
 def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
@@ -33,19 +37,19 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     blocks = []
     if isinstance(B, TensorMap):
-        _check_same_keys(A, B, "add")
+        _check_same_keys_raise(A, B, "add")
         for key, block_A in A.items():
             block_B = B[key]
-            _check_blocks(
+            _check_blocks_raise(
                 block_A,
                 block_B,
-                props=["samples", "components", "properties"],
+                check=("samples", "components", "properties"),
                 fname="add",
             )
-            _check_same_gradients(
+            _check_same_gradients_raise(
                 block_A,
                 block_B,
-                props=["samples", "components", "properties"],
+                check=("samples", "components", "properties"),
                 fname="add",
             )
             blocks.append(_add_block_block(block_1=block_A, block_2=block_B))

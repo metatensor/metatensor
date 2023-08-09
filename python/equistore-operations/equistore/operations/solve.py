@@ -3,7 +3,7 @@ import numpy as np
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_same_gradients, _check_same_keys
+from ._utils import _check_same_gradients_raise, _check_same_keys_raise
 
 
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
@@ -69,7 +69,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]
     """
-    _check_same_keys(X, Y, "solve")
+    _check_same_keys_raise(X, Y, "solve")
 
     for X_block in X:
         shape = X_block.values.shape
@@ -120,7 +120,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
 
-    _check_same_gradients(X, Y, props=None, fname="solve")
+    _check_same_gradients_raise(X, Y, fname="solve")
 
     for parameter, X_gradient in X.gradients():
         X_gradient_values = X_gradient.values.reshape(-1, X_n_properties)

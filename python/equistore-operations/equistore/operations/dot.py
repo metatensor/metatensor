@@ -3,7 +3,7 @@ import numpy as np
 from equistore.core import TensorBlock, TensorMap
 
 from . import _dispatch
-from ._utils import _check_same_keys
+from ._utils import _check_same_keys_raise
 
 
 def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
@@ -71,7 +71,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
             ``B``; and the ``components`` equal to the ``components`` of ``A``
 
     """
-    _check_same_keys(tensor_1, tensor_2, "dot")
+    _check_same_keys_raise(tensor_1, tensor_2, "dot")
 
     blocks = []
     for key, block_1 in tensor_1.items():

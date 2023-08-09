@@ -18,9 +18,11 @@ def tensor():
         use_numpy=True,
     )
 
-    # Ensure that the tensor has at least one gradient. This avoids dropping
-    # gradient tests silently by removing gradients from the reference data
-    assert "positions" in tensor.block(0).gradients_list()
+    msg = (
+        "Tensor must have at least one gradient. When no gradients are present certain "
+        "tests will pass without testing anything."
+    )
+    assert len(tensor.block(0).gradients_list()) > 0, msg
 
     return tensor
 

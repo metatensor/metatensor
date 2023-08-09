@@ -6,7 +6,7 @@ import numpy as np
 
 from equistore.core import Labels, TensorBlock, TensorMap
 
-from ._utils import _check_same_keys
+from ._utils import _check_same_keys_raise
 from .manipulate_dimension import remove_dimension
 
 
@@ -205,7 +205,7 @@ def join(
         return tensors[0]
 
     for ts_to_join in tensors[1:]:
-        _check_same_keys(tensors[0], ts_to_join, "join")
+        _check_same_keys_raise(tensors[0], ts_to_join, "join")
 
     # Deduce if sample/property names are the same in all tensors.
     # If this is not the case we have to change unify the corresponding labels later.

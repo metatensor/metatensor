@@ -49,7 +49,7 @@ def _allclose_block_impl(
     check_blocks_message = _check_blocks_impl(
         block_1,
         block_2,
-        props=["samples", "properties", "components"],
+        check=("samples", "properties", "components"),
         fname="allclose",
     )
     if check_blocks_message != "":
@@ -58,7 +58,7 @@ def _allclose_block_impl(
     check_same_gradient_message = _check_same_gradients_impl(
         block_1,
         block_2,
-        props=["samples", "properties", "components"],
+        check=("samples", "properties", "components"),
         fname="allclose",
     )
     if check_same_gradient_message != "":
