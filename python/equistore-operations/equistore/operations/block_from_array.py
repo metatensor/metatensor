@@ -1,5 +1,6 @@
 import equistore.core
-from equistore.core import Labels, TensorBlock
+
+from ._classes import Labels, TensorBlock
 
 
 def block_from_array(array: equistore.core.data.Array) -> TensorBlock:

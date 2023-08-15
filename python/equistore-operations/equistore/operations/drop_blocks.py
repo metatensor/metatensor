@@ -1,6 +1,6 @@
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap
 
 
 def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:

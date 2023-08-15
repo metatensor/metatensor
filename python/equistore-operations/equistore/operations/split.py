@@ -1,7 +1,6 @@
 from typing import List, Union
 
-from equistore.core import Labels, TensorBlock, TensorMap
-
+from ._classes import Labels, TensorBlock, TensorMap
 from .slice import _slice_block
 
 

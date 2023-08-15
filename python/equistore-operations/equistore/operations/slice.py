@@ -2,7 +2,7 @@ from typing import Union
 
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap
 
 
 def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:

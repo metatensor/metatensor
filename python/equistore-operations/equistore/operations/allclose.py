@@ -1,6 +1,5 @@
-from equistore.core import TensorBlock, TensorMap
-
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 from ._utils import (
     NotEqualError,
     _check_blocks_impl,

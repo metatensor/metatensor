@@ -30,6 +30,29 @@ else:
     save = torch.ops.equistore.save
 
 
+try:
+    import equistore.operations  # noqa
+
+    HAS_EQUISTORE_OPERATIONS = True
+except ImportError:
+    HAS_EQUISTORE_OPERATIONS = False
+
+
+if HAS_EQUISTORE_OPERATIONS:
+    from . import operations  # noqa
+    from .operations import *  # noqa
+
+
+else:
+    # __getattr__ is called when a symbol can not be found, we use it to give
+    # the user a better error message if they don't have equistore-operations
+    def __getattr__(name):
+        raise AttributeError(
+            f"equistore.torch.{name} is not defined, are you sure you have the "
+            "equistore-operations package installed?"
+        )
+
+
 __all__ = [
     "Labels",
     "TensorBlock",

@@ -44,9 +44,8 @@ from typing import List, Optional, Union
 
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
-
 from . import _dispatch
+from ._classes import Labels, TensorBlock, TensorMap
 
 
 def _reduce_over_samples_block(

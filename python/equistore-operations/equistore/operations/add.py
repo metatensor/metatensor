@@ -1,7 +1,6 @@
 from typing import Union
 
-from equistore.core import TensorBlock, TensorMap
-
+from ._classes import TensorBlock, TensorMap
 from ._utils import (
     _check_blocks_raise,
     _check_same_gradients_raise,

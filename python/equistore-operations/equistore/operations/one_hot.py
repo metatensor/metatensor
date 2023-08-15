@@ -1,6 +1,6 @@
 import numpy as np
 
-from equistore.core import Labels
+from ._classes import Labels
 
 
 def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:

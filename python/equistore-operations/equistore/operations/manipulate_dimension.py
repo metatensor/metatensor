@@ -19,7 +19,7 @@ from typing import List
 
 import numpy as np
 
-from equistore.core import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap
 
 
 def _check_axis(axis: str):
