@@ -24,8 +24,8 @@ def remove_gradients(
     if remove is None:
         remove = tensor.block(0).gradients_list()
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         new_block = TensorBlock(
             values=block.values,
             samples=block.samples,
