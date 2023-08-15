@@ -1,8 +1,7 @@
 from typing import Optional
 
-from equistore.core import TensorBlock, TensorMap
-
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 
 
 def to(

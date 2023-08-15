@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from equistore.core import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap
 
 
 def remove_gradients(

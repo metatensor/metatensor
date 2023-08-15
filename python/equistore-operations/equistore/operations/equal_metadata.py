@@ -3,8 +3,7 @@ Module for checking equivalence in metadata between 2 TensorMaps
 """
 from typing import Optional, Sequence
 
-from equistore.core import TensorBlock, TensorMap
-
+from ._classes import TensorBlock, TensorMap
 from ._utils import (
     NotEqualError,
     _check_blocks_impl,

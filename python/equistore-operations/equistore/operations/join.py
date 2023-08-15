@@ -4,8 +4,7 @@ from typing import List
 
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
-
+from ._classes import Labels, TensorBlock, TensorMap
 from ._utils import _check_same_keys_raise
 from .manipulate_dimension import remove_dimension
 

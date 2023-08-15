@@ -2,7 +2,7 @@ from typing import List, Sequence
 
 import numpy as np
 
-from equistore.core import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap
 
 
 class NotEqualError(Exception):

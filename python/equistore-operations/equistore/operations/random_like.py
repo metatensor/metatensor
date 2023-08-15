@@ -1,8 +1,7 @@
 from typing import List, Union
 
-from equistore.core import TensorBlock, TensorMap
-
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 from ._utils import _check_gradient_presence_raise
 
 

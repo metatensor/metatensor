@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from equistore.core import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap
 
 
 def unique_metadata(

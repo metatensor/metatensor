@@ -1,7 +1,6 @@
 from typing import Union
 
-from equistore.core import TensorMap
-
+from ._classes import TensorMap
 from .add import add
 from .multiply import multiply
 
