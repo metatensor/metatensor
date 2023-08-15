@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import equistore
 
@@ -7,35 +6,27 @@ import equistore
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
-class TestRemoveGradients(unittest.TestCase):
-    def test_remove_everything(self):
-        tensor = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-            # the npz is using DEFLATE compression, equistore only supports STORED
-            use_numpy=True,
-        )
+def test_remove_everything():
+    tensor = equistore.load(
+        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
+        # the npz is using DEFLATE compression, equistore only supports STORED
+        use_numpy=True,
+    )
 
-        self.assertEqual(
-            set(tensor.block(0).gradients_list()), set(["cell", "positions"])
-        )
+    assert set(tensor.block(0).gradients_list()) == set(["cell", "positions"])
 
-        tensor = equistore.remove_gradients(tensor)
-        self.assertEqual(tensor.block(0).gradients_list(), [])
-
-    def test_remove_subset(self):
-        tensor = equistore.load(
-            os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-            # the npz is using DEFLATE compression, equistore only supports STORED
-            use_numpy=True,
-        )
-
-        self.assertEqual(
-            set(tensor.block(0).gradients_list()), set(["cell", "positions"])
-        )
-
-        tensor = equistore.remove_gradients(tensor, ["positions"])
-        self.assertEqual(tensor.block(0).gradients_list(), ["cell"])
+    tensor = equistore.remove_gradients(tensor)
+    assert tensor.block(0).gradients_list() == []
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_remove_subset():
+    tensor = equistore.load(
+        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
+        # the npz is using DEFLATE compression, equistore only supports STORED
+        use_numpy=True,
+    )
+
+    assert set(tensor.block(0).gradients_list()) == set(["cell", "positions"])
+
+    tensor = equistore.remove_gradients(tensor, ["positions"])
+    assert tensor.block(0).gradients_list() == ["cell"]
