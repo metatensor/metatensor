@@ -1,13 +1,3 @@
-"""
-The Python API for equistore also provides functions which operate on
-:py:class:`equistore.TensorMap`, :py:class:`equistore.TensorBlock`, and
-:py:class:`equistore.Labels` and can be used to build Machine Learning models.
-
-These functions can handle data stored with any of the compatible
-:py:class:`equistore.core.data.Array` types, automatically dispatching to the
-right function (e.g. :py:func:`numpy.sum` or :py:func:`torch.sum`) for a given
-:py:class:`equistore.TensorMap`.
-"""
 import sys
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
