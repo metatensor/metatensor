@@ -1,7 +1,7 @@
 """
 Module for checking equivalence in metadata between 2 TensorMaps
 """
-from typing import Optional, Sequence
+from typing import List, Union
 
 from ._classes import TensorBlock, TensorMap
 from ._utils import (
@@ -15,18 +15,12 @@ from ._utils import (
 def _equal_metadata_impl(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> str:
     if not isinstance(tensor_1, TensorMap):
         return f"`tensor_1` must be a TensorMap, not {type(tensor_1)}"
     if not isinstance(tensor_2, TensorMap):
         return f"`tensor_2` must be a TensorMap, not {type(tensor_2)}"
-    for metadata in check:
-        if not isinstance(metadata, str):
-            return f"`check` must be a list of strings, got list of {type(metadata)}"
-
-        if metadata not in ("samples", "components", "properties"):
-            return f"Invalid metadata to check: {metadata}"
 
     message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
     if message != "":
@@ -43,17 +37,12 @@ def _equal_metadata_impl(
 def _equal_metadata_block_impl(
     block_1: TensorBlock,
     block_2: TensorBlock,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> str:
     if not isinstance(block_1, TensorBlock):
         return f"`block_1` must be a TensorBlock, not {type(block_1)}"
     if not isinstance(block_2, TensorBlock):
         return f"`block_2` must be a TensorBlock, not {type(block_2)}"
-    for metadata in check:
-        if not isinstance(metadata, str):
-            return f"`check` must be a list of strings, got list of {type(metadata)}"
-        if metadata not in ("samples", "components", "properties"):
-            return f"Invalid metadata to check: {metadata}"
 
     check_blocks_message = _check_blocks_impl(
         block_1,
@@ -61,14 +50,17 @@ def _equal_metadata_block_impl(
         "equal_metadata_block_raise",
         check=check,
     )
+
     if check_blocks_message != "":
         return check_blocks_message
+
     check_same_gradient_message = _check_same_gradients_impl(
         block_1,
         block_2,
         "equal_metadata_block_raise",
         check=check,
     )
+
     if check_same_gradient_message != "":
         return check_same_gradient_message
 
@@ -78,28 +70,29 @@ def _equal_metadata_block_impl(
 def equal_metadata(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> bool:
     """
-    Checks if two :py:class:`TensorMap` objects have the same metadata,
-    returning a bool.
+    Checks if two :py:class:`TensorMap` objects have the same metadata, returning a
+    bool.
 
-    The equivalence of the keys of the two :py:class:`TensorMap` objects is
-    always checked. If ``check`` is none (the default), all metadata (i.e. the
-    samples, components, and properties of each block) is checked to contain the
-    same values in the same order.
+    The equivalence of the keys of the two :py:class:`TensorMap` objects is always
+    checked.
 
-    Passing ``check`` as a list of strings will only check the metadata specified.
-    Allowed values to pass are "samples", "components", and "properties".
+    If ``check`` is ``'all'`` (the default), all metadata (i.e. the samples, components,
+    and properties of each block) is checked to contain the same values in the same
+    order. Passing ``check`` as a list of strings will only check the specified
+    metadata. Allowed values to pass are ``'samples'``, ``'components'``, and
+    ``'properties'``.
 
     :param tensor_1: The first :py:class:`TensorMap`.
     :param tensor_2: The second :py:class:`TensorMap` to compare to the first.
-    :param check: A sequence of strings specifying which metadata of each block to
-        check. If none, all metadata is checked. Allowed values are "samples",
-        "components", and "properties".
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``.
 
-    :return: True if the metadata of the two :py:class:`TensorMap` objects are
-        equal, False otherwise.
+    :return: True if the metadata of the two :py:class:`TensorMap` objects are equal,
+        False otherwise.
 
     Examples
     --------
@@ -161,25 +154,26 @@ def equal_metadata(
 def equal_metadata_raise(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorMap` have unequal
     metadata.
 
-    The equivalence of the keys of the two :py:class:`TensorMap` objects is
-    always checked. If ``check`` is none (the default), all metadata (i.e. the
-    samples, components, and properties of each block) is checked to contain the
-    same values in the same order.
+    The equivalence of the keys of the two :py:class:`TensorMap` objects is always
+    checked.
 
-    Passing ``check`` as a list of strings will only check the metadata specified.
-    Allowed values to pass are "samples", "components", and "properties".
+    If ``check`` is ``'all'`` (the default), all metadata (i.e. the samples, components,
+    and properties of each block) is checked to contain the same values in the same
+    order. Passing ``check`` as a list of strings will only check the specified
+    metadata. Allowed values to pass are ``'samples'``, ``'components'``, and
+    ``'properties'``.
 
     :param tensor_1: The first :py:class:`TensorMap`.
     :param tensor_2: The second :py:class:`TensorMap` to compare to the first.
-    :param check: A sequence of strings specifying which metadata of each block to
-        check. If none, all metadata is checked. Allowed values are "samples",
-        "components", and "properties".
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``.
     :raises NotEqualError: If the metadata is not the same.
 
     Examples
@@ -246,27 +240,26 @@ def equal_metadata_raise(
 def equal_metadata_block(
     block_1: TensorBlock,
     block_2: TensorBlock,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> bool:
     """
-    Checks if two :py:class:`TensorBlock` objects have the same metadata,
-    returning a bool.
+    Checks if two :py:class:`TensorBlock` objects have the same metadata, returning a
+    bool.
 
-    If ``check`` is none (the default), all metadata (i.e. the samples,
-    components, and properties of each block) is checked to contain the same
-    values in the same order.
-
-    Passing ``check`` as a list of strings will only check the metadata specified.
-    Allowed values to pass are "samples", "components", and "properties".
+    If ``check`` is ``'all'`` (the default), all metadata (i.e. the samples, components,
+    and properties of each block) is checked to contain the same values in the same
+    order. Passing ``check`` as a list of strings will only check the specified
+    metadata. Allowed values to pass are ``'samples'``, ``'components'``, and
+    ``'properties'``.
 
     :param block_1: The first :py:class:`TensorBlock`.
     :param block_2: The second :py:class:`TensorBlock` to compare to the first.
-    :param check: A list of strings specifying which metadata of each block to
-        check. If none, all metadata is checked. Allowed values are "samples",
-        "components", and "properties".
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``.
 
-    :return: True if the metadata of the two :py:class:`TensorBlock` objects are
-        equal, False otherwise.
+    :return: True if the metadata of the two :py:class:`TensorBlock` objects are equal,
+        False otherwise.
 
     Examples
     --------
@@ -300,18 +293,17 @@ def equal_metadata_block(
 def equal_metadata_block_raise(
     block_1: TensorBlock,
     block_2: TensorBlock,
-    check: Optional[Sequence[str]] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorBlock` have unequal
     metadata.
 
-    If ``check`` is none (the default), all metadata (i.e. the samples,
-    components, and properties of each block) is checked to contain the same
-    values in the same order.
-
-    Passing ``check`` as a list of strings will only check the metadata specified.
-    Allowed values to pass are "samples", "components", and "properties".
+    If ``check`` is ``'all'`` (the default), all metadata (i.e. the samples, components,
+    and properties of each block) is checked to contain the same values in the same
+    order. Passing ``check`` as a list of strings will only check the specified
+    metadata. Allowed values to pass are ``'samples'``, ``'components'``, and
+    ``'properties'``.
 
     :param block_1: The first :py:class:`TensorBlock`.
     :param block_2: The second :py:class:`TensorBlock` to compare to the first.

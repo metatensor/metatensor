@@ -42,13 +42,11 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
             _check_blocks_raise(
                 block_A,
                 block_B,
-                check=("samples", "components", "properties"),
                 fname="add",
             )
             _check_same_gradients_raise(
                 block_A,
                 block_B,
-                check=("samples", "components", "properties"),
                 fname="add",
             )
             blocks.append(_add_block_block(block_1=block_A, block_2=block_B))

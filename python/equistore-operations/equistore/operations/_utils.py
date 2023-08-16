@@ -1,6 +1,4 @@
-from typing import List, Sequence
-
-import numpy as np
+from typing import List, Union
 
 from ._classes import TensorBlock, TensorMap
 
@@ -59,7 +57,7 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
             f"got {len(keys_a)} and {len(keys_b)}"
         )
 
-    if not np.all([key in keys_a for key in keys_b]):
+    if not all([keys_b[i] in keys_a for i in range(len(keys_b))]):
         return f"inputs to {fname} should have the same keys"
 
     return ""
@@ -69,7 +67,7 @@ def _check_blocks(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> bool:
     """
     Checks if the metadata of 2 TensorBlocks are the same. If not, returns false.
@@ -82,7 +80,7 @@ def _check_blocks_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> None:
     """
     Checks if the metadata of two TensorBlocks are the same. If not, raises a
@@ -97,8 +95,9 @@ def _check_blocks_raise(
     :param b: second :py:class:`TensorBlock` for check
     :param fname: name of the function where the check is performed. The input will be
         used to generate a meaningful error message.
-    :param check: A sequence of strings containing the metadata to check. Allowed values
-        are ``'properties'`` or ``'samples'``, ``'components'``.
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``.
 
     :raises: :py:class:`equistore.NotEqualError` if the metadata of the blocks are
         different
@@ -114,7 +113,7 @@ def _check_blocks_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> str:
     """
     Check if metadata between two TensorBlocks is consistent for an operation.
@@ -129,9 +128,16 @@ def _check_blocks_impl(
     :param b: second :py:class:`TensorBlock` for check
     :param fname: name of the function where the check is performed. The input will be
         used to generate a meaningful error message.
-    :param check: A sequence of strings containing the metadata to check. Allowed values
-        are ``'properties'`` or ``'samples'``, ``'components'``.
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``.
     """
+    if isinstance(check, str):
+        if check == "all":
+            check = ["samples", "components", "properties"]
+        else:
+            raise ValueError("`check` must be a list of strings or 'all'")
+
     for metadata in check:
         err_msg = f"inputs to '{fname}' should have the same {metadata}:\n"
         err_msg_len = f"{metadata} of the two `TensorBlock` have different lengths"
@@ -143,7 +149,7 @@ def _check_blocks_impl(
                 return err_msg + err_msg_len
             if not a.samples.names == b.samples.names:
                 return err_msg + err_msg_names
-            if not np.all(a.samples == b.samples):
+            if not a.samples == b.samples:
                 return err_msg + err_msg_1
 
         elif metadata == "properties":
@@ -151,7 +157,7 @@ def _check_blocks_impl(
                 return err_msg + err_msg_len
             if not a.properties.names == b.properties.names:
                 return err_msg + err_msg_names
-            if not np.all(a.properties == b.properties):
+            if not a.properties == b.properties:
                 return err_msg + err_msg_1
 
         elif metadata == "components":
@@ -165,7 +171,7 @@ def _check_blocks_impl(
                 if not (len(c1) == len(c2)):
                     return err_msg + err_msg_1
 
-                if not np.all(c1 == c2):
+                if not c1 == c2:
                     return err_msg + err_msg_1
         else:
             raise ValueError(
@@ -179,7 +185,7 @@ def _check_same_gradients(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> bool:
     """
     Check if metadata between the gradients of 2 TensorBlocks is consistent for an
@@ -194,9 +200,10 @@ def _check_same_gradients(
     :param b: second :py:class:`TensorBlock` for check
     :param fname: name of the function where the check is performed. The input will be
         used to generate a meaningful error message.
-    :param check: A sequence of strings containing the metadata to check. Allowed values
-        are ``'properties'`` or ``'samples'``, ``'components'``. To check only if the
-        ``'parameters'`` are consistent pass an empty tuple ``check=()``.
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``. If you only want to check
+        if the two blocks have the same gradients, pass an empty list ``check=[]``.
     """
     return not bool(_check_same_gradients_impl(a, b, fname, check))
 
@@ -205,7 +212,7 @@ def _check_same_gradients_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> None:
     """
     Check if two TensorBlocks gradients have identical metadata.
@@ -219,9 +226,11 @@ def _check_same_gradients_raise(
     :param b: second :py:class:`TensorBlock` for check
     :param fname: name of the function where the check is performed. The input will be
         used to generate a meaningful error message.
-    :param check: A sequence of strings containing the metadata to check. Allowed values
-        are ``'properties'`` or ``'samples'``, ``'components'``. To check only if the
-        ``'parameters'`` are consistent pass an empty tuple ``check=()``.
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``. If you only want to check
+        if the two blocks have the same gradients, pass an empty list ``check=[]``.
+
     :raises: :py:class:`equistore.NotEqualError` if the gradients of the blocks are
         different
     :raises: :py:class:`ValueError` if an invalid prop name in :param check: is
@@ -236,7 +245,7 @@ def _check_same_gradients_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: Union[List[str], str] = "all",
 ) -> str:
     """
     Check if metadata between the gradients of two TensorBlocks is consistent for an
@@ -253,16 +262,23 @@ def _check_same_gradients_impl(
     :param b: second :py:class:`TensorBlock` whose gradients are to be checked
     :param fname: name of the function where the check is performed. The input will be
         used to generate a meaningful error message.
-    :param check: A sequence of strings containing the metadata to check. Allowed values
-        are ``'properties'`` or ``'samples'``, ``'components'``. To check only if the
-        ``'parameters'`` are consistent pass an empty tuple ``check=()``.
+    :param check: Which parts of the metadata to check. This can be a list containing
+        any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
+        ``'all'`` to check everything. Defaults to ``'all'``. If you only want to check
+        if the two blocks have the same gradients, pass an empty list ``check=[]``.
     """
+    if isinstance(check, str):
+        if check == "all":
+            check = ["samples", "components", "properties"]
+        else:
+            raise ValueError("`check` must be a list of strings or 'all'")
+
     err_msg = f"inputs to {fname} should have the same gradients:\n"
     gradients_list_a = a.gradients_list()
     gradients_list_b = b.gradients_list()
 
     if len(gradients_list_a) != len(gradients_list_b) or (
-        not np.all([parameter in gradients_list_b for parameter in gradients_list_a])
+        not all([parameter in gradients_list_b for parameter in gradients_list_a])
     ):
         return f"inputs to {fname} should have the same gradient parameters"
 
@@ -290,7 +306,7 @@ def _check_same_gradients_impl(
                     return err_msg + err_msg_len
                 if not grad_a.samples.names == grad_b.samples.names:
                     return err_msg + err_msg_names
-                if not np.all(grad_a.samples == grad_b.samples):
+                if not grad_a.samples == grad_b.samples:
                     return err_msg + err_msg_1
 
             elif metadata == "properties":
@@ -298,7 +314,7 @@ def _check_same_gradients_impl(
                     return err_msg + err_msg_len
                 if not grad_a.properties.names == grad_b.properties.names:
                     return err_msg + err_msg_names
-                if not np.all(grad_a.properties == grad_b.properties):
+                if not grad_a.properties == grad_b.properties:
                     return err_msg + err_msg_1
             elif metadata == "components":
                 if len(grad_a.components) != len(grad_b.components):
@@ -308,7 +324,7 @@ def _check_same_gradients_impl(
                     if not (c1.names == c2.names):
                         return err_msg + err_msg_names
 
-                    if not np.all(c1 == c2):
+                    if not c1 == c2:
                         return err_msg + err_msg_1
             else:
                 raise ValueError(
@@ -319,7 +335,9 @@ def _check_same_gradients_impl(
 
 
 def _check_gradient_presence_raise(
-    block: TensorBlock, parameters: List[str], fname: str
+    block: TensorBlock,
+    parameters: List[str],
+    fname: str,
 ) -> None:
     """
     For a single TensorBlock checks if each of the passed ``parameters`` are present as
