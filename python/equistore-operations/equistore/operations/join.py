@@ -1,9 +1,6 @@
-import functools
-import operator
 from typing import List
 
-import numpy as np
-
+from . import _dispatch
 from ._classes import Labels, TensorBlock, TensorMap
 from ._utils import _check_same_keys_raise
 from .manipulate_dimension import remove_dimension
@@ -33,9 +30,12 @@ def _disjoint_tensor_labels(tensors: List[TensorMap], axis: str) -> bool:
 
 
 def join(
-    tensors: List[TensorMap], axis: str, remove_tensor_name: bool = False
+    tensors: List[TensorMap],
+    axis: str,
+    different_keys="error",
+    remove_tensor_name: bool = False,
 ) -> TensorMap:
-    """Join a sequence of :py:class:`TensorMap` along an axis.
+    """Join a sequence of :py:class:`TensorMap` with the same blocks along an axis.
 
     The ``axis`` parameter specifies the type of joining. For example, if
     ``axis='properties'`` the tensor maps in `tensors` will be joined along the
@@ -47,10 +47,13 @@ def join(
     :param axis:
         A string indicating how the tensormaps are stacked. Allowed
         values are ``'properties'`` or ``'samples'``.
+    :param different_keys: Method to handle different keys between the tensors. For
+        ``"error"`` keys in all tensors have to be the same. For ``"intersection"`` only
+        blocks present in all tensors will be taken into account. For ``"union"``
+        missing keys will be treated like if they where associated with an empty block.
     :param remove_tensor_name:
         Remove the extra ``tensor`` dimension from labels if possible. See examples
         above for the case where this is applicable.
-
     :return tensor_joined:
         The stacked :py:class:`TensorMap` with more properties or samples
         than the input TensorMap.
@@ -185,7 +188,6 @@ def join(
               1        2
         )
     """
-
     if not isinstance(tensors, (list, tuple)):
         raise TypeError(
             "the `TensorMap`s to join must be provided as a list or a tuple"
@@ -203,8 +205,18 @@ def join(
     if len(tensors) == 1:
         return tensors[0]
 
-    for ts_to_join in tensors[1:]:
-        _check_same_keys_raise(tensors[0], ts_to_join, "join")
+    if different_keys == "error":
+        for ts_to_join in tensors[1:]:
+            _check_same_keys_raise(tensors[0], ts_to_join, "join")
+    elif different_keys == "intersection":
+        tensors = _tensors_intersection(tensors)
+    elif different_keys == "union":
+        tensors = _tensors_union(tensors, axis=axis)
+    else:
+        raise ValueError(
+            f"'{different_keys}' is not a valid option for `different_keys`. Choose "
+            "either 'error', 'intersection' or 'union'."
+        )
 
     # Deduce if sample/property names are the same in all tensors.
     # If this is not the case we have to change unify the corresponding labels later.
@@ -217,13 +229,13 @@ def join(
     #
     #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
     #
-    # A nested list with sublist of different shapes can not be handled by np.unique.
-    unique_names = np.unique(functools.reduce(operator.concat, names_list))
+    # A nested list with sublist of different shapes can not be handled by `set`.
+    names_list_flattened = []
+    for names in names_list:
+        names_list_flattened += names
 
-    # Label names are unique: We can do an equal check only checking the lengths.
-    names_are_same = np.all(
-        len(unique_names) == np.array([len(names) for names in names_list])
-    )
+    unique_names = set(names_list_flattened)
+    names_are_same = all([len(unique_names) == len(names) for names in names_list])
 
     # It's fine to lose metadata on the property axis, less so on the sample axis!
     if axis == "samples" and not names_are_same:
@@ -272,7 +284,10 @@ def join(
 
             blocks.append(new_block)
 
-    keys = Labels(names=keys_names, values=np.array(keys_values))
+    keys = Labels(
+        names=keys_names,
+        values=_dispatch.list_to_array(array=tensors[0].keys.values, data=keys_values),
+    )
     tensor = TensorMap(keys=keys, blocks=blocks)
 
     if axis == "samples":
@@ -284,3 +299,119 @@ def join(
         return remove_dimension(tensor_joined, name="tensor", axis=axis)
     else:
         return tensor_joined
+
+
+def _tensors_intersection(tensors: List[TensorMap]) -> List[TensorMap]:
+    """Create a new tensors list where keys are based on the intersection from all
+    tensors.
+
+    Blocks corresponding to keys that are not present in all tensor will be discarded.
+    """
+    # Construct a Labels object with intersected keys
+    all_keys = tensors[0].keys
+    for tensor in tensors[1:]:
+        all_keys = all_keys.intersection(tensor.keys)
+
+    # Create new blocks and discard bocks not present in all_keys
+    new_tensors = []
+    for tensor in tensors:
+        new_blocks = [tensor.block(key).copy() for key in all_keys]
+        new_tensors.append(TensorMap(keys=all_keys, blocks=new_blocks))
+
+    return new_tensors
+
+
+def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
+    """Create a new tensors list where keys are based on the union from all tensors.
+
+    Missing keys will be filled by empty blocks having containing no labels in the
+    ``axis`` dimension.
+    """
+    # Construct a Labels object with all keys
+
+    all_keys = tensors[0].keys
+    for tensor in tensors[1:]:
+        all_keys = all_keys.union(tensor.keys)
+
+    # Create empty blocks for missing keys for each TensorMap
+    new_tensors = []
+    for tensor in tensors:
+        _, map, _ = all_keys.intersection_and_mapping(tensor.keys)
+
+        missing_keys = Labels(
+            names=tensor.keys.names, values=all_keys.values[map == -1]
+        )
+
+        new_keys = tensor.keys.union(missing_keys)
+        new_blocks = [block.copy() for block in tensor]
+
+        for key in missing_keys:
+            # Find corresponding block with the missing key
+            reference_tensor = None
+            for reference_tensor in tensors:
+                if key in reference_tensor.keys:
+                    reference_block = reference_tensor.block(key)
+                    break
+
+            # There should be a block with the key otherwise we did something wrong
+            assert reference_tensor is not None
+
+            # Construct new block with zero samples based on the metadata of
+            # reference_block
+            if axis == "samples":
+                values = _dispatch.empty_like(
+                    array=reference_block.values,
+                    shape=(0,) + reference_block.values.shape[1:],
+                )
+                samples = Labels.empty(reference_block.samples.names)
+                properties = reference_block.properties
+            else:
+                assert axis == "properties"
+                values = _dispatch.empty_like(
+                    array=reference_block.values,
+                    shape=reference_block.values.shape[:-1] + (0,),
+                )
+                samples = reference_block.samples
+                properties = Labels.empty(reference_block.properties.names)
+
+            new_block = TensorBlock(
+                values=values,
+                samples=samples,
+                components=reference_block.components,
+                properties=properties,
+            )
+
+            for parameter, gradient in reference_block.gradients():
+                if len(gradient.gradients_list()) != 0:
+                    raise NotImplementedError(
+                        "gradients of gradients are not supported"
+                    )
+
+                if axis == "samples":
+                    values = _dispatch.empty_like(
+                        array=gradient.values,
+                        shape=(0,) + gradient.values.shape[1:],
+                    )
+                    gradient_samples = Labels.empty(gradient.samples.names)
+                else:
+                    values = _dispatch.empty_like(
+                        array=gradient.values,
+                        shape=gradient.values.shape[:-1] + (0,),
+                    )
+                    gradient_samples = gradient.samples
+
+                new_block.add_gradient(
+                    parameter=parameter,
+                    gradient=TensorBlock(
+                        values=values,
+                        samples=gradient_samples,
+                        components=gradient.components,
+                        properties=properties,
+                    ),
+                )
+
+            new_blocks.append(new_block)
+
+        new_tensors.append(TensorMap(keys=new_keys, blocks=new_blocks))
+
+    return new_tensors

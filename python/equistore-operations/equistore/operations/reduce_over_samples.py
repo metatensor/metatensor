@@ -148,7 +148,6 @@ def _reduce_over_samples_block(
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
         bincount = _dispatch.bincount(index)
-        bincount = _dispatch.array_like_data(values_result, bincount)
         values_result = values_result / bincount.reshape(
             (-1,) + (1,) * len(other_shape)
         )
@@ -232,7 +231,6 @@ def _reduce_over_samples_block(
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
-            bincount = _dispatch.array_like_data(gradient_values_result, bincount)
             gradient_values_result = gradient_values_result / bincount.reshape(
                 (-1,) + (1,) * len(other_shape)
             )

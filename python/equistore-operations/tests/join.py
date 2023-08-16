@@ -52,6 +52,13 @@ def test_wrong_type(tensor):
         equistore.join(tensor, axis="properties")
 
 
+def test_wrong_different_keys(tensor):
+    """Test if a wrong type (e.g., TensorMap) is provided."""
+    match = "'foo' is not a valid option for `different_keys`"
+    with pytest.raises(ValueError, match=match):
+        equistore.join([tensor, tensor], axis="properties", different_keys="foo")
+
+
 @pytest.mark.parametrize("tensor", ([], ()))
 def test_no_tensormaps(tensor):
     """Test if an empty list or tuple is provided."""
@@ -287,3 +294,65 @@ def test_split_join_properties(tensor):
     )
 
     assert joined_tensor == tensor
+
+
+@pytest.mark.parametrize("axis", ["samples", "properties"])
+def test_intersection_join(axis, components_tensor):
+    tensor_1 = components_tensor
+
+    labels_remove = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[:1])
+    labels_present = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[1:])
+
+    tensor_2 = equistore.drop_blocks(components_tensor, labels_remove, copy=True)
+
+    joined_tensor = equistore.join(
+        [tensor_1, tensor_2], axis=axis, different_keys="intersection"
+    )
+
+    assert joined_tensor.keys == labels_present
+
+
+@pytest.mark.parametrize("axis", ["samples", "properties"])
+def test_union_join(axis, components_tensor):
+    tensor_1 = components_tensor
+
+    labels_remove = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[:1])
+
+    tensor_2 = equistore.drop_blocks(components_tensor, labels_remove, copy=True)
+
+    joined_tensor = equistore.join(
+        [tensor_1, tensor_2], axis=axis, different_keys="union"
+    )
+
+    assert joined_tensor.keys == tensor_1.keys
+
+    # First block should be same as in tensor_1
+    assert joined_tensor[0].values.shape == tensor_1[0].values.shape
+
+    # All other blocks should have doubled the number of samples/features
+    for i_block in range(1, len(tensor_1.keys)):
+        ref_block = tensor_1[i_block]
+        joined_block = joined_tensor[i_block]
+
+        # Check values
+        if axis == "samples":
+            ref_shape = (2 * ref_block.values.shape[0],) + ref_block.values.shape[1:]
+        else:
+            ref_shape = ref_block.values.shape[:-1] + (2 * ref_block.values.shape[-1],)
+
+        assert joined_block.values.shape == ref_shape
+
+        # Check values
+        for parameter, joined_gradient in joined_block.gradients():
+            ref_gradient = ref_block.gradient(parameter)
+
+            if axis == "samples":
+                ref_gradient_shape = (
+                    2 * ref_gradient.values.shape[0],
+                ) + ref_gradient.values.shape[1:]
+            else:
+                ref_gradient_shape = ref_gradient.values.shape[:-1] + (
+                    2 * ref_gradient.values.shape[-1],
+                )
+
+            assert joined_gradient.values.shape == ref_gradient_shape
