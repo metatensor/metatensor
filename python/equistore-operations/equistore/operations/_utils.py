@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import List
 
 import numpy as np
 
@@ -59,7 +59,11 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
             f"got {len(keys_a)} and {len(keys_b)}"
         )
 
-    if not np.all([key in keys_a for key in keys_b]):
+    # PR COMMENT changed to range because otherwise I get error
+    #    RuntimeError:
+    #    '__torch__.torch.classes.equistore.Labels (of Python compilation unit at: 0)' object is not iterable:
+    #      File "/home/alexgo/code/equistore/python/equistore-operations/equistore/operations/_utils.py", line 46
+    if not all([keys_b[i] in keys_a for i in range(len(keys_b))]):
         return f"inputs to {fname} should have the same keys"
 
     return ""
@@ -69,7 +73,7 @@ def _check_blocks(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Checks if the metadata of 2 TensorBlocks are the same. If not, returns false.
@@ -82,7 +86,7 @@ def _check_blocks_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> None:
     """
     Checks if the metadata of two TensorBlocks are the same. If not, raises a
@@ -114,7 +118,7 @@ def _check_blocks_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> str:
     """
     Check if metadata between two TensorBlocks is consistent for an operation.
@@ -143,7 +147,7 @@ def _check_blocks_impl(
                 return err_msg + err_msg_len
             if not a.samples.names == b.samples.names:
                 return err_msg + err_msg_names
-            if not np.all(a.samples == b.samples):
+            if not a.samples == b.samples:
                 return err_msg + err_msg_1
 
         elif metadata == "properties":
@@ -151,7 +155,7 @@ def _check_blocks_impl(
                 return err_msg + err_msg_len
             if not a.properties.names == b.properties.names:
                 return err_msg + err_msg_names
-            if not np.all(a.properties == b.properties):
+            if not a.properties == b.properties:
                 return err_msg + err_msg_1
 
         elif metadata == "components":
@@ -165,7 +169,7 @@ def _check_blocks_impl(
                 if not (len(c1) == len(c2)):
                     return err_msg + err_msg_1
 
-                if not np.all(c1 == c2):
+                if not c1 == c2:
                     return err_msg + err_msg_1
         else:
             raise ValueError(
@@ -179,7 +183,7 @@ def _check_same_gradients(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Check if metadata between the gradients of 2 TensorBlocks is consistent for an
@@ -205,7 +209,7 @@ def _check_same_gradients_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> None:
     """
     Check if two TensorBlocks gradients have identical metadata.
@@ -236,7 +240,7 @@ def _check_same_gradients_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Sequence[str] = ("samples", "components", "properties"),
+    check: List[str] = ("samples", "components", "properties"),
 ) -> str:
     """
     Check if metadata between the gradients of two TensorBlocks is consistent for an
@@ -262,7 +266,7 @@ def _check_same_gradients_impl(
     gradients_list_b = b.gradients_list()
 
     if len(gradients_list_a) != len(gradients_list_b) or (
-        not np.all([parameter in gradients_list_b for parameter in gradients_list_a])
+        not all([parameter in gradients_list_b for parameter in gradients_list_a])
     ):
         return f"inputs to {fname} should have the same gradient parameters"
 
@@ -290,7 +294,7 @@ def _check_same_gradients_impl(
                     return err_msg + err_msg_len
                 if not grad_a.samples.names == grad_b.samples.names:
                     return err_msg + err_msg_names
-                if not np.all(grad_a.samples == grad_b.samples):
+                if not grad_a.samples == grad_b.samples:
                     return err_msg + err_msg_1
 
             elif metadata == "properties":
@@ -298,7 +302,7 @@ def _check_same_gradients_impl(
                     return err_msg + err_msg_len
                 if not grad_a.properties.names == grad_b.properties.names:
                     return err_msg + err_msg_names
-                if not np.all(grad_a.properties == grad_b.properties):
+                if not grad_a.properties == grad_b.properties:
                     return err_msg + err_msg_1
             elif metadata == "components":
                 if len(grad_a.components) != len(grad_b.components):
@@ -308,7 +312,7 @@ def _check_same_gradients_impl(
                     if not (c1.names == c2.names):
                         return err_msg + err_msg_names
 
-                    if not np.all(c1 == c2):
+                    if not c1 == c2:
                         return err_msg + err_msg_1
             else:
                 raise ValueError(
