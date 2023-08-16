@@ -48,7 +48,6 @@ def _allclose_block_impl(
     check_blocks_message = _check_blocks_impl(
         block_1,
         block_2,
-        check=("samples", "properties", "components"),
         fname="allclose",
     )
     if check_blocks_message != "":

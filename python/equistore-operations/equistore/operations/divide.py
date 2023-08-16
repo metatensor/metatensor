@@ -46,13 +46,11 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
             _check_blocks_raise(
                 block_A,
                 block_B,
-                check=("samples", "components", "properties"),
                 fname="divide",
             )
             _check_same_gradients_raise(
                 block_A,
                 block_B,
-                check=("samples", "components", "properties"),
                 fname="divide",
             )
             blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))

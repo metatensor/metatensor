@@ -112,8 +112,8 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
 
 
 def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
-    _check_blocks_raise(X, Y, check=("samples", "components"), fname="lstsq")
-    _check_same_gradients_raise(X, Y, check=("samples", "components"), fname="lstsq")
+    _check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
+    _check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
 
     # reshape components together with the samples
     X_n_properties = X.values.shape[-1]
