@@ -87,14 +87,13 @@ def _lib_path():
 
 
 def _check_dll(path):
-    """
-    Check if the DLL pointer size matches Python (32-bit or 64-bit)
-    """
+    """Check if the DLL at ``path`` matches the architecture of Python"""
     import platform
     import struct
 
     IMAGE_FILE_MACHINE_I386 = 332
     IMAGE_FILE_MACHINE_AMD64 = 34404
+    IMAGE_FILE_MACHINE_ARM64 = 43620
 
     machine = None
     with open(path, "rb") as fd:
@@ -109,15 +108,21 @@ def _check_dll(path):
             header = fd.read(2)
             machine = struct.unpack("<H", header)[0]
 
-    arch = platform.architecture()[0]
-    if arch == "32bit":
+    python_machine = platform.machine()
+    if python_machine == "x86":
         if machine != IMAGE_FILE_MACHINE_I386:
-            raise ImportError("Python is 32-bit, but this DLL is not")
-    elif arch == "64bit":
+            raise ImportError("Python is 32-bit x86, but equistore.dll is not")
+    elif python_machine == "AMD64":
         if machine != IMAGE_FILE_MACHINE_AMD64:
-            raise ImportError("Python is 64-bit, but this DLL is not")
+            raise ImportError("Python is 64-bit x86_64, but equistore.dll is not")
+    elif python_machine == "ARM64":
+        if machine != IMAGE_FILE_MACHINE_ARM64:
+            raise ImportError("Python is 64-bit ARM, but equistore.dll is not")
     else:
-        raise ImportError("Could not determine pointer size of Python")
+        raise ImportError(
+            f"Equistore doesn't provide a version for {python_machine} CPU. "
+            "If you are compiling from source on a new architecture, edit this file"
+        )
 
 
 _get_library = LibraryFinder()
