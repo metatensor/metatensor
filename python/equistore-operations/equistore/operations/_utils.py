@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -73,7 +73,7 @@ def _check_blocks(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Checks if the metadata of 2 TensorBlocks are the same. If not, returns false.
@@ -86,7 +86,7 @@ def _check_blocks_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> None:
     """
     Checks if the metadata of two TensorBlocks are the same. If not, raises a
@@ -118,7 +118,7 @@ def _check_blocks_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> str:
     """
     Check if metadata between two TensorBlocks is consistent for an operation.
@@ -183,7 +183,7 @@ def _check_same_gradients(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> bool:
     """
     Check if metadata between the gradients of 2 TensorBlocks is consistent for an
@@ -209,7 +209,7 @@ def _check_same_gradients_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> None:
     """
     Check if two TensorBlocks gradients have identical metadata.
@@ -240,7 +240,7 @@ def _check_same_gradients_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: List[str] = ("samples", "components", "properties"),
+    check: Tuple[str] = ("samples", "components", "properties"),
 ) -> str:
     """
     Check if metadata between the gradients of two TensorBlocks is consistent for an
