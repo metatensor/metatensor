@@ -1,7 +1,5 @@
 from typing import List, Tuple
 
-import numpy as np
-
 from ._classes import TensorBlock, TensorMap
 
 
@@ -61,8 +59,10 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
 
     # PR COMMENT changed to range because otherwise I get error
     #    RuntimeError:
-    #    '__torch__.torch.classes.equistore.Labels (of Python compilation unit at: 0)' object is not iterable:
-    #      File "/home/alexgo/code/equistore/python/equistore-operations/equistore/operations/_utils.py", line 46
+    #    '__torch__.torch.classes.equistore.Labels (of Python compilation unit at: 0)'
+    #    object is not iterable:
+    #      File "/home/alexgo/code/equistore/python/equistore-operations/
+    #      equistore/operations/_utils.py", line 46
     if not all([keys_b[i] in keys_a for i in range(len(keys_b))]):
         return f"inputs to {fname} should have the same keys"
 
