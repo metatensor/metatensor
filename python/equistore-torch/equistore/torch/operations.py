@@ -1,6 +1,8 @@
 import importlib
 import sys
 
+import torch
+
 import equistore.operations
 from equistore.torch import Labels, TensorBlock, TensorMap
 
@@ -52,7 +54,22 @@ module = importlib.util.module_from_spec(spec)
 module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
-module.__dict__["TORCH_SCRIPT_MODE"] = True
+module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
+
+
+def check_isinstance(obj, ty):
+    if isinstance(ty, torch.ScriptClass):
+        # This branch is taken when `ty` is a custom class (TensorMap, …). since `ty` is
+        # an instance of `torch.ScriptClass` and not a class itself, there is no way to
+        # check if obj is an "instance" of this class, so we always return True and hope
+        # for the best. Most errors should be caught by the TorchScript compiler anyway.
+        return True
+    else:
+        assert isinstance(ty, type)
+        return isinstance(obj, ty)
+
+
+module.__dict__["check_isinstance"] = check_isinstance
 
 # register the module in sys.modules, so future import find it directly
 sys.modules[spec.name] = module

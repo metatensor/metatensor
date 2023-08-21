@@ -12,10 +12,16 @@
 from equistore.core import Labels, TensorBlock, TensorMap
 
 
-TORCH_SCRIPT_MODE = False
+def torch_jit_is_scripting():
+    return False
+
+
+check_isinstance = isinstance
+
 __all__ = [
     "Labels",
     "TensorBlock",
     "TensorMap",
-    "TORCH_SCRIPT_MODE",
+    "torch_jit_is_scripting",
+    "check_isinstance",
 ]

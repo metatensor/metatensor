@@ -319,7 +319,7 @@ TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) {
         }
         new_names.push_back(names[index]);
     }
- 
+
     auto new_values = this->values().index({torch::indexing::Slice(), torch::tensor(dimensions_indexes)});
 
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
