@@ -134,11 +134,13 @@ def _check_blocks_impl(
     """
     if isinstance(check, str):
         if check == "all":
-            check = ["samples", "components", "properties"]
+            metadata_to_check = ["samples", "components", "properties"]
         else:
             raise ValueError("`check` must be a list of strings or 'all'")
+    else:
+        metadata_to_check = check
 
-    for metadata in check:
+    for metadata in metadata_to_check:
         err_msg = f"inputs to '{fname}' should have the same {metadata}:\n"
         err_msg_len = f"{metadata} of the two `TensorBlock` have different lengths"
         err_msg_1 = f"{metadata} are not the same or not in the same order"
@@ -269,9 +271,11 @@ def _check_same_gradients_impl(
     """
     if isinstance(check, str):
         if check == "all":
-            check = ["samples", "components", "properties"]
+            metadata_to_check = ["samples", "components", "properties"]
         else:
             raise ValueError("`check` must be a list of strings or 'all'")
+    else:
+        metadata_to_check = check
 
     err_msg = f"inputs to {fname} should have the same gradients:\n"
     gradients_list_a = a.gradients_list()
@@ -285,7 +289,7 @@ def _check_same_gradients_impl(
     for parameter, grad_a in a.gradients():
         grad_b = b.gradient(parameter)
 
-        for metadata in check:
+        for metadata in metadata_to_check:
             err_msg_len = (
                 f"gradient '{parameter}' {metadata} of the two `TensorBlock` "
                 "have different lengths"
