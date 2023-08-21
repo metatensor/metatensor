@@ -274,7 +274,7 @@ def index_add(output_array, input_array, index):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def zeros_like(array, shape=None, requires_grad=False):
+def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array filled with zeros, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -294,8 +294,9 @@ def zeros_like(array, shape=None, requires_grad=False):
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(
+            requires_grad
+        )  # need to follow aten::zeros signature
     elif isinstance(array, np.ndarray):
         return np.zeros_like(array, shape=shape, subok=False)
     else:
