@@ -80,9 +80,9 @@ def _allclose_block_impl(
 def allclose(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    rtol=1e-13,
-    atol=1e-12,
-    equal_nan=False,
+    rtol: float = 1e-13,
+    atol: float = 1e-12,
+    equal_nan: bool = False,
 ) -> bool:
     """
     Compare two :py:class:`TensorMap`.

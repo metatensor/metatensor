@@ -1,6 +1,11 @@
-from typing import List, Tuple
+from typing import List, Optional
 
 from ._classes import TensorBlock, TensorMap
+
+
+# PR COMMENT temporary way do test jit scritability
+# from equistore.torch import TensorBlock, TensorMap
+# import torch
 
 
 class NotEqualError(Exception):
@@ -59,10 +64,10 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
 
     # PR COMMENT changed to range because otherwise I get error
     #    RuntimeError:
-    #    '__torch__.torch.classes.equistore.Labels (of Python compilation unit at: 0)'
-    #    object is not iterable:
-    #      File "/home/alexgo/code/equistore/python/equistore-operations/
-    #      equistore/operations/_utils.py", line 46
+    #    '__torch__.torch.classes.equistore.Labels
+    #    (of Python compilation unit at: 0)' object is not iterable:
+    #      File "/home/alexgo/code/equistore/python/
+    #      equistore-operations/equistore/operations/_utils.py", line 46
     if not all([keys_b[i] in keys_a for i in range(len(keys_b))]):
         return f"inputs to {fname} should have the same keys"
 
@@ -73,7 +78,7 @@ def _check_blocks(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> bool:
     """
     Checks if the metadata of 2 TensorBlocks are the same. If not, returns false.
@@ -86,7 +91,7 @@ def _check_blocks_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> None:
     """
     Checks if the metadata of two TensorBlocks are the same. If not, raises a
@@ -118,7 +123,7 @@ def _check_blocks_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> str:
     """
     Check if metadata between two TensorBlocks is consistent for an operation.
@@ -136,6 +141,9 @@ def _check_blocks_impl(
     :param check: A sequence of strings containing the metadata to check. Allowed values
         are ``'properties'`` or ``'samples'``, ``'components'``.
     """
+    if check is None:
+        check = ["samples", "components", "properties"]
+
     for metadata in check:
         err_msg = f"inputs to '{fname}' should have the same {metadata}:\n"
         err_msg_len = f"{metadata} of the two `TensorBlock` have different lengths"
@@ -183,7 +191,7 @@ def _check_same_gradients(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> bool:
     """
     Check if metadata between the gradients of 2 TensorBlocks is consistent for an
@@ -209,7 +217,7 @@ def _check_same_gradients_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> None:
     """
     Check if two TensorBlocks gradients have identical metadata.
@@ -240,7 +248,7 @@ def _check_same_gradients_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
-    check: Tuple[str] = ("samples", "components", "properties"),
+    check: Optional[List[str]] = None,
 ) -> str:
     """
     Check if metadata between the gradients of two TensorBlocks is consistent for an
@@ -261,6 +269,9 @@ def _check_same_gradients_impl(
         are ``'properties'`` or ``'samples'``, ``'components'``. To check only if the
         ``'parameters'`` are consistent pass an empty tuple ``check=()``.
     """
+    if check is None:
+        check = ["samples", "components", "properties"]
+
     err_msg = f"inputs to {fname} should have the same gradients:\n"
     gradients_list_a = a.gradients_list()
     gradients_list_b = b.gradients_list()
