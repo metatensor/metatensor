@@ -1,5 +1,6 @@
-import numpy as np
 from typing import List
+
+import numpy as np
 
 
 try:
@@ -51,7 +52,9 @@ def all(a, axis=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def allclose(a: TorchTensor, b: TorchTensor, rtol: float, atol: float, equal_nan: bool = False):
+def allclose(
+    a: TorchTensor, b: TorchTensor, rtol: float, atol: float, equal_nan: bool = False
+):
     """Compare two arrays using ``allclose``
 
     This function has the same behavior as
