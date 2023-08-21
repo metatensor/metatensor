@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -33,7 +33,7 @@ def _check_all_np_ndarray(arrays):
             )
 
 
-def all(a, axis=None):
+def all(a, axis: Optional[int] = None):
     """Test whether all array elements along a given axis evaluate to True.
 
     This function has the same behavior as
