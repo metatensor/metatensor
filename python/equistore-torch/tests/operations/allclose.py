@@ -12,10 +12,7 @@ def check_operation(allclose):
 
 def check_operation_raise(allclose_raise):
     tensor = load_data("qm7-power-spectrum.npz")
-    try:
-        allclose_raise(tensor, tensor)
-    except Exception:
-        raise AssertionError("allclose_raise threw an exception and it should not have")
+    allclose_raise(tensor, tensor)
 
 
 def check_operation_block(allclose_block):
@@ -25,12 +22,7 @@ def check_operation_block(allclose_block):
 
 def check_operation_block_raise(allclose_block_raise):
     tensor = load_data("qm7-power-spectrum.npz")
-    try:
-        allclose_block_raise(tensor.block(0), tensor.block(0))
-    except Exception:
-        raise AssertionError(
-            "allclose_block_raise threw an exception and it should not have"
-        )
+    allclose_block_raise(tensor.block(0), tensor.block(0))
 
 
 def test_operations_as_python():

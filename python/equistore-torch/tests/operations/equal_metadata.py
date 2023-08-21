@@ -12,12 +12,7 @@ def check_operation(equal_metadata):
 
 def check_operation_raise(equal_metadata_raise):
     tensor = load_data("qm7-power-spectrum.npz")
-    try:
-        equal_metadata_raise(tensor, tensor)
-    except Exception:
-        raise AssertionError(
-            "equal_metadata_raise threw an exception and it should not have"
-        )
+    equal_metadata_raise(tensor, tensor)
 
 
 def check_operation_block(equal_metadata_block):
@@ -27,12 +22,7 @@ def check_operation_block(equal_metadata_block):
 
 def check_operation_block_raise(equal_metadata_block_raise):
     tensor = load_data("qm7-power-spectrum.npz")
-    try:
-        equal_metadata_block_raise(tensor.block(0), tensor.block(0))
-    except Exception:
-        raise AssertionError(
-            "equal_metadata_block_raise threw an exception and it should not have"
-        )
+    equal_metadata_block_raise(tensor.block(0), tensor.block(0))
 
 
 def test_operations_as_python():
