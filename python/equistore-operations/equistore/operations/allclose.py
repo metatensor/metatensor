@@ -56,7 +56,7 @@ def _allclose_block_impl(
     check_same_gradient_message = _check_same_gradients_impl(
         block_1,
         block_2,
-        check=("samples", "properties", "components"),
+        check=["samples", "properties", "components"],
         fname="allclose",
     )
     if check_same_gradient_message != "":
@@ -79,9 +79,9 @@ def _allclose_block_impl(
 def allclose(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    rtol=1e-13,
-    atol=1e-12,
-    equal_nan=False,
+    rtol: float = 1e-13,
+    atol: float = 1e-12,
+    equal_nan: bool = False,
 ) -> bool:
     """
     Compare two :py:class:`TensorMap`.
@@ -224,9 +224,9 @@ def allclose(
 def allclose_raise(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
-    rtol=1e-13,
-    atol=1e-12,
-    equal_nan=False,
+    rtol: float = 1e-13,
+    atol: float = 1e-12,
+    equal_nan: bool = False,
 ):
     """
     Compare two :py:class:`TensorMap`, raising :py:class:`NotEqualError` if they
@@ -333,9 +333,9 @@ values are not allclose
 def allclose_block(
     block_1: TensorBlock,
     block_2: TensorBlock,
-    rtol=1e-13,
-    atol=1e-12,
-    equal_nan=False,
+    rtol: float = 1e-13,
+    atol: float = 1e-12,
+    equal_nan: bool = False,
 ) -> bool:
     """
     Compare two :py:class:`TensorBlock`.
@@ -432,9 +432,9 @@ def allclose_block(
 def allclose_block_raise(
     block_1: TensorBlock,
     block_2: TensorBlock,
-    rtol=1e-13,
-    atol=1e-12,
-    equal_nan=False,
+    rtol: float = 1e-13,
+    atol: float = 1e-12,
+    equal_nan: bool = False,
 ):
     """
     Compare two :py:class:`TensorBlock`, raising :py:class:`NotEqualError` if
