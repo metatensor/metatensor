@@ -19,7 +19,7 @@ def _check_same_keys(a: TensorMap, b: TensorMap, fname: str) -> bool:
 
 def _check_same_keys_raise(a: TensorMap, b: TensorMap, fname: str) -> None:
     """
-    If the keys of 2 TensorMaps are not the same, raises a NotEqualError, othwerwise
+    If the keys of 2 TensorMaps are not the same, raises a NotEqualError, otherwise
     returns None.
     """
     message = _check_same_keys_impl(a, b, fname)
@@ -47,18 +47,18 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
 
     if keys_a.names != keys_b.names:
         return (
-            f"inputs to {fname} should have the same keys names, "
+            f"inputs to '{fname}' should have the same keys names, "
             f"got '{keys_a.names}' and '{keys_b.names}'"
         )
 
     if len(keys_a) != len(keys_b):
         return (
-            f"inputs to {fname} should have the same number of blocks, "
+            f"inputs to '{fname}' should have the same number of blocks, "
             f"got {len(keys_a)} and {len(keys_b)}"
         )
 
     if not all([keys_b[i] in keys_a for i in range(len(keys_b))]):
-        return f"inputs to {fname} should have the same keys"
+        return f"inputs to '{fname}' should have the same keys"
 
     return ""
 
@@ -141,40 +141,30 @@ def _check_blocks_impl(
         metadata_to_check = check
 
     for metadata in metadata_to_check:
-        err_msg = f"inputs to '{fname}' should have the same {metadata}:\n"
-        err_msg_len = f"{metadata} of the two `TensorBlock` have different lengths"
-        err_msg_1 = f"{metadata} are not the same or not in the same order"
-        err_msg_names = f"{metadata} names are not the same or not in the same order"
-
         if metadata == "samples":
-            if not len(a.samples) == len(b.samples):
-                return err_msg + err_msg_len
-            if not a.samples.names == b.samples.names:
-                return err_msg + err_msg_names
             if not a.samples == b.samples:
-                return err_msg + err_msg_1
+                return (
+                    f"inputs to '{fname}' should have the same samples, "
+                    "but they are not the same or not in the same order"
+                )
 
         elif metadata == "properties":
-            if not len(a.properties) == len(b.properties):
-                return err_msg + err_msg_len
-            if not a.properties.names == b.properties.names:
-                return err_msg + err_msg_names
             if not a.properties == b.properties:
-                return err_msg + err_msg_1
+                return (
+                    f"inputs to '{fname}' should have the same properties, "
+                    "but they are not the same or not in the same order"
+                )
 
         elif metadata == "components":
             if len(a.components) != len(b.components):
-                return err_msg + err_msg_len
+                return f"inputs to '{fname}' have a different number of components"
 
             for c1, c2 in zip(a.components, b.components):
-                if not (c1.names == c2.names):
-                    return err_msg + err_msg_names
-
-                if not (len(c1) == len(c2)):
-                    return err_msg + err_msg_1
-
                 if not c1 == c2:
-                    return err_msg + err_msg_1
+                    return (
+                        f"inputs to '{fname}' should have the same components, "
+                        "but they are not the same or not in the same order"
+                    )
         else:
             raise ValueError(
                 f"{metadata} is not a valid property to check, "
@@ -277,57 +267,40 @@ def _check_same_gradients_impl(
     else:
         metadata_to_check = check
 
-    err_msg = f"inputs to {fname} should have the same gradients:\n"
+    err_msg = f"inputs to '{fname}' should have the same gradients: "
     gradients_list_a = a.gradients_list()
     gradients_list_b = b.gradients_list()
 
     if len(gradients_list_a) != len(gradients_list_b) or (
         not all([parameter in gradients_list_b for parameter in gradients_list_a])
     ):
-        return f"inputs to {fname} should have the same gradient parameters"
+        return f"inputs to '{fname}' should have the same gradient parameters"
 
     for parameter, grad_a in a.gradients():
         grad_b = b.gradient(parameter)
 
         for metadata in metadata_to_check:
-            err_msg_len = (
-                f"gradient '{parameter}' {metadata} of the two `TensorBlock` "
-                "have different lengths"
-            )
-
             err_msg_1 = (
                 f"gradient '{parameter}' {metadata} are not the same or not in the "
                 "same order"
             )
 
-            err_msg_names = (
-                f"gradient '{parameter}' {metadata} names are not the same "
-                "or not in the same order"
-            )
-
             if metadata == "samples":
-                if not len(grad_a.samples) == len(grad_b.samples):
-                    return err_msg + err_msg_len
-                if not grad_a.samples.names == grad_b.samples.names:
-                    return err_msg + err_msg_names
                 if not grad_a.samples == grad_b.samples:
                     return err_msg + err_msg_1
 
             elif metadata == "properties":
-                if not len(grad_a.properties) == len(grad_b.properties):
-                    return err_msg + err_msg_len
-                if not grad_a.properties.names == grad_b.properties.names:
-                    return err_msg + err_msg_names
                 if not grad_a.properties == grad_b.properties:
                     return err_msg + err_msg_1
+
             elif metadata == "components":
                 if len(grad_a.components) != len(grad_b.components):
-                    return err_msg + err_msg_len
+                    extra = (
+                        f"gradient '{parameter}' have different number of components"
+                    )
+                    return err_msg + extra
 
                 for c1, c2 in zip(grad_a.components, grad_b.components):
-                    if not (c1.names == c2.names):
-                        return err_msg + err_msg_names
-
                     if not c1 == c2:
                         return err_msg + err_msg_1
             else:
@@ -351,6 +324,6 @@ def _check_gradient_presence_raise(
     for parameter in parameters:
         if parameter not in block.gradients_list():
             raise ValueError(
-                f"requested gradient '{parameter}' in {fname} is not defined "
+                f"requested gradient '{parameter}' in '{fname}' is not defined "
                 "in this tensor"
             )

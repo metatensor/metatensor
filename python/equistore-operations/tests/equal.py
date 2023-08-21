@@ -195,15 +195,15 @@ def test_self_equal_exceptions():
     assert not equistore.equal_block(block_1, block_2)
 
     message = (
-        "inputs to 'equal' should have the same samples:\n"
-        "samples names are not the same or not in the same order"
+        "inputs to 'equal' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_1, block_2)
 
     message = (
-        "inputs to 'equal' should have the same samples:\n"
-        "samples are not the same or not in the same order"
+        "inputs to 'equal' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_1, block_3)
@@ -212,15 +212,15 @@ def test_self_equal_exceptions():
         equistore.equal_block_raise(block_1, block_4)
 
     message = (
-        "inputs to 'equal' should have the same components:\n"
-        "components names are not the same or not in the same order"
+        "inputs to 'equal' should have the same components, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_5, block_4)
 
     message = (
-        "inputs to 'equal' should have the same samples:\n"
-        "samples are not the same or not in the same order"
+        "inputs to 'equal' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_6, block_4)
@@ -258,8 +258,8 @@ def test_self_equal_exceptions():
     assert not equistore.equal_block(block_8, block_9)
 
     message = (
-        "inputs to 'equal' should have the same components:\n"
-        "components are not the same or not in the same order"
+        "inputs to 'equal' should have the same components, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_7, block_8)
@@ -304,8 +304,8 @@ def test_self_equal_exceptions_gradient():
     )
 
     message = (
-        "inputs to equal should have the same gradients:\n"
-        "gradient 'g' samples names are not the same or not in the same order"
+        "inputs to 'equal' should have the same gradients: "
+        "gradient 'g' samples are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_1, block_2)
@@ -365,7 +365,7 @@ def test_self_equal_exceptions_gradient():
     )
 
     message = (
-        "inputs to equal should have the same gradients:\n"
+        "inputs to 'equal' should have the same gradients: "
         "gradient 'g' components are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
@@ -389,8 +389,8 @@ def test_self_equal_exceptions_gradient():
     )
 
     message = (
-        "inputs to equal should have the same gradients:\n"
-        "gradient 'g' samples names are not the same or not in the same order"
+        "inputs to 'equal' should have the same gradients: "
+        "gradient 'g' samples are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.equal_block_raise(block_5, block_6)

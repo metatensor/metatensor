@@ -30,7 +30,7 @@ def test_empty_like_error():
         use_numpy=True,
     )
 
-    message = "requested gradient 'err' in empty_like is not defined in this tensor"
+    message = "requested gradient 'err' in 'empty_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):
         tensor = equistore.empty_like(tensor, gradients=["positions", "err"])
 

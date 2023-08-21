@@ -226,8 +226,7 @@ def equal_metadata_raise(
     >>> equistore.equal_metadata_raise(tensor_1, tensor_2)
     Traceback (most recent call last):
         ...
-    equistore.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' should have the same properties:
-    properties names are not the same or not in the same order
+    equistore.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' should have the same properties, but they are not the same or not in the same order
     >>> equistore.equal_metadata_raise(
     ...     tensor_1,
     ...     tensor_2,
@@ -334,8 +333,8 @@ def equal_metadata_block_raise(
     >>> equistore.equal_metadata_block_raise(block_1, block_2)
     Traceback (most recent call last):
         ...
-    equistore.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' should have the same properties:
-    properties names are not the same or not in the same order
+    equistore.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
+should have the same properties, but they are not the same or not in the same order
     >>> equistore.equal_metadata_block_raise(
     ...     block_1, block_2, check=("samples", "components")
     ... )

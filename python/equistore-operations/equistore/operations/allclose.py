@@ -310,12 +310,11 @@ def allclose_raise(
     If this is executed yourself, you will see a nested exception explaining that the
     ``values`` of the two blocks are not `allclose`.
 
-    >>> try:
-    ...     allclose_raise(tensor_1, tensor_2)
-    ... except equistore.NotEqualError as e:
-    ...     print(f"got an exception: {e}")
-    ...
-    got an exception: blocks for key (key=0) are different: values are not allclose
+    >>> allclose_raise(tensor_1, tensor_2)
+    Traceback (most recent call last):
+        ...
+    equistore.operations._utils.NotEqualError: blocks for key (key=0) are different: \
+values are not allclose
 
     call :py:func:`equistore.allclose_raise()` again, but use ``equal_nan=True`` and
     ``rtol=1e-5`` This passes, as the two ``NaN`` are now considered equal, and the
@@ -508,13 +507,11 @@ def allclose_block_raise(
     :py:func:`equistore.NotEqualError` because the properties of the two blocks are not
     `equal`.
 
-    >>> try:
-    ...     allclose_block_raise(block_1, block_2)
-    ... except equistore.NotEqualError as e:
-    ...     print(f"got an exception: {e}")
-    ...
-    got an exception: inputs to 'allclose' should have the same properties:
-    properties names are not the same or not in the same order
+    >>> allclose_block_raise(block_1, block_2)
+    Traceback (most recent call last):
+        ...
+    equistore.operations._utils.NotEqualError: inputs to 'allclose' should have the \
+same properties, but they are not the same or not in the same order
     """
     message = _allclose_block_impl(
         block_1=block_1, block_2=block_2, rtol=rtol, atol=atol, equal_nan=equal_nan
