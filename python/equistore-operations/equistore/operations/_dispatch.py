@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 
 
 try:
@@ -15,7 +16,7 @@ UNKNOWN_ARRAY_TYPE = (
 )
 
 
-def _check_all_torch_tensor(arrays):
+def _check_all_torch_tensor(arrays: List[TorchTensor]):
     for array in arrays:
         if not isinstance(array, TorchTensor):
             raise TypeError(
@@ -50,7 +51,7 @@ def all(a, axis=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def allclose(a, b, rtol, atol, equal_nan=False):
+def allclose(a: TorchTensor, b: TorchTensor, rtol: float, atol: float, equal_nan: bool = False):
     """Compare two arrays using ``allclose``
 
     This function has the same behavior as
