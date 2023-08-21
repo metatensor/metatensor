@@ -17,7 +17,7 @@ UNKNOWN_ARRAY_TYPE = (
 )
 
 
-def _check_all_torch_tensor(arrays):
+def _check_all_torch_tensor(arrays: List[TorchTensor]):
     for array in arrays:
         if not isinstance(array, TorchTensor):
             raise TypeError(
@@ -52,7 +52,9 @@ def all(a, axis=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def allclose(a, b, rtol, atol, equal_nan=False):
+def allclose(
+    a: TorchTensor, b: TorchTensor, rtol: float, atol: float, equal_nan: bool = False
+):
     """Compare two arrays using ``allclose``
 
     This function has the same behavior as
@@ -99,11 +101,13 @@ def bincount(input, weights=None, minlength=0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def list_to_array(array, data: List):
-    """Create an object from data with the same type as ``array``."""
+def array_like_data(array, data):
+    """Return `data` with the same data-type and array-type of array"""
     if isinstance(array, TorchTensor):
-        return torch.Tensor(data, device=array.device, dtype=array.dtype)
+        _check_all_torch_tensor([data])
+        return torch.Tensor(data, device=array.device)
     elif isinstance(array, np.ndarray):
+        _check_all_np_ndarray([data])
         return np.array(data, dtype=array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -416,7 +420,9 @@ def rand_like(array, shape=None, requires_grad=False):
 
 
 def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
-    """Convert the array to the specified backend."""
+    """
+    Convert the array to the specified backend.
+    """
     # Convert numpy array
     if isinstance(array, np.ndarray):
         if backend is None:  # Infer the target backend
