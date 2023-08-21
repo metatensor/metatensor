@@ -70,7 +70,7 @@ public:
     LabelsHolder(equistore::Labels labels);
 
     /// Get the names of the dimensions/columns of these Labels
-    const std::vector<std::string>& names() const {
+    std::vector<std::string> names() const {
         return names_;
     }
 
@@ -233,7 +233,7 @@ public:
     }
 
     /// Get the names of the dimensions/columns of these Labels
-    const std::vector<std::string>& names() const {
+    std::vector<std::string> names() const {
         return labels_->names();
     }
 
