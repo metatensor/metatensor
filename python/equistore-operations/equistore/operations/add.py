@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Union
 
 from ._classes import TensorBlock, TensorMap
 from ._utils import (
@@ -8,7 +8,7 @@ from ._utils import (
 )
 
 
-def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
+def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the sum of
     ``A`` and ``B``.
 
@@ -34,7 +34,7 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
 
-    blocks = []
+    blocks: List[TensorBlock] = []
     if isinstance(B, TensorMap):
         _check_same_keys_raise(A, B, "add")
         for key, block_A in A.items():
