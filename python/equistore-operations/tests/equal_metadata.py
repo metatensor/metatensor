@@ -166,7 +166,9 @@ def test_two_tensors_block(test_tensor_block_1, test_tensor_block_2):
 
 def test_two_tensors_block_raise(test_tensor_block_1, test_tensor_block_2):
     """check error raise if the metadata of two tensor maps are equal"""
-    error_message = "components of the two `TensorBlock` have different lengths"
+    error_message = (
+        "inputs to 'equal_metadata_block_raise' have a different number of components"
+    )
     with pytest.raises(NotEqualError, match=error_message):
         equistore.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_2)
 

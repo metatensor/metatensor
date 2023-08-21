@@ -198,15 +198,15 @@ def test_self_allclose_exceptions():
     assert not equistore.allclose_block(block_1, block_2)
 
     message = (
-        "inputs to 'allclose' should have the same samples:\n"
-        "samples names are not the same or not in the same order"
+        "inputs to 'allclose' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_block_raise(block_1, block_2)
 
     message = (
-        "inputs to 'allclose' should have the same samples:\n"
-        "samples are not the same or not in the same order"
+        "inputs to 'allclose' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_block_raise(block_1, block_3)
@@ -216,15 +216,15 @@ def test_self_allclose_exceptions():
         equistore.allclose_block_raise(block_1, block_4)
 
     message = (
-        "inputs to 'allclose' should have the same components:\n"
-        "components names are not the same or not in the same order"
+        "inputs to 'allclose' should have the same components, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_block_raise(block_5, block_4)
 
     message = (
-        "inputs to 'allclose' should have the same samples:\n"
-        "samples are not the same or not in the same order"
+        "inputs to 'allclose' should have the same samples, "
+        "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_block_raise(block_6, block_4)
@@ -266,8 +266,8 @@ def test_self_allclose_exceptions_gradient():
     )
 
     message = (
-        "inputs to allclose should have the same gradients:\n"
-        "gradient 'g' samples names are not the same or not in the same order"
+        "inputs to 'allclose' should have the same gradients: "
+        "gradient 'g' samples are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
         equistore.allclose_block_raise(block_1, block_2)
@@ -328,7 +328,7 @@ def test_self_allclose_exceptions_gradient():
     )
 
     message = (
-        "inputs to allclose should have the same gradients:\n"
+        "inputs to 'allclose' should have the same gradients: "
         "gradient 'g' components are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):

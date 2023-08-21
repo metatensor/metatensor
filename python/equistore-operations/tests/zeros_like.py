@@ -41,7 +41,7 @@ def test_zeros_like_error():
         use_numpy=True,
     )
 
-    message = "requested gradient 'err' in zeros_like is not defined in this tensor"
+    message = "requested gradient 'err' in 'zeros_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):
         tensor = equistore.zeros_like(tensor, gradients=["positions", "err"])
 

@@ -43,7 +43,8 @@ def test_random_uniform_like_error():
     )
 
     message = (
-        "requested gradient 'err' in random_uniform_like is not defined in this tensor"
+        "requested gradient 'err' in 'random_uniform_like' is not defined "
+        "in this tensor"
     )
     with pytest.raises(ValueError, match=message):
         tensor = equistore.random_uniform_like(tensor, gradients=["positions", "err"])
