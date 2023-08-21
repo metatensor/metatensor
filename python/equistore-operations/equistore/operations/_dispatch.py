@@ -101,13 +101,11 @@ def bincount(input, weights=None, minlength=0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def array_like_data(array, data):
-    """Return `data` with the same data-type and array-type of array"""
+def list_to_array(array, data: List):
+    """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):
-        _check_all_torch_tensor([data])
-        return torch.Tensor(data, device=array.device)
+        return torch.Tensor(data, device=array.device, dtype=array.dtype)
     elif isinstance(array, np.ndarray):
-        _check_all_np_ndarray([data])
         return np.array(data, dtype=array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -420,9 +418,7 @@ def rand_like(array, shape=None, requires_grad=False):
 
 
 def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
-    """
-    Convert the array to the specified backend.
-    """
+    """Convert the array to the specified backend."""
     # Convert numpy array
     if isinstance(array, np.ndarray):
         if backend is None:  # Infer the target backend
