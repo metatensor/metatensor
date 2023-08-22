@@ -28,7 +28,8 @@ bindgen $ROOT_DIR/equistore-core/include/equistore.h -o $ROOT_DIR/equistore/src/
 //! should not be needed by most.
 
 #[cfg_attr(feature="static", link(name="equistore", kind = "static", modifiers = "-whole-archive"))]
-#[cfg_attr(not(feature="static"), link(name="equistore", kind = "dylib"))]
+#[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="equistore", kind = "dylib"))]
+#[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="equistore.dll", kind = "dylib"))]
 extern "C" {}'
 
 
