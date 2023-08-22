@@ -62,10 +62,16 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         # I want the difference between the number of components of the gradients and
         # the values
         diff_components = len(gradient_values.shape) - len(block.values.shape)
+        gradient_samples_to_values_samples = gradient.samples.column("sample")
+        if isinstance(gradient_samples_to_values_samples, torch.Tensor):
+            # convert to torch.long before using as index
+            gradient_samples_to_values_samples = gradient_samples_to_values_samples.to(
+                torch.long
+            )
         values_grad.append(
             constant
             * gradient_values
-            * block.values[gradient.samples.column("sample").to(torch.long)].reshape(
+            * block.values[gradient_samples_to_values_samples].reshape(
                 [-1] + [1] * diff_components + _shape
             )
             ** (constant - 1)
