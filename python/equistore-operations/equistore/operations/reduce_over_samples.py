@@ -42,8 +42,6 @@ TensorBlock operations
 
 from typing import List, Optional, Union
 
-import numpy as np
-
 from . import _dispatch
 from ._classes import Labels, TensorBlock, TensorMap
 
@@ -78,7 +76,8 @@ def _reduce_over_samples_block(
         assert sample_names is not None
         remaining_samples_final: List[str] = []
         for s_name in block_samples.names:
-            if s_name in sample_names: continue
+            if s_name in sample_names:
+                continue
             remaining_samples_final.append(s_name)
     else:
         remaining_samples_final = remaining_samples
@@ -272,7 +271,6 @@ def _reduce_over_samples_block(
                     )
                 else:  # std
                     for i, s in enumerate(new_gradient_samples):
-                        
                         gradient_values_result[i] = (
                             values_grad_result[i]
                             - (gradient_values_result[i] * values_mean[s[0]])
@@ -314,9 +312,11 @@ def _reduce_over_samples(
     "std" or "var"
     """
     if isinstance(sample_names, str):
-        sample_names = [sample_names]
+        sample_names_list = [sample_names]
+    else:
+        sample_names_list = sample_names
 
-    for sample in sample_names:
+    for sample in sample_names_list:
         if sample not in tensor.sample_names:
             raise ValueError(
                 f"one of the requested sample name ({sample}) is not part of "
@@ -325,7 +325,8 @@ def _reduce_over_samples(
 
     remaining_samples: List[str] = []
     for s_name in tensor.sample_names:
-        if s_name in sample_names: continue
+        if s_name in sample_names_list:
+            continue
         remaining_samples.append(s_name)
 
     blocks: List[TensorBlock] = []
@@ -502,7 +503,9 @@ def mean_over_samples_block(
     )
 
 
-def mean_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def mean_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     """Compute the mean of a :py:class:`TensorMap`, combining the samples according to
     ``sample_names``.
 
@@ -550,7 +553,9 @@ def std_over_samples_block(
     )
 
 
-def std_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def std_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     r"""Compute the standard deviation of a :py:class:`TensorMap`, combining the samples
     according to ``sample_names``.
 
@@ -605,7 +610,9 @@ def var_over_samples_block(
     )
 
 
-def var_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def var_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     r"""Compute the variance of a :py:class:`TensorMap`, combining the
     samples according to ``sample_names``.
 
