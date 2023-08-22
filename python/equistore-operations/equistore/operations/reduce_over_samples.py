@@ -98,7 +98,8 @@ def _reduce_over_samples_block(
         # Labels.single() cannot be used because Labels.single() has not
         # an np.empty() array as values but has one values, it has dimension (1,...)
         # we want (0,...).
-        # here if len(remaining_samples_final) == 0 -> Labels([], shape=(0, 0), dtype=int32)
+        # here if len(remaining_samples_final) == 0 ->
+        # Labels([], shape=(0, 0), dtype=int32)
 
         samples_label = Labels(
             remaining_samples_final,
@@ -220,7 +221,7 @@ def _reduce_over_samples_block(
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
-        samples[:, 0] = index[samples[:, 0]]
+        samples[:, 0] = index[_dispatch.to_index_array(samples[:, 0])]
 
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
             samples[:, :], axis=0

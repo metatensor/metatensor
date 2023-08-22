@@ -273,11 +273,10 @@ def index_add(output_array, input_array, index):
     output_array.index_add_(0, torch.tensor(index),input_array)
 
     """
-    if len(index.shape) != 1:
-        raise ValueError("index should be 1D array")
+    index = to_index_array(index)
     if isinstance(input_array, TorchTensor):
         _check_all_torch_tensor([output_array, input_array, index])
-        output_array.index_add_(0, index.to(torch.long), input_array)
+        output_array.index_add_(0, index, input_array)
     elif isinstance(input_array, np.ndarray):
         _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, index, input_array)
@@ -463,6 +462,29 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
 
     else:
         # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def to_index_array(array):
+    """Returns an array that is suitable for indexing a dimension of
+    a different array.
+
+    After a few checks (int, 1D), this operation will convert the dtype to
+    torch.long (which is, in some torch versions, the only acceptable type
+    of index tensor). Numpy arrays are left unchanged.
+    """
+    if len(array.shape) != 1:
+        raise ValueError("Index arrays must be 1D")
+
+    if isinstance(array, TorchTensor):
+        if torch.is_floating_point(array):
+            raise ValueError("Index arrays must be integers")
+        return array.to(torch.long)
+    elif isinstance(array, np.ndarray):
+        if not np.issubdtype(array.dtype, np.integer):
+            raise ValueError("Index arrays must be integers")
+        return array
+    else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
