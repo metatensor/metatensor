@@ -312,8 +312,8 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     if axis == "keys":
         keys = keys.remove(name=name)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
 
