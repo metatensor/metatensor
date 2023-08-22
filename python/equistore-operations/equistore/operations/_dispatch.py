@@ -453,6 +453,38 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
     else:
         # Only numpy and torch arrays currently supported
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+    
+
+def unique(
+    array,
+    return_inverse: bool = False,
+    return_counts: bool = False,
+    axis: Optional[int] = None
+):
+    """Return the unique entries of `array`.
+
+    This function only supports common functionalities
+    of the corresponding numpy and torch versions.
+    The return values are given consistently with torch.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.unique(
+            array, return_inverse=return_inverse, return_counts=return_counts, dim=axis
+        )
+    elif isinstance(array, np.ndarray):
+        # Cover all cases to yield a consistent return type (a tuple of three objects)
+        # consistent with torch.unique
+        result = np.unique(array, return_inverse=return_inverse, return_counts=return_counts, axis=axis)
+        if return_inverse and return_counts:
+            return result
+        elif return_inverse and not return_counts:
+            return result[0], result[1], None
+        elif not return_inverse and return_counts:
+            return result[0], None, result[1]
+        else:  # only unique values
+            return result, None, None
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
 def where(array):

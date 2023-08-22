@@ -51,7 +51,7 @@ from ._classes import Labels, TensorBlock, TensorMap
 def _reduce_over_samples_block(
     block: TensorBlock,
     sample_names: Optional[List[str]] = None,
-    reduction: Optional[str] = "sum",
+    reduction: str = "sum",
     remaining_samples: Optional[List[str]] = None,
 ) -> TensorBlock:
     """
@@ -76,17 +76,20 @@ def _reduce_over_samples_block(
 
     if remaining_samples is None:
         assert sample_names is not None
-        remaining_samples = [
-            s_name for s_name in block_samples.names if s_name not in sample_names
-        ]
+        remaining_samples_final: List[str] = []
+        for s_name in block_samples.names:
+            if s_name in sample_names: continue
+            remaining_samples_final.append(s_name)
+    else:
+        remaining_samples_final = remaining_samples
 
-    for sample in remaining_samples:
+    for sample in remaining_samples_final:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean", "var", "std"]
     # get the indices of the selected sample
     sample_selected = [
-        block_samples.names.index(sample) for sample in remaining_samples
+        block_samples.names.index(sample) for sample in remaining_samples_final
     ]
 
     # checks if it is a zero sample TensorBlock
@@ -100,7 +103,7 @@ def _reduce_over_samples_block(
 
         samples_label = Labels(
             remaining_samples,
-            np.zeros((0, len(remaining_samples))),
+            _dispatch.zeros_like(block.values, [0, len(remaining_samples)]),
         )
 
         result_block = TensorBlock(
@@ -130,7 +133,7 @@ def _reduce_over_samples_block(
         return result_block
 
     # get which samples will still be there after reduction
-    new_samples, index = np.unique(
+    new_samples, index, _ = _dispatch.unique(
         block_samples.values[:, sample_selected], return_inverse=True, axis=0
     )
 
@@ -217,7 +220,7 @@ def _reduce_over_samples_block(
         # between samples and gradient.samples
         samples[:, 0] = index[samples[:, 0]]
 
-        new_gradient_samples, index_gradient = np.unique(
+        new_gradient_samples, index_gradient, _ = _dispatch.unique(
             samples[:, :], return_inverse=True, axis=0
         )
 
@@ -320,12 +323,13 @@ def _reduce_over_samples(
                 "this TensorMap"
             )
 
-    remaining_samples = [
-        s_name for s_name in tensor.sample_names if s_name not in sample_names
-    ]
+    remaining_samples: List[str] = []
+    for s_name in tensor.sample_names:
+        if s_name in sample_names: continue
+        remaining_samples.append(s_name)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
