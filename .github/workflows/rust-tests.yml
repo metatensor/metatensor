@@ -39,19 +39,19 @@ jobs:
             container: ubuntu:20.04
             rust-target: x86_64-unknown-linux-gnu
             cargo-build-flags: --features=rayon
-            extra-name: ", cmake 3.16, all features"
+            extra-name: ", cmake 3.16"
 
           - os: macos-11
             rust-version: stable
             rust-target: x86_64-apple-darwin
-            cargo-test-flags: --all-features
-            extra-name: ", all features"
+            cargo-test-flags: --features=rayon
+            extra-name: ""
 
           - os: windows-2019
             rust-version: stable
             rust-target: x86_64-pc-windows-msvc
-            cargo-build-flags: --all-features
-            extra-name: ", all features"
+            cargo-build-flags: --features=rayon
+            extra-name: ""
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:20.04'
