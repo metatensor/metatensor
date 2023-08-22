@@ -1,11 +1,11 @@
 from typing import Union
 
 from ._classes import TensorMap
-from .add import add
+from .add import add, check_isinstance, torch_jit_is_scripting
 from .multiply import multiply
 
 
-def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
+def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the subtract
     of ``A`` and ``B``.
 
@@ -30,10 +30,15 @@ def subtract(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-    if isinstance(B, TensorMap):
-        B = multiply(B, -1)
-    elif isinstance(B, (float, int)):
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(B, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(B, TensorMap)
+
+    if isinstance(B, (float, int)):
         B = -float(B)
+    elif is_tensor_map:
+        B = multiply(B, -1)
     else:
         raise TypeError("B should be a TensorMap or a scalar value")
 

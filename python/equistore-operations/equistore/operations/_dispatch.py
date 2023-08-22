@@ -229,7 +229,7 @@ def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def concatenate(arrays, axis):
+def concatenate(arrays: List[TorchTensor], axis: int):
     """
     Concatenate a group of arrays along a given axis.
 
@@ -459,4 +459,18 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
 
     else:
         # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def where(array):
+    """Return the indices where `array` is True.
+
+    This function has the same behavior as
+    ``np.where(array)``.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.where(array)
+    elif isinstance(array, np.ndarray):
+        return np.where(array)
+    else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
