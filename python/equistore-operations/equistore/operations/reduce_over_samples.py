@@ -94,15 +94,15 @@ def _reduce_over_samples_block(
     # checks if it is a zero sample TensorBlock
     if len(block.samples) == 0:
         # Here is different from the general case where we use Labels.single() if
-        # if len(remaining_samples) == 0
+        # if len(remaining_samples_final) == 0
         # Labels.single() cannot be used because Labels.single() has not
         # an np.empty() array as values but has one values, it has dimension (1,...)
         # we want (0,...).
-        # here if len(remaining_samples) == 0 -> Labels([], shape=(0, 0), dtype=int32)
+        # here if len(remaining_samples_final) == 0 -> Labels([], shape=(0, 0), dtype=int32)
 
         samples_label = Labels(
-            remaining_samples,
-            _dispatch.zeros_like(block.values, [0, len(remaining_samples)]),
+            remaining_samples_final,
+            _dispatch.zeros_like(block.values, [0, len(remaining_samples_final)]),
         )
 
         result_block = TensorBlock(
@@ -176,11 +176,11 @@ def _reduce_over_samples_block(
                 values_result = _dispatch.sqrt(values_result)
 
     # check if the reduce operation reduce all the samples
-    if len(remaining_samples) == 0:
+    if len(remaining_samples_final) == 0:
         samples_label = Labels.single()
     else:
         samples_label = Labels(
-            remaining_samples,
+            remaining_samples_final,
             new_samples,
         )
 
