@@ -366,6 +366,7 @@ def sum_over_samples_block(
     :returns:
         a :py:class:`TensorBlock` containing the reduced values and sample labels
 
+    >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
@@ -432,6 +433,7 @@ def sum_over_samples(
     :returns:
         a :py:class:`TensorMap` containing the reduced values and sample labels
 
+    >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
