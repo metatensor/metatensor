@@ -89,7 +89,3 @@ module = importlib.util.module_from_spec(spec)
 # with the newly created module
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
-
-# Step 3: override the objects/functions/classes exposed by this module with the data
-# from the module we just created.
-globals().update(module.__dict__)
