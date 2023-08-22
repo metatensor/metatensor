@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -7,7 +7,7 @@ from ._utils import _check_gradient_presence_raise
 
 def random_uniform_like(
     tensor: TensorMap,
-    gradients: Union[List[str], str] = None,
+    gradients: Optional[Union[List[str], str]] = None,
     requires_grad: bool = False,
 ) -> TensorMap:
     """
@@ -100,8 +100,8 @@ def random_uniform_like(
     >>> print(tensor_random.block(0).gradients_list())
     ['alpha']
     """
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         blocks.append(
             random_uniform_like_block(
                 block=block,
@@ -114,7 +114,7 @@ def random_uniform_like(
 
 def random_uniform_like_block(
     block: TensorBlock,
-    gradients: Union[List[str], str] = None,
+    gradients: Optional[Union[List[str], str]] = None,
     requires_grad: bool = False,
 ) -> TensorBlock:
     """
