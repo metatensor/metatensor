@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from . import _dispatch
 from ._classes import Labels, TensorBlock, TensorMap
@@ -22,6 +22,11 @@ def _disjoint_tensor_labels(tensors: List[TensorMap], axis: str) -> bool:
                 elif axis == "properties":
                     first_labels = first_block.properties
                     second_labels = second_block.properties
+                else:
+                    raise ValueError(
+                        "Only `'properties'` or `'samples'` are "
+                        "valid values for the `axis` parameter."
+                    )
 
                 if len(first_labels.intersection(second_labels)):
                     return False
@@ -29,10 +34,18 @@ def _disjoint_tensor_labels(tensors: List[TensorMap], axis: str) -> bool:
     return True
 
 
+def _unique_str(str_list: List[str]):
+    unique_strings: List[str] = []
+    for string in str_list:
+        if string not in unique_strings:
+            unique_strings.append(string)
+    return unique_strings
+
+
 def join(
     tensors: List[TensorMap],
     axis: str,
-    different_keys="error",
+    different_keys: str = "error",
     remove_tensor_name: bool = False,
 ) -> TensorMap:
     """Join a sequence of :py:class:`TensorMap` with the same blocks along an axis.
@@ -230,12 +243,13 @@ def join(
     #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
     #
     # A nested list with sublist of different shapes can not be handled by `set`.
-    names_list_flattened = []
+    names_list_flattened: List[str] = []
     for names in names_list:
         names_list_flattened += names
 
-    unique_names = set(names_list_flattened)
-    names_are_same = all([len(unique_names) == len(names) for names in names_list])
+    unique_names = _unique_str(names_list_flattened)
+    length_equal = [len(unique_names) == len(names) for names in names_list]
+    names_are_same = sum(length_equal) == len(length_equal)
 
     # It's fine to lose metadata on the property axis, less so on the sample axis!
     if axis == "samples" and not names_are_same:
@@ -244,14 +258,27 @@ def join(
             "sample names will loose information and is not supported."
         )
 
-    keys_names = ["tensor"] + tensors[0].keys.names
-    keys_values = []
-    blocks = []
+    keys = tensors[0].keys
+    n_tensors = len(tensors)
+    n_keys_dimensions = 1 + keys.values.shape[1]
+    new_keys_values = _dispatch.empty_like(
+        array=keys.values,
+        shape=[n_tensors, keys.values.shape[0], n_keys_dimensions],
+    )
 
     for i, tensor in enumerate(tensors):
-        keys_values += [[i] + value.tolist() for value in tensor.keys.values]
+        for j, value in enumerate(tensor.keys.values):
+            new_keys_values[i, j, 0] = i
+            new_keys_values[i, j, 1:] = value
 
-        for block in tensor:
+    keys = Labels(
+        names=["tensor"] + keys.names,
+        values=new_keys_values.reshape(-1, n_keys_dimensions),
+    )
+
+    blocks: List[TensorBlock] = []
+    for tensor in tensors:
+        for block in tensor.blocks():
             # We would already raised an error if `axis == "samples"`. Therefore, we can
             # neglect the check for `axis == "properties"`.
             if names_are_same:
@@ -284,10 +311,6 @@ def join(
 
             blocks.append(new_block)
 
-    keys = Labels(
-        names=keys_names,
-        values=_dispatch.list_to_array(array=tensors[0].keys.values, data=keys_values),
-    )
     tensor = TensorMap(keys=keys, blocks=blocks)
 
     if axis == "samples":
@@ -313,9 +336,11 @@ def _tensors_intersection(tensors: List[TensorMap]) -> List[TensorMap]:
         all_keys = all_keys.intersection(tensor.keys)
 
     # Create new blocks and discard bocks not present in all_keys
-    new_tensors = []
+    new_tensors: List[TensorMap] = []
     for tensor in tensors:
-        new_blocks = [tensor.block(key).copy() for key in all_keys]
+        new_blocks: List[TensorBlock] = []
+        for i_key in range(all_keys.values.shape[0]):
+            new_blocks.append(tensor.block(all_keys.entry(i_key)).copy())
         new_tensors.append(TensorMap(keys=all_keys, blocks=new_blocks))
 
     return new_tensors
@@ -334,7 +359,7 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
         all_keys = all_keys.union(tensor.keys)
 
     # Create empty blocks for missing keys for each TensorMap
-    new_tensors = []
+    new_tensors: List[TensorMap] = []
     for tensor in tensors:
         _, map, _ = all_keys.intersection_and_mapping(tensor.keys)
 
@@ -343,18 +368,19 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
         )
 
         new_keys = tensor.keys.union(missing_keys)
-        new_blocks = [block.copy() for block in tensor]
+        new_blocks = [block.copy() for block in tensor.blocks()]
 
-        for key in missing_keys:
+        for i_key in range(missing_keys.values.shape[0]):
+            key = missing_keys.entry(i_key)
             # Find corresponding block with the missing key
-            reference_tensor = None
+            reference_block: Union[None, TensorBlock] = None
             for reference_tensor in tensors:
                 if key in reference_tensor.keys:
                     reference_block = reference_tensor.block(key)
                     break
 
             # There should be a block with the key otherwise we did something wrong
-            assert reference_tensor is not None
+            assert reference_block is not None
 
             # Construct new block with zero samples based on the metadata of
             # reference_block
