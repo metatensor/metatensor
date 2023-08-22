@@ -112,7 +112,7 @@ def test_numpy_to_torch_gpu_block(block):
 
     assert isinstance(new_block.values, torch.Tensor)
     assert equistore.equal_metadata_block(new_block, block)
-    assert new_block.device.is_cuda()
+    assert new_block.values.device.type == "cuda"
     np.testing.assert_equal(new_block.values.cpu().numpy(), block.values)
 
     for parameter, gradient in block.gradients():
@@ -143,8 +143,8 @@ def test_torch_to_gpu_block(block):
     assert isinstance(new_block.values, torch.Tensor)
     assert equistore.equal_metadata_block(new_block, block)
     np.testing.assert_equal(new_block.values.cpu().numpy(), block.values.numpy())
-    assert new_block.values.device.is_cuda()
-    assert block.values.device.is_cpu()
+    assert new_block.values.device.type == "cuda"
+    assert block.values.device.type == "cpu"
 
     for parameter, gradient in block.gradients():
         new_gradient = new_block.gradient(parameter)
@@ -154,8 +154,8 @@ def test_torch_to_gpu_block(block):
         np.testing.assert_equal(
             new_gradient.values.cpu().numpy(), gradient.values.numpy()
         )
-        assert new_gradient.values.device.is_cuda()
-        assert gradient.values.device.is_cpu()
+        assert new_gradient.values.device.type == "cuda"
+        assert gradient.values.device.type == "cpu"
 
         for parameter_2, gradient_gradient in gradient.gradients():
             new_gradient_gradient = new_gradient.gradient(parameter_2)
@@ -168,8 +168,8 @@ def test_torch_to_gpu_block(block):
                 new_gradient_gradient.values.cpu().numpy(),
                 gradient_gradient.values.numpy(),
             )
-            assert new_gradient_gradient.values.device.is_cuda()
-            assert gradient_gradient.values.device.is_cpu()
+            assert new_gradient_gradient.values.device.type == "cuda"
+            assert gradient_gradient.values.device.type == "cpu"
 
 
 def test_change_dtype_block(block):
