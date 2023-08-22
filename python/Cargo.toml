@@ -3,7 +3,7 @@ name = "equistore-python"
 version = "0.0.0"
 edition = "2021"
 publish = false
-rust-version = "1.63"
+rust-version = "1.64"
 
 [lib]
 path = "lib.rs"

@@ -101,7 +101,7 @@ class cmake_ext(build_ext):
                     raise ValueError(f"unknown arch: {arch}")
 
         elif sys.platform.startswith("linux"):
-            # we set RUST_BUILD_TARGET in out custom docker image
+            # we set RUST_BUILD_TARGET in our custom docker image
             RUST_BUILD_TARGET = os.environ.get("RUST_BUILD_TARGET")
             if RUST_BUILD_TARGET is not None:
                 cmake_options.append(f"-DRUST_BUILD_TARGET={RUST_BUILD_TARGET}")
