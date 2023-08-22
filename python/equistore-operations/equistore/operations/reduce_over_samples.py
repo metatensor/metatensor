@@ -246,7 +246,7 @@ def _reduce_over_samples_block(
                 for i in range(gradient.samples.values.shape[0]):
                     s = gradient.samples.entry(i)
                     values_times_gradient_values[i] = (
-                        gradient_values[i] * block_values[s[0]]
+                        gradient_values[i] * block_values[int(s[0])]
                     )
 
                 values_grad_result = _dispatch.zeros_like(
@@ -265,7 +265,7 @@ def _reduce_over_samples_block(
                 if reduction == "var":
                     for i, s in enumerate(new_gradient_samples):
                         gradient_values_result[i] = (
-                            gradient_values_result[i] * values_mean[s[0]]
+                            gradient_values_result[i] * values_mean[int(s[0])]
                         )
                     gradient_values_result = 2 * (
                         values_grad_result - gradient_values_result
@@ -274,8 +274,8 @@ def _reduce_over_samples_block(
                     for i, s in enumerate(new_gradient_samples):
                         gradient_values_result[i] = (
                             values_grad_result[i]
-                            - (gradient_values_result[i] * values_mean[s[0]])
-                        ) / values_result[s[0]]
+                            - (gradient_values_result[i] * values_mean[int(s[0])])
+                        ) / values_result[int(s[0])]
 
                         gradient_values_result[i] = _dispatch.nan_to_num(
                             gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
