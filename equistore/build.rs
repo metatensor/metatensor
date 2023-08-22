@@ -46,15 +46,28 @@ fn main() {
         equistore_core.push(splitted[..splitted.len() - 1].join("."));
     }
 
-    let mut install_dir = cmake::Config::new(&equistore_core)
+    let install_dir = cmake::Config::new(&equistore_core)
         .define("CARGO_EXE", env!("CARGO"))
         .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
+        .define("BUILD_SHARED_LIBS", if cfg!(feature="static") { "OFF" } else { "ON" })
+        .define("EQUISTORE_INSTALL_BOTH_STATIC_SHARED", "OFF")
         .build();
 
-    install_dir.push("lib");
-    assert!(install_dir.is_dir(), "installation of equistore-core failed");
+    let lib_install_dir = install_dir.join("lib");
+    assert!(lib_install_dir.is_dir(), "installation of equistore-core failed");
 
-    println!("cargo:rustc-link-search=native={}", install_dir.display());
+    println!("cargo:rustc-link-search=native={}", lib_install_dir.display());
+
+    if cfg!(all(target_os = "windows", not(feature="static"))) {
+        // on windows, the DLL is installed in <prefix>/bin, while the link
+        // library (.dll.lib) is installed in in <prefix>/lib. We need
+        // `lib_install_dir` to find the link library at compile time, and
+        // `bin_install_dir` to find the DLL when running tests/etc. from cargo.
+        let bin_install_dir = install_dir.join("bin");
+        assert!(bin_install_dir.is_dir(), "installation of equistore-core failed");
+        println!("cargo:rustc-link-search=native={}", bin_install_dir.display());
+    }
+
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed={}", equistore_core.display());
 }
