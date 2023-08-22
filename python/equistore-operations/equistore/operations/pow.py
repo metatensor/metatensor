@@ -1,5 +1,7 @@
 from typing import List, Union
 
+import torch
+
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
 
@@ -63,7 +65,7 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         values_grad.append(
             constant
             * gradient_values
-            * block.values[gradient.samples.column("sample")].reshape(
+            * block.values[gradient.samples.column("sample").to(torch.long)].reshape(
                 [-1] + [1] * diff_components + _shape
             )
             ** (constant - 1)
