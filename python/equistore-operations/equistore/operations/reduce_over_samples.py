@@ -133,8 +133,8 @@ def _reduce_over_samples_block(
         return result_block
 
     # get which samples will still be there after reduction
-    new_samples, index, _ = _dispatch.unique(
-        block_samples.values[:, sample_selected], return_inverse=True, axis=0
+    new_samples, index = _dispatch.unique_with_inverse(
+        block_samples.values[:, sample_selected], axis=0
     )
 
     block_values = block.values
@@ -148,6 +148,9 @@ def _reduce_over_samples_block(
         block_values,
         index,
     )
+
+    # define values_mean for torchscript (won't be used unless there are gradients)
+    values_mean = _dispatch.empty_like(values_result, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
         bincount = _dispatch.bincount(index)
@@ -168,7 +171,7 @@ def _reduce_over_samples_block(
             )
             # I need the mean values in the derivatives
             if len(block.gradients_list()) > 0:
-                values_mean = values_result.copy()
+                values_mean = _dispatch.copy(values_result)
             values_result = values_result2 - values_result**2
             if reduction == "std":
                 values_result = _dispatch.sqrt(values_result)
@@ -214,14 +217,14 @@ def _reduce_over_samples_block(
 
         gradient_samples = gradient.samples
         # here we need to copy because we want to modify the samples array
-        samples = gradient_samples.values.copy()
+        samples = _dispatch.copy(gradient_samples.values)
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
         samples[:, 0] = index[samples[:, 0]]
 
-        new_gradient_samples, index_gradient, _ = _dispatch.unique(
-            samples[:, :], return_inverse=True, axis=0
+        new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
+            samples[:, :], axis=0
         )
 
         gradient_values = gradient.values
@@ -240,7 +243,8 @@ def _reduce_over_samples_block(
             if reduction == "std" or reduction == "var":
                 values_times_gradient_values = _dispatch.zeros_like(gradient_values)
 
-                for i, s in enumerate(gradient.samples):
+                for i in range(gradient.samples.values.shape[0]):
+                    s = gradient.samples.entry(i)
                     values_times_gradient_values[i] = (
                         gradient_values[i] * block_values[s[0]]
                     )
@@ -268,15 +272,11 @@ def _reduce_over_samples_block(
                     )
                 else:  # std
                     for i, s in enumerate(new_gradient_samples):
-                        # only numpy raise a warning for division by zero
-                        # so the statement catch that
-                        # for torch there is nothing to catch
-                        # both numpy and torch give inf for the division by zero
-                        with np.errstate(divide="ignore", invalid="ignore"):
-                            gradient_values_result[i] = (
-                                values_grad_result[i]
-                                - (gradient_values_result[i] * values_mean[s[0]])
-                            ) / values_result[s[0]]
+                        
+                        gradient_values_result[i] = (
+                            values_grad_result[i]
+                            - (gradient_values_result[i] * values_mean[s[0]])
+                        ) / values_result[s[0]]
 
                         gradient_values_result[i] = _dispatch.nan_to_num(
                             gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
