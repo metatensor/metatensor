@@ -1,7 +1,7 @@
-from ._classes import TensorBlock, TensorMap
-from typing import Union, List
+from typing import List, Union
 
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 
 
 def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
@@ -46,7 +46,7 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         properties=block.properties,
     )
 
-    _shape : List[int] = []
+    _shape: List[int] = []
     for c in block.components:
         _shape.append(len(c))
     _shape.append(len(block.properties))
