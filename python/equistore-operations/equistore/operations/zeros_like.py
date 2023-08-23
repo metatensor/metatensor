@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -7,7 +7,7 @@ from ._utils import _check_gradient_presence_raise
 
 def zeros_like(
     tensor: TensorMap,
-    gradients: Union[List[str], str] = None,
+    gradients: Optional[Union[List[str], str]] = None,
     requires_grad: bool = False,
 ) -> TensorMap:
     """Return a new :py:class:`TensorMap` with the same metadata as tensor,
@@ -99,8 +99,8 @@ def zeros_like(
     ['alpha']
     """
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []  # this must be declared as a list of TensorBlocks
+    for block in tensor.blocks():
         blocks.append(
             zeros_like_block(
                 block=block, gradients=gradients, requires_grad=requires_grad
@@ -111,7 +111,7 @@ def zeros_like(
 
 def zeros_like_block(
     block: TensorBlock,
-    gradients: Union[List[str], str] = None,
+    gradients: Optional[Union[List[str], str]] = None,
     requires_grad: bool = False,
 ) -> TensorBlock:
     """Return a new :py:class:`TensorBlock` with the same metadata as block,
