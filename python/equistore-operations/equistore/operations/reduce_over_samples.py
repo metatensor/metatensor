@@ -40,16 +40,28 @@ TensorBlock operations
 .. autofunction:: equistore.std_over_samples_block
 """
 
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
+
 from . import _dispatch
 from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
 
 
-def np_errstate_torch_script(divide: str, invalid: str) -> None:
+class NpErrstateTorchScriptContext:
+    def __init__(self) -> None:
+        pass
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        pass
+
+
+def np_errstate_torch_script(divide: str, invalid: str) -> NpErrstateTorchScriptContext:
     # Placeholder for np.errstate while torch-scripting
-    return None
+    return NpErrstateTorchScriptContext()
 
 
 def _reduce_over_samples_block(
