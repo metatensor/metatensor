@@ -42,8 +42,14 @@ TensorBlock operations
 
 from typing import List, Optional, Union
 
+import numpy as np
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
+
+
+def np_errstate_torch_script(divide: str, invalid: str) -> None:
+    # Placeholder for np.errstate while torch-scripting
+    return None
 
 
 def _reduce_over_samples_block(
@@ -271,11 +277,20 @@ def _reduce_over_samples_block(
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
+                    if torch_jit_is_scripting():
+                        np_errstate = np_errstate_torch_script
+                    else:
+                        np_errstate = np.errstate
                     for i, s in enumerate(new_gradient_samples):
-                        gradient_values_result[i] = (
-                            values_grad_result[i]
-                            - (gradient_values_result[i] * values_mean[int(s[0])])
-                        ) / values_result[int(s[0])]
+                        # only numpy raise a warning for division by zero
+                        # so the statement catch that
+                        # for torch there is nothing to catch
+                        # both numpy and torch give inf for the division by zero
+                        with np_errstate(divide="ignore", invalid="ignore"):
+                            gradient_values_result[i] = (
+                                values_grad_result[i]
+                                - (gradient_values_result[i] * values_mean[int(s[0])])
+                            ) / values_result[int(s[0])]
 
                         gradient_values_result[i] = _dispatch.nan_to_num(
                             gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
@@ -366,7 +381,6 @@ def sum_over_samples_block(
     :returns:
         a :py:class:`TensorBlock` containing the reduced values and sample labels
 
-    >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
@@ -433,7 +447,6 @@ def sum_over_samples(
     :returns:
         a :py:class:`TensorMap` containing the reduced values and sample labels
 
-    >>> import numpy as np
     >>> from equistore import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
     ...     values=np.array(
