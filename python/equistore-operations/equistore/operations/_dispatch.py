@@ -72,7 +72,7 @@ def allclose(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def bincount(input, weights=None, minlength=0):
+def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
     """Count number of occurrences of each value in array of non-negative ints.
     Equivalent of ``numpy.bitcount(input, weights, minlength)``
 
@@ -97,6 +97,17 @@ def bincount(input, weights=None, minlength=0):
         if weights is not None:
             _check_all_np_ndarray([weights])
         return np.bincount(input, weights=weights, minlength=minlength)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def copy(array):
+    """Returns a copy of ``array``.
+    The new data is not shared with the original array"""
+    if isinstance(array, TorchTensor):
+        return array.clone()
+    elif isinstance(array, np.ndarray):
+        return array.copy()
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -219,7 +230,9 @@ def lstsq(X, Y, rcond, driver=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
+def nan_to_num(
+    X, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None
+):
     """Equivalent to np.nan_to_num(X, nan, posinf, neginf)"""
     if isinstance(X, TorchTensor):
         return torch.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
@@ -260,15 +273,12 @@ def index_add(output_array, input_array, index):
     output_array.index_add_(0, torch.tensor(index),input_array)
 
     """
-    if len(index.shape) != 1:
-        raise ValueError("index should be 1D array")
+    index = to_index_array(index)
     if isinstance(input_array, TorchTensor):
-        _check_all_torch_tensor([output_array])
-        output_array.index_add_(
-            0, torch.tensor(index, device=input_array.device), input_array
-        )
+        _check_all_torch_tensor([output_array, input_array, index])
+        output_array.index_add_(0, index, input_array)
     elif isinstance(input_array, np.ndarray):
-        _check_all_np_ndarray([output_array])
+        _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, index, input_array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -452,6 +462,44 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
 
     else:
         # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def to_index_array(array):
+    """Returns an array that is suitable for indexing a dimension of
+    a different array.
+
+    After a few checks (int, 1D), this operation will convert the dtype to
+    torch.long (which is, in some torch versions, the only acceptable type
+    of index tensor). Numpy arrays are left unchanged.
+    """
+    if len(array.shape) != 1:
+        raise ValueError("Index arrays must be 1D")
+
+    if isinstance(array, TorchTensor):
+        if torch.is_floating_point(array):
+            raise ValueError("Index arrays must be integers")
+        return array.to(torch.long)
+    elif isinstance(array, np.ndarray):
+        if not np.issubdtype(array.dtype, np.integer):
+            raise ValueError("Index arrays must be integers")
+        return array
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def unique_with_inverse(array, axis: Optional[int] = None):
+    """Return the unique entries of `array`, along with inverse indices.
+
+    Specifying return_inverse=True explicitly seems to be necessary, as
+    there is apparently no way to mark something as a compile-time constant
+    in torchscript.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.unique(array, return_inverse=True, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.unique(array, return_inverse=True, axis=axis)
+    else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
