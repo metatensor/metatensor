@@ -229,7 +229,7 @@ def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def concatenate(arrays, axis):
+def concatenate(arrays: List[TorchTensor], axis: int):
     """
     Concatenate a group of arrays along a given axis.
 
@@ -274,7 +274,7 @@ def index_add(output_array, input_array, index):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def zeros_like(array, shape=None, requires_grad=False):
+def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array filled with zeros, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -294,15 +294,14 @@ def zeros_like(array, shape=None, requires_grad=False):
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
         return np.zeros_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def ones_like(array, shape=None, requires_grad=False):
+def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array filled with ones, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -313,24 +312,23 @@ def ones_like(array, shape=None, requires_grad=False):
 
     This is the equivalent to ``np.ones_like(array, shape=shape)``.
     """
-    if isinstance(array, np.ndarray):
-        return np.ones_like(array, shape=shape, subok=False)
-    elif isinstance(array, TorchTensor):
+
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
-
         return torch.ones(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        return np.ones_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def empty_like(array, shape=None, requires_grad=False):
+def empty_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an uninitialized array, with the given ``shape``, and similar dtype,
     device and other options as ``array``.
@@ -341,19 +339,17 @@ def empty_like(array, shape=None, requires_grad=False):
 
     This is the equivalent to ``np.empty_like(array, shape=shape)``.
     """
-    if isinstance(array, np.ndarray):
-        return np.empty_like(array, shape=shape, subok=False)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
-
         return torch.empty(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        return np.empty_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -386,7 +382,7 @@ def sign(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def rand_like(array, shape=None, requires_grad=False):
+def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array with values randomly sampled from the uniform distribution
     in the ``[0, 1)`` interval, with the given ``shape``, and similar dtype,
@@ -397,22 +393,19 @@ def rand_like(array, shape=None, requires_grad=False):
     value on the returned array.
     """
 
-    if isinstance(array, np.ndarray):
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.shape
-
-        return np.random.rand(*shape).astype(array.dtype)
-    elif isinstance(array, TorchTensor):
-        if shape is None:
-            shape = array.shape
-
         return torch.rand(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        if shape is None:
+            shape = array.shape
+        return np.random.rand(*shape).astype(array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -459,4 +452,18 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
 
     else:
         # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def where(array):
+    """Return the indices where `array` is True.
+
+    This function has the same behavior as
+    ``np.where(array)``.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.where(array)
+    elif isinstance(array, np.ndarray):
+        return np.where(array)
+    else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
