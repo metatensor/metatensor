@@ -92,36 +92,36 @@ def _reduce_over_samples_block(
 
     if remaining_samples is None:
         assert sample_names is not None
-        remaining_samples_final: List[str] = []
+        remaining_samples_names: List[str] = []
         for s_name in block_samples.names:
             if s_name in sample_names:
                 continue
-            remaining_samples_final.append(s_name)
+            remaining_samples_names.append(s_name)
     else:
-        remaining_samples_final = remaining_samples
+        remaining_samples_names = remaining_samples
 
-    for sample in remaining_samples_final:
+    for sample in remaining_samples_names:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean", "var", "std"]
     # get the indices of the selected sample
     sample_selected = [
-        block_samples.names.index(sample) for sample in remaining_samples_final
+        block_samples.names.index(sample) for sample in remaining_samples_names
     ]
 
     # checks if it is a zero sample TensorBlock
     if len(block.samples) == 0:
         # Here is different from the general case where we use Labels.single() if
-        # if len(remaining_samples_final) == 0
+        # if len(remaining_samples_names) == 0
         # Labels.single() cannot be used because Labels.single() has not
         # an np.empty() array as values but has one values, it has dimension (1,...)
         # we want (0,...).
-        # here if len(remaining_samples_final) == 0 ->
+        # here if len(remaining_samples_names) == 0 ->
         # Labels([], shape=(0, 0), dtype=int32)
 
         samples_label = Labels(
-            remaining_samples_final,
-            _dispatch.zeros_like(block.values, [0, len(remaining_samples_final)]),
+            remaining_samples_names,
+            _dispatch.zeros_like(block.values, [0, len(remaining_samples_names)]),
         )
 
         result_block = TensorBlock(
@@ -195,11 +195,11 @@ def _reduce_over_samples_block(
                 values_result = _dispatch.sqrt(values_result)
 
     # check if the reduce operation reduce all the samples
-    if len(remaining_samples_final) == 0:
+    if len(remaining_samples_names) == 0:
         samples_label = Labels.single()
     else:
         samples_label = Labels(
-            remaining_samples_final,
+            remaining_samples_names,
             new_samples,
         )
 
