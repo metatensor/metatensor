@@ -117,7 +117,7 @@ def list_to_array(array, data: Union[List[int], List[List[int]]]):
     if isinstance(array, TorchTensor):
         return torch.tensor(data).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
-        return np.array(data, dtype=array.dtype)
+        return np.array(data)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -370,10 +370,10 @@ def abs(array):
 
     It is equivalent of np.abs(array) and torch.abs(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.abs(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.abs(array)
+    elif isinstance(array, np.ndarray):
+        return np.abs(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -384,10 +384,10 @@ def sign(array):
 
     It is equivalent of np.sign(array) and torch.sign(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.sign(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.sign(array)
+    elif isinstance(array, np.ndarray):
+        return np.sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
