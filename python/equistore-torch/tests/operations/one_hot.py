@@ -30,7 +30,7 @@ def check_operation(one_hot):
     # check values
     print(one_hot_encoding)
     print(correct_encoding)
-    assert torch.allclose(one_hot_encoding, correct_encoding)
+    assert torch.all(one_hot_encoding == correct_encoding)
 
 
 def test_operation_as_python():
