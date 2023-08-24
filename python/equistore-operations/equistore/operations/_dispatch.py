@@ -6,9 +6,15 @@ import numpy as np
 try:
     import torch
     from torch import Tensor as TorchTensor
+    torch_dtype = torch.dtype
+    torch_device = torch.device
 except ImportError:
 
     class TorchTensor:
+        pass
+    class torch_dtype:
+        pass
+    class torch_device:
         pass
 
 
@@ -311,7 +317,7 @@ def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = F
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
+def ones_like(array, shape=None, requires_grad=False):
     """
     Create an array filled with ones, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -322,18 +328,19 @@ def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
 
     This is the equivalent to ``np.ones_like(array, shape=shape)``.
     """
-
-    if isinstance(array, TorchTensor):
+    if isinstance(array, np.ndarray):
+        return np.ones_like(array, shape=shape, subok=False)
+    elif isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
+
         return torch.ones(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-        ).requires_grad_(requires_grad)
-    elif isinstance(array, np.ndarray):
-        return np.ones_like(array, shape=shape, subok=False)
+            requires_grad=requires_grad,
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -392,7 +399,7 @@ def sign(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
+def rand_like(array, shape=None, requires_grad=False):
     """
     Create an array with values randomly sampled from the uniform distribution
     in the ``[0, 1)`` interval, with the given ``shape``, and similar dtype,
@@ -403,27 +410,65 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
     value on the returned array.
     """
 
-    if isinstance(array, TorchTensor):
+    if isinstance(array, np.ndarray):
         if shape is None:
             shape = array.shape
+
+        return np.random.rand(*shape).astype(array.dtype)
+    elif isinstance(array, TorchTensor):
+        if shape is None:
+            shape = array.shape
+
         return torch.rand(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-        ).requires_grad_(requires_grad)
-    elif isinstance(array, np.ndarray):
-        if shape is None:
-            shape = array.shape
-        return np.random.rand(*shape).astype(array.dtype)
+            requires_grad=requires_grad,
+        )
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
+def to(
+    array,
+    backend: Optional[str] = None,
+    dtype: Optional[torch.dtype] = None,
+    device: Optional[Union[str, torch.device]] = None,
+    requires_grad: Optional[bool] = None
+):
     """Convert the array to the specified backend."""
+
+    # Convert torch Tensor
+    if isinstance(array, torch.Tensor):
+        if backend is None:  # Infer the target backend
+            backend = "torch"
+        if dtype is None:
+            dtype = array.dtype
+        if device is None:
+            device = array.device
+        if isinstance(device, str):
+            device = torch.device(device)
+
+        # Perform the conversion
+        if backend == "torch":
+            # We need this to keep gradients of the tensor
+            new_array = array.to(dtype=dtype).to(device=device)
+            if requires_grad is not None:
+                new_array.requires_grad_(requires_grad)
+            return new_array
+        
+        elif backend == "numpy":
+            if torch.jit.is_scripting():
+                raise ValueError("cannot call numpy conversion when torch-scripting")
+            else:
+                return array.detach().cpu().numpy()
+
+        else:
+            raise ValueError(f"Unknown backend: {backend}")
+
     # Convert numpy array
-    if isinstance(array, np.ndarray):
+    elif isinstance(array, np.ndarray):
         if backend is None:  # Infer the target backend
             backend = "numpy"
 
@@ -437,26 +482,6 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
             if requires_grad is not None:
                 new_array.requires_grad = requires_grad
             return new_array
-
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-
-    # Convert torch Tensor
-    elif isinstance(array, torch.Tensor):
-        if backend is None:  # Infer the target backend
-            backend = "torch"
-
-        # Perform the conversion
-        if backend == "numpy":
-            return array.detach().cpu().numpy()
-
-        elif backend == "torch":
-            # We need this to keep gradients of the tensor
-            new_array = array.to(dtype=dtype, device=device)
-            if requires_grad is not None:
-                new_array.requires_grad = requires_grad
-            return new_array
-
         else:
             raise ValueError(f"Unknown backend: {backend}")
 

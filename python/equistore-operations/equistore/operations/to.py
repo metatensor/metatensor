@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -50,13 +50,13 @@ def to(
     keys = tensor.keys
     new_blocks = [
         block_to(
-            tensor[key].copy(),
+            _dispatch.copy(tensor.block(keys.entry(i))),
             backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
         )
-        for key in keys
+        for i in range(keys.values.shape[0])
     ]
 
     return TensorMap(keys=keys, blocks=new_blocks)
@@ -122,8 +122,8 @@ def block_to(
 def _block_to(
     block: TensorBlock,
     backend: str,
-    dtype=None,
-    device=None,
+    dtype: Optional[_dispatch.torch_dtype] = None,
+    device: Optional[Union[str, _dispatch.torch_device]] = None,
     requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
