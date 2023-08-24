@@ -1,9 +1,7 @@
-import equistore.core
-
 from ._classes import Labels, TensorBlock
 
 
-def block_from_array(array: equistore.core.data.Array) -> TensorBlock:
+def block_from_array(array) -> TensorBlock:
     """
     Creates a simple TensorBlock from an array.
 

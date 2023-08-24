@@ -2,9 +2,10 @@
 Module to find the absolute values of a :py:class:`TensorMap`, returning a new
 :py:class:`TensorMap`.
 """
-from equistore.core import TensorBlock, TensorMap
+from typing import List
 
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 
 
 def abs(A: TensorMap) -> TensorMap:
@@ -25,10 +26,10 @@ def abs(A: TensorMap) -> TensorMap:
     :return: a new :py:class:`TensorMap` with the same metadata as ``A`` and
         absolute values of ``A``.
     """
-    blocks = []
+    blocks: List[TensorBlock] = []
     keys = A.keys
-    for key in keys:
-        blocks.append(_abs_block(block=A[key]))
+    for i in range(len(keys)):
+        blocks.append(_abs_block(block=A.block(keys.entry(i))))
     return TensorMap(keys, blocks)
 
 
@@ -50,10 +51,10 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         return result_block
 
     sign_values = _dispatch.sign(block.values)
-    _shape = ()
+    _shape: List[int] = []
     for c in block.components:
-        _shape += (len(c),)
-    _shape += (len(block.properties),)
+        _shape += [len(c)]
+    _shape += [len(block.properties)]
 
     for parameter, gradient in block.gradients():
         if len(gradient.gradients_list()) != 0:
@@ -62,9 +63,9 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         diff_components = len(gradient.components) - len(block.components)
         # The sign_values have the same dimensions as that of the block.values.
         # Reshape the sign_values to allow multiplication with gradient.values
-        new_grad = gradient.values[:] * sign_values[gradient.samples["sample"]].reshape(
-            (-1,) + (1,) * diff_components + _shape
-        )
+        new_grad = gradient.values[:] * sign_values[
+            _dispatch.to_index_array(gradient.samples.column("sample"))
+        ].reshape([-1] + [1] * diff_components + _shape)
 
         gradient = TensorBlock(
             new_grad, gradient.samples, gradient.components, gradient.properties

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -72,7 +72,7 @@ def allclose(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def bincount(input, weights=None, minlength=0):
+def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
     """Count number of occurrences of each value in array of non-negative ints.
     Equivalent of ``numpy.bitcount(input, weights, minlength)``
 
@@ -101,12 +101,23 @@ def bincount(input, weights=None, minlength=0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def list_to_array(array, data: List):
+def copy(array):
+    """Returns a copy of ``array``.
+    The new data is not shared with the original array"""
+    if isinstance(array, TorchTensor):
+        return array.clone()
+    elif isinstance(array, np.ndarray):
+        return array.copy()
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def list_to_array(array, data: Union[List[int], List[List[int]]]):
     """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):
-        return torch.Tensor(data, device=array.device, dtype=array.dtype)
+        return torch.tensor(data).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
-        return np.array(data, dtype=array.dtype)
+        return np.array(data)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -219,7 +230,9 @@ def lstsq(X, Y, rcond, driver=None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def nan_to_num(X, nan=0.0, posinf=None, neginf=None):
+def nan_to_num(
+    X, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None
+):
     """Equivalent to np.nan_to_num(X, nan, posinf, neginf)"""
     if isinstance(X, TorchTensor):
         return torch.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
@@ -260,21 +273,18 @@ def index_add(output_array, input_array, index):
     output_array.index_add_(0, torch.tensor(index),input_array)
 
     """
-    if len(index.shape) != 1:
-        raise ValueError("index should be 1D array")
+    index = to_index_array(index)
     if isinstance(input_array, TorchTensor):
-        _check_all_torch_tensor([output_array])
-        output_array.index_add_(
-            0, torch.tensor(index, device=input_array.device), input_array
-        )
+        _check_all_torch_tensor([output_array, input_array, index])
+        output_array.index_add_(0, index, input_array)
     elif isinstance(input_array, np.ndarray):
-        _check_all_np_ndarray([output_array])
+        _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, index, input_array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def zeros_like(array, shape=None, requires_grad=False):
+def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array filled with zeros, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -294,15 +304,14 @@ def zeros_like(array, shape=None, requires_grad=False):
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
         return np.zeros_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def ones_like(array, shape=None, requires_grad=False):
+def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array filled with ones, with the given ``shape``, and similar
     dtype, device and other options as ``array``.
@@ -313,24 +322,23 @@ def ones_like(array, shape=None, requires_grad=False):
 
     This is the equivalent to ``np.ones_like(array, shape=shape)``.
     """
-    if isinstance(array, np.ndarray):
-        return np.ones_like(array, shape=shape, subok=False)
-    elif isinstance(array, TorchTensor):
+
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
-
         return torch.ones(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        return np.ones_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def empty_like(array, shape=None, requires_grad=False):
+def empty_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an uninitialized array, with the given ``shape``, and similar dtype,
     device and other options as ``array``.
@@ -341,19 +349,17 @@ def empty_like(array, shape=None, requires_grad=False):
 
     This is the equivalent to ``np.empty_like(array, shape=shape)``.
     """
-    if isinstance(array, np.ndarray):
-        return np.empty_like(array, shape=shape, subok=False)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.size()
-
         return torch.empty(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        return np.empty_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -364,10 +370,10 @@ def abs(array):
 
     It is equivalent of np.abs(array) and torch.abs(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.abs(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.abs(array)
+    elif isinstance(array, np.ndarray):
+        return np.abs(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -378,15 +384,15 @@ def sign(array):
 
     It is equivalent of np.sign(array) and torch.sign(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.sign(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.sign(array)
+    elif isinstance(array, np.ndarray):
+        return np.sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def rand_like(array, shape=None, requires_grad=False):
+def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array with values randomly sampled from the uniform distribution
     in the ``[0, 1)`` interval, with the given ``shape``, and similar dtype,
@@ -397,22 +403,19 @@ def rand_like(array, shape=None, requires_grad=False):
     value on the returned array.
     """
 
-    if isinstance(array, np.ndarray):
+    if isinstance(array, TorchTensor):
         if shape is None:
             shape = array.shape
-
-        return np.random.rand(*shape).astype(array.dtype)
-    elif isinstance(array, TorchTensor):
-        if shape is None:
-            shape = array.shape
-
         return torch.rand(
             shape,
             dtype=array.dtype,
             layout=array.layout,
             device=array.device,
-            requires_grad=requires_grad,
-        )
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        if shape is None:
+            shape = array.shape
+        return np.random.rand(*shape).astype(array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -459,6 +462,52 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
 
     else:
         # Only numpy and torch arrays currently supported
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def to_index_array(array):
+    """Returns an array that is suitable for indexing a dimension of
+    a different array.
+
+    After a few checks (int, 1D), this operation will convert the dtype to
+    torch.long (which is, in some torch versions, the only acceptable type
+    of index tensor). Numpy arrays are left unchanged.
+    """
+    if len(array.shape) != 1:
+        raise ValueError("Index arrays must be 1D")
+
+    if isinstance(array, TorchTensor):
+        if torch.is_floating_point(array):
+            raise ValueError("Index arrays must be integers")
+        return array.to(torch.long)
+    elif isinstance(array, np.ndarray):
+        if not np.issubdtype(array.dtype, np.integer):
+            raise ValueError("Index arrays must be integers")
+        return array
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def unique(array, axis: Optional[int] = None):
+    """Find the unique elements of an array."""
+    if isinstance(array, TorchTensor):
+        return torch.unique(array, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.unique(array, axis=axis)
+
+
+def unique_with_inverse(array, axis: Optional[int] = None):
+    """Return the unique entries of `array`, along with inverse indices.
+
+    Specifying return_inverse=True explicitly seems to be necessary, as
+    there is apparently no way to mark something as a compile-time constant
+    in torchscript.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.unique(array, return_inverse=True, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.unique(array, return_inverse=True, axis=axis)
+    else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 

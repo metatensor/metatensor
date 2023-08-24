@@ -12,7 +12,7 @@ build:
   tools:
     # Set the version of Python and other tools we need
     python: "3.11"
-    rust: "1.64"  # RDT does not offer our minimal version 1.63
+    rust: "1.64"
   jobs:
     post_install:
       # install equistore-torch with the CPU version of PyTorch we can not use

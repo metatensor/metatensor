@@ -40,18 +40,34 @@ TensorBlock operations
 .. autofunction:: equistore.std_over_samples_block
 """
 
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
+
+
+class NpErrstateTorchScriptContext:
+    def __init__(self) -> None:
+        pass
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        pass
+
+
+def np_errstate_torch_script(divide: str, invalid: str) -> NpErrstateTorchScriptContext:
+    # Placeholder for np.errstate while torch-scripting
+    return NpErrstateTorchScriptContext()
 
 
 def _reduce_over_samples_block(
     block: TensorBlock,
     sample_names: Optional[List[str]] = None,
-    reduction: Optional[str] = "sum",
+    reduction: str = "sum",
     remaining_samples: Optional[List[str]] = None,
 ) -> TensorBlock:
     """
@@ -76,31 +92,36 @@ def _reduce_over_samples_block(
 
     if remaining_samples is None:
         assert sample_names is not None
-        remaining_samples = [
-            s_name for s_name in block_samples.names if s_name not in sample_names
-        ]
+        remaining_samples_names: List[str] = []
+        for s_name in block_samples.names:
+            if s_name in sample_names:
+                continue
+            remaining_samples_names.append(s_name)
+    else:
+        remaining_samples_names = remaining_samples
 
-    for sample in remaining_samples:
+    for sample in remaining_samples_names:
         assert sample in block_samples.names
 
     assert reduction in ["sum", "mean", "var", "std"]
     # get the indices of the selected sample
     sample_selected = [
-        block_samples.names.index(sample) for sample in remaining_samples
+        block_samples.names.index(sample) for sample in remaining_samples_names
     ]
 
     # checks if it is a zero sample TensorBlock
     if len(block.samples) == 0:
         # Here is different from the general case where we use Labels.single() if
-        # if len(remaining_samples) == 0
+        # if len(remaining_samples_names) == 0
         # Labels.single() cannot be used because Labels.single() has not
         # an np.empty() array as values but has one values, it has dimension (1,...)
         # we want (0,...).
-        # here if len(remaining_samples) == 0 -> Labels([], shape=(0, 0), dtype=int32)
+        # here if len(remaining_samples_names) == 0 ->
+        # Labels([], shape=(0, 0), dtype=int32)
 
         samples_label = Labels(
-            remaining_samples,
-            np.zeros((0, len(remaining_samples))),
+            remaining_samples_names,
+            _dispatch.zeros_like(block.values, [0, len(remaining_samples_names)]),
         )
 
         result_block = TensorBlock(
@@ -130,8 +151,8 @@ def _reduce_over_samples_block(
         return result_block
 
     # get which samples will still be there after reduction
-    new_samples, index = np.unique(
-        block_samples.values[:, sample_selected], return_inverse=True, axis=0
+    new_samples, index = _dispatch.unique_with_inverse(
+        block_samples.values[:, sample_selected], axis=0
     )
 
     block_values = block.values
@@ -145,6 +166,9 @@ def _reduce_over_samples_block(
         block_values,
         index,
     )
+
+    # define values_mean for torchscript (won't be used unless there are gradients)
+    values_mean = _dispatch.empty_like(values_result, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
         bincount = _dispatch.bincount(index)
@@ -165,17 +189,17 @@ def _reduce_over_samples_block(
             )
             # I need the mean values in the derivatives
             if len(block.gradients_list()) > 0:
-                values_mean = values_result.copy()
+                values_mean = _dispatch.copy(values_result)
             values_result = values_result2 - values_result**2
             if reduction == "std":
                 values_result = _dispatch.sqrt(values_result)
 
     # check if the reduce operation reduce all the samples
-    if len(remaining_samples) == 0:
+    if len(remaining_samples_names) == 0:
         samples_label = Labels.single()
     else:
         samples_label = Labels(
-            remaining_samples,
+            remaining_samples_names,
             new_samples,
         )
 
@@ -211,14 +235,14 @@ def _reduce_over_samples_block(
 
         gradient_samples = gradient.samples
         # here we need to copy because we want to modify the samples array
-        samples = gradient_samples.values.copy()
+        samples = _dispatch.copy(gradient_samples.values)
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
-        samples[:, 0] = index[samples[:, 0]]
+        samples[:, 0] = index[_dispatch.to_index_array(samples[:, 0])]
 
-        new_gradient_samples, index_gradient = np.unique(
-            samples[:, :], return_inverse=True, axis=0
+        new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
+            samples[:, :], axis=0
         )
 
         gradient_values = gradient.values
@@ -237,9 +261,10 @@ def _reduce_over_samples_block(
             if reduction == "std" or reduction == "var":
                 values_times_gradient_values = _dispatch.zeros_like(gradient_values)
 
-                for i, s in enumerate(gradient.samples):
+                for i in range(gradient.samples.values.shape[0]):
+                    s = gradient.samples.entry(i)
                     values_times_gradient_values[i] = (
-                        gradient_values[i] * block_values[s[0]]
+                        gradient_values[i] * block_values[int(s[0])]
                     )
 
                 values_grad_result = _dispatch.zeros_like(
@@ -258,22 +283,26 @@ def _reduce_over_samples_block(
                 if reduction == "var":
                     for i, s in enumerate(new_gradient_samples):
                         gradient_values_result[i] = (
-                            gradient_values_result[i] * values_mean[s[0]]
+                            gradient_values_result[i] * values_mean[int(s[0])]
                         )
                     gradient_values_result = 2 * (
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
+                    if torch_jit_is_scripting():
+                        np_errstate = np_errstate_torch_script
+                    else:
+                        np_errstate = np.errstate
                     for i, s in enumerate(new_gradient_samples):
                         # only numpy raise a warning for division by zero
                         # so the statement catch that
                         # for torch there is nothing to catch
                         # both numpy and torch give inf for the division by zero
-                        with np.errstate(divide="ignore", invalid="ignore"):
+                        with np_errstate(divide="ignore", invalid="ignore"):
                             gradient_values_result[i] = (
                                 values_grad_result[i]
-                                - (gradient_values_result[i] * values_mean[s[0]])
-                            ) / values_result[s[0]]
+                                - (gradient_values_result[i] * values_mean[int(s[0])])
+                            ) / values_result[int(s[0])]
 
                         gradient_values_result[i] = _dispatch.nan_to_num(
                             gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
@@ -311,21 +340,25 @@ def _reduce_over_samples(
     "std" or "var"
     """
     if isinstance(sample_names, str):
-        sample_names = [sample_names]
+        sample_names_list = [sample_names]
+    else:
+        sample_names_list = sample_names
 
-    for sample in sample_names:
+    for sample in sample_names_list:
         if sample not in tensor.sample_names:
             raise ValueError(
                 f"one of the requested sample name ({sample}) is not part of "
                 "this TensorMap"
             )
 
-    remaining_samples = [
-        s_name for s_name in tensor.sample_names if s_name not in sample_names
-    ]
+    remaining_samples: List[str] = []
+    for s_name in tensor.sample_names:
+        if s_name in sample_names_list:
+            continue
+        remaining_samples.append(s_name)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
@@ -498,7 +531,9 @@ def mean_over_samples_block(
     )
 
 
-def mean_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def mean_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     """Compute the mean of a :py:class:`TensorMap`, combining the samples according to
     ``sample_names``.
 
@@ -546,7 +581,9 @@ def std_over_samples_block(
     )
 
 
-def std_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def std_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     r"""Compute the standard deviation of a :py:class:`TensorMap`, combining the samples
     according to ``sample_names``.
 
@@ -601,7 +638,9 @@ def var_over_samples_block(
     )
 
 
-def var_over_samples(tensor: TensorMap, sample_names: List[str]) -> TensorMap:
+def var_over_samples(
+    tensor: TensorMap, sample_names: Union[str, List[str]]
+) -> TensorMap:
     r"""Compute the variance of a :py:class:`TensorMap`, combining the
     samples according to ``sample_names``.
 
