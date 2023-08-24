@@ -1,7 +1,5 @@
 from typing import List, Union
 
-import torch
-
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
 
@@ -57,26 +55,20 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         if len(gradient.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 
-        values_grad = []
         gradient_values = gradient.values
-        # I want the difference between the number of components of the gradients and
-        # the values
+        # we find the difference between the number of components
+        # of the gradients and the values and then use it to create
+        # empty dimensions for broadcasting
         diff_components = len(gradient_values.shape) - len(block.values.shape)
         gradient_samples_to_values_samples = gradient.samples.column("sample")
-        if isinstance(gradient_samples_to_values_samples, torch.Tensor):
-            # convert to torch.long before using as index
-            gradient_samples_to_values_samples = gradient_samples_to_values_samples.to(
-                torch.long
-            )
-        values_grad.append(
+        values_grad = (
             constant
             * gradient_values
-            * block.values[gradient_samples_to_values_samples].reshape(
-                [-1] + [1] * diff_components + _shape
-            )
+            * block.values[
+                _dispatch.to_index_array(gradient_samples_to_values_samples)
+            ].reshape([-1] + [1] * diff_components + _shape)
             ** (constant - 1)
         )
-        values_grad = _dispatch.concatenate(values_grad, axis=0)
 
         result_block.add_gradient(
             parameter=parameter,
