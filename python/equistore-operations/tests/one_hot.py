@@ -21,7 +21,7 @@ def test_ordinary_usage():
             [0, 1],
             [1, 0],
         ],
-        dtype=np.float64,
+        dtype=np.int32,
     )
     one_hot_encoding = equistore.one_hot(original_labels, possible_labels)
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
@@ -43,7 +43,7 @@ def test_additional_value():
             [0, 1, 0],
             [1, 0, 0],
         ],
-        dtype=np.float64,
+        dtype=np.int32,
     )
     one_hot_encoding = equistore.one_hot(original_labels, possible_labels)
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
