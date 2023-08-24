@@ -115,7 +115,7 @@ def copy(array):
 def list_to_array(array, data: Union[List[int], List[List[int]]]):
     """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):
-        return torch.tensor(data)
+        return torch.tensor(data).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
         return np.array(data)
     else:
