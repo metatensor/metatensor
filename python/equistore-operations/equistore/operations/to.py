@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
 
 
 def to(
@@ -42,10 +42,12 @@ def to(
         type, and/or device.
     """
     # Check types
-    if not isinstance(tensor, TensorMap):
-        raise TypeError(
-            f"`tensor` should be an equistore `TensorMap`, got {type(tensor)}"
-        )
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(tensor, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(tensor, TensorMap)
+    if not is_tensor_map:
+        raise TypeError("`tensor` should be an equistore `TensorMap`")
     # Convert each block and build the return TensorMap
     keys = tensor.keys
     new_blocks = [
@@ -99,10 +101,12 @@ def block_to(
         type, and/or device.
     """
     # Check inputs
-    if not isinstance(block, TensorBlock):
-        raise TypeError(
-            f"`block` should be an equistore `TensorBlock`, got {type(block)}"
-        )
+    if torch_jit_is_scripting():
+        is_tensor_block = isinstance(block, TensorBlock)
+    else:
+        is_tensor_block = check_isinstance(block, TensorBlock)
+    if not is_tensor_block:
+        raise TypeError("`block` should be an equistore `TensorBlock`")
     if backend is not None:
         if not isinstance(backend, str):
             raise TypeError("'backend' should be given as a string")
@@ -124,6 +128,7 @@ def block_to(
     last_visited = ""
 
     while True:
+        print(len(transformed_blocks))
         gradient_names = current_block.gradients_list()
         n_gradients = len(gradient_names)
         if last_visited == "":  # first time we see this block
@@ -168,11 +173,7 @@ def block_to(
                 current_block = _reach_current_block(
                     block, current_location
                 )  # reach current location
-            else:
-                # transform and append to list of transformed blocks:
-                transformed_blocks.append(
-                    _block_to(current_block, backend, dtype, device, requires_grad)
-                )
+            else:  # more gradients to convert
                 # walk forward:
                 current_block = current_block.gradient(
                     gradient_names[index_last_visited + 1]
