@@ -8,7 +8,9 @@ def check_operation(one_hot):
         names=["atom", "species"],
         values=torch.tensor([[0, 6], [1, 1], [2, 1], [3, 1], [4, 6], [5, 1]]),
     )
-    possible_labels = equistore.torch.Labels(names=["species"], values=torch.tensor([[1], [6]]))
+    possible_labels = equistore.torch.Labels(
+        names=["species"], values=torch.tensor([[1], [6]])
+    )
     correct_encoding = torch.tensor(
         [
             [0, 1],

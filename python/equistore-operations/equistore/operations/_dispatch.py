@@ -110,7 +110,7 @@ def copy(array):
         return array.copy()
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
-    
+
 
 def eye_like(array, size: int):
     """
