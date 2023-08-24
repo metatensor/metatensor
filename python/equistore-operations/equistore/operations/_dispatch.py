@@ -6,14 +6,17 @@ import numpy as np
 try:
     import torch
     from torch import Tensor as TorchTensor
+
     torch_dtype = torch.dtype
     torch_device = torch.device
 except ImportError:
 
     class TorchTensor:
         pass
+
     class torch_dtype:
         pass
+
     class torch_device:
         pass
 
@@ -435,7 +438,7 @@ def to(
     backend: Optional[str] = None,
     dtype: Optional[torch.dtype] = None,
     device: Optional[Union[str, torch.device]] = None,
-    requires_grad: Optional[bool] = None
+    requires_grad: Optional[bool] = None,
 ):
     """Convert the array to the specified backend."""
 
@@ -457,7 +460,7 @@ def to(
             if requires_grad is not None:
                 new_array.requires_grad_(requires_grad)
             return new_array
-        
+
         elif backend == "numpy":
             if torch.jit.is_scripting():
                 raise ValueError("cannot call numpy conversion when torch-scripting")
