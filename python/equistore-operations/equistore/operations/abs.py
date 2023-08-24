@@ -28,7 +28,7 @@ def abs(A: TensorMap) -> TensorMap:
     """
     blocks: List[TensorBlock] = []
     keys = A.keys
-    for i in range(keys.values.shape[0]):
+    for i in range(len(keys)):
         blocks.append(_abs_block(block=A.block(keys.entry(i))))
     return TensorMap(keys, blocks)
 
