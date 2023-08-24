@@ -1,9 +1,12 @@
-from equistore.core import TensorBlock, TensorMap
+from typing import List, Union
+
+import torch
 
 from . import _dispatch
+from ._classes import TensorBlock, TensorMap
 
 
-def pow(A: TensorMap, B: float) -> TensorMap:
+def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the same metadata of ``A``
     and the values being the element-wise ``B``-power of ``A.values``.
 
@@ -22,7 +25,7 @@ def pow(A: TensorMap, B: float) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
 
-    blocks = []
+    blocks: List[TensorBlock] = []
 
     if isinstance(B, (float, int)):
         B = float(B)
@@ -45,10 +48,10 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         properties=block.properties,
     )
 
-    _shape = ()
+    _shape: List[int] = []
     for c in block.components:
-        _shape += (len(c),)
-    _shape += (len(block.properties),)
+        _shape.append(len(c))
+    _shape.append(len(block.properties))
 
     for parameter, gradient in block.gradients():
         if len(gradient.gradients_list()) != 0:
@@ -59,11 +62,17 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         # I want the difference between the number of components of the gradients and
         # the values
         diff_components = len(gradient_values.shape) - len(block.values.shape)
+        gradient_samples_to_values_samples = gradient.samples.column("sample")
+        if isinstance(gradient_samples_to_values_samples, torch.Tensor):
+            # convert to torch.long before using as index
+            gradient_samples_to_values_samples = gradient_samples_to_values_samples.to(
+                torch.long
+            )
         values_grad.append(
             constant
             * gradient_values
-            * block.values[gradient.samples["sample"]].reshape(
-                (-1,) + (1,) * diff_components + _shape
+            * block.values[gradient_samples_to_values_samples].reshape(
+                [-1] + [1] * diff_components + _shape
             )
             ** (constant - 1)
         )

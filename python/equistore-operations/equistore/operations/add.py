@@ -1,6 +1,6 @@
-from typing import Union
+from typing import List, Union
 
-from ._classes import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
 from ._utils import (
     _check_blocks_raise,
     _check_same_gradients_raise,
@@ -8,7 +8,7 @@ from ._utils import (
 )
 
 
-def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
+def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the sum of
     ``A`` and ``B``.
 
@@ -34,8 +34,18 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
 
-    blocks = []
-    if isinstance(B, TensorMap):
+    blocks: List[TensorBlock] = []
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(B, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(B, TensorMap)
+
+    if isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
+            blocks.append(_add_block_constant(block=block_A, constant=B))
+
+    elif is_tensor_map:
         _check_same_keys_raise(A, B, "add")
         for key, block_A in A.items():
             block_B = B[key]
@@ -50,12 +60,6 @@ def add(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 fname="add",
             )
             blocks.append(_add_block_block(block_1=block_A, block_2=block_B))
-
-    elif isinstance(B, (float, int)):
-        B = float(B)
-        for block_A in A.blocks():
-            blocks.append(_add_block_constant(block=block_A, constant=B))
-
     else:
         raise TypeError("B should be a TensorMap or a scalar value")
 

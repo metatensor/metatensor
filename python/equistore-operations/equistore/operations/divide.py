@@ -1,9 +1,7 @@
-from typing import Union
-
-import numpy as np
+from typing import List, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
 from ._utils import (
     _check_blocks_raise,
     _check_same_gradients_raise,
@@ -11,7 +9,7 @@ from ._utils import (
 )
 
 
-def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
+def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the element-wise
     division of ``A`` and ``B``.
 
@@ -38,8 +36,17 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
 
-    blocks = []
-    if isinstance(B, TensorMap):
+    blocks: List[TensorBlock] = []
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(B, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(B, TensorMap)
+
+    if isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
+            blocks.append(_divide_block_constant(block=block_A, constant=B))
+    elif is_tensor_map:
         _check_same_keys_raise(A, B, "divide")
         for key, block_A in A.items():
             block_B = B.block(key)
@@ -54,12 +61,6 @@ def divide(A: TensorMap, B: Union[float, TensorMap]) -> TensorMap:
                 fname="divide",
             )
             blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
-
-    elif isinstance(B, (float, int)):
-        B = float(B)
-        for block_A in A.blocks():
-            blocks.append(_divide_block_constant(block=block_A, constant=B))
-
     else:
         raise TypeError("B should be a TensorMap or a scalar value")
 
@@ -114,8 +115,12 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
 
         values_grad = []
         for i_sample in range(len(block_1.samples)):
-            i_sample_grad_1 = np.where(gradient_1.samples["sample"] == i_sample)[0]
-            i_sample_grad_2 = np.where(gradient_2.samples["sample"] == i_sample)[0]
+            i_sample_grad_1 = _dispatch.where(
+                gradient_1.samples.column("sample") == i_sample
+            )[0]
+            i_sample_grad_2 = _dispatch.where(
+                gradient_2.samples.column("sample") == i_sample
+            )[0]
 
             value_grad = (
                 -block_1.values[i_sample]
