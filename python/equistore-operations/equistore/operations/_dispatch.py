@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -112,12 +112,12 @@ def copy(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def list_to_array(array, data: List):
+def list_to_array(array, data: Union[List[int], List[List[int]]]):
     """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):
-        return torch.Tensor(data, device=array.device, dtype=array.dtype)
+        return torch.tensor(data)
     elif isinstance(array, np.ndarray):
-        return np.array(data, dtype=array.dtype)
+        return np.array(data)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -370,10 +370,10 @@ def abs(array):
 
     It is equivalent of np.abs(array) and torch.abs(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.abs(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.abs(array)
+    elif isinstance(array, np.ndarray):
+        return np.abs(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -384,10 +384,10 @@ def sign(array):
 
     It is equivalent of np.sign(array) and torch.sign(tensor)
     """
-    if isinstance(array, np.ndarray):
-        return np.sign(array)
-    elif isinstance(array, TorchTensor):
+    if isinstance(array, TorchTensor):
         return torch.sign(array)
+    elif isinstance(array, np.ndarray):
+        return np.sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -486,6 +486,14 @@ def to_index_array(array):
         return array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def unique(array, axis: Optional[int] = None):
+    """Find the unique elements of an array."""
+    if isinstance(array, TorchTensor):
+        return torch.unique(array, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.unique(array, axis=axis)
 
 
 def unique_with_inverse(array, axis: Optional[int] = None):
