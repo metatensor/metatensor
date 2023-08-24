@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -126,10 +126,10 @@ def eye_like(array, size: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def list_to_array(array, data: List):
+def list_to_array(array, data: Union[List[int], List[List[int]]]):
     """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):
-        return torch.Tensor(data, device=array.device, dtype=array.dtype)
+        return torch.tensor(data).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
         return np.array(data, dtype=array.dtype)
     else:
@@ -500,6 +500,14 @@ def to_index_array(array):
         return array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def unique(array, axis: Optional[int] = None):
+    """Find the unique elements of an array."""
+    if isinstance(array, TorchTensor):
+        return torch.unique(array, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.unique(array, axis=axis)
 
 
 def unique_with_inverse(array, axis: Optional[int] = None):

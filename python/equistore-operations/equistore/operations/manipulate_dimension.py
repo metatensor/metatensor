@@ -17,8 +17,6 @@ changing the columns of the :py:class:`equistore.Labels` within).
 """
 from typing import List
 
-import numpy as np
-
 from ._classes import TensorBlock, TensorMap
 
 
@@ -30,18 +28,18 @@ def _check_axis(axis: str):
         )
 
 
-def append_dimension(
-    tensor: TensorMap, axis: str, name: str, values: np.ndarray
-) -> TensorMap:
+def append_dimension(tensor: TensorMap, axis: str, name: str, values) -> TensorMap:
     """Append a :py:class:`equistore.Labels` dimension along the given axis.
 
     For ``axis=="samples"`` the new dimension is `not` appended to gradients.
 
     :param tensor: the input :py:class:`TensorMap`.
     :param axis: axis for which the ``name`` should be appended. Allowed are ``"keys"``,
-                 ``"properties"`` or ``"samples"``.
+        ``"properties"`` or ``"samples"``.
     :param name: name of the dimension be appended
     :param values: values of the dimension to be appended
+        (``np.array`` or ``torch.Tensor`` according to whether ``equistore`` or
+        ``equistore.torch`` is being used)
 
 
     :raises ValueError: if ``axis`` is a not valid value
@@ -70,16 +68,15 @@ def append_dimension(
     keys: foo  bar
            0    1
     """
-    kwargs = dict(tensor=tensor, axis=axis, name=name, values=values)
     if axis == "keys":
         index = len(tensor.keys.names)
-        return insert_dimension(index=index, **kwargs)
+        return insert_dimension(tensor, axis, index, name, values)
     elif axis == "samples":
         index = len(tensor.sample_names)
-        return insert_dimension(index=index, **kwargs)
+        return insert_dimension(tensor, axis, index, name, values)
     elif axis == "properties":
         index = len(tensor.property_names)
-        return insert_dimension(index=index, **kwargs)
+        return insert_dimension(tensor, axis, index, name, values)
     else:
         raise ValueError(
             f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
@@ -92,7 +89,7 @@ def insert_dimension(
     axis: str,
     index: int,
     name: str,
-    values: np.ndarray,
+    values,
 ) -> TensorMap:
     """Insert a :py:class:`equistore.Labels` dimension along the given axis before the
     given index.
@@ -105,6 +102,8 @@ def insert_dimension(
     :param index: index before the new dimension is inserted.
     :param name: the name to be inserted
     :param values: values to be inserted
+        (``np.array`` or ``torch.Tensor`` according to whether ``equistore`` or
+        ``equistore.torch`` is being used)
 
     :raises ValueError: if ``axis`` is a not valid value
 
@@ -139,8 +138,8 @@ def insert_dimension(
     if axis == "keys":
         keys = keys.insert(index=index, name=name, values=values)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
 
@@ -218,8 +217,8 @@ def permute_dimensions(
     if axis == "keys":
         keys = keys.permute(dimensions_indexes=dimensions_indexes)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
 
@@ -312,8 +311,8 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     if axis == "keys":
         keys = keys.remove(name=name)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
 
@@ -382,8 +381,8 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
     if axis == "keys":
         keys = keys.rename(old, new)
 
-    blocks = []
-    for block in tensor:
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
 
