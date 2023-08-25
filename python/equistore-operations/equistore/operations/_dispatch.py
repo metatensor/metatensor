@@ -112,6 +112,20 @@ def copy(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def eye_like(array, size: int):
+    """
+    Create an identity matrix with the given ``size``, and the same
+    dtype and device as ``array``.
+    """
+
+    if isinstance(array, TorchTensor):
+        return torch.eye(size).to(array.dtype).to(array.device)
+    elif isinstance(array, np.ndarray):
+        return np.eye(size, dtype=array.dtype)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def list_to_array(array, data: Union[List[int], List[List[int]]]):
     """Create an object from data with the same type as ``array``."""
     if isinstance(array, TorchTensor):

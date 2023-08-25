@@ -1,9 +1,8 @@
-import numpy as np
-
+from . import _dispatch
 from ._classes import Labels
 
 
-def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
+def one_hot(labels: Labels, dimension: Labels):
     """Generates one-hot encoding from a Labels object.
 
     This function takes two ``Labels`` objects as inputs. The first
@@ -21,9 +20,9 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
         can take.
 
     :return:
-        A two-dimensional ``numpy.ndarray`` containing the one-hot
-        encoding along the selected dimension: its first dimension
-        matches the one in ``labels``, while the second contains 1
+        A two-dimensional ``numpy.ndarray`` or ``torch.Tensor`` containing
+        the one-hot encoding along the selected dimension: its first
+        dimension matches the one in ``labels``, while the second contains 1
         at the position corresponding to the original label and 0
         everywhere else
 
@@ -43,12 +42,12 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
     >>> # Get the one-hot encoded labels:
     >>> one_hot_encoding = equistore.one_hot(original_labels, possible_labels)
     >>> print(one_hot_encoding)
-    [[0. 1. 0.]
-     [1. 0. 0.]
-     [1. 0. 0.]
-     [1. 0. 0.]
-     [0. 1. 0.]
-     [1. 0. 0.]]
+    [[0 1 0]
+     [1 0 0]
+     [1 0 0]
+     [1 0 0]
+     [0 1 0]
+     [1 0 0]]
     """
 
     if len(dimension.names) != 1:
@@ -60,15 +59,19 @@ def one_hot(labels: Labels, dimension: Labels) -> np.ndarray:
 
     name = dimension.names[0]
 
-    indices = np.zeros(len(labels), dtype=np.int64)
-    for i, entry in enumerate(labels[name]):
-        position = dimension.position([entry])
+    indices = _dispatch.zeros_like(dimension.values, [len(labels)])
+    labels_name = labels.column(name)
+    for i in range(labels_name.shape[0]):
+        entry = labels_name[None, i]
+        position = dimension.position(entry)
         if position is None:
             raise ValueError(
-                f"{name}={entry} is present in the labels, but was not found in "
+                f"{name}={entry[0]} is present in the labels, but was not found in "
                 "the dimension"
             )
         indices[i] = position
 
-    one_hot_array = np.eye(len(dimension))[indices]
+    one_hot_array = _dispatch.eye_like(dimension.values, len(dimension))[
+        _dispatch.to_index_array(indices)
+    ]
     return one_hot_array
