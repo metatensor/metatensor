@@ -266,6 +266,10 @@ impl Drop for UserData {
     }
 }
 
+// These should be enforced by the code using equistore
+unsafe impl Sync for UserData {}
+unsafe impl Send for UserData {}
+
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
 /// This is similar to a list of named tuples, but stored as a 2D array of shape
@@ -416,6 +420,7 @@ impl Labels {
 
         if !first_mapping.is_empty() {
             assert!(first_mapping.len() == self.count());
+            #[allow(clippy::cast_possible_wrap)]
             for i in 0..self.count() {
                 first_mapping[i] = i as i64;
             }
@@ -427,6 +432,7 @@ impl Labels {
 
             if !second_mapping.is_empty() {
                 let index = match position {
+                    #[allow(clippy::cast_possible_wrap)]
                     Ok(index) | Err((index, _)) => {
                         index as i64
                     }
@@ -470,6 +476,7 @@ impl Labels {
         let mut builder = LabelsBuilder::new(self.names()).expect("should be valid names");
         for (i, entry) in first.iter().enumerate() {
             if let Some(position) = second.position(entry) {
+                #[allow(clippy::cast_possible_wrap)]
                 let new_position = builder.count() as i64;
                 builder.add(entry).expect("should not already exist");
 
@@ -641,9 +648,6 @@ mod tests {
         // ensure Arc<Labels> is Send and Sync, assuming the user data is
         fn use_send(_: impl Send) {}
         fn use_sync(_: impl Sync) {}
-
-        unsafe impl Sync for UserData {}
-        unsafe impl Send for UserData {}
 
         let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
         builder.add(&[0, 1]).unwrap();

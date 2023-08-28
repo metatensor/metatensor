@@ -20,6 +20,7 @@ use super::status::{eqs_status_t, catch_unwind};
 // is non-NULL, and corresponds to the pointer `Arc::into_raw` gives); or to a
 // set of Labels created from C, and containing pointer to C-allocated data.
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct eqs_labels_t {
     /// internal: pointer to the rust `Labels` struct if any, null otherwise
     pub internal_ptr_: *mut c_void,
@@ -156,6 +157,7 @@ unsafe fn create_rust_labels(labels: &eqs_labels_t) -> Result<Arc<Labels>, Error
 ///          `EQS_SUCCESS`, you can use `eqs_last_error()` to get the full
 ///          error message.
 #[no_mangle]
+#[allow(clippy::cast_possible_wrap)]
 pub unsafe extern fn eqs_labels_position(
     labels: eqs_labels_t,
     values: *const i32,

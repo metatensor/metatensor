@@ -59,7 +59,7 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
         builder.finish()
     } else {
         let mut remaining_keys = IndexSet::new();
-        for key in keys.iter() {
+        for key in keys {
             let mut label = Vec::new();
             for &i in &remaining_i {
                 label.push(key[i]);
@@ -94,7 +94,7 @@ pub fn merge_gradient_samples(
             new_gradient_samples_names = Some(gradient.samples.names());
         }
 
-        for grad_sample in gradient.samples.iter() {
+        for grad_sample in &*gradient.samples {
             // translate from the old sample id in gradients to the new ones
             let mut grad_sample = grad_sample.to_vec();
             let old_sample_i = grad_sample[0].usize();
@@ -129,7 +129,7 @@ pub fn merge_samples(
     // were in the blocks, and then optionally sort them later below
     let mut merged_samples = IndexSet::new();
     for KeyAndBlock{key, block} in blocks {
-        for sample in block.samples.iter() {
+        for sample in &*block.samples {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);

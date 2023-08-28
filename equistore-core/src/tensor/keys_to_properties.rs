@@ -80,7 +80,7 @@ impl TensorMap {
             )?;
             new_blocks.push(block);
         } else {
-            for entry in splitted_keys.new_keys.iter() {
+            for entry in &splitted_keys.new_keys {
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names())?;
                 selection.add(entry)?;
 
@@ -167,7 +167,7 @@ fn merge_blocks_along_properties(
         // use the user-provided new values
         for new_property in keys_to_move {
             for KeyAndBlock{block, ..} in blocks_to_merge {
-                for old_property in block.properties.iter() {
+                for old_property in &*block.properties {
                     let mut property = new_property.to_vec();
                     property.extend_from_slice(old_property);
                     new_properties.insert(property);
@@ -179,7 +179,7 @@ fn merge_blocks_along_properties(
         // collect properties from the blocks, augmenting them with the new
         // properties
         for KeyAndBlock{key, block} in blocks_to_merge {
-            for old_property in block.properties.iter() {
+            for old_property in &*block.properties {
                 let mut property = key.clone();
                 property.extend_from_slice(old_property);
                 new_properties.insert(property);

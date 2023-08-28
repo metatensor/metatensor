@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::iter::FusedIterator;
 
-use crate::block::{TensorBlockRefMut};
+use crate::block::TensorBlockRefMut;
 use crate::c_api::{eqs_tensormap_t, eqs_labels_t};
 
 use crate::errors::{check_status, check_ptr};
@@ -624,12 +624,12 @@ mod tests {
         ).unwrap();
 
         // iterate over keys & blocks
-        for (key, block) in tensor.iter() {
+        for (key, block) in &tensor {
             assert_eq!(block.values().to_array()[[0, 0]], key[0].i32() as f64);
         }
 
         // iterate over keys & blocks mutably
-        for (key, mut block) in tensor.iter_mut() {
+        for (key, mut block) in &mut tensor {
             let array = block.values_mut().to_array_mut();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * (key[0].i32() as f64));

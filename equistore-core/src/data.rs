@@ -168,6 +168,7 @@ pub struct eqs_array_t {
 /// Representation of a single sample moved from an array to another one
 #[derive(Debug, Clone)]
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct eqs_sample_mapping_t {
     /// index of the moved sample in the input array
     pub input: usize,
@@ -188,7 +189,7 @@ impl std::fmt::Debug for eqs_array_t {
             .field("ptr", &self.ptr)
             .field("origin", &origin)
             .field("shape", &shape)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -568,7 +569,7 @@ mod tests {
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
-            "eqs_array_t {{ ptr: {:?}, origin: Some(\"rust.TestArray\"), shape: Some([3, 4, 5]) }}",
+            "eqs_array_t {{ ptr: {:?}, origin: Some(\"rust.TestArray\"), shape: Some([3, 4, 5]), .. }}",
             data.ptr
         ));
     }
