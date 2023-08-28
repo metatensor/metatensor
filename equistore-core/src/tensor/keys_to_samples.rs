@@ -70,7 +70,7 @@ impl TensorMap {
             )?;
             new_blocks.push(block);
         } else {
-            for entry in splitted_keys.new_keys.iter() {
+            for entry in &splitted_keys.new_keys {
                 let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names())?;
                 selection.add(entry)?;
 

@@ -103,7 +103,7 @@ impl GradientMap<'_> {
     fn new(block: &TensorBlock) -> GradientMap {
         // generate gradient information for a block
         let mut gradients = HashMap::new();
-        for (gradient_name, sub_gradient) in block.gradients().iter() {
+        for (gradient_name, sub_gradient) in block.gradients() {
             let metadata = GradientMetadata {
                 sample_names: sub_gradient.samples.names(),
                 components_names: sub_gradient.components.iter()

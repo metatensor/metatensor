@@ -33,7 +33,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for LazyMetadata<T> {
         f.debug_struct("Lazy")
             .field("block", &self.block)
             .field("metadata", &self.metadata)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

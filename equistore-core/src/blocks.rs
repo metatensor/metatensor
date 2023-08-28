@@ -304,7 +304,7 @@ impl TensorBlock {
             .collect();
 
         let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
-        for new_property in moved_component.iter() {
+        for new_property in &*moved_component {
             for old_property in old_properties.iter() {
                 let mut property = new_property.to_vec();
                 property.extend_from_slice(old_property);
