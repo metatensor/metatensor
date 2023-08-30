@@ -1,18 +1,18 @@
-Equistore
-=========
+Metatensor
+==========
 
-Equistore is a specialized data storage format for all your atomistic machine
+Metatensor is a specialized data storage format for all your atomistic machine
 learning needs, and more. Think numpy ``ndarray`` or pytorch ``Tensor`` equipped
 with extra metadata for atomic — and other particles — systems. The core of this
 library is written in Rust and we provide API for C, C++, and Python.
 
-The main class of equistore is the :py:class:`equistore.TensorMap` data
+The main class of metatensor is the :py:class:`metatensor.TensorMap` data
 structure, illustrated below. This class defines a block-sparse data format,
-where each :py:class:`block <equistore.TensorBlock>` is stored using
+where each :py:class:`block <metatensor.TensorBlock>` is stored using
 `coordinate`_ sparse storage. The schematic below represents a TensorMap made of
 multiple TensorBlocks, and the overall data format is explained further in the
 :ref:`getting started <userdoc-core-concepts>` section of this documentation. If
-you are using equistore from Python, we additionally provide a collection of
+you are using metatensor from Python, we additionally provide a collection of
 mathematical, logical and other utility :ref:`operations
 <python-api-operations>` to make working with TensorMaps more convenient.
 
@@ -22,10 +22,10 @@ mathematical, logical and other utility :ref:`operations
     :width: 400px
     :align: center
 
-Why equistore
--------------
+Why metatensor
+--------------
 
-With the creation of equistore, we want to achieve three goals:
+With the creation of metatensor, we want to achieve three goals:
 
 1. provide an interchange format for the atomistic machine learning ecosystem,
    making different players in this ecosystem more interoperable with one
@@ -38,20 +38,20 @@ With the creation of equistore, we want to achieve three goals:
 
 For more information on these goals and how we are trying to fulfill them,
 please read the corresponding :ref:`documentation page <userdoc-goals>`.
-Equistore is still in the alpha phase of software development, so expect some
+Metatensor is still in the alpha phase of software development, so expect some
 rough corners and sharp edges.
 
 Development team
 ----------------
 
-Equistore is developed in the `COSMO laboratory`_ at `EPFL`_, and made available
-to everyone under the `BSD 3-clauses license <LICENSE_>`_. We welcome
+Metatensor is developed in the `COSMO laboratory`_ at `EPFL`_, and made
+available to everyone under the `BSD 3-clauses license <LICENSE_>`_. We welcome
 contributions from anyone, and we provide some :ref:`developer documentation
 <devdoc>` for newcomers.
 
 .. _COSMO laboratory: https://www.epfl.ch/labs/cosmo/
 .. _EPFL: https://www.epfl.ch/
-.. _LICENSE: https://github.com/lab-cosmo/equistore/blob/master/LICENSE
+.. _LICENSE: https://github.com/lab-cosmo/metatensor/blob/master/LICENSE
 
 --------------------------------------------------------------------------------
 

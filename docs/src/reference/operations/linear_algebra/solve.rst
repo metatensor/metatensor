@@ -1,5 +1,5 @@
 solve
 =====
 
-.. autoclass:: equistore.solve
+.. autoclass:: metatensor.solve
     :members:

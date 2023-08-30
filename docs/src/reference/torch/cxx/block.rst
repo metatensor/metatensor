@@ -1,7 +1,7 @@
 TensorBlock
 ===========
 
-.. doxygentypedef:: equistore_torch::TorchTensorBlock
+.. doxygentypedef:: metatensor_torch::TorchTensorBlock
 
-.. doxygenclass:: equistore_torch::TensorBlockHolder
+.. doxygenclass:: metatensor_torch::TensorBlockHolder
     :members:

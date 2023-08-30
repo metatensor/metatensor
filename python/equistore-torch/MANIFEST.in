@@ -1,9 +1,0 @@
-include pyproject.toml
-include AUTHORS
-include LICENSE
-
-include git_extra_version
-
-include equistore-torch.tar.gz
-
-recursive-include build-backend *.py

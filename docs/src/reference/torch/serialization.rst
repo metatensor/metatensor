@@ -1,6 +1,6 @@
 Serialization
 =============
 
-.. autofunction:: equistore.torch.save
+.. autofunction:: metatensor.torch.save
 
-.. autofunction:: equistore.torch.load
+.. autofunction:: metatensor.torch.load

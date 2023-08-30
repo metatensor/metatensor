@@ -1,5 +1,5 @@
 [project]
-name = "equistore"
+name = "metatensor"
 dynamic = ["version", "authors", "dependencies", "optional-dependencies"]
 requires-python = ">=3.7"
 
@@ -26,10 +26,10 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://lab-cosmo.github.io/equistore/latest/"
-documentation = "https://lab-cosmo.github.io/equistore/latest/"
-repository = "https://github.com/lab-cosmo/equistore"
-# changelog = "https://github.com/lab-cosmo/equistore/blob/master/CHANGELOG.rst"
+homepage = "https://lab-cosmo.github.io/metatensor/latest/"
+documentation = "https://lab-cosmo.github.io/metatensor/latest/"
+repository = "https://github.com/lab-cosmo/metatensor"
+# changelog = "https://github.com/lab-cosmo/metatensor/blob/master/CHANGELOG.rst"
 
 ### ======================================================================== ###
 
@@ -44,8 +44,8 @@ build-backend = "setuptools.build_meta"
 zip-safe = true
 
 [tool.setuptools.packages.find]
-where = ["python/equistore"]
-include = ["equistore*"]
+where = ["python/metatensor"]
+include = ["metatensor*"]
 namespaces = false
 
 ### ======================================================================== ###
@@ -57,4 +57,4 @@ line_length = 88
 indent = 4
 include_trailing_comma = true
 lines_after_imports = 2
-known_first_party = "equistore"
+known_first_party = "metatensor"

@@ -1,6 +1,6 @@
 unique_metadata
 ===============
 
-.. autofunction:: equistore.unique_metadata
-    
-.. autofunction:: equistore.unique_metadata_block
+.. autofunction:: metatensor.unique_metadata
+
+.. autofunction:: metatensor.unique_metadata_block

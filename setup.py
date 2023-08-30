@@ -9,9 +9,9 @@ from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-EQUISTORE_CORE = os.path.join(ROOT, "python", "equistore-core")
-EQUISTORE_OPERATIONS = os.path.join(ROOT, "python", "equistore-operations")
-EQUISTORE_TORCH = os.path.join(ROOT, "python", "equistore-torch")
+METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor-core")
+METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor-operations")
+METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor-torch")
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -25,7 +25,7 @@ class bdist_egg_disabled(bdist_egg):
         sys.exit(
             "Aborting implicit building of eggs. "
             + "Use `pip install .` or `python setup.py bdist_wheel && pip "
-            + "uninstall equistore -y && pip install dist/equistore-*.whl` "
+            + "uninstall metatensor -y && pip install dist/metatensor-*.whl` "
             + "to install from source."
         )
 
@@ -116,26 +116,26 @@ if __name__ == "__main__":
 
     install_requires = []
     extras_require = {}
-    if os.path.exists(EQUISTORE_CORE):
+    if os.path.exists(METATENSOR_CORE):
         # we are building from a git checkout
-        assert os.path.exists(EQUISTORE_OPERATIONS)
-        assert os.path.exists(EQUISTORE_TORCH)
+        assert os.path.exists(METATENSOR_OPERATIONS)
+        assert os.path.exists(METATENSOR_TORCH)
 
         # add a random uuid to the file url to prevent pip from using a cached
-        # wheel for equistore-core, and force it to re-build from scratch
+        # wheel for metatensor-core, and force it to re-build from scratch
         uuid = uuid.uuid4()
         install_requires.append(
-            f"equistore-core @ file://{EQUISTORE_CORE}?{uuid}",
+            f"metatensor-core @ file://{METATENSOR_CORE}?{uuid}",
         )
         install_requires.append(
-            f"equistore-operations @ file://{EQUISTORE_OPERATIONS}?{uuid}",
+            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}?{uuid}",
         )
-        extras_require["torch"] = f"equistore-torch @ file://{EQUISTORE_TORCH}?{uuid}"
+        extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}?{uuid}"
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("equistore-core >=0.1.0.dev0,<0.2.0")
-        install_requires.append("equistore-operations >=0.1.0.dev0,<0.2.0")
-        extras_require["torch"] = "equistore-torch >=0.1.0.dev0,<0.2.0"
+        install_requires.append("metatensor-core >=0.1.0.dev0,<0.2.0")
+        install_requires.append("metatensor-operations >=0.1.0.dev0,<0.2.0")
+        extras_require["torch"] = "metatensor-torch >=0.1.0.dev0,<0.2.0"
 
     setup(
         version=version,

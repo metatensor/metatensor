@@ -11,14 +11,14 @@ cd $ROOT_DIR
 rm -rf dist
 rm -rf build
 
-rm -rf python/equistore-core/dist
-rm -rf python/equistore-core/build
+rm -rf python/metatensor-core/dist
+rm -rf python/metatensor-core/build
 
-rm -rf python/equistore-operations/dist
-rm -rf python/equistore-operations/build
+rm -rf python/metatensor-operations/dist
+rm -rf python/metatensor-operations/build
 
-rm -rf python/equistore-torch/dist
-rm -rf python/equistore-torch/build
+rm -rf python/metatensor-torch/dist
+rm -rf python/metatensor-torch/build
 
 find . -name "*.egg-info" -exec rm -rf "{}" +
 find . -name "__pycache__" -exec rm -rf "{}" +

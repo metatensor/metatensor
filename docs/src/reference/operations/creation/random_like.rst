@@ -1,6 +1,6 @@
 random_like
 ============
 
-.. autofunction:: equistore.random_uniform_like
+.. autofunction:: metatensor.random_uniform_like
 
-.. autofunction:: equistore.random_uniform_like_block
+.. autofunction:: metatensor.random_uniform_like_block

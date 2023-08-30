@@ -1,1 +1,1 @@
-.. automodule:: equistore.operations.manipulate_dimension
+.. automodule:: metatensor.operations.manipulate_dimension

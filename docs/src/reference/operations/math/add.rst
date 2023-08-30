@@ -1,4 +1,4 @@
 add
 ===
 
-.. autofunction:: equistore.add
+.. autofunction:: metatensor.add

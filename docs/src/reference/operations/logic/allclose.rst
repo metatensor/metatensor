@@ -1,10 +1,10 @@
 allclose
 ========
 
-.. autofunction:: equistore.allclose
+.. autofunction:: metatensor.allclose
 
-.. autofunction:: equistore.allclose_raise
+.. autofunction:: metatensor.allclose_raise
 
-.. autofunction:: equistore.allclose_block
+.. autofunction:: metatensor.allclose_block
 
-.. autofunction:: equistore.allclose_block_raise
+.. autofunction:: metatensor.allclose_block_raise

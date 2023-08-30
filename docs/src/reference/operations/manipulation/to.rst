@@ -1,6 +1,6 @@
 to
 ==
 
-.. autofunction:: equistore.to
+.. autofunction:: metatensor.to
 
-.. autofunction:: equistore.block_to
+.. autofunction:: metatensor.block_to

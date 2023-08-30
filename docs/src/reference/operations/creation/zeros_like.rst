@@ -1,6 +1,6 @@
 zeros_like
 ============
 
-.. autofunction:: equistore.zeros_like
+.. autofunction:: metatensor.zeros_like
 
-.. autofunction:: equistore.zeros_like_block
+.. autofunction:: metatensor.zeros_like_block

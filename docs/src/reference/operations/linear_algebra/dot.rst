@@ -1,4 +1,4 @@
 dot
 ===
 
-.. autofunction:: equistore.dot
+.. autofunction:: metatensor.dot

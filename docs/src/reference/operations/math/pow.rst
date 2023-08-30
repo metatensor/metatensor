@@ -1,4 +1,4 @@
 pow
 ===
 
-.. autofunction:: equistore.pow
+.. autofunction:: metatensor.pow

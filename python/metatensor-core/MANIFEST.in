@@ -1,0 +1,7 @@
+include metatensor-core-*.crate
+
+include pyproject.toml
+include AUTHORS
+include LICENSE
+
+include git_extra_version
