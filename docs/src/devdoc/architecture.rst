@@ -5,18 +5,24 @@ Code organization
 
 The code is organized in multiple modules, each in a separate directory:
 
-- ``metatensor-core/`` contains the core library, implemented in Rust and exposed
-  to the outside world through a C API. This is also where the C++ API lives,
-  implemented as a header-only library in ``metatensor.hpp``.
+- ``metatensor-core/`` contains the core library, implemented in Rust and
+  exposed to the outside world through a C API. This is also where the C++ API
+  lives, implemented as a header-only library in ``metatensor.hpp``.
+- ``metatensor-torch/`` contains a `TorchScript`_ extension, written in C++,
+  using the C++ API of metatensor; as well as the corresponding tests and
+  examples.
 - ``metatensor/`` contains the Rust interface to metatensor, using the C API
-  defined in ``metatensor-core``, as well as the corresponding tests and examples
-- ``python/metatensor-core`` contains the Python interface to the core metatensor
-  types, and the corresponding tests;
+  defined in ``metatensor-core``, as well as the corresponding tests and
+  examples.
+- ``python/metatensor-core`` contains the Python interface to the core
+  metatensor types, and the corresponding tests;
 - ``python/metatensor-operations`` contains a set of pure Python functions to
   manipulate data in metatensor format, and the corresponding tests;
+- ``python/metatensor-torch`` contains the Python interface for the TorchScript
+  version of metatensor, and the corresponding tests;
 - ``python/metatensor`` contains a small Python package re-exporting everything
-  from ``metatensor-core`` and ``metatensor-operations``. This is the main package
-  users should interact with.
+  from ``metatensor-core`` and ``metatensor-operations``. This is the main
+  package users should interact with.
 
 Finally, ``docs/`` contains the documentation for everything related to
 metatensor.
@@ -24,7 +30,7 @@ metatensor.
 ------------------------
 
 .. figure:: ../../static/images/API-organization.*
-    :width: 600px
+    :width: 650px
     :align: center
 
     Logical organization of the modules in the metatensor repository. Blue boxes
@@ -36,7 +42,7 @@ metatensor.
 ``metatensor-core``
 ^^^^^^^^^^^^^^^^^^^
 
-This sub-project is supposed to be built by `cmake`_. When building it,
+This sub-project should be built by `cmake`_. When building it, a shared library
 ``libmetatensor.so`` (``libmetatensor.dylib`` on macOS/``metatensor.dll`` on
 Windows) and ``metatensor.h`` will be produced for consumption by other
 modules/the end users.
@@ -48,6 +54,15 @@ automatically be translated to the corresponding C function declaration.
 The C++ API in ``metatensor.hpp`` is manually written as a header-only library,
 exposing the functions from ``metatensor.h`` with a cleaner C++11 interface.
 
+``metatensor-torch``
+^^^^^^^^^^^^^^^^^^^^
+
+This sub-project is a typical C++ project, built by `cmake`_. It contains the
+`TorchScript`_ version of all metatensor core types, built using the C++ API.
+This sub-project depends on both the C++ API of metatensor-core; and
+``libtorch`` (the C++ part of PyTorch). All the code in this sub-project is
+manually written.
+
 ``metatensor`` rust crate
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -57,29 +72,76 @@ interface built on top of the C API. This is a separate module from
 there can be a single authoritative version of the metatensor C API.
 
 When publishing to `crates.io`_, metatensor-core is included as a tarball of the
-``metatensor-core/`` folder (using the ``.crate`` file created by cargo package).
-This file should be generated before publishing using
-``./metatensor/scripts/update-core.sh``. This script also update the Rust
-declarations corresponding to the C API (``./metatensor/src/c_api.rs``) using
-`bindgen`_.
+``metatensor-core/`` folder (using the ``.crate`` file created by cargo
+package). This file should be generated before publishing using
+``./scripts/package-core.sh``. The Rust declarations corresponding to the C API
+(``./metatensor/src/c_api.rs``) are also automatically generated using using
+`bindgen`_, and should be updated with ``./scripts/update-declarations.sh``.
 
-``metatensor`` Python package
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Python packages
+^^^^^^^^^^^^^^^
 
-This is built by setuptools/pip, like a normal Python project, and re-export a
-native Python interface built on top of the C API. The C API is accessed using
-the standard Python `ctypes`_ module. The functions declaration live in
-``python/src/metatensor/_c_api.py``, and are generated from the functions in
-``metatensor.h`` by the script ``./python/scripts/generate-declarations.py``.
+The Python API for metatensor is split into different `distributions`_, which
+when installed will correspond to different sub-module of ``metatensor``:
 
-In addition to the core types of metatensor, the Python package also contains a
-set of :ref:`operations <python-api-operations>` acting on :py:class:`TensorMap`
-and providing building blocks for machine learning models on top of the core
-metatensor data structures.
+- the ``metatensor`` distribution installs a small module, re-exporting code
+  from ``metatensor.core`` and ``metatensor.operations``;
+- the ``metatensor-core`` distribution contains the ``metatensor.core`` module;
+- the ``metatensor-operations`` distribution contains the
+  ``metatensor.operations`` module; which depends on ``metatensor-core``;
+- the ``metatensor-torch`` distribution contains the ``metatensor.torch``
+  module;
 
+All the Python sub-projects are built by setuptools, and fully compatible with
+pip and other standard Python tools.
+
+``metatensor-core``
+-------------------
+
+This Python module re-export a native Python interface built on top of the C
+API. The C API is accessed using the standard Python `ctypes`_ module. The
+functions declaration in ``python/metatensor-core/metatensor/core/_c_api.py``
+are generated from the ``metatensor.h`` header when running
+``./scripts/update-declarations.sh``.
+
+``metatensor-operations``
+-------------------------
+
+This Python package contains the code for the :ref:`operations
+<python-api-operations>` acting on :py:class:`TensorMap`, and provides building
+blocks for machine learning models on top of the metatensor data structures.
+
+By default, the operations uses the types from ``metatensor-core``, and can act
+on either numpy or torch data. The code in ``_dispatch.py`` is here to use the
+right function depending on the type of arrays stored by metatensor.
+
+At the same time, this code is also used from ``metatensor-torch``, using the
+metatensor types exposed in this module and operating only on torch data. This
+is achieved by re-importing the code from ``metatensor-operations`` in a new
+module ``metatensor.torch.operations``. See the comments in
+``python/metatensor-torch/metatensor/torch/operations.py`` for more information.
+
+``metatensor-torch``
+--------------------
+
+This Python package exposes to Python the types defined in the C++
+``metatensor-torch`` sub-project. It should be used to define models that are
+then exported using TorchScript and run without a Python interpreter.
+
+As mentioned above, this package also re-export the code from
+``metatensor-operations`` in a way compatible with TorchScript.
+
+
+``metatensor``
+--------------
+
+This is a small wrapper package for user convenience, re-exporting all types
+from ``metatensor-core`` and all functions from ``metatensor-operations``.
 
 .. _cmake: https://cmake.org/
 .. _cbindgen: https://github.com/eqrion/cbindgen/blob/master/docs.md
 .. _crates.io: https://crates.io/
 .. _bindgen: https://rust-lang.github.io/rust-bindgen/
 .. _ctypes: https://docs.python.org/3/library/ctypes.html
+.. _distributions: https://packaging.python.org/en/latest/glossary/#term-Distribution-Package
+.. _TorchScript: https://pytorch.org/docs/stable/jit.html
