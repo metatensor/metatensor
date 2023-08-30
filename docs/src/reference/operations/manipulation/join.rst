@@ -1,4 +1,4 @@
 join
 ====
 
-.. autofunction:: equistore.join
+.. autofunction:: metatensor.join

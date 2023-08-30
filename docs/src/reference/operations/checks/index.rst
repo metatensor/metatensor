@@ -1,7 +1,7 @@
 Checks
 ======
 
-.. automodule:: equistore.operations.checks
+.. automodule:: metatensor.operations.checks
 
 .. toctree::
     :maxdepth: 1

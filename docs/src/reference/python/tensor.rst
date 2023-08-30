@@ -1,5 +1,5 @@
 TensorMap
 =========
 
-.. autoclass:: equistore.TensorMap
+.. autoclass:: metatensor.TensorMap
     :members:

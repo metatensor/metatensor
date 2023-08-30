@@ -1,4 +1,4 @@
 remove_gradients
 ================
 
-.. autofunction:: equistore.remove_gradients
+.. autofunction:: metatensor.remove_gradients

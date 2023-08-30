@@ -3,12 +3,12 @@
 Python API reference
 ====================
 
-.. py:currentmodule:: equistore
+.. py:currentmodule:: metatensor
 
-Most users will find the Python interface to ``equistore`` to be the most
+Most users will find the Python interface to ``metatensor`` to be the most
 convenient to use. This interface is built on top of the C API, and can be
 :ref:`installed independently <install-python-lib>`. The functions and classes
-provided in ``equistore`` can be grouped as follows:
+provided in ``metatensor`` can be grouped as follows:
 
 - the three core classes: :py:class:`TensorMap`, :py:class:`TensorBlock`,
   and :py:class:`Labels`;

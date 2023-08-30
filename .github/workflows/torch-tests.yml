@@ -68,8 +68,8 @@ jobs:
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 
       - name: run TorchScript C++ tests
-        run: cargo test --package equistore-torch ${{ matrix.cargo-test-flags }}
+        run: cargo test --package metatensor-torch ${{ matrix.cargo-test-flags }}
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-          EQUISTORE_TORCH_TEST_VERSION: ${{ matrix.torch-version }}
+          METATENSOR_TORCH_TEST_VERSION: ${{ matrix.torch-version }}

@@ -1,12 +1,12 @@
 Labels
 ======
 
-.. doxygentypedef:: equistore_torch::TorchLabels
+.. doxygentypedef:: metatensor_torch::TorchLabels
 
-.. doxygenclass:: equistore_torch::LabelsHolder
+.. doxygenclass:: metatensor_torch::LabelsHolder
     :members:
 
-.. doxygentypedef:: equistore_torch::TorchLabelsEntry
+.. doxygentypedef:: metatensor_torch::TorchLabelsEntry
 
-.. doxygenclass:: equistore_torch::LabelsEntryHolder
+.. doxygenclass:: metatensor_torch::LabelsEntryHolder
     :members:

@@ -1,6 +1,6 @@
 empty_like
 ==========
 
-.. autofunction:: equistore.empty_like
+.. autofunction:: metatensor.empty_like
 
-.. autofunction:: equistore.empty_like_block
+.. autofunction:: metatensor.empty_like_block

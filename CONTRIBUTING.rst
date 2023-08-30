@@ -3,24 +3,24 @@ Contribution via pull requests are always welcome. Source code is available from
 your changes. Use the only `master` as reference branch for submitting your
 requests.
 
-.. _`Github` : https://github.com/lab-cosmo/equistore
+.. _`Github` : https://github.com/lab-cosmo/metatensor
 
-Interactions with the equistore projects must follow our `code of conduct`_.
+Interactions with the metatensor projects must follow our `code of conduct`_.
 
-.. _code of conduct: https://github.com/lab-cosmo/equistore/blob/master/CODE_OF_CONDUCT.md
+.. _code of conduct: https://github.com/lab-cosmo/metatensor/blob/master/CODE_OF_CONDUCT.md
 
 Required tools
 --------------
 
 You will need to install and get familiar with the following tools when working
-on equistore:
+on metatensor:
 
 - **git**: the software we use for version control of the source code. See
   https://git-scm.com/downloads for installation instructions.
 - **the rust compiler**: you will need both ``rustc`` (the compiler) and
   ``cargo`` (associated build tool). You can install both using `rustup`_, or
   use a version provided by your operating system. We need at least Rust version
-  1.64 to build equistore.
+  1.64 to build metatensor.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
   We require a Python version of at least 3.7.
 - **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
@@ -62,17 +62,17 @@ not have to interact with them directly:
 Getting the code
 ----------------
 
-The first step when developing equistore is to `create a fork`_ of the main
+The first step when developing metatensor is to `create a fork`_ of the main
 repository on github, and then clone it locally:
 
 .. code-block:: bash
 
     git clone <insert/your/fork/url/here>
-    cd equistore
+    cd metatensor
 
     # setup the local repository so that the master branch tracks changes in
     # the main repository
-    git remote add upstream https://github.com/lab-cosmo/equistore
+    git remote add upstream https://github.com/lab-cosmo/metatensor
     git fetch upstream
     git branch master --set-upstream-to=upstream/master
 
@@ -101,25 +101,25 @@ with:
 
 .. code-block:: bash
 
-    cd <path/to/equistore/repo>
+    cd <path/to/metatensor/repo>
     cargo test  # or cargo test --release to run tests in release mode
 
 These are exactly the same tests that will be performed online in our Github CI
 workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
-- ``cargo test --package=equistore-core`` to run the C/C++ tests only;
+- ``cargo test --package=metatensor-core`` to run the C/C++ tests only;
 
   - ``cargo test --test=run-cxx-tests`` will run the unit tests for the C/C++
     API. If `valgrind`_ is installed, it will be used to check for memory
-    errors. You can disable this by setting the `EQUISTORE_DISABLE_VALGRIND`
-    environment variable to 1 (`export EQUISTORE_DISABLE_VALGRIND=1` for most
+    errors. You can disable this by setting the `METATENSOR_DISABLE_VALGRIND`
+    environment variable to 1 (`export METATENSOR_DISABLE_VALGRIND=1` for most
     Linux/macOS shells);
   - ``cargo test --test=check-cxx-install`` will build the C/C++ interfaces,
     install them and the associated CMake files and then try to build a basic
     project depending on this interface with CMake;
 
-- ``cargo test --package=equistore-torch`` to run the C++ TorchScript extension
+- ``cargo test --package=metatensor-torch`` to run the C++ TorchScript extension
   tests only;
 
   - ``cargo test --test=run-torch-tests`` will run the unit tests for the
@@ -128,7 +128,7 @@ workflows. You can also run only a subset of tests with one of these commands:
     extension, install it and then try to build a basic project depending on
     this extension with CMake;
 
-- ``cargo test --package=equistore-python`` (or ``tox`` directly, see below) to
+- ``cargo test --package=metatensor-python`` (or ``tox`` directly, see below) to
   run Python tests only;
 - ``cargo test --lib`` to run unit tests;
 - ``cargo test --doc`` to run documentation tests;
@@ -146,9 +146,9 @@ subset of Python tests, for example:
 
 .. code-block:: bash
 
-    tox -e core-tests           # unit tests for equistore-core
-    tox -e operations-tests     # unit tests for equistore-operations
-    tox -e torch-tests          # unit tests for equistore-torch
+    tox -e core-tests           # unit tests for metatensor-core
+    tox -e operations-tests     # unit tests for metatensor-operations
+    tox -e torch-tests          # unit tests for metatensor-torch
     tox -e docs-tests           # doctests (checking inline examples) for all packages
     tox -e lint                 # code style
     tox -e build-python         # python packaging
@@ -163,7 +163,7 @@ You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
 replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
 ``tox -e tests -- python/tests/operations/abs.py``.
 
-When running the equistore-torch unit tests, you might get an error about CUDA
+When running the metatensor-torch unit tests, you might get an error about CUDA
 not being available if you try to build the code against the default PyPI
 version of PyTorch. A possible workaround is to use the CPU-only version of
 PyTorch in the tests, by setting the ``PIP_EXTRA_INDEX_URL`` environnement
@@ -183,7 +183,7 @@ related shells:
 Contributing to the documentation
 ---------------------------------
 
-The documentation of equistore is written in reStructuredText (rst) and uses the
+The documentation of metatensor is written in reStructuredText (rst) and uses the
 `sphinx`_ documentation generator. In order to modify the documentation, first
 create a local version of the code on your machine as described above. Then, you
 can build the documentation with:
@@ -220,7 +220,7 @@ looks like the following.
 
         Extensive multi-line summary of what is going in. Use single
         backticks for parameters of the function like `width` and two ticks for
-        values ``67``. You can link to classes :py:class:`equistore.Labels`. This
+        values ``67``. You can link to classes :py:class:`metatensor.Labels`. This
         also works for other classes and functions like :py:obj:`True`.
 
         Inline Math is also possible with :math:`\mathsf{R}`. Or as a math block.
@@ -245,7 +245,7 @@ looks like the following.
 
         Examples
         --------
-        >>> from equistore import func
+        >>> from metatensor import func
         >>> func(1, 1)
         42
         """

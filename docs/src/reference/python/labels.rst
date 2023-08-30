@@ -1,6 +1,6 @@
 Labels
 ======
 
-.. autoclass:: equistore.Labels
+.. autoclass:: metatensor.Labels
     :members:
     :undoc-members:

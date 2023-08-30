@@ -1,6 +1,6 @@
 Serialization
 =============
 
-.. doxygenfunction:: equistore_torch::save
+.. doxygenfunction:: metatensor_torch::save
 
-.. doxygenfunction:: equistore_torch::load
+.. doxygenfunction:: metatensor_torch::load

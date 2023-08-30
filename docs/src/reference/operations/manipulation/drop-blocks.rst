@@ -1,4 +1,4 @@
 drop_blocks
 ===========
 
-.. autofunction:: equistore.drop_blocks
+.. autofunction:: metatensor.drop_blocks

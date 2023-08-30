@@ -1,4 +1,4 @@
 abs
 ===
 
-.. autofunction:: equistore.abs
+.. autofunction:: metatensor.abs

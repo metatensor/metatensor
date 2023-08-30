@@ -1,4 +1,4 @@
 one_hot
 =======
 
-.. autofunction:: equistore.one_hot
+.. autofunction:: metatensor.one_hot

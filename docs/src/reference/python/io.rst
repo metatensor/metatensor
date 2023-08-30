@@ -3,16 +3,16 @@
 Serialization
 ^^^^^^^^^^^^^
 
-.. autofunction:: equistore.load
+.. autofunction:: metatensor.load
 
-.. autofunction:: equistore.save
+.. autofunction:: metatensor.save
 
 --------------------------------------------------------------------------------
 
-.. autofunction:: equistore.core.io.load_custom_array
+.. autofunction:: metatensor.core.io.load_custom_array
 
-.. autofunction:: equistore.core.io.load_buffer_custom_array
+.. autofunction:: metatensor.core.io.load_buffer_custom_array
 
-.. autofunction:: equistore.core.io.create_numpy_array()
+.. autofunction:: metatensor.core.io.create_numpy_array()
 
-.. autofunction:: equistore.core.io.create_torch_array()
+.. autofunction:: metatensor.core.io.create_torch_array()

@@ -1,4 +1,4 @@
 subtract
 ========
 
-.. autofunction:: equistore.subtract
+.. autofunction:: metatensor.subtract

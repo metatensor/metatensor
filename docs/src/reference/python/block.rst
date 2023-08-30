@@ -1,5 +1,5 @@
 TensorBlock
 ===========
 
-.. autoclass:: equistore.TensorBlock
+.. autoclass:: metatensor.TensorBlock
     :members:

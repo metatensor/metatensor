@@ -1,5 +1,5 @@
 TensorMap
 =========
 
-.. doxygenclass:: equistore::TensorMap
+.. doxygenclass:: metatensor::TensorMap
     :members:

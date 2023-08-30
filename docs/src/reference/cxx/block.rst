@@ -1,5 +1,5 @@
 TensorBlock
 ===========
 
-.. doxygenclass:: equistore::TensorBlock
+.. doxygenclass:: metatensor::TensorBlock
     :members:

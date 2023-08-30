@@ -1,1 +1,1 @@
-.. automodule:: equistore.operations.reduce_over_samples
+.. automodule:: metatensor.operations.reduce_over_samples

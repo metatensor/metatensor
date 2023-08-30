@@ -1,4 +1,4 @@
 multiply
 ========
 
-.. autofunction:: equistore.multiply
+.. autofunction:: metatensor.multiply
