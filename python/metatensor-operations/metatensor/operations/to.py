@@ -47,7 +47,7 @@ def to(
     else:
         is_tensor_map = check_isinstance(tensor, TensorMap)
     if not is_tensor_map:
-        raise TypeError("`tensor` should be an equistore `TensorMap`")
+        raise TypeError("`tensor` should be a metatensor `TensorMap`")
     # Convert each block and build the return TensorMap
     keys = tensor.keys
     new_blocks = [
@@ -106,7 +106,7 @@ def block_to(
     else:
         is_tensor_block = check_isinstance(block, TensorBlock)
     if not is_tensor_block:
-        raise TypeError("`block` should be an equistore `TensorBlock`")
+        raise TypeError("`block` should be an metatensor `TensorBlock`")
     if backend is not None:
         if not isinstance(backend, str):
             raise TypeError("'backend' should be given as a string")

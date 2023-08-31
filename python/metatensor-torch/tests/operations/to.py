@@ -1,6 +1,6 @@
 import torch
 
-import equistore.torch
+import metatensor.torch
 
 from .data import load_data
 
@@ -22,10 +22,10 @@ def check_to_dtype(to):
 
 
 def test_operations_as_python():
-    check_to_cpu(equistore.torch.to)
-    check_to_dtype(equistore.torch.to)
+    check_to_cpu(metatensor.torch.to)
+    check_to_dtype(metatensor.torch.to)
 
 
 def test_operations_as_torch_script():
-    check_to_cpu(torch.jit.script(equistore.torch.to))
-    check_to_dtype(torch.jit.script(equistore.torch.to))
+    check_to_cpu(torch.jit.script(metatensor.torch.to))
+    check_to_dtype(torch.jit.script(metatensor.torch.to))
