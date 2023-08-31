@@ -1,12 +1,12 @@
 equal
 =====
 
-.. autofunction:: equistore.equal
+.. autofunction:: metatensor.equal
 
-.. autofunction:: equistore.equal_raise
+.. autofunction:: metatensor.equal_raise
 
-.. autofunction:: equistore.equal_block
+.. autofunction:: metatensor.equal_block
 
-.. autofunction:: equistore.equal_block_raise
+.. autofunction:: metatensor.equal_block_raise
 
-.. autofunction:: equistore.NotEqualError
+.. autofunction:: metatensor.NotEqualError

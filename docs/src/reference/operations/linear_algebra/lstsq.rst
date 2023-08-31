@@ -1,4 +1,4 @@
 lstsq
 ======
 
-.. autofunction:: equistore.lstsq
+.. autofunction:: metatensor.lstsq

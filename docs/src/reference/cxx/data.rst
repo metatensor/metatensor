@@ -1,10 +1,10 @@
 Data arrays
 ===========
 
-.. doxygenclass:: equistore::DataArrayBase
+.. doxygenclass:: metatensor::DataArrayBase
     :members:
 
 ------------------------------------
 
-.. doxygenclass:: equistore::SimpleDataArray
-    :members: SimpleDataArray, operator=, view, from_eqs_array
+.. doxygenclass:: metatensor::SimpleDataArray
+    :members: SimpleDataArray, operator=, view, from_mts_array

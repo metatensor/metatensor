@@ -1,11 +1,11 @@
 Labels
 ======
 
-.. doxygenclass:: equistore::Labels
+.. doxygenclass:: metatensor::Labels
     :members:
 
 
 --------------------------------------------------------------------------------
 
-.. doxygenclass:: equistore::LabelsUserData
+.. doxygenclass:: metatensor::LabelsUserData
     :members:

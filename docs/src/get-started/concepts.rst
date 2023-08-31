@@ -4,17 +4,17 @@ Core concepts
 =============
 
 This page explains the main types and core concepts you need to understand to
-use equistore, without tying it to how a specific library is using equistore to
+use metatensor, without tying it to how a specific library is using metatensor to
 store it's own data.
 
-.. py:currentmodule:: equistore
+.. py:currentmodule:: metatensor
 
 .. _concept-TensorMap:
 
 TensorMap
 ^^^^^^^^^
 
-The core type of equistore is the :py:class:`TensorMap`: a high dimensional
+The core type of metatensor is the :py:class:`TensorMap`: a high dimensional
 block-sparse tensor containing both data and metadata. A TensorMap contains a
 list of blocks (represented as :ref:`concept-TensorBlock`), each associated with
 a key. The set of all keys is stored in a :ref:`concept-Labels` object
@@ -32,7 +32,7 @@ associated with ``lambda = 0`` and ``sigma = 1``, and so on.
     :width: 600px
     :align: center
 
-    Illustration of an equistore TensorMap object, made of a set of keys and
+    Illustration of a metatensor TensorMap object, made of a set of keys and
     associated :ref:`concept-TensorBlock`.
 
 
@@ -44,7 +44,7 @@ dimensions you'll encounter when working with atomistic data are the following:
   sparse, containing implicit zeros if a given species is not present in a
   structure. This is the case of the ``species_center`` and various
   ``species_neighbor`` key dimensions produced by `rascaline`_.
-- **symmetry markers**: Another use case for equistore is to store and
+- **symmetry markers**: Another use case for metatensor is to store and
   manipulate equivariant data, i.e. data that transforms in a known, specific
   way when the corresponding atomic structure is transformed. This is typically
   used to represent the symmetry property of some data with respect to
@@ -63,11 +63,11 @@ dimensions you'll encounter when working with atomistic data are the following:
 Labels
 ^^^^^^
 
-A fundamental part of equistore is to carry simultaneously the data used in
+A fundamental part of metatensor is to carry simultaneously the data used in
 machine learning and the associated metadata. The first kind of metadata we
 encountered was the keys of a :py:class:`TensorMap`, stored as an instance of
 the :py:class:`Labels` class. This class is also used to store all other
-metadata in equistore, i.e. all the metadata associated with a given
+metadata in metatensor, i.e. all the metadata associated with a given
 :py:class:`TensorBlock`.
 
 
@@ -97,7 +97,7 @@ information.
 TensorBlock
 ^^^^^^^^^^^
 
-The final core object of equistore is the :py:class:`TensorBlock`, containing a
+The final core object of metatensor is the :py:class:`TensorBlock`, containing a
 dense array of data and metadata describing the different axes of this array.
 The simplest possible TensorBlock is represented below, and contains three things:
 
@@ -142,33 +142,33 @@ described by the ``i``:superscript:`th` entry of the samples and the
     **samples**, while the metadata associated with the second axis (columns)
     describes **properties**.
 
-In addition to all this metadata, equistore also carries around some data. This
-data can be stored in various arrays types, all integrated with equistore.
-Equistore then manipulate these arrays in an opaque way, without knowing what's
-inside. This allows to integrate equistore with multiple third-party libraries
+In addition to all this metadata, metatensor also carries around some data. This
+data can be stored in various arrays types, all integrated with metatensor.
+Metatensor then manipulate these arrays in an opaque way, without knowing what's
+inside. This allows to integrate metatensor with multiple third-party libraries
 and ecosystems, for example having the data live on GPU, or using memory-mapped
 data arrays.
 
-.. admonition:: Advanced functionalities: integrating new array types with equistore
+.. admonition:: Advanced functionalities: integrating new array types with metatensor
 
-    Currently, the following array types are integrated with equistore:
+    Currently, the following array types are integrated with metatensor:
 
     - `Numpy's ndarray`_ from Python,
     - `PyTorch's Tensor`_ from Python, including full support for autograd and
       different device (data living on CPU memory, GPU memory, …),
     - `Rust's ndarray`_ from Rust, more specifically ``ndarray::ArrayD<f64>``,
-    - A very bare-bone N-dimensional array in equistore C++ API:
-      :cpp:class:`equistore::SimpleDataArray`
+    - A very bare-bone N-dimensional array in metatensor C++ API:
+      :cpp:class:`metatensor::SimpleDataArray`
 
-    It is possible to integrate new array types with equistore, look into the
-    :py:func:`equistore.data.register_external_data_wrapper` function in Python, the
-    :c:struct:`eqs_array_t` struct in C, the :cpp:class:`equistore::DataArrayBase`
-    abstract base class in C++, and the `equistore::Array`_ trait in Rust.
+    It is possible to integrate new array types with metatensor, look into the
+    :py:func:`metatensor.data.register_external_data_wrapper` function in Python, the
+    :c:struct:`mts_array_t` struct in C, the :cpp:class:`metatensor::DataArrayBase`
+    abstract base class in C++, and the `metatensor::Array`_ trait in Rust.
 
 .. _Numpy's ndarray: https://numpy.org/doc/stable/reference/arrays.ndarray.html
 .. _PyTorch's Tensor: https://pytorch.org/docs/stable/tensors.html
 .. _Rust's ndarray: https://docs.rs/ndarray/
-.. _equistore::Array: ../reference/rust/equistore/trait.Array.html
+.. _metatensor::Array: ../reference/rust/metatensor/trait.Array.html
 
 Gradients
 ---------

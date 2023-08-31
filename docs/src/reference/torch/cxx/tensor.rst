@@ -1,7 +1,7 @@
 TensorMap
 =========
 
-.. doxygentypedef:: equistore_torch::TorchTensorMap
+.. doxygentypedef:: metatensor_torch::TorchTensorMap
 
-.. doxygenclass:: equistore_torch::TensorMapHolder
+.. doxygenclass:: metatensor_torch::TensorMapHolder
     :members:

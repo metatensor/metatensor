@@ -1,6 +1,6 @@
 slice
 ======
 
-.. autofunction:: equistore.slice
-    
-.. autofunction:: equistore.slice_block
+.. autofunction:: metatensor.slice
+
+.. autofunction:: metatensor.slice_block

@@ -2,43 +2,41 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 3071 1749" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
     <g transform="matrix(1,0,0,1,959.765,-81.6757)">
-        <g transform="matrix(1.15962,0,0,1.36066,-355.432,117.481)">
+        <g transform="matrix(1.33076,0,0,1.36066,-492.84,117.481)">
             <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(165,205,255);"/>
         </g>
         <g transform="matrix(1,0,0,1,-723.068,-160.111)">
-            <g transform="matrix(0.638062,0,0,0.34674,786.415,926.615)">
+            <g transform="matrix(0.735184,0,0,0.34674,708.433,926.615)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(148,55,255);"/>
             </g>
-            <g transform="matrix(1,0,0,1,112.444,321.419)">
+            <g transform="matrix(1,0,0,1,79.119,331.811)">
                 <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">li</text>
                 <text x="976.427px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">b</text>
-                <text x="1018.89px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">equistore.so</text>
+                <text x="1018.89px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">metatensor.so</text>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-723.068,14.3111)">
-            <g transform="matrix(0.638062,0,0,0.34674,786.415,926.615)">
+            <g transform="matrix(0.735184,0,0,0.34674,708.433,932.516)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(148,55,255);"/>
             </g>
-            <g transform="matrix(1,0,0,1,170.712,321.419)">
-                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">e</text>
-                <text x="985.563px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">quistore.h</text>
+            <g transform="matrix(1,0,0,1,169.756,334.388)">
+                <text x="910.151px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">metatensor.h</text>
             </g>
         </g>
-        <g transform="matrix(1,0,0,1,-801.219,-27.8453)">
-            <text x="943.101px" y="837.971px" style="font-family:'Helvetica-Bold', 'Helvetica';font-weight:700;font-size:125px;">equistore-core</text>
+        <g transform="matrix(1,0,0,1,-859.294,-31.321)">
+            <text x="943.101px" y="837.971px" style="font-family:'Helvetica-Bold', 'Helvetica';font-weight:700;font-size:125px;">metatensor-core</text>
         </g>
     </g>
     <g transform="matrix(1,0,0,1,431.194,680.399)">
         <g transform="matrix(0.878832,0,0,0.92748,-252.744,286.234)">
             <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(165,205,255);"/>
         </g>
-        <g transform="matrix(1,0,0,1,-845.837,-187.45)">
-            <g transform="matrix(0.638062,0,0,0.34674,786.415,926.615)">
+        <g transform="matrix(1,0,0,1,-876.917,-204.102)">
+            <g transform="matrix(0.709147,0,0,0.34674,760.419,926.615)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(148,55,255);"/>
             </g>
             <g transform="matrix(1,0,0,1,107.519,321.327)">
-                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">e</text>
-                <text x="985.563px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">quistore crate</text>
+                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">metatensor crate</text>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-696.043,-67.3952)">
@@ -50,12 +48,11 @@
             <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(165,205,255);"/>
         </g>
         <g transform="matrix(1,0,0,1,-845.837,-187.45)">
-            <g transform="matrix(0.638062,0,0,0.34674,786.415,926.615)">
+            <g transform="matrix(0.69391,0,0,0.34674,741.573,926.615)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(148,55,255);"/>
             </g>
-            <g transform="matrix(1,0,0,1,128.118,321.419)">
-                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">e</text>
-                <text x="985.563px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">quistore.hpp</text>
+            <g transform="matrix(1,0,0,1,94.0692,321.419)">
+                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">metatensor.hpp</text>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-685.107,-66.4672)">
@@ -63,23 +60,22 @@
         </g>
     </g>
     <g transform="matrix(1,0,0,1,850.589,-647.553)">
-        <g transform="matrix(1.40933,0,0,0.92748,-446.75,286.234)">
+        <g transform="matrix(1.5046,0,0,0.92748,-523.248,286.234)">
             <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(165,205,255);"/>
         </g>
-        <g transform="matrix(1,0,0,1,-906.621,-187.446)">
-            <g transform="matrix(0.758447,0,0,0.34674,742.389,926.615)">
+        <g transform="matrix(1,0,0,1,-884.473,-204.102)">
+            <g transform="matrix(0.804527,0,0,0.34674,685.242,926.615)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(148,55,255);"/>
             </g>
-            <g transform="matrix(1,0,0,1,128.118,321.419)">
-                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">e</text>
-                <text x="985.563px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">quistore module</text>
+            <g transform="matrix(1,0,0,1,66.3334,328.487)">
+                <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">metatensor module</text>
             </g>
         </g>
-        <g transform="matrix(1,0,0,1,-211.548,-187.446)">
+        <g transform="matrix(1,0,0,1,-189.401,-204.102)">
             <g transform="matrix(0.512708,0,0,0.34674,832.258,926.615)">
                 <rect x="365.71" y="389.57" width="874.448" height="452.926" style="fill:rgb(28,30,128);"/>
             </g>
-            <g transform="matrix(1,0,0,1,128.118,321.419)">
+            <g transform="matrix(1,0,0,1,125.98,328.487)">
                 <text x="943.101px" y="837.971px" style="font-family:'Helvetica';font-size:75px;fill:white;">operations</text>
             </g>
         </g>
@@ -100,7 +96,7 @@
     </g>
     <defs>
         <image id="_Image1" width="62px" height="154px" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAD4AAACaCAYAAADxTPu8AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAGwElEQVR4nO2dXU8aWQCG38Fx1bqJtXExkl11rXExvWBjrGZtk9rURNs03e7FbmJ6s2nSmP4E/TFN9mL/gMJAk150K6CCVqBYEEHBD6woxW6222z5OHvRDvELYYaZQXvOcycz58x58nAwIZmBI4SgEoRCIQIAXV1dXCWur6vERQFgcnISU1NTlbp8ZcSDwSBZWVlBKBTC8vJyRd5yFRE/WLpS1TUXDwQCJBwO5/9eWVlBMBjUvLrm4icVrkR1TcUDgQCJRCLHXg+HwwgEAppW11R8cnKy4DGtq2smvrS0RFZXVwsej0QieP36tWbVNRMvpaiW1TUR9/v9ZG1treh5q6urWFpa0qS6JuJSSmpVXXVxv99PotFoyeevra3B7/erXl11cTkFtaiuqrjP55NUWyQajeLVq1eqVldV3Gw2yx6rdnXVxH0+H4nFYrLHx2Ix+Hw+1aqrJq5EsXLeMcVQRdzr9ZL19fWy54nFYvB6vapUV1ycEEKU3J9TU1MgKnw/pri4x+PBxsaGYvNtbGzA6/UqNp+IouKEEKLGvjSbzYpXV1Tc4/Fgc3NTySkBfKru8XgUnVMxcaX39lGUrq6Y+OLiIra2tpSa7hibm5tYXFxUbD5FxNWuLaJkdUXEX758iXg8rsRUp7K1taVY9bLF1fokL4RS/9fLFl9YWNCktkg8HsfCwkLZ85QlrnVtESX2elni8/Pz2N7eLmcKWWxvb2N+fr6sOWSLE0KIxWIp6+LlYLFYyqouW9ztdlektki51WWJ53K5iuzto5Sz12WJu91u7OzsyBmqKG/evIHL5ZI1VrJ4Lper6N4+isViQS6Xk1xdsrjL5ToTtUV2dnbgdrslj5MkftZqi5jNZsnVJYnPzc0hkUhIW5UGJBIJyXu9ZPGzWltE6l4vWXx2dha7u7vyVqUBiUQCs7OzJZ9fkvhZry0iCELJ1UsSn5mZwd7eXnmr0oDd3d2SqxcVz2azRBCEshelFaXu9aLi56W2yN7eHmZmZoqed6r4eastIggCstnsqdVPFXc6nUgmk8quSgNKqV5QPJvNEqvVqviitKJY9YLiDofjXNYWSSaTcDqdBY+fKJ7JZM7l3j6KIAjIZDInVj9R3OFwIJVKyb4gz/Po6OhAW1ub7Dna2trQ0dEBnudlz/H27duC1Y/NmslkJO9tnU6H1tZWdHd3w2g04vLly6iurubm5ubIkydPZC361q1b6O/v59LpNIlEIggGgwgEAlhfX0culyt5HkEQMDAwQHieP3QLyDFxu91eUm2DwQCj0Qij0Yiuri7U1dWpcm9JdXU1J17n/v37+PDhAwmFQggGgwgGg0W/00+lUnA4HLhx48ah1w+JF6vNcRxMJhNu376N9vb2itxEU1dXx5lMJphMJgBANBolVqsVXq8Xhb5+s1qtuHbt2qHqh8Snp6exv79/bKBOp8PVq1cxMjICg8FQEeFCtLe3c48fP0Y8Hic2mw1ut/vYVkilUrDb7RgcHMy/lhfPZDLEZrMdGsDzPAYGBjA8PIympqYzJXwUg8HAPXz4EPfu3SNPnz6F0+lEJpPJH7darbh+/Xq+el78aO3BwUHcuXMHDQ0NZ1r4KE1NTdyDBw9w9+5dIggCnj9/DgDY39/H9PQ0bt68CeDzv7N0Op3f27W1tRgbG8Po6Ch33qQP0tDQwI2OjnJjY2Oora0FANhsNqTTaQJ8Fn/x4gXevXuHlpYWTExMoKen59wKH6Wnp4ebmJhAS0tLvjoA6NLpNLHZbOjt7cX4+Diam5u/GGmR5uZmbnx8HL29vfnqvN1ux/DwMIaGhr444YPU1NRwjx49wrNnz4jD4QB/5coV6PX6L1r6IENDQ1wikSA6mqRF9Ho9V7G7iSsNE6cNJk4bTJw2mDhtMHHaYOK0wcRpg4nTBhOnDSZOG0ycNpg4bTBx2mDitMHEaYOJ0wYTpw0mThtMnDaYOG0wcdpg4rTBxGmDidMGE6cNJk4bTJw2mDhtMHHaYOK0wcRpg4nTBhOnDSZOG0ycNpg4bTBx2mDitMHEaYOJ0wYTpw1+Xf5j1IuSfC//cZDJ9xzUXBtvX1Nv8r8/fiN77MZHPfZVXJuqb/X6RoOscYRwuHCpReHVHEZV8arqGu7it92Sx136rhtVfI2qj01V/cOt86ffAAkKHHS4PPCregv6jOri9ZcM3Pd9v5R8fnv/z6hvVP/h9fJ/kkICrT+OcLX1jWT5rz+Qy2ZPPEdXVYUfBn+HvrNPkycDc38uKPYj7kX5758USYRd2Am78PHfTw+x/+rCRTR39kHf2Yearxs1exzy/1gTDvSTyZARAAAAAElFTkSuQmCC"/>
-        <image id="_Image2" width="154px" height="154px" xlink:href="data:image/png;base64,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"/>
-        <image id="_Image3" width="154px" height="154px" xlink:href="data:image/png;base64,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"/>
+        <image id="_Image2" width="154px" height="154px" xlink:href="data:image/png;base64,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"/>
+        <image id="_Image3" width="154px" height="154px" xlink:href="data:image/png;base64,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"/>
     </defs>
 </svg>

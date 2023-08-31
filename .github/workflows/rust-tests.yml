@@ -85,7 +85,7 @@ jobs:
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 
       - name: run tests
-        run: cargo test --package equistore --package equistore-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
+        run: cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:
@@ -140,12 +140,12 @@ jobs:
 
       - name: check for leftover \#include <iostream>
         run: |
-          ! rg "<iostream>" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
+          ! rg "<iostream>" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet
 
       - name: check for leftover std::cout
         run: |
-          ! rg "cout" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
+          ! rg "cout" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet
 
       - name: check for leftover std::cerr
         run: |
-          ! rg "cerr" --iglob "\!equistore-core/tests/cpp/external/catch/catch.hpp" --quiet
+          ! rg "cerr" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet

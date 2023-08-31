@@ -59,8 +59,8 @@ jobs:
         if: matrix.os == 'ubuntu-20.04'
         run: docker build -t rustc-manylinux2014_x86_64 python/scripts/rustc-manylinux2014_x86_64
 
-      - name: build equistore-core wheel
-        run: python -m cibuildwheel python/equistore-core
+      - name: build metatensor-core wheel
+        run: python -m cibuildwheel python/metatensor-core
         env:
           CIBW_BUILD: cp310-*
           CIBW_SKIP: "*musllinux*"
@@ -94,13 +94,13 @@ jobs:
         run: python -m pip install wheel build
       - name: package vendored code
         run: ./scripts/package-core.sh
-      - name: build equistore-core sdist
-        run: python -m build python/equistore-core --sdist --outdir=dist/
-      - name: build equistore-operations sdist and wheel
-        run: python -m build python/equistore-operations --outdir=dist/
-      - name: build equistore-torch sdist
-        run: python -m build python/equistore-torch --sdist --outdir=dist/
-      - name: build equistore sdist and wheel
+      - name: build metatensor-core sdist
+        run: python -m build python/metatensor-core --sdist --outdir=dist/
+      - name: build metatensor-operations sdist and wheel
+        run: python -m build python/metatensor-operations --outdir=dist/
+      - name: build metatensor-torch sdist
+        run: python -m build python/metatensor-torch --sdist --outdir=dist/
+      - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/
       - uses: actions/upload-artifact@v3
         with:
