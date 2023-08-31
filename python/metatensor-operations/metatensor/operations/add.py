@@ -106,6 +106,15 @@ def _add_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
     for parameter, gradient_1 in block_1.gradients():
         gradient_2 = block_2.gradient(parameter)
 
+        if gradient_1.values.shape != gradient_2.values.shape:
+            raise ValueError(
+                "The two gradient blocks must have the same shape. "
+                "Different sparsity patterns along the samples dimension "
+                "are not supported."
+            )
+        if gradient_1.samples != gradient_2.samples:
+            raise ValueError("The two gradient blocks must have the same samples")
+
         if len(gradient_1.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 

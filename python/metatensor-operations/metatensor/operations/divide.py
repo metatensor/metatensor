@@ -121,6 +121,8 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
                 "Different sparsity patterns along the samples dimension "
                 "are not supported."
             )
+        if gradient_1.samples != gradient_2.samples:
+            raise ValueError("The two gradient blocks must have the same samples")
         _shape: List[int] = []
         for c in block_1.components:
             _shape.append(len(c))
