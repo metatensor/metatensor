@@ -335,8 +335,8 @@ class TestMultiply(unittest.TestCase):
         )
         block_result.add_gradient("g", block_result_grad)
         tensor_result = TensorMap(keys, [block_result])
-        product_tensor = equistore.multiply(tensor_1, tensor_2)
-        assert equistore.equal(tensor_result, product_tensor)
+        product_tensor = metatensor.multiply(tensor_1, tensor_2)
+        assert metatensor.equal(tensor_result, product_tensor)
 
 
 if __name__ == "__main__":

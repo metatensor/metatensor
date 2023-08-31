@@ -348,8 +348,8 @@ class TestDivide(unittest.TestCase):
         )
         block_result.add_gradient("g", block_result_grad)
         tensor_result = TensorMap(keys, [block_result])
-        quotient_tensor = equistore.divide(tensor_1, tensor_2)
-        assert equistore.equal(tensor_result, quotient_tensor)
+        quotient_tensor = metatensor.divide(tensor_1, tensor_2)
+        assert metatensor.equal(tensor_result, quotient_tensor)
 
 
 if __name__ == "__main__":
