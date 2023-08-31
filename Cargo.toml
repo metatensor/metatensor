@@ -1,8 +1,9 @@
 [workspace]
+resolver = "2"
 
 members = [
-    "equistore-core",
-    "equistore-torch",
-    "equistore",
+    "metatensor-core",
+    "metatensor-torch",
+    "metatensor",
     "python",
 ]

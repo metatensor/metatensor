@@ -1,4 +1,4 @@
 divide
 ======
 
-.. autofunction:: equistore.divide
+.. autofunction:: metatensor.divide

@@ -15,13 +15,13 @@ build:
     rust: "1.64"
   jobs:
     post_install:
-      # install equistore-torch with the CPU version of PyTorch we can not use
+      # install metatensor-torch with the CPU version of PyTorch we can not use
       # the `python` section below since it does not allow to specify
       # `--extra-index-url`
-      - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/equistore-torch
+      - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/metatensor-torch
 
     post_build:
-      - cargo doc --no-deps --package equistore
+      - cargo doc --no-deps --package metatensor
       - rm -rf $READTHEDOCS_OUTPUT/html/reference/rust/
       - cp -r target/doc/ $READTHEDOCS_OUTPUT/html/reference/rust/
       - cp docs/src/reference/rust/index.html $READTHEDOCS_OUTPUT/html/reference/rust/

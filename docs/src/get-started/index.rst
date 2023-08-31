@@ -3,7 +3,7 @@
 Getting started
 ===============
 
-The following sections describes how to install equistore, and how the equistore
+The following sections describes how to install metatensor, and how the metatensor
 data format works.
 
 .. toctree::

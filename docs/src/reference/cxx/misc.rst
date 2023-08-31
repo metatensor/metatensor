@@ -4,12 +4,12 @@ Miscelaneous
 Error handling
 --------------
 
-.. doxygenclass:: equistore::Error
+.. doxygenclass:: metatensor::Error
     :members:
 
 
 N-dimensional arrays
 --------------------
 
-.. doxygenclass:: equistore::NDArray
+.. doxygenclass:: metatensor::NDArray
     :members:

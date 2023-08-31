@@ -1,6 +1,6 @@
 split
 ======
 
-.. autofunction:: equistore.split
-    
-.. autofunction:: equistore.split_block
+.. autofunction:: metatensor.split
+
+.. autofunction:: metatensor.split_block

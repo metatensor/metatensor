@@ -13,9 +13,9 @@ fn run_python_tests() {
     if cfg!(debug_assertions) {
         // assume that debug assertion means that we are building the code in
         // debug mode, even if optimizations could be enabled
-        tox.env("EQUISTORE_BUILD_TYPE", "debug");
+        tox.env("METATENSOR_BUILD_TYPE", "debug");
     } else {
-        tox.env("EQUISTORE_BUILD_TYPE", "release");
+        tox.env("METATENSOR_BUILD_TYPE", "release");
     }
     tox.current_dir(&root);
     let status = tox.status().expect("failed to run tox");

@@ -7,19 +7,19 @@ import toml
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# when importing equistore-torch, this will change the definition of the classes
+# when importing metatensor-torch, this will change the definition of the classes
 # to include the documentation
-os.environ["EQUISTORE_IMPORT_FOR_SPHINX"] = "1"
+os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 # -- Project information -----------------------------------------------------
 
-project = "equistore"
+project = "metatensor"
 author = ", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines())
 copyright = f"{datetime.now().date().year}, {author}"
 
 
 def load_version_from_cargo_toml():
-    with open(os.path.join(ROOT, "equistore-core", "Cargo.toml")) as fd:
+    with open(os.path.join(ROOT, "metatensor-core", "Cargo.toml")) as fd:
         data = toml.load(fd)
     return data["package"]["version"]
 
@@ -41,7 +41,7 @@ def build_doxygen_docs():
 
 def setup(app):
     build_doxygen_docs()
-    app.add_css_file("css/equistore.css")
+    app.add_css_file("css/metatensor.css")
 
 
 # -- General configuration ---------------------------------------------------
@@ -80,9 +80,9 @@ intersphinx_mapping = {
 }
 
 breathe_projects = {
-    "equistore": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),
+    "metatensor": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),
 }
-breathe_default_project = "equistore"
+breathe_default_project = "metatensor"
 breathe_domain_by_extension = {
     "h": "c",
 }

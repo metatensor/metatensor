@@ -1,4 +1,4 @@
 checks_enabled
 ==============
 
-.. autofunction:: equistore.checks_enabled
+.. autofunction:: metatensor.checks_enabled
