@@ -106,7 +106,7 @@ def block_to(
     else:
         is_tensor_block = check_isinstance(block, TensorBlock)
     if not is_tensor_block:
-        raise TypeError("`block` should be an metatensor `TensorBlock`")
+        raise TypeError("`block` should be a metatensor `TensorBlock`")
     if backend is not None:
         if not isinstance(backend, str):
             raise TypeError("'backend' should be given as a string")
