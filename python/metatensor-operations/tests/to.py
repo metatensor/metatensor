@@ -3,7 +3,7 @@ import pytest
 import torch
 
 import metatensor
-from metatensor import Labels, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 @pytest.fixture
@@ -282,3 +282,82 @@ def test_change_dtype(tensor):
     for new_block in new_tensor:
         assert isinstance(new_block.values, np.ndarray)
         assert new_block.values.dtype == np.float32
+
+
+def test_change_dtype_branched():
+    """Test a `to` change of dtype with multiple gradient branches"""
+
+    def get_dummy_block():
+        return TensorBlock(
+            values=np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]),
+            samples=Labels.range("sample", 2),
+            components=[],
+            properties=Labels.range("property", 3),
+        )
+
+    grad_00 = get_dummy_block()
+    grad_0100 = get_dummy_block()
+    grad_0101 = get_dummy_block()
+    grad_0102 = get_dummy_block()
+    grad_010 = get_dummy_block()
+    grad_010.add_gradient("gradient_0100", grad_0100)
+    grad_010.add_gradient("gradient_0101", grad_0101)
+    grad_010.add_gradient("gradient_0102", grad_0102)
+    grad_011 = get_dummy_block()
+    grad_012 = get_dummy_block()
+    grad_01 = get_dummy_block()
+    grad_01.add_gradient("gradient_010", grad_010)
+    grad_01.add_gradient("gradient_011", grad_011)
+    grad_01.add_gradient("gradient_012", grad_012)
+    grad_0 = get_dummy_block()
+    grad_0.add_gradient("gradient_00", grad_00)
+    grad_0.add_gradient("gradient_01", grad_01)
+    grad_1 = get_dummy_block()
+    grad_20 = get_dummy_block()
+    grad_21 = get_dummy_block()
+    grad_220 = get_dummy_block()
+    grad_22 = get_dummy_block()
+    grad_22.add_gradient("gradient_220", grad_220)
+    grad_2 = get_dummy_block()
+    grad_2.add_gradient("gradient_20", grad_20)
+    grad_2.add_gradient("gradient_21", grad_21)
+    grad_2.add_gradient("gradient_22", grad_22)
+
+    block = metatensor.block_from_array(
+        np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]),
+    )
+    block.add_gradient("gradient_0", grad_0)
+    block.add_gradient("gradient_1", grad_1)
+    block.add_gradient("gradient_2", grad_2)
+    tensor = TensorMap(keys=Labels.single(), blocks=[block])
+
+    float32_tensor = metatensor.to(tensor, dtype=np.float32)
+    float32_block = float32_tensor.block()
+
+    assert float32_block.gradients_list() == ["gradient_0", "gradient_1", "gradient_2"]
+    assert float32_block.gradient("gradient_0").gradients_list() == [
+        "gradient_00",
+        "gradient_01",
+    ]
+    assert float32_block.gradient("gradient_0").gradient(
+        "gradient_01"
+    ).gradients_list() == ["gradient_010", "gradient_011", "gradient_012"]
+    assert float32_block.gradient("gradient_2").gradient(
+        "gradient_22"
+    ).gradients_list() == ["gradient_220"]
+
+    assert (
+        float32_block.gradient("gradient_2")
+        .gradient("gradient_22")
+        .gradient("gradient_220")
+        .values.dtype
+        == np.float32
+    )
+    assert (
+        float32_block.gradient("gradient_0")
+        .gradient("gradient_01")
+        .gradient("gradient_010")
+        .gradient("gradient_0102")
+        .values.dtype
+        == np.float32
+    )
