@@ -5,13 +5,13 @@ Reduction over samples
 These functions allow to reduce over the sample indices of a :py:class:`TensorMap` or
 :py:class:`TensorBlock` objects, generating a new :py:class:`TensorMap` or
 :py:class:`TensorBlock` in which the values sharing the same indices for the indicated
-``sample_names`` have been combined in a single entry. The functions differ by the type
+``samples_names`` have been combined in a single entry. The functions differ by the type
 of reduction operation, but otherwise operate in the same way. The reduction operation
-loops over the samples in each block/map, and combines all those that only differ by
-the values of the indices associated with the names listed in the ``sample_names``
+loops over the samples in each block/map, and combines all those that only differ by the
+values of the indices associated with the names listed in the ``samples_names``
 argument. One way to see these operations is that the sample indices describe the
 non-zero entries in a *sparse* array, and the reduction acts much like
-:func:`numpy.sum`, where ``sample_names`` plays the same role as the ``axis`` argument.
+:func:`numpy.sum`, where ``samples_names`` plays the same role as the ``axis`` argument.
 Whenever gradients are present, the reduction is performed also on the gradients.
 
 See also :py:func:`metatensor.sum_over_samples_block` and
@@ -66,7 +66,7 @@ def np_errstate_torch_script(divide: str, invalid: str) -> NpErrstateTorchScript
 
 def _reduce_over_samples_block(
     block: TensorBlock,
-    sample_names: Optional[List[str]] = None,
+    samples_names: Optional[List[str]] = None,
     reduction: str = "sum",
     remaining_samples: Optional[List[str]] = None,
 ) -> TensorBlock:
@@ -79,11 +79,11 @@ def _reduce_over_samples_block(
 
     :param block:
         input block
-    :param sample_names:
+    :param samples_names:
         names of samples to reduce over. it is ignored if remaining_samples is given
     :param remaining_samples:
         names of samples that should remain after reducing reduce over.
-        it is computed automatically from sample_names if missing or set to None
+        it is computed automatically from samples_names if missing or set to None
     :param reduction:
         how to reduce, only available values are "mean", "sum", "std" or "var"
     """
@@ -91,10 +91,10 @@ def _reduce_over_samples_block(
     block_samples = block.samples
 
     if remaining_samples is None:
-        assert sample_names is not None
+        assert samples_names is not None
         remaining_samples_names: List[str] = []
         for s_name in block_samples.names:
-            if s_name in sample_names:
+            if s_name in samples_names:
                 continue
             remaining_samples_names.append(s_name)
     else:
@@ -324,36 +324,36 @@ def _reduce_over_samples_block(
 
 
 def _reduce_over_samples(
-    tensor: TensorMap, sample_names: Union[List[str], str], reduction: str
+    tensor: TensorMap, samples_names: Union[List[str], str], reduction: str
 ) -> TensorMap:
     """
     Create a new :py:class:`TensorMap` with the same keys as as the input
     ``tensor``, and each :py:class:`TensorBlock` is obtained summing the
-    corresponding input :py:class:`TensorBlock` over the ``sample_names``
+    corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
     "sum", "mean", "std" or "var" reductions can be performed.
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to reduce over
+    :param samples_names: names of samples to reduce over
     :param reduction: how to reduce, only available values are "mean", "sum",
     "std" or "var"
     """
-    if isinstance(sample_names, str):
-        sample_names_list = [sample_names]
+    if isinstance(samples_names, str):
+        samples_names_list = [samples_names]
     else:
-        sample_names_list = sample_names
+        samples_names_list = samples_names
 
-    for sample in sample_names_list:
-        if sample not in tensor.sample_names:
+    for sample in samples_names_list:
+        if sample not in tensor.samples_names:
             raise ValueError(
                 f"one of the requested sample name ({sample}) is not part of "
                 "this TensorMap"
             )
 
     remaining_samples: List[str] = []
-    for s_name in tensor.sample_names:
-        if s_name in sample_names_list:
+    for s_name in tensor.samples_names:
+        if s_name in samples_names_list:
             continue
         remaining_samples.append(s_name)
 
@@ -370,24 +370,24 @@ def _reduce_over_samples(
 
 
 def sum_over_samples_block(
-    block: TensorBlock, sample_names: Union[List[str], str]
+    block: TensorBlock, samples_names: Union[List[str], str]
 ) -> TensorBlock:
     """Sum a :py:class:`TensorBlock`, combining the samples
-    according to ``sample_names``.
+    according to ``samples_names``.
 
     This function creates a new :py:class:`TensorBlock` in which each sample is
-    obtained summing over the ``sample_names`` indices, so that the resulting
+    obtained summing over the ``samples_names`` indices, so that the resulting
     :py:class:`TensorBlock` does not have those indices.
 
-    ``sample_names`` indicates over which dimensions in the samples the sum is
+    ``samples_names`` indicates over which dimensions in the samples the sum is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     :param block:
         input :py:class:`TensorBlock`
-    :param sample_names:
+    :param samples_names:
         names of samples to sum over
 
     :returns:
@@ -417,7 +417,7 @@ def sum_over_samples_block(
     ...     components=[],
     ...     properties=Labels.range("properties", 3),
     ... )
-    >>> block_sum = sum_over_samples_block(block, sample_names="center")
+    >>> block_sum = sum_over_samples_block(block, samples_names="center")
     >>> print(block_sum.samples)
     Labels(
         structure
@@ -430,30 +430,31 @@ def sum_over_samples_block(
     """
 
     return _reduce_over_samples_block(
-        block=block, sample_names=sample_names, reduction="sum"
+        block=block, samples_names=samples_names, reduction="sum"
     )
 
 
 def sum_over_samples(
-    tensor: TensorMap, sample_names: Union[List[str], str]
+    tensor: TensorMap, samples_names: Union[List[str], str]
 ) -> TensorMap:
-    """Sum a :py:class:`TensorMap`, combining the samples according to ``sample_names``.
+    """
+    Sum a :py:class:`TensorMap`, combining the samples according to ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys
     as as the input ``tensor``. Each :py:class:`TensorBlock` is obtained summing the
-    corresponding input :py:class:`TensorBlock` over the ``sample_names``
+    corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices, essentially calling :py:func:`sum_over_samples_block` over each
     block in ``tensor``.
 
-    ``sample_names`` indicates over which dimensions in the samples the sum is
+    ``samples_names`` indicates over which dimensions in the samples the sum is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     :param tensor:
         input :py:class:`TensorMap`
-    :param sample_names:
+    :param samples_names:
         names of samples to sum over
 
     :returns:
@@ -485,7 +486,7 @@ def sum_over_samples(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
-    >>> tensor_sum = sum_over_samples(tensor, sample_names="center")
+    >>> tensor_sum = sum_over_samples(tensor, samples_names="center")
     >>> # only 'structure' is left as a sample
     >>> print(tensor_sum.block(0))
     TensorBlock
@@ -505,21 +506,21 @@ def sum_over_samples(
     """
 
     return _reduce_over_samples(
-        tensor=tensor, sample_names=sample_names, reduction="sum"
+        tensor=tensor, samples_names=samples_names, reduction="sum"
     )
 
 
 def mean_over_samples_block(
-    block: TensorBlock, sample_names: Union[List[str], str]
+    block: TensorBlock, samples_names: Union[List[str], str]
 ) -> TensorBlock:
     """Averages a :py:class:`TensorBlock`, combining the samples according
-    to ``sample_names``.
+    to ``samples_names``.
 
     See also :py:func:`sum_over_samples_block` and :py:func:`mean_over_samples`
 
     :param block:
         input :py:class:`TensorBlock`
-    :param sample_names:
+    :param samples_names:
         names of samples to average over
 
     :returns:
@@ -527,49 +528,49 @@ def mean_over_samples_block(
     """
 
     return _reduce_over_samples_block(
-        block=block, sample_names=sample_names, reduction="sum"
+        block=block, samples_names=samples_names, reduction="sum"
     )
 
 
 def mean_over_samples(
-    tensor: TensorMap, sample_names: Union[str, List[str]]
+    tensor: TensorMap, samples_names: Union[str, List[str]]
 ) -> TensorMap:
     """Compute the mean of a :py:class:`TensorMap`, combining the samples according to
-    ``sample_names``.
+    ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    averaging the corresponding input :py:class:`TensorBlock` over the ``sample_names``
+    averaging the corresponding input :py:class:`TensorBlock` over the ``samples_names``
     indices.
 
-    ``sample_names`` indicates over which dimensions in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to average over
+    :param samples_names: names of samples to average over
     """
     return _reduce_over_samples(
-        tensor=tensor, sample_names=sample_names, reduction="mean"
+        tensor=tensor, samples_names=samples_names, reduction="mean"
     )
 
 
 def std_over_samples_block(
-    block: TensorBlock, sample_names: Union[List[str], str]
+    block: TensorBlock, samples_names: Union[List[str], str]
 ) -> TensorBlock:
     """Computes the standard deviation for a :py:class:`TensorBlock`,
-    combining the samples according to ``sample_names``.
+    combining the samples according to ``samples_names``.
 
     See also :py:func:`sum_over_samples_block` and :py:func:`std_over_samples`
 
     :param block:
         input :py:class:`TensorBlock`
-    :param sample_names:
+    :param samples_names:
         names of samples to compute the standard deviation for
 
     :returns:
@@ -577,26 +578,26 @@ def std_over_samples_block(
     """
 
     return _reduce_over_samples_block(
-        block=block, sample_names=sample_names, reduction="std"
+        block=block, samples_names=samples_names, reduction="std"
     )
 
 
 def std_over_samples(
-    tensor: TensorMap, sample_names: Union[str, List[str]]
+    tensor: TensorMap, samples_names: Union[str, List[str]]
 ) -> TensorMap:
     r"""Compute the standard deviation of a :py:class:`TensorMap`, combining the samples
-    according to ``sample_names``.
+    according to ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the std deviation of the corresponding input :py:class:`TensorBlock`
-    over the ``sample_names`` indices.
+    over the ``samples_names`` indices.
 
-    ``sample_names`` indicates over which dimensions in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples()`.
@@ -609,24 +610,24 @@ def std_over_samples(
         = (E[X \nabla X] - E[X]E[\nabla X])/Std(X)
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to perform the standart deviation over
+    :param samples_names: names of samples to perform the standart deviation over
     """
     return _reduce_over_samples(
-        tensor=tensor, sample_names=sample_names, reduction="std"
+        tensor=tensor, samples_names=samples_names, reduction="std"
     )
 
 
 def var_over_samples_block(
-    block: TensorBlock, sample_names: Union[List[str], str]
+    block: TensorBlock, samples_names: Union[List[str], str]
 ) -> TensorBlock:
     """Computes the variance for a :py:class:`TensorBlock`,
-    combining the samples according to ``sample_names``.
+    combining the samples according to ``samples_names``.
 
     See also :py:func:`sum_over_samples_block` and :py:func:`std_over_samples`
 
     :param block:
         input :py:class:`TensorBlock`
-    :param sample_names:
+    :param samples_names:
         names of samples to compute the variance for
 
     :returns:
@@ -634,26 +635,26 @@ def var_over_samples_block(
     """
 
     return _reduce_over_samples_block(
-        block=block, sample_names=sample_names, reduction="var"
+        block=block, samples_names=samples_names, reduction="var"
     )
 
 
 def var_over_samples(
-    tensor: TensorMap, sample_names: Union[str, List[str]]
+    tensor: TensorMap, samples_names: Union[str, List[str]]
 ) -> TensorMap:
     r"""Compute the variance of a :py:class:`TensorMap`, combining the
-    samples according to ``sample_names``.
+    samples according to ``samples_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
     performing the variance of the corresponding input :py:class:`TensorBlock`
-    over the ``sample_names`` indices.
+    over the ``samples_names`` indices.
 
-    ``sample_names`` indicates over which dimensions in the samples the mean is
+    ``samples_names`` indicates over which dimensions in the samples the mean is
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``samples_names = "center"`` is the same as ``samples_names = ["center"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.
@@ -665,8 +666,8 @@ def var_over_samples(
         \nabla[Var(X)] = 2(E[X \nabla X] - E[X]E[\nabla X])
 
     :param tensor: input :py:class:`TensorMap`
-    :param sample_names: names of samples to perform the variance over
+    :param samples_names: names of samples to perform the variance over
     """
     return _reduce_over_samples(
-        tensor=tensor, sample_names=sample_names, reduction="var"
+        tensor=tensor, samples_names=samples_names, reduction="var"
     )

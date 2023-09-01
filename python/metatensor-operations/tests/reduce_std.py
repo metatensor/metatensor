@@ -22,9 +22,9 @@ def test_std_samples_block():
 
     bl1 = tensor_ps[0]
 
-    # check both passing a list and a single string for sample_names
-    reduce_tensor_se = metatensor.std_over_samples(tensor_se, sample_names="center")
-    reduce_tensor_ps = metatensor.std_over_samples(tensor_ps, sample_names=["center"])
+    # check both passing a list and a single string for samples_names
+    reduce_tensor_se = metatensor.std_over_samples(tensor_se, samples_names="center")
+    reduce_tensor_ps = metatensor.std_over_samples(tensor_ps, samples_names=["center"])
 
     assert np.allclose(
         np.std(bl1.values[:4], axis=0),
@@ -176,9 +176,9 @@ def test_reduction_block_two_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = metatensor.std_over_samples(X, sample_names=["s_3"])
-    reduce_X_23 = metatensor.std_over_samples(X, sample_names="s_1")
-    reduce_X_2 = metatensor.std_over_samples(X, sample_names=["s_1", "s_3"])
+    reduce_X_12 = metatensor.std_over_samples(X, samples_names=["s_3"])
+    reduce_X_23 = metatensor.std_over_samples(X, samples_names="s_1")
+    reduce_X_2 = metatensor.std_over_samples(X, samples_names=["s_1", "s_3"])
 
     assert np.allclose(
         np.std(X.block(0).values[:3], axis=0),
@@ -259,10 +259,10 @@ def test_reduction_of_one_element():
     keys = Labels(names=["key_1"], values=np.array([[0]]))
     X = TensorMap(keys, [block_1])
 
-    add_X = metatensor.sum_over_samples(X, sample_names=["s_1"])
-    mean_X = metatensor.mean_over_samples(X, sample_names=["s_1"])
-    var_X = metatensor.var_over_samples(X, sample_names=["s_1"])
-    std_X = metatensor.std_over_samples(X, sample_names=["s_1"])
+    add_X = metatensor.sum_over_samples(X, samples_names=["s_1"])
+    mean_X = metatensor.mean_over_samples(X, samples_names=["s_1"])
+    var_X = metatensor.var_over_samples(X, samples_names=["s_1"])
+    std_X = metatensor.std_over_samples(X, samples_names=["s_1"])
 
     # print(add_X[0])
     # print(X[0].values, add_X[0].values)

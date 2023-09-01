@@ -118,14 +118,17 @@ public:
     /// strings.
     TorchTensorMap components_to_properties(torch::IValue dimensions) const;
 
-    /// Get the sample names used for all block in this `TensorMap`
-    std::vector<std::string> sample_names();
+    /// Get the names of the samples dimensions for all blocks in this
+    /// `TensorMap`
+    std::vector<std::string> samples_names();
 
-    /// Get the components names used for all block in this `TensorMap`
-    std::vector<std::vector<std::string>> components_names();
+    /// Get the names of the components dimensions for all blocks in this
+    /// `TensorMap`
+    std::vector<std::string> components_names();
 
-    /// Get the property names used for all block in this `TensorMap`
-    std::vector<std::string> property_names();
+    /// Get the names of the properties dimensions for all blocks in this
+    /// `TensorMap`
+    std::vector<std::string> properties_names();
 
     /// Get all (key => block) pairs in this `TensorMap`
     std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> items();

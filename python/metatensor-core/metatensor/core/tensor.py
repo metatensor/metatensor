@@ -1,7 +1,7 @@
 import copy
 import ctypes
 import sys
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Dict, List, Sequence, Union
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
@@ -512,26 +512,32 @@ class TensorMap:
         return TensorMap._from_ptr(ptr)
 
     @property
-    def sample_names(self) -> Tuple[str]:
-        """names of the sample labels for all blocks in this tensor map"""
+    def samples_names(self) -> List[str]:
+        """
+        names of the samples dimensions for all blocks in this :py:class:`TensorMap`
+        """
         if len(self.keys) == 0:
-            return tuple()
+            return []
 
         return self.block(0).samples.names
 
     @property
-    def components_names(self) -> List[Tuple[str]]:
-        """names of the component labels for all blocks in this tensor map"""
+    def components_names(self) -> List[str]:
+        """
+        names of the components dimensions for all blocks in this :py:class:`TensorMap`
+        """
         if len(self.keys) == 0:
             return []
 
-        return [c.names for c in self.block(0).components]
+        return [c.names[0] for c in self.block(0).components]
 
     @property
-    def property_names(self) -> Tuple[str]:
-        """names of the property labels for all blocks in this tensor map"""
+    def properties_names(self) -> List[str]:
+        """
+        names of the properties dimensions for all blocks in this :py:class:`TensorMap`
+        """
         if len(self.keys) == 0:
-            return tuple()
+            return []
 
         return self.block(0).properties.names
 

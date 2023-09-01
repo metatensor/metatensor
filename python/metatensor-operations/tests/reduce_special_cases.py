@@ -25,10 +25,10 @@ def test_reduction_all_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    sum_X = metatensor.sum_over_samples(X, sample_names=["s"])
-    mean_X = metatensor.mean_over_samples(X, sample_names=["s"])
-    var_X = metatensor.var_over_samples(X, sample_names=["s"])
-    std_X = metatensor.std_over_samples(X, sample_names=["s"])
+    sum_X = metatensor.sum_over_samples(X, samples_names=["s"])
+    mean_X = metatensor.mean_over_samples(X, samples_names=["s"])
+    var_X = metatensor.var_over_samples(X, samples_names=["s"])
+    std_X = metatensor.std_over_samples(X, samples_names=["s"])
 
     assert metatensor.equal_metadata(sum_X, mean_X)
     assert metatensor.equal_metadata(sum_X, std_X)

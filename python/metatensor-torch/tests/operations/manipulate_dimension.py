@@ -25,58 +25,58 @@ def get_tensor_map():
 def check_append(append):
     tensor = get_tensor_map()
 
-    assert tensor.sample_names == ["structure", "center"]
+    assert tensor.samples_names == ["structure", "center"]
     new_tensor = append(
         tensor, "samples", "center_2", tensor.block(0).samples.column("center")
     )
 
     assert isinstance(new_tensor, torch.ScriptObject)
-    assert new_tensor.sample_names == ["structure", "center", "center_2"]
+    assert new_tensor.samples_names == ["structure", "center", "center_2"]
 
 
 def check_insert(insert):
     tensor = get_tensor_map()
 
-    assert tensor.sample_names == ["structure", "center"]
+    assert tensor.samples_names == ["structure", "center"]
     new_tensor = insert(
         tensor, "samples", 1, "center_2", tensor.block(0).samples.column("center")
     )
 
     assert isinstance(new_tensor, torch.ScriptObject)
-    assert new_tensor.sample_names == ["structure", "center_2", "center"]
+    assert new_tensor.samples_names == ["structure", "center_2", "center"]
 
 
 def check_permute(permute):
     tensor = get_tensor_map()
 
-    assert tensor.sample_names == ["structure", "center"]
+    assert tensor.samples_names == ["structure", "center"]
     new_tensor = permute(tensor, "samples", [1, 0])
 
     assert isinstance(new_tensor, torch.ScriptObject)
-    assert new_tensor.sample_names == ["center", "structure"]
+    assert new_tensor.samples_names == ["center", "structure"]
 
 
 def check_remove(remove):
     tensor = get_tensor_map()
 
-    assert tensor.sample_names == ["structure", "center"]
+    assert tensor.samples_names == ["structure", "center"]
     new_tensor = metatensor.torch.append_dimension(
         tensor, "samples", "center_2", tensor.block(0).samples.column("center")
     )
     new_tensor = remove(new_tensor, "samples", "center_2")
 
     assert isinstance(new_tensor, torch.ScriptObject)
-    assert new_tensor.sample_names == ["structure", "center"]
+    assert new_tensor.samples_names == ["structure", "center"]
 
 
 def check_rename(rename):
     tensor = get_tensor_map()
 
-    assert tensor.sample_names == ["structure", "center"]
+    assert tensor.samples_names == ["structure", "center"]
     new_tensor = rename(tensor, "samples", "center", "center_2")
 
     assert isinstance(new_tensor, torch.ScriptObject)
-    assert new_tensor.sample_names == ["structure", "center_2"]
+    assert new_tensor.samples_names == ["structure", "center_2"]
 
 
 def test_operations_as_python():
