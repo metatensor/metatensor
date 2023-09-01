@@ -192,9 +192,13 @@ if (CARGO_VERSION_CHANGED)
         endforeach()
         # Special case `msvcrt` to link with the debug version in Debug mode.
         list(TRANSFORM stripped_lib_list REPLACE "^msvcrt$" "\$<\$<CONFIG:Debug>:msvcrtd>")
+        list(REMOVE_DUPLICATES stripped_lib_list)
 
         set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
-        message(STATUS "Cargo default link libraries are: ${CARGO_DEFAULT_LIBRARIES}")
+
+        if (${METATENSOR_MAIN_PROJECT})
+            message(STATUS "Cargo default link libraries are: ${CARGO_DEFAULT_LIBRARIES}")
+        endif()
     else()
         message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_build_error_message}`")
     endif()
