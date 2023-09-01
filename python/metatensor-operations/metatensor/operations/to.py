@@ -180,7 +180,7 @@ def block_to(
                 current_location.append(gradient_names[index_last_visited + 1])
                 last_visited = ""
 
-    # at this point, transformed_blocks should only contain the final transformed block:
+    # at this point, transformed_blocks contain only the final transformed block:
     return transformed_blocks[0]
 
 
