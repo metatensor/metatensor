@@ -127,8 +127,8 @@ def test_join_properties_values(tensor):
             assert_equal(joined_gradient.values, gradient.values)
 
 
-def test_join_properties_with_same_property_names(tensor):
-    """Test join function with three tensor along `properties`"""
+def test_join_properties_with_same_properties_names(tensor):
+    """Test join function with three tensor along properties"""
 
     joined_tensor = metatensor.join([tensor, tensor, tensor], axis="properties")
 
@@ -146,8 +146,8 @@ def test_join_properties_with_same_property_names(tensor):
     )
 
 
-def test_join_properties_with_different_property_names():
-    """Test join function with tensors of different `property` names"""
+def test_join_properties_with_different_properties_names():
+    """Test join function with tensors of different properties names"""
 
     keys = Labels.range("frame_a", 1)
     values = np.zeros([1, 1])
@@ -178,7 +178,7 @@ def test_join_properties_with_different_property_names():
     )
 
     joined_tensor = metatensor.join([tensor_map_a, tensor_map_b], axis="properties")
-    assert joined_tensor.property_names == ["tensor", "property"]
+    assert joined_tensor.properties_names == ["tensor", "property"]
     assert len(joined_tensor[0].properties) == 2
 
 
@@ -229,8 +229,8 @@ def test_join_samples_values(tensor):
             assert_equal(joined_gradient.values, gradient.values)
 
 
-def test_join_samples_with_different_sample_names():
-    """Test join function raises an error with different `sample` names"""
+def test_join_samples_with_different_samples_names():
+    """Test join function raises an error with different samples names"""
     keys = Labels.range("frame_a", 1)
     values = np.zeros([1, 1])
     properties = Labels.range("idx", 1)

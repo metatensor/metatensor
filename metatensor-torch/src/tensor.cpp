@@ -378,7 +378,7 @@ static std::vector<std::string> labels_names(const metatensor::TensorBlock& bloc
     return result;
 }
 
-std::vector<std::string> TensorMapHolder::sample_names() {
+std::vector<std::string> TensorMapHolder::samples_names() {
     if (tensor_.keys().count() == 0) {
         return {};
     }
@@ -386,22 +386,26 @@ std::vector<std::string> TensorMapHolder::sample_names() {
     return labels_names(this->block_by_id(0)->as_metatensor(), 0);
 }
 
-std::vector<std::vector<std::string>> TensorMapHolder::components_names() {
-    auto result = std::vector<std::vector<std::string>>();
+std::vector<std::string> TensorMapHolder::components_names() {
+    auto result = std::vector<std::string>();
 
     if (tensor_.keys().count() != 0) {
         auto block = this->block_by_id(0);
         auto n_dimensions = block->values().sizes().size();
 
         for (size_t dimension=1; dimension<n_dimensions-1; dimension++) {
-            result.push_back(labels_names(block->as_metatensor(), dimension));
+            const auto& metatensor_block = block->as_metatensor();
+            auto labels = metatensor_block.labels(dimension);
+            assert(labels.names().size() == 1);
+
+            result.push_back(std::string(labels.names()[0]));
         }
     }
 
     return result;
 }
 
-std::vector<std::string> TensorMapHolder::property_names() {
+std::vector<std::string> TensorMapHolder::properties_names() {
     if (tensor_.keys().count() == 0) {
         return {};
     }
