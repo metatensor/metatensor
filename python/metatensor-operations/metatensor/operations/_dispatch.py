@@ -473,10 +473,7 @@ def to(
             return new_array
 
         elif backend == "numpy":
-            if torch.jit.is_scripting():
-                raise ValueError("cannot call numpy conversion when torch-scripting")
-            else:
-                return array.detach().cpu().numpy()
+            return array.detach().cpu().numpy()
 
         else:
             raise ValueError(f"Unknown backend: {backend}")
