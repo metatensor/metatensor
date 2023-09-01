@@ -128,7 +128,6 @@ def block_to(
     last_visited = ""
 
     while True:
-        print(len(transformed_blocks))
         gradient_names = current_block.gradients_list()
         n_gradients = len(gradient_names)
         if last_visited == "":  # first time we see this block
