@@ -286,7 +286,6 @@ def test_self_divide_scalar_gradient():
 
     assert metatensor.allclose(tensor_result, tensor_sum, rtol=1e-8)
 
-
     def test_self_multiply_tensors_gradient_additional_components(self):
         block_1 = TensorBlock(
             values=np.array([[1]]),
