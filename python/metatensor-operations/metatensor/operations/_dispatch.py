@@ -2,6 +2,8 @@ from typing import List, Optional, Union
 
 import numpy as np
 
+from ._classes import torch_jit_is_scripting
+
 
 try:
     import torch
@@ -473,7 +475,10 @@ def to(
             return new_array
 
         elif backend == "numpy":
-            return array.detach().cpu().numpy()
+            if torch_jit_is_scripting():
+                raise ValueError("cannot call numpy conversion when torch-scripting")
+            else:
+                return array.detach().cpu().numpy()
 
         else:
             raise ValueError(f"Unknown backend: {backend}")
