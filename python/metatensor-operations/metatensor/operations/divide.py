@@ -113,16 +113,9 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
         if len(gradient_2.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 
-        gradient_values_1 = gradient_1.values
-        gradient_values_2 = gradient_2.values
-        if gradient_values_1.shape != gradient_values_2.shape:
-            raise ValueError(
-                "The two gradient blocks must have the same shape. "
-                "Different sparsity patterns along the samples dimension "
-                "are not supported."
-            )
-        if gradient_1.samples != gradient_2.samples:
-            raise ValueError("The two gradient blocks must have the same samples")
+        assert gradient_1.values.shape == gradient_2.values.shape
+        assert gradient_1.samples == gradient_2.samples
+
         _shape: List[int] = []
         for c in block_1.components:
             _shape.append(len(c))
@@ -130,7 +123,7 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
         # we find the difference between the number of components
         # of the gradients and the values and then use it to create
         # empty dimensions for broadcasting
-        diff_components = len(gradient_values_1.shape) - len(block_1.values.shape)
+        diff_components = len(gradient_1.values.shape) - len(block_1.values.shape)
 
         gradient_samples_to_values_samples_1 = gradient_1.samples.column("sample")
         gradient_samples_to_values_samples_2 = gradient_2.samples.column("sample")
