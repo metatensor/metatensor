@@ -1,5 +1,3 @@
-import numpy as np
-
 from typing import List
 
 from . import _dispatch
@@ -20,6 +18,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     two :py:class:`TensorBlocks` has ``result_block.values = block_1.values @
     block_2.values.T``
 
+    >>> import numpy as np
     >>> from metatensor import Labels
     >>> block_1 = TensorBlock(
     ...     values=np.array(
@@ -74,7 +73,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     """
     _check_same_keys_raise(tensor_1, tensor_2, "dot")
 
-    blocks : List[TensorBlock] = []
+    blocks: List[TensorBlock] = []
     for key, block_1 in tensor_1.items():
         block_2 = tensor_2.block(key)
         blocks.append(_dot_block(block_1=block_1, block_2=block_2))

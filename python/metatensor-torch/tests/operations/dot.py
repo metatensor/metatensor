@@ -8,7 +8,9 @@ from .data import load_data
 
 def check_operation(dot):
     tensor = load_data("qm7-power-spectrum.npz")
-    dot_tensor = dot(tensor, metatensor.torch.remove_gradients(tensor, ["positions", "cell"]))
+    dot_tensor = dot(
+        tensor, metatensor.torch.remove_gradients(tensor, ["positions", "cell"])
+    )
 
     # right output type
     assert isinstance(dot_tensor, torch.ScriptObject)
@@ -22,7 +24,10 @@ def check_operation(dot):
 
     # right values
     for key in tensor.keys:
-        assert torch.allclose(dot_tensor.block(key).values, tensor.block(key).values @ tensor.block(key).values.T)
+        assert torch.allclose(
+            dot_tensor.block(key).values,
+            tensor.block(key).values @ tensor.block(key).values.T,
+        )
 
 
 def test_operation_as_python():
