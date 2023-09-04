@@ -273,6 +273,54 @@ def test_self_multiply_scalar_gradient():
 
     assert metatensor.allclose(tensor_result, tensor_sum)
 
+    def test_self_multiply_tensors_gradient_additional_components(self):
+        block_1 = TensorBlock(
+            values=np.array([[1]]),
+            samples=Labels(["s"], np.array([[2]])),
+            components=[],
+            properties=Labels.range("p", 1),
+        )
+        block_1_grad = TensorBlock(
+            values=np.array([[[1], [3]], [[5], [7]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 0], [0, 1]])),
+            components=[Labels.range("c", 2)],
+            properties=Labels.range("p", 1),
+        )
+        block_2 = TensorBlock(
+            values=np.array([[2]]),
+            samples=Labels(["s"], np.array([[2]])),
+            components=[],
+            properties=Labels.range("p", 1),
+        )
+        block_2_grad = TensorBlock(
+            values=np.array([[[0], [2]], [[4], [6]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 0], [0, 1]])),
+            components=[Labels.range("c", 2)],
+            properties=Labels.range("p", 1),
+        )
+        block_1.add_gradient("g", block_1_grad)
+        block_2.add_gradient("g", block_2_grad)
+        keys = Labels(names=["key"], values=np.array([[0]]))
+        tensor_1 = TensorMap(keys, [block_1])
+        tensor_2 = TensorMap(keys, [block_2])
+
+        block_result = TensorBlock(
+            values=np.array([[2]]),
+            samples=Labels(["s"], np.array([[2]])),
+            components=[],
+            properties=Labels.range("p", 1),
+        )
+        block_result_grad = TensorBlock(
+            values=np.array([[[2], [8]], [[14], [20]]]),
+            samples=Labels(["sample", "g"], np.array([[0, 0], [0, 1]])),
+            components=[Labels.range("c", 2)],
+            properties=Labels.range("p", 1),
+        )
+        block_result.add_gradient("g", block_result_grad)
+        tensor_result = TensorMap(keys, [block_result])
+        product_tensor = metatensor.multiply(tensor_1, tensor_2)
+        assert metatensor.equal(tensor_result, product_tensor)
+
 
 def test_self_multiply_error():
     block_1 = TensorBlock(

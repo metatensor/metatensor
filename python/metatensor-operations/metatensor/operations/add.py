@@ -106,6 +106,9 @@ def _add_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
     for parameter, gradient_1 in block_1.gradients():
         gradient_2 = block_2.gradient(parameter)
 
+        assert gradient_1.values.shape == gradient_2.values.shape
+        assert gradient_1.samples == gradient_2.samples
+
         if len(gradient_1.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 

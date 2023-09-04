@@ -104,20 +104,29 @@ def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorB
         if len(gradient_2.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
 
-        gradient_values = []
-        for i_sample in range(len(block_1.samples)):
-            i_sample_grad_1 = _dispatch.where(
-                gradient_1.samples.column("sample") == i_sample
-            )[0]
-            i_sample_grad_2 = _dispatch.where(
-                gradient_2.samples.column("sample") == i_sample
-            )[0]
+        assert gradient_1.values.shape == gradient_2.values.shape
+        assert gradient_1.samples == gradient_2.samples
 
-            gradient_values.append(
-                block_1.values[i_sample] * gradient_2.values[i_sample_grad_2]
-                + gradient_1.values[i_sample_grad_1] * block_2.values[i_sample]
-            )
-        gradient_values = _dispatch.concatenate(gradient_values, axis=0)
+        _shape: List[int] = []
+        for c in block_1.components:
+            _shape.append(len(c))
+        _shape.append(len(block_1.properties))
+        # we find the difference between the number of components
+        # of the gradients and the values and then use it to create
+        # empty dimensions for broadcasting
+        diff_components = len(gradient_1.values.shape) - len(block_1.values.shape)
+
+        gradient_samples_to_values_samples_1 = gradient_1.samples.column("sample")
+        gradient_samples_to_values_samples_2 = gradient_2.samples.column("sample")
+        gradient_values = block_1.values[
+            _dispatch.to_index_array(gradient_samples_to_values_samples_1)
+        ].reshape(
+            [-1] + [1] * diff_components + _shape
+        ) * gradient_2.values + gradient_1.values * block_2.values[
+            _dispatch.to_index_array(gradient_samples_to_values_samples_2)
+        ].reshape(
+            [-1] + [1] * diff_components + _shape
+        )
 
         result_block.add_gradient(
             parameter=parameter_1,
