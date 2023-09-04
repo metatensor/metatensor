@@ -218,7 +218,7 @@ def sqrt(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def lstsq(X, Y, rcond, driver=None):
+def lstsq(X, Y, rcond: Optional[float], driver: Optional[str] = None):
     """
     Computes a solution to the least squares problem of a system of linear
     equations.
@@ -247,11 +247,10 @@ def lstsq(X, Y, rcond, driver=None):
     """
     if isinstance(X, TorchTensor):
         _check_all_torch_tensor([Y])
-        result = torch.linalg.lstsq(X, Y, rcond=rcond, driver=driver)[0]
+        return torch.linalg.lstsq(X, Y, rcond=rcond, driver=driver)[0]
     elif isinstance(X, np.ndarray):
         _check_all_np_ndarray([Y])
         return np.linalg.lstsq(X, Y, rcond=rcond)[0]
-        return result
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

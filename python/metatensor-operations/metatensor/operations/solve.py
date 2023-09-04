@@ -1,4 +1,4 @@
-import numpy as np
+from typing import List
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -70,14 +70,14 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     """
     _check_same_keys_raise(X, Y, "solve")
 
-    for X_block in X:
+    for X_block in X.blocks():
         shape = X_block.values.shape
         if len(shape) != 2 or (not (shape[0] == shape[1])):
             raise ValueError(
                 "the values in each block of X should be a square 2D array"
             )
 
-    blocks = []
+    blocks: List[TensorBlock] = []
     for key, X_block in X.items():
         Y_block = Y.block(key)
         blocks.append(_solve_block(X_block, Y_block))
@@ -93,7 +93,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     """
     # TODO handle properties and samples not in the same order?
 
-    if not np.all(X.samples == Y.samples):
+    if not _dispatch.all(X.samples.values == Y.samples.values):
         raise ValueError(
             "X and Y blocks in `solve` should have the same samples in the same order"
         )
@@ -106,7 +106,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
             )
 
         for X_component, Y_component in zip(X.components, Y.components):
-            if not np.all(X_component == Y_component):
+            if not _dispatch.all(X_component.values == Y_component.values):
                 raise ValueError(
                     "X and Y blocks in `solve` should have the same components \
                     in the same order"
