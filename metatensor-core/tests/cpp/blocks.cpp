@@ -130,6 +130,39 @@ TEST_CASE("Blocks") {
         CHECK_THROWS_WITH(block.clone(), "external error: calling mts_array_t.create failed (status -1)");
     }
 
+
+    SECTION("clone metadata") {
+        auto components = std::vector<Labels>();
+        components.emplace_back(Labels({"component_1"}, {{-1}, {0}, {1}}));
+        components.emplace_back(Labels({"component_2"}, {{-4}, {1}}));
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
+            Labels({"samples"}, {{0}, {1}, {4}}),
+            std::move(components),
+            Labels({"properties"}, {{5}, {3}})
+        );
+
+        auto clone = block.clone_metadata_only();
+
+        CHECK(clone.samples() == block.samples());
+        CHECK(clone.components() == block.components());
+        CHECK(clone.properties() == block.properties());
+
+        auto array = clone.mts_array();
+
+        const uintptr_t* shape = nullptr;
+        uintptr_t shape_count = 0;
+        CHECK(array.shape(array.ptr, &shape, &shape_count) == MTS_SUCCESS);
+        CHECK(std::vector<uintptr_t>(shape, shape + shape_count) == std::vector<uintptr_t>{{3, 3, 2, 2}});
+
+        mts_data_origin_t origin = 0;
+        CHECK(array.origin(array.ptr, &origin) == MTS_SUCCESS);
+
+        char buffer[32];
+        CHECK(mts_get_data_origin(origin, buffer, sizeof(buffer)) == MTS_SUCCESS);
+        CHECK(buffer == std::string("metatensor::EmptyDataArray"));
+    }
+
     SECTION("empty labels") {
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 0})),

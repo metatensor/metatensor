@@ -8,3 +8,6 @@ Data arrays
 
 .. doxygenclass:: metatensor::SimpleDataArray
     :members: SimpleDataArray, operator=, view, from_mts_array
+
+.. doxygenclass:: metatensor::EmptyDataArray
+    :members: EmptyDataArray, operator=
