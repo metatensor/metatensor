@@ -2,13 +2,25 @@ from typing import List, Optional, Union
 
 import numpy as np
 
+from ._classes import torch_jit_is_scripting
+
 
 try:
     import torch
     from torch import Tensor as TorchTensor
+
+    torch_dtype = torch.dtype
+    torch_device = torch.device
+
 except ImportError:
 
     class TorchTensor:
+        pass
+
+    class torch_dtype:
+        pass
+
+    class torch_device:
         pass
 
 
@@ -434,10 +446,45 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
+def to(
+    array,
+    backend: Optional[str] = None,
+    dtype: Optional[torch.dtype] = None,
+    device: Optional[Union[str, torch.device]] = None,
+    requires_grad: Optional[bool] = None,
+):
     """Convert the array to the specified backend."""
+
+    # Convert torch Tensor
+    if isinstance(array, torch.Tensor):
+        if backend is None:  # Infer the target backend
+            backend = "torch"
+        if dtype is None:
+            dtype = array.dtype
+        if device is None:
+            device = array.device
+        if isinstance(device, str):
+            device = torch.device(device)
+
+        # Perform the conversion
+        if backend == "torch":
+            # We need this to keep gradients of the tensor
+            new_array = array.to(dtype=dtype).to(device=device)
+            if requires_grad is not None:
+                new_array.requires_grad_(requires_grad)
+            return new_array
+
+        elif backend == "numpy":
+            if torch_jit_is_scripting():
+                raise ValueError("cannot call numpy conversion when torch-scripting")
+            else:
+                return array.detach().cpu().numpy()
+
+        else:
+            raise ValueError(f"Unknown backend: {backend}")
+
     # Convert numpy array
-    if isinstance(array, np.ndarray):
+    elif isinstance(array, np.ndarray):
         if backend is None:  # Infer the target backend
             backend = "numpy"
 
@@ -451,26 +498,6 @@ def to(array, backend: str = None, dtype=None, device=None, requires_grad=None):
             if requires_grad is not None:
                 new_array.requires_grad = requires_grad
             return new_array
-
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-
-    # Convert torch Tensor
-    elif isinstance(array, torch.Tensor):
-        if backend is None:  # Infer the target backend
-            backend = "torch"
-
-        # Perform the conversion
-        if backend == "numpy":
-            return array.detach().cpu().numpy()
-
-        elif backend == "torch":
-            # We need this to keep gradients of the tensor
-            new_array = array.to(dtype=dtype, device=device)
-            if requires_grad is not None:
-                new_array.requires_grad = requires_grad
-            return new_array
-
         else:
             raise ValueError(f"Unknown backend: {backend}")
 

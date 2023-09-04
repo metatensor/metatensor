@@ -1,14 +1,14 @@
-from typing import Optional
+from typing import List, Optional, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
 
 
 def to(
     tensor: TensorMap,
     backend: Optional[str] = None,
-    dtype=None,
-    device=None,
+    dtype: Optional[_dispatch.torch_dtype] = None,
+    device: Optional[Union[str, _dispatch.torch_device]] = None,
     requires_grad: Optional[bool] = None,
 ) -> TensorMap:
     """
@@ -42,21 +42,23 @@ def to(
         type, and/or device.
     """
     # Check types
-    if not isinstance(tensor, TensorMap):
-        raise TypeError(
-            f"`tensor` should be a metatensor `TensorMap`, got {type(tensor)}"
-        )
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(tensor, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(tensor, TensorMap)
+    if not is_tensor_map:
+        raise TypeError("`tensor` should be a metatensor `TensorMap`")
     # Convert each block and build the return TensorMap
     keys = tensor.keys
     new_blocks = [
         block_to(
-            tensor[key].copy(),
+            tensor.block(keys.entry(i)).copy(),
             backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
         )
-        for key in keys
+        for i in range(keys.values.shape[0])
     ]
 
     return TensorMap(keys=keys, blocks=new_blocks)
@@ -65,8 +67,8 @@ def to(
 def block_to(
     block: TensorBlock,
     backend: Optional[str] = None,
-    dtype=None,
-    device=None,
+    dtype: Optional[_dispatch.torch_dtype] = None,
+    device: Optional[Union[str, _dispatch.torch_device]] = None,
     requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
@@ -99,10 +101,12 @@ def block_to(
         type, and/or device.
     """
     # Check inputs
-    if not isinstance(block, TensorBlock):
-        raise TypeError(
-            f"`block` should be a metatensor `TensorBlock`, got {type(block)}"
-        )
+    if torch_jit_is_scripting():
+        is_tensor_block = isinstance(block, TensorBlock)
+    else:
+        is_tensor_block = check_isinstance(block, TensorBlock)
+    if not is_tensor_block:
+        raise TypeError("`block` should be a metatensor `TensorBlock`")
     if backend is not None:
         if not isinstance(backend, str):
             raise TypeError("'backend' should be given as a string")
@@ -116,19 +120,98 @@ def block_to(
                         " gradient tracking"
                     )
 
-    return _block_to(block, backend, dtype, device, requires_grad)
+    # Walk the tree of gradients without recursion
+    # (recursion is not supported by torchscript)
+
+    # The current_location list of strings will contain the name of
+    # all the gradients until the current location. This allows to
+    # access parents of gradient blocks easily
+    current_location: List[str] = []
+
+    current_block = block  # the block that is being examined
+
+    # transformed_blocks is a stack that will be populated and
+    # depopulated during the algorithm
+    transformed_blocks: List[TensorBlock] = []
+
+    # last_visite keeps track of the last gradient block that has been
+    # visited while walking backward. While walking forward, this variable
+    # is an empty string
+    last_visited = ""
+
+    while True:
+        gradient_names = current_block.gradients_list()
+        n_gradients = len(gradient_names)
+        if last_visited == "":
+            # we're walking forward and it's the first time we see this block
+            # transform and append to list of transformed blocks:
+            transformed_blocks.append(
+                _block_to(current_block, backend, dtype, device, requires_grad)
+            )
+            if n_gradients == 0:  # the current block has no gradients
+                # step back:
+                if len(current_location) == 0:
+                    break  # algorithm completed
+                last_visited = (
+                    current_location.pop()
+                )  # removes last visited gradient name and stores it
+                current_block = _reach_current_block(
+                    block, current_location
+                )  # reach current location
+            else:  # the current block has gradients
+                # proceed walking forward:
+                current_block = current_block.gradient(gradient_names[0])
+                current_location.append(gradient_names[0])
+        else:
+            # we're walking back to a block we've already seen.
+            # get index of the last gradient of the current block that
+            # has been visited and converted:
+            index_last_visited = gradient_names.index(last_visited)
+            if (
+                index_last_visited == n_gradients - 1
+            ):  # the last visited gradient was the last one we needed to convert
+                # add gradients blocks to the current block; these are the
+                # last n_gradients blocks in transformed_blocks and the one before
+                # them, respectively.
+                for i_gradient in range(n_gradients):
+                    transformed_blocks[-n_gradients - 1].add_gradient(
+                        gradient_names[i_gradient],
+                        transformed_blocks[i_gradient - n_gradients],
+                    )
+                # remove all added gradients from the transformed list:
+                for _ in range(n_gradients):
+                    transformed_blocks.pop()
+                # the block and its gradients have been assembled. Step back:
+                if len(current_location) == 0:
+                    break  # algorithm completed
+                last_visited = (
+                    current_location.pop()
+                )  # removes last visited gradient and stores it
+                current_block = _reach_current_block(
+                    block, current_location
+                )  # reach current location
+            else:  # more gradients to convert in the current block
+                # walk forward:
+                current_block = current_block.gradient(
+                    gradient_names[index_last_visited + 1]
+                )
+                current_location.append(gradient_names[index_last_visited + 1])
+                last_visited = ""  # walking forward
+
+    # at this point, transformed_blocks only contains the final transformed block:
+    return transformed_blocks[0]
 
 
 def _block_to(
     block: TensorBlock,
-    backend: str,
-    dtype=None,
-    device=None,
+    backend: Optional[str],
+    dtype: Optional[_dispatch.torch_dtype] = None,
+    device: Optional[Union[str, _dispatch.torch_device]] = None,
     requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
-    Converts a :py:class:`TensorBlock` and all its gradients to a different
-    ``backend``.
+    Converts a :py:class:`TensorBlock`, but not its gradients, to a different
+    ``backend``, dtype and/or device.
     """
     # Create new block, with the values tensor converted
     new_block = TensorBlock(
@@ -143,18 +226,13 @@ def _block_to(
         components=block.components,
         properties=block.properties,
     )
-    # Recursively convert all gradient blocks to numpy
-    for parameter, gradient_block in block.gradients():
-        new_gradient_block = _block_to(
-            block=gradient_block,
-            backend=backend,
-            dtype=dtype,
-            device=device,
-            requires_grad=requires_grad,
-        )
-        new_block.add_gradient(
-            parameter,
-            new_gradient_block,
-        )
 
     return new_block
+
+
+def _reach_current_block(block: TensorBlock, current_location: List[str]):
+    # walks through the gradient path defined by current_location
+    current_block = block
+    for gradient_name in current_location:
+        current_block = current_block.gradient(gradient_name)
+    return current_block
