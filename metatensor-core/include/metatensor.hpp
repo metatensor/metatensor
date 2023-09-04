@@ -522,7 +522,7 @@ public:
     ): Labels(details::labels_from_cxx(names, NDArray(std::move(values), names.size()))) {}
 
     /// Create an empty set of Labels with the given names
-    Labels(const std::vector<std::string>& names):
+    explicit Labels(const std::vector<std::string>& names):
         Labels(details::labels_from_cxx(
             names,
             NDArray(static_cast<const int32_t*>(nullptr), {0, names.size()})
@@ -842,11 +842,11 @@ public:
     }
 
 private:
-    Labels(): NDArray(static_cast<const int32_t*>(nullptr), {0, 0}) {
+    explicit Labels(): NDArray(static_cast<const int32_t*>(nullptr), {0, 0}) {
         std::memset(&labels_, 0, sizeof(labels_));
     }
 
-    Labels(mts_labels_t labels):
+    explicit Labels(mts_labels_t labels):
         NDArray(labels.values, {labels.count, labels.size}),
         labels_(labels)
     {
@@ -857,7 +857,7 @@ private:
         }
     }
 
-    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
+    explicit Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
         Labels(details::labels_from_cxx(names, NDArray(values, {count, names.size()}))) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>&, NDArray<int32_t>);
@@ -1702,7 +1702,7 @@ public:
 
 private:
     /// Constructor of a TensorBlock not associated with anything
-    TensorBlock(): block_(nullptr), is_view_(true) {}
+    explicit TensorBlock(): block_(nullptr), is_view_(true) {}
 
     /// Get the `mts_array_t` for this block.
     ///
@@ -2178,7 +2178,7 @@ public:
 
     /// Create a C++ TensorMap from a C `mts_tensormap_t` pointer. The C++
     /// tensor map takes ownership of the C pointer.
-    TensorMap(mts_tensormap_t* tensor): tensor_(tensor) {}
+    explicit TensorMap(mts_tensormap_t* tensor): tensor_(tensor) {}
 
 private:
     mts_tensormap_t* tensor_;
