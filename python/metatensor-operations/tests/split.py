@@ -477,8 +477,8 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "tensor should be a 'TensorMap', not "
-            "<class 'metatensor.core.block.TensorBlock'>",
+            "`tensor` should be a metatensor TensorMap, "
+            "not <class 'metatensor.core.block.TensorBlock'>",
         )
 
         # axis not str
@@ -520,7 +520,8 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "each element in grouped_labels must be 'Labels', not <class 'str'>",
+            "each element in `grouped_labels` must be metatensor Labels, "
+            "not <class 'str'>",
         )
 
         # different names in labels of grouped_labels
@@ -573,7 +574,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "block should be a 'TensorBlock', "
+            "`block` should be a metatensor TensorBlock, "
             "not <class 'metatensor.core.tensor.TensorMap'>",
         )
 

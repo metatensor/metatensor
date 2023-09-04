@@ -119,9 +119,9 @@ def bool_array_like(bool_list: List[bool], like):
     based on the type of `like`.
     """
     if isinstance(like, TorchTensor):
-        return torch.tensor(bool_list, device=like.device)
+        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
     elif isinstance(like, np.ndarray):
-        return np.array(bool_list)
+        return np.array(bool_list).astype(bool)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -151,12 +151,34 @@ def eye_like(array, size: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def list_to_array(array, data: Union[List[int], List[List[int]]]):
-    """Create an object from data with the same type as ``array``."""
+def int_array_like(shape: List[int], fill_value: int, like):
+    """
+    Fills an array with a value. This will be a numpy array or a torch tensor based on
+    the `like` argument.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.full(shape, fill_value, dtype=like.dtype, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.full(shape, fill_value)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def mask(array, axis: int, mask):
+    """
+    Applies a boolean mask along the specified axis.
+
+    This function indexes an `array` along an `axis` using the boolean values inside
+    `mask`. Only the indices for which `mask` is True will be part of the output array.
+
+    This operation is useful because array[..., mask] — i.e. indexing with a mask after
+    an ellipsis — is not supported in torchscript.
+    """
+    indices = where(mask)[0]  # use _dispatch.where to find the indices
     if isinstance(array, TorchTensor):
-        return torch.tensor(data).to(array.dtype).to(array.device)
+        return torch.index_select(array, dim=axis, index=indices)
     elif isinstance(array, np.ndarray):
-        return np.array(data)
+        return np.take(array, indices, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

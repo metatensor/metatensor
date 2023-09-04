@@ -525,25 +525,18 @@ def test_slice_errors(tensor):
         values=centers_to_keep,
     )
 
-    error_msg = "``tensor`` should be a metatensor ``TensorMap``"
-    with pytest.raises(TypeError, match=error_msg):
+    message = (
+        "`tensor` should be a metatensor TensorMap, "
+        "not <class 'metatensor.core.block.TensorBlock'>"
+    )
+    with pytest.raises(TypeError, match=message):
         metatensor.slice(tensor.block(0), axis="samples", labels=samples),
 
-    # passing samples=np.array raises TypeError
-    error_msg = "labels must be a `Labels` object"
-    with pytest.raises(TypeError, match=error_msg):
+    message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.slice(
             tensor,
             axis="samples",
-            labels=np.array([[5], [6]]),
-        )
-
-    # passing properties=np.array raises TypeError
-    error_msg = "labels must be a `Labels` object"
-    with pytest.raises(TypeError, match=error_msg):
-        metatensor.slice(
-            tensor,
-            axis="properties",
             labels=np.array([[5], [6]]),
         )
 
@@ -555,25 +548,18 @@ def test_slice_block_errors(tensor):
         values=centers_to_keep,
     )
 
-    error_msg = "``block`` should be a metatensor ``TensorBlock``"
-    with pytest.raises(TypeError, match=error_msg):
+    message = message = (
+        "`block` should be a metatensor TensorBlock, "
+        "not <class 'metatensor.core.tensor.TensorMap'>"
+    )
+    with pytest.raises(TypeError, match=message):
         metatensor.slice_block(tensor, axis="samples", labels=samples),
 
     block = tensor.block(0)
-    # passing samples=np.array raises TypeError
-    error_msg = "labels must be a `Labels` object"
-    with pytest.raises(TypeError, match=error_msg):
+    message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.slice_block(
             block,
             axis="samples",
-            labels=np.array([[5], [6]]),
-        )
-
-    # passing properties=np.array raises TypeError
-    error_msg = "labels must be a `Labels` object"
-    with pytest.raises(TypeError, match=error_msg):
-        metatensor.slice_block(
-            block,
-            axis="properties",
             labels=np.array([[5], [6]]),
         )
