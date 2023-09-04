@@ -203,6 +203,16 @@ TEST_CASE("TensorMap") {
 
         CHECK_THROWS_WITH(tensor.clone(), "external error: calling mts_array_t.create failed (status -1)");
     }
+
+    SECTION("clone metadata") {
+        auto tensor = test_tensor_map();
+
+        auto clone = tensor.clone_metadata_only();
+        CHECK(clone.keys() == tensor.keys());
+
+        auto block = clone.block_by_id(0);
+        CHECK_THROWS_WITH(block.values(), "error in C++ callback: can not call `data` for an EmptyDataArray");
+    }
 }
 
 

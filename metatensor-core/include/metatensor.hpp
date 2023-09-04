@@ -1350,6 +1350,69 @@ inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 }
 
 
+/// An implementation of `DataArrayBase` containing no data.
+///
+/// This class only tracks it's shape, and can be used when only the metadata
+/// of a `TensorBlock` is important, leaving the data unspecified.
+class EmptyDataArray: public metatensor::DataArrayBase {
+public:
+    /// Create ae `EmptyDataArray` with the given `shape`
+    EmptyDataArray(std::vector<uintptr_t> shape):
+        shape_(std::move(shape)) {}
+
+    ~EmptyDataArray() override = default;
+
+    /// EmptyDataArray can be copy-constructed
+    EmptyDataArray(const EmptyDataArray&) = default;
+    /// EmptyDataArray can be copy-assigned
+    EmptyDataArray& operator=(const EmptyDataArray&) = default;
+    /// EmptyDataArray can be move-constructed
+    EmptyDataArray(EmptyDataArray&&) noexcept = default;
+    /// EmptyDataArray can be move-assigned
+    EmptyDataArray& operator=(EmptyDataArray&&) noexcept = default;
+
+    mts_data_origin_t origin() const override {
+        mts_data_origin_t origin = 0;
+        mts_register_data_origin("metatensor::EmptyDataArray", &origin);
+        return origin;
+    }
+
+    double* data() & override {
+        throw metatensor::Error("can not call `data` for an EmptyDataArray");
+    }
+
+    const std::vector<uintptr_t>& shape() const & override {
+        return shape_;
+    }
+
+    void reshape(std::vector<uintptr_t> shape) override {
+        if (details::product(shape_) != details::product(shape)) {
+            throw metatensor::Error("invalid shape in reshape");
+        }
+        shape_ = std::move(shape);
+    }
+
+    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+        std::swap(shape_[axis_1], shape_[axis_2]);
+    }
+
+    std::unique_ptr<DataArrayBase> copy() const override {
+        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
+    }
+
+    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
+    }
+
+    void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
+        throw metatensor::Error("can not call `move_samples_from` for an EmptyDataArray");
+    }
+
+private:
+    std::vector<uintptr_t> shape_;
+};
+
+
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
@@ -1438,6 +1501,27 @@ public:
         copy.block_ = mts_block_copy(this->block_);
         details::check_pointer(copy.block_);
         return copy;
+    }
+
+    /// Get a copy of the metadata in this block (i.e. samples, components, and
+    /// properties), ignoring the data itself.
+    ///
+    /// The resulting block values will be an `EmptyDataArray` instance, which
+    /// does not contain any data.
+    TensorBlock clone_metadata_only() const {
+        auto block = TensorBlock(
+            std::unique_ptr<EmptyDataArray>(new EmptyDataArray(this->values_shape())),
+            this->samples(),
+            this->components(),
+            this->properties()
+        );
+
+        for (const auto& parameter: this->gradients_list()) {
+            auto gradient = this->gradient(parameter);
+            block.add_gradient(parameter, gradient.clone_metadata_only());
+        }
+
+        return block;
     }
 
     /// Get a view in the values in this block
@@ -1743,6 +1827,28 @@ public:
         auto copy = mts_tensormap_copy(this->tensor_);
         details::check_pointer(copy);
         return TensorMap(copy);
+    }
+
+    /// Get a copy of the metadata in this `TensorMap` (i.e. keys, samples,
+    /// components, and properties), ignoring the data itself.
+    ///
+    /// The resulting blocks values will be an `EmptyDataArray` instance, which
+    /// does not contain any data.
+    TensorMap clone_metadata_only() const {
+        auto n_blocks = this->keys().count();
+
+        auto blocks = std::vector<TensorBlock>();
+        blocks.reserve(n_blocks);
+        for (uintptr_t i=0; i<n_blocks; i++) {
+            mts_block_t* block_ptr = nullptr;
+            details::check_status(mts_tensormap_block_by_id(tensor_, &block_ptr, i));
+            details::check_pointer(block_ptr);
+            auto block = TensorBlock::unsafe_view_from_ptr(block_ptr);
+
+            blocks.push_back(block.clone_metadata_only());
+        }
+
+        return TensorMap(this->keys(), std::move(blocks));
     }
 
     /// Get the set of keys labeling the blocks in this tensor map
