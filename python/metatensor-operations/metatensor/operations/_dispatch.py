@@ -273,10 +273,6 @@ def concatenate(arrays: List[TorchTensor], axis: int):
 
     This function has the same behavior as ``numpy.concatenate(arrays, axis)``
     and ``torch.concatenate(arrays, axis)``.
-
-    Passing `axis` as ``0`` is equivalent to :py:func:`numpy.vstack`, ``1`` to
-    :py:func:`numpy.hstack`, and ``2`` to :py:func:`numpy.dstack`, though any
-    axis index > 0 is valid.
     """
     if isinstance(arrays[0], TorchTensor):
         _check_all_torch_tensor(arrays)
@@ -413,6 +409,23 @@ def sign(array):
         return torch.sign(array)
     elif isinstance(array, np.ndarray):
         return np.sign(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def stack(arrays: List[TorchTensor], axis: int):
+    """
+    Stack a group of arrays along a new axis.
+
+    This function has the same behavior as ``numpy.stack(arrays, axis)``
+    and ``torch.stack(arrays, axis)``.
+    """
+    if isinstance(arrays[0], TorchTensor):
+        _check_all_torch_tensor(arrays)
+        return torch.stack(arrays, axis)
+    elif isinstance(arrays[0], np.ndarray):
+        _check_all_np_ndarray(arrays)
+        return np.stack(arrays, axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
