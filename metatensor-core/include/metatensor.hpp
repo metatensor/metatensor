@@ -2167,6 +2167,13 @@ public:
         return tensor_;
     }
 
+    /// Get the const `mts_tensormap_t` pointer corresponding to this `TensorMap`.
+    ///
+    /// The tensor map pointer is still managed by the current `TensorMap`
+    const mts_tensormap_t* as_mts_tensormap_t() const & {
+        return tensor_;
+    }
+
     mts_tensormap_t* as_mts_tensormap_t() && = delete;
 
     /// Create a C++ TensorMap from a C `mts_tensormap_t` pointer. The C++
