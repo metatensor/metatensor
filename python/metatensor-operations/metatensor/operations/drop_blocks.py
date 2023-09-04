@@ -1,6 +1,13 @@
-import numpy as np
+from typing import List
 
-from ._classes import Labels, TensorBlock, TensorMap
+from . import _dispatch
+from ._classes import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+)
 
 
 def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
@@ -26,35 +33,38 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         dropped.
     """
     # Check arg types
-    if not isinstance(tensor, TensorMap):
-        raise TypeError(
-            f"input `tensor` must be a TensorMap, got '{type(tensor)}' instead"
-        )
-    if not isinstance(keys, Labels):
-        raise TypeError(
-            f"input `keys` must be a Labels object, got '{type(keys)}' instead"
-        )
-    if not isinstance(copy, bool):
-        raise TypeError(f"`copy` flag must be a boolean, got '{type(copy)}' instead")
+    if not torch_jit_is_scripting():
+        if not check_isinstance(tensor, TensorMap):
+            raise TypeError(
+                f"input `tensor` must be a TensorMap, got {type(tensor)} instead"
+            )
+
+        if not check_isinstance(keys, Labels):
+            raise TypeError(
+                f"input `keys` must be a Labels object, got {type(keys)} instead"
+            )
+
+        if not isinstance(copy, bool):
+            raise TypeError(f"`copy` flag must be a boolean, got {type(copy)} instead")
 
     # Find the indices of keys to remove
     tensor_keys = tensor.keys
     _, to_remove, used_in_intersection = tensor_keys.intersection_and_mapping(keys)
-    to_remove_indices = np.where(to_remove != -1)[0]
+    to_remove_indices: List[int] = (_dispatch.where(to_remove != -1)[0]).tolist()
 
-    not_present_in_tensor = np.where(used_in_intersection == -1)[0]
+    not_present_in_tensor = _dispatch.where(used_in_intersection == -1)[0]
     if len(not_present_in_tensor) != 0:
-        key = keys[not_present_in_tensor[0]]
+        key = keys.entry(not_present_in_tensor[0])
         raise ValueError(f"{key.print()} is not present in this tensor")
 
     # Create the new TensorMap
-    new_blocks = []
+    new_blocks: List[TensorBlock] = []
     new_keys_values = []
     for i in range(len(tensor_keys)):
         if i in to_remove_indices:
             continue
 
-        new_keys_values.append(tensor_keys[i].values)
+        new_keys_values.append(tensor_keys.entry(i).values)
         block = tensor[i]
 
         if copy:
@@ -87,7 +97,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
             new_blocks.append(new_block)
 
     if len(new_keys_values) != 0:
-        new_keys = Labels(keys.names, np.vstack(new_keys_values))
+        new_keys = Labels(keys.names, _dispatch.stack(new_keys_values, 0))
     else:
         new_keys = Labels.empty(keys.names)
 
