@@ -1,6 +1,12 @@
-from typing import List, Union
+from typing import Dict, List
 
-from ._classes import Labels, TensorBlock, TensorMap
+from ._classes import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+)
 from .slice import _slice_block
 
 
@@ -52,12 +58,21 @@ def split(
         the respective py:class:`Labels` object of ``grouped_labels``.
     """
     # Check input args
-    if not isinstance(tensor, TensorMap):
-        raise TypeError(f"tensor should be a 'TensorMap', not {type(tensor)}")
-    _check_args(tensor, axis, grouped_labels)
+    if not torch_jit_is_scripting():
+        if not check_isinstance(tensor, TensorMap):
+            raise TypeError(
+                f"`tensor` should be a metatensor TensorMap, not {type(tensor)}"
+            )
 
-    all_new_blocks = {group_i: [] for group_i in range(len(grouped_labels))}
-    for key in tensor.keys:
+    _check_args(tensor.block(0), axis, grouped_labels)
+
+    all_new_blocks: Dict[int, List[TensorBlock]] = {}
+    for group_i in range(len(grouped_labels)):
+        empty_list: List[TensorBlock] = []
+        all_new_blocks[group_i] = empty_list
+
+    for key_index in range(len(tensor.keys)):
+        key = tensor.keys.entry(key_index)
         new_blocks = _split_block(tensor[key], axis, grouped_labels)
 
         for group_i, new_block in enumerate(new_blocks):
@@ -115,8 +130,12 @@ def split_block(
         the respective py:class:`Labels` object of ``grouped_labels``.
     """
     # Check input args
-    if not isinstance(block, TensorBlock):
-        raise TypeError(f"block should be a 'TensorBlock', not {type(block)}")
+    if not torch_jit_is_scripting():
+        if not check_isinstance(block, TensorBlock):
+            raise TypeError(
+                f"`block` should be a metatensor TensorBlock, not {type(block)}"
+            )
+
     _check_args(block, axis, grouped_labels)
 
     return _split_block(block, axis, grouped_labels)
@@ -134,7 +153,7 @@ def _split_block(
     operations. There may be a more efficient way of doing it, but this is not
     yet implemented.
     """
-    new_blocks = []
+    new_blocks: List[TensorBlock] = []
     for indices in grouped_labels:
         # perform the slice either along the samples or properties axis
         new_block = _slice_block(block, axis=axis, labels=indices)
@@ -143,9 +162,7 @@ def _split_block(
     return new_blocks
 
 
-def _check_args(
-    tensor: Union[TensorMap, TensorBlock], axis: str, grouped_labels: List[Labels]
-):
+def _check_args(block: TensorBlock, axis: str, grouped_labels: List[Labels]):
     """
     Checks the arguments passed to :py:func:`split` and :py:func:`split_block`.
     """
@@ -164,10 +181,12 @@ def _check_args(
         return
 
     for labels in grouped_labels:
-        if not isinstance(labels, Labels):
-            raise TypeError(
-                f"each element in grouped_labels must be 'Labels', not {type(labels)}"
-            )
+        if not torch_jit_is_scripting():
+            if not check_isinstance(labels, Labels):
+                raise TypeError(
+                    "each element in `grouped_labels` must be metatensor Labels, "
+                    f"not {type(labels)}"
+                )
 
     # Check the Labels names are equivalent for all Labels in grouped_labels
     reference_names = grouped_labels[0].names
@@ -178,9 +197,6 @@ def _check_args(
                     "the names of all 'Labels' in grouped_labels"
                     f" must be the same, got {reference_names} and {labels.names}"
                 )
-
-    # Get a single block
-    block = tensor.block(0) if isinstance(tensor, TensorMap) else tensor
 
     # Check the names in grouped_labels Labels are contained within the names for
     # the block
