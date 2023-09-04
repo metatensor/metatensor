@@ -186,10 +186,7 @@ def test_unique_metadata_block_errors(real_tensor):
             names=3.14,
         )
 
-    message = (
-        "`names` argument must be a list of str, not "
-        + r"\[<class 'str'>, <class 'float'>\]"
-    )
+    message = "`names` argument must be a list of str, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),

@@ -113,6 +113,19 @@ def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def bool_array_like(bool_list: List[bool], like):
+    """
+    Converts the input list of bool to a numpy array or torch tensor
+    based on the type of `like`.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.tensor(bool_list, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.array(bool_list)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def copy(array):
     """Returns a copy of ``array``.
     The new data is not shared with the original array"""
