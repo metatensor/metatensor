@@ -82,7 +82,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
 
 
 def _dot_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
-    if not _dispatch.all(block_1.properties.values == block_2.properties.values):
+    if not block_1.properties == block_2.properties:
         raise ValueError("TensorBlocks in `dot` should have the same properties")
 
     if len(block_2.components) > 0:
