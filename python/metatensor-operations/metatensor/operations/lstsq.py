@@ -13,7 +13,7 @@ from ._utils import (
 def lstsq(
     X: TensorMap,
     Y: TensorMap,
-    rcond: Optional[float] = None,
+    rcond: Optional[float],
     driver: Optional[str] = None,
 ) -> TensorMap:
     r"""
