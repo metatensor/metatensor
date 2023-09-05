@@ -1,4 +1,5 @@
 import warnings
+from typing import List, Optional
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -9,7 +10,12 @@ from ._utils import (
 )
 
 
-def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
+def lstsq(
+    X: TensorMap,
+    Y: TensorMap,
+    rcond: Optional[float],
+    driver: Optional[str] = None,
+) -> TensorMap:
     r"""
     Solve a linear system using two :py:class:`TensorMap`.
 
@@ -103,7 +109,7 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
 
     _check_same_keys_raise(X, Y, "lstsq")
 
-    blocks = []
+    blocks: List[TensorBlock] = []
     for key, X_block in X.items():
         Y_block = Y.block(key)
         blocks.append(_lstsq_block(X_block, Y_block, rcond=rcond, driver=driver))
@@ -111,7 +117,9 @@ def lstsq(X: TensorMap, Y: TensorMap, rcond, driver=None) -> TensorMap:
     return TensorMap(X.keys, blocks)
 
 
-def _lstsq_block(X: TensorBlock, Y: TensorBlock, rcond, driver) -> TensorBlock:
+def _lstsq_block(
+    X: TensorBlock, Y: TensorBlock, rcond: Optional[float], driver: Optional[str] = None
+) -> TensorBlock:
     _check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
     _check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
 

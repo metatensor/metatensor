@@ -1,0 +1,58 @@
+import torch
+from packaging import version
+
+import metatensor.torch
+from metatensor.torch import Labels, TensorBlock, TensorMap
+
+
+def check_operation(lstsq):
+    X_tensor = TensorMap(
+        keys=Labels.single(),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[1, 0], [0, 1]], dtype=torch.float64),
+                samples=Labels.range("s", 2),
+                components=[],
+                properties=Labels.range("p1", 2),
+            )
+        ],
+    )
+    Y_tensor = TensorMap(
+        keys=Labels.single(),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[1, 0], [0, 1]], dtype=torch.float64),
+                samples=Labels.range("s", 2),
+                components=[],
+                properties=Labels.range("p2", 2),
+            )
+        ],
+    )
+    solution_tensor = lstsq(X_tensor, Y_tensor, rcond=1e-14)
+
+    # check output type
+    assert isinstance(solution_tensor, torch.ScriptObject)
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        assert solution_tensor._type().name() == "TensorMap"
+
+    # check content
+    expected_solution = TensorMap(
+        keys=Labels.single(),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[1, 0], [0, 1]], dtype=torch.float64),
+                samples=Labels.range("p2", 2),
+                components=[],
+                properties=Labels.range("p1", 2),
+            )
+        ],
+    )
+    assert metatensor.torch.equal(solution_tensor, expected_solution)
+
+
+def test_operation_as_python():
+    check_operation(metatensor.torch.lstsq)
+
+
+def test_operation_as_torch_script():
+    check_operation(torch.jit.script(metatensor.torch.lstsq))
