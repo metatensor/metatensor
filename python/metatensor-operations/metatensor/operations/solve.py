@@ -93,7 +93,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     """
     # TODO handle properties and samples not in the same order?
 
-    if not _dispatch.all(X.samples.values == Y.samples.values):
+    if not X.samples == Y.samples:
         raise ValueError(
             "X and Y blocks in `solve` should have the same samples in the same order"
         )
