@@ -98,11 +98,12 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
             "X and Y blocks in `solve` should have the same samples in the same order"
         )
 
-    if X.components != Y.components:
-        raise ValueError(
-            "X and Y blocks in `solve` should have the same components \
-            in the same order"
-        )
+    for X_component, Y_component in zip(X.components, Y.components):
+        if X_component != Y_component:
+            raise ValueError(
+                "X and Y blocks in `solve` should have the same components \
+                in the same order"
+            )
 
     # reshape components together with the samples
     X_n_properties = X.values.shape[-1]
