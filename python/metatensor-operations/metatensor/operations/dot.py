@@ -1,4 +1,4 @@
-import numpy as np
+from typing import List
 
 from . import _dispatch
 from ._classes import TensorBlock, TensorMap
@@ -18,6 +18,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     two :py:class:`TensorBlocks` has ``result_block.values = block_1.values @
     block_2.values.T``
 
+    >>> import numpy as np
     >>> from metatensor import Labels
     >>> block_1 = TensorBlock(
     ...     values=np.array(
@@ -72,7 +73,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     """
     _check_same_keys_raise(tensor_1, tensor_2, "dot")
 
-    blocks = []
+    blocks: List[TensorBlock] = []
     for key, block_1 in tensor_1.items():
         block_2 = tensor_2.block(key)
         blocks.append(_dot_block(block_1=block_1, block_2=block_2))
@@ -81,7 +82,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
 
 
 def _dot_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
-    if not np.all(block_1.properties == block_2.properties):
+    if not block_1.properties == block_2.properties:
         raise ValueError("TensorBlocks in `dot` should have the same properties")
 
     if len(block_2.components) > 0:
