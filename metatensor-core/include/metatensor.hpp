@@ -957,6 +957,9 @@ public:
     DataArrayBase& operator=(DataArrayBase&&) noexcept = default;
 
     /// Convert a concrete `DataArrayBase` to a C-compatible `mts_array_t`
+    ///
+    /// The `mts_array_t` takes ownership of the data, which should be released
+    /// with `mts_array_t::destroy`.
     static mts_array_t to_mts_array_t(std::unique_ptr<DataArrayBase> data) {
         mts_array_t array;
         std::memset(&array, 0, sizeof(array));
@@ -1601,10 +1604,6 @@ public:
         return Labels(labels);
     }
 
-private:
-    /// Constructor of a TensorBlock not associated with anything
-    TensorBlock(): block_(nullptr), is_view_(true) {}
-
     /// Get the shape of the value array for this block
     std::vector<uintptr_t> values_shape() const {
         auto array = this->const_mts_array();
@@ -1616,6 +1615,10 @@ private:
 
         return {shape, shape + shape_count};
     }
+
+private:
+    /// Constructor of a TensorBlock not associated with anything
+    TensorBlock(): block_(nullptr), is_view_(true) {}
 
     /// Get the `mts_array_t` for this block.
     ///

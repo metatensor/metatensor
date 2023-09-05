@@ -485,3 +485,33 @@ def test_script():
 
     module = TestModule()
     module = torch.jit.script(module)
+
+
+class Issue349(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.modules_dict = torch.nn.ModuleDict({"0": torch.nn.Linear(1, 1)})
+
+    def forward(self, tensor: TensorMap):
+        # make a copy, so this function holds the only reference to `tensor`
+        tensor = tensor.copy()
+        for i, _module in self.modules_dict.items():
+            # access the block
+            block = tensor.block_by_id(int(i))
+            # this results in a use-after-free since `tensor` gets freed on the last
+            # iteration of the loop, just after the last line
+            _ = block.values
+
+        return torch.tensor(42.0)
+
+
+def test_script_variable_scoping(tensor):
+    problematic = Issue349()
+    tensor = utils.tensor()
+
+    # This is fine
+    assert problematic(tensor).item() == 42.0
+
+    # This segfaults
+    scripted = torch.jit.script(problematic)
+    assert scripted(tensor).item() == 42.0

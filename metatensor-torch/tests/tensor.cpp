@@ -1,5 +1,6 @@
 #include <torch/torch.h>
 
+#include <metatensor.hpp>
 #include <metatensor/torch.hpp>
 using namespace metatensor_torch;
 
@@ -19,7 +20,7 @@ TEST_CASE("TensorMap") {
         auto tensor = test_tensor_map();
 
         // block by index
-        auto block = tensor->block_by_id(2);
+        auto block = TensorMapHolder::block_by_id(tensor, 2);
         const auto values = block->values();
         CHECK(values[0][0][0].item<double>() == 3);
 
@@ -42,17 +43,17 @@ TEST_CASE("TensorMap") {
         CHECK(*tensor->keys() == metatensor::Labels({"key_1"}, {{0}, {1}, {2}}));
 
         // The first two blocks are not modified
-        auto block = tensor->block_by_id(0);
+        auto block = TensorMapHolder::block_by_id(tensor, 0);
         CHECK(*block->samples() == metatensor::Labels({"samples", "key_2"}, {{0, 0}, {2, 0}, {4, 0}}));
         CHECK(torch::all(block->values() == torch::full({3, 1, 1}, 1.0)).item<bool>());
 
 
-        block = tensor->block_by_id(1);
+        block = TensorMapHolder::block_by_id(tensor, 1);
         CHECK(*block->samples() == metatensor::Labels({"samples", "key_2"}, {{0, 0}, {1, 0}, {3, 0}}));
         CHECK(torch::all(block->values() == torch::full({3, 1, 3}, 2.0)).item<bool>());
 
         // The new third block contains the old third and fourth blocks merged
-        block = tensor->block_by_id(2);
+        block = TensorMapHolder::block_by_id(tensor, 2);
         CHECK(*block->samples() == metatensor::Labels({"samples", "key_2"}, {
             {0, 2}, {0, 3}, {1, 3}, {2, 3}, {3, 2}, {5, 3}, {6, 2}, {8, 2}
         }));
@@ -70,7 +71,7 @@ TEST_CASE("TensorMap") {
 
         CHECK(torch::all(block->values() == expected).item<bool>());
 
-        auto gradient = block->gradient("parameter");
+        auto gradient = TensorBlockHolder::gradient(block, "parameter");
         CHECK(*gradient->samples() == metatensor::Labels({"sample", "parameter"}, {
             {1, 1}, {4, -2}, {5, 3},
         }));
@@ -86,7 +87,7 @@ TEST_CASE("TensorMap") {
         // unsorted samples
         tensor = test_tensor_map()->keys_to_samples("key_2", /*sort_samples*/ false);
 
-        block = tensor->block_by_id(2);
+        block = TensorMapHolder::block_by_id(tensor, 2);
         CHECK(*block->samples() == metatensor::Labels({"samples", "key_2"}, {
             {0, 2}, {3, 2}, {6, 2}, {8, 2}, {0, 3}, {1, 3}, {2, 3}, {5, 3}
         }));
@@ -98,7 +99,7 @@ TEST_CASE("TensorMap") {
         CHECK(*tensor->keys() == metatensor::Labels({"key_2"}, {{0}, {2}, {3}}));
 
         // The new first block contains the old first two blocks merged
-        auto block = tensor->block_by_id(0);
+        auto block = TensorMapHolder::block_by_id(tensor, 0);
         CHECK(*block->samples() == metatensor::Labels({"samples"}, {{0}, {1}, {2}, {3}, {4}}));
 
         auto components = block->components();
@@ -119,7 +120,7 @@ TEST_CASE("TensorMap") {
 
         CHECK(torch::all(block->values() == expected).item<bool>());
 
-        auto gradient = block->gradient("parameter");
+        auto gradient = TensorBlockHolder::gradient(block, "parameter");
         CHECK(*gradient->samples() == metatensor::Labels({"sample", "parameter"}, {{0, -2}, {0, 3}, {3, -2}, {4, 3}}));
 
         expected = torch::tensor(std::vector<double>{
@@ -132,13 +133,13 @@ TEST_CASE("TensorMap") {
         CHECK(torch::all(gradient->values() == expected).item<bool>());
 
         // The new second block contains the old third block
-        block = tensor->block_by_id(1);
+        block = TensorMapHolder::block_by_id(tensor, 1);
         CHECK(*block->properties() == metatensor::Labels({"key_1", "properties"}, {{2, 0}}));
 
         CHECK(torch::all(block->values() == torch::full({4, 3, 1}, 3.0)).item<bool>());
 
         // the new third block contains the old fourth block
-        block = tensor->block_by_id(2);
+        block = TensorMapHolder::block_by_id(tensor, 2);
         CHECK(*block->properties() == metatensor::Labels({"key_1", "properties"}, {{2, 0}}));
 
         CHECK(torch::all(block->values() == torch::full({4, 3, 1}, 4.0)).item<bool>());
@@ -147,7 +148,7 @@ TEST_CASE("TensorMap") {
     SECTION("component_to_properties") {
         auto tensor = test_tensor_map()->components_to_properties("component");
 
-        auto block = tensor->block_by_id(0);
+        auto block = TensorMapHolder::block_by_id(tensor, 0);
 
         CHECK(*block->samples() == metatensor::Labels({"samples"}, {{0}, {2}, {4}}));
 
@@ -170,7 +171,7 @@ TEST_CASE("TensorMap serialization") {
         CHECK(keys->names()[2] == std::string("neighbor_species"));
         CHECK(keys->count() == 27);
 
-        auto block = tensor->block_by_id(21);
+        auto block = TensorMapHolder::block_by_id(tensor, 21);
 
         auto samples = block->samples();
         CHECK(samples->names().size() == 2);
@@ -179,7 +180,7 @@ TEST_CASE("TensorMap serialization") {
 
         CHECK(block->values().sizes() == std::vector<int64_t>{9, 5, 3});
 
-        auto gradient = block->gradient("positions");
+        auto gradient = TensorBlockHolder::gradient(block, "positions");
         samples = gradient->samples();
         CHECK(samples->names().size() == 3);
         CHECK(samples->names()[0] == std::string("sample"));

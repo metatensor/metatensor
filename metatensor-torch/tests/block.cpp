@@ -45,27 +45,27 @@ TEST_CASE("Blocks") {
     }
 
     SECTION("gradients") {
-        auto block = TensorBlockHolder(
+        auto block = torch::make_intrusive<TensorBlockHolder>(
             torch::full({3, 2}, 11.0),
             LabelsHolder::create({"s"}, {{0}, {2}, {1}}),
-            {},
+            std::vector<TorchLabels>{},
             LabelsHolder::create({"p"}, {{0}, {1}})
         );
 
-        CHECK(block.gradients_list().empty());
+        CHECK(block->gradients_list().empty());
 
-        block.add_gradient("g", torch::make_intrusive<TensorBlockHolder>(
+        block->add_gradient("g", torch::make_intrusive<TensorBlockHolder>(
             torch::full({1, 3, 2}, 1.0),
             LabelsHolder::create({"sample", "g"}, {{0, 1}}),
             std::vector<TorchLabels>{LabelsHolder::create({"c"}, {{0}, {1}, {2}})},
-            block.properties()
+            block->properties()
         ));
 
-        CHECK((block.gradients_list() == std::vector<std::string>{"g"}));
-        CHECK(block.has_gradient("g"));
-        CHECK_FALSE(block.has_gradient("not-there"));
+        CHECK((block->gradients_list() == std::vector<std::string>{"g"}));
+        CHECK(block->has_gradient("g"));
+        CHECK_FALSE(block->has_gradient("not-there"));
 
-        auto gradient = block.gradient("g");
+        auto gradient = TensorBlockHolder::gradient(block, "g");
         CHECK((gradient->values().sizes() == std::vector<int64_t>{1, 3, 2}));
 
         auto sample_names = gradient->samples()->names();
@@ -73,7 +73,7 @@ TEST_CASE("Blocks") {
         CHECK(sample_names[0] == "sample");
         CHECK(sample_names[1] == "g");
 
-        for (const auto& entry: block.gradients()) {
+        for (const auto& entry: TensorBlockHolder::gradients(block)) {
             CHECK(std::get<0>(entry) == "g");
         }
     }

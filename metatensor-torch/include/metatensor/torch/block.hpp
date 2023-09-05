@@ -31,8 +31,13 @@ public:
         TorchLabels properties
     );
 
-    /// Create a torch TensorBlockHolder from a pre-existing metatensor::TensorBlock
-    TensorBlockHolder(metatensor::TensorBlock block);
+    /// Create a torch TensorBlockHolder from a pre-existing
+    /// `metatensor::TensorBlock`.
+    ///
+    /// If the block is a view inside another `TorchTensorBlock` or
+    /// `TorchTensorMap`, then `parent` should point to the corresponding
+    /// object, making sure a reference to it is kept around.
+    TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent);
 
     /// Make a copy of this `TensorBlockHolder`, including all the data
     /// contained inside
@@ -104,10 +109,10 @@ public:
     bool has_gradient(const std::string& parameter) const;
 
     /// Get a gradient from this TensorBlock
-    TorchTensorBlock gradient(const std::string& parameter) const;
+    static TorchTensorBlock gradient(TorchTensorBlock self, const std::string& parameter);
 
     /// Get a all gradients and associated parameters in this block
-    std::vector<std::tuple<std::string, TorchTensorBlock>> gradients();
+    static std::vector<std::tuple<std::string, TorchTensorBlock>> gradients(TorchTensorBlock self);
 
     /// Implementation of __repr__/__str__ for Python
     std::string __repr__() const;
@@ -120,11 +125,16 @@ public:
 private:
     /// Create a TensorBlockHolder containing gradients with respect to
     /// `parameter`
-    TensorBlockHolder(metatensor::TensorBlock block, std::string parameter);
+    TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent);
     friend class torch::intrusive_ptr<TensorBlockHolder>;
 
     /// Underlying metatensor TensorBlock
     metatensor::TensorBlock block_;
+
+    /// Parent for this block, either `None`, another `TensorBlock` (if this
+    /// block contains gradients), or a `TensorMap`.
+    torch::IValue parent_;
+
     /// If this TensorBlock contains gradients, these are gradients w.r.t. this
     /// parameter
     std::string parameter_;
