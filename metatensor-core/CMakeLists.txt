@@ -138,17 +138,29 @@ endif()
 
 set(CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/target)
 set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target-dir=${CARGO_TARGET_DIR}")
+
 # Handle cross compilation with RUST_BUILD_TARGET
 if ("${RUST_BUILD_TARGET}" STREQUAL "")
     if (CARGO_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
-        set(RUST_BUILD_TARGET "${CMAKE_MATCH_1}")
+        set(RUST_HOST_TARGET "${CMAKE_MATCH_1}")
     else()
         message(FATAL_ERROR "failed to determine host target, output was: ${CARGO_VERSION_RAW}")
     endif()
-endif()
 
-set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
-set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
+    if (${METATENSOR_MAIN_PROJECT})
+        message(STATUS "Compiling to host (${RUST_HOST_TARGET})")
+    endif()
+
+    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${CARGO_BUILD_TYPE}")
+    set(RUST_BUILD_TARGET ${RUST_HOST_TARGET})
+else()
+    if (${METATENSOR_MAIN_PROJECT})
+        message(STATUS "Cross-compiling to ${RUST_BUILD_TARGET}")
+    endif()
+
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target=${RUST_BUILD_TARGET}")
+    set(CARGO_OUTPUT_DIR "${CARGO_TARGET_DIR}/${RUST_BUILD_TARGET}/${CARGO_BUILD_TYPE}")
+endif()
 
 
 # Get the list of libraries linked by default by cargo/rustc to add when linking
@@ -169,6 +181,7 @@ if (CARGO_VERSION_CHANGED)
 
     file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs/Cargo.toml"
         "[workspace]\nmembers=[]\n[lib]\ncrate-type=[\"staticlib\"]")
+
     execute_process(
         COMMAND ${CARGO_EXE} rustc --verbose --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs"
