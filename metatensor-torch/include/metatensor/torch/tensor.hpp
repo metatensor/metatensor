@@ -25,7 +25,7 @@ using TorchTensorMap = torch::intrusive_ptr<TensorMapHolder>;
 class METATENSOR_TORCH_EXPORT TensorMapHolder: public torch::CustomClassHolder {
 public:
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
-    TensorMapHolder(metatensor::TensorMap tensor);
+    explicit TensorMapHolder(metatensor::TensorMap tensor);
 
     /// Create a new `TensorMapHolder` for TorchScript.
     ///
@@ -51,42 +51,42 @@ public:
     ///
     /// The returned `TensorBlock` is a view inside memory owned by this
     /// `TensorMap`, and is only valid as long as the `TensorMap` is kept alive.
-    TorchTensorBlock block_by_id(int64_t index);
+    static TorchTensorBlock block_by_id(TorchTensorMap self, int64_t index);
 
     /// Get the block in this `TensorMap` with the key matching the name=>values
     /// passed in `selection`
-    TorchTensorBlock block(const std::map<std::string, int32_t>& selection);
+    static TorchTensorBlock block(TorchTensorMap self, const std::map<std::string, int32_t>& selection);
 
     /// Get the block in this `TensorMap` with the key matching the name=>values
     /// passed in `selection`. The `selection` must contain a single entry.
-    TorchTensorBlock block(TorchLabels selection);
+    static TorchTensorBlock block(TorchTensorMap self, TorchLabels selection);
 
     /// Get the block in this `TensorMap` with the key matching the name=>values
     /// passed in `selection`
-    TorchTensorBlock block(TorchLabelsEntry selection);
+    static TorchTensorBlock block(TorchTensorMap self, TorchLabelsEntry selection);
 
     /// TorchScript implementation of `block`, dispatching to one of the
     /// functions above
-    TorchTensorBlock block_torch(torch::IValue index);
+    static TorchTensorBlock block_torch(TorchTensorMap self, torch::IValue index);
 
     /// Similar to `block_by_id`, but get all blocks with the given indices
-    std::vector<TorchTensorBlock> blocks_by_id(const std::vector<int64_t>& indices);
+    static std::vector<TorchTensorBlock> blocks_by_id(TorchTensorMap self, const std::vector<int64_t>& indices);
 
     /// Get all blocks in this TensorMap
-    std::vector<TorchTensorBlock> blocks();
+    static std::vector<TorchTensorBlock> blocks(TorchTensorMap self);
 
     /// Similar to `block`, but allow getting multiple matching blocks
-    std::vector<TorchTensorBlock> blocks(const std::map<std::string, int32_t>& selection);
+    static std::vector<TorchTensorBlock> blocks(TorchTensorMap self, const std::map<std::string, int32_t>& selection);
 
     /// Similar to `block`, but allow getting multiple matching blocks
-    std::vector<TorchTensorBlock> blocks(TorchLabels selection);
+    static std::vector<TorchTensorBlock> blocks(TorchTensorMap self, TorchLabels selection);
 
     /// Similar to `block`, but allow getting multiple matching blocks
-    std::vector<TorchTensorBlock> blocks(TorchLabelsEntry selection);
+    static std::vector<TorchTensorBlock> blocks(TorchTensorMap self, TorchLabelsEntry selection);
 
     /// TorchScript implementation of `blocks`, dispatching to one of the
     /// functions above.
-    std::vector<TorchTensorBlock> blocks_torch(torch::IValue index);
+    static std::vector<TorchTensorBlock> blocks_torch(TorchTensorMap self, torch::IValue index);
 
     /// Merge blocks with the same value for selected keys dimensions along the
     /// property axis.
@@ -131,7 +131,7 @@ public:
     std::vector<std::string> properties_names();
 
     /// Get all (key => block) pairs in this `TensorMap`
-    std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> items();
+    static std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> items(TorchTensorMap self);
 
     /// Print this TensorMap to a string, including at most `max_keys` in the
     /// output (-1 to include all keys).

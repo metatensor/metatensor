@@ -67,7 +67,7 @@ public:
     static TorchLabels range(std::string name, int64_t end);
 
     /// Create a `LabelsHolder` from a pre-existing `metatensor::Labels`
-    LabelsHolder(metatensor::Labels labels);
+    explicit LabelsHolder(metatensor::Labels labels);
 
     /// Get the names of the dimensions/columns of these Labels
     std::vector<std::string> names() const {

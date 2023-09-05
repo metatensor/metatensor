@@ -22,26 +22,31 @@ TensorBlockHolder::TensorBlockHolder(
     std::vector<TorchLabels> components,
     TorchLabels properties
 ):
-    block_(
-        std::make_unique<TorchDataArray>(std::move(data)),
-        samples->as_metatensor(),
-        components_from_torch(components),
-        properties->as_metatensor()
+    TensorBlockHolder(
+        metatensor::TensorBlock(
+            std::make_unique<TorchDataArray>(std::move(data)),
+            samples->as_metatensor(),
+            components_from_torch(components),
+            properties->as_metatensor()
+        ),
+        /* parameter */ "",
+        /* parent */ torch::IValue()
     )
 {}
 
 
-TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block):
-    block_(std::move(block))
+TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent):
+    TensorBlockHolder(std::move(block), "", std::move(parent))
 {}
 
-TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, std::string parameter):
+TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent):
     block_(std::move(block)),
-    parameter_(std::move(parameter))
+    parameter_(std::move(parameter)),
+    parent_(std::move(parent))
 {}
 
 torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::copy() const {
-    return torch::make_intrusive<TensorBlockHolder>(this->block_.clone());
+    return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
 }
 
 torch::Tensor TensorBlockHolder::values() {
@@ -92,21 +97,22 @@ bool TensorBlockHolder::has_gradient(const std::string& parameter) const {
     return it != std::end(list);
 }
 
-TorchTensorBlock TensorBlockHolder::gradient(const std::string& parameter) const {
+TorchTensorBlock TensorBlockHolder::gradient(TorchTensorBlock self, const std::string& parameter) {
     // handle recursive gradients
     std::string gradient_parameter;
-    if (!parameter_.empty()) {
-        gradient_parameter = parameter_ + "/" + parameter;
+    if (!self->parameter_.empty()) {
+        gradient_parameter = self->parameter_ + "/" + parameter;
     } else {
         gradient_parameter = parameter;
     }
 
-    return torch::make_intrusive<TensorBlockHolder>(block_.gradient(parameter), gradient_parameter);
+    return torch::make_intrusive<TensorBlockHolder>(self->block_.gradient(parameter), gradient_parameter, self);
 }
-std::vector<std::tuple<std::string, TorchTensorBlock>> TensorBlockHolder::gradients() {
+
+std::vector<std::tuple<std::string, TorchTensorBlock>> TensorBlockHolder::gradients(TorchTensorBlock self) {
     auto result = std::vector<std::tuple<std::string, TorchTensorBlock>>();
-    for (const auto& parameter: this->gradients_list()) {
-        result.push_back(std::make_tuple(parameter, this->gradient(parameter)));
+    for (const auto& parameter: self->gradients_list()) {
+        result.push_back(std::make_tuple(parameter, TensorBlockHolder::gradient(self, parameter)));
     }
     return result;
 }
