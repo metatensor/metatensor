@@ -49,19 +49,25 @@ def to(
             )
 
     # Convert each block and build the return TensorMap
-    keys = tensor.keys
+    
     new_blocks = [
         block_to(
-            tensor.block(keys.entry(i)).copy(),
+            tensor.block(tensor.keys.entry(i)).copy(),
             backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
         )
-        for i in range(keys.values.shape[0])
+        for i in range(tensor.keys.values.shape[0])
     ]
 
-    return TensorMap(keys=keys, blocks=new_blocks)
+    if device is not None:
+        new_keys = tensor.keys.view(tensor.keys.names).to_owned()
+        new_keys.to(new_blocks[0].values.device)
+    else:
+        new_keys = tensor.keys
+
+    return TensorMap(keys=new_keys, blocks=new_blocks)
 
 
 def block_to(
@@ -215,17 +221,34 @@ def _block_to(
     ``backend``, dtype and/or device.
     """
     # Create new block, with the values tensor converted
+    # The labels will also me moved if a new device is requested
+    # (this will only happen in the case of metatensor.torch.Labels)
+    values = _dispatch.to(
+        array=block.values,
+        backend=backend,
+        dtype=dtype,
+        device=device,
+        requires_grad=requires_grad,
+    )
+
+    if values.device != block.values.device:
+        samples = block.samples.view(block.samples.names).to_owned()
+        samples.to(values.device)
+        components = [component.view(component.names).to_owned() for component in block.components]
+        for component in components:
+            component.to(values.device) 
+        properties = block.properties.view(block.properties.names).to_owned()
+        properties.to(values.device)
+    else:  # avoid copies
+        samples = block.samples
+        components = block.components
+        properties = block.properties
+
     new_block = TensorBlock(
-        values=_dispatch.to(
-            array=block.values,
-            backend=backend,
-            dtype=dtype,
-            device=device,
-            requires_grad=requires_grad,
-        ),
-        samples=block.samples,
-        components=block.components,
-        properties=block.properties,
+        values=values,
+        samples=samples,
+        components=components,
+        properties=properties,
     )
 
     return new_block
