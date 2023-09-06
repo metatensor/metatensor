@@ -19,7 +19,7 @@ static metatensor::TensorBlock block_from_torch(const TorchTensorBlock& block) {
     auto result = metatensor::TensorBlock(
         std::make_unique<TorchDataArray>(block->values()),
         block->samples()->as_metatensor(),
-        std::move(components),
+        components,
         block->properties()->as_metatensor()
     );
 
@@ -42,7 +42,7 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 
 
 TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensorBlock>& blocks):
-    tensor_(keys->as_metatensor(), blocks_from_torch(std::move(blocks)))
+    tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
 {}
 
 TorchTensorMap TensorMapHolder::copy() const {
@@ -88,7 +88,7 @@ TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, const std::map<std:
     }
 
     auto selection = metatensor::Labels(names, values.data(), 1);
-    return TensorMapHolder::block(self, torch::make_intrusive<LabelsHolder>(std::move(selection)));
+    return TensorMapHolder::block(std::move(self), torch::make_intrusive<LabelsHolder>(std::move(selection)));
 }
 
 TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, TorchLabels selection) {
@@ -98,7 +98,7 @@ TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, TorchLabels selecti
         );
     }
 
-    return TensorMapHolder::block(self, torch::make_intrusive<LabelsEntryHolder>(selection, 0));
+    return TensorMapHolder::block(std::move(self), torch::make_intrusive<LabelsEntryHolder>(selection, 0));
 }
 
 TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, TorchLabelsEntry torch_selection) {
@@ -108,7 +108,7 @@ TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, TorchLabelsEntry to
     );
 
     auto matching = self->tensor_.blocks_matching(selection);
-    if (matching.size() == 0) {
+    if (matching.empty()) {
         C10_THROW_ERROR(ValueError,
             "could not find blocks matching the selection " + torch_selection->print()
         );
@@ -119,7 +119,7 @@ TorchTensorBlock TensorMapHolder::block(TorchTensorMap self, TorchLabelsEntry to
         );
     }
 
-    return TensorMapHolder::block_by_id(self, matching[0]);
+    return TensorMapHolder::block_by_id(self, static_cast<int64_t>(matching[0]));
 }
 
 TorchTensorBlock TensorMapHolder::block_torch(TorchTensorMap self, torch::IValue index) {
@@ -196,7 +196,7 @@ std::vector<TorchTensorBlock> TensorMapHolder::blocks_by_id(TorchTensorMap self,
 std::vector<TorchTensorBlock> TensorMapHolder::blocks(TorchTensorMap self) {
     auto result = std::vector<TorchTensorBlock>();
     for (size_t i=0; i<self->tensor_.keys().count(); i++) {
-        result.push_back(TensorMapHolder::block_by_id(self, i));
+        result.push_back(TensorMapHolder::block_by_id(self, static_cast<int64_t>(i)));
     }
     return result;
 }
@@ -211,7 +211,7 @@ std::vector<TorchTensorBlock> TensorMapHolder::blocks(TorchTensorMap self, const
     }
 
     auto selection = metatensor::Labels(names, values.data(), 1);
-    return TensorMapHolder::blocks(self, torch::make_intrusive<LabelsHolder>(std::move(selection)));
+    return TensorMapHolder::blocks(std::move(self), torch::make_intrusive<LabelsHolder>(std::move(selection)));
 }
 
 
@@ -222,7 +222,7 @@ std::vector<TorchTensorBlock> TensorMapHolder::blocks(TorchTensorMap self, Torch
         );
     }
 
-    return TensorMapHolder::blocks(self, torch::make_intrusive<LabelsEntryHolder>(selection, 0));
+    return TensorMapHolder::blocks(std::move(self), torch::make_intrusive<LabelsEntryHolder>(selection, 0));
 }
 
 
@@ -302,7 +302,7 @@ std::vector<TorchTensorBlock> TensorMapHolder::blocks_torch(TorchTensorMap self,
 ///
 /// The `context` is used for the error message in case the torch::IValue is
 /// none of the above.
-static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_move, std::string context) {
+static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_move, const std::string& context) {
     if (keys_to_move.isString()) {
         return {keys_to_move.toString()->string()};
     } else if (keys_to_move.isList()) {
@@ -375,7 +375,7 @@ static std::vector<std::string> labels_names(const metatensor::TensorBlock& bloc
 
     auto labels = block.labels(dimension);
     for (const auto& name: labels.names()) {
-        result.push_back(std::string(name));
+        result.emplace_back(name);
     }
 
     return result;
@@ -400,7 +400,7 @@ std::vector<std::string> TensorMapHolder::components_names() {
             auto labels = block.labels(dimension);
             assert(labels.names().size() == 1);
 
-            result.push_back(std::string(labels.names()[0]));
+            result.emplace_back(labels.names()[0]);
         }
     }
 
@@ -423,10 +423,10 @@ std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> TensorMapHolder::ite
 
     auto keys = self->keys();
     for (size_t i = 0; i<keys->count(); i++) {
-        result.push_back({
+        result.emplace_back(
             torch::make_intrusive<LabelsEntryHolder>(keys, i),
-            TensorMapHolder::block_by_id(self, i)
-        });
+            TensorMapHolder::block_by_id(self, static_cast<int64_t>(i))
+        );
     }
     return result;
 }

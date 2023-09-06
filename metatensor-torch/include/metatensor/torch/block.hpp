@@ -115,7 +115,7 @@ public:
     static std::vector<std::tuple<std::string, TorchTensorBlock>> gradients(TorchTensorBlock self);
 
     /// Implementation of __repr__/__str__ for Python
-    std::string __repr__() const;
+    std::string repr() const;
 
     /// Get the underlying metatensor TensorBlock
     const metatensor::TensorBlock& as_metatensor() const {

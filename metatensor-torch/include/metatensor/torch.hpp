@@ -1,7 +1,7 @@
-#include "metatensor/torch/exports.h"
+#include "metatensor/torch/exports.h"   // IWYU pragma: export
 
-#include "metatensor/torch/array.hpp"
-#include "metatensor/torch/labels.hpp"
-#include "metatensor/torch/block.hpp"
-#include "metatensor/torch/tensor.hpp"
-#include "metatensor/torch/misc.hpp"
+#include "metatensor/torch/array.hpp"   // IWYU pragma: export
+#include "metatensor/torch/labels.hpp"  // IWYU pragma: export
+#include "metatensor/torch/block.hpp"   // IWYU pragma: export
+#include "metatensor/torch/tensor.hpp"  // IWYU pragma: export
+#include "metatensor/torch/misc.hpp"    // IWYU pragma: export

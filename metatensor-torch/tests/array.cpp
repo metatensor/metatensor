@@ -12,10 +12,10 @@ TEST_CASE("Arrays") {
     SECTION("origin") {
         auto origin = array.origin();
 
-        char buffer[64] = {0};
-        auto status = mts_get_data_origin(origin, buffer, 64);
+        std::array<char, 64> buffer = {0};
+        auto status = mts_get_data_origin(origin, buffer.data(), buffer.size());
         CHECK(status == MTS_SUCCESS);
-        CHECK(std::string(buffer) == "metatensor_torch::TorchDataArray");
+        CHECK(std::string(buffer.data()) == "metatensor_torch::TorchDataArray");
     }
 
     SECTION("shape") {
@@ -50,14 +50,14 @@ TEST_CASE("Arrays") {
 
     SECTION("new arrays") {
         auto copy = array.copy();
-        auto copy_ptr = dynamic_cast<TorchDataArray*>(copy.get());
+        auto* copy_ptr = dynamic_cast<TorchDataArray*>(copy.get());
 
         CHECK(copy_ptr->tensor().data_ptr() != array.tensor().data_ptr());
         CHECK((copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4}));
         CHECK(copy_ptr->tensor().dtype() == torch::kF64);
 
         auto created = array.create({5, 6});
-        auto created_ptr = dynamic_cast<TorchDataArray*>(created.get());
+        auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
 
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));
         CHECK(created_ptr->tensor().dtype() == torch::kF64);

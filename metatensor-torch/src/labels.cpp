@@ -14,7 +14,7 @@ static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_l
     if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
         C10_THROW_ERROR(ValueError,
             context + " must be an Tensor of 32-bit integers"
-        );
+       );
     }
 
     if (values.sizes().size() != shape_length) {
@@ -27,14 +27,14 @@ static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_l
 }
 
 static torch::Tensor initializer_list_to_tensor(
-    std::vector<std::initializer_list<int32_t>> values,
+    const std::vector<std::initializer_list<int32_t>>& values,
     size_t size
 ) {
     auto vector = std::vector<int32_t>();
 
     auto count = values.size();
     vector.reserve(count * size);
-    for (auto row: std::move(values)) {
+    for (auto row: values) {
         if (row.size() != size) {
             C10_THROW_ERROR(ValueError,
                 "invalid size for row: expected " + std::to_string(size) +
@@ -47,11 +47,11 @@ static torch::Tensor initializer_list_to_tensor(
         }
     }
 
-    auto tensor = torch::tensor(std::move(vector));
+    auto tensor = torch::tensor(vector);
     return tensor.reshape({static_cast<int64_t>(count), static_cast<int64_t>(size)});
 }
 
-std::vector<std::string> metatensor_torch::details::normalize_names(torch::IValue names, std::string argument_name) {
+std::vector<std::string> metatensor_torch::details::normalize_names(torch::IValue names, const std::string& argument_name) {
     auto results = std::vector<std::string>();
     if (names.isString()) {
         results.push_back(names.toStringRef());
@@ -119,8 +119,8 @@ static mts_labels_t labels_from_torch(const std::vector<std::string>& names, con
 
 static std::vector<std::string> names_from_metatensor(const metatensor::Labels& labels) {
     auto names = std::vector<std::string>();
-    for (const auto name: labels.names()) {
-        names.push_back(std::string(name));
+    for (const auto* name: labels.names()) {
+        names.emplace_back(name);
     }
     return names;
 }
@@ -128,7 +128,7 @@ static std::vector<std::string> names_from_metatensor(const metatensor::Labels& 
 
 static torch::Tensor values_from_metatensor(metatensor::Labels& labels) {
     // check if the labels are already associated with a tensor
-    auto user_data = labels.user_data();
+    auto* user_data = labels.user_data();
     if (user_data != nullptr) {
         // if we start using user_data for more than this exact case (storing
         // tensors inside Labels), this code might fails and will need to start
@@ -168,7 +168,7 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
 
 TorchLabels LabelsHolder::create(
     const std::vector<std::string>& names,
-    std::vector<std::initializer_list<int32_t>> values
+    const std::vector<std::initializer_list<int32_t>>& values
 ) {
     return torch::make_intrusive<LabelsHolder>(
         torch::IValue(names),
@@ -202,7 +202,7 @@ TorchLabels LabelsHolder::view(const TorchLabels& labels, std::vector<std::strin
         dimensions.push_back(static_cast<int64_t>(index));
     }
 
-    auto new_values = labels->values_.index({torch::indexing::Slice(), torch::tensor(std::move(dimensions))});
+    auto new_values = labels->values_.index({torch::indexing::Slice(), torch::tensor(dimensions)});
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values), CreateView{});
 }
 
@@ -265,16 +265,16 @@ LabelsHolder LabelsHolder::to_owned() const {
     }
 }
 
-TorchLabels LabelsHolder::append(std::string name, torch::Tensor values) {
+TorchLabels LabelsHolder::append(std::string name, torch::Tensor values) const {
     return this->insert(this->size(), std::move(name), std::move(values));
 }
 
 
-TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) {
+TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
     auto names = this->names();
 
     auto it = std::begin(names) + index;
-    names.insert(it, name);
+    names.insert(it, std::move(name));
 
     if (values.sizes().size() != 1) {
         C10_THROW_ERROR(
@@ -293,7 +293,7 @@ TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor 
 }
 
 
-TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) {
+TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
     auto names = this->names();
 
     if (dimensions_indexes.size() != names.size()) {
@@ -308,7 +308,7 @@ TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) {
 
     for (auto index : dimensions_indexes) {
         if (index < 0) {
-            index += names.size();
+            index += static_cast<int64_t>(names.size());
         }
         if (index >= names.size()) {
             C10_THROW_ERROR(
@@ -326,7 +326,7 @@ TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) {
 }
 
 
-TorchLabels LabelsHolder::remove(std::string name) {
+TorchLabels LabelsHolder::remove(std::string name) const {
     auto names = this->names();
 
     auto it = std::find(std::begin(names), std::end(names), name);
@@ -349,7 +349,7 @@ TorchLabels LabelsHolder::remove(std::string name) {
 }
 
 
-TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) {
+TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) const {
     auto names = this->names();
 
     auto it = std::find(std::begin(names), std::end(names), old_name);
@@ -361,7 +361,7 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) {
     }
     auto column_index = it - std::begin(names);
 
-    names[column_index] = new_name;
+    names[column_index] = std::move(new_name);
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(this->values()));
 }
 
@@ -405,7 +405,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
         position = labels.position(int32_values);
     } else if (entry.isList()) {
         auto int32_values = std::vector<int32_t>();
-        for (auto value: entry.toListRef()) {
+        for (const auto& value: entry.toListRef()) {
             if (value.isInt()) {
                 int32_values.push_back(static_cast<int32_t>(value.toInt()));
             } else {
@@ -418,7 +418,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
         position = labels.position(int32_values);
     } else if (entry.isTuple()) {
         auto int32_values = std::vector<int32_t>();
-        for (auto value: entry.toTupleRef().elements()) {
+        for (const auto& value: entry.toTupleRef().elements()) {
             if (value.isInt()) {
                 int32_values.push_back(static_cast<int32_t>(value.toInt()));
             } else {
@@ -609,7 +609,7 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
             print_data.add_values_first(values_[i]);
         }
 
-        for (int i=(n_elements - n_after); i<n_elements; i++) {
+        for (int64_t i=(n_elements - n_after); i<n_elements; i++) {
             print_data.add_values_second(values_[i]);
         }
     }
@@ -635,7 +635,7 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
 
 
     if (!print_data.values_second.empty()) {
-        auto half_header_widths = 0;
+        size_t half_header_widths = 0;
         for (auto w: print_data.widths) {
             half_header_widths += w;
         }
@@ -665,7 +665,7 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
     return output_string;
 }
 
-std::string LabelsHolder::__str__() const {
+std::string LabelsHolder::str() const {
     auto output = std::ostringstream();
     if (labels_.has_value()) {
         output << "Labels(\n   ";
@@ -677,7 +677,7 @@ std::string LabelsHolder::__str__() const {
     return output.str();
 }
 
-std::string LabelsHolder::__repr__() const {
+std::string LabelsHolder::repr() const {
     auto output = std::ostringstream();
     if (labels_.has_value()) {
         output << "Labels(\n   ";
@@ -695,7 +695,7 @@ std::string LabelsEntryHolder::print() const {
     auto output = std::stringstream();
 
     output << "(";
-    for (size_t i=0; i<this->size(); i++) {
+    for (int64_t i=0; i<this->size(); i++) {
         output << this->names()[i] << "=" << values_[i].item<int32_t>();
 
         if (i < this->size() - 1) {
@@ -707,7 +707,7 @@ std::string LabelsEntryHolder::print() const {
     return output.str();
 }
 
-std::string LabelsEntryHolder::__repr__() const {
+std::string LabelsEntryHolder::repr() const {
     return "LabelsEntry" + this->print();
 }
 
@@ -725,7 +725,7 @@ int32_t LabelsEntryHolder::operator[](const std::string& name) const {
 }
 
 
-int64_t LabelsEntryHolder::__getitem__(torch::IValue index) const {
+int64_t LabelsEntryHolder::getitem(torch::IValue index) const {
     if (index.isInt()) {
         return static_cast<int64_t>(this->operator[](index.toInt()));
     } else if (index.isString()) {
