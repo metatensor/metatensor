@@ -60,8 +60,8 @@ torch::Tensor TensorBlockHolder::values() {
         );
     }
 
-    auto ptr = static_cast<metatensor::DataArrayBase*>(array.ptr);
-    auto wrapper = dynamic_cast<TorchDataArray*>(ptr);
+    auto* ptr = static_cast<metatensor::DataArrayBase*>(array.ptr);
+    auto* wrapper = dynamic_cast<TorchDataArray*>(ptr);
     if (wrapper == nullptr) {
         C10_THROW_ERROR(ValueError,
             "this TensorBlock does not contain a C++ torch Tensor"
@@ -112,7 +112,7 @@ TorchTensorBlock TensorBlockHolder::gradient(TorchTensorBlock self, const std::s
 std::vector<std::tuple<std::string, TorchTensorBlock>> TensorBlockHolder::gradients(TorchTensorBlock self) {
     auto result = std::vector<std::tuple<std::string, TorchTensorBlock>>();
     for (const auto& parameter: self->gradients_list()) {
-        result.push_back(std::make_tuple(parameter, TensorBlockHolder::gradient(self, parameter)));
+        result.emplace_back(parameter, TensorBlockHolder::gradient(self, parameter));
     }
     return result;
 }
@@ -131,7 +131,7 @@ static void print_labels(std::ostringstream& output, const metatensor::Labels& l
     output << "]\n";
 }
 
-std::string TensorBlockHolder::__repr__() const {
+std::string TensorBlockHolder::repr() const {
     auto output = std::ostringstream();
 
     if (parameter_.empty()) {

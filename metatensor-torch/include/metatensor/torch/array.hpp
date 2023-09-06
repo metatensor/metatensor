@@ -21,7 +21,7 @@ public:
     /// Create a `TorchDataArray` containing the given `tensor`
     TorchDataArray(torch::Tensor tensor);
 
-    virtual ~TorchDataArray() override = default;
+    ~TorchDataArray() override = default;
 
     /// TorchDataArray can be copy-constructed
     TorchDataArray(const TorchDataArray&) = default;

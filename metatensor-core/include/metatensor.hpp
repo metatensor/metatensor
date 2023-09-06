@@ -38,7 +38,7 @@ class Labels;
 class Error: public std::runtime_error {
 public:
     /// Create a new Error with the given `message`
-    Error(std::string message): std::runtime_error(std::move(message)) {}
+    Error(const std::string& message): std::runtime_error(message) {}
 };
 
 namespace details {
@@ -343,7 +343,6 @@ private:
         data_(const_cast<T*>(data)),
         shape_(std::move(shape)),
         is_const_(is_const),
-        owned_data_(nullptr),
         deleter_([](void*){})
     {
         validate();
@@ -469,12 +468,12 @@ public:
     LabelsUserData& operator=(const LabelsUserData& other) = delete;
 
     /// LabelsUserData is move-constructible
-    LabelsUserData(LabelsUserData&& other): LabelsUserData(nullptr, nullptr) {
+    LabelsUserData(LabelsUserData&& other) noexcept: LabelsUserData(nullptr, nullptr) {
         *this = std::move(other);
     }
 
     /// LabelsUserData be move-assigned
-    LabelsUserData& operator=(LabelsUserData&& other) {
+    LabelsUserData& operator=(LabelsUserData&& other) noexcept {
         if (deleter_ !=  nullptr) {
             deleter_(data_);
         }
@@ -721,13 +720,13 @@ public:
         std::vector<int64_t>& first_mapping,
         std::vector<int64_t>& second_mapping
     ) const {
-        auto first_mapping_ptr = first_mapping.data();
+        auto* first_mapping_ptr = first_mapping.data();
         auto first_mapping_count = first_mapping.size();
         if (first_mapping_count == 0) {
             first_mapping_ptr = nullptr;
         }
 
-        auto second_mapping_ptr = second_mapping.data();
+        auto* second_mapping_ptr = second_mapping.data();
         auto second_mapping_count = second_mapping.size();
         if (second_mapping_count == 0) {
             second_mapping_ptr = nullptr;
@@ -820,13 +819,13 @@ public:
         std::vector<int64_t>& first_mapping,
         std::vector<int64_t>& second_mapping
     ) const {
-        auto first_mapping_ptr = first_mapping.data();
+        auto* first_mapping_ptr = first_mapping.data();
         auto first_mapping_count = first_mapping.size();
         if (first_mapping_count == 0) {
             first_mapping_ptr = nullptr;
         }
 
-        auto second_mapping_ptr = second_mapping.data();
+        auto* second_mapping_ptr = second_mapping.data();
         auto second_mapping_count = second_mapping.size();
         if (second_mapping_count == 0) {
             second_mapping_ptr = nullptr;
@@ -860,7 +859,7 @@ private:
     explicit Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
         Labels(details::labels_from_cxx(names, NDArray(values, {count, names.size()}))) {}
 
-    friend Labels details::labels_from_cxx(const std::vector<std::string>&, NDArray<int32_t>);
+    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, NDArray<int32_t> values);
     friend class TensorMap;
     friend class TensorBlock;
 
@@ -944,7 +943,7 @@ inline bool operator!=(const Labels& lhs, const Labels& rhs) {
 /// might be moved from one thread to another.
 class DataArrayBase {
 public:
-    DataArrayBase() {}
+    DataArrayBase() = default;
     virtual ~DataArrayBase() = default;
 
     /// DataArrayBase can be copy-constructed
@@ -973,7 +972,7 @@ public:
 
         array.origin = [](const void* array, mts_data_origin_t* origin) {
             return details::catch_exceptions([](const void* array, mts_data_origin_t* origin){
-                auto cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 *origin = cxx_array->origin();
                 return MTS_SUCCESS;
             }, array, origin);
@@ -981,7 +980,7 @@ public:
 
         array.copy = [](const void* array, mts_array_t* new_array) {
             return details::catch_exceptions([](const void* array, mts_array_t* new_array){
-                auto cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 auto copy = cxx_array->copy();
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
                 return MTS_SUCCESS;
@@ -995,7 +994,7 @@ public:
                 uintptr_t shape_count,
                 mts_array_t* new_array
             ) {
-                auto cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
@@ -1009,7 +1008,7 @@ public:
 
         array.data = [](void* array, double** data) {
             return details::catch_exceptions([](void* array, double** data){
-                auto cxx_array = static_cast<DataArrayBase*>(array);
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
                 *data = cxx_array->data();
                 return MTS_SUCCESS;
             }, array, data);
@@ -1017,7 +1016,7 @@ public:
 
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
             return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
-                auto cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 const auto& cxx_shape = cxx_array->shape();
                 *shape = cxx_shape.data();
                 *shape_count = static_cast<uintptr_t>(cxx_shape.size());
@@ -1027,7 +1026,7 @@ public:
 
         array.reshape = [](void* array, const uintptr_t* shape, uintptr_t shape_count) {
             return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
-                auto cxx_array = static_cast<DataArrayBase*>(array);
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
                 cxx_array->reshape(std::move(cxx_shape));
                 return MTS_SUCCESS;
@@ -1036,7 +1035,7 @@ public:
 
         array.swap_axes = [](void* array, uintptr_t axis_1, uintptr_t axis_2) {
             return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
-                auto cxx_array = static_cast<DataArrayBase*>(array);
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
                 cxx_array->swap_axes(axis_1, axis_2);
                 return MTS_SUCCESS;
             }, array, axis_1, axis_2);
@@ -1058,8 +1057,8 @@ public:
                 uintptr_t property_start,
                 uintptr_t property_end
             ) {
-                auto cxx_array = static_cast<DataArrayBase*>(array);
-                auto cxx_input = static_cast<const DataArrayBase*>(input);
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* cxx_input = static_cast<const DataArrayBase*>(input);
                 auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
 
                 cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
@@ -1299,9 +1298,9 @@ public:
             throw Error("failed to get data origin");
         }
 
-        char buffer[64] = {0};
-        status = mts_get_data_origin(origin, buffer, 64);
-        if (status != MTS_SUCCESS || std::string(buffer) != "metatensor::SimpleDataArray") {
+        std::array<char, 64> buffer = {0};
+        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 
@@ -1320,9 +1319,9 @@ public:
             throw Error("failed to get data origin");
         }
 
-        char buffer[64] = {0};
-        status = mts_get_data_origin(origin, buffer, 64);
-        if (status != MTS_SUCCESS || std::string(buffer) != "metatensor::SimpleDataArray") {
+        std::array<char, 64> buffer = {0};
+        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 
@@ -1609,7 +1608,7 @@ public:
 
         auto result = std::vector<std::string>();
         for (uint64_t i=0; i<count; i++) {
-            result.push_back(std::string(parameters[i]));
+            result.emplace_back(parameters[i]);
         }
 
         return result;
@@ -1728,7 +1727,7 @@ private:
                 "block since it is a view inside a TensorMap"
             );
         }
-        auto ptr = block_;
+        auto* ptr = block_;
         block_ = nullptr;
         is_view_ = false;
         return ptr;
@@ -1824,7 +1823,7 @@ public:
 
     /// Make a copy of this `TensorMap`, including all the data contained inside
     TensorMap clone() const {
-        auto copy = mts_tensormap_copy(this->tensor_);
+        auto* copy = mts_tensormap_copy(this->tensor_);
         details::check_pointer(copy);
         return TensorMap(copy);
     }
@@ -1923,7 +1922,7 @@ public:
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     TensorMap keys_to_properties(const Labels& keys_to_move, bool sort_samples = true) const {
-        auto ptr = mts_tensormap_keys_to_properties(
+        auto* ptr = mts_tensormap_keys_to_properties(
             tensor_,
             keys_to_move.as_mts_labels_t(),
             sort_samples
@@ -1968,7 +1967,7 @@ public:
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     TensorMap keys_to_samples(const Labels& keys_to_move, bool sort_samples = true) const {
-        auto ptr = mts_tensormap_keys_to_samples(
+        auto* ptr = mts_tensormap_keys_to_samples(
             tensor_,
             keys_to_move.as_mts_labels_t(),
             sort_samples
@@ -2001,7 +2000,7 @@ public:
             c_dimensions.push_back(v.c_str());
         }
 
-        auto ptr = mts_tensormap_components_to_properties(
+        auto* ptr = mts_tensormap_components_to_properties(
             tensor_,
             c_dimensions.data(),
             c_dimensions.size()
@@ -2013,7 +2012,7 @@ public:
     /// Call `components_to_properties` with a single dimension
     TensorMap components_to_properties(const std::string& dimension) const {
         const char* c_str = dimension.c_str();
-        auto ptr = mts_tensormap_components_to_properties(
+        auto* ptr = mts_tensormap_components_to_properties(
             tensor_,
             &c_str,
             1
@@ -2043,7 +2042,7 @@ public:
         const std::string& path,
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
-        auto ptr = mts_tensormap_load(path.c_str(), create_array);
+        auto* ptr = mts_tensormap_load(path.c_str(), create_array);
         details::check_pointer(ptr);
         return TensorMap(ptr);
     }
@@ -2066,7 +2065,7 @@ public:
         size_t buffer_count,
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
-        auto ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
+        auto* ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
         return TensorMap(ptr);
     }
@@ -2131,11 +2130,11 @@ public:
     static std::vector<uint8_t> save_buffer(const TensorMap& tensor) {
         std::vector<uint8_t> buffer;
 
-        auto ptr = buffer.data();
+        auto* ptr = buffer.data();
         auto size = buffer.size();
 
         auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
-            auto buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
+            auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
             buffer->resize(new_size, '\0');
             return buffer->data();
         };

@@ -91,7 +91,10 @@ void TorchDataArray::reshape(std::vector<uintptr_t> shape) {
 }
 
 void TorchDataArray::swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
-    this->tensor_ = this->tensor().swapaxes(axis_1, axis_2).contiguous();
+    this->tensor_ = this->tensor().swapaxes(
+        static_cast<int64_t>(axis_1),
+        static_cast<int64_t>(axis_2)
+    ).contiguous();
 
     this->update_shape();
 }
@@ -105,24 +108,26 @@ void TorchDataArray::move_samples_from(
     const auto& input = dynamic_cast<const TorchDataArray&>(raw_input);
     auto input_tensor = input.tensor();
 
-    auto input_samples = std::vector<int64_t>();
-    input_samples.reserve(samples.size());
-    auto output_samples = std::vector<int64_t>();
-    output_samples.reserve(samples.size());
+    auto options = torch::TensorOptions().device(input_tensor.device()).dtype(torch::kInt64);
+    auto input_samples = torch::zeros({static_cast<int64_t>(samples.size())}, options);
+    auto output_samples = torch::zeros({static_cast<int64_t>(samples.size())}, options);
 
-    for (const auto& sample: samples) {
-        input_samples.push_back(static_cast<int64_t>(sample.input));
-        output_samples.push_back(static_cast<int64_t>(sample.output));
+    for (int64_t i=0; i<samples.size(); i++) {
+        input_samples[i] = static_cast<int64_t>(samples[i].input);
+        output_samples[i] = static_cast<int64_t>(samples[i].output);
     }
 
     using torch::indexing::Slice;
     using torch::indexing::Ellipsis;
     auto output_tensor = this->tensor();
 
+    assert(input_tensor.dtype() == output_tensor.dtype());
+    assert(input_tensor.device() == output_tensor.device());
+
     // output[output_samples, ..., properties] = input[input_samples, ..., :]
     output_tensor.index_put_(
-        {torch::tensor(std::move(output_samples)), Ellipsis, Slice(property_start, property_end)},
-        input_tensor.index({torch::tensor(std::move(input_samples)), Ellipsis, Slice()})
+        {output_samples, Ellipsis, Slice(property_start, property_end)},
+        input_tensor.index({input_samples, Ellipsis, Slice()})
     );
 }
 

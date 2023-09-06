@@ -24,7 +24,7 @@ namespace details {
     /// Transform a torch::IValue containing either a single string, a list of
     /// strings or a tuple of strings into a `std::vector<std::string>`.
     /// `argument_name` is used in the error message.
-    std::vector<std::string> normalize_names(torch::IValue names, std::string argument_name);
+    std::vector<std::string> normalize_names(torch::IValue names, const std::string& argument_name);
 }
 
 /// Wrapper around `metatensor::Labels` for integration with TorchScript
@@ -50,7 +50,7 @@ public:
     /// `metatensor::Labels`.
     static TorchLabels create(
         const std::vector<std::string>& names,
-        std::vector<std::initializer_list<int32_t>> values
+        const std::vector<std::initializer_list<int32_t>>& values
     );
 
     /// Get a view of `labels` corresponding to only the given columns names
@@ -79,20 +79,23 @@ public:
         return values_;
     }
 
-    /// Append a new dimension with the given `name` and `values`  to the end of these `Labels`
-    TorchLabels append(std::string name, torch::Tensor values);
+    /// Create new `Labels` with a new dimension with the given `name` and
+    /// `values` added to the end of the dimensions list.
+    TorchLabels append(std::string name, torch::Tensor values) const;
 
-    /// Insert a new dimension with the given `name` and `values` before `index` in these `Labels`
-    TorchLabels insert(int64_t index, std::string name, torch::Tensor values);
+    /// Create new `Labels` with a new dimension with the given `name` and
+    /// `values` before `index`.
+    TorchLabels insert(int64_t index, std::string name, torch::Tensor values) const;
 
-    /// Permute dimensions of these `Labels`
-    TorchLabels permute(std::vector<int64_t> dimensions_indexes);
+    /// Create new `Labels` with permuted dimensions
+    TorchLabels permute(std::vector<int64_t> dimensions_indexes) const;
 
-    /// Remove `name` from the dimensions of these `Labels`
-    TorchLabels remove(std::string name);
+    /// Create new `Labels` with `name` removed from the dimensions list
+    TorchLabels remove(std::string name) const;
 
-    /// Rename `old_name` dimensions in these Labels to `new_name`
-    TorchLabels rename(std::string old_name, std::string new_name);
+    /// Create new `Labels` with `old_name` renamed to `new_name` in the
+    /// dimensions list
+    TorchLabels rename(std::string old_name, std::string new_name) const;
 
     /// Move the values for these Labels to the given `device`
     void to(torch::Device device);
@@ -131,10 +134,10 @@ public:
     std::string print(int64_t max_entries, int64_t indent) const;
 
     /// Implementation of `__str__` for Python
-    std::string __str__() const;
+    std::string str() const;
 
     /// Implementation of `__repr__` for Python
-    std::string __repr__() const;
+    std::string repr() const;
 
     /// Get the underlying metatensor::Labels
     const metatensor::Labels& as_metatensor() const;
@@ -258,13 +261,13 @@ public:
     int32_t operator[](const std::string& name) const;
 
     /// implementation of __getitem__, forwarding to one of the operator[]
-    int64_t __getitem__(torch::IValue index) const;
+    int64_t getitem(torch::IValue index) const;
 
     /// Print this entry as a named tuple (i.e. `(key=value, key=value)`).
     std::string print() const;
 
     /// Implementation of __repr__ for Python
-    std::string __repr__() const;
+    std::string repr() const;
 
 private:
     torch::Tensor values_;

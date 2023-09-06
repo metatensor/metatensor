@@ -153,7 +153,7 @@ TEST_CASE("TensorMap") {
         CHECK(*block->samples() == metatensor::Labels({"samples"}, {{0}, {2}, {4}}));
 
         auto components = block->components();
-        CHECK(components.size() == 0);
+        CHECK(components.empty());
 
         CHECK(*block->properties() == metatensor::Labels({"component", "properties"}, {{0, 0}}));
     }

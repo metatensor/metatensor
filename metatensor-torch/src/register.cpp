@@ -37,14 +37,14 @@ TORCH_LIBRARY(metatensor, m) {
     // Whenever this file is changed, please also reproduce the changes in
     // python/metatensor-torch/metatensor/torch/documentation.py, and include the
     // docstring over there
-    const std::string DOCSTRING = "";
+    const std::string DOCSTRING;
 
 
     m.class_<LabelsEntryHolder>("LabelsEntry")
-        .def("__str__", &LabelsEntryHolder::__repr__)
-        .def("__repr__", &LabelsEntryHolder::__repr__)
+        .def("__str__", &LabelsEntryHolder::repr)
+        .def("__repr__", &LabelsEntryHolder::repr)
         .def("__len__", &LabelsEntryHolder::size)
-        .def("__getitem__", &LabelsEntryHolder::__getitem__, DOCSTRING,
+        .def("__getitem__", &LabelsEntryHolder::getitem, DOCSTRING,
             {torch::arg("index")}
         )
         .def("__eq__", [](const TorchLabelsEntry& self, const TorchLabelsEntry& other){ return *self == *other; },
@@ -65,10 +65,10 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init<torch::IValue, torch::Tensor>(), DOCSTRING,
             {torch::arg("names"), torch::arg("values")}
         )
-        .def("__str__", &LabelsHolder::__str__)
+        .def("__str__", &LabelsHolder::str)
         // __repr__ is ignored for now, until we can use
         // https://github.com/pytorch/pytorch/pull/100724 (hopefully torch 2.1)
-        .def("__repr__", &LabelsHolder::__repr__)
+        .def("__repr__", &LabelsHolder::repr)
         .def("__len__", &LabelsHolder::count)
         .def("__contains__", [](const TorchLabels& self, torch::IValue entry) {
                 return self->position(entry).has_value();
@@ -122,8 +122,8 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init<torch::Tensor, TorchLabels, std::vector<TorchLabels>, TorchLabels>(), DOCSTRING,
             {torch::arg("values"), torch::arg("samples"), torch::arg("components"), torch::arg("properties")}
         )
-        .def("__repr__", &TensorBlockHolder::__repr__)
-        .def("__str__", &TensorBlockHolder::__repr__)
+        .def("__repr__", &TensorBlockHolder::repr)
+        .def("__str__", &TensorBlockHolder::repr)
         .def("copy", &TensorBlockHolder::copy)
         .def_property("values", &TensorBlockHolder::values)
         .def_property("samples", &TensorBlockHolder::samples)
@@ -194,7 +194,7 @@ TORCH_LIBRARY(metatensor, m) {
                 // `torch::from_blob` does not take ownership of the data,
                 // so we need to register a custom deleter to clean up when
                 // the tensor is no longer used
-                auto buffer_data = new std::vector<uint8_t>(std::move(buffer));
+                auto* buffer_data = new std::vector<uint8_t>(std::move(buffer));
 
                 auto options = torch::TensorOptions().dtype(torch::kU8).device(torch::kCPU);
                 auto deleter = [=](void* data) {

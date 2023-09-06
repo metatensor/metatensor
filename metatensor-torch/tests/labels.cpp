@@ -25,7 +25,7 @@ TEST_CASE("Labels") {
         CHECK(labels.values()[3][1].item<int64_t>() == -2);
 
         // and the underlying metatensor::Labels
-        auto& metatensor_labels = labels.as_metatensor();
+        const auto& metatensor_labels = labels.as_metatensor();
         CHECK(metatensor_labels.names().size() == 2);
         CHECK(metatensor_labels.names()[0] == std::string("a"));
         CHECK(metatensor_labels.names()[1] == std::string("bb"));
@@ -52,9 +52,7 @@ TEST_CASE("Labels") {
 
     SECTION("print") {
         auto labels = LabelsHolder::create({"aaa", "bbb"}, {{1, 2}, {3, 4}});
-
-        auto expected = " aaa  bbb\n     1    2\n     3    4";
-        CHECK(labels->print(-1, 3) == expected);
+        CHECK(labels->print(-1, 3) == " aaa  bbb\n     1    2\n     3    4");
     }
 
     SECTION("create views") {
@@ -164,7 +162,7 @@ TEST_CASE("LabelsEntry") {
     CHECK(entry.values()[0].item<int32_t>() == 1);
     CHECK(entry.values()[1].item<int32_t>() == 2);
 
-    CHECK(entry.__repr__() == "LabelsEntry(aaa=1, bbb=2)");
+    CHECK(entry.repr() == "LabelsEntry(aaa=1, bbb=2)");
 
     CHECK(entry[0] == 1);
     CHECK(entry[1] == 2);
