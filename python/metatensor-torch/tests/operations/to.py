@@ -37,11 +37,9 @@ def check_to_cuda(to):
         for _, gradient in block.gradients():
             assert gradient.samples.values.device.type == "cuda"
             for component in gradient.components:
-                assert gradient.values.device.type == "cuda"
+                assert component.device.type == "cuda"
             assert gradient.properties.values.device.type == "cuda"
             assert gradient.values.device.type == "cuda"
-
-
 
 
 def check_to_dtype(to):
@@ -69,4 +67,3 @@ def test_operations_as_torch_script():
     check_to_dtype(torch.jit.script(metatensor.torch.to))
     if torch.cuda.is_available():
         check_to_cuda(torch.jit.script(metatensor.torch.to))
-

@@ -49,7 +49,7 @@ def to(
             )
 
     # Convert each block and build the return TensorMap
-    
+
     new_blocks = [
         block_to(
             tensor.block(tensor.keys.entry(i)).copy(),
@@ -234,9 +234,11 @@ def _block_to(
     if values.device != block.values.device:
         samples = block.samples.view(block.samples.names).to_owned()
         samples.to(values.device)
-        components = [component.view(component.names).to_owned() for component in block.components]
+        components = [
+            component.view(component.names).to_owned() for component in block.components
+        ]
         for component in components:
-            component.to(values.device) 
+            component.to(values.device)
         properties = block.properties.view(block.properties.names).to_owned()
         properties.to(values.device)
     else:  # avoid copies
