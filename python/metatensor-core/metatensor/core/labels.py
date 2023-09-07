@@ -9,6 +9,46 @@ from ._c_lib import _get_library
 from .utils import _ptr_to_const_ndarray
 
 
+class LabelsValues(np.ndarray):
+    """
+    Wrapper class around the values inside :py:class:`Labels`, keeping a reference to
+    the :py:class:`Labels` alive as needed. This class inherit from
+    :py:class:`numpy.ndarray`, and can be used anywhere a numpy ndarray can be used.
+    """
+
+    def __new__(cls, labels: "Labels"):
+        array = _ptr_to_const_ndarray(
+            ptr=labels._labels.values,
+            shape=(labels._labels.count, labels._labels.size),
+            dtype=np.int32,
+        )
+        obj = array.view(cls)
+
+        # keep a reference to the Python labels to prevent them from being
+        # garbage-collected too early.
+        obj._parent = labels
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        # keep the parent around when creating sub-views of this array
+        self._parent = getattr(obj, "_parent", None)
+
+    def __array_wrap__(self, new):
+        self_ptr = self.ctypes.data
+        self_size = self.nbytes
+
+        new_ptr = new.ctypes.data
+
+        if self_ptr <= new_ptr <= self_ptr + self_size:
+            # if the new array is a view inside memory owned by self, wrap it in
+            # LabelsValues
+            return super().__array_wrap__(new)
+        else:
+            # otherwise return the ndarray straight away
+            return np.asarray(new)
+
+
 class LabelsEntry:
     """A single entry (i.e. row) in a set of :py:class:`Labels`.
 
@@ -28,7 +68,7 @@ class LabelsEntry:
     [0 1 8]
     """
 
-    def __init__(self, names: List[str], values: np.ndarray):
+    def __init__(self, names: List[str], values: LabelsValues):
         self._names = names
 
         if len(values.shape) != 1 or values.dtype != np.int32:
@@ -44,7 +84,7 @@ class LabelsEntry:
         return self._names
 
     @property
-    def values(self) -> np.ndarray:
+    def values(self) -> LabelsValues:
         """
         values associated with each dimensions of this Labels entry, stored as
         32-bit integers.
@@ -254,7 +294,7 @@ class Labels:
         self._lib = _get_library()
         self._labels = _create_new_labels(self._lib, names, values)
         self._names = names
-        self._values = _labels_values(self._labels)
+        self._values = LabelsValues(self)
 
     @staticmethod
     def single() -> "Labels":
@@ -316,7 +356,7 @@ class Labels:
             names.append(labels.names[i].decode("utf8"))
         obj._names = names
 
-        obj._values = _labels_values(obj._labels)
+        obj._values = LabelsValues(obj)
 
         return obj
 
@@ -951,16 +991,6 @@ def _create_new_labels(lib, names: List[str], values: np.ndarray) -> mts_labels_
     lib.mts_labels_create(labels)
 
     return labels
-
-
-def _labels_values(labels: mts_labels_t):
-    """
-    Get a numpy array corresponding to the values of the given raw labels
-
-    The numpy array is a view into Rust-owned memory, and only valid as long as
-    the Rust labels itself stays alive.
-    """
-    return _ptr_to_const_ndarray(labels.values, (labels.count, labels.size), np.int32)
 
 
 def _print_string_center(output, string, width, last):

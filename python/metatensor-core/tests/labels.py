@@ -401,3 +401,11 @@ def test_intersection():
     assert intersection == intersection_2
     assert np.all(first_mapping == np.array([-1, 0]))
     assert np.all(second_mapping == np.array([-1, 0, -1]))
+
+
+def test_values_reference():
+    # see https://github.com/lab-cosmo/metatensor/issues/293
+    data = [0, 1, 2, 3, 4, 5]
+    values = Labels(names=["_"], values=np.array(data).reshape(-1, 1)).values
+
+    assert np.all(values.reshape(-1) == data)

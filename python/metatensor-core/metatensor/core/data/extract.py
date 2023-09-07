@@ -173,4 +173,4 @@ class ExternalCpuArray(np.ndarray):
             return super().__array_wrap__(new)
         else:
             # return the ndarray straight away
-            return new
+            return np.asarray(new)
