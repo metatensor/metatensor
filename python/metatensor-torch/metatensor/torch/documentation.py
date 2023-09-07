@@ -564,12 +564,11 @@ class TensorBlock:
     ):
         """
         :param values: tensor containing the values for this block
-        :param samples: labels describing the samples (first dimension of the
-            array)
-        :param components: labels describing the components (intermediary
-            dimensions of the array). This should be an empty list for
-            scalar/invariant data.
-        :param properties: labels describing the samples (last dimension of the
+        :param samples: labels describing the samples (first dimension of the array)
+        :param components: list of labels describing the components (intermediate
+            dimensions of the array). This should be an empty list for scalar/invariant
+            data.
+        :param properties: labels describing the properties (last dimension of the
             array)
         """
 

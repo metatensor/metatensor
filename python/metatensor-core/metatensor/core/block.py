@@ -1,6 +1,6 @@
 import copy
 import ctypes
-from typing import Generator, List, Tuple
+from typing import Generator, List, Sequence, Tuple
 
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
@@ -33,22 +33,37 @@ class TensorBlock:
         self,
         values: Array,
         samples: Labels,
-        components: List[Labels],
+        components: Sequence[Labels],
         properties: Labels,
     ):
         """
         :param values: array containing the values for this block
-        :param samples: labels describing the samples (first dimension of the
-            array)
-        :param components: labels describing the components (intermediary
-            dimensions of the array). This should be an empty list for
-            scalar/invariant data.
-        :param properties: labels describing the samples (last dimension of the
+        :param samples: labels describing the samples (first dimension of the array)
+        :param components: list of labels describing the components (intermediate
+            dimensions of the array). This should be an empty list for scalar/invariant
+            data.
+        :param properties: labels describing the properties (last dimension of the
             array)
         """
         self._lib = _get_library()
         self._parent = None
         self._gradient_parameters = []
+
+        if not isinstance(samples, Labels):
+            raise TypeError(f"`samples` must be metatensor Labels, not {type(samples)}")
+
+        components = list(components)
+        for component in components:
+            if not isinstance(component, Labels):
+                raise TypeError(
+                    "`components` elements must be metatensor Labels, "
+                    f"not {type(component)}"
+                )
+
+        if not isinstance(properties, Labels):
+            raise TypeError(
+                f"`properties` must be metatensor Labels, not {type(properties)}"
+            )
 
         components_array = ctypes.ARRAY(mts_labels_t, len(components))()
         for i, component in enumerate(components):

@@ -69,6 +69,11 @@ class LabelsEntry:
     """
 
     def __init__(self, names: List[str], values: LabelsValues):
+        assert isinstance(names, list)
+        for n in names:
+            assert isinstance(n, str)
+        assert isinstance(values, LabelsValues)
+
         self._names = names
 
         if len(values.shape) != 1 or values.dtype != np.int32:
