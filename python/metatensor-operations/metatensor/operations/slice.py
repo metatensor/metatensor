@@ -77,7 +77,7 @@ def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
     if not torch_jit_is_scripting():
         if not check_isinstance(tensor, TensorMap):
             raise TypeError(
-                f"`tensor` should be a metatensor TensorMap, not {type(tensor)}"
+                f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
     _check_args(tensor.block(0), axis=axis, labels=labels)
@@ -154,7 +154,7 @@ def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     if not torch_jit_is_scripting():
         if not check_isinstance(block, TensorBlock):
             raise TypeError(
-                f"`block` should be a metatensor TensorBlock, not {type(block)}"
+                f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )
 
     _check_args(block, axis=axis, labels=labels)

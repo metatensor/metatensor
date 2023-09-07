@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
 
 
 def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
@@ -22,14 +22,16 @@ def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
+    if not torch_jit_is_scripting():
+        if not check_isinstance(A, TensorMap):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
+        if not isinstance(B, (float, int)):
+            raise TypeError(f"`B` must be a scalar value, not {type(B)}")
+
+    B = float(B)
 
     blocks: List[TensorBlock] = []
-
-    if isinstance(B, (float, int)):
-        B = float(B)
-    else:
-        raise TypeError("B should be a scalar value")
-
     for block_A in A.blocks():
         blocks.append(_pow_block_constant(block=block_A, constant=B))
 

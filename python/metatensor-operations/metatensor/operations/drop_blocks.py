@@ -36,16 +36,14 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
     if not torch_jit_is_scripting():
         if not check_isinstance(tensor, TensorMap):
             raise TypeError(
-                f"input `tensor` must be a TensorMap, got {type(tensor)} instead"
+                f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
         if not check_isinstance(keys, Labels):
-            raise TypeError(
-                f"input `keys` must be a Labels object, got {type(keys)} instead"
-            )
+            raise TypeError(f"`keys` must be a metatensor Labels, not {type(keys)}")
 
         if not isinstance(copy, bool):
-            raise TypeError(f"`copy` flag must be a boolean, got {type(copy)} instead")
+            raise TypeError(f"`copy` must be a boolean, not {type(copy)}")
 
     # Find the indices of keys to remove
     tensor_keys = tensor.keys

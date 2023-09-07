@@ -1,7 +1,13 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap
+from ._classes import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+)
 from ._utils import _check_same_keys_raise
 from .manipulate_dimension import remove_dimension
 
@@ -201,10 +207,16 @@ def join(
               1        2
         )
     """
-    if not isinstance(tensors, (list, tuple)):
-        raise TypeError(
-            "the `TensorMap`s to join must be provided as a list or a tuple"
-        )
+    if not torch_jit_is_scripting():
+        if not isinstance(tensors, (list, tuple)):
+            raise TypeError(f"`tensor` must be a list or a tuple, not {type(tensors)}")
+
+        for tensor in tensors:
+            if not check_isinstance(tensor, TensorMap):
+                raise TypeError(
+                    "`tensors` elements must be metatensor TensorMap, "
+                    f"not {type(tensor)}"
+                )
 
     if len(tensors) < 1:
         raise ValueError("provide at least one `TensorMap` for joining")

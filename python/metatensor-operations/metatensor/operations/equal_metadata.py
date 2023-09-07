@@ -19,9 +19,9 @@ def _equal_metadata_impl(
 ) -> str:
     if not torch_jit_is_scripting():
         if not check_isinstance(tensor_1, TensorMap):
-            return f"`tensor_1` must be a TensorMap, not {type(tensor_1)}"
+            return f"`tensor_1` must be a metatensor TensorMap, not {type(tensor_1)}"
         if not check_isinstance(tensor_2, TensorMap):
-            return f"`tensor_2` must be a TensorMap, not {type(tensor_2)}"
+            return f"`tensor_2` must be a metatensor TensorMap, not {type(tensor_2)}"
 
     message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
     if message != "":
@@ -42,9 +42,9 @@ def _equal_metadata_block_impl(
 ) -> str:
     if not torch_jit_is_scripting():
         if not check_isinstance(block_1, TensorBlock):
-            return f"`block_1` must be a TensorBlock, not {type(block_1)}"
+            return f"`block_1` must be a metatensor TensorBlock, not {type(block_1)}"
         if not check_isinstance(block_2, TensorBlock):
-            return f"`block_2` must be a TensorBlock, not {type(block_2)}"
+            return f"`block_2` must be a metatensor TensorBlock, not {type(block_2)}"
 
     check_blocks_message = _check_blocks_impl(
         block_1,

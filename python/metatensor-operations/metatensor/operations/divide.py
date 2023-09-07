@@ -10,6 +10,10 @@ from ._utils import (
 
 
 def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
+    if not torch_jit_is_scripting():
+        if not check_isinstance(A, TensorMap):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
     r"""Return a new :class:`TensorMap` with the values being the element-wise
     division of ``A`` and ``B``.
 
@@ -62,7 +66,12 @@ def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
             )
             blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
     else:
-        raise TypeError("B should be a TensorMap or a scalar value")
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(B)}"
+
+        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
 
     return TensorMap(A.keys, blocks)
 

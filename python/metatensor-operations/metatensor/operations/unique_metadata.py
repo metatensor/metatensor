@@ -107,7 +107,7 @@ def unique_metadata(
     if not torch_jit_is_scripting():
         if not check_isinstance(tensor, TensorMap):
             raise TypeError(
-                f"`tensor` argument must be a metatensor TensorMap, not {type(tensor)}"
+                f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
     names = (
@@ -115,7 +115,8 @@ def unique_metadata(
         if isinstance(names, str)
         else (list(names) if isinstance(names, tuple) else names)
     )
-    _check_args_tensor(tensor, axis, names, gradient)
+    _check_args(axis, names, gradient)
+
     # Make a list of the blocks to find unique indices for
     if gradient is None:
         blocks = tensor.blocks()
@@ -192,7 +193,7 @@ def unique_metadata_block(
     if not torch_jit_is_scripting():
         if not check_isinstance(block, TensorBlock):
             raise TypeError(
-                f"`block` argument must be a metatensor TensorBlock, not {type(block)}"
+                f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )
 
     names = (
@@ -200,7 +201,7 @@ def unique_metadata_block(
         if isinstance(names, str)
         else (list(names) if isinstance(names, tuple) else names)
     )
-    _check_args_block(block, axis, names, gradient)
+    _check_args(axis, names, gradient)
 
     # Make a list of the blocks to find unique indices for
     if gradient is None:
@@ -232,58 +233,7 @@ def _unique_from_blocks(
     return Labels(names=names, values=unique_values)
 
 
-def _check_args_tensor(
-    tensor: TensorMap,
-    axis: str,
-    names: List[str],
-    gradient: Optional[str] = None,
-):
-    """Checks input args for `unique_metadata`"""
-
-    if not torch_jit_is_scripting():
-        if not check_isinstance(tensor, TensorMap):
-            raise TypeError(f"`tensor` must be a TensorMap, not {type(tensor)}")
-
-        if not isinstance(axis, str):
-            raise TypeError(
-                "`axis` argument must be a str, either `'samples'` or `'properties'`, "
-                f"not {type(axis)}"
-            )
-
-        if not isinstance(names, list):
-            raise TypeError(
-                f"`names` argument must be a list of str, not {type(names)}"
-            )
-
-        for name in names:
-            if not isinstance(name, str):
-                raise TypeError(
-                    f"`names` argument must be a list of str, not {type(name)}"
-                )
-
-    blocks = tensor.blocks()
-    if gradient is not None:
-        if not torch_jit_is_scripting():
-            if not isinstance(gradient, str):
-                raise TypeError(
-                    f"`gradient` argument must be a `str`, not {type(gradient)}"
-                )
-
-        if not _dispatch.all(
-            _dispatch.bool_array_like(
-                [block.has_gradient(gradient) for block in blocks], tensor.keys.values
-            )
-        ):
-            raise ValueError(
-                f"not all input blocks have a gradient with respect to '{gradient}'"
-            )
-
-    if axis not in ["samples", "properties"]:
-        raise ValueError("`axis` argument must be either `'samples'` or `'properties'`")
-
-
-def _check_args_block(
-    block: TensorBlock,
+def _check_args(
     axis: str,
     names: List[str],
     gradient: Optional[str] = None,
@@ -291,37 +241,22 @@ def _check_args_block(
     """Checks input args for `unique_metadata_block`"""
 
     if not torch_jit_is_scripting():
-        if not check_isinstance(block, TensorBlock):
-            raise TypeError(f"`block` must be a TensorBlock, not {type(block)}")
-
         if not isinstance(axis, str):
-            raise TypeError(
-                "`axis` argument must be a str, either `'samples'` or `'properties'`, "
-                f"not {type(axis)}"
-            )
+            raise TypeError(f"`axis` must be a string, not {type(axis)}")
 
         if not isinstance(names, list):
-            raise TypeError(
-                f"`names` argument must be a list of str, not {type(names)}"
-            )
+            raise TypeError(f"`names` must be a list of strings, not {type(names)}")
 
         for name in names:
             if not isinstance(name, str):
-                raise TypeError(
-                    f"`names` argument must be a list of str, not {type(name)}"
-                )
+                raise TypeError(f"`names` elements must be a strings, not {type(name)}")
 
     if gradient is not None:
         if not torch_jit_is_scripting():
             if not isinstance(gradient, str):
-                raise TypeError(
-                    f"`gradient` argument must be a str, not {type(gradient)}"
-                )
-
-        if not block.has_gradient(gradient):
-            raise ValueError(
-                f"input block does not have a gradient with respect to '{gradient}'"
-            )
+                raise TypeError(f"`gradient` must be a string, not {type(gradient)}")
 
     if axis not in ["samples", "properties"]:
-        raise ValueError("`axis` argument must be either `'samples'` or `'properties'`")
+        raise ValueError(
+            f"`axis` must be either 'samples' or 'properties', not '{axis}'"
+        )

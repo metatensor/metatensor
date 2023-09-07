@@ -602,8 +602,7 @@ def unique_with_inverse(array, axis: Optional[int] = None):
 def where(array):
     """Return the indices where `array` is True.
 
-    This function has the same behavior as
-    ``np.where(array)``.
+    This function has the same behavior as ``np.where(array)``.
     """
     if isinstance(array, TorchTensor):
         return torch.where(array)
