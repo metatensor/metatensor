@@ -48,7 +48,16 @@ class TensorMap:
         :param keys: keys associated with each block
         :param blocks: set of blocks containing the actual data
         """
-        assert isinstance(keys, Labels)
+        if not isinstance(keys, Labels):
+            raise TypeError(f"`keys` must be metatensor Labels, not {type(keys)}")
+
+        blocks = list(blocks)
+        for block in blocks:
+            if not isinstance(block, TensorBlock):
+                raise TypeError(
+                    "`blocks` elements must be metatensor TensorBlock, "
+                    f"not {type(block)}"
+                )
 
         self._lib = _get_library()
 

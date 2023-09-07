@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-from metatensor.core import Labels, MetatensorError, TensorMap
+from metatensor.core import Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import utils
 
@@ -18,6 +18,27 @@ def tensor():
 @pytest.fixture
 def large_tensor():
     return utils.large_tensor()
+
+
+def test_constructor_errors():
+    block = TensorBlock(
+        values=np.full((3, 1, 1), 1.0),
+        samples=Labels(["s"], np.array([[0], [2], [4]])),
+        components=[Labels(["c"], np.array([[0]]))],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+    keys = Labels.single()
+
+    # this works
+    _ = TensorMap(keys, [block])
+
+    message = "`keys` must be metatensor Labels, not <class 'str'>"
+    with pytest.raises(TypeError, match=message):
+        TensorMap("keys", [block])
+
+    message = "`blocks` elements must be metatensor TensorBlock, not <class 'str'>"
+    with pytest.raises(TypeError, match=message):
+        TensorMap(keys, ["block"])
 
 
 def test_copy():

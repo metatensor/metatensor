@@ -30,6 +30,31 @@ def block_components():
     )
 
 
+def test_constructor_errors():
+    values = np.full((3, 3, 2, 2), -1.0)
+    samples = Labels(["s"], np.array([[0], [2], [4]]))
+    components = [
+        Labels(["c_1"], np.array([[-1], [0], [1]])),
+        Labels(["c_2"], np.array([[-4], [1]])),
+    ]
+    properties = Labels(["p"], np.array([[5], [3]]))
+
+    # this works
+    _ = TensorBlock(values, samples, components, properties)
+
+    message = "`samples` must be metatensor Labels, not <class 'str'>"
+    with pytest.raises(TypeError, match=message):
+        TensorBlock(values, "samples", components, properties)
+
+    message = "`components` elements must be metatensor Labels, not <class 'str'>"
+    with pytest.raises(TypeError, match=message):
+        TensorBlock(values, samples, ["c"], properties)
+
+    message = "`properties` must be metatensor Labels, not <class 'str'>"
+    with pytest.raises(TypeError, match=message):
+        TensorBlock(values, samples, components, "properties")
+
+
 def test_gradient_errors(block):
     # missing "sample" column
     gradient = TensorBlock(
