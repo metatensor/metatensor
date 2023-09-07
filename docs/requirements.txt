@@ -1,4 +1,4 @@
-sphinx >= 7.2.4
+sphinx == 7.2.4
 sphinx-toggleprompt # hide the prompt (>>>) in python doctests
 pygments >=2.11     # syntax highligthing
 breathe >=4.33      # C and C++ => sphinx through doxygen
