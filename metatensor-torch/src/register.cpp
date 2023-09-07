@@ -101,7 +101,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
         .def("to", [](const TorchLabels& self, torch::IValue device) {
-            torch::Device normalized_device = metatensor_torch::details::normalize_device(std::move(device));
+            auto normalized_device = metatensor_torch::details::normalize_device(std::move(device));
             return self->to(normalized_device);
         }, DOCSTRING, {torch::arg("device")})
         .def("position", &LabelsHolder::position, DOCSTRING,

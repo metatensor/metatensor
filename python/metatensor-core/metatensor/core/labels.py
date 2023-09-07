@@ -652,7 +652,7 @@ class Labels:
         Move the values for these Labels to the given ``device``.
 
         In the Python version of metatensor, this returns the original labels.
-        Defined forcompatibility with the TorchScript version of metatensor.
+        Defined for compatibility with the TorchScript version of metatensor.
         """
         return self
 

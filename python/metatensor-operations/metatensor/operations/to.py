@@ -220,7 +220,7 @@ def _block_to(
     ``backend``, dtype and/or device.
     """
     # Create new block, with the values tensor converted
-    # The labels will also me moved if a new device is requested
+    # The labels will also be moved if a new device is requested
     # (this will only happen in the case of metatensor.torch.Labels)
     values = _dispatch.to(
         array=block.values,

@@ -379,10 +379,10 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) con
 
 TorchLabels LabelsHolder::to(torch::Device device) const {
     // first move the values
-    torch::Tensor new_values = values_.to(device);
+    auto new_values = values_.to(device);
 
     // copy the names
-    std::vector<std::string> new_names = this->names();
+    auto new_names = this->names();
 
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
 }
