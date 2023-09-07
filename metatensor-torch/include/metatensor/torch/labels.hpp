@@ -25,6 +25,7 @@ namespace details {
     /// strings or a tuple of strings into a `std::vector<std::string>`.
     /// `argument_name` is used in the error message.
     std::vector<std::string> normalize_names(torch::IValue names, const std::string& argument_name);
+    torch::Device normalize_device(torch::IValue device);
 }
 
 /// Wrapper around `metatensor::Labels` for integration with TorchScript
@@ -98,7 +99,7 @@ public:
     TorchLabels rename(std::string old_name, std::string new_name) const;
 
     /// Move the values for these Labels to the given `device`
-    void to(torch::Device device);
+    TorchLabels to(torch::Device device) const;
 
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.

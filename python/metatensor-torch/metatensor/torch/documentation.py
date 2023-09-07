@@ -427,7 +427,12 @@ class Labels:
         )
         """
 
-    def to(self, device):
+    @overload
+    def to(self, str) -> "Labels":
+        """move the values for these Labels to the given ``device``"""
+
+    @overload
+    def to(self, device) -> "Labels":
         """move the values for these Labels to the given ``device``"""
 
     def position(

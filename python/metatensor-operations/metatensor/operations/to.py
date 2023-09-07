@@ -62,8 +62,7 @@ def to(
     ]
 
     if device is not None:
-        new_keys = tensor.keys.view(tensor.keys.names).to_owned()
-        new_keys.to(new_blocks[0].values.device)
+        new_keys = tensor.keys.to(device)
     else:
         new_keys = tensor.keys
 
@@ -231,17 +230,11 @@ def _block_to(
         requires_grad=requires_grad,
     )
 
-    if values.device != block.values.device:
-        samples = block.samples.view(block.samples.names).to_owned()
-        samples.to(values.device)
-        components = [
-            component.view(component.names).to_owned() for component in block.components
-        ]
-        for component in components:
-            component.to(values.device)
-        properties = block.properties.view(block.properties.names).to_owned()
-        properties.to(values.device)
-    else:  # avoid copies
+    if device is not None:
+        samples = block.samples.to(device)
+        components = [component.to(device) for component in block.components]
+        properties = block.properties.to(device)
+    else:
         samples = block.samples
         components = block.components
         properties = block.properties

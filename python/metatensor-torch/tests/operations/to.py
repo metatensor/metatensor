@@ -37,7 +37,7 @@ def check_to_cuda(to):
         for _, gradient in block.gradients():
             assert gradient.samples.values.device.type == "cuda"
             for component in gradient.components:
-                assert component.device.type == "cuda"
+                assert component.values.device.type == "cuda"
             assert gradient.properties.values.device.type == "cuda"
             assert gradient.values.device.type == "cuda"
 
