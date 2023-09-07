@@ -238,10 +238,23 @@ def test_self_add_scalar_gradient(tensor_A, tensor_res_2):
     metatensor.equal_raise(tensor_A, tensor_A_copy)
 
 
-def test_self_add_error(tensor_A):
-    msg = "B should be a TensorMap or a scalar value"
-    with pytest.raises(TypeError, match=msg):
-        metatensor.add(tensor_A, np.ones((3, 4)))
+def test_self_add_error():
+    block = TensorBlock(
+        values=np.array([[1, 2], [3, 5]]),
+        samples=Labels(["s"], np.array([[0], [2]])),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
+    tensor = TensorMap(keys, [block])
 
+    message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
+    with pytest.raises(TypeError, match=message):
+        metatensor.add(np.ones((3, 4)), tensor)
 
-# TODO: add tests with torch & torch scripting/tracing
+    message = (
+        "`B` must be a metatensor TensorMap or a scalar value, "
+        "not <class 'numpy.ndarray'>"
+    )
+    with pytest.raises(TypeError, match=message):
+        metatensor.add(tensor, np.ones((3, 4)))

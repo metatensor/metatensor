@@ -33,17 +33,20 @@ def tensor():
 
 def test_wrong_arguments_block(block):
     """Test the `block_to` function with incorrect arguments."""
-    with pytest.raises(TypeError, match="`block` should be a metatensor `TensorBlock`"):
+    message = "`block` must be a metatensor TensorBlock, not <class 'int'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.block_to(100)
 
-    with pytest.raises(TypeError, match="'backend' should be given as a string"):
+    message = "`backend` must be a string, not <class 'int'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.block_to(block, backend=10)
 
-    message = "the `numpy` backend option does not support autograd gradient tracking"
+    message = "the 'numpy' backend does not support `requires_grad=True`"
     with pytest.raises(ValueError, match=message):
         metatensor.block_to(block, backend="numpy", requires_grad=True)
 
-    with pytest.raises(ValueError, match="backend 'jax' is not supported"):
+    message = "backend 'jax' is not supported"
+    with pytest.raises(ValueError, match=message):
         metatensor.block_to(block, backend="jax")
 
 
@@ -205,17 +208,20 @@ def test_change_dtype_block(block):
 
 def test_wrong_arguments(tensor):
     """Test the `to` function with incorrect arguments."""
-    with pytest.raises(TypeError, match="`tensor` should be a metatensor `TensorMap`"):
+    message = "`tensor` must be a metatensor TensorMap, not <class 'int'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.to(100)
 
-    with pytest.raises(TypeError, match="'backend' should be given as a string"):
+    message = "`backend` must be a string, not <class 'int'>"
+    with pytest.raises(TypeError, match=message):
         metatensor.to(tensor, backend=10)
 
-    message = "the `numpy` backend option does not support autograd gradient tracking"
+    message = "the 'numpy' backend does not support `requires_grad=True`"
     with pytest.raises(ValueError, match=message):
         metatensor.to(tensor, backend="numpy", requires_grad=True)
 
-    with pytest.raises(ValueError, match="backend 'jax' is not supported"):
+    message = "backend 'jax' is not supported"
+    with pytest.raises(ValueError, match=message):
         metatensor.to(tensor, backend="jax")
 
 

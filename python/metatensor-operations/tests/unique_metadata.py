@@ -159,18 +159,21 @@ def test_unique_metadata(tensor, large_tensor):
 
 
 def test_unique_metadata_block_errors(real_tensor):
-    message = "`block` argument must be a metatensor TensorBlock"
+    message = (
+        "`block` must be a metatensor TensorBlock, "
+        "not <class 'metatensor.core.tensor.TensorMap'>"
+    )
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(real_tensor, "samples", ["structure"])
 
-    message = "`tensor` argument must be a metatensor TensorMap"
+    message = (
+        "`tensor` must be a metatensor TensorMap, "
+        "not <class 'metatensor.core.block.TensorBlock'>"
+    )
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata(real_tensor.block(0), "samples", ["structure"])
 
-    message = (
-        "`axis` argument must be a str, either `'samples'` or `'properties'`,"
-        " not <class 'float'>"
-    )
+    message = "`axis` must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),
@@ -178,7 +181,7 @@ def test_unique_metadata_block_errors(real_tensor):
             names=["structure"],
         )
 
-    message = "`names` argument must be a list of str, not <class 'float'>"
+    message = "`names` must be a list of strings, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),
@@ -186,7 +189,7 @@ def test_unique_metadata_block_errors(real_tensor):
             names=3.14,
         )
 
-    message = "`names` argument must be a list of str, not <class 'float'>"
+    message = "`names` elements must be a strings, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),
@@ -194,7 +197,7 @@ def test_unique_metadata_block_errors(real_tensor):
             names=["structure", 3.14],
         )
 
-    message = "`gradient` argument must be a str, not <class 'float'>"
+    message = "`gradient` must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),
@@ -203,21 +206,12 @@ def test_unique_metadata_block_errors(real_tensor):
             gradient=3.14,
         )
 
-    message = "`axis` argument must be either `'samples'` or `'properties'`"
+    message = "`axis` must be either 'samples' or 'properties', not 'ciao'"
     with pytest.raises(ValueError, match=message):
         metatensor.unique_metadata_block(
             real_tensor.block(0),
             axis="ciao",
             names=["structure"],
-        )
-
-    message = "`gradient` argument must be a str, not <class 'float'>"
-    with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(
-            real_tensor.block(0),
-            axis="properties",
-            names=["structure"],
-            gradient=3.14,
         )
 
     message = "'ciao' not found in the dimensions of these Labels"

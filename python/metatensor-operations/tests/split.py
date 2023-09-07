@@ -477,7 +477,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "`tensor` should be a metatensor TensorMap, "
+            "`tensor` must be a metatensor TensorMap, "
             "not <class 'metatensor.core.block.TensorBlock'>",
         )
 
@@ -487,7 +487,7 @@ class TestSplitErrors(unittest.TestCase):
                 self.tensor, axis=3.14, grouped_labels=self.grouped_labels
             ),
         self.assertEqual(
-            str(cm.exception), "axis should be a 'str', not <class 'float'>"
+            str(cm.exception), "axis must be a string, not <class 'float'>"
         )
 
         # axis not "samples" or "properties"
@@ -499,7 +499,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "axis mut be either 'samples' or 'properties'",
+            "axis must be either 'samples' or 'properties'",
         )
 
         # grouped_labels is Labels not list
@@ -509,7 +509,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "grouped_labels must be a list of 'Labels', "
+            "`grouped_labels` must be a list, "
             "not <class 'metatensor.core.labels.Labels'>",
         )
 
@@ -520,8 +520,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "each element in `grouped_labels` must be metatensor Labels, "
-            "not <class 'str'>",
+            "`grouped_labels` elements must be metatensor Labels, not <class 'str'>",
         )
 
         # different names in labels of grouped_labels
@@ -536,7 +535,7 @@ class TestSplitErrors(unittest.TestCase):
             ),
         self.assertEqual(
             str(cm.exception),
-            "the names of all 'Labels' in grouped_labels must be the same, "
+            "the dimensions names of all Labels in `grouped_labels` must be the same, "
             "got ['red'] and ['wine']",
         )
 
@@ -562,19 +561,19 @@ class TestSplitErrors(unittest.TestCase):
 
         self.assertEqual(
             str(cm.exception),
-            "the name 'front_and' in grouped_labels is not part of "
+            "the 'front_and' dimension name in `grouped_labels` is not part of "
             "the samples names of the input tensor",
         )
 
     def test_split_block_errors(self):
-        # TypeError not TB
         with self.assertRaises(TypeError) as cm:
             metatensor.split_block(
                 self.tensor, axis="samples", grouped_labels=self.grouped_labels
             ),
+
         self.assertEqual(
             str(cm.exception),
-            "`block` should be a metatensor TensorBlock, "
+            "`block` must be a metatensor TensorBlock, "
             "not <class 'metatensor.core.tensor.TensorMap'>",
         )
 

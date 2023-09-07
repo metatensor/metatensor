@@ -271,16 +271,22 @@ def test_self_subtract_scalar_gradient():
 
 
 def test_self_subtract_error():
-    block_1 = TensorBlock(
+    block = TensorBlock(
         values=np.array([[1, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels.range("p", 2),
     )
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
-    A = TensorMap(keys, [block_1])
-    B = np.ones((3, 4))
+    tensor = TensorMap(keys, [block])
 
-    message = "B should be a TensorMap or a scalar value"
+    message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.subtract(A, B)
+        keys = metatensor.subtract(np.ones((3, 4)), tensor)
+
+    message = (
+        "`B` must be a metatensor TensorMap or a scalar value, "
+        "not <class 'numpy.ndarray'>"
+    )
+    with pytest.raises(TypeError, match=message):
+        keys = metatensor.subtract(tensor, np.ones((3, 4)))

@@ -42,12 +42,12 @@ def to(
         type, and/or device.
     """
     # Check types
-    if torch_jit_is_scripting():
-        is_tensor_map = isinstance(tensor, TensorMap)
-    else:
-        is_tensor_map = check_isinstance(tensor, TensorMap)
-    if not is_tensor_map:
-        raise TypeError("`tensor` should be a metatensor `TensorMap`")
+    if not torch_jit_is_scripting():
+        if not check_isinstance(tensor, TensorMap):
+            raise TypeError(
+                f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
+            )
+
     # Convert each block and build the return TensorMap
     keys = tensor.keys
     new_blocks = [
@@ -101,24 +101,25 @@ def block_to(
         type, and/or device.
     """
     # Check inputs
-    if torch_jit_is_scripting():
-        is_tensor_block = isinstance(block, TensorBlock)
-    else:
-        is_tensor_block = check_isinstance(block, TensorBlock)
-    if not is_tensor_block:
-        raise TypeError("`block` should be a metatensor `TensorBlock`")
+    if not torch_jit_is_scripting():
+        if not check_isinstance(block, TensorBlock):
+            raise TypeError(
+                f"`block` must be a metatensor TensorBlock, not {type(block)}"
+            )
+
     if backend is not None:
-        if not isinstance(backend, str):
-            raise TypeError("'backend' should be given as a string")
-        else:
-            if backend not in ["numpy", "torch"]:
-                raise ValueError(f"backend '{backend}' is not supported")
-            if backend == "numpy":
-                if requires_grad is not None:
-                    raise ValueError(
-                        "the `numpy` backend option does not support autograd"
-                        " gradient tracking"
-                    )
+        if not torch_jit_is_scripting():
+            if not isinstance(backend, str):
+                raise TypeError(f"`backend` must be a string, not {type(backend)}")
+
+        if backend not in ["numpy", "torch"]:
+            raise ValueError(f"backend '{backend}' is not supported")
+
+        if backend == "numpy":
+            if requires_grad is not None:
+                raise ValueError(
+                    "the 'numpy' backend does not support `requires_grad=True`"
+                )
 
     # Walk the tree of gradients without recursion
     # (recursion is not supported by torchscript)

@@ -37,10 +37,9 @@ def append_dimension(tensor: TensorMap, axis: str, name: str, values) -> TensorM
     :param axis: axis for which the ``name`` should be appended. Allowed are ``"keys"``,
         ``"properties"`` or ``"samples"``.
     :param name: name of the dimension be appended
-    :param values: values of the dimension to be appended
-        (``np.array`` or ``torch.Tensor`` according to whether ``metatensor`` or
-        ``metatensor.torch`` is being used)
-
+    :param values: values of the dimension to be appended (``np.array`` or
+        ``torch.Tensor`` according to whether ``metatensor`` or ``metatensor.torch`` is
+        being used)
 
     :raises ValueError: if ``axis`` is a not valid value
 

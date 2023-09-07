@@ -30,6 +30,10 @@ def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
+    if not torch_jit_is_scripting():
+        if not check_isinstance(A, TensorMap):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)
     else:
@@ -40,8 +44,11 @@ def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     elif is_tensor_map:
         B = multiply(B, -1)
     else:
-        raise TypeError("B should be a TensorMap or a scalar value")
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(B)}"
 
-    tensor_result = add(A=A, B=B)
+        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
 
-    return tensor_result
+    return add(A=A, B=B)

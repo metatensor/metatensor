@@ -61,7 +61,7 @@ def split(
     if not torch_jit_is_scripting():
         if not check_isinstance(tensor, TensorMap):
             raise TypeError(
-                f"`tensor` should be a metatensor TensorMap, not {type(tensor)}"
+                f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
     _check_args(tensor.block(0), axis, grouped_labels)
@@ -133,7 +133,7 @@ def split_block(
     if not torch_jit_is_scripting():
         if not check_isinstance(block, TensorBlock):
             raise TypeError(
-                f"`block` should be a metatensor TensorBlock, not {type(block)}"
+                f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )
 
     _check_args(block, axis, grouped_labels)
@@ -167,36 +167,37 @@ def _check_args(block: TensorBlock, axis: str, grouped_labels: List[Labels]):
     Checks the arguments passed to :py:func:`split` and :py:func:`split_block`.
     """
     # Check types
-    if not isinstance(axis, str):
-        raise TypeError(f"axis should be a 'str', not {type(axis)}")
+    if not torch_jit_is_scripting():
+        if not isinstance(axis, str):
+            raise TypeError(f"axis must be a string, not {type(axis)}")
+
+        if not isinstance(grouped_labels, list):
+            raise TypeError(
+                f"`grouped_labels` must be a list, not {type(grouped_labels)}"
+            )
+
+        for labels in grouped_labels:
+            if not check_isinstance(labels, Labels):
+                raise TypeError(
+                    "`grouped_labels` elements must be metatensor Labels, "
+                    f"not {type(labels)}"
+                )
+
     if axis not in ["samples", "properties"]:
-        raise ValueError("axis mut be either 'samples' or 'properties'")
-    if not isinstance(grouped_labels, list):
-        raise TypeError(
-            f"grouped_labels must be a list of 'Labels', not {type(grouped_labels)}"
-        )
+        raise ValueError("axis must be either 'samples' or 'properties'")
 
     # If passed as an empty list, return now
     if len(grouped_labels) == 0:
         return
 
-    for labels in grouped_labels:
-        if not torch_jit_is_scripting():
-            if not check_isinstance(labels, Labels):
-                raise TypeError(
-                    "each element in `grouped_labels` must be metatensor Labels, "
-                    f"not {type(labels)}"
-                )
-
     # Check the Labels names are equivalent for all Labels in grouped_labels
     reference_names = grouped_labels[0].names
-    if len(grouped_labels) > 1:
-        for labels in grouped_labels[1:]:
-            if labels.names != reference_names:
-                raise ValueError(
-                    "the names of all 'Labels' in grouped_labels"
-                    f" must be the same, got {reference_names} and {labels.names}"
-                )
+    for labels in grouped_labels[1:]:
+        if labels.names != reference_names:
+            raise ValueError(
+                "the dimensions names of all Labels in `grouped_labels`"
+                f" must be the same, got {reference_names} and {labels.names}"
+            )
 
     # Check the names in grouped_labels Labels are contained within the names for
     # the block
@@ -204,6 +205,6 @@ def _check_args(block: TensorBlock, axis: str, grouped_labels: List[Labels]):
     for name in reference_names:
         if name not in names:
             raise ValueError(
-                f"the name '{name}' in grouped_labels is not part of "
+                f"the '{name}' dimension name in `grouped_labels` is not part of "
                 f"the {axis} names of the input tensor"
             )
