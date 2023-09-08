@@ -261,8 +261,10 @@ impl TensorBlock {
                 if gradient_labels != values_labels {
                     return Err(Error::InvalidParameter(format!(
                         "gradients and values components mismatch for values \
-                        component {} (the corresponding names are [{}])",
-                        component_i, values_labels.names().join(", ")
+                        component {} (dimension name is '{}'). Components which \
+                        are specific to the gradients must come first, and be \
+                        followed by the exact same components as the values.",
+                        component_i, values_labels.names()[0]
                     )));
                 }
             }
