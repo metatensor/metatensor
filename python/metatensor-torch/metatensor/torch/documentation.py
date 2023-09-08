@@ -612,20 +612,21 @@ class TensorBlock:
         Add gradient with respect to ``parameter`` in this block.
 
         :param parameter:
-            add gradients with respect to this ``parameter`` (e.g.
-            ``positions``, ``cell``, ...)
+            add gradients with respect to this ``parameter`` (e.g. ``positions``,
+            ``cell``, ...)
 
         :param gradient:
-            a :py:class:`TensorBlock` whose values contain the gradients with
-            respect to the ``parameter``. The labels of the gradient
-            :py:class:`TensorBlock` should be organized as follows: its
-            ``samples`` must contain ``"sample"`` as the first label, with
-            values containing the index of the corresponding ``samples`` in the
-            :py:class:`TensorBlock` containing values; its components must
-            contain at least the same components as the :py:class:`TensorBlock`
-            containing values, with any additional components coming before
-            those; its properties must match exactly those of the
-            :py:class:`TensorBlock` containing values.
+            a :py:class:`TensorBlock` whose values contain the gradients of this
+            :py:class:`TensorBlock` values with respect to ``parameter``. The labels
+            of the gradient :py:class:`TensorBlock` should be organized as follows:
+
+            - its samples must contain ``"sample"`` as the first dimension, with values
+              containing the index of the corresponding samples in this
+              :py:class:`TensorBlock`, and arbitrary supplementary samples dimension;
+            - its components must contain at least the same components as this
+              :py:class:`TensorBlock`, with any additional components coming before
+              those;
+            - its properties must match exactly those of this :py:class:`TensorBlock`.
 
         >>> import numpy as np
         >>> from metatensor.torch import TensorBlock, Labels
