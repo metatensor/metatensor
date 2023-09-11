@@ -146,14 +146,15 @@ subset of Python tests, for example:
 
 .. code-block:: bash
 
-    tox -e core-tests           # unit tests for metatensor-core
-    tox -e operations-tests     # unit tests for metatensor-operations
-    tox -e torch-tests          # unit tests for metatensor-torch
-    tox -e docs-tests           # doctests (checking inline examples) for all packages
-    tox -e lint                 # code style
-    tox -e build-python         # python packaging
+    tox -e core-tests                     # unit tests for metatensor-core
+    tox -e operations-notorch-tests       # unit tests for metatensor-operations without torch
+    tox -e operations-torch-tests         # unit tests for metatensor-operations with torch
+    tox -e torch-tests                    # unit tests for metatensor-torch
+    tox -e docs-tests                     # doctests (checking inline examples) for all packages
+    tox -e lint                           # code style
+    tox -e build-python                   # python packaging
 
-    tox -e format               # format all files
+    tox -e format                         # format all files
 
 The last command ``tox -e format`` will use tox to do actual formatting instead
 of just checking it, you can use to automatically fix some of the issues
