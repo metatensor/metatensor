@@ -25,6 +25,10 @@ namespace details {
     /// strings or a tuple of strings into a `std::vector<std::string>`.
     /// `argument_name` is used in the error message.
     std::vector<std::string> normalize_names(torch::IValue names, const std::string& argument_name);
+
+    /// Transform a torch::IValue into a torch::Device. The input torch::IValue
+    /// must be either a string or a torch.device, otherwise a runtime error
+    /// will be raised.
     torch::Device normalize_device(torch::IValue device);
 }
 
@@ -99,7 +103,7 @@ public:
     TorchLabels rename(std::string old_name, std::string new_name) const;
 
     /// Move the values for these Labels to the given `device`
-    TorchLabels to(torch::Device device) const;
+    TorchLabels to(torch::IValue device) const;
 
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.
