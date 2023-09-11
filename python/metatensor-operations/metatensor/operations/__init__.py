@@ -65,6 +65,7 @@ from .subtract import subtract
 from .unique_metadata import unique_metadata, unique_metadata_block
 from .checks import checks_enabled, unsafe_disable_checks, unsafe_enable_checks
 from .zeros_like import zeros_like, zeros_like_block
+from .sort import sort, sort_block
 
 __all__ = [
     "NotEqualError",
@@ -112,6 +113,8 @@ __all__ = [
     "solve",
     "split",
     "split_block",
+    "sort",
+    "sort_block",
     "std_over_samples",
     "std_over_samples_block",
     "subtract",
