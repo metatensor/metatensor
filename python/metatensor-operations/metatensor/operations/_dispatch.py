@@ -496,14 +496,14 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
 def to(
     array,
     backend: Optional[str] = None,
-    dtype: Optional[torch.dtype] = None,
-    device: Optional[Union[str, torch.device]] = None,
+    dtype: Optional[torch_dtype] = None,
+    device: Optional[Union[str, torch_device]] = None,
     requires_grad: Optional[bool] = None,
 ):
     """Convert the array to the specified backend."""
 
     # Convert torch Tensor
-    if isinstance(array, torch.Tensor):
+    if isinstance(array, TorchTensor):
         if backend is None:  # Infer the target backend
             backend = "torch"
         if dtype is None:
