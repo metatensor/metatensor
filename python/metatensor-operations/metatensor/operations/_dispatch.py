@@ -614,7 +614,7 @@ def where(array):
 
 def take(array, indices, axis: int):
     """
-    See torch take_along_dim or numpy take as reference.
+    See :py:func:`torch.index_select` or :py:func:`numpy.take` as reference.
 
     Because numpy and torch have different APIs we went for the more limited one
     in torch not supporting ``mode`` argument. The argument ``out`` is not supported
@@ -635,68 +635,31 @@ def take(array, indices, axis: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-# PR COMMENT I implemented argsort because I thought I need it, but it turned out not
-#            but I would nevertheless keep it, might be useful for something else
-def argsort(array, axis=-1, descending: bool = False, stable: bool = False):
+def argsort_labels_values(labels_values, reverse: bool = False):
     """
-    See torch argsort as reference.
+    Similar to :py:func:`np.argsort`, but sort the rows as one aggregated
+    tuple.
 
-    Because numpy and torch have different APIs we went for the more limited one
-    in torch. Numpy supports more options for sorting that are not here available.
+    :param labels_values: numpy.array or torch.Tensor
+    :param reverse: if true, order is descending
 
-    :param array: the array that is argsorted
-    :param axis: axis of array to argsort
-    :param stable: if true, the order of duplicate elements stays the same an the array
-    :param descending: if false, the order is ascending
-
-    :return: indices of the sorted array wrt. the unsorted one
-    """
-    if isinstance(array, TorchTensor):
-        return torch.argsort(array, dim=axis, descending=descending, stable=stable)
-    elif isinstance(array, np.ndarray):
-        if stable:
-            idx_ascending = np.argsort(array, axis=axis, kind="stable")
-        else:
-            idx_ascending = np.argsort(array, axis=axis, kind="quicksort")
-
-        if descending:
-            return np.flip(idx_ascending, axis=axis)
-        else:
-            return idx_ascending
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def argsort_metadata_values(metadata_values, reverse: bool = False):
-    """
-    In this function we append an index at the end to get the indices of the
-    corresponding to the sorted values (argsort).  Because we append the indices at the
-    end and since metadata is unique, we do not affect the sorted order.
-
-    We are highly limited by TorchScript with the sorting functions: torch.argsort does
-    not work because it cannot sort over the rows considering each row as one aggregated
-    element The ´´reverse´´ keyword argument is only supported by TorchScript using sort
-    like l.sort(reverse=...), but not using sorted(reverse=...) the ``key`` keyword
-    argument is not supported by TorchScript at all
-
-    :param metadata_values: numpy.array or torch.Tensor :param reverse: if true, order
-    is descending
-
-    :return: indices corresponding to the sorted values in py:obj:`metadata_values`
+    :return: indices corresponding to the sorted values in ``labels_values``
 
     """
-    if isinstance(metadata_values, TorchTensor):
-        # PR COMMENT torchscript does not support sort of List[List[int]]
-        #            the algorithm will run into numerical problems for high max ints
-        #            for future PR would do a unique before to map to a lower range
-        max_int = torch.max(metadata_values)
+    if isinstance(labels_values, TorchTensor):
+        # torchscript does not support sorted for List[List[int]]
+        # so we temporary do this trick. this will be fixed with issue #366
+        max_int = torch.max(labels_values)
         idx = torch.sum(
-            max_int ** torch.arange(metadata_values.shape[1]) * metadata_values, dim=1
+            max_int ** torch.arange(labels_values.shape[1]) * labels_values, dim=1
         )
         return torch.argsort(idx, dim=-1, descending=reverse)
-    elif isinstance(metadata_values, np.ndarray):
-        list_tuples: List[List[int]] = metadata_values.tolist()
-        for i in range(len(metadata_values)):
+    elif isinstance(labels_values, np.ndarray):
+        # Index is appended at the end to get the indices corresponding to the
+        # sorted values. Because we append the indices at the end and since metadata
+        # is unique, we do not affect the sorted order.
+        list_tuples: List[List[int]] = labels_values.tolist()
+        for i in range(len(labels_values)):
             list_tuples[i].append(i)
         list_tuples.sort(reverse=reverse)
         return np.array(list_tuples)[:, -1]

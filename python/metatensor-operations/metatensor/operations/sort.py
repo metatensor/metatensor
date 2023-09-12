@@ -27,20 +27,18 @@ def _sort_single_block(
 
     values = block.values
     if "samples" in axes:
-        sorted_idx = _dispatch.argsort_metadata_values(
-            samples_values, reverse=descending
-        )
+        sorted_idx = _dispatch.argsort_labels_values(samples_values, reverse=descending)
         samples_values = samples_values[sorted_idx]
         values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(block.components):
-            sorted_idx = _dispatch.argsort_metadata_values(
+            sorted_idx = _dispatch.argsort_labels_values(
                 components_values[i], reverse=descending
             )
             components_values[i] = components_values[i][sorted_idx]
             values = _dispatch.take(values, sorted_idx, axis=i + 1)
     if "properties" in axes:
-        sorted_idx = _dispatch.argsort_metadata_values(
+        sorted_idx = _dispatch.argsort_labels_values(
             properties_values, reverse=descending
         )
         properties_values = properties_values[sorted_idx]
@@ -67,15 +65,15 @@ def sort_block(
     descending: bool = False,
 ) -> TensorBlock:
     """
-    Rearanges the values of an block according to the order given by the sorted metadata
+    Rearanges the values of a block according to the order given by the sorted metadata
     of the given axes.
 
-    This function creates copies of the metadata on the CPU to sort the metadata.  For
-    that each row have to be interpreted as tuple which is not supported by torch.
+    This function creates copies of the metadata on the CPU to sort the metadata.
 
-    :param axes: axis of array to argsort :param stable: if true, the order of duplicate
-    elements stays the same an the array :param descending: if false, the order is
-    ascending :return: sorted tensor block
+    :param axes: axis of array to argsort
+    :param descending: if false, the order is ascending
+
+    :return: sorted tensor block
 
     >>> import numpy as np
     >>> import metatensor
@@ -164,8 +162,6 @@ def sort_block(
 
     result_block = _sort_single_block(block, axes_list, descending)
 
-    # issue #68
-    # for parameter, gradient in block.gradients().items():
     for parameter, gradient in block.gradients():
         if len(gradient.gradients_list()) != 0:
             raise NotImplementedError("gradients of gradients are not supported")
@@ -184,13 +180,14 @@ def sort(
     descending: bool = False,
 ) -> TensorMap:
     """
-    Sorts each block separately, see :py:func:`sort_block` for more information
+    Sort the tensor map according to the key values and the blocks for each
+    specified axis in :param axes: according to the label values in the axis.
 
-    This function creates copies of the metadata on the CPU to sort the metadata.
-    For that each row have to be interpreted as tuple which is not supported by torch.
+    Each block is sorted separately, see :py:func:`sort_block` for more information
+
+    Note: This function duplicates metadata on the CPU for the purpose of sorting.
 
     :param axes: axis of array to argsort
-    :param stable: if true, the order of duplicate elements stays the same an the array
     :param descending: if false, the order is ascending
     :return: sorted tensor map
 
@@ -222,9 +219,7 @@ def sort(
     """
     blocks: List[TensorBlock] = []
 
-    sorted_idx = _dispatch.argsort_metadata_values(
-        tensor.keys.values, reverse=descending
-    )
+    sorted_idx = _dispatch.argsort_labels_values(tensor.keys.values, reverse=descending)
     for i in sorted_idx:
         blocks.append(
             sort_block(
