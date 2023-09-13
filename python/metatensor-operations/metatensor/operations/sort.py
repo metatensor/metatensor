@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap
+from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
 
 
 def _sort_single_block(
@@ -65,15 +65,15 @@ def sort_block(
     descending: bool = False,
 ) -> TensorBlock:
     """
-    Rearanges the values of a block according to the order given by the sorted metadata
+    Rearrange the values of a block according to the order given by the sorted metadata
     of the given axes.
 
     This function creates copies of the metadata on the CPU to sort the metadata.
 
     :param axes: axes to sort. The labels entries along these axes will be sorted in
-                 lexicographic order, and the arrays values will be reordered
-                 accordingly. Possible values are ``'samples'``, ``'components'``,
-                 ``'properties'`` and ``'all'`` to sort everything.
+        lexicographic order, and the arrays values will be reordered accordingly.
+        Possible values are ``'keys'``, ``'samples'``, ``'components'``,
+        ``'properties'`` and ``'all'`` to sort everything.
 
     :param descending: if false, the order is ascending
 
@@ -145,23 +145,24 @@ def sort_block(
     if isinstance(axes, str):
         if axes == "all":
             axes_list = ["samples", "components", "properties"]
-        elif axes not in ["samples", "components", "properties"]:
-            raise ValueError(
-                f"input parameter 'axes' may only be one of the strings 'samples', "
-                f"components' or 'properties' but is '{axes}'"
-            )
         else:
             axes_list = [axes]
     elif isinstance(axes, list):
-        for axis in axes:
-            if axis not in ["samples", "components", "properties"]:
-                raise ValueError(
-                    f"input parameter 'axes' may only contain the strings 'samples', "
-                    f"components' or 'properties' but contains '{axis}'"
-                )
         axes_list = axes
     else:
-        raise TypeError("input paramater 'axes' should be of type str or list of str")
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(axes)}"
+
+        raise TypeError("'axes' should be a string or list of strings" + extra)
+
+    for axis in axes_list:
+        if axis not in ["samples", "components", "properties"]:
+            raise ValueError(
+                "`axes` must be one of 'samples', 'components' or 'properties', "
+                f"not '{axis}'"
+            )
 
     result_block = _sort_single_block(block, axes_list, descending)
 
@@ -183,17 +184,17 @@ def sort(
     descending: bool = False,
 ) -> TensorMap:
     """
-    Sort the tensor map according to the key values and the blocks for each
-    specified axis in ``axes`` according to the label values along these axes.
+    Sort the ``tensor`` according to the key values and the blocks for each specified
+    axis in ``axes`` according to the label values along these axes.
 
     Each block is sorted separately, see :py:func:`sort_block` for more information
 
     Note: This function duplicates metadata on the CPU for the purpose of sorting.
 
     :param axes: axes to sort. The labels entries along these axes will be sorted in
-                 lexicographic order, and the arrays values will be reordered
-                 accordingly. Possible values are ``'samples'``, ``'components'``,
-                 ``'properties'`` and ``'all'`` to sort everything.
+        lexicographic order, and the arrays values will be reordered accordingly.
+        Possible values are ``'samples'``, ``'components'``, ``'properties'`` and
+        ``'all'`` to sort everything.
     :param descending: if false, the order is ascending
     :return: sorted tensor map
 
@@ -217,22 +218,67 @@ def sort(
     >>> tm = TensorMap(
     ...     keys=Labels(["species"], np.array([[1], [0]])), blocks=[block_2, block_1]
     ... )
-    >>> metatensor.sort(tm)
+    >>> metatensor.sort(tm, axes="keys")
     TensorMap with 2 blocks
     keys: species
              0
              1
     """
-    blocks: List[TensorBlock] = []
+    if isinstance(axes, str):
+        axes_list: List[str] = []
+        if axes == "all":
+            axes_list = ["samples", "components", "properties"]
+            sort_keys = True
+        elif axes == "keys":
+            axes_list = []
+            sort_keys = True
+        else:
+            axes_list = [axes]
+            sort_keys = False
 
-    sorted_idx = _dispatch.argsort_labels_values(tensor.keys.values, reverse=descending)
+    elif isinstance(axes, list):
+        axes_list = axes
+
+        keys_index = axes_list.index("keys")
+        if keys_index != -1:
+            sort_keys = True
+            axes_list.pop(keys_index)
+        else:
+            sort_keys = False
+
+    else:
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(axes)}"
+
+        raise TypeError("'axes' should be a string or list of strings" + extra)
+
+    # Do we need to sort the keys?
+    if sort_keys:
+        sorted_idx = _dispatch.argsort_labels_values(
+            tensor.keys.values, reverse=descending
+        )
+        new_keys = Labels(
+            names=tensor.keys.names,
+            values=tensor.keys.values[sorted_idx],
+        )
+    else:
+        new_keys = tensor.keys
+        sorted_idx = _dispatch.int_array_like(
+            int_list=list(range(len(new_keys))),
+            like=new_keys.values,
+        )
+
+    # Do any required sorting on the blocks
+    new_blocks: List[TensorBlock] = []
     for i in sorted_idx:
-        blocks.append(
+        new_blocks.append(
             sort_block(
                 block=tensor.block(tensor.keys[int(i)]),
-                axes=axes,
+                axes=axes_list,
                 descending=descending,
             )
         )
-    keys = Labels(names=tensor.keys.names, values=tensor.keys.values[sorted_idx])
-    return TensorMap(keys, blocks)
+
+    return TensorMap(new_keys, new_blocks)

@@ -211,7 +211,8 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
         # sample_map contains at position old_sample the index of the
         # corresponding new sample
         sample_map = _dispatch.int_array_like(
-            shape=[len(samples_mask)], fill_value=-1, like=samples_mask
+            int_list=[-1] * len(samples_mask),
+            like=samples_mask,
         )
         last = 0
         for i, picked in enumerate(samples_mask):

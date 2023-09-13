@@ -113,19 +113,6 @@ def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def bool_array_like(bool_list: List[bool], like):
-    """
-    Converts the input list of bool to a numpy array or torch tensor
-    based on the type of `like`.
-    """
-    if isinstance(like, TorchTensor):
-        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
-    elif isinstance(like, np.ndarray):
-        return np.array(bool_list).astype(bool)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
 def copy(array):
     """Returns a copy of ``array``.
     The new data is not shared with the original array"""
@@ -151,15 +138,28 @@ def eye_like(array, size: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def int_array_like(shape: List[int], fill_value: int, like):
+def bool_array_like(bool_list: List[bool], like):
     """
-    Fills an array with a value. This will be a numpy array or a torch tensor based on
-    the `like` argument.
+    Converts the input list of bool to a numpy array or torch tensor
+    based on the type of `like`.
     """
     if isinstance(like, TorchTensor):
-        return torch.full(shape, fill_value, dtype=like.dtype, device=like.device)
+        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
     elif isinstance(like, np.ndarray):
-        return np.full(shape, fill_value)
+        return np.array(bool_list).astype(bool)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def int_array_like(int_list: List[int], like):
+    """
+    Converts the input list of int to a numpy array or torch tensor
+    based on the type of `like`.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.tensor(int_list, dtype=torch.int64, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.array(int_list).astype(np.int64)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
