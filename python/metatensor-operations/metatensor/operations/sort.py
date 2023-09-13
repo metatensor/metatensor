@@ -70,7 +70,7 @@ def sort_block(
 
     This function creates copies of the metadata on the CPU to sort the metadata.
 
-    :param axes: axis of array to argsort
+    :param axes: axes to sort. The labels entries along these axes will be sorted in lexicographic order, and the arrays values will be reordered accordingly. Possible values are ``'samples'``, ``'components'``, ``'properties'`` and ``'all'`` to sort everything.
     :param descending: if false, the order is ascending
 
     :return: sorted tensor block
@@ -180,13 +180,13 @@ def sort(
 ) -> TensorMap:
     """
     Sort the tensor map according to the key values and the blocks for each
-    specified axis in :param axes: according to the label values in the axis.
+    specified axis in ``axes`` according to the label values along these axes.
 
     Each block is sorted separately, see :py:func:`sort_block` for more information
 
     Note: This function duplicates metadata on the CPU for the purpose of sorting.
 
-    :param axes: axis of array to argsort
+    :param axes: axes to sort. The labels entries along these axes will be sorted in lexicographic order, and the arrays values will be reordered accordingly. Possible values are ``'samples'``, ``'components'``, ``'properties'`` and ``'all'`` to sort everything.
     :param descending: if false, the order is ascending
     :return: sorted tensor map
 
