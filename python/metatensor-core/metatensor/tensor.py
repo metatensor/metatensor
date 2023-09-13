@@ -129,9 +129,9 @@ class TensorMap:
         Used by the Pickler to dump TensorMap object to bytes object. When protocol >= 5
         it supports PickleBuffer which reduces number of copies needed
         """
-        import metatensor.core
+        import metatensor
 
-        buffer = metatensor.core.io.save_buffer_raw_(self)
+        buffer = metatensor.io.save_buffer_raw_(self)
         if protocol >= 5:
             return self._from_pickle, (PickleBuffer(buffer),)
         else:

@@ -239,7 +239,6 @@ def generate_declarations():
         "python",
         "metatensor-core",
         "metatensor",
-        "core",
         "_c_api.py",
     )
     with open(outpath, "w") as file:

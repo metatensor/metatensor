@@ -13,7 +13,7 @@ class TensorBlock:
     """
     Basic building block for a :py:class:`TensorMap`.
 
-    A single block contains a n-dimensional :py:class:`metatensor.core.data.Array`,
+    A single block contains a n-dimensional :py:class:`metatensor.data.Array`,
     and n sets of :py:class:`Labels` (one for each dimension). The first
     dimension is the *samples* dimension, the last dimension is the *properties*
     dimension. Any intermediate dimension is called a *component* dimension.

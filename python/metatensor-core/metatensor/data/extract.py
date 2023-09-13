@@ -53,7 +53,7 @@ def register_external_data_wrapper(origin, klass):
     The wrapper class constructor must take two arguments (raw ``mts_array`` and
     python ``parent`` object) and return a subclass of either
     :py:class:`numpy.ndarray` or :py:class:`torch.Tensor`, which keeps
-    ``parent`` alive. The :py:class:`metatensor.core.data.ExternalCpuArray` class
+    ``parent`` alive. The :py:class:`metatensor.data.ExternalCpuArray` class
     should provide the right behavior for data living in CPU memory, and can
     serve as an example for more advanced custom arrays.
 

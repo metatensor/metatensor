@@ -84,9 +84,10 @@ Python packages
 The Python API for metatensor is split into different `distributions`_, which
 when installed will correspond to different sub-module of ``metatensor``:
 
-- the ``metatensor`` distribution installs a small module, re-exporting code
-  from ``metatensor.core`` and ``metatensor.operations``;
-- the ``metatensor-core`` distribution contains the ``metatensor.core`` module;
+- the ``metatensor`` distribution does not install any module, but has
+  dependencies on ``metatensor-core`` and ``metatensor-operations``. It is
+  mainly here for user convenience, allowing to have a single install command;
+- the ``metatensor-core`` distribution contains the ``metatensor`` module;
 - the ``metatensor-operations`` distribution contains the
   ``metatensor.operations`` module; which depends on ``metatensor-core``;
 - the ``metatensor-torch`` distribution contains the ``metatensor.torch``

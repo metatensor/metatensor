@@ -39,7 +39,7 @@ class cmake_ext(build_ext):
     def run(self):
         import torch
 
-        import metatensor.core
+        import metatensor
 
         source_dir = METATENSOR_TORCH
         build_dir = os.path.join(ROOT, "build", "cmake-build")
@@ -49,7 +49,7 @@ class cmake_ext(build_ext):
 
         # Tell CMake where to find metatensor & torch
         cmake_prefix_path = [
-            metatensor.core.utils.cmake_prefix_path,
+            metatensor.utils.cmake_prefix_path,
             torch.utils.cmake_prefix_path,
         ]
 
@@ -122,7 +122,7 @@ class cmake_ext(build_ext):
             # same for metatensor-core
             fd.write(
                 "# version of metatensor-core used when compiling this package\n"
-                f"BUILD_METATENSOR_CORE_VERSION = '{metatensor.core.__version__}'\n"
+                f"BUILD_METATENSOR_CORE_VERSION = '{metatensor.__version__}'\n"
             )
 
 

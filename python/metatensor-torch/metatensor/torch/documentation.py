@@ -94,7 +94,7 @@ class Labels:
 
     ..  seealso::
 
-        The pure Python version of this class :py:class:`metatensor.core.Labels`,
+        The pure Python version of this class :py:class:`metatensor.Labels`,
         and the :ref:`differences between TorchScript and Python API for
         metatensor <python-vs-torch>`.
 
@@ -551,7 +551,7 @@ class TensorBlock:
     .. seealso::
 
         The pure Python version of this class
-        :py:class:`metatensor.core.TensorBlock`, and the :ref:`differences
+        :py:class:`metatensor.TensorBlock`, and the :ref:`differences
         between TorchScript and Python API for metatensor <python-vs-torch>`.
     """
 
@@ -744,7 +744,7 @@ class TensorMap:
     ..  seealso::
 
         The pure Python version of this class
-        :py:class:`metatensor.core.TensorMap`, and the :ref:`differences between
+        :py:class:`metatensor.TensorMap`, and the :ref:`differences between
         TorchScript and Python API for metatensor <python-vs-torch>`.
     """
 

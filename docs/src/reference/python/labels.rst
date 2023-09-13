@@ -6,10 +6,10 @@ Labels
     :undoc-members:
 
 
-.. autoclass:: metatensor.core.labels.LabelsEntry
+.. autoclass:: metatensor.labels.LabelsEntry
     :members:
     :undoc-members:
 
 
-.. autoclass:: metatensor.core.labels.LabelsValues()
+.. autoclass:: metatensor.labels.LabelsValues()
     :show-inheritance:

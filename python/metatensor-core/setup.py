@@ -63,7 +63,7 @@ class cmake_ext(build_ext):
     def run(self):
         source_dir = METATENSOR_CORE
         build_dir = os.path.join(ROOT, "build", "cmake-build")
-        install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor/core")
+        install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor")
 
         os.makedirs(build_dir, exist_ok=True)
 

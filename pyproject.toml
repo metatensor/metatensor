@@ -42,11 +42,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 zip-safe = true
-
-[tool.setuptools.packages.find]
-where = ["python/metatensor"]
-include = ["metatensor*"]
-namespaces = false
+packages = []
 
 ### ======================================================================== ###
 

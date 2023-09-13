@@ -3,10 +3,10 @@
 Data arrays
 ===========
 
-.. autoclass:: metatensor.core.data.Array()
+.. autoclass:: metatensor.data.Array()
 
 --------------------------------------------------------------------------------
 
-.. autofunction:: metatensor.core.data.register_external_data_wrapper
+.. autofunction:: metatensor.data.register_external_data_wrapper
 
-.. autoclass:: metatensor.core.data.ExternalCpuArray
+.. autoclass:: metatensor.data.ExternalCpuArray

@@ -5,7 +5,7 @@ from collections import namedtuple
 
 import torch
 
-import metatensor.core
+import metatensor
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION, BUILD_TORCH_VERSION
 
@@ -40,10 +40,10 @@ if not version_compatible(torch.__version__, BUILD_TORCH_VERSION):
         "is not ABI compatible"
     )
 
-if not version_compatible(metatensor.core.__version__, BUILD_METATENSOR_CORE_VERSION):
+if not version_compatible(metatensor.__version__, BUILD_METATENSOR_CORE_VERSION):
     raise ImportError(
         "Trying to load metatensor-torch with metatensor-core "
-        f"v{metatensor.core.__version__}, but it was compiled against "
+        f"v{metatensor.__version__}, but it was compiled against "
         f"metatensor-core v{BUILD_METATENSOR_CORE_VERSION}, which "
         "is not ABI compatible"
     )
@@ -109,7 +109,7 @@ def _check_dll(path):
 def _load_library():
     # Load metatensor shared library in the process first, to ensure
     # the metatensor_torch shared library can find it
-    metatensor.core._c_lib._get_library()
+    metatensor._c_lib._get_library()
 
     # load the C++ operators and custom classes
     torch.ops.load_library(_lib_path())
