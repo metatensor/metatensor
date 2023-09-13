@@ -50,7 +50,7 @@ well as CMake files that can be used with ``find_package(metatensor)``.
 .. code-block:: bash
 
     git clone https://github.com/lab-cosmo/metatensor
-    cd metatensor
+    cd metatensor/metatensor-core
     mkdir build && cd build
     cmake ..
     # configure cmake if needed
