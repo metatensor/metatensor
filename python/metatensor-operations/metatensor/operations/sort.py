@@ -92,8 +92,9 @@ def sort_block(
         components (): []
         properties (3): ['n', 'l']
         gradients: None
+    >>> # sorting axes one by one
     >>> block_sorted_stepwise = metatensor.sort_block(block, axes=["properties"])
-    >>> # properties are are sorted which are columns in this case
+    >>> # properties (last dimension of the array) are sorted
     >>> block_sorted_stepwise.values
     array([[2, 0, 1],
            [5, 3, 4],
@@ -101,17 +102,18 @@ def sort_block(
     >>> block_sorted_stepwise = metatensor.sort_block(
     ...     block_sorted_stepwise, axes=["samples"]
     ... )
-    >>> # samples are are sorted which are rows in this case
+    >>> # samples (first dimension of the array) are sorted
     >>> block_sorted_stepwise.values
     array([[5, 3, 4],
            [8, 6, 7],
            [2, 0, 1]])
+    >>> # sorting both samples and properties at the same time
     >>> sorted_block = metatensor.sort_block(block)
     >>> np.all(
     ...     sorted_block.values == block_sorted_stepwise.values
-    ... )  # doing everything at once and verify correctness
+    ... )
     True
-    >>> # Example for sorting the gradient
+    >>> # This function can also sort gradients:
     >>> sorted_block.add_gradient(
     ...     parameter="g",
     ...     gradient=TensorBlock(
@@ -126,9 +128,8 @@ def sort_block(
     True
     >>> sorted_grad_block.gradient("g").properties == sorted_block.properties
     True
-    >>> sorted_grad_block.gradient(
-    ...     "g"
-    ... ).values  # sorting of components can be clearly seen
+    >>> # the components (middle dimensions) are also sorted:
+    >>> sorted_grad_block.gradient("g").values
     array([[[12, 13, 14],
             [15, 16, 17]],
     <BLANKLINE>
