@@ -286,5 +286,5 @@ def test_not_unique_after():
         r"invalid parameter: can not have the same label value multiple time: \[1, 1\] "
         r"is already present at position 0"
     )
-    with pytest.raises(metatensor.core.status.MetatensorError, match=match):
+    with pytest.raises(metatensor.status.MetatensorError, match=match):
         metatensor.remove_dimension(tensor(), axis="keys", name="species_center")

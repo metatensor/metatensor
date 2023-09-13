@@ -9,7 +9,7 @@
 #
 # Any change to this file MUST be also be made to `metatensor/torch/operations.py`.
 
-from metatensor.core import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 def torch_jit_is_scripting():

@@ -6,8 +6,8 @@ import sys
 import numpy as np
 import pytest
 
-import metatensor.core
-from metatensor.core import Labels, TensorBlock, TensorMap
+import metatensor
+from metatensor import Labels, TensorBlock, TensorMap
 
 from . import utils
 
@@ -39,7 +39,7 @@ def test_load(use_numpy, memory_buffer):
     else:
         file = path
 
-    tensor = metatensor.core.load(
+    tensor = metatensor.load(
         file,
         use_numpy=use_numpy,
     )
@@ -74,7 +74,7 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
         file = "serialize-test.npz"
 
     with tmpdir.as_cwd():
-        metatensor.core.save(file, tensor, use_numpy=use_numpy)
+        metatensor.save(file, tensor, use_numpy=use_numpy)
         if memory_buffer:
             file.seek(0)
 
@@ -106,7 +106,7 @@ def test_save_warning_errors(tmpdir, tensor):
 
     with pytest.warns() as record:
         with tmpdir.as_cwd():
-            metatensor.core.save(tmpfile, tensor)
+            metatensor.save(tmpfile, tensor)
 
     expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
     assert str(record[0].message) == expected
@@ -114,12 +114,11 @@ def test_save_warning_errors(tmpdir, tensor):
     tmpfile = "serialize-test.npz"
 
     message = (
-        "tensor should be a 'TensorMap', "
-        "not <class 'metatensor.core.block.TensorBlock'>"
+        "tensor should be a 'TensorMap', " "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
         with tmpdir.as_cwd():
-            metatensor.core.save(tmpfile, tensor.block(0))
+            metatensor.save(tmpfile, tensor.block(0))
 
 
 if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
@@ -194,13 +193,13 @@ def test_nested_gradients(tmpdir, use_numpy):
     tmpfile = "grad-grad-test.npz"
 
     with tmpdir.as_cwd():
-        metatensor.core.save(tmpfile, tensor, use_numpy=use_numpy)
+        metatensor.save(tmpfile, tensor, use_numpy=use_numpy)
 
         # load back with numpy
         data = np.load(tmpfile)
 
         # load back with metatensor
-        loaded = metatensor.core.load(tmpfile)
+        loaded = metatensor.load(tmpfile)
 
     assert _npz_labels(data["keys"]) == tensor.keys
     assert _npz_labels(data["keys"]) == loaded.keys

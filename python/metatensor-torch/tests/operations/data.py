@@ -2,7 +2,7 @@ import os
 
 import torch
 
-import metatensor.core
+import metatensor
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
@@ -22,7 +22,7 @@ ROOT = os.path.realpath(
 def load_data(data: str):
     # we need to load from metatensor-core and then convert to the torch types since
     # the files are using DEFLATE compression, while metatensor only supports STORED
-    tensor = metatensor.core.load(os.path.join(ROOT, data), use_numpy=True)
+    tensor = metatensor.load(os.path.join(ROOT, data), use_numpy=True)
 
     blocks = []
     for block in tensor:

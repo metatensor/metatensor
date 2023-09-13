@@ -15,8 +15,8 @@ except ImportError:
 
 import ctypes
 
-import metatensor.core
-from metatensor.core._c_api import (
+import metatensor
+from metatensor._c_api import (
     MTS_SUCCESS,
     c_uintptr_t,
     mts_array_t,
@@ -31,21 +31,19 @@ def free_mts_array(array):
 class ArrayWrapperMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
-        assert id(metatensor.core.data.mts_array_to_python_array(mts_array)) == id(
-            array
-        )
+        assert id(metatensor.data.mts_array_to_python_array(mts_array)) == id(array)
 
-        origin = metatensor.core.data.data_origin(mts_array)
-        assert metatensor.core.data.data_origin_name(origin) == self.expected_origin()
+        origin = metatensor.data.data_origin(mts_array)
+        assert metatensor.data.data_origin_name(origin) == self.expected_origin()
 
         free_mts_array(mts_array)
 
     def test_shape(self):
         array = self.create_array((2, 3, 4))
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
         assert _get_shape(mts_array, self) == [2, 3, 4]
@@ -60,7 +58,7 @@ class ArrayWrapperMixin:
 
     def test_swap_axes(self):
         array = self.create_array((2, 3, 18, 23))
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
         mts_array.swap_axes(mts_array.ptr, 1, 3)
@@ -72,7 +70,7 @@ class ArrayWrapperMixin:
         array = self.create_array((2, 3))
         array_ref = weakref.ref(array)
 
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
         new_mts_array = mts_array_t()
@@ -82,7 +80,7 @@ class ArrayWrapperMixin:
         )
         assert status == MTS_SUCCESS
 
-        new_array = metatensor.core.data.mts_array_to_python_array(new_mts_array)
+        new_array = metatensor.data.mts_array_to_python_array(new_mts_array)
         assert id(new_array) != id(array)
 
         assert_equal(new_array, np.zeros((18, 4)))
@@ -106,14 +104,14 @@ class ArrayWrapperMixin:
         array = self.create_array((2, 3, 4))
         array[1, :, :] = 3
         array[1, 2, :] = 5
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
         copy = mts_array_t()
         status = mts_array.copy(mts_array.ptr, copy)
         assert status == MTS_SUCCESS
 
-        array_copy = metatensor.core.data.mts_array_to_python_array(copy)
+        array_copy = metatensor.data.mts_array_to_python_array(copy)
         assert id(array_copy) != id(array)
 
         assert_equal(np.array(array_copy), np.array(array))
@@ -124,12 +122,12 @@ class ArrayWrapperMixin:
     def test_move_samples_from(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
-        wrapper = metatensor.core.data.ArrayWrapper(array)
+        wrapper = metatensor.data.ArrayWrapper(array)
         mts_array = wrapper.into_mts_array()
 
         other = self.create_array((1, 3, 4))
         other[:] = 2.0
-        wrapper_other = metatensor.core.data.ArrayWrapper(other)
+        wrapper_other = metatensor.data.ArrayWrapper(other)
         mts_array_other = wrapper_other.into_mts_array()
 
         move = mts_sample_mapping_t(input=0, output=1)
@@ -167,7 +165,7 @@ class ArrayWrapperMixin:
 
 class TestNumpyData(ArrayWrapperMixin):
     def expected_origin(self):
-        return "metatensor.core.data.array.numpy"
+        return "metatensor.data.array.numpy"
 
     def create_array(self, shape):
         return np.zeros(shape)
@@ -177,7 +175,7 @@ if HAS_TORCH:
 
     class TestTorchData(ArrayWrapperMixin):
         def expected_origin(self):
-            return "metatensor.core.data.array.torch"
+            return "metatensor.data.array.torch"
 
         def create_array(self, shape):
             return torch.zeros(shape, device="cpu")
@@ -197,24 +195,24 @@ def _get_shape(mts_array, test):
     return shape
 
 
-TEST_ORIGIN = metatensor.core.data.array._register_origin("python.test-origin")
-metatensor.core.data.register_external_data_wrapper(
+TEST_ORIGIN = metatensor.data.array._register_origin("python.test-origin")
+metatensor.data.register_external_data_wrapper(
     "python.test-origin",
-    metatensor.core.data.extract.ExternalCpuArray,
+    metatensor.data.extract.ExternalCpuArray,
 )
 
 
-@metatensor.core.utils.catch_exceptions
+@metatensor.utils.catch_exceptions
 def create_test_array(shape_ptr, shape_count, array):
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
     data = np.zeros(shape)
-    wrapper = metatensor.core.data.array.ArrayWrapper(data)
+    wrapper = metatensor.data.array.ArrayWrapper(data)
     mts_array = wrapper.into_mts_array()
 
-    @metatensor.core.utils.catch_exceptions
+    @metatensor.utils.catch_exceptions
     def test_origin(this, origin):
         origin[0] = TEST_ORIGIN
 
@@ -227,12 +225,10 @@ def test_parent_keepalive():
     path = os.path.join(
         os.path.dirname(__file__), "..", "..", "..", "metatensor", "tests", "data.npz"
     )
-    tensor = metatensor.core.io.load_custom_array(
-        path.encode("utf8"), create_test_array
-    )
+    tensor = metatensor.io.load_custom_array(path.encode("utf8"), create_test_array)
 
     values = tensor.block(0).values
-    assert isinstance(values, metatensor.core.data.extract.ExternalCpuArray)
+    assert isinstance(values, metatensor.data.extract.ExternalCpuArray)
     assert values._parent is not None
 
     tensor_ref = weakref.ref(tensor)

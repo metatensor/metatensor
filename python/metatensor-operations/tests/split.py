@@ -228,7 +228,7 @@ def test_split_errors():
 
     message = (
         "`tensor` must be a metatensor TensorMap, "
-        "not <class 'metatensor.core.block.TensorBlock'>"
+        "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
         metatensor.split(block, axis="samples", grouped_labels=grouped_labels)
@@ -242,8 +242,7 @@ def test_split_errors():
         metatensor.split(tensor, axis="buongiorno!", grouped_labels=grouped_labels),
 
     message = (
-        "`grouped_labels` must be a list, "
-        "not <class 'metatensor.core.labels.Labels'>"
+        "`grouped_labels` must be a list, " "not <class 'metatensor.labels.Labels'>"
     )
     with pytest.raises(TypeError, match=message):
         metatensor.split(tensor, axis="samples", grouped_labels=grouped_labels[0])
@@ -287,7 +286,7 @@ def test_split_errors():
 
     message = (
         "`block` must be a metatensor TensorBlock, "
-        "not <class 'metatensor.core.tensor.TensorMap'>"
+        "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
         metatensor.split_block(tensor, axis="samples", grouped_labels=[]),

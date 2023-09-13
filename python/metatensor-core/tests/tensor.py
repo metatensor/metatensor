@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-from metatensor.core import Labels, MetatensorError, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import utils
 

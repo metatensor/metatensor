@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from metatensor.core import Labels, MetatensorError
+from metatensor import Labels, MetatensorError
 
 
 def test_constructor():

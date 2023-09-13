@@ -10,5 +10,5 @@ Error handling
 CMake integration
 ^^^^^^^^^^^^^^^^^
 
-.. autodata:: metatensor.core.utils.cmake_prefix_path
+.. autodata:: metatensor.utils.cmake_prefix_path
     :annotation:

@@ -19,7 +19,7 @@ from .utils import catch_exceptions
 def create_numpy_array(shape_ptr, shape_count, array):
     """
     Callback function that can be used with
-    :py:func:`metatensor.core.io.load_custom_array` to load data in numpy arrays.
+    :py:func:`metatensor.io.load_custom_array` to load data in numpy arrays.
     """
     shape = []
     for i in range(shape_count):
@@ -34,7 +34,7 @@ def create_numpy_array(shape_ptr, shape_count, array):
 def create_torch_array(shape_ptr, shape_count, array):
     """
     Callback function that can be used with
-    :py:func:`metatensor.core.io.load_custom_array` to load data in torch
+    :py:func:`metatensor.io.load_custom_array` to load data in torch
     tensors. The resulting tensors are stored on CPU, and their dtype is
     ``torch.float64``.
     """
@@ -98,8 +98,8 @@ def load_custom_array(
     pointer to the shape, the number of elements in the shape, and a pointer to the
     ``mts_array_t`` to be filled.
 
-    :py:func:`metatensor.core.io.create_numpy_array` and
-    :py:func:`metatensor.core.io.create_torch_array` can be used to load data into numpy
+    :py:func:`metatensor.io.create_numpy_array` and
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
     and torch arrays respectively.
 
     :param path: path of the file to load
@@ -133,8 +133,8 @@ def load_buffer_custom_array(
     pointer to the shape, the number of elements in the shape, and a pointer to the
     ``mts_array_t`` to be filled.
 
-    :py:func:`metatensor.core.io.create_numpy_array` and
-    :py:func:`metatensor.core.io.create_torch_array` can be used to load data into numpy
+    :py:func:`metatensor.io.create_numpy_array` and
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
     and torch arrays respectively.
 
     :param buffer: in-memory buffer containing a saved :py:class:`TensorMap`

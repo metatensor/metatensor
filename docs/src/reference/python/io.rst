@@ -9,10 +9,10 @@ Serialization
 
 --------------------------------------------------------------------------------
 
-.. autofunction:: metatensor.core.io.load_custom_array
+.. autofunction:: metatensor.io.load_custom_array
 
-.. autofunction:: metatensor.core.io.load_buffer_custom_array
+.. autofunction:: metatensor.io.load_buffer_custom_array
 
-.. autofunction:: metatensor.core.io.create_numpy_array()
+.. autofunction:: metatensor.io.create_numpy_array()
 
-.. autofunction:: metatensor.core.io.create_torch_array()
+.. autofunction:: metatensor.io.create_torch_array()

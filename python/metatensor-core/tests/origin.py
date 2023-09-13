@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from metatensor.core import Labels, MetatensorError, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 
 def test_different_origins():
