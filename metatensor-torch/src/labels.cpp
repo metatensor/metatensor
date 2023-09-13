@@ -85,6 +85,18 @@ std::vector<std::string> metatensor_torch::details::normalize_names(torch::IValu
     return results;
 }
 
+torch::Device metatensor_torch::details::normalize_device(torch::IValue device) {
+    if (device.isString()) {
+        return torch::Device(device.toStringRef());
+    } else if (device.isDevice()) {
+        return device.toDevice();
+    } else {
+        C10_THROW_ERROR(TypeError,
+            "'device' must be a string or a torch.device, got '" + device.type()->str() + "' instead"
+        );
+    }
+}
+
 static mts_labels_t labels_from_torch(const std::vector<std::string>& names, const torch::Tensor& values) {
     // extract the names from the Python IValue
     auto c_names = std::vector<const char*>();
@@ -365,18 +377,17 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) con
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(this->values()));
 }
 
-void LabelsHolder::to(torch::Device device) {
-    // first move the values
-    values_ = values_.to(device);
+TorchLabels LabelsHolder::to(torch::IValue device) const {
+    // transform torch::IValue into torch::Device
+    auto normalized_device = details::normalize_device(device);
 
-    // then make sure that when accessing these labels again we still have the
-    // values on the same device by updating the registered user data
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
+    // move the values
+    auto new_values = values_.to(normalized_device);
 
-    labels_->set_user_data(std::move(user_data));
+    // copy the names
+    auto new_names = this->names();
+
+    return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
 }
 
 torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {

@@ -308,7 +308,7 @@ def test_to():
         labels = Labels(names=("a", "b"), values=torch.IntTensor([[0, 0], [0, 1]]))
         assert labels.values.device.type == "cpu"
 
-        labels.to(device)
+        labels = labels.to(device)
         assert labels.values.device.type == torch.device(device).type
 
 
@@ -472,7 +472,7 @@ class LabelsWrap:
     def values(self) -> Tensor:
         return self._c.values
 
-    def to(self, device: torch.device):
+    def to(self, device: torch.device) -> Labels:
         return self._c.to(device)
 
     def position(self, entry: Union[List[int], LabelsEntry]) -> Optional[int]:

@@ -49,19 +49,24 @@ def to(
             )
 
     # Convert each block and build the return TensorMap
-    keys = tensor.keys
+
     new_blocks = [
         block_to(
-            tensor.block(keys.entry(i)).copy(),
+            tensor.block(tensor.keys.entry(i)).copy(),
             backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
         )
-        for i in range(keys.values.shape[0])
+        for i in range(tensor.keys.values.shape[0])
     ]
 
-    return TensorMap(keys=keys, blocks=new_blocks)
+    if device is not None:
+        new_keys = tensor.keys.to(device)
+    else:
+        new_keys = tensor.keys
+
+    return TensorMap(keys=new_keys, blocks=new_blocks)
 
 
 def block_to(
@@ -215,17 +220,30 @@ def _block_to(
     ``backend``, dtype and/or device.
     """
     # Create new block, with the values tensor converted
+    # The labels will also be moved if a new device is requested
+    # (this will only happen in the case of metatensor.torch.Labels)
+    values = _dispatch.to(
+        array=block.values,
+        backend=backend,
+        dtype=dtype,
+        device=device,
+        requires_grad=requires_grad,
+    )
+
+    if device is not None:
+        samples = block.samples.to(device)
+        components = [component.to(device) for component in block.components]
+        properties = block.properties.to(device)
+    else:
+        samples = block.samples
+        components = block.components
+        properties = block.properties
+
     new_block = TensorBlock(
-        values=_dispatch.to(
-            array=block.values,
-            backend=backend,
-            dtype=dtype,
-            device=device,
-            requires_grad=requires_grad,
-        ),
-        samples=block.samples,
-        components=block.components,
-        properties=block.properties,
+        values=values,
+        samples=samples,
+        components=components,
+        properties=properties,
     )
 
     return new_block

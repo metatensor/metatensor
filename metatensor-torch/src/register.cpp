@@ -100,9 +100,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("permute", &LabelsHolder::permute, DOCSTRING, {torch::arg("dimensions_indexes")})
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
-        .def("to", &LabelsHolder::to, DOCSTRING,
-            {torch::arg("device")}
-        )
+        .def("to", &LabelsHolder::to, DOCSTRING, {torch::arg("device")})
         .def("position", &LabelsHolder::position, DOCSTRING,
             {torch::arg("entry")}
         )
