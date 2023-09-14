@@ -149,7 +149,6 @@ def test_sort_descending(tensor, tensor_sorted):
 
 
 def test_raise_error(tensor, tensor_sorted):
-    axis = "error"
     error_message = (
         "axes` must be one of 'samples', 'components' or 'properties', not 'error'"
     )
