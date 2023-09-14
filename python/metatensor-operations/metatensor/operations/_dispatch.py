@@ -113,19 +113,6 @@ def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def bool_array_like(bool_list: List[bool], like):
-    """
-    Converts the input list of bool to a numpy array or torch tensor
-    based on the type of `like`.
-    """
-    if isinstance(like, TorchTensor):
-        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
-    elif isinstance(like, np.ndarray):
-        return np.array(bool_list).astype(bool)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
 def copy(array):
     """Returns a copy of ``array``.
     The new data is not shared with the original array"""
@@ -151,15 +138,28 @@ def eye_like(array, size: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def int_array_like(shape: List[int], fill_value: int, like):
+def bool_array_like(bool_list: List[bool], like):
     """
-    Fills an array with a value. This will be a numpy array or a torch tensor based on
-    the `like` argument.
+    Converts the input list of bool to a numpy array or torch tensor
+    based on the type of `like`.
     """
     if isinstance(like, TorchTensor):
-        return torch.full(shape, fill_value, dtype=like.dtype, device=like.device)
+        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
     elif isinstance(like, np.ndarray):
-        return np.full(shape, fill_value)
+        return np.array(bool_list).astype(bool)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def int_array_like(int_list: List[int], like):
+    """
+    Converts the input list of int to a numpy array or torch tensor
+    based on the type of `like`.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.tensor(int_list, dtype=torch.int64, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.array(int_list).astype(np.int64)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -608,5 +608,60 @@ def where(array):
         return torch.where(array)
     elif isinstance(array, np.ndarray):
         return np.where(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def take(array, indices, axis: int):
+    """
+    See :py:func:`torch.index_select` or :py:func:`numpy.take` as reference.
+
+    Because numpy and torch have different APIs we went for the more limited one
+    in torch not supporting ``mode`` argument. The argument ``out`` is not supported
+    by TorchScript, or at least it is nontrivial to add
+
+    :param array: the array the elements are returned from
+    :param indices: the indices to take long an axes
+    :param axis: axis of array to take
+
+    :return: the elments at the indices in the array along dimension specified by the
+    axis
+    """
+    if isinstance(array, TorchTensor):
+        return torch.index_select(array, dim=axis, index=indices)
+    elif isinstance(array, np.ndarray):
+        return np.take(array, indices, axis=axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def argsort_labels_values(labels_values, reverse: bool = False):
+    """
+    Similar to :py:func:`np.argsort`, but sort the rows as one aggregated
+    tuple.
+
+    :param labels_values: numpy.array or torch.Tensor
+    :param reverse: if true, order is descending
+
+    :return: indices corresponding to the sorted values in ``labels_values``
+
+    """
+    if isinstance(labels_values, TorchTensor):
+        # torchscript does not support sorted for List[List[int]]
+        # so we temporary do this trick. this will be fixed with issue #366
+        max_int = torch.max(labels_values)
+        idx = torch.sum(
+            max_int ** torch.arange(labels_values.shape[1]) * labels_values, dim=1
+        )
+        return torch.argsort(idx, dim=-1, descending=reverse)
+    elif isinstance(labels_values, np.ndarray):
+        # Index is appended at the end to get the indices corresponding to the
+        # sorted values. Because we append the indices at the end and since metadata
+        # is unique, we do not affect the sorted order.
+        list_tuples: List[List[int]] = labels_values.tolist()
+        for i in range(len(labels_values)):
+            list_tuples[i].append(i)
+        list_tuples.sort(reverse=reverse)
+        return np.array(list_tuples)[:, -1]
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
