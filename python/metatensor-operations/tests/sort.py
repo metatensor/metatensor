@@ -151,15 +151,14 @@ def test_sort_descending(tensor, tensor_sorted):
 def test_raise_error(tensor, tensor_sorted):
     axis = "error"
     error_message = (
-        "input parameter 'axes' may only be one of the strings 'samples',"
-        f" components' or 'properties' but is {axis!r}"
+        "axes` must be one of 'samples', 'components' or 'properties', not 'error'"
     )
     with pytest.raises(ValueError, match=error_message):
         metatensor.operations.sort(tensor, axes="error")
 
+    axis = 5
     error_message = (
-        "input parameter 'axes' may only contain the strings 'samples',"
-        f" components' or 'properties' but contains {axis!r}"
+        "`axes` must be one of 'samples', 'components' or 'properties', not '5'"
     )
     with pytest.raises(ValueError, match=error_message):
-        metatensor.operations.sort(tensor, axes=["error"])
+        metatensor.operations.sort(tensor, axes=[5])

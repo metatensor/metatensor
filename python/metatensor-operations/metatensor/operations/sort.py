@@ -239,8 +239,8 @@ def sort(
     elif isinstance(axes, list):
         axes_list = axes
 
-        keys_index = axes_list.index("keys")
-        if keys_index != -1:
+        if "keys" in axes_list:
+            keys_index = axes_list.index("keys")
             sort_keys = True
             axes_list.pop(keys_index)
         else:
