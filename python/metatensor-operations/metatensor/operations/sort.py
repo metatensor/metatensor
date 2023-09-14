@@ -72,8 +72,8 @@ def sort_block(
 
     :param axes: axes to sort. The labels entries along these axes will be sorted in
         lexicographic order, and the arrays values will be reordered accordingly.
-        Possible values are ``'keys'``, ``'samples'``, ``'components'``,
-        ``'properties'`` and ``'all'`` to sort everything.
+        Possible values are ``'samples'``, ``'components'``, ``'properties'`` and
+        ``'all'`` to sort everything.
 
     :param descending: if false, the order is ascending
 
@@ -193,8 +193,8 @@ def sort(
 
     :param axes: axes to sort. The labels entries along these axes will be sorted in
         lexicographic order, and the arrays values will be reordered accordingly.
-        Possible values are ``'samples'``, ``'components'``, ``'properties'`` and
-        ``'all'`` to sort everything.
+        Possible values are ``'keys'``, ``'samples'``, ``'components'``,
+        ``'properties'`` and ``'all'`` to sort everything.
     :param descending: if false, the order is ascending
     :return: sorted tensor map
 
