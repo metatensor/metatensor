@@ -156,7 +156,6 @@ def test_raise_error(tensor, tensor_sorted):
     with pytest.raises(ValueError, match=error_message):
         metatensor.operations.sort(tensor, axes="error")
 
-    axis = 5
     error_message = (
         "`axes` must be one of 'samples', 'components' or 'properties', not '5'"
     )
