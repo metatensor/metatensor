@@ -52,13 +52,13 @@ def to(
 
     new_blocks = [
         block_to(
-            tensor.block(tensor.keys.entry(i)).copy(),
+            tensor.block(i),
             backend=backend,
             dtype=dtype,
             device=device,
             requires_grad=requires_grad,
         )
-        for i in range(tensor.keys.values.shape[0])
+        for i in range(len(tensor.keys))
     ]
 
     if device is not None:
@@ -126,31 +126,30 @@ def block_to(
                     "the 'numpy' backend does not support `requires_grad=True`"
                 )
 
-    # Walk the tree of gradients without recursion
-    # (recursion is not supported by torchscript)
+    # Walk the tree of gradients without recursion (recursion is not supported by
+    # TorchScript)
 
-    # The current_location list of strings will contain the name of
-    # all the gradients until the current location. This allows to
-    # access parents of gradient blocks easily
+    # The current_location list of strings will contain the name of all the gradients
+    # until the current location. This allows to access parents of gradient blocks
+    # easily
     current_location: List[str] = []
 
     current_block = block  # the block that is being examined
 
-    # transformed_blocks is a stack that will be populated and
-    # depopulated during the algorithm
+    # transformed_blocks is a stack that will be populated and depopulated during the
+    # algorithm
     transformed_blocks: List[TensorBlock] = []
 
-    # last_visite keeps track of the last gradient block that has been
-    # visited while walking backward. While walking forward, this variable
-    # is an empty string
+    # last_visite keeps track of the last gradient block that has been visited while
+    # walking backward. While walking forward, this variable is an empty string
     last_visited = ""
 
     while True:
         gradient_names = current_block.gradients_list()
         n_gradients = len(gradient_names)
         if last_visited == "":
-            # we're walking forward and it's the first time we see this block
-            # transform and append to list of transformed blocks:
+            # we're walking forward and it's the first time we see this block transform
+            # and append to list of transformed blocks:
             transformed_blocks.append(
                 _block_to(current_block, backend, dtype, device, requires_grad)
             )
@@ -158,27 +157,24 @@ def block_to(
                 # step back:
                 if len(current_location) == 0:
                     break  # algorithm completed
-                last_visited = (
-                    current_location.pop()
-                )  # removes last visited gradient name and stores it
-                current_block = _reach_current_block(
-                    block, current_location
-                )  # reach current location
-            else:  # the current block has gradients
-                # proceed walking forward:
+
+                # removes last visited gradient name and stores it
+                last_visited = current_location.pop()
+
+                # reach current location
+                current_block = _reach_current_block(block, current_location)
+            else:
+                # the current block has gradients, proceed walking forward
                 current_block = current_block.gradient(gradient_names[0])
                 current_location.append(gradient_names[0])
         else:
-            # we're walking back to a block we've already seen.
-            # get index of the last gradient of the current block that
-            # has been visited and converted:
+            # we're walking back to a block we've already seen. get index of the last
+            # gradient of the current block that has been visited and converted:
             index_last_visited = gradient_names.index(last_visited)
-            if (
-                index_last_visited == n_gradients - 1
-            ):  # the last visited gradient was the last one we needed to convert
-                # add gradients blocks to the current block; these are the
-                # last n_gradients blocks in transformed_blocks and the one before
-                # them, respectively.
+            if index_last_visited == n_gradients - 1:
+                # the last visited gradient was the last one we needed to convert add
+                # gradients blocks to the current block; these are the last n_gradients
+                # blocks in transformed_blocks and the one before them, respectively.
                 for i_gradient in range(n_gradients):
                     transformed_blocks[-n_gradients - 1].add_gradient(
                         gradient_names[i_gradient],
@@ -190,12 +186,13 @@ def block_to(
                 # the block and its gradients have been assembled. Step back:
                 if len(current_location) == 0:
                     break  # algorithm completed
-                last_visited = (
-                    current_location.pop()
-                )  # removes last visited gradient and stores it
-                current_block = _reach_current_block(
-                    block, current_location
-                )  # reach current location
+
+                # removes last visited gradient and stores it
+                last_visited = current_location.pop()
+
+                # reach current location
+                current_block = _reach_current_block(block, current_location)
+
             else:  # more gradients to convert in the current block
                 # walk forward:
                 current_block = current_block.gradient(
