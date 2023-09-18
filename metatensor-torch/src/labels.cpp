@@ -243,7 +243,7 @@ TorchLabels LabelsHolder::empty(torch::IValue names_ivalue) {
 TorchLabels LabelsHolder::range(std::string name, int64_t end) {
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
     auto values = torch::arange(end, options).reshape({end, 1});
-    return torch::make_intrusive<LabelsHolder>(std::move(name), std::move(values));
+    return torch::make_intrusive<LabelsHolder>(name, std::move(values));
 }
 
 torch::Tensor LabelsHolder::column(std::string dimension) {
@@ -269,11 +269,11 @@ const metatensor::Labels& LabelsHolder::as_metatensor() const {
     return labels_.value();
 }
 
-LabelsHolder LabelsHolder::to_owned() const {
+TorchLabels LabelsHolder::to_owned() const {
     if (labels_.has_value()) {
-        return *this;
+        return torch::make_intrusive<LabelsHolder>(*this);
     } else {
-        return LabelsHolder(this->names_, values_);
+        return torch::make_intrusive<LabelsHolder>(this->names_, values_);
     }
 }
 
@@ -283,10 +283,10 @@ TorchLabels LabelsHolder::append(std::string name, torch::Tensor values) const {
 
 
 TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
-    auto names = this->names();
+    auto new_names = this->names();
 
-    auto it = std::begin(names) + index;
-    names.insert(it, std::move(name));
+    auto it = std::begin(new_names) + index;
+    new_names.insert(it, std::move(name));
 
     if (values.sizes().size() != 1) {
         C10_THROW_ERROR(
@@ -301,7 +301,7 @@ TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor 
 
     auto new_values = torch::hstack({first, values.reshape({values.size(0), 1}), second});
 
-    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values));
+    return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
 }
 
 
@@ -339,42 +339,42 @@ TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const
 
 
 TorchLabels LabelsHolder::remove(std::string name) const {
-    auto names = this->names();
+    auto new_names = this->names();
 
-    auto it = std::find(std::begin(names), std::end(names), name);
-    if (it == std::end(names)) {
+    auto it = std::find(std::begin(new_names), std::end(new_names), name);
+    if (it == std::end(new_names)) {
         C10_THROW_ERROR(
             ValueError,
             "'" + name + "' not found in the dimensions of these Labels"
         );
     }
 
-    auto column_index = it - std::begin(names);
-    names.erase(it);
+    auto column_index = it - std::begin(new_names);
+    new_names.erase(it);
 
     auto values = this->values();
     auto first = values.index({torch::indexing::Slice(), torch::indexing::Slice(0, column_index)});
     auto second = values.index({torch::indexing::Slice(), torch::indexing::Slice(column_index + 1)});
     auto new_values = torch::hstack({first, second});
 
-    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values));
+    return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
 }
 
 
 TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) const {
-    auto names = this->names();
+    auto new_names = this->names();
 
-    auto it = std::find(std::begin(names), std::end(names), old_name);
-    if (it == std::end(names)) {
+    auto it = std::find(std::begin(new_names), std::end(new_names), old_name);
+    if (it == std::end(new_names)) {
         C10_THROW_ERROR(
             ValueError,
             "'" + old_name + "' not found in the dimensions of these Labels"
         );
     }
-    auto column_index = it - std::begin(names);
+    auto column_index = it - std::begin(new_names);
 
-    names[column_index] = std::move(new_name);
-    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(this->values()));
+    new_names[column_index] = std::move(new_name);
+    return torch::make_intrusive<LabelsHolder>(std::move(new_names), this->values());
 }
 
 TorchLabels LabelsHolder::to(torch::IValue device) const {
