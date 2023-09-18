@@ -367,7 +367,7 @@ void check_loaded_tensor(metatensor::TensorMap& tensor) {
     CHECK(keys.names()[0] == std::string("spherical_harmonics_l"));
     CHECK(keys.names()[1] == std::string("center_species"));
     CHECK(keys.names()[2] == std::string("neighbor_species"));
-    CHECK(keys.shape()[0] == 27);
+    CHECK(keys.count() == 27);
 
     auto block = tensor.block_by_id(21);
 

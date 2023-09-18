@@ -6,9 +6,12 @@ using namespace metatensor;
 TEST_CASE("Labels") {
     auto labels = Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 6}});
 
-    CHECK(labels.shape().size() == 2);
-    CHECK(labels.shape()[0] == 3);
-    CHECK(labels.shape()[1] == 2);
+    CHECK(labels.values().shape().size() == 2);
+    CHECK(labels.values().shape()[0] == 3);
+    CHECK(labels.values().shape()[1] == 2);
+
+    CHECK(labels.count() == 3);
+    CHECK(labels.size() == 2);
 
     CHECK(labels.names().size() == 2);
     CHECK(labels.names()[0] == std::string("foo"));
@@ -17,14 +20,15 @@ TEST_CASE("Labels") {
     CHECK(labels.position({3, 4}) == 1);
     CHECK(labels.position({1, 4}) == -1);
 
-    CHECK(labels(0, 0) == 1);
-    CHECK(labels(0, 1) == 2);
+    const auto& values = labels.values();
+    CHECK(values(0, 0) == 1);
+    CHECK(values(0, 1) == 2);
 
-    CHECK(labels(1, 0) == 3);
-    CHECK(labels(1, 1) == 4);
+    CHECK(values(1, 0) == 3);
+    CHECK(values(1, 1) == 4);
 
-    CHECK(labels(2, 0) == 5);
-    CHECK(labels(2, 1) == 6);
+    CHECK(values(2, 0) == 5);
+    CHECK(values(2, 1) == 6);
 
     CHECK(labels == Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 6}}));
     CHECK(labels != Labels({"bar", "foo"}, {{1, 2}, {3, 4}, {5, 6}}));
@@ -65,17 +69,18 @@ TEST_CASE("Set operations") {
         CHECK(union_.names()[1] == std::string("bb"));
 
         CHECK(union_.count() == 4);
-        CHECK(union_(0, 0) == 0);
-        CHECK(union_(0, 1) == 1);
+        const auto& values = union_.values();
+        CHECK(values(0, 0) == 0);
+        CHECK(values(0, 1) == 1);
 
-        CHECK(union_(1, 0) == 1);
-        CHECK(union_(1, 1) == 2);
+        CHECK(values(1, 0) == 1);
+        CHECK(values(1, 1) == 2);
 
-        CHECK(union_(2, 0) == 2);
-        CHECK(union_(2, 1) == 3);
+        CHECK(values(2, 0) == 2);
+        CHECK(values(2, 1) == 3);
 
-        CHECK(union_(3, 0) == 4);
-        CHECK(union_(3, 1) == 5);
+        CHECK(values(3, 0) == 4);
+        CHECK(values(3, 1) == 5);
 
         auto expected = std::vector<int64_t>{0, 1};
         CHECK(first_mapping == expected);
@@ -98,8 +103,9 @@ TEST_CASE("Set operations") {
         CHECK(intersection.names()[1] == std::string("bb"));
 
         CHECK(intersection.count() == 1);
-        CHECK(intersection(0, 0) == 1);
-        CHECK(intersection(0, 1) == 2);
+        const auto& values = intersection.values();
+        CHECK(values(0, 0) == 1);
+        CHECK(values(0, 1) == 2);
 
         auto expected = std::vector<int64_t>{-1, 0};
         CHECK(first_mapping == expected);
