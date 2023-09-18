@@ -8,7 +8,7 @@ using namespace metatensor_torch;
 
 TEST_CASE("Labels") {
     SECTION("constructor") {
-        torch::IValue names = std::vector<std::string>{"a", "bb"};
+        auto names = std::vector<std::string>{"a", "bb"};
         auto values = std::vector<int64_t>{0, 0, 1, 0, 0, -1, 1, -2};
         auto labels = LabelsHolder(names, torch::tensor(values).reshape({4, 2}));
 
@@ -140,7 +140,7 @@ TEST_CASE("Labels") {
 
     SECTION("Labels keep the values tensor alive") {
         // see https://github.com/lab-cosmo/metatensor/issues/290 for the use case
-        torch::IValue names = std::vector<std::string>{"a", "b"};
+        auto names = std::vector<std::string>{"a", "b"};
         auto values = torch::tensor(std::vector<int32_t>{0, 0, 1, 0, 0, -1, 1, -2});
         values = values.reshape({-1, 2}).to(torch::kInt32);
         auto labels = LabelsHolder(names, values);

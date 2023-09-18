@@ -25,11 +25,6 @@ namespace details {
     /// strings or a tuple of strings into a `std::vector<std::string>`.
     /// `argument_name` is used in the error message.
     std::vector<std::string> normalize_names(torch::IValue names, const std::string& argument_name);
-
-    /// Transform a torch::IValue into a torch::Device. The input torch::IValue
-    /// must be either a string or a torch.device, otherwise a runtime error
-    /// will be raised.
-    torch::Device normalize_device(torch::IValue device);
 }
 
 /// Wrapper around `metatensor::Labels` for integration with TorchScript
@@ -54,7 +49,7 @@ public:
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
     static TorchLabels create(
-        const std::vector<std::string>& names,
+        std::vector<std::string> names,
         const std::vector<std::initializer_list<int32_t>>& values
     );
 
@@ -178,6 +173,10 @@ public:
     std::tuple<TorchLabels, torch::Tensor, torch::Tensor> intersection_and_mapping(const TorchLabels& other) const;
 
 private:
+    /// main constructor, checking everything in debug mode & registering the
+    /// `values` as user data for the `labels`.
+    LabelsHolder(std::vector<std::string> names, torch::Tensor values, metatensor::Labels labels);
+
     /// marker type to differentiate the private constructor below from the main
     /// one
     struct CreateView {};
