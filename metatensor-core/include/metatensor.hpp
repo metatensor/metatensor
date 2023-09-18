@@ -439,7 +439,7 @@ bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
 }
 
 namespace details {
-    Labels labels_from_cxx(const std::vector<std::string>& names, NDArray<int32_t> values);
+    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
 }
 
 /// It is possible to store some user-provided data inside `Labels`, and access
@@ -501,7 +501,7 @@ private:
 /// of shape `(count, size)`, with a set of names associated with the columns of
 /// this array (often called *dimensions*). Each row/entry in this array is
 /// unique, and they are often (but not always) sorted in lexicographic order.
-class Labels final: public NDArray<int32_t> {
+class Labels final {
 public:
     /// Create a new set of Labels from the given `names` and `values`.
     ///
@@ -517,15 +517,12 @@ public:
     /// ```
     Labels(
         const std::vector<std::string>& names,
-        std::vector<std::initializer_list<int32_t>> values
-    ): Labels(details::labels_from_cxx(names, NDArray(std::move(values), names.size()))) {}
+        const std::vector<std::initializer_list<int32_t>>& values
+    ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
 
     /// Create an empty set of Labels with the given names
     explicit Labels(const std::vector<std::string>& names):
-        Labels(details::labels_from_cxx(
-            names,
-            NDArray(static_cast<const int32_t*>(nullptr), {0, names.size()})
-        )) {}
+        Labels(names, static_cast<const int32_t*>(nullptr), 0) {}
 
     ~Labels() {
         mts_labels_free(&labels_);
@@ -541,6 +538,15 @@ public:
         mts_labels_free(&labels_);
         std::memset(&labels_, 0, sizeof(labels_));
         details::check_status(mts_labels_clone(other.labels_, &labels_));
+        assert(this->labels_.internal_ptr_ != nullptr);
+
+        this->values_ = NDArray<int32_t>(labels_.values, {labels_.count, labels_.size});
+
+        this->names_.clear();
+        for (size_t i=0; i<this->labels_.size; i++) {
+            this->names_.push_back(this->labels_.names[i]);
+        }
+
         return *this;
     }
 
@@ -551,13 +557,13 @@ public:
 
     /// Labels can be move-assigned
     Labels& operator=(Labels&& other) noexcept {
-        NDArray<int32_t>::operator=(std::move(other));
-
-        this->names_ = std::move(other.names_);
-
         mts_labels_free(&labels_);
         this->labels_ = other.labels_;
+        assert(this->labels_.internal_ptr_ != nullptr);
         std::memset(&other.labels_, 0, sizeof(other.labels_));
+
+        this->values_ = std::move(other.values_);
+        this->names_ = std::move(other.names_);
 
         return *this;
     }
@@ -571,14 +577,14 @@ public:
     ///
     /// This is the same as `shape()[0]` for the corresponding values array
     size_t count() const {
-        return this->shape()[0];
+        return labels_.count;
     }
 
     /// Get the number of dimensions in this set of Labels.
     ///
     /// This is the same as `shape()[1]` for the corresponding values array
     size_t size() const {
-        return this->names_.size();
+        return labels_.size;
     }
 
     /// Convert from this set of Labels to the C `mts_labels_t`
@@ -645,10 +651,12 @@ public:
         return result;
     }
 
-    /// Get the value inside these `Labels` at the given index
-    int32_t operator()(size_t i, size_t j) const {
-        return NDArray<int32_t>::operator()(i, j);
+    /// Get the array of values for these Labels
+    const NDArray<int32_t>& values() const & {
+        return values_;
     }
+
+    const NDArray<int32_t>& values() && = delete;
 
     /// Take the union of these `Labels` with `other`.
     ///
@@ -841,25 +849,33 @@ public:
     }
 
 private:
-    explicit Labels(): NDArray(static_cast<const int32_t*>(nullptr), {0, 0}) {
+    explicit Labels(): values_(static_cast<const int32_t*>(nullptr), {0, 0})
+    {
         std::memset(&labels_, 0, sizeof(labels_));
     }
 
     explicit Labels(mts_labels_t labels):
-        NDArray(labels.values, {labels.count, labels.size}),
+        values_(labels.values, {labels.count, labels.size}),
         labels_(labels)
     {
         assert(labels_.internal_ptr_ != nullptr);
 
-        for (size_t i=0; i<labels.size; i++) {
-            names_.push_back(labels.names[i]);
+        for (size_t i=0; i<labels_.size; i++) {
+            names_.push_back(labels_.names[i]);
         }
     }
 
-    explicit Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
-        Labels(details::labels_from_cxx(names, NDArray(values, {count, names.size()}))) {}
+    // the constructor below is ambiguous with the public constructor taking
+    // `std::initializer_list`, so we use a private dummy struct argument to
+    // remove the ambiguity.
+    struct InternalConstructor {};
+    Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
+        Labels(names, values.data(), values.shape()[0]) {}
 
-    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, NDArray<int32_t> values);
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
+        Labels(details::labels_from_cxx(names, values, count)) {}
+
+    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
     friend class TensorMap;
     friend class TensorBlock;
 
@@ -867,6 +883,7 @@ private:
     friend class metatensor_torch::TensorMapHolder;
 
     std::vector<const char*> names_;
+    NDArray<int32_t> values_;
     mts_labels_t labels_;
 
     friend bool operator==(const Labels& lhs, const Labels& rhs);
@@ -875,16 +892,9 @@ private:
 namespace details {
     inline metatensor::Labels labels_from_cxx(
         const std::vector<std::string>& names,
-        metatensor::NDArray<int32_t> values
+        const int32_t* values,
+        size_t count
     ) {
-        assert(values.shape().size() == 2);
-
-        if (values.shape()[1] != names.size()) {
-            throw metatensor::Error(
-                "invalid Labels: the names must have an entry for each column of the array"
-            );
-        }
-
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));
 
@@ -895,8 +905,8 @@ namespace details {
 
         labels.names = c_names.data();
         labels.size = c_names.size();
-        labels.count = values.shape()[0];
-        labels.values = const_cast<const NDArray<int32_t>&>(values).data();
+        labels.count = count;
+        labels.values = values;
 
         details::check_status(mts_labels_create(&labels));
 
@@ -918,7 +928,7 @@ inline bool operator==(const Labels& lhs, const Labels& rhs) {
         }
     }
 
-    return static_cast<const NDArray<int32_t>&>(lhs) == static_cast<const NDArray<int32_t>&>(rhs);
+    return lhs.values() == rhs.values();
 }
 
 /// Two Labels compare equal only if they have the same names and values in the

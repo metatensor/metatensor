@@ -30,8 +30,9 @@ TEST_CASE("Labels") {
         CHECK(metatensor_labels.names()[0] == std::string("a"));
         CHECK(metatensor_labels.names()[1] == std::string("bb"));
 
-        CHECK(metatensor_labels(1, 1) == 0);
-        CHECK(metatensor_labels(3, 0) == 1);
+        const auto& metatensor_values = metatensor_labels.values();
+        CHECK(metatensor_values(1, 1) == 0);
+        CHECK(metatensor_values(3, 0) == 1);
 
         auto empty = LabelsHolder::create({}, {});
         CHECK(empty->size() == 0);

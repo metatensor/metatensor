@@ -149,16 +149,16 @@ static torch::Tensor values_from_metatensor(metatensor::Labels& labels) {
     }
 
     // otherwise create a new tensor
-    auto sizes = std::vector<int64_t>();
-    for (auto dim: labels.shape()) {
-        sizes.push_back(static_cast<int64_t>(dim));
-    }
+    auto sizes = std::vector<int64_t>{
+        static_cast<int64_t>(labels.count()),
+        static_cast<int64_t>(labels.size()),
+    };
 
     return torch::from_blob(
         // This should really be a `const int32_t*`, but we can not prevent
         // writing to this tensor since torch does not support read-only tensor:
         // https://github.com/pytorch/pytorch/issues/44027
-        const_cast<int32_t*>((const_cast<const metatensor::Labels&>(labels)).data()),
+        const_cast<int32_t*>(labels.as_mts_labels_t().values),
         sizes,
         torch::TensorOptions().dtype(torch::kInt32)
     );
