@@ -392,7 +392,7 @@ private:
             "NDArray only works with integers and floating points"
         );
 
-        if (shape_.size() == 0) {
+        if (shape_.empty()) {
             throw Error("invalid parameters to NDArray, shape should contain at least one element");
         }
 

@@ -48,14 +48,14 @@ TEST_CASE("TensorMap") {
         // The first two blocks are not modified
         auto block = tensor.block_by_id(0);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {{0, 0}, {2, 0}, {4, 0}}));
-        auto& values_1 = SimpleDataArray::from_mts_array(block.mts_array());
+        const auto& values_1 = SimpleDataArray::from_mts_array(block.mts_array());
         CHECK(values_1 == SimpleDataArray({3, 1, 1}, 1.0));
 
 
         block = tensor.block_by_id(1);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {{0, 0}, {1, 0}, {3, 0}}));
 
-        auto& values_2 = SimpleDataArray::from_mts_array(block.mts_array());
+        const auto& values_2 = SimpleDataArray::from_mts_array(block.mts_array());
         CHECK(values_2 == SimpleDataArray({3, 1, 3}, 2.0));
 
         // The new third block contains the old third and fourth blocks merged
@@ -75,7 +75,7 @@ TEST_CASE("TensorMap") {
             3.0, 3.0, 3.0,
         });
 
-        auto& values_3 = SimpleDataArray::from_mts_array(block.mts_array());
+        const auto& values_3 = SimpleDataArray::from_mts_array(block.mts_array());
         CHECK(values_3 == expected);
 
         auto gradient = block.gradient("parameter");
@@ -126,7 +126,7 @@ TEST_CASE("TensorMap") {
             1.0, 0.0, 0.0, 0.0,
         });
 
-        auto& values_1 = SimpleDataArray::from_mts_array(block.mts_array());
+        const auto& values_1 = SimpleDataArray::from_mts_array(block.mts_array());
         CHECK(values_1 == expected);
 
         auto gradient = block.gradient("parameter");
@@ -165,7 +165,7 @@ TEST_CASE("TensorMap") {
         CHECK(block.samples() == Labels({"samples"}, {{0}, {2}, {4}}));
 
         auto components = block.components();
-        CHECK(components.size() == 0);
+        CHECK(components.empty());
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
     }
@@ -185,7 +185,7 @@ TEST_CASE("TensorMap") {
 
         class BrokenDataArray: public metatensor::SimpleDataArray {
         public:
-            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray(shape) {}
+            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray(std::move(shape)) {}
 
             std::unique_ptr<DataArrayBase> copy() const override {
                 throw std::runtime_error("can not copy this!");

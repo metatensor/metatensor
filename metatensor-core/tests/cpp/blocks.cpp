@@ -19,7 +19,7 @@ TEST_CASE("Blocks") {
         CHECK(values.shape() == std::vector<size_t>{3, 2});
 
         CHECK(block.samples() == Labels({"samples"}, {{0}, {1}, {4}}));
-        CHECK(block.components().size() == 0);
+        CHECK(block.components().empty());
         CHECK(block.properties() == Labels({"properties"}, {{5}, {3}}));
     }
 
@@ -30,7 +30,7 @@ TEST_CASE("Blocks") {
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
-            std::move(components),
+            components,
             Labels({"properties"}, {{5}, {3}})
         );
 
@@ -113,7 +113,7 @@ TEST_CASE("Blocks") {
 
         class BrokenDataArray: public metatensor::SimpleDataArray {
         public:
-            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray(shape) {}
+            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray(std::move(shape)) {}
 
             std::unique_ptr<DataArrayBase> copy() const override {
                 throw std::runtime_error("can not copy this!");
@@ -138,7 +138,7 @@ TEST_CASE("Blocks") {
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
-            std::move(components),
+            components,
             Labels({"properties"}, {{5}, {3}})
         );
 

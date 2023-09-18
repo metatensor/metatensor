@@ -121,7 +121,7 @@ static int DELETE_CALL_MARKER = 0;
 TEST_CASE("User data") {
     {
         // check that we can register and recover user data on Labels
-        auto data = new UserData{"aabbccdd", 0xDEADBEEF, {1.0, 2.0, 3.0, 42.1}};
+        auto* data = new UserData{"aabbccdd", 0xDEADBEEF, {1.0, 2.0, 3.0, 42.1}};
         auto user_data = metatensor::LabelsUserData(data, [](void* ptr){
             DELETE_CALL_MARKER += 1;
             delete static_cast<UserData*>(ptr);
@@ -130,7 +130,7 @@ TEST_CASE("User data") {
         auto labels = Labels({"sample"}, {{0}, {1}, {2}});
         labels.set_user_data(std::move(user_data));
 
-        auto data_ptr = static_cast<UserData*>(labels.user_data());
+        auto* data_ptr = static_cast<UserData*>(labels.user_data());
         REQUIRE(data_ptr != nullptr);
         CHECK(data_ptr->name == "aabbccdd");
         CHECK(data_ptr->count == 0xDEADBEEF);
@@ -139,7 +139,7 @@ TEST_CASE("User data") {
         // check we can recover user data from Labels inside a TensorBlock
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
-            std::move(labels),
+            labels,
             {},
             Labels({"properties"}, {{5}, {3}})
         );
@@ -177,7 +177,7 @@ TEST_CASE("User data") {
         REQUIRE(data_ptr != nullptr);
         CHECK(data_ptr->name == "properties");
         CHECK(data_ptr->count == 0);
-        CHECK(data_ptr->values == std::vector<double>{});
+        CHECK(data_ptr->values.empty());
     }
 
     // Check that the `user_data_delete` function was called the
