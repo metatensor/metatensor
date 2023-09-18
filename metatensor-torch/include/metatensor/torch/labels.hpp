@@ -159,7 +159,7 @@ public:
     // A view is created by the `view` function (also `__getitem__` in Python),
     // and does not have a corresponding `metatensor::Labels` (`labels_` is
     // `nullopt`)
-    LabelsHolder to_owned() const;
+    TorchLabels to_owned() const;
 
     /// Get the union of `this` and `other`
     TorchLabels set_union(const TorchLabels& other) const;

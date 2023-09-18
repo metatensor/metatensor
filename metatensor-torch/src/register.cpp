@@ -108,7 +108,7 @@ TORCH_LIBRARY(metatensor, m) {
             {torch::arg("max_entries"), torch::arg("indent") = 0}
         )
         .def("is_view", &LabelsHolder::is_view)
-        .def("to_owned", [](const TorchLabels& self){ return torch::make_intrusive<LabelsHolder>(self->to_owned()); })
+        .def("to_owned", &LabelsHolder::to_owned)
         .def("union", &LabelsHolder::set_union, DOCSTRING, {torch::arg("other")})
         .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
         .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})

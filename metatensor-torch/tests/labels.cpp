@@ -72,8 +72,8 @@ TEST_CASE("Labels") {
 
         CHECK_THROWS_WITH(view->position(1), Catch::Matchers::Contains("can not call this function on Labels view, call to_owned first"));
         auto owned = view->to_owned();
-        CHECK_FALSE(owned.is_view());
-        CHECK(owned.position(std::vector<int64_t>{1}).value() == 0);
+        CHECK_FALSE(owned->is_view());
+        CHECK(owned->position(std::vector<int64_t>{1}).value() == 0);
     }
 
     SECTION("equality") {
