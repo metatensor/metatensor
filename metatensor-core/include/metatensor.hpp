@@ -524,6 +524,11 @@ public:
     explicit Labels(const std::vector<std::string>& names):
         Labels(names, static_cast<const int32_t*>(nullptr), 0) {}
 
+    /// Create labels with the given `names` and `values`. `values` must be an
+    /// array with `count x names.size()` elements.
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
+        Labels(details::labels_from_cxx(names, values, count)) {}
+
     ~Labels() {
         mts_labels_free(&labels_);
     }
@@ -872,15 +877,12 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
         Labels(names, values.data(), values.shape()[0]) {}
 
-    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
-        Labels(details::labels_from_cxx(names, values, count)) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
     friend class TensorMap;
     friend class TensorBlock;
 
     friend class metatensor_torch::LabelsHolder;
-    friend class metatensor_torch::TensorMapHolder;
 
     std::vector<const char*> names_;
     NDArray<int32_t> values_;
