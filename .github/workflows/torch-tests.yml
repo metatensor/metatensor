@@ -21,12 +21,13 @@ jobs:
             torch-version: 1.11.*
             python-version: "3.10"
             cargo-test-flags: --release
+            do-valgrind: true
 
           - os: ubuntu-20.04
             torch-version: 2.0.*
             python-version: "3.11"
-            cargo-test-flags: --release
-            do-valgrind: true
+            cargo-test-flags:
+            cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-11
             torch-version: 2.0.*
@@ -73,3 +74,4 @@ jobs:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TORCH_TEST_VERSION: ${{ matrix.torch-version }}
+          CXXFLAGS: ${{ matrix.cxx-flags }}
