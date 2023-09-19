@@ -294,7 +294,7 @@ def test_eq():
 
 
 def test_to():
-    devices = []
+    devices = ["meta", torch.device("meta")]
     if torch.backends.mps.is_available() and torch.backends.mps.is_built():
         devices.append("mps")
         devices.append(torch.device("mps"))
@@ -366,6 +366,25 @@ def test_union():
     assert torch.all(first_mapping == torch.LongTensor([0, 1]))
     assert torch.all(second_mapping == torch.LongTensor([2, 1, 3]))
 
+    # check that union preserves devices
+    first = first.to("meta")
+
+    message = "device mismatch in union: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.union(second)
+
+    with pytest.raises(ValueError, match=message):
+        first.union_and_mapping(second)
+
+    second = second.to("meta")
+    union = first.union(second)
+    assert union.values.device == torch.device("meta")
+
+    union, first_mapping, second_mapping = first.union_and_mapping(second)
+    assert union.values.device == torch.device("meta")
+    assert first_mapping.device == torch.device("meta")
+    assert second_mapping.device == torch.device("meta")
+
 
 def test_intersection():
     first = Labels(["aa", "bb"], torch.IntTensor([[0, 1], [1, 2]]))
@@ -382,6 +401,25 @@ def test_intersection():
     assert intersection == intersection_2
     assert torch.all(first_mapping == torch.LongTensor([-1, 0]))
     assert torch.all(second_mapping == torch.LongTensor([-1, 0, -1]))
+
+    # check that intersection preserves devices
+    first = first.to("meta")
+
+    message = "device mismatch in intersection: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.intersection(second)
+
+    with pytest.raises(ValueError, match=message):
+        first.intersection_and_mapping(second)
+
+    second = second.to("meta")
+    intersection = first.intersection(second)
+    assert intersection.values.device == torch.device("meta")
+
+    intersection, first_mapping, second_mapping = first.intersection_and_mapping(second)
+    assert intersection.values.device == torch.device("meta")
+    assert first_mapping.device == torch.device("meta")
+    assert second_mapping.device == torch.device("meta")
 
 
 def test_dimensions_manipulation():
