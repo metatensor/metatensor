@@ -483,8 +483,16 @@ TorchLabels LabelsHolder::set_union(const TorchLabels& other) const {
         );
     }
 
-    auto result = labels_->set_union(other->labels_.value());
-    return torch::make_intrusive<LabelsHolder>(std::move(result));
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in union: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
+    auto result = LabelsHolder(labels_->set_union(other->labels_.value()));
+    return result.to(device);
 }
 
 std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const TorchLabels& other) const {
@@ -494,24 +502,30 @@ std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_ma
         );
     }
 
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in union: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = labels_->set_union(
+    auto result = LabelsHolder(labels_->set_union(
         other->labels_.value(),
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
         second_mapping.size(0)
-    );
-    auto torch_result = torch::make_intrusive<LabelsHolder>(std::move(result));
-
+    ));
 
     return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
-        std::move(torch_result),
-        std::move(first_mapping),
-        std::move(second_mapping)
+        result.to(device),
+        first_mapping.to(device),
+        second_mapping.to(device)
     );
 }
 
@@ -522,8 +536,16 @@ TorchLabels LabelsHolder::set_intersection(const TorchLabels& other) const {
         );
     }
 
-    auto result = labels_->set_intersection(other->labels_.value());
-    return torch::make_intrusive<LabelsHolder>(std::move(result));
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in intersection: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
+    auto result = LabelsHolder(labels_->set_intersection(other->labels_.value()));
+    return result.to(device);
 }
 
 std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const TorchLabels& other) const {
@@ -533,24 +555,30 @@ std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection
         );
     }
 
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in intersection: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = labels_->set_intersection(
+    auto result = LabelsHolder(labels_->set_intersection(
         other->labels_.value(),
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
         second_mapping.size(0)
-    );
-    auto torch_result = torch::make_intrusive<LabelsHolder>(std::move(result));
-
+    ));
 
     return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
-        std::move(torch_result),
-        std::move(first_mapping),
-        std::move(second_mapping)
+        result.to(device),
+        first_mapping.to(device),
+        second_mapping.to(device)
     );
 }
 
