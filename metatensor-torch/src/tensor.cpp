@@ -6,6 +6,15 @@
 
 using namespace metatensor_torch;
 
+template <typename T>
+bool custom_class_is(torch::IValue ivalue) {
+    assert(ivalue.isCustomClass());
+
+    // this is inspired by the code inside `torch::IValue.toCustomClass<T>()`
+    auto* expected_type = torch::getCustomClassType<torch::intrusive_ptr<T>>().get();
+    return ivalue.type().get() == expected_type;
+}
+
 TensorMapHolder::TensorMapHolder(metatensor::TensorMap tensor): tensor_(std::move(tensor)) {}
 
 static metatensor::TensorBlock block_from_torch(const TorchTensorBlock& block) {
@@ -152,29 +161,17 @@ TorchTensorBlock TensorMapHolder::block_torch(TorchTensorMap self, torch::IValue
         }
         return TensorMapHolder::block(self, selection);
     } else if (index.isCustomClass()) {
-        torch::optional<TorchLabels> labels = torch::nullopt;
-        torch::optional<TorchLabelsEntry> entry = torch::nullopt;
-        try {
-            labels = index.toCustomClass<LabelsHolder>();
-        } catch (const c10::Error&) {
-            try {
-                entry = index.toCustomClass<LabelsEntryHolder>();
-            } catch (const c10::Error&) {
-                C10_THROW_ERROR(TypeError,
-                    "expected argument to be Labels or LabelsEntry, got"
-                    + index.type()->str()
-                );
-            }
-        }
-
-        if (labels.has_value()) {
-            return TensorMapHolder::block(self, labels.value());
-        } else if (entry.has_value()) {
-            return TensorMapHolder::block(self, entry.value());
+        if (custom_class_is<LabelsHolder>(index)) {
+            auto labels = index.toCustomClass<LabelsHolder>();
+            return TensorMapHolder::block(self, labels);
+        } else if (custom_class_is<LabelsEntryHolder>(index)) {
+            auto entry = index.toCustomClass<LabelsEntryHolder>();
+            return TensorMapHolder::block(self, entry);
         } else {
-            // this should never be reached, the code above should throw a
-            // TypeError before
-            throw std::runtime_error("internal error: not a labels nor a labels entry");
+            C10_THROW_ERROR(TypeError,
+                "expected argument to be Labels or LabelsEntry, got"
+                + index.type()->str()
+            );
         }
     } else {
         C10_THROW_ERROR(TypeError,
@@ -264,29 +261,17 @@ std::vector<TorchTensorBlock> TensorMapHolder::blocks_torch(TorchTensorMap self,
         }
         return TensorMapHolder::blocks(self, selection);
     } else if (index.isCustomClass()) {
-        torch::optional<TorchLabels> labels = torch::nullopt;
-        torch::optional<TorchLabelsEntry> entry = torch::nullopt;
-        try {
-            labels = index.toCustomClass<LabelsHolder>();
-        } catch (const c10::Error&) {
-            try {
-                entry = index.toCustomClass<LabelsEntryHolder>();
-            } catch (const c10::Error&) {
-                C10_THROW_ERROR(TypeError,
-                    "expected argument to be Labels or LabelsEntry, got"
-                    + index.type()->str()
-                );
-            }
-        }
-
-        if (labels.has_value()) {
-            return TensorMapHolder::blocks(self, labels.value());
-        } else if (entry.has_value()) {
-            return TensorMapHolder::blocks(self, entry.value());
+        if (custom_class_is<LabelsHolder>(index)) {
+            auto labels = index.toCustomClass<LabelsHolder>();
+            return TensorMapHolder::blocks(self, labels);
+        } else if (custom_class_is<LabelsEntryHolder>(index)) {
+            auto entry = index.toCustomClass<LabelsEntryHolder>();
+            return TensorMapHolder::blocks(self, entry);
         } else {
-            // this should never be reached, the code above should throw a
-            // TypeError before
-            throw std::runtime_error("internal error: not a labels nor a labels entry");
+            C10_THROW_ERROR(TypeError,
+                "expected argument to be Labels or LabelsEntry, got"
+                + index.type()->str()
+            );
         }
     } else {
         C10_THROW_ERROR(ValueError,
