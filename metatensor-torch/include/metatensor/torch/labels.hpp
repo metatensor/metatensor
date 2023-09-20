@@ -233,11 +233,7 @@ class METATENSOR_TORCH_EXPORT LabelsEntryHolder: public torch::CustomClassHolder
 public:
     /// Create a new `LabelsEntryHolder` corresponding to the entry at the given
     /// `index` in the given `labels`
-    LabelsEntryHolder(TorchLabels labels, int64_t index):
-        labels_(std::move(labels))
-    {
-        values_ = labels_->values()[index];
-    }
+    LabelsEntryHolder(TorchLabels labels, int64_t index);
 
     /// Get the names of the dimensions/columns of these Labels
     std::vector<std::string> names() const {

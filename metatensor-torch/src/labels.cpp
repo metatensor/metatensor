@@ -724,6 +724,30 @@ std::string LabelsHolder::repr() const {
 
 /******************************************************************************/
 
+LabelsEntryHolder::LabelsEntryHolder(TorchLabels labels, int64_t index):
+    labels_(std::move(labels))
+{
+    auto size = labels_->values().size(0);
+    if (index < -size || index >= size) {
+        // We prefer not using `C10_THROW_ERROR` here since this is an expected
+        // error (it will and must happen once per iteration over the labels),
+        // and `C10_THROW_ERROR` is quite expensive since it construct a full
+        // backtrace of the C++ code.
+        //
+        // Unfortunately, the `IndexError` constructor is not exported on
+        // Windows, so we can not call it. In this case, we let the indexing
+        // code below construct and throw the full error.
+#ifndef _WIN32
+        std::ostringstream ss;
+        ss << "out of range for tensor of size " << labels_->values().sizes();
+        ss << " at dimension 0";
+        throw torch::IndexError(ss.str(), "<no backtrace>");
+#endif
+    }
+
+    values_ = labels_->values()[index];
+}
+
 std::string LabelsEntryHolder::print() const {
     auto output = std::stringstream();
 
