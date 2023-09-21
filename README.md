@@ -2,6 +2,7 @@
 
 [![tests status](https://img.shields.io/github/checks-status/lab-cosmo/metatensor/master)](https://github.com/lab-cosmo/metatensor/actions?query=branch%3Amaster)
 [![documentation](https://img.shields.io/badge/documentation-latest-sucess)](https://lab-cosmo.github.io/metatensor/latest/)
+[![coverage](https://codecov.io/gh/lab-cosmo/metatensor/branch/master/graph/badge.svg)]( https://codecov.io/gh/lab-cosmo/metatensor)
 
 Metatensor is a self-describing sparse tensor data format for atomistic machine
 learning and beyond; storing values and gradients of these values together.

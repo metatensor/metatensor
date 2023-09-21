@@ -1,0 +1,68 @@
+name: Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    # Check all PR
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  coverage:
+    runs-on: ubuntu-22.04
+    name: collect code coverage
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox coverage
+
+      - name: cache tox environments
+        uses: actions/cache@v3
+        with:
+          path: .tox
+          key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Setup sccache environnement variables
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
+      - name: collect Python coverage
+        run: |
+            tox -e core-tests
+            tox -e operations-notorch-tests
+            tox -e operations-torch-tests
+            tox -e torch-tests
+        env:
+            # Use the CPU only version of torch when building/running the code
+            PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+
+      - name: combine coverage files
+        run: |
+            coverage combine \
+              python/metatensor-core/.coverage \
+              python/metatensor-operations/.coverage \
+              python/metatensor-torch/.coverage
+            coverage xml
+
+      - name: upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          files: coverage.xml

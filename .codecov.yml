@@ -1,0 +1,11 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+    patch: off
+  ignore:
+    - "tests/.*"
+    - "**/documentation.py"
+
+comment: false
