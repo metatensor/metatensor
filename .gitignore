@@ -8,3 +8,6 @@ __pycache__
 dist/
 build/
 .tox/
+htmlcov/
+.coverage
+coverage.xml
