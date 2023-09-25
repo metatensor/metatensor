@@ -13,10 +13,17 @@ endif()
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION METATENSOR_TORCH_VERSION)
 string(STRIP ${METATENSOR_TORCH_VERSION} METATENSOR_TORCH_VERSION)
 
+include(cmake/dev-versions.cmake)
+create_development_version("${METATENSOR_TORCH_VERSION}" "metatensor-torch-v" METATENSOR_TORCH_FULL_VERSION)
+message(STATUS "Building metatensor-torch v${METATENSOR_TORCH_FULL_VERSION}")
+
+# strip any -dev/-rc suffix on the version since project(VERSION) does not support it
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*)\\.([0-9]*).*" "\\1.\\2.\\3" METATENSOR_TORCH_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 project(metatensor_torch
     VERSION ${METATENSOR_TORCH_VERSION}
     LANGUAGES CXX
 )
+set(PROJECT_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 
 option(METATENSOR_TORCH_TESTS "Build metatensor-torch C++ tests" OFF)
 set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install binaries/DLL")
@@ -37,7 +44,12 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
-set(REQUIRED_METATENSOR_VERSION "0.1")
+# If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
+# in the same way we update the metatensor-torch version
+set(REQUIRED_METATENSOR_VERSION "0.0.0")
+create_development_version("${REQUIRED_METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_CORE_FULL_VERSION)
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
+
 find_package(metatensor ${REQUIRED_METATENSOR_VERSION} CONFIG REQUIRED)
 
 # FindCUDNN.cmake distributed with PyTorch is a bit broken, so we have a
@@ -102,7 +114,7 @@ endif()
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     metatensor_torch-config-version.cmake
-    VERSION ${METATENSOR_TORCH_VERSION}
+    VERSION ${METATENSOR_TORCH_FULL_VERSION}
     COMPATIBILITY SameMinorVersion
 )
 

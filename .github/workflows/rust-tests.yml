@@ -61,6 +61,12 @@ jobs:
           apt install -y cmake make gcc g++ git curl
 
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure git safe directory
+        if: matrix.container == 'ubuntu:20.04'
+        run: git config --global --add safe.directory /__w/metatensor/metatensor
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
@@ -86,6 +92,13 @@ jobs:
 
       - name: run tests
         run: cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
+
+      - name: check the code can be compiled as a standalone crate
+        if: matrix.os != 'windows-2019'
+        run: |
+          ./scripts/package-core.sh
+          cd metatensor
+          cargo publish --dry-run --allow-dirty
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:

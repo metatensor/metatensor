@@ -27,17 +27,25 @@ endif()
 
 file(STRINGS "Cargo.toml" CARGO_TOML_CONTENT)
 foreach(line ${CARGO_TOML_CONTENT})
-    string(REGEX REPLACE "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\".*" "\\1" METATENSOR_VERSION ${line})
+    string(REGEX REPLACE "^version = \"(.*)\"" "\\1" METATENSOR_VERSION ${line})
     if (NOT ${CMAKE_MATCH_COUNT} EQUAL 0)
         # stop on the first regex match, this should be the right version
         break()
     endif()
 endforeach()
 
+include(cmake/dev-versions.cmake)
+create_development_version("${METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_FULL_VERSION)
+message(STATUS "Building metatensor-core v${METATENSOR_FULL_VERSION}")
+
+# strip any -dev/-rc suffix on the version since project(VERSION) does not support it
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*)\\.([0-9]*).*" "\\1.\\2.\\3" METATENSOR_VERSION ${METATENSOR_FULL_VERSION})
 project(metatensor
     VERSION ${METATENSOR_VERSION}
     LANGUAGES C CXX # we need to declare a language to access CMAKE_SIZEOF_VOID_P later
 )
+set(PROJECT_VERSION ${METATENSOR_FULL_VERSION})
+
 
 # We follow the standard CMake convention of using BUILD_SHARED_LIBS to provide
 # either a shared or static library as a default target. But since cargo always
@@ -256,6 +264,7 @@ endif()
 add_custom_target(cargo-build-metatensor ALL
     COMMAND
         ${CMAKE_COMMAND} -E env
+        METATENSOR_FULL_VERSION="${METATENSOR_FULL_VERSION}"
         MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
         RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
@@ -311,7 +320,7 @@ configure_package_config_file(
 )
 write_basic_package_version_file(
     metatensor-config-version.cmake
-    VERSION ${METATENSOR_VERSION}
+    VERSION ${METATENSOR_FULL_VERSION}
     COMPATIBILITY SameMinorVersion
 )
 

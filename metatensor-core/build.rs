@@ -35,4 +35,10 @@ fn main() {
     if result.is_ok() {
         println!("cargo:rerun-if-changed=src");
     }
+
+    if std::env::var("METATENSOR_FULL_VERSION").is_err() {
+        let version = std::env::var("CARGO_PKG_VERSION").expect("missing CARGO_PKG_VERSION");
+        println!("cargo:rustc-env=METATENSOR_FULL_VERSION={}+rust", version);
+    }
+    println!("cargo:rerun-if-env-changed=METATENSOR_FULL_VERSION");
 }

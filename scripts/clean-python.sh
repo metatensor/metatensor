@@ -11,12 +11,14 @@ cd "$ROOT_DIR"
 rm -rf dist
 rm -rf build
 
+rm -rf python/metatensor-core/metatensor-core-cxx-*.tar.gz
 rm -rf python/metatensor-core/dist
 rm -rf python/metatensor-core/build
 
 rm -rf python/metatensor-operations/dist
 rm -rf python/metatensor-operations/build
 
+rm -rf python/metatensor-torch/metatensor-torch-cxx-*.tar.gz
 rm -rf python/metatensor-torch/dist
 rm -rf python/metatensor-torch/build
 

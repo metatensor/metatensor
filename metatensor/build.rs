@@ -19,13 +19,13 @@ fn main() {
     if !cargo_toml.is_file() {
         let cmake_exe = which::which("cmake").expect("could not find cmake");
 
-        let all_crate_files = glob::glob("metatensor-core-*.crate")
+        let all_crate_files = glob::glob("metatensor-core-cxx-*.tar.gz")
             .expect("bad pattern")
             .flatten()
             .collect::<Vec<_>>();
 
         if all_crate_files.len() != 1 {
-            panic!("could not find the metatensor-core crate file, run script/update-core.sh");
+            panic!("could not find the metatensor-core-cxx tarball, run script/update-core.sh");
         }
         let mut crate_file = std::env::current_dir().expect("missing cwd");
         crate_file.push(&all_crate_files[0]);
@@ -43,7 +43,7 @@ fn main() {
 
         let crate_dir = crate_file.file_name().expect("file name").to_str().expect("UTF8 error");
         let splitted = crate_dir.split('.').collect::<Vec<_>>();
-        metatensor_core.push(splitted[..splitted.len() - 1].join("."));
+        metatensor_core.push(splitted[..splitted.len() - 2].join("."));
     }
 
     let install_dir = cmake::Config::new(&metatensor_core)

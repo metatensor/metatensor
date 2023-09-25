@@ -49,7 +49,7 @@ pub extern fn mts_disable_panic_printing() {
 }
 
 static VERSION: Lazy<CString> = Lazy::new(|| {
-    CString::new(env!("CARGO_PKG_VERSION")).expect("version contains NULL byte")
+    CString::new(env!("METATENSOR_FULL_VERSION")).expect("version contains NULL byte")
 });
 
 

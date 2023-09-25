@@ -8,7 +8,16 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 set -eux
 
 cd "$ROOT_DIR"
-tar cf metatensor-torch.tar metatensor-torch
-gzip -9 metatensor-torch.tar
 
-mv metatensor-torch.tar.gz python/metatensor-torch/
+VERSION=$(cat metatensor-torch/VERSION)
+ARCHIVE_NAME="metatensor-torch-cxx-$VERSION"
+
+./scripts/n-commits-since-last-tag.py "metatensor-torch-v" > metatensor-torch/cmake/n_commits_since_last_tag
+tar cf "$ARCHIVE_NAME".tar metatensor-torch
+rm -f metatensor-torch/cmake/n_commits_since_last_tag
+
+gzip -9 "$ARCHIVE_NAME".tar
+cp "$ARCHIVE_NAME".tar.gz "$ROOT_DIR/python/metatensor-torch/"
+
+mkdir -p "$ROOT_DIR/dist/cxx"
+mv "$ARCHIVE_NAME".tar.gz "$ROOT_DIR/dist/cxx/"

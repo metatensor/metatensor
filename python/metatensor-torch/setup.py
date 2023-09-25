@@ -1,8 +1,10 @@
+import glob
 import os
 import subprocess
 import sys
 import uuid
 
+import packaging.version
 from setuptools import Extension, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_ext import build_ext
@@ -13,24 +15,6 @@ ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
 
 METATENSOR_TORCH = os.path.join(ROOT, "..", "..", "metatensor-torch")
-if not os.path.exists(METATENSOR_TORCH):
-    # we are building from a sdist, which should include metatensor-torch
-    # sources as a tarball
-    cxx_sources = os.path.join(ROOT, "metatensor-torch.tar.gz")
-
-    if not os.path.exists(cxx_sources):
-        raise RuntimeError(
-            "expected an 'metatensor-torch.tar.gz' file containing "
-            "metatensor-torch C++ sources"
-        )
-
-    subprocess.run(
-        ["cmake", "-E", "tar", "xf", cxx_sources],
-        cwd=ROOT,
-        check=True,
-    )
-
-    METATENSOR_TORCH = os.path.join(ROOT, "metatensor-torch")
 
 
 class cmake_ext(build_ext):
@@ -135,9 +119,9 @@ class bdist_egg_disabled(bdist_egg):
 
     def run(self):
         sys.exit(
-            "Aborting implicit building of eggs. "
-            + "Use `pip install .` or `python setup.py bdist_wheel && pip "
-            + "install dist/metatensor-*.whl` to install from source."
+            "Aborting implicit building of eggs.\nUse `pip install .` or "
+            "`python -m build --wheel . && pip install dist/metatensor_torch-*.whl` "
+            "to install from source."
         )
 
 
@@ -148,84 +132,97 @@ class sdist_git_version(sdist):
     """
 
     def run(self):
-        with open("git_extra_version", "w") as fd:
-            fd.write(git_extra_version())
+        with open("n_commits_since_last_tag", "w") as fd:
+            fd.write(str(n_commits_since_last_tag()))
 
         # run original sdist
         super().run()
 
-        os.unlink("git_extra_version")
+        os.unlink("n_commits_since_last_tag")
 
 
-def git_extra_version():
+def n_commits_since_last_tag():
     """
-    If git is available, it is used to check if we are installing a development
-    version or a released version (by checking how many commits happened since
-    the last tag).
+    If git is available and we are building from a checkout, get the number of commits
+    since the last tag. Otherwise, this always returns 0.
     """
+    script = os.path.join(ROOT, "..", "..", "scripts", "n-commits-since-last-tag.py")
+    assert os.path.exists(script)
 
-    # Add pre-release info the version
-    try:
-        tags_list = subprocess.run(
-            ["git", "tag"],
-            stderr=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            check=True,
-        )
-        tags_list = tags_list.stdout.decode("utf8").strip()
+    TAG_PREFIX = "metatensor-torch-v"
+    output = subprocess.run(
+        [sys.executable, script, TAG_PREFIX],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        check=True,
+        encoding="utf8",
+    )
 
-        if tags_list == "":
-            first_commit = subprocess.run(
-                ["git", "rev-list", "--max-parents=0", "HEAD"],
-                stderr=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                check=True,
-            )
-            reference = first_commit.stdout.decode("utf8").strip()
+    if output.stderr:
+        print(output.stderr, file=sys.stderr)
+        return 0
+    else:
+        return int(output.stdout)
 
+
+def create_version_number(version):
+    version = packaging.version.parse(version)
+
+    if os.path.exists("n_commits_since_last_tag"):
+        # we are building from a sdist, without git available, but the git
+        # version was recorded in the `n_commits_since_last_tag` file
+        with open("n_commits_since_last_tag") as fd:
+            n_commits = int(fd.read().strip())
+    else:
+        n_commits = n_commits_since_last_tag()
+
+    if n_commits != 0:
+        # if we have commits since the last tag, this mean we are in a pre-release of
+        # the next version. So we increase either the minor version number or the
+        # release candidate number (if we are closing up on a release)
+        if version.pre is not None:
+            assert version.pre[0] == "rc"
+            pre = ("rc", version.pre[1] + 1)
+            release = version.release
         else:
-            last_tag = subprocess.run(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                stderr=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                check=True,
-            )
+            major, minor, patch = version.release
+            release = (major, minor + 1, 0)
+            pre = None
 
-            reference = last_tag.stdout.decode("utf8").strip()
+        # this is using a private API which is intended to become public soon:
+        # https://github.com/pypa/packaging/pull/698. In the mean time we'll
+        # use this
+        version._version = version._version._replace(release=release)
+        version._version = version._version._replace(pre=pre)
+        version._version = version._version._replace(dev=("dev", n_commits))
 
-    except Exception:
-        reference = ""
-        pass
-
-    try:
-        n_commits_since_tag = subprocess.run(
-            ["git", "rev-list", f"{reference}..HEAD", "--count"],
-            stderr=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            check=True,
-        )
-        n_commits_since_tag = n_commits_since_tag.stdout.decode("utf8").strip()
-
-        if n_commits_since_tag != 0:
-            return ".dev" + n_commits_since_tag
-    except Exception:
-        pass
-
-    return ""
+    return str(version)
 
 
 if __name__ == "__main__":
-    if os.path.exists("git_extra_version"):
-        # we are building from a sdist, without git available, but the git
-        # version was recorded in a git_extra_version file
-        with open("git_extra_version") as fd:
-            extra_version = fd.read()
-    else:
-        extra_version = git_extra_version()
+    if not os.path.exists(METATENSOR_TORCH):
+        # we are building from a sdist, which should include metatensor-core Rust
+        # sources as a tarball
+        crate_file = glob.glob(os.path.join(ROOT, "metatensor-core-*.tar.gz"))
+
+        if not len(crate_file) == 1:
+            raise RuntimeError(
+                "expected a single 'metatensor-core-*.tar.gz' file containing "
+                "metatensor-core Rust sources. remove all files and re-run "
+                "scripts/package-core.sh"
+            )
+
+        METATENSOR_TORCH = os.path.realpath(crate_file[0])
+        subprocess.run(
+            ["cmake", "-E", "tar", "xf", METATENSOR_TORCH],
+            cwd=ROOT,
+            check=True,
+        )
+
+        METATENSOR_TORCH = ".".join(METATENSOR_TORCH.split(".")[:-2])
 
     with open(os.path.join(METATENSOR_TORCH, "VERSION")) as fd:
-        version = fd.read().strip()
-    version += extra_version
+        METATENSOR_TORCH_VERSION = fd.read().strip()
 
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
         authors = fd.read().splitlines()
@@ -248,7 +245,7 @@ if __name__ == "__main__":
         install_requires.append("metatensor-core >=0.1.0.dev0,<0.2.0")
 
     setup(
-        version=version,
+        version=create_version_number(METATENSOR_TORCH_VERSION),
         author=", ".join(authors),
         install_requires=install_requires,
         ext_modules=[
