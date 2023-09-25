@@ -4,15 +4,15 @@
 # in the metatensor Rust sources (`bindgen` below) and the metatensor-core
 # Python package
 
-ROOT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 set -eux
 
-cd $ROOT_DIR
+cd "$ROOT_DIR"
 
-$ROOT_DIR/scripts/package-core.sh
+./scripts/package-core.sh
 
 # Regenerate Rust bindings to the C API
-bindgen $ROOT_DIR/metatensor-core/include/metatensor.h -o $ROOT_DIR/metatensor/src/c_api.rs \
+bindgen ./metatensor-core/include/metatensor.h -o ./metatensor/src/c_api.rs \
     --disable-header-comment \
     --no-doc-comments \
     --default-macro-constant-type=signed \
@@ -34,4 +34,4 @@ extern "C" {}'
 
 
 # Regenerate Python bindings to the C API
-$ROOT_DIR/python/scripts/generate-declarations.py
+./python/scripts/generate-declarations.py

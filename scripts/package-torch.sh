@@ -4,10 +4,10 @@
 # metatensor-torch, and copy it to be included in the metatensor-torch python
 # package sdist.
 
-ROOT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 set -eux
 
-cd $ROOT_DIR
+cd "$ROOT_DIR"
 tar cf metatensor-torch.tar metatensor-torch
 gzip -9 metatensor-torch.tar
 
