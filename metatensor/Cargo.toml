@@ -1,12 +1,12 @@
 [package]
 name = "metatensor"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 rust-version = "1.64"
 include = [
     "build.rs",
     "src/",
-    "metatensor-core-*.crate",
+    "metatensor-core-cxx-*.tar.gz",
 ]
 
 description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"

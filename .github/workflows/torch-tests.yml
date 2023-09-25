@@ -40,6 +40,8 @@ jobs:
             cargo-test-flags: --release
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master

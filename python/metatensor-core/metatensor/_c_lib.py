@@ -56,7 +56,7 @@ class LibraryFinder(object):
                 self._cached_dll = None
                 raise RuntimeError(
                     f"wrong version for libmetatensor, we want {__version__}, "
-                    f"but we got {version} in '{path}'"
+                    f"but we got {version} @ '{path}'"
                 )
 
             # Register the origin used by the Rust API as an external CPU array

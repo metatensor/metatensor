@@ -36,8 +36,9 @@ repository = "https://github.com/lab-cosmo/metatensor"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=61",
-    "wheel >=0.38",
+    "setuptools >=68",
+    "packaging >=23",
+    "wheel >=0.41",
     "cmake",
 ]
 build-backend = "setuptools.build_meta"

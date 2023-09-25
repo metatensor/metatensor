@@ -2,8 +2,8 @@ include pyproject.toml
 include AUTHORS
 include LICENSE
 
-include git_extra_version
+include n_commits_since_last_tag
 
-include metatensor-torch.tar.gz
+include metatensor-torch-*.tar.gz
 
 recursive-include build-backend *.py

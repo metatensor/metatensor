@@ -2,4 +2,4 @@ include pyproject.toml
 include AUTHORS
 include LICENSE
 
-include git_extra_version
+include n_commits_since_last_tag
