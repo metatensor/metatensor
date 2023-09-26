@@ -3,9 +3,9 @@ name = "metatensor"
 dynamic = ["version", "authors", "dependencies", "optional-dependencies"]
 requires-python = ">=3.7"
 
-readme = "README.rst"
+readme = "README.md"
 license = {text = "BSD-3-Clause"}
-description = "A specialized data storage format suited to atomistic machine learning needs and more"
+description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"
 
 keywords = ["machine learning", "molecular modeling"]
 classifiers = [
