@@ -3,7 +3,7 @@ name: Build Python wheels
 on:
   push:
     branches: [master]
-    tags: "*"
+    tags: ["*"]
   pull_request:
     # Check all PR
 
@@ -72,6 +72,7 @@ jobs:
         with:
           name: wheels
           path: ./wheelhouse/*.whl
+
       - name: upload wheel to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -86,34 +87,50 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+
       - name: install dependencies
         run: python -m pip install wheel build
+
       - name: package vendored code
         run: ./scripts/package-core.sh
+
       - name: build metatensor-core sdist
         run: python -m build python/metatensor-core --sdist --outdir=dist/
+
       - name: build metatensor-operations sdist and wheel
         run: python -m build python/metatensor-operations --outdir=dist/
+
       - name: build metatensor-torch sdist
         run: python -m build python/metatensor-torch --sdist --outdir=dist/
+
       - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/
+
+      - name: build C++ tarballs
+        run: |
+          ./scripts/package-core.sh
+          ./scripts/package-torch.sh
+
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: |
             dist/*.tar.gz
+            dist/cxx/*.tar.gz
             dist/*.whl
+
       - name: upload to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/*.tar.gz
+            dist/cxx/*.tar.gz
             dist/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

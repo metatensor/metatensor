@@ -19,11 +19,18 @@ TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
 tar xf "$ROOT_DIR"/target/package/metatensor-core-*.crate
 ARCHIVE_NAME=$(ls)
-ARCHIVE_NAME="metatensor-core-cxx-${ARCHIVE_NAME:16}"
+
+# extract the version part of the package from the .crate file name
+VERSION=${ARCHIVE_NAME:16}
+ARCHIVE_NAME="metatensor-core-cxx-$VERSION"
 
 mv metatensor-core-* "$ARCHIVE_NAME"
+cp "$ROOT_DIR/LICENSE" "$TMP_DIR/$ARCHIVE_NAME"
+cp "$ROOT_DIR/AUTHORS" "$TMP_DIR/$ARCHIVE_NAME"
+cp "$ROOT_DIR/README.md" "$TMP_DIR/$ARCHIVE_NAME"
 
-# Get the number of commits since last tag
+# Get the number of commits since last tag, this is used when building the
+# code to change the version for development builds
 cd "$ROOT_DIR"
 ./scripts/n-commits-since-last-tag.py "metatensor-core-v" > "$TMP_DIR/$ARCHIVE_NAME/cmake/n_commits_since_last_tag"
 
