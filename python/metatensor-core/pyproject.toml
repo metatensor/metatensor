@@ -5,7 +5,7 @@ requires-python = ">=3.7"
 
 readme = "README.rst"
 license = {text = "BSD-3-Clause"}
-description = "Python bindings to the core metatensor C API"
+description = "Python bindings for metatensor"
 
 dependencies = ["numpy"]
 
