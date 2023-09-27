@@ -215,16 +215,16 @@ if __name__ == "__main__":
     if not os.path.exists(METATENSOR_CORE):
         # we are building from a sdist, which should include metatensor-core Rust
         # sources as a tarball
-        crate_file = glob.glob(os.path.join(ROOT, "metatensor-core-*.tar.gz"))
+        tarballs = glob.glob(os.path.join(ROOT, "metatensor-core-*.tar.gz"))
 
-        if not len(crate_file) == 1:
+        if not len(tarballs) == 1:
             raise RuntimeError(
                 "expected a single 'metatensor-core-*.tar.gz' file containing "
                 "metatensor-core Rust sources. remove all files and re-run "
                 "scripts/package-core.sh"
             )
 
-        METATENSOR_CORE = os.path.realpath(crate_file[0])
+        METATENSOR_CORE = os.path.realpath(tarballs[0])
         subprocess.run(
             ["cmake", "-E", "tar", "xf", METATENSOR_CORE],
             cwd=ROOT,
