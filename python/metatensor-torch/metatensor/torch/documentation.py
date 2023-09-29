@@ -953,7 +953,7 @@ class TensorMap:
         """
 
     @property
-    def sample_names(self) -> List[str]:
+    def samples_names(self) -> List[str]:
         """names of the sample labels for all blocks in this tensor map"""
 
     @property

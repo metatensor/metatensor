@@ -120,10 +120,10 @@ pub fn merge_gradient_samples(
 
 pub fn merge_samples(
     blocks: &[KeyAndBlock],
-    new_sample_names: Vec<&str>,
+    new_samples_names: Vec<&str>,
     sort: bool
 ) -> (Arc<Labels>, Vec<Vec<mts_sample_mapping_t>>) {
-    let add_key_to_samples = blocks[0].block.samples.size() < new_sample_names.len();
+    let add_key_to_samples = blocks[0].block.samples.size() < new_samples_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
     // were in the blocks, and then optionally sort them later below
@@ -143,7 +143,7 @@ pub fn merge_samples(
         merged_samples.sort_unstable();
     }
 
-    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names).expect("invalid new samples names");
+    let mut merged_samples_builder = LabelsBuilder::new(new_samples_names).expect("invalid new samples names");
     for sample in merged_samples {
         merged_samples_builder.add(&sample).expect("got duplicated samples");
     }

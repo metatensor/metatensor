@@ -68,10 +68,10 @@ TEST_CASE("Blocks") {
         auto gradient = TensorBlockHolder::gradient(block, "g");
         CHECK((gradient->values().sizes() == std::vector<int64_t>{1, 3, 2}));
 
-        auto sample_names = gradient->samples()->names();
-        CHECK(sample_names.size() == 2);
-        CHECK(sample_names[0] == "sample");
-        CHECK(sample_names[1] == "g");
+        auto samples_names = gradient->samples()->names();
+        CHECK(samples_names.size() == 2);
+        CHECK(samples_names[0] == "sample");
+        CHECK(samples_names[1] == "g");
 
         for (const auto& entry: TensorBlockHolder::gradients(block)) {
             CHECK(std::get<0>(entry) == "g");

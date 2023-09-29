@@ -29,15 +29,15 @@ pub struct TensorMap {
 
 fn check_labels_names(
     block: &TensorBlock,
-    sample_names: &[&str],
+    samples_names: &[&str],
     components_names: &[Vec<&str>],
     context: &str,
 ) -> Result<(), Error> {
-    if block.samples.names() != sample_names {
+    if block.samples.names() != samples_names {
         return Err(Error::InvalidParameter(format!(
             "all blocks must have the same sample label names, got [{}] and [{}]{}",
             block.samples.names().join(", "),
-            sample_names.join(", "),
+            samples_names.join(", "),
             context,
         )));
     }
@@ -88,7 +88,7 @@ fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
 
 #[derive(Debug, Clone, PartialEq)]
 struct GradientMetadata<'a> {
-    sample_names: Vec<&'a str>,
+    samples_names: Vec<&'a str>,
     components_names: Vec<Vec<&'a str>>,
 }
 
@@ -105,7 +105,7 @@ impl GradientMap<'_> {
         let mut gradients = HashMap::new();
         for (gradient_name, sub_gradient) in block.gradients() {
             let metadata = GradientMetadata {
-                sample_names: sub_gradient.samples.names(),
+                samples_names: sub_gradient.samples.names(),
                 components_names: sub_gradient.components.iter()
                     .map(|c| c.names())
                     .collect::<Vec<_>>(),
@@ -136,7 +136,7 @@ impl TensorMap {
 
         if !blocks.is_empty() {
             // extract metadata from the first block
-            let sample_names = blocks[0].samples.names();
+            let samples_names = blocks[0].samples.names();
             let components_names = blocks[0].components.iter()
                 .map(|c| c.names())
                 .collect::<Vec<_>>();
@@ -145,7 +145,7 @@ impl TensorMap {
 
             for block in &blocks {
                 // check samples and components are the same as those of the first block
-                check_labels_names(block, &sample_names, &components_names, "")?;
+                check_labels_names(block, &samples_names, &components_names, "")?;
 
                 // check properties are the same as those of the first block
                 if block.properties.names() != properties_names {
