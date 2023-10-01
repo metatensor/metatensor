@@ -35,7 +35,7 @@ fn check_labels_names(
 ) -> Result<(), Error> {
     if block.samples.names() != samples_names {
         return Err(Error::InvalidParameter(format!(
-            "all blocks must have the same sample label names, got [{}] and [{}]{}",
+            "all blocks must have the same samples names, got [{}] and [{}]{}",
             block.samples.names().join(", "),
             samples_names.join(", "),
             context,
@@ -150,7 +150,7 @@ impl TensorMap {
                 // check properties are the same as those of the first block
                 if block.properties.names() != properties_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same property label names, got [{}] and [{}]",
+                        "all blocks must have the same properties names, got [{}] and [{}]",
                         block.properties.names().join(", "),
                         properties_names.join(", "),
                     )));
@@ -255,7 +255,7 @@ impl TensorMap {
         return Ok(matching);
     }
 
-    /// Move the given dimensions from the component labels to the property labels
+    /// Move the given dimensions from the component labels to the properties labels
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
         let mut clone = self.try_clone()?;
@@ -325,7 +325,7 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same sample label \
+            "invalid parameter: all blocks must have the same samples \
             names, got [something_else] and [samples]"
         );
 
@@ -401,7 +401,7 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same property label \
+            "invalid parameter: all blocks must have the same properties \
             names, got [something_else] and [properties]"
         );
 

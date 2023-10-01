@@ -1058,24 +1058,24 @@ public:
             const void* input,
             const mts_sample_mapping_t* samples,
             uintptr_t samples_count,
-            uintptr_t property_start,
-            uintptr_t property_end
+            uintptr_t properties_start,
+            uintptr_t properties_end
         ) {
             return details::catch_exceptions([](
                 void* array,
                 const void* input,
                 const mts_sample_mapping_t* samples,
                 uintptr_t samples_count,
-                uintptr_t property_start,
-                uintptr_t property_end
+                uintptr_t properties_start,
+                uintptr_t properties_end
             ) {
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 const auto* cxx_input = static_cast<const DataArrayBase*>(input);
                 auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
 
-                cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
+                cxx_array->move_samples_from(*cxx_input, cxx_samples, properties_start, properties_end);
                 return MTS_SUCCESS;
-            }, array, input, samples, samples_count, property_start, property_end);
+            }, array, input, samples, samples_count, properties_start, properties_end);
         };
 
         return array;
@@ -1131,13 +1131,13 @@ public:
     /// the current DataArrayBase.
     ///
     /// This function should copy data from `input[samples[i].input, ..., :]` to
-    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
+    /// `array[samples[i].output, ..., properties_start:properties_end]` for `i` up
     /// to `samples_count`. All indexes are 0-based.
     virtual void move_samples_from(
         const DataArrayBase& input,
         std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        uintptr_t properties_start,
+        uintptr_t properties_end
     ) = 0;
 
 };
@@ -1227,15 +1227,15 @@ public:
     void move_samples_from(
         const DataArrayBase& input,
         std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        uintptr_t properties_start,
+        uintptr_t properties_end
     ) override {
         const auto& input_array = dynamic_cast<const SimpleDataArray&>(input);
         assert(input_array.shape_.size() == this->shape_.size());
 
-        size_t property_count = property_end - property_start;
-        size_t property_dim = shape_.size() - 1;
-        assert(input_array.shape_[property_dim] == property_count);
+        size_t properties_count = properties_end - properties_start;
+        size_t properties_dim = shape_.size() - 1;
+        assert(input_array.shape_[properties_dim] == properties_count);
 
         auto input_index = std::vector<size_t>(shape_.size(), 0);
         auto output_index = std::vector<size_t>(shape_.size(), 0);
@@ -1244,11 +1244,11 @@ public:
             input_index[0] = sample.input;
             output_index[0] = sample.output;
 
-            if (property_dim == 1) {
+            if (properties_dim == 1) {
                 // no components
-                for (size_t property_i=0; property_i<property_count; property_i++) {
-                    input_index[property_dim] = property_i;
-                    output_index[property_dim] = property_i + property_start;
+                for (size_t properties_i=0; properties_i<properties_count; properties_i++) {
+                    input_index[properties_dim] = properties_i;
+                    output_index[properties_dim] = properties_i + properties_start;
 
                     auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
                     this->data_[details::linear_index(shape_, output_index)] = value;
@@ -1265,9 +1265,9 @@ public:
                         output_index[component_i] = input_index[component_i];
                     }
 
-                    for (size_t property_i=0; property_i<property_count; property_i++) {
-                        input_index[property_dim] = property_i;
-                        output_index[property_dim] = property_i + property_start;
+                    for (size_t properties_i=0; properties_i<properties_count; properties_i++) {
+                        input_index[properties_dim] = properties_i;
+                        output_index[properties_dim] = properties_i + properties_start;
 
                         auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
                         this->data_[details::linear_index(shape_, output_index)] = value;
@@ -1443,7 +1443,7 @@ private:
 ///
 /// A block can also contain gradients of the values with respect to a variety
 /// of parameters. In this case, each gradient has a separate set of samples,
-/// and possibly components but share the same property labels as the values.
+/// and possibly components but share the same properties labels as the values.
 class TensorBlock final {
 public:
     /// Create a new TensorBlock containing the given `values` array.
@@ -1546,7 +1546,7 @@ public:
 
     NDArray<double> values() && = delete;
 
-    /// Access the sample `Labels` for this block.
+    /// Access the samples `Labels` for this block.
     ///
     /// The entries in these labels describe the first dimension of the
     /// `values()` array.
@@ -1569,7 +1569,7 @@ public:
         return result;
     }
 
-    /// Access the property `Labels` for this block.
+    /// Access the properties `Labels` for this block.
     ///
     /// The entries in these labels describe the last dimension of the
     /// `values()` array. The properties are guaranteed to be the same for
@@ -1904,35 +1904,35 @@ public:
     TensorBlock block_by_id(uintptr_t index) && = delete;
 
     /// Merge blocks with the same value for selected keys dimensions along the
-    /// property axis.
+    /// properties axis.
     ///
     /// The dimensions (names) of `keys_to_move` will be moved from the keys to
-    /// the property labels, and blocks with the same remaining keys dimensions
-    /// will be merged together along the property axis.
+    /// the properties labels, and blocks with the same remaining keys
+    /// dimensions will be merged together along the properties axis.
     ///
     /// If `keys_to_move` does not contains any entries (i.e.
-    /// `keys_to_move.count() == 0`), then the new property labels will contain
-    /// entries corresponding to the merged blocks only. For example, merging a
-    /// block with key `a=0` and properties `p=1, 2` with a block with key `a=2`
-    /// and properties `p=1, 3` will produce a block with properties `a, p = (0,
-    /// 1), (0, 2), (2, 1), (2, 3)`.
+    /// `keys_to_move.count() == 0`), then the new properties labels will
+    /// contain entries corresponding to the merged blocks only. For example,
+    /// merging a block with key `a=0` and properties `p=1, 2` with a block with
+    /// key `a=2` and properties `p=1, 3` will produce a block with properties
+    /// `a, p = (0, 1), (0, 2), (2, 1), (2, 3)`.
     ///
-    /// If `keys_to_move` contains entries, then the property labels must be the
-    /// same for all the merged blocks. In that case, the merged property labels
-    /// will contains each of the entries of `keys_to_move` and then the current
-    /// property labels. For example, using `a=2, 3` in `keys_to_move`, and
-    /// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
-    /// (3, 1), (3, 2)`.
+    /// If `keys_to_move` contains entries, then the properties labels must be
+    /// the same for all the merged blocks. In that case, the merged properties
+    /// labels will contains each of the entries of `keys_to_move` and then the
+    /// current properties labels. For example, using `a=2, 3` in
+    /// `keys_to_move`, and blocks with properties `p=1, 2` will result in `a, p
+    /// = (2, 1), (2, 2), (3, 1), (3, 2)`.
     ///
-    /// The new sample labels will contains all of the merged blocks sample
+    /// The new samples labels will contains all of the merged blocks samples
     /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     ///
-    /// @param keys_to_move description of the keys to move
-    /// @param sort_samples whether to sort the merged samples or keep them in
-    ///                     the order in which they appear in the original blocks
+    /// @param keys_to_move description of the keys to move @param sort_samples
+    /// whether to sort the merged samples or keep them in the order in which
+    /// they appear in the original blocks
     TensorMap keys_to_properties(const Labels& keys_to_move, bool sort_samples = true) const {
         auto* ptr = mts_tensormap_keys_to_properties(
             tensor_,
@@ -1960,11 +1960,11 @@ public:
     /// samples axis.
     ///
     /// The dimensions (names) of `keys_to_move` will be moved from the keys to
-    /// the sample labels, and blocks with the same remaining keys dimensions
-    /// will be merged together along the sample axis.
+    /// the samples labels, and blocks with the same remaining keys dimensions
+    /// will be merged together along the samples axis.
     ///
     /// If `keys_to_move` must be an empty set of `Labels`
-    /// (`keys_to_move.count() == 0`). The new sample labels will contain
+    /// (`keys_to_move.count() == 0`). The new samples labels will contain
     /// entries corresponding to the merged blocks' keys.
     ///
     /// The order of the samples is controlled by `sort_samples`. If
@@ -1973,7 +1973,7 @@ public:
     /// they appear in the blocks.
     ///
     /// This function is only implemented if all merged block have the same
-    /// property labels.
+    /// properties labels.
     ///
     /// @param keys_to_move description of the keys to move
     /// @param sort_samples whether to sort the merged samples or keep them in
@@ -2001,7 +2001,7 @@ public:
         return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
     }
 
-    /// Move the given `dimensions` from the component labels to the property
+    /// Move the given `dimensions` from the component labels to the properties
     /// labels for each block.
     ///
     /// @param dimensions name of the component dimensions to move to the

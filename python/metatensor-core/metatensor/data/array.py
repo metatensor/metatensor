@@ -219,8 +219,8 @@ def _mts_array_move_samples_from(
     input,
     samples_ptr,
     samples_count,
-    property_start,
-    property_end,
+    properties_start,
+    properties_end,
 ):
     output = _object_from_ptr(this).array
     input = _object_from_ptr(input).array
@@ -231,5 +231,5 @@ def _mts_array_move_samples_from(
         input_samples.append(samples_ptr[i].input)
         output_samples.append(samples_ptr[i].output)
 
-    properties = slice(property_start, property_end)
+    properties = slice(properties_start, properties_end)
     output[output_samples, ..., properties] = input[input_samples, ..., :]

@@ -50,8 +50,8 @@ def test_split_block_samples():
         for parameter, gradient in block.gradients():
             split_gradient = split_block.gradient(parameter)
 
-            # only check the non-"sample" dimension, since the "sample" dimension should
-            # have been updated.
+            # only check the non-"sample" dimension, since the "sample"
+            # dimension should have been updated.
             gradient_mask = mask[gradient.samples["sample"]]
             assert np.all(
                 gradient.samples.values[gradient_mask, 1:]

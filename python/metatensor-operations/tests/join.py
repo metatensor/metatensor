@@ -85,11 +85,11 @@ def test_join_properties_metadata(tensor):
 
     joined_tensor = metatensor.join([tensor, tensor, tensor], axis="properties")
 
-    # test property names
+    # test properties names
     names = tensor.block(0).properties.names
     assert joined_tensor.block(0).properties.names == ["tensor"] + names
 
-    # test property values
+    # test properties values
     tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
     assert set(tensor_prop) == set((0, 1, 2))
 
@@ -101,11 +101,11 @@ def test_join_properties_metadata(tensor):
 
 def test_join_properties_values(tensor):
     """Test values for joining along `properties`"""
-    first_property = Labels(
+    first_properties = Labels(
         tensor[0].properties.names,
         tensor[0].properties.values[:1],
     )
-    slice_1 = metatensor.slice(tensor, axis="properties", labels=first_property)
+    slice_1 = metatensor.slice(tensor, axis="properties", labels=first_properties)
 
     other_properties = Labels(
         tensor[0].properties.names,
@@ -132,11 +132,11 @@ def test_join_properties_with_same_properties_names(tensor):
 
     joined_tensor = metatensor.join([tensor, tensor, tensor], axis="properties")
 
-    # test property names
+    # test properties names
     names = tensor.block(0).properties.names
     assert joined_tensor.block(0).properties.names == ["tensor"] + names
 
-    # test property values
+    # test properties values
     tensor_prop = np.unique(joined_tensor.block(0).properties["tensor"])
     assert set(tensor_prop) == set((0, 1, 2))
 
@@ -259,7 +259,7 @@ def test_join_samples_with_different_samples_names():
         ],
     )
 
-    with pytest.raises(ValueError, match="Sample names are not the same!"):
+    with pytest.raises(ValueError, match="Samples names are not the same!"):
         metatensor.join([tensor_map_a, tensor_map_b], axis="samples")
 
 

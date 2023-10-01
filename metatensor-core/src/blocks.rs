@@ -47,7 +47,7 @@ fn check_data_and_labels(
 
     if shape[0] != samples.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 0 is {} but we have {} sample labels",
+            "{}: the array shape along axis 0 is {} but we have {} samples labels",
             context, shape[0], samples.count()
         )));
     }
@@ -192,7 +192,7 @@ impl TensorBlock {
     /// Add a gradient with respect to `parameter` to this block.
     ///
     /// The gradient `data` is given as an array, and the samples and components
-    /// labels must be provided. The property labels are assumed to match the
+    /// labels must be provided. The properties labels are assumed to match the
     /// ones of the values in the current block.
     ///
     /// The components labels must contain at least the same entries as the
@@ -298,19 +298,19 @@ impl TensorBlock {
 
         let moved_component = self.components.0.remove(component_axis);
 
-        // construct the new property with old properties and the components
+        // construct the new properties with old properties and the components
         let old_properties = &self.properties;
-        let new_property_names = moved_component.names().iter()
+        let new_properties_names = moved_component.names().iter()
             .chain(old_properties.names().iter())
             .copied()
             .collect();
 
-        let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
-        for new_property in &*moved_component {
-            for old_property in old_properties.iter() {
-                let mut property = new_property.to_vec();
-                property.extend_from_slice(old_property);
-                new_properties_builder.add(&property)?;
+        let mut new_properties_builder = LabelsBuilder::new(new_properties_names)?;
+        for new_properties in &*moved_component {
+            for old_properties in old_properties.iter() {
+                let mut properties = new_properties.to_vec();
+                properties.extend_from_slice(old_properties);
+                new_properties_builder.add(&properties)?;
             }
         }
         let new_properties = new_properties_builder.finish();
@@ -362,7 +362,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 0 is 3 but we have 4 sample labels"
+            along axis 0 is 3 but we have 4 samples labels"
         );
 
         let values = TestArray::new(vec![4, 9]);

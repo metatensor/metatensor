@@ -372,17 +372,9 @@ def allclose_block(
     ...             [3, 5, 6],
     ...         ]
     ...     ),
-    ...     samples=Labels(
-    ...         ["structure", "center"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     samples=Labels.range("s", 2),
     ...     components=[],
-    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
+    ...     properties=Labels.range("p", 3),
     ... )
 
     Recreate ``block_1``, but change first value in the block from ``1`` to ``1.00001``.
@@ -394,17 +386,9 @@ def allclose_block(
     ...             [3, 5, 6],
     ...         ]
     ...     ),
-    ...     samples=Labels(
-    ...         ["structure", "center"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     samples=Labels.range("s", 2),
     ...     components=[],
-    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
+    ...     properties=Labels.range("p", 3),
     ... )
 
     Call :py:func:`metatensor.allclose_block()`, which should return :py:obj:`False`
@@ -466,17 +450,9 @@ def allclose_block_raise(
     ...             [3, 5, 6],
     ...         ]
     ...     ),
-    ...     samples=Labels(
-    ...         ["structure", "center"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     samples=Labels.range("s", 2),
     ...     components=[],
-    ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
+    ...     properties=Labels.range("property_1", 3),
     ... )
 
     Recreate ``block_1``, but rename properties label ``'property_1'`` to
@@ -489,17 +465,9 @@ def allclose_block_raise(
     ...             [3, 5, 6],
     ...         ]
     ...     ),
-    ...     samples=Labels(
-    ...         ["structure", "center"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     samples=Labels.range("s", 2),
     ...     components=[],
-    ...     properties=Labels(["property_2"], np.array([[0], [1], [2]])),
+    ...     properties=Labels.range("property_2", 3),
     ... )
 
     Call :py:func:`metatensor.allclose_block_raise()`, which should raise

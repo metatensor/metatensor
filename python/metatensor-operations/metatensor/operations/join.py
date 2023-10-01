@@ -243,7 +243,7 @@ def join(
             "either 'error', 'intersection' or 'union'."
         )
 
-    # Deduce if sample/property names are the same in all tensors.
+    # Deduce if samples/properties names are the same in all tensors.
     # If this is not the case we have to change unify the corresponding labels later.
     if axis == "samples":
         names_list = [tensor.samples_names for tensor in tensors]
@@ -263,11 +263,11 @@ def join(
     length_equal = [len(unique_names) == len(names) for names in names_list]
     names_are_same = sum(length_equal) == len(length_equal)
 
-    # It's fine to lose metadata on the property axis, less so on the sample axis!
+    # It's fine to lose metadata on the property axis, less so on the samples axis!
     if axis == "samples" and not names_are_same:
         raise ValueError(
-            "Sample names are not the same! Joining along samples with different "
-            "sample names will loose information and is not supported."
+            "Samples names are not the same! Joining along samples with different "
+            "samples names will loose information and is not supported."
         )
 
     keys = tensors[0].keys

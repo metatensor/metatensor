@@ -79,10 +79,10 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
         assert np.all(sliced_c == c)
 
     # we have the right values
-    samples_filter = np.array(
+    samples_mask = np.array(
         [sample["structure"] in structures_to_keep for sample in block.samples]
     )
-    assert np.all(sliced_block.values == block.values[samples_filter, ...])
+    assert np.all(sliced_block.values == block.values[samples_mask, ...])
 
     for parameter, gradient in block.gradients():
         sliced_gradient = sliced_block.gradient(parameter)
@@ -93,9 +93,9 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
         assert np.max(sliced_gradient.samples["sample"]) < sliced_block.values.shape[0]
 
         # other columns in the gradient samples have been sliced correctly
-        gradient_sample_filter = samples_filter[gradient.samples["sample"]]
+        gradient_sample_mask = samples_mask[gradient.samples["sample"]]
         if len(gradient.samples.names) > 1:
-            expected = gradient.samples.values[gradient_sample_filter, 1:]
+            expected = gradient.samples.values[gradient_sample_mask, 1:]
             sliced_gradient_samples = sliced_gradient.samples.values[:, 1:]
             assert np.all(sliced_gradient_samples == expected)
 
@@ -104,7 +104,7 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
         for sliced_c, c in zip(sliced_gradient.components, gradient.components):
             assert np.all(sliced_c == c)
 
-        expected = gradient.values[gradient_sample_filter]
+        expected = gradient.values[gradient_sample_mask]
         assert np.all(sliced_gradient.values == expected)
 
 
@@ -126,8 +126,8 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
         assert np.all(sliced_c == c)
 
     # we have the right values
-    property_filter = [property["n"] in radial_to_keep for property in block.properties]
-    assert np.all(sliced_block.values == block.values[..., property_filter])
+    properties_mask = [p["n"] in radial_to_keep for p in block.properties]
+    assert np.all(sliced_block.values == block.values[..., properties_mask])
 
     for parameter, gradient in block.gradients():
         sliced_gradient = sliced_block.gradient(parameter)
@@ -148,7 +148,7 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
             assert np.all(sliced_c == c)
 
         # we have the right values
-        assert np.all(sliced_gradient.values == gradient.values[..., property_filter])
+        assert np.all(sliced_gradient.values == gradient.values[..., properties_mask])
 
 
 def _check_empty_block(block, sliced_block, axis):
@@ -370,11 +370,9 @@ def test_slice_block_samples_and_properties(tensor):
     )
 
     # we have the right values
-    samples_filter = [sample["center"] in centers_to_keep for sample in block.samples]
-    properties_filter = [
-        property["n"] in channels_to_keep for property in block.properties
-    ]
-    expected = block.values[samples_filter][..., properties_filter]
+    samples_mask = [sample["center"] in centers_to_keep for sample in block.samples]
+    properties_mask = [p["n"] in channels_to_keep for p in block.properties]
+    expected = block.values[samples_mask][..., properties_mask]
     assert np.all(sliced_block.values == expected)
 
     # Second, slice on properties and then on samples
@@ -406,11 +404,9 @@ def test_slice_block_samples_and_properties(tensor):
     )
 
     # we have the right values
-    samples_filter = [sample["center"] in centers_to_keep for sample in block.samples]
-    properties_filter = [
-        property["n"] in channels_to_keep for property in block.properties
-    ]
-    expected = block.values[samples_filter][..., properties_filter]
+    samples_mask = [sample["center"] in centers_to_keep for sample in block.samples]
+    properties_mask = [p["n"] in channels_to_keep for p in block.properties]
+    expected = block.values[samples_mask][..., properties_mask]
     assert np.all(sliced_block.values == expected)
 
 

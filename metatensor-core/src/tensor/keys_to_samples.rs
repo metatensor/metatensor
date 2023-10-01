@@ -13,21 +13,21 @@ impl TensorMap {
     /// samples axis.
     ///
     /// The dimensions (names) of `keys_to_move` will be moved from the keys to
-    /// the sample labels, and blocks with the same remaining keys dimensions
-    /// will be merged together along the sample axis.
+    /// the samples labels, and blocks with the same remaining keys dimensions
+    /// will be merged together along the samples axis.
     ///
     /// `keys_to_move` must be empty (`keys_to_move.count() == 0`), and the new
-    /// sample labels will contain entries corresponding to the merged blocks'
+    /// samples labels will contain entries corresponding to the merged blocks'
     /// keys.
     ///
-    /// The new sample labels will contains all of the merged blocks sample
+    /// The new samples labels will contains all of the merged blocks samples
     /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     ///
     /// This function is only implemented if all merged block have the same
-    /// property labels.
+    /// properties labels.
     pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
@@ -103,7 +103,7 @@ impl TensorMap {
     }
 }
 
-/// Merge the given `blocks` along the sample axis.
+/// Merge the given `blocks` along the samples axis.
 fn merge_blocks_along_samples(
     blocks_to_merge: &[KeyAndBlock],
     extracted_names: &[&str],
@@ -134,7 +134,7 @@ fn merge_blocks_along_samples(
         if &block.properties != first_properties_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
-                different property labels".into() // TODO: this might be possible
+                different properties labels".into() // TODO: this might be possible
             ))
         }
     }
@@ -157,14 +157,14 @@ fn merge_blocks_along_samples(
     new_shape[0] = merged_samples.count();
     let mut new_data = first_block.values.create(&new_shape)?;
 
-    let property_range = 0..new_properties.count();
+    let properties_range = 0..new_properties.count();
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
         new_data.move_samples_from(
             &block.values,
             samples_mapping,
-            property_range.clone(),
+            properties_range.clone(),
         )?;
     }
 
@@ -209,7 +209,7 @@ fn merge_blocks_along_samples(
             new_gradient.move_samples_from(
                 &gradient.values,
                 &samples_to_move,
-                property_range.clone(),
+                properties_range.clone(),
             )?;
         }
 

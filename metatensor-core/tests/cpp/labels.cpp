@@ -133,7 +133,7 @@ TEST_CASE("User data") {
             delete static_cast<UserData*>(ptr);
         });
 
-        auto labels = Labels({"sample"}, {{0}, {1}, {2}});
+        auto labels = Labels({"s"}, {{0}, {1}, {2}});
         labels.set_user_data(std::move(user_data));
 
         auto* data_ptr = static_cast<UserData*>(labels.user_data());
@@ -147,7 +147,7 @@ TEST_CASE("User data") {
             std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
             labels,
             {},
-            Labels({"properties"}, {{5}, {3}})
+            Labels({"p"}, {{5}, {3}})
         );
 
         auto samples = block.samples();
@@ -169,7 +169,7 @@ TEST_CASE("User data") {
         CHECK(data_ptr->values == std::vector<double>{1.0, 2.0, 3.0, 42.1, 12356});
 
         // check that we can register user data after the construction of the block
-        data = new UserData{"properties", 0, {}};
+        data = new UserData{"name of data", 0, {}};
         user_data = metatensor::LabelsUserData(data, [](void* ptr){
             DELETE_CALL_MARKER += 10000000;
             delete static_cast<UserData*>(ptr);
@@ -181,7 +181,7 @@ TEST_CASE("User data") {
         properties = block.properties();
         data_ptr = static_cast<UserData*>(properties.user_data());
         REQUIRE(data_ptr != nullptr);
-        CHECK(data_ptr->name == "properties");
+        CHECK(data_ptr->name == "name of data");
         CHECK(data_ptr->count == 0);
         CHECK(data_ptr->values.empty());
     }

@@ -26,7 +26,7 @@ class TensorBlock:
     A block can also contain gradients of the values with respect to a variety
     of parameters. In this case, each gradient is a :py:class:`TensorBlock` with
     a separate set of samples and possibly components, but which shares the same
-    property labels as the original :py:class:`TensorBlock`.
+    properties labels as the original :py:class:`TensorBlock`.
     """
 
     def __init__(
@@ -192,7 +192,7 @@ class TensorBlock:
     @property
     def samples(self) -> Labels:
         """
-        Get the sample :py:class:`Labels` for this block.
+        Get the samples :py:class:`Labels` for this block.
 
         The entries in these labels describe the first dimension of the
         ``values`` array.
@@ -218,14 +218,14 @@ class TensorBlock:
     @property
     def properties(self) -> Labels:
         """
-        Get the property :py:class:`Labels` for this block.
+        Get the properties :py:class:`Labels` for this block.
 
         The entries in these labels describe the last dimension of the
         ``values`` array. The properties are guaranteed to be the same for
         values and gradients in the same block.
         """
-        property_axis = len(self.values.shape) - 1
-        return self._labels(property_axis)
+        properties_axis = len(self.values.shape) - 1
+        return self._labels(properties_axis)
 
     def _labels(self, axis) -> Labels:
         result = mts_labels_t()
@@ -244,18 +244,18 @@ class TensorBlock:
         >>> from metatensor import Labels, TensorBlock
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 5), 1.0),
-        ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 5),
+        ...     samples=Labels(["s"], np.array([[0], [2], [4]])),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 5),
         ... )
         >>> positions_gradient = TensorBlock(
         ...     values=np.full((2, 3, 1, 5), 11.0),
         ...     samples=Labels(["sample", "atom"], np.array([[0, 2], [2, 3]])),
         ...     components=[
         ...         Labels.range("direction", 3),
-        ...         Labels.range("component", 1),
+        ...         Labels.range("c", 1),
         ...     ],
-        ...     properties=Labels.range("property", 5),
+        ...     properties=Labels.range("p", 5),
         ... )
 
         >>> block.add_gradient("positions", positions_gradient)
@@ -265,9 +265,9 @@ class TensorBlock:
         ...     components=[
         ...         Labels.range("direction_1", 3),
         ...         Labels.range("direction_2", 3),
-        ...         Labels.range("component", 1),
+        ...         Labels.range("c", 1),
         ...     ],
-        ...     properties=Labels.range("property", 5),
+        ...     properties=Labels.range("p", 5),
         ... )
         >>> block.add_gradient("cell", cell_gradient)
 
@@ -275,16 +275,16 @@ class TensorBlock:
         >>> print(positions_gradient)
         Gradient TensorBlock ('positions')
             samples (2): ['sample', 'atom']
-            components (3, 1): ['direction', 'component']
-            properties (5): ['property']
+            components (3, 1): ['direction', 'c']
+            properties (5): ['p']
             gradients: None
 
         >>> cell_gradient = block.gradient("cell")
         >>> print(cell_gradient)
         Gradient TensorBlock ('cell')
             samples (2): ['sample']
-            components (3, 3, 1): ['direction_1', 'direction_2', 'component']
-            properties (5): ['property']
+            components (3, 3, 1): ['direction_1', 'direction_2', 'c']
+            properties (5): ['p']
             gradients: None
         """
         gradient_block = ctypes.POINTER(mts_block_t)()
@@ -324,22 +324,22 @@ class TensorBlock:
         >>> from metatensor import Labels, TensorBlock
         >>> block = TensorBlock(
         ...     values=np.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["structure"], np.array([[0], [2], [4]])),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 1),
+        ...     samples=Labels(["s"], np.array([[0], [2], [4]])),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 1),
         ... )
         >>> gradient = TensorBlock(
         ...     values=np.full((2, 1, 1), 11.0),
         ...     samples=Labels(["sample", "parameter"], np.array([[0, -2], [2, 3]])),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 1),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 1),
         ... )
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
         TensorBlock
-            samples (3): ['structure']
-            components (1): ['component']
-            properties (1): ['property']
+            samples (3): ['s']
+            components (1): ['c']
+            properties (1): ['p']
             gradients: ['parameter']
         """
         if self._parent is not None:

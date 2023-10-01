@@ -9,24 +9,24 @@ use utils::example_labels;
 fn one_component() {
     let mut block = TensorBlock::new(
         ArrayD::from_elem(vec![3, 2, 3], 1.0),
-        &example_labels(vec!["samples"], vec![[0], [1], [2]]),
-        &[example_labels(vec!["components"], vec![[0], [1]])],
-        &example_labels(vec!["properties"], vec![[0], [1], [2]]),
+        &example_labels(vec!["s"], vec![[0], [1], [2]]),
+        &[example_labels(vec!["c"], vec![[0], [1]])],
+        &example_labels(vec!["p"], vec![[0], [1], [2]]),
     ).unwrap();
 
     let gradient = TensorBlock::new(
         ArrayD::from_elem(vec![2, 2, 3], 11.0),
         &example_labels(vec!["sample", "parameter"], vec![[0, 2], [1, 2]]),
-        &[example_labels(vec!["components"], vec![[0], [1]])],
-        &example_labels(vec!["properties"], vec![[0], [1], [2]]),
+        &[example_labels(vec!["c"], vec![[0], [1]])],
+        &example_labels(vec!["p"], vec![[0], [1], [2]]),
     ).unwrap();
     block.add_gradient("parameter", gradient).unwrap();
 
     let tensor = TensorMap::new(Labels::single(), vec![block]).unwrap();
-    let tensor = tensor.components_to_properties(&["components"]).unwrap();
+    let tensor = tensor.components_to_properties(&["c"]).unwrap();
 
     let block = tensor.block_by_id(0);
-    assert_eq!(block.samples().names(), ["samples"]);
+    assert_eq!(block.samples().names(), ["s"]);
     assert_eq!(block.samples().count(), 3);
     assert_eq!(block.samples()[0], [0]);
     assert_eq!(block.samples()[1], [1]);
@@ -34,7 +34,7 @@ fn one_component() {
 
     assert_eq!(block.components().len(), 0);
 
-    assert_eq!(block.properties().names(), ["components", "properties"]);
+    assert_eq!(block.properties().names(), ["c", "p"]);
     assert_eq!(block.properties().count(), 6);
     assert_eq!(block.properties()[0], [0, 0]);
     assert_eq!(block.properties()[1], [0, 1]);
@@ -62,14 +62,14 @@ fn multiple_components() {
     ]).unwrap();
 
     let components = [
-        example_labels(vec!["component_1"], vec![[0], [1]]),
-        example_labels(vec!["component_2"], vec![[0], [1], [2]]),
+        example_labels(vec!["c1"], vec![[0], [1]]),
+        example_labels(vec!["c2"], vec![[0], [1], [2]]),
     ];
-    let properties = example_labels(vec!["properties"], vec![[0], [1]]);
+    let properties = example_labels(vec!["p"], vec![[0], [1]]);
 
     let mut block = TensorBlock::new(
         data,
-        &example_labels(vec!["samples"], vec![[0], [1]]),
+        &example_labels(vec!["s"], vec![[0], [1]]),
         &components,
         &properties,
     ).unwrap();
@@ -84,22 +84,22 @@ fn multiple_components() {
     block.add_gradient("parameter", gradient).unwrap();
 
     let tensor = TensorMap::new(Labels::single(), vec![block]).unwrap();
-    let tensor = tensor.components_to_properties(&["component_1"]).unwrap();
+    let tensor = tensor.components_to_properties(&["c1"]).unwrap();
 
     let block = tensor.block_by_id(0);
-    assert_eq!(block.samples().names(), ["samples"]);
+    assert_eq!(block.samples().names(), ["s"]);
     assert_eq!(block.samples().count(), 2);
     assert_eq!(block.samples()[0], [0]);
     assert_eq!(block.samples()[1], [1]);
 
     assert_eq!(block.components().len(), 1);
-    assert_eq!(block.components()[0].names(), ["component_2"]);
+    assert_eq!(block.components()[0].names(), ["c2"]);
     assert_eq!(block.components()[0].count(), 3);
     assert_eq!(block.components()[0][0], [0]);
     assert_eq!(block.components()[0][1], [1]);
     assert_eq!(block.components()[0][2], [2]);
 
-    assert_eq!(block.properties().names(), ["component_1", "properties"]);
+    assert_eq!(block.properties().names(), ["c1", "p"]);
     assert_eq!(block.properties().count(), 4);
     assert_eq!(block.properties()[0], [0, 0]);
     assert_eq!(block.properties()[1], [0, 1]);

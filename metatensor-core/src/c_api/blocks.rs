@@ -12,8 +12,8 @@ use super::{catch_unwind, mts_status_t};
 /// `mts_array_t`, and n sets of `mts_labels_t` (one for each dimension).
 ///
 /// A block can also contain gradients of the values with respect to a variety
-/// of parameters. In this case, each gradient has a separate set of sample
-/// and component labels but share the property labels with the values.
+/// of parameters. In this case, each gradient has a separate set of samples
+/// and components labels but share the properties labels with the values.
 #[allow(non_camel_case_types)]
 pub struct mts_block_t(TensorBlock);
 
@@ -46,11 +46,10 @@ impl mts_block_t {
 /// @param data array handle containing the data for this block. The block takes
 ///             ownership of the array, and will release it with
 ///             `array.destroy(array.ptr)` when it no longer needs it.
-/// @param samples sample labels corresponding to the first dimension of the data
-/// @param components array of component labels corresponding to intermediary
-///                   dimensions of the data
+/// @param samples labels corresponding to the first dimension of the data
+/// @param components labels corresponding to intermediary dimensions of the data
 /// @param components_count number of entries in the `components` array
-/// @param properties property labels corresponding to the last dimension of the data
+/// @param properties labels corresponding to the last dimension of the data
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
@@ -192,7 +191,7 @@ pub unsafe extern fn mts_block_labels(
             // component labels
             &block.components[axis - 1]
         } else if axis == n_components + 1 {
-            // property labels
+            // properties labels
             &block.properties
         } else {
             return Err(Error::InvalidParameter(format!(

@@ -51,7 +51,7 @@ public:
     /// the given `axis`.
     TorchLabels labels(uintptr_t axis) const;
 
-    /// Access the sample `Labels` for this block.
+    /// Access the samples `Labels` for this block.
     ///
     /// The entries in these labels describe the first dimension of the
     /// `values()` array.
@@ -74,7 +74,7 @@ public:
         return result;
     }
 
-    /// Access the property `Labels` for this block.
+    /// Access the properties `Labels` for this block.
     ///
     /// The entries in these labels describe the last dimension of the
     /// `values()` array. The properties are guaranteed to be the same for

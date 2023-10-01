@@ -50,8 +50,8 @@
  * `mts_array_t`, and n sets of `mts_labels_t` (one for each dimension).
  *
  * A block can also contain gradients of the values with respect to a variety
- * of parameters. In this case, each gradient has a separate set of sample
- * and component labels but share the property labels with the values.
+ * of parameters. In this case, each gradient has a separate set of samples
+ * and components labels but share the properties labels with the values.
  */
 typedef struct mts_block_t mts_block_t;
 
@@ -215,15 +215,15 @@ typedef struct mts_array_t {
    * should be moved from `input` to `output`.
    *
    * This function should copy data from `input[samples[i].input, ..., :]` to
-   * `array[samples[i].output, ..., property_start:property_end]` for `i` up
+   * `array[samples[i].output, ..., properties_start:properties_end]` for `i` up
    * to `samples_count`. All indexes are 0-based.
    */
   mts_status_t (*move_samples_from)(void *output,
                                     const void *input,
                                     const struct mts_sample_mapping_t *samples,
                                     uintptr_t samples_count,
-                                    uintptr_t property_start,
-                                    uintptr_t property_end);
+                                    uintptr_t properties_start,
+                                    uintptr_t properties_end);
 } mts_array_t;
 
 /**
@@ -482,11 +482,10 @@ mts_status_t mts_get_data_origin(mts_data_origin_t origin, char *buffer, uintptr
  * @param data array handle containing the data for this block. The block takes
  *             ownership of the array, and will release it with
  *             `array.destroy(array.ptr)` when it no longer needs it.
- * @param samples sample labels corresponding to the first dimension of the data
- * @param components array of component labels corresponding to intermediary
- *                   dimensions of the data
+ * @param samples labels corresponding to the first dimension of the data
+ * @param components labels corresponding to intermediary dimensions of the data
  * @param components_count number of entries in the `components` array
- * @param properties property labels corresponding to the last dimension of the data
+ * @param properties labels corresponding to the last dimension of the data
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
@@ -737,33 +736,32 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
 
 /**
  * Merge blocks with the same value for selected keys dimensions along the
- * property axis.
+ * properties axis.
  *
- * The dimensions (names) of `keys_to_move` will be moved from the keys to
- * the property labels, and blocks with the same remaining keys dimensions
- * will be merged together along the property axis.
+ * The dimensions (names) of `keys_to_move` will be moved from the keys to the
+ * properties labels, and blocks with the same remaining keys dimensions will
+ * be merged together along the properties axis.
  *
- * If `keys_to_move` does not contains any entries (`keys_to_move.count
- * == 0`), then the new property labels will contain entries corresponding
- * to the merged blocks only. For example, merging a block with key `a=0`
- * and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
- * 3` will produce a block with properties `a, p = (0, 1), (0, 2), (2, 1),
- * (2, 3)`.
+ * If `keys_to_move` does not contains any entries (`keys_to_move.count == 0`),
+ * then the new properties labels will contain entries corresponding to the
+ * merged blocks only. For example, merging a block with key `a=0` and
+ * properties `p=1, 2` with a block with key `a=2` and properties `p=1, 3` will
+ * produce a block with properties `a, p = (0, 1), (0, 2), (2, 1), (2, 3)`.
  *
- * If `keys_to_move` contains entries, then the property labels must be the
- * same for all the merged blocks. In that case, the merged property labels
+ * If `keys_to_move` contains entries, then the properties labels must be the
+ * same for all the merged blocks. In that case, the merged properties labels
  * will contains each of the entries of `keys_to_move` and then the current
- * property labels. For example, using `a=2, 3` in `keys_to_move`, and
- * blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
- * (3, 1), (3, 2)`.
+ * properties labels. For example, using `a=2, 3` in `keys_to_move`, and blocks
+ * with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2), (3, 1), (3,
+ * 2)`.
  *
- * The new sample labels will contains all of the merged blocks sample
- * labels. The order of the samples is controlled by `sort_samples`. If
- * `sort_samples` is true, samples are re-ordered to keep them
- * lexicographically sorted. Otherwise they are kept in the order in which
- * they appear in the blocks.
+ * The new samples labels will contains all of the merged blocks samples labels.
+ * The order of the samples is controlled by `sort_samples`. If `sort_samples`
+ * is true, samples are re-ordered to keep them lexicographically sorted.
+ * Otherwise they are kept in the order in which they appear in the blocks.
  *
- * The result is a new tensor map, which should be freed with `mts_tensormap_free`.
+ * The result is a new tensor map, which should be freed with
+ * `mts_tensormap_free`.
  *
  * @param tensor pointer to an existing tensor map
  * @param keys_to_move description of the keys to move
@@ -779,7 +777,7 @@ struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensor
                                                          bool sort_samples);
 
 /**
- * Move the given dimensions from the component labels to the property labels
+ * Move the given dimensions from the component labels to the properties labels
  * for each block in this tensor map.
  *
  * `dimensions` must be an array of `dimensions_count` NULL-terminated strings,
@@ -802,21 +800,21 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  * samples axis.
  *
  * The dimensions (names) of `keys_to_move` will be moved from the keys to
- * the sample labels, and blocks with the same remaining keys dimensions
- * will be merged together along the sample axis.
+ * the samples labels, and blocks with the same remaining keys dimensions
+ * will be merged together along the samples axis.
  *
  * `keys_to_move` must be empty (`keys_to_move.count == 0`), and the new
- * sample labels will contain entries corresponding to the merged blocks'
+ * samples labels will contain entries corresponding to the merged blocks'
  * keys.
  *
- * The new sample labels will contains all of the merged blocks sample
+ * The new samples labels will contains all of the merged blocks samples
  * labels. The order of the samples is controlled by `sort_samples`. If
  * `sort_samples` is true, samples are re-ordered to keep them
  * lexicographically sorted. Otherwise they are kept in the order in which
  * they appear in the blocks.
  *
  * This function is only implemented if all merged block have the same
- * property labels.
+ * properties labels.
  *
  * @param tensor pointer to an existing tensor map
  * @param keys_to_move description of the keys to move

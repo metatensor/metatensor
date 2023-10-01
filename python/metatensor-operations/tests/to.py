@@ -13,7 +13,7 @@ except ImportError:
 
 
 import metatensor
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorMap
 
 
 @pytest.fixture
@@ -313,11 +313,8 @@ def test_change_dtype_branched():
     """Test a `to` change of dtype with multiple gradient branches"""
 
     def get_dummy_block():
-        return TensorBlock(
-            values=np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]),
-            samples=Labels.range("sample", 2),
-            components=[],
-            properties=Labels.range("property", 3),
+        return metatensor.block_from_array(
+            np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]),
         )
 
     grad_00 = get_dummy_block()
@@ -348,9 +345,7 @@ def test_change_dtype_branched():
     grad_2.add_gradient("gradient_21", grad_21)
     grad_2.add_gradient("gradient_22", grad_22)
 
-    block = metatensor.block_from_array(
-        np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]),
-    )
+    block = get_dummy_block()
     block.add_gradient("gradient_0", grad_0)
     block.add_gradient("gradient_1", grad_1)
     block.add_gradient("gradient_2", grad_2)

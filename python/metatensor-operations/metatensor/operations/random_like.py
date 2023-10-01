@@ -37,16 +37,16 @@ def random_uniform_like(
 
     >>> block = TensorBlock(
     ...     values=np.random.rand(4, 3),
-    ...     samples=Labels.range("sample", 4),
+    ...     samples=Labels.range("s", 4),
     ...     components=[],
-    ...     properties=Labels.range("property", 3),
+    ...     properties=Labels.range("p", 3),
     ... )
     >>> block.add_gradient(
     ...     parameter="alpha",
     ...     gradient=TensorBlock(
     ...         values=np.random.rand(2, 3, 3),
-    ...         samples=Labels(["sample", "atom"], np.array([[0, 0], [0, 2]])),
-    ...         components=[Labels.range("component", 3)],
+    ...         samples=Labels(["sample", "alpha"], np.array([[0, 0], [0, 2]])),
+    ...         components=[Labels.range("c", 3)],
     ...         properties=block.properties,
     ...     ),
     ... )
@@ -63,9 +63,9 @@ def random_uniform_like(
     >>> tensor = TensorMap(keys, [block])
     >>> print(tensor.block(0))
     TensorBlock
-        samples (4): ['sample']
+        samples (4): ['s']
         components (): []
-        properties (3): ['property']
+        properties (3): ['p']
         gradients: ['alpha', 'beta']
 
     Then we use ``random_uniform_like`` to create a :py:class:`TensorMap` with
@@ -75,9 +75,9 @@ def random_uniform_like(
     >>> tensor_random = metatensor.random_uniform_like(tensor)
     >>> print(tensor_random.block(0))
     TensorBlock
-        samples (4): ['sample']
+        samples (4): ['s']
         components (): []
-        properties (3): ['property']
+        properties (3): ['p']
         gradients: ['alpha', 'beta']
     >>> print(tensor_random.block(0).values)
     [[0.53316528 0.69187711 0.31551563]

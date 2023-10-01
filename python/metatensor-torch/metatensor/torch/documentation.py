@@ -579,7 +579,7 @@ class TensorBlock:
     @property
     def samples(self) -> Labels:
         """
-        Get the sample :py:class:`Labels` for this block.
+        Get the samples :py:class:`Labels` for this block.
 
         The entries in these labels describe the first dimension of the
         ``values`` array.
@@ -632,9 +632,9 @@ class TensorBlock:
         >>> from metatensor.torch import TensorBlock, Labels
         >>> block = TensorBlock(
         ...     values=torch.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["structure"], torch.IntTensor([[0], [2], [4]])),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 1),
+        ...     samples=Labels(["s"], torch.IntTensor([[0], [2], [4]])),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 1),
         ... )
         >>> gradient = TensorBlock(
         ...     values=torch.full((2, 1, 1), 11.0),
@@ -642,15 +642,15 @@ class TensorBlock:
         ...         names=["sample", "parameter"],
         ...         values=torch.IntTensor([[0, -2], [2, 3]]),
         ...     ),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 1),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 1),
         ... )
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
         TensorBlock
-            samples (3): ['structure']
-            components (1): ['component']
-            properties (1): ['property']
+            samples (3): ['s']
+            components (1): ['c']
+            properties (1): ['p']
             gradients: ['parameter']
         <BLANKLINE>
         """
@@ -666,9 +666,9 @@ class TensorBlock:
         >>> from metatensor.torch import TensorBlock, Labels
         >>> block = TensorBlock(
         ...     values=torch.full((3, 1, 5), 1.0),
-        ...     samples=Labels(["structure"], torch.tensor([[0], [2], [4]])),
-        ...     components=[Labels.range("component", 1)],
-        ...     properties=Labels.range("property", 5),
+        ...     samples=Labels(["s"], torch.tensor([[0], [2], [4]])),
+        ...     components=[Labels.range("c", 1)],
+        ...     properties=Labels.range("p", 5),
         ... )
 
         >>> positions_gradient = TensorBlock(
@@ -676,9 +676,9 @@ class TensorBlock:
         ...     samples=Labels(["sample", "atom"], torch.tensor([[0, 2], [2, 3]])),
         ...     components=[
         ...         Labels.range("direction", 3),
-        ...         Labels.range("component", 1),
+        ...         Labels.range("c", 1),
         ...     ],
-        ...     properties=Labels.range("property", 5),
+        ...     properties=Labels.range("p", 5),
         ... )
         >>> block.add_gradient("positions", positions_gradient)
 
@@ -688,9 +688,9 @@ class TensorBlock:
         ...     components=[
         ...         Labels.range("direction_1", 3),
         ...         Labels.range("direction_2", 3),
-        ...         Labels.range("component", 1),
+        ...         Labels.range("c", 1),
         ...     ],
-        ...     properties=Labels.range("property", 5),
+        ...     properties=Labels.range("p", 5),
         ... )
         >>> block.add_gradient("cell", cell_gradient)
 
@@ -698,16 +698,16 @@ class TensorBlock:
         >>> print(positions_gradient)
         Gradient TensorBlock ('positions')
             samples (2): ['sample', 'atom']
-            components (3, 1): ['direction', 'component']
-            properties (5): ['property']
+            components (3, 1): ['direction', 'c']
+            properties (5): ['p']
             gradients: None
         <BLANKLINE>
         >>> cell_gradient = block.gradient("cell")
         >>> print(cell_gradient)
         Gradient TensorBlock ('cell')
             samples (2): ['sample']
-            components (3, 3, 1): ['direction_1', 'direction_2', 'component']
-            properties (5): ['property']
+            components (3, 3, 1): ['direction_1', 'direction_2', 'c']
+            properties (5): ['p']
             gradients: None
         <BLANKLINE>
         """
@@ -827,7 +827,7 @@ class TensorMap:
         blocks along the properties direction (i.e. do an *horizontal*
         concatenation).
 
-        If ``keys_to_move`` is given as strings, then the new property labels
+        If ``keys_to_move`` is given as strings, then the new properties labels
         will **only** contain entries from the existing blocks. For example,
         merging a block with key ``a=0`` and properties ``p=1, 2`` with a block
         with key ``a=2`` and properties ``p=1, 3`` will produce a block with
@@ -863,7 +863,7 @@ class TensorMap:
 
     def components_to_properties(self, dimensions: StrSequence) -> "TensorMap":
         """
-        Move the given ``dimensions`` from the component labels to the property
+        Move the given ``dimensions`` from the component labels to the properties
         labels for each block.
 
         :param dimensions: name of the component dimensions to move to the
@@ -954,15 +954,15 @@ class TensorMap:
 
     @property
     def samples_names(self) -> List[str]:
-        """names of the sample labels for all blocks in this tensor map"""
+        """names of the samples labels for all blocks in this tensor map"""
 
     @property
-    def components_names(self) -> List[List[str]]:
-        """names of the component labels for all blocks in this tensor map"""
+    def components_names(self) -> List[str]:
+        """names of the components labels for all blocks in this tensor map"""
 
     @property
     def property_names(self) -> List[str]:
-        """names of the property labels for all blocks in this tensor map"""
+        """names of the properties labels for all blocks in this tensor map"""
 
     def print(self, max_keys: int) -> str:
         """

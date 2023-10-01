@@ -102,8 +102,8 @@ void TorchDataArray::swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
 void TorchDataArray::move_samples_from(
     const metatensor::DataArrayBase& raw_input,
     std::vector<mts_sample_mapping_t> samples,
-    uintptr_t property_start,
-    uintptr_t property_end
+    uintptr_t properties_start,
+    uintptr_t properties_end
 ) {
     const auto& input = dynamic_cast<const TorchDataArray&>(raw_input);
     auto input_tensor = input.tensor();
@@ -126,7 +126,7 @@ void TorchDataArray::move_samples_from(
 
     // output[output_samples, ..., properties] = input[input_samples, ..., :]
     output_tensor.index_put_(
-        {output_samples, Ellipsis, Slice(property_start, property_end)},
+        {output_samples, Ellipsis, Slice(properties_start, properties_end)},
         input_tensor.index({input_samples, Ellipsis, Slice()})
     );
 }

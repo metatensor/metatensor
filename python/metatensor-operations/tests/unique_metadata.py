@@ -29,7 +29,7 @@ def real_tensor():
 
 
 def test_unique_metadata_block(large_tensor):
-    # unique metadata along sample axis
+    # unique metadata along samples axis
     target_samples = Labels(names=["s"], values=np.array([0, 1, 3]).reshape(-1, 1))
     actual_samples = metatensor.unique_metadata_block(
         large_tensor.block(1),
@@ -38,7 +38,7 @@ def test_unique_metadata_block(large_tensor):
     )
     assert target_samples == actual_samples
 
-    # unique metadata of gradient along sample axis
+    # unique metadata of gradient along samples axis
     names = ["sample", "g"]
     target_samples = Labels(names=names, values=np.array([[0, -2], [0, 3], [2, -2]]))
     actual_samples = metatensor.unique_metadata_block(

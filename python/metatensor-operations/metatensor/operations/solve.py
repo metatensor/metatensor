@@ -8,19 +8,16 @@ from ._utils import _check_same_gradients_raise, _check_same_keys_raise
 def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     """Solve a linear system among two :py:class:`TensorMap`.
 
-    Solve the linear equation set
-    ``Y = X * w`` for the unknown ``w``.
-    Where ``Y``, ``X`` and ``w`` are all :py:class:`TensorMap`.
-    ``Y`` and ``X`` must have the same ``keys`` and
-    all their :py:class:`TensorBlock` must be 2D-square array.
+    Solve the linear equation set ``Y = X * w`` for the unknown ``w``. Where ``Y``,
+    ``X`` and ``w`` are all :py:class:`TensorMap`. ``Y`` and ``X`` must have the same
+    ``keys`` and all their :py:class:`TensorBlock` must be 2D-square array.
 
     :param X: a :py:class:`TensorMap` containing the "coefficient" matrices.
     :param Y: a :py:class:`TensorMap` containing the "dependent variable" values.
 
-    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``,
-            and where each :py:class:`TensorBlock` has: the ``sample``
-            equal to the ``properties`` of ``Y``;
-            and the ``properties`` equal to the ``properties`` of ``X``.
+    :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``, and where
+        each :py:class:`TensorBlock` has its ``samples`` equal to the ``properties`` of
+        ``Y``; and its ``properties`` equal to the ``properties`` of ``X``.
 
 
     >>> import numpy as np
@@ -39,9 +36,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
     ...     blocks=[
     ...         TensorBlock(
-    ...             samples=Labels.range("sample", 2),
+    ...             samples=Labels.range("s", 2),
     ...             components=[],
-    ...             properties=Labels.range("properties_for_regression", 2),
+    ...             properties=Labels.range("features", 2),
     ...             values=covariance,
     ...         )
     ...     ],
@@ -50,9 +47,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...     keys=Labels(names=["dummy"], values=np.array([[0]])),
     ...     blocks=[
     ...         TensorBlock(
-    ...             samples=Labels.range("sample", 2),
+    ...             samples=Labels.range("s", 2),
     ...             components=[],
-    ...             properties=Labels.range("property_to_regress", 1),
+    ...             properties=Labels.range("target", 1),
     ...             values=y_regression,
     ...         )
     ...     ],
@@ -60,9 +57,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> c = metatensor.solve(X, y)
     >>> print(c.block())
     TensorBlock
-        samples (1): ['property_to_regress']
+        samples (1): ['target']
         components (): []
-        properties (2): ['properties_for_regression']
+        properties (2): ['features']
         gradients: None
     >>> # c should now be close to true_c
     >>> print(c.block().values)

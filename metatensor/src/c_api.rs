@@ -200,8 +200,8 @@ pub struct mts_array_t {
             input: *const ::std::os::raw::c_void,
             samples: *const mts_sample_mapping_t,
             samples_count: usize,
-            property_start: usize,
-            property_end: usize,
+            properties_start: usize,
+            properties_end: usize,
         ) -> mts_status_t,
     >,
 }

@@ -227,8 +227,8 @@ unsafe extern fn rust_array_move_samples_from(
     input: *const c_void,
     samples: *const mts_sample_mapping_t,
     samples_count: usize,
-    property_start: usize,
-    property_end: usize,
+    properties_start: usize,
+    properties_end: usize,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(output, input);
@@ -242,7 +242,7 @@ unsafe extern fn rust_array_move_samples_from(
             std::slice::from_raw_parts(samples, samples_count)
         };
 
-        (*output).move_samples_from(&**input, samples, property_start..property_end);
+        (*output).move_samples_from(&**input, samples, properties_start..properties_end);
     })
 }
 
@@ -287,12 +287,12 @@ impl Array for ndarray::ArrayD<f64> {
         &mut self,
         input: &dyn Array,
         samples: &[mts_sample_mapping_t],
-        property: Range<usize>,
+        properties: Range<usize>,
     ) {
         use ndarray::{Axis, Slice};
 
         // -2 since we also remove one axis with `index_axis_mut` below
-        let property_axis = self.shape().len() - 2;
+        let properties_axis = self.shape().len() - 2;
 
         let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
         for sample in samples {
@@ -300,7 +300,7 @@ impl Array for ndarray::ArrayD<f64> {
 
             let mut output_location = self.index_axis_mut(Axis(0), sample.output);
             let mut output_location = output_location.slice_axis_mut(
-                Axis(property_axis), Slice::from(property.clone())
+                Axis(properties_axis), Slice::from(properties.clone())
             );
 
             output_location.assign(&value);

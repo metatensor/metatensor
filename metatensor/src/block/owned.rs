@@ -126,7 +126,7 @@ impl TensorBlock {
 
     /// Add a gradient with respect to `parameter` to this block.
     ///
-    /// The property of the gradient should match the ones of this block. The
+    /// The properties of the gradient should match the ones of this block. The
     /// components of the gradients must contain at least the same entries as
     /// the value components, and can prepend other components.
     #[allow(clippy::needless_pass_by_value)]

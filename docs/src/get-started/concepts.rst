@@ -47,14 +47,14 @@ dimensions you'll encounter when working with atomistic data are the following:
 - **symmetry markers**: Another use case for metatensor is to store and
   manipulate equivariant data, i.e. data that transforms in a known, specific
   way when the corresponding atomic structure is transformed. This is typically
-  used to represent the symmetry property of some data with respect to
-  rotations, by decomposing the properties of interest on a basis of spherical
-  harmonics. When handling this kind of data, it is convenient to store and
-  manipulate the data corresponding to different spherical harmonics (or
-  generally different irreducible representations of the symmetry group)
-  separately. This is the case of the ``spherical_harmonics_l`` key dimension
-  produced by `rascaline`_: different blocks will contain the :math:`\ell = 1`
-  and :math:`\ell = 2` parts of an equivariant representation.
+  used to represent the symmetry of some data with respect to rotations, by
+  decomposing the properties of interest on a basis of spherical harmonics. When
+  handling this kind of data, it is convenient to store and manipulate the data
+  corresponding to different spherical harmonics (or generally different
+  irreducible representations of the symmetry group) separately. This is the
+  case of the ``spherical_harmonics_l`` key dimension produced by `rascaline`_:
+  different blocks will contain the :math:`\ell = 1` and :math:`\ell = 2` parts
+  of an equivariant representation.
 
 .. _rascaline: https://github.com/Luthaf/rascaline/
 
@@ -177,7 +177,7 @@ In addition to storing data and metadata together, a :py:class:`TensorBlock` can
 also store values and gradients together. The gradients are stored in another
 :py:class:`TensorBlock`, associated with a **parameter** name, describing with
 respect to **what** the gradients are taken. Regarding metadata, the gradient
-properties always match the values properties; while the gradient sample are
+properties always match the values properties; while the gradient samples are
 different from the value samples. The gradient samples contains both what a
 given row in the data is the gradient **of**, and **with respect to** what the
 gradient is taken. As illustrated below, multiple gradient rows can be gradients
@@ -191,7 +191,7 @@ of different particles in the system).
     Illustration of gradients stored inside a :py:class:`TensorBlock`.
 
 
-.. TODO: explain how the gradient sample works in a separate tutorial
+.. TODO: explain how the gradient samples works in a separate tutorial
 
 Components
 ----------

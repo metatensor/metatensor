@@ -17,7 +17,7 @@ def check_operation(join):
     # test keys
     assert joined_tensor.keys == tensor.keys
 
-    # test property names
+    # test properties names
     names = tensor.block(0).properties.names
     assert joined_tensor.block(0).properties.names == ["tensor"] + names
 

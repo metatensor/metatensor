@@ -89,7 +89,7 @@ public:
     static std::vector<TorchTensorBlock> blocks_torch(TorchTensorMap self, torch::IValue index);
 
     /// Merge blocks with the same value for selected keys dimensions along the
-    /// property axis.
+    /// properties axis.
     ///
     /// See `metatensor::TensorMap::keys_to_properties` for more information on
     /// this function.
@@ -99,7 +99,7 @@ public:
     TorchTensorMap keys_to_properties(torch::IValue keys_to_move, bool sort_samples) const;
 
     /// Merge blocks with the same value for selected keys dimensions along the
-    /// sample axis.
+    /// samples axis.
     ///
     /// See `metatensor::TensorMap::keys_to_samples` for more information on
     /// this function.
@@ -108,7 +108,7 @@ public:
     /// strings, or a `TorchLabels` instance.
     TorchTensorMap keys_to_samples(torch::IValue keys_to_move, bool sort_samples) const;
 
-    /// Move the given `dimensions` from the component labels to the property
+    /// Move the given `dimensions` from the component labels to the properties
     /// labels for each block.
     ///
     /// See `metatensor::TensorMap::components_to_properties` for more

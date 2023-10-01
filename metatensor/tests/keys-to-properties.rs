@@ -95,7 +95,7 @@ fn user_provided_entries_different_properties() {
     assert_eq!(
         result.unwrap_err().message,
         "invalid parameter: can not provide values for the keys to move to \
-        properties if the blocks have different property labels"
+        properties if the blocks have different properties labels"
     );
 }
 
@@ -263,7 +263,7 @@ fn user_provided_entries() {
     ]).unwrap();
     assert_eq!(block.values().as_array(), expected);
 
-    // second block also contains the new property chanel even if it was not
+    // second block also contains the new properties channel even if it was not
     // merged with another block
     let block = tensor.block_by_id(1);
     let expected = ArrayD::from_shape_vec(vec![3, 1, 8], vec![

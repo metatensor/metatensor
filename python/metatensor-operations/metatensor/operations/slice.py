@@ -205,19 +205,19 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
             properties=block.properties,
         )
 
-        # Create a map from the previous samples indexes to the new sample indexes
-        # to update the gradient samples
+        # Create a map from the previous samples indexes to the
+        # new samples indexes to update the gradient samples
 
-        # sample_map contains at position old_sample the index of the
+        # samples_map contains at position old_sample the index of the
         # corresponding new sample
-        sample_map = _dispatch.int_array_like(
+        samples_map = _dispatch.int_array_like(
             int_list=[-1] * len(samples_mask),
             like=samples_mask,
         )
         last = 0
         for i, picked in enumerate(samples_mask):
             if picked:
-                sample_map[i] = last
+                samples_map[i] = last
                 last += 1
 
         for parameter, gradient in block.gradients():
@@ -233,7 +233,7 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
             if new_grad_samples_values.shape[0] != 0:
                 # update the "sample" column of the gradient samples
                 # to refer to the new samples
-                new_grad_samples_values[:, 0] = sample_map[
+                new_grad_samples_values[:, 0] = samples_map[
                     new_grad_samples_values[:, 0]
                 ]
 
@@ -334,7 +334,7 @@ def _check_args(
         for name in labels.names:
             if name not in s_names:
                 raise ValueError(
-                    f"invalid sample name '{name}' which is not part of the input"
+                    f"invalid samples name '{name}' which is not part of the input"
                 )
     else:
         assert axis == "properties"
@@ -342,5 +342,5 @@ def _check_args(
         for name in labels.names:
             if name not in p_names:
                 raise ValueError(
-                    f"invalid property name '{name}' which is not part of the input"
+                    f"invalid properties name '{name}' which is not part of the input"
                 )

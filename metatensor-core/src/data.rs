@@ -153,15 +153,15 @@ pub struct mts_array_t {
     /// should be moved from `input` to `output`.
     ///
     /// This function should copy data from `input[samples[i].input, ..., :]` to
-    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
+    /// `array[samples[i].output, ..., properties_start:properties_end]` for `i` up
     /// to `samples_count`. All indexes are 0-based.
     move_samples_from: Option<unsafe extern fn(
         output: *mut c_void,
         input: *const c_void,
         samples: *const mts_sample_mapping_t,
         samples_count: usize,
-        property_start: usize,
-        property_end: usize,
+        properties_start: usize,
+        properties_end: usize,
     ) -> mts_status_t>,
 }
 

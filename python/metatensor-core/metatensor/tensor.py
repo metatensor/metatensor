@@ -291,24 +291,24 @@ class TensorMap:
         >>> keys = Labels(["key_1", "key_2"], np.array([[0, 0], [6, 8]]))
         >>> block_1 = TensorBlock(
         ...     values=np.full((3, 5), 1.0),
-        ...     samples=Labels.range("sample", 3),
+        ...     samples=Labels.range("s", 3),
         ...     components=[],
-        ...     properties=Labels.range("property", 5),
+        ...     properties=Labels.range("p", 5),
         ... )
         >>> block_2 = TensorBlock(
         ...     values=np.full((5, 3), 2.0),
-        ...     samples=Labels.range("sample", 5),
+        ...     samples=Labels.range("s", 5),
         ...     components=[],
-        ...     properties=Labels.range("property", 3),
+        ...     properties=Labels.range("p", 3),
         ... )
         >>> tensor = TensorMap(keys, [block_1, block_2])
         >>> # numeric index selection, this gives a block by its position
         >>> block = tensor.block(0)
         >>> block
         TensorBlock
-            samples (3): ['sample']
+            samples (3): ['s']
             components (): []
-            properties (5): ['property']
+            properties (5): ['p']
             gradients: None
         >>> # This is the first block
         >>> block.values.mean()
@@ -456,7 +456,7 @@ class TensorMap:
         self, dimensions: Union[str, Sequence[str]]
     ) -> "TensorMap":
         """
-        Move the given ``dimensions`` from the component labels to the property labels
+        Move the given ``dimensions`` from the component labels to the properties labels
         for each block.
 
         :param dimensions: name of the component dimensions to move to the properties
@@ -482,7 +482,7 @@ class TensorMap:
         with the same remaining keys values. Then it will merge these blocks along the
         properties direction (i.e. do an *horizontal* concatenation).
 
-        If ``keys_to_move`` is given as strings, then the new property labels will
+        If ``keys_to_move`` is given as strings, then the new properties labels will
         **only** contain entries from the existing blocks. For example, merging a block
         with key ``a=0`` and properties ``p=1, 2`` with a block with key ``a=2`` and
         properties ``p=1, 3`` will produce a block with properties ``a, p = (0, 1), (0,

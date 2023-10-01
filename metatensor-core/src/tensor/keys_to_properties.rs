@@ -13,27 +13,27 @@ use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merg
 
 impl TensorMap {
     /// Merge blocks with the same value for selected keys dimensions along the
-    /// property axis.
+    /// properties axis.
     ///
     /// The dimensions (names) of `keys_to_move` will be moved from the keys to
-    /// the property labels, and blocks with the same remaining keys dimensions
-    /// will be merged together along the property axis.
+    /// the properties labels, and blocks with the same remaining keys
+    /// dimensions will be merged together along the properties axis.
     ///
     /// If `keys_to_move` does not contains any entries (`keys_to_move.count()
-    /// == 0`), then the new property labels will contain entries corresponding
-    /// to the merged blocks only. For example, merging a block with key `a=0`
-    /// and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
-    /// 3` will produce a block with properties `a, p = (0, 1), (0, 2), (2, 1),
-    /// (2, 3)`.
+    /// == 0`), then the new properties labels will contain entries
+    /// corresponding to the merged blocks only. For example, merging a block
+    /// with key `a=0` and properties `p=1, 2` with a block with key `a=2` and
+    /// properties `p=1, 3` will produce a block with properties `a, p = (0, 1),
+    /// (0, 2), (2, 1), (2, 3)`.
     ///
-    /// If `keys_to_move` contains entries, then the property labels must be the
-    /// same for all the merged blocks. In that case, the merged property labels
-    /// will contains each of the entries of `keys_to_move` and then the current
-    /// property labels. For example, using `a=2, 3` in `keys_to_move`, and
-    /// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
-    /// (3, 1), (3, 2)`.
+    /// If `keys_to_move` contains entries, then the properties labels must be
+    /// the same for all the merged blocks. In that case, the merged properties
+    /// labels will contains each of the entries of `keys_to_move` and then the
+    /// current properties labels. For example, using `a=2, 3` in
+    /// `keys_to_move`, and blocks with properties `p=1, 2` will result in `a, p
+    /// = (2, 1), (2, 2), (3, 1), (3, 2)`.
     ///
-    /// The new sample labels will contains all of the merged blocks sample
+    /// The new samples labels will contains all of the merged blocks samples
     /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
@@ -115,7 +115,7 @@ impl TensorMap {
     }
 }
 
-/// Merge the given `blocks` along the property axis.
+/// Merge the given `blocks` along the properties axis.
 #[allow(clippy::too_many_lines)]
 fn merge_blocks_along_properties(
     blocks_to_merge: &[KeyAndBlock],
@@ -135,7 +135,7 @@ fn merge_blocks_along_properties(
     }
 
     let first_components_label = &first_block.components;
-    let first_property_labels = &first_block.properties;
+    let first_properties_labels = &first_block.properties;
     for KeyAndBlock{block, ..} in blocks_to_merge {
         if &block.components != first_components_label {
             return Err(Error::InvalidParameter(
@@ -144,13 +144,13 @@ fn merge_blocks_along_properties(
             ));
         }
 
-        if keys_to_move.is_some() && &block.properties != first_property_labels {
+        if keys_to_move.is_some() && &block.properties != first_properties_labels {
             // TODO: this might be possible but also pretty slow. It would
             // requires to lookup the position of properties one by one in the
             // merged properties
             return Err(Error::InvalidParameter(
                 "can not provide values for the keys to move to properties if \
-                the blocks have different property labels".into()
+                the blocks have different properties labels".into()
             ));
         }
     }
@@ -174,26 +174,26 @@ fn merge_blocks_along_properties(
                 }
             }
         }
-        assert_eq!(new_properties.len(), first_property_labels.count() * keys_to_move.count());
+        assert_eq!(new_properties.len(), first_properties_labels.count() * keys_to_move.count());
     } else {
         // collect properties from the blocks, augmenting them with the new
         // properties
         for KeyAndBlock{key, block} in blocks_to_merge {
-            for old_property in &*block.properties {
-                let mut property = key.clone();
-                property.extend_from_slice(old_property);
-                new_properties.insert(property);
+            for old_properties in &*block.properties {
+                let mut properties = key.clone();
+                properties.extend_from_slice(old_properties);
+                new_properties.insert(properties);
             }
         }
     }
 
-    let new_property_names = extracted_names.iter()
+    let new_properties_names = extracted_names.iter()
         .chain(first_block.properties.names().iter())
         .copied()
         .collect();
-    let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
-    for property in new_properties {
-        new_properties_builder.add(&property)?;
+    let mut new_properties_builder = LabelsBuilder::new(new_properties_names)?;
+    for properties in new_properties {
+        new_properties_builder.add(&properties)?;
     }
 
     let new_components = first_block.components.to_vec();
@@ -203,24 +203,24 @@ fn merge_blocks_along_properties(
     // create a new array and move the data around
     let mut new_shape = first_block.values.shape()?.to_vec();
     new_shape[0] = merged_samples.count();
-    let property_axis = new_shape.len() - 1;
-    new_shape[property_axis] = new_properties_count;
+    let properties_axis = new_shape.len() - 1;
+    new_shape[properties_axis] = new_properties_count;
     let mut new_data = first_block.values.create(&new_shape)?;
 
-    // compute the property range for each block, i.e. where we want to put
+    // compute the properties range for each block, i.e. where we want to put
     // the corresponding data
-    let mut property_ranges = Vec::new();
+    let mut properties_ranges = Vec::new();
     for KeyAndBlock{key, block} in blocks_to_merge {
         if block.properties.is_empty() {
             // no properties, ignore this block
-            property_ranges.push(None);
+            properties_ranges.push(None);
             continue;
         }
 
         let mut first = key.clone();
         first.extend_from_slice(&block.properties[0]);
 
-        // we can lookup only the `first` new property here, since the new
+        // we can lookup only the `first` new properties here, since the new
         // properties match exactly the old ones, just with an added "channel"
         // of the moved key.
 
@@ -229,21 +229,21 @@ fn merge_blocks_along_properties(
         let start = new_properties.position(&first);
         let size = block.properties.count();
         if let Some(start) = start {
-            property_ranges.push(Some(start..(start + size)));
+            properties_ranges.push(Some(start..(start + size)));
         } else {
-            property_ranges.push(None);
+            properties_ranges.push(None);
         }
     }
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
-    debug_assert_eq!(blocks_to_merge.len(), property_ranges.len());
+    debug_assert_eq!(blocks_to_merge.len(), properties_ranges.len());
     // for each block, gather the data to be moved & send it in one go
-    for ((KeyAndBlock{block, ..}, samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
-        if let Some(property_range) = property_range {
+    for ((KeyAndBlock{block, ..}, samples_mapping), properties_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&properties_ranges) {
+        if let Some(properties_range) = properties_range {
             new_data.move_samples_from(
                 &block.values,
                 samples_mapping,
-                property_range.clone()
+                properties_range.clone()
             )?;
         }
     }
@@ -263,17 +263,17 @@ fn merge_blocks_along_properties(
 
         let mut new_shape = first_gradient.values.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();
-        let property_axis = new_shape.len() - 1;
-        new_shape[property_axis] = new_properties_count;
+        let properties_axis = new_shape.len() - 1;
+        new_shape[properties_axis] = new_properties_count;
 
         let mut new_gradient = first_block.values.create(&new_shape)?;
         let new_components = first_gradient.components.to_vec();
 
-        for ((KeyAndBlock{block, ..}, samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
-            if property_range.is_none() {
+        for ((KeyAndBlock{block, ..}, samples_mapping), properties_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&properties_ranges) {
+            if properties_range.is_none() {
                 continue;
             }
-            let property_range = property_range.as_ref().unwrap();
+            let properties_range = properties_range.as_ref().unwrap();
 
             let gradient = block.gradient(parameter).expect("missing gradient");
             debug_assert!(*gradient.components == *new_components);
@@ -297,7 +297,7 @@ fn merge_blocks_along_properties(
             new_gradient.move_samples_from(
                 &gradient.values,
                 &samples_to_move,
-                property_range.clone(),
+                properties_range.clone(),
             )?;
         }
 

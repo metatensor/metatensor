@@ -167,7 +167,7 @@ def _check_blocks_impl(
                     )
         else:
             raise ValueError(
-                f"{metadata} is not a valid property to check, "
+                f"{metadata} is not a valid set of labels to check, "
                 "choose from 'samples', 'properties' and 'components'"
             )
     return ""
@@ -305,7 +305,7 @@ def _check_same_gradients_impl(
                         return err_msg + err_msg_1
             else:
                 raise ValueError(
-                    f"{metadata} is not a valid property to check, "
+                    f"{metadata} is not a valid set of labels to check, "
                     "choose from 'samples', 'properties' and 'components'"
                 )
     return ""

@@ -57,7 +57,7 @@ pub fn example_tensor() -> TensorMap {
         /* gradient_values  */ 11.0,
     );
 
-    // different property size
+    // different properties size
     let block_2 = example_block(
         /* samples          */ vec![[0], [1], [3]],
         /* components       */ vec![[0]],

@@ -63,8 +63,8 @@ public:
     void move_samples_from(
         const metatensor::DataArrayBase& input,
         std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        uintptr_t properties_start,
+        uintptr_t properties_end
     ) override;
 
 private:

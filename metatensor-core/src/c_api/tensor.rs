@@ -292,33 +292,32 @@ pub unsafe extern fn mts_tensormap_blocks_matching(
 
 
 /// Merge blocks with the same value for selected keys dimensions along the
-/// property axis.
+/// properties axis.
 ///
-/// The dimensions (names) of `keys_to_move` will be moved from the keys to
-/// the property labels, and blocks with the same remaining keys dimensions
-/// will be merged together along the property axis.
+/// The dimensions (names) of `keys_to_move` will be moved from the keys to the
+/// properties labels, and blocks with the same remaining keys dimensions will
+/// be merged together along the properties axis.
 ///
-/// If `keys_to_move` does not contains any entries (`keys_to_move.count
-/// == 0`), then the new property labels will contain entries corresponding
-/// to the merged blocks only. For example, merging a block with key `a=0`
-/// and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
-/// 3` will produce a block with properties `a, p = (0, 1), (0, 2), (2, 1),
-/// (2, 3)`.
+/// If `keys_to_move` does not contains any entries (`keys_to_move.count == 0`),
+/// then the new properties labels will contain entries corresponding to the
+/// merged blocks only. For example, merging a block with key `a=0` and
+/// properties `p=1, 2` with a block with key `a=2` and properties `p=1, 3` will
+/// produce a block with properties `a, p = (0, 1), (0, 2), (2, 1), (2, 3)`.
 ///
-/// If `keys_to_move` contains entries, then the property labels must be the
-/// same for all the merged blocks. In that case, the merged property labels
+/// If `keys_to_move` contains entries, then the properties labels must be the
+/// same for all the merged blocks. In that case, the merged properties labels
 /// will contains each of the entries of `keys_to_move` and then the current
-/// property labels. For example, using `a=2, 3` in `keys_to_move`, and
-/// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
-/// (3, 1), (3, 2)`.
+/// properties labels. For example, using `a=2, 3` in `keys_to_move`, and blocks
+/// with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2), (3, 1), (3,
+/// 2)`.
 ///
-/// The new sample labels will contains all of the merged blocks sample
-/// labels. The order of the samples is controlled by `sort_samples`. If
-/// `sort_samples` is true, samples are re-ordered to keep them
-/// lexicographically sorted. Otherwise they are kept in the order in which
-/// they appear in the blocks.
+/// The new samples labels will contains all of the merged blocks samples labels.
+/// The order of the samples is controlled by `sort_samples`. If `sort_samples`
+/// is true, samples are re-ordered to keep them lexicographically sorted.
+/// Otherwise they are kept in the order in which they appear in the blocks.
 ///
-/// The result is a new tensor map, which should be freed with `mts_tensormap_free`.
+/// The result is a new tensor map, which should be freed with
+/// `mts_tensormap_free`.
 ///
 /// @param tensor pointer to an existing tensor map
 /// @param keys_to_move description of the keys to move
@@ -358,7 +357,7 @@ pub unsafe extern fn mts_tensormap_keys_to_properties(
 }
 
 
-/// Move the given dimensions from the component labels to the property labels
+/// Move the given dimensions from the component labels to the properties labels
 /// for each block in this tensor map.
 ///
 /// `dimensions` must be an array of `dimensions_count` NULL-terminated strings,
@@ -412,21 +411,21 @@ pub unsafe extern fn mts_tensormap_components_to_properties(
 /// samples axis.
 ///
 /// The dimensions (names) of `keys_to_move` will be moved from the keys to
-/// the sample labels, and blocks with the same remaining keys dimensions
-/// will be merged together along the sample axis.
+/// the samples labels, and blocks with the same remaining keys dimensions
+/// will be merged together along the samples axis.
 ///
 /// `keys_to_move` must be empty (`keys_to_move.count == 0`), and the new
-/// sample labels will contain entries corresponding to the merged blocks'
+/// samples labels will contain entries corresponding to the merged blocks'
 /// keys.
 ///
-/// The new sample labels will contains all of the merged blocks sample
+/// The new samples labels will contains all of the merged blocks samples
 /// labels. The order of the samples is controlled by `sort_samples`. If
 /// `sort_samples` is true, samples are re-ordered to keep them
 /// lexicographically sorted. Otherwise they are kept in the order in which
 /// they appear in the blocks.
 ///
 /// This function is only implemented if all merged block have the same
-/// property labels.
+/// properties labels.
 ///
 /// @param tensor pointer to an existing tensor map
 /// @param keys_to_move description of the keys to move
