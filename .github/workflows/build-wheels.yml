@@ -134,6 +134,7 @@ jobs:
             dist/metatensor-core-*.tar.gz
             dist/cxx/metatensor-core-cxx-*.tar.gz
             dist/metatensor_core-*.whl
+          prerelease: contains(github.ref, '-rc')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -145,6 +146,7 @@ jobs:
             dist/metatensor-torch-*.tar.gz
             dist/cxx/metatensor-torch-cxx-*.tar.gz
             dist/metatensor_torch-*.whl
+          prerelease: contains(github.ref, '-rc')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -155,6 +157,7 @@ jobs:
           files: |
             dist/metatensor-operations-*.tar.gz
             dist/metatensor_operations-*.whl
+          prerelease: contains(github.ref, '-rc')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -171,5 +174,6 @@ jobs:
           files: |
             dist/metatensor-*.tar.gz
             dist/metatensor-*.whl
+          prerelease: contains(github.ref, '-rc')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
