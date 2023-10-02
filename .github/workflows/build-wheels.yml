@@ -11,6 +11,8 @@ concurrency:
   group: python-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
+env:
+  METATENSOR_NO_LOCAL_DEPS: "1"
 
 jobs:
   build-core-wheels:
