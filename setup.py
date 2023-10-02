@@ -14,7 +14,7 @@ METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor-core")
 METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor-operations")
 METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor-torch")
 
-METATENSOR_VERSION = "0.0.0"
+METATENSOR_VERSION = "0.1.0-rc1"
 
 
 class bdist_egg_disabled(bdist_egg):
