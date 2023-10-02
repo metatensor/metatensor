@@ -1,6 +1,6 @@
 [package]
 name = "metatensor-core"
-version = "0.0.0"
+version = "0.1.0-rc1"
 edition = "2021"
 publish = false
 rust-version = "1.64"
