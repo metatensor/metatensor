@@ -38,8 +38,12 @@ cd "$TMP_DIR"
 tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 
+rm -f "$ROOT_DIR"/metatensor/metatensor-core-cxx-*.tar.gz
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/metatensor/"
+
+rm -f "$ROOT_DIR"/python/metatensor-core/metatensor-core-cxx-*.tar.gz
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/python/metatensor-core/"
 
 mkdir -p "$ROOT_DIR/dist/cxx"
+rm -f "$ROOT_DIR"/dist/cxx/metatensor-core-cxx-*.tar.gz
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/dist/cxx/"
