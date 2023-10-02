@@ -124,13 +124,50 @@ jobs:
             dist/cxx/*.tar.gz
             dist/*.whl
 
-      - name: upload to GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: upload to GitHub release (metatensor-core)
+        if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/*.tar.gz
-            dist/cxx/*.tar.gz
-            dist/*.whl
+            dist/metatensor-core-*.tar.gz
+            dist/cxx/metatensor-core-cxx-*.tar.gz
+            dist/metatensor_core-*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload to GitHub release (metatensor-torch)
+        if: startsWith(github.ref, 'refs/tags/metatensor-torch-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/metatensor-torch-*.tar.gz
+            dist/cxx/metatensor-torch-cxx-*.tar.gz
+            dist/metatensor_torch-*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload to GitHub release (metatensor-operations)
+        if: startsWith(github.ref, 'refs/tags/metatensor-operations-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/metatensor-operations-*.tar.gz
+            dist/metatensor_operations-*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: remove all sdist except metatensor
+        run: |
+          rm dist/metatensor-core-*.tar.gz
+          rm dist/metatensor-torch-*.tar.gz
+          rm dist/metatensor-operations-*.tar.gz
+
+      - name: upload to GitHub release (metatensor-python)
+        if: startsWith(github.ref, 'refs/tags/metatensor-python-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/metatensor-*.tar.gz
+            dist/metatensor-*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
