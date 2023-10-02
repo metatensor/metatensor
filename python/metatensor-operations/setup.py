@@ -114,7 +114,10 @@ if __name__ == "__main__":
             authors = fd.read().splitlines()
 
     install_requires = []
-    if os.path.exists(METATENSOR_CORE):
+
+    # when packaging a release, we should never use local dependencies
+    METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
         # we are building from a git checkout or full repo archive
 
         # add a random uuid to the file url to prevent pip from using a cached

@@ -110,7 +110,10 @@ def create_version_number(version):
 if __name__ == "__main__":
     install_requires = []
     extras_require = {}
-    if os.path.exists(METATENSOR_CORE):
+
+    # when creating a sdist, we should never use local dependencies
+    METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
         # we are building from a git checkout
         assert os.path.exists(METATENSOR_OPERATIONS)
         assert os.path.exists(METATENSOR_TORCH)
