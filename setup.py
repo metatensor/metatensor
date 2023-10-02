@@ -57,7 +57,7 @@ def n_commits_since_last_tag():
     if not os.path.exists(script):
         return 0
 
-    TAG_PREFIX = "metatensor-v"
+    TAG_PREFIX = "metatensor-python-v"
     output = subprocess.run(
         [sys.executable, script, TAG_PREFIX],
         stderr=subprocess.PIPE,
