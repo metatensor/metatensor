@@ -26,7 +26,10 @@ cd "$TMP_DIR"
 tar cf "$ARCHIVE_NAME".tar "$ARCHIVE_NAME"
 
 gzip -9 "$ARCHIVE_NAME".tar
+
+rm -f "$ROOT_DIR"/python/metatensor-torch/metatensor-torch-cxx-*.tar.gz
 cp "$ARCHIVE_NAME".tar.gz "$ROOT_DIR/python/metatensor-torch/"
 
 mkdir -p "$ROOT_DIR/dist/cxx"
+rm -f "$ROOT_DIR"/dist/cxx/metatensor-torch-cxx-*.tar.gz
 cp "$ARCHIVE_NAME".tar.gz "$ROOT_DIR/dist/cxx/"
