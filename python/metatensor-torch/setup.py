@@ -208,7 +208,7 @@ if __name__ == "__main__":
         if not len(tarballs) == 1:
             raise RuntimeError(
                 "expected a single 'metatensor-torch-*.tar.gz' file containing "
-                "metatensor-torch Rust sources. remove all files and re-run "
+                "metatensor-torch C++ sources. remove all files and re-run "
                 "scripts/package-torch.sh"
             )
 

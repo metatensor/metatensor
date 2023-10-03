@@ -99,8 +99,10 @@ jobs:
       - name: install dependencies
         run: python -m pip install wheel build
 
-      - name: package vendored code
-        run: ./scripts/package-core.sh
+      - name: create C++ tarballs
+        run: |
+          ./scripts/package-core.sh
+          ./scripts/package-torch.sh
 
       - name: build metatensor-core sdist
         run: python -m build python/metatensor-core --sdist --outdir=dist/
@@ -113,11 +115,6 @@ jobs:
 
       - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/
-
-      - name: build C++ tarballs
-        run: |
-          ./scripts/package-core.sh
-          ./scripts/package-torch.sh
 
       - uses: actions/upload-artifact@v3
         with:
