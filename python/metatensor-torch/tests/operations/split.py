@@ -36,6 +36,7 @@ def check_operation(split):
     assert isinstance(split_tensors_samples[0], torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
         assert split_tensors_samples[0]._type().name() == "TensorMap"
+
     assert isinstance(split_tensors_properties, list)
     assert isinstance(split_tensors_properties[0], torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -81,11 +82,12 @@ def check_operation_block(split_block):
     assert isinstance(split_blocks_samples, list)
     assert isinstance(split_blocks_samples[0], torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_blocks_samples[0]._type().name() == "TensorMap"
+        assert split_blocks_samples[0]._type().name() == "TensorBlock"
+
     assert isinstance(split_blocks_properties, list)
     assert isinstance(split_blocks_properties[0], torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_blocks_properties[0]._type().name() == "TensorMap"
+        assert split_blocks_properties[0]._type().name() == "TensorBlock"
 
     # check values
     assert torch.equal(split_blocks_samples[0].values, torch.tensor([[0, 1, 2]]))

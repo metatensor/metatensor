@@ -84,7 +84,7 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
         .expect("failed to run python");
     assert!(status.success(), "failed to run `python -m pip install --upgrade pip`");
 
-    let torch_version = std::env::var("METATENSOR_TORCH_TEST_VERSION").unwrap_or("2.0.*".into());
+    let torch_version = std::env::var("METATENSOR_TORCH_TEST_VERSION").unwrap_or("2.1.*".into());
     let status = Command::new(&python)
         .arg("-m")
         .arg("pip")
