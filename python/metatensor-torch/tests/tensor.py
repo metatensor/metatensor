@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple, Union
 
 import pytest
 import torch
+from packaging import version
 
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
@@ -37,6 +38,10 @@ keys: key_1  key_2
     assert expected == str(tensor)
     assert expected == tensor.print(6)
 
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(tensor) == expected
+
 
 def test_print_large(large_tensor):
     expected = """TensorMap with 12 blocks
@@ -58,6 +63,25 @@ keys: key_1  key_2
         2      5
         3      5"""
     assert expected == large_tensor.print(6)
+
+    expected = """TensorMap with 12 blocks
+keys: key_1  key_2
+        0      0
+        1      0
+        2      2
+        2      3
+        0      4
+        1      4
+        2      4
+        3      4
+        0      5
+        1      5
+        2      5
+        3      5"""
+
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(large_tensor) == expected
 
 
 def test_labels_names(tensor):

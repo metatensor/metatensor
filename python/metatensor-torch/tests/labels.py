@@ -2,6 +2,7 @@ from typing import Any, List, Optional, Tuple, Union
 
 import pytest
 import torch
+from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, LabelsEntry
@@ -136,9 +137,10 @@ def test_repr():
 
     expected = "Labels(\n    aaa  bbb\n     1    2\n     3    4\n)"
     assert str(labels) == expected
-    # custom __repr__ definitions are not passed to Python, we need to wait for
-    # https://github.com/pytorch/pytorch/pull/100724 to be merged and available
-    # assert repr(labels) == expected
+
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(labels) == expected
 
     expected = "LabelsEntry(aaa=1, bbb=2)"
     assert str(labels[0]) == expected

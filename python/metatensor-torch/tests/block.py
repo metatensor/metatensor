@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import pytest
 import torch
+from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, TensorBlock
@@ -95,6 +96,10 @@ def test_repr():
 """
     assert str(block) == expected
 
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(block) == expected
+
     expected = """Gradient TensorBlock ('g')
     samples (3): ['sample', 'g']
     components (3, 1, 2): ['c_1', 'c_2', 'c_3']
@@ -102,6 +107,10 @@ def test_repr():
     gradients: None
 """
     assert str(block.gradient("g")) == expected
+
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(block.gradient("g")) == expected
 
 
 def test_copy():
