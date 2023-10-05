@@ -35,6 +35,10 @@ cd "$ROOT_DIR"
 ./scripts/n-commits-since-last-tag.py "metatensor-core-v" > "$TMP_DIR/$ARCHIVE_NAME/cmake/n_commits_since_last_tag"
 
 cd "$TMP_DIR"
+# Compile metatensor-core as it's own Cargo workspace (otherwise we can not the
+# use metatensor rust crate in a project using workspaces).
+echo "[workspace]" >> "$ARCHIVE_NAME/Cargo.toml"
+
 tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 
