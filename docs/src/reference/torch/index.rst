@@ -43,7 +43,11 @@ the following pages:
     labels
     serialization
 
-.. TODO: operations are not yet available
+All the :ref:`operations <python-api-operations>` are also available in the
+``metatensor.torch`` module under the same name. All the functions have the same
+behavior, but the versions in ``metatensor.torch`` are annotated with the types
+from ``metatensor.torch``, and compatible with TorchScript compilation. For
+example :py:func:`metatensor.add()` is available as ``metatensor.torch.add()``.
 
 --------------------------------------------------------------------------------
 
