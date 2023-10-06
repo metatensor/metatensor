@@ -1,9 +1,13 @@
+#include <iomanip>
+#include <sstream>
+
 #include <torch/script.h>
 
 #include "metatensor/torch/labels.hpp"
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/tensor.hpp"
 #include "metatensor/torch/misc.hpp"
+#include "metatensor/torch/atomistic.hpp"
 
 using namespace metatensor_torch;
 
@@ -219,4 +223,92 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.def("load", metatensor_torch::load);
     m.def("save", metatensor_torch::save);
+
+    // ====================================================================== //
+    //               code specific to atomistic simulations                   //
+    // ====================================================================== //
+    m.class_<NeighborsListOptionsHolder>("NeighborsListOptions")
+        .def(
+            torch::init<double, bool>(), DOCSTRING,
+            {torch::arg("model_cutoff"), torch::arg("full_list")}
+        )
+        .def_property("model_cutoff", &NeighborsListOptionsHolder::model_cutoff)
+        .def_property("engine_cutoff", &NeighborsListOptionsHolder::engine_cutoff)
+        .def("set_engine_unit", &NeighborsListOptionsHolder::set_engine_unit)
+        .def_property("full_list", &NeighborsListOptionsHolder::full_list)
+        .def("__repr__", &NeighborsListOptionsHolder::repr)
+        .def("__str__", &NeighborsListOptionsHolder::repr)
+        .def("__eq__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator==))
+        .def("__ne__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator!=))
+        ;
+
+
+    m.class_<SystemHolder>("System")
+        .def(
+            torch::init<TorchTensorBlock, TorchTensorBlock>(), DOCSTRING,
+            {torch::arg("positions"), torch::arg("cell")}
+        )
+        .def_readwrite("positions", &SystemHolder::positions)
+        .def_readwrite("cell", &SystemHolder::cell)
+        .def("__len__", &SystemHolder::size)
+        .def("add_neighbors_list", &SystemHolder::add_neighbors_list, DOCSTRING,
+            {torch::arg("options"), torch::arg("neighbors")}
+        )
+        .def("get_neighbors_list", &SystemHolder::get_neighbors_list, DOCSTRING,
+            {torch::arg("options")}
+        )
+        .def("known_neighbors_lists", &SystemHolder::known_neighbors_lists)
+        .def("add_data", &SystemHolder::add_data, DOCSTRING,
+            {torch::arg("name"), torch::arg("data")}
+        )
+        .def("get_data", &SystemHolder::get_data, DOCSTRING,
+            {torch::arg("name")}
+        )
+        .def("known_data", &SystemHolder::known_data)
+        ;
+
+
+    m.class_<ModelOutputHolder>("ModelOutput")
+        .def(
+            torch::init<std::string, std::string, bool, std::vector<std::string>>(),
+            DOCSTRING, {
+                torch::arg("quantity") = "",
+                torch::arg("unit") = "",
+                torch::arg("per_atom") = false,
+                torch::arg("forward_gradients") = std::vector<std::string>()
+            }
+        )
+        .def_readwrite("quantity", &ModelOutputHolder::quantity)
+        .def_readwrite("unit", &ModelOutputHolder::unit)
+        .def_readwrite("per_atom", &ModelOutputHolder::per_atom)
+        .def_readwrite("forward_gradients", &ModelOutputHolder::forward_gradients)
+        ;
+
+    m.class_<ModelCapabilitiesHolder>("ModelCapabilities")
+        .def(
+            torch::init<std::string, std::vector<int64_t>, torch::Dict<std::string, ModelOutput>>(),
+            DOCSTRING, {
+                torch::arg("length_unit") = "",
+                torch::arg("species") = std::vector<int64_t>(),
+                torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
+            }
+        )
+        .def_readwrite("length_unit", &ModelCapabilitiesHolder::length_unit)
+        .def_readwrite("species", &ModelCapabilitiesHolder::species)
+        .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
+        ;
+
+    m.class_<ModelRunOptionsHolder>("ModelRunOptions")
+        .def(
+            torch::init<std::string, torch::optional<std::vector<int64_t>>, torch::Dict<std::string, ModelOutput>>(),
+            DOCSTRING, {
+                torch::arg("length_unit") = "",
+                torch::arg("selected_atoms") = torch::nullopt,
+                torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
+            }
+        )
+        .def_readwrite("length_unit", &ModelRunOptionsHolder::length_unit)
+        .def_readwrite("selected_atoms", &ModelRunOptionsHolder::selected_atoms)
+        .def_readwrite("outputs", &ModelRunOptionsHolder::outputs)
+        ;
 }
