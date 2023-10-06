@@ -88,7 +88,7 @@ impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
 /// the error into `mts_status_t`.
 pub(crate) fn catch_unwind<F>(function: F) -> mts_status_t where F: FnOnce() + std::panic::UnwindSafe {
     match std::panic::catch_unwind(function) {
-        Ok(_) => MTS_SUCCESS,
+        Ok(()) => MTS_SUCCESS,
         Err(e) => {
             // Store the error in LAST_RUST_ERROR, we will extract it later
             // in `check_status`
