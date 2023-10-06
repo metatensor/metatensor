@@ -24,6 +24,9 @@ From source:
 
 .. code-block:: bash
 
+    # Make sure you are using the latest version of pip
+    pip install --upgrade pip
+
     git clone https://github.com/lab-cosmo/metatensor
     cd metatensor
     pip install .
@@ -37,6 +40,7 @@ of building the package with a Rust compiler from the source code.
 
 .. code-block:: bash
 
+    pip install --upgrade pip
     pip install --extra-index-url https://luthaf.fr/temporary-wheels/ metatensor
 
 .. _install-c-lib:
@@ -102,6 +106,9 @@ For usage from Python
 Building from source:
 
 .. code-block:: bash
+
+    # Make sure you are using the latest version of pip
+    pip install --upgrade pip
 
     git clone https://github.com/lab-cosmo/metatensor
     cd metatensor/python/metatensor-torch
