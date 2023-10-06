@@ -1,7 +1,6 @@
 #ifndef METATENSOR_TORCH_MISC_HPP
 #define METATENSOR_TORCH_MISC_HPP
 
-#include <metatensor.h>
 #include <vector>
 
 #include <torch/script.h>
