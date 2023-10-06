@@ -73,7 +73,7 @@ impl From<Error> for mts_status_t {
 /// the error into `mts_status_t`.
 pub fn catch_unwind<F>(function: F) -> mts_status_t where F: FnOnce() -> Result<(), Error> + UnwindSafe {
     match std::panic::catch_unwind(function) {
-        Ok(Ok(_)) => mts_status_t(MTS_SUCCESS),
+        Ok(Ok(())) => mts_status_t(MTS_SUCCESS),
         Ok(Err(error)) => error.into(),
         Err(error) => Error::from(error).into()
     }
@@ -106,7 +106,7 @@ pub unsafe extern fn mts_last_error() -> *const c_char {
     let mut result = std::ptr::null();
     let wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let wrapper = wrapper;
+        let _ = &wrapper;
         LAST_ERROR_MESSAGE.with(|message| {
             *wrapper.0 = message.borrow().as_ptr();
         });

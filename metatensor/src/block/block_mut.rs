@@ -48,7 +48,7 @@ fn block_gradient(block: *mut mts_block_t, parameter: &CStr) -> Option<*mut mts_
     };
 
     match crate::errors::check_status(status) {
-        Ok(_) => Some(gradient_block),
+        Ok(()) => Some(gradient_block),
         Err(error) => {
             if error.code == Some(MTS_INVALID_PARAMETER_ERROR) {
                 // there is no array for this gradient
