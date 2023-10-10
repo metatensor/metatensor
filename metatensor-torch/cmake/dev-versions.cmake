@@ -16,17 +16,23 @@ function(parse_version _version_ _major_ _minor_ _patch_ _rc_)
     set(${_patch_} ${CMAKE_MATCH_3} PARENT_SCOPE)
 endfunction()
 
+
+if (CMAKE_VERSION VERSION_LESS "3.17")
+    # CMAKE_CURRENT_FUNCTION_LIST_DIR was added in CMake 3.17
+    set(CMAKE_CURRENT_FUNCTION_LIST_DIR "${CMAKE_CURRENT_LIST_DIR}")
+endif()
+
 # Get the number of commits since the last tag matching `_tag_prefix_`
 function(n_commits_since_last_tag _tag_prefix_ _output_)
-    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/n_commits_since_last_tag")
+    if (EXISTS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/n_commits_since_last_tag")
         # When building from a tarball, the script is executed and the result
         # put in this file
-        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/cmake/n_commits_since_last_tag" _n_commits_)
+        file(READ "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/n_commits_since_last_tag" _n_commits_)
 
-    elseif (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/n-commits-since-last-tag.py")
+    elseif (EXISTS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../scripts/n-commits-since-last-tag.py")
         # When building from a checkout, we'll need to run the script
         find_package(Python COMPONENTS Interpreter REQUIRED)
-        set(_script_ "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/n-commits-since-last-tag.py")
+        set(_script_ "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../scripts/n-commits-since-last-tag.py")
         execute_process(
             COMMAND "${Python_EXECUTABLE}" "${_script_}" "${_tag_prefix_}"
             RESULT_VARIABLE _status_
