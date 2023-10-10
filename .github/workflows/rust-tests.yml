@@ -35,7 +35,7 @@ jobs:
           # check the build on a stock Ubuntu 20.04, which uses cmake 3.16, and
           # with our minimal supported rust version
           - os: ubuntu-20.04
-            rust-version: 1.64
+            rust-version: 1.65
             container: ubuntu:20.04
             rust-target: x86_64-unknown-linux-gnu
             cargo-build-flags: --features=rayon
