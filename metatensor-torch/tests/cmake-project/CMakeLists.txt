@@ -2,7 +2,14 @@ cmake_minimum_required(VERSION 3.16)
 
 project(metatensor-torch-test-cmake-project CXX)
 
-find_package(metatensor_torch 0.1 CONFIG REQUIRED)
+# If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
+# in the same way we update the metatensor-torch version
+include(../../cmake/dev-versions.cmake)
+set(REQUIRED_METATENSOR_TORCH_VERSION "0.1.0-rc3")
+create_development_version("${REQUIRED_METATENSOR_TORCH_VERSION}" "metatensor-torch-v" METATENSOR_TORCH_FULL_VERSION)
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_TORCH_VERSION ${METATENSOR_TORCH_FULL_VERSION})
+
+find_package(metatensor_torch ${REQUIRED_METATENSOR_TORCH_VERSION} CONFIG REQUIRED)
 
 add_executable(torch-main src/main.cpp)
 target_link_libraries(torch-main metatensor_torch)
