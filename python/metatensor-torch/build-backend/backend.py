@@ -27,7 +27,7 @@ elif os.path.exists(METATENSOR_CORE):
     METATENSOR_CORE_DEP = f"metatensor-core @ file://{METATENSOR_CORE}?{uuid}"
 else:
     # we are building from a sdist
-    METATENSOR_CORE_DEP = "metatensor-core >=0.1.0-rc2,<0.2.0"
+    METATENSOR_CORE_DEP = "metatensor-core >=0.1.0,<0.2.0"
 
 
 prepare_metadata_for_build_wheel = build_meta.prepare_metadata_for_build_wheel

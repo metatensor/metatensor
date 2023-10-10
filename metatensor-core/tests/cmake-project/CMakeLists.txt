@@ -5,7 +5,7 @@ project(metatensor-test-cmake-project C CXX)
 # If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
 # in the same way we update the metatensor-torch version
 include(../../cmake/dev-versions.cmake)
-set(REQUIRED_METATENSOR_VERSION "0.1.0-rc2")
+set(REQUIRED_METATENSOR_VERSION "0.1.0")
 create_development_version("${REQUIRED_METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_CORE_FULL_VERSION)
 string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
 
