@@ -415,7 +415,7 @@ def test_slice_block_samples_and_properties(tensor):
 
 
 def test_slicing_by_empty(tensor):
-    empty_labels_samples = Labels.empty(tensor.samples_names)
+    empty_labels_samples = Labels.empty(tensor.sample_names)
 
     # Empty block returned if no samples to slice by are passed
     reference_block = _construct_empty_slice_block(
@@ -439,7 +439,7 @@ def test_slicing_by_empty(tensor):
         reference_tensor,
     )
 
-    empty_labels_properties = Labels.empty(tensor.properties_names)
+    empty_labels_properties = Labels.empty(tensor.property_names)
     # Empty block returned if no properties to slice by are passed
     reference_block = _construct_empty_slice_block(
         tensor.block(0), "properties", empty_labels_properties
@@ -470,7 +470,7 @@ def test_slicing_all(tensor):
             tensor.block(0),
             axis="samples",
             labels=metatensor.unique_metadata(
-                tensor, axis="samples", names=tensor.samples_names
+                tensor, axis="samples", names=tensor.sample_names
             ),
         ),
         tensor.block(0),
@@ -482,7 +482,7 @@ def test_slicing_all(tensor):
             tensor,
             axis="samples",
             labels=metatensor.unique_metadata(
-                tensor, axis="samples", names=tensor.samples_names
+                tensor, axis="samples", names=tensor.sample_names
             ),
         ),
         tensor,
@@ -496,7 +496,7 @@ def test_slicing_all(tensor):
             labels=metatensor.unique_metadata(
                 tensor,
                 axis="properties",
-                names=tensor.properties_names,
+                names=tensor.property_names,
             ),
         ),
         tensor.block(0),
@@ -508,7 +508,7 @@ def test_slicing_all(tensor):
             tensor,
             axis="properties",
             labels=metatensor.unique_metadata(
-                tensor, axis="properties", names=tensor.properties_names
+                tensor, axis="properties", names=tensor.property_names
             ),
         ),
         tensor,

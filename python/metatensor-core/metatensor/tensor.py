@@ -521,7 +521,7 @@ class TensorMap:
         return TensorMap._from_ptr(ptr)
 
     @property
-    def samples_names(self) -> List[str]:
+    def sample_names(self) -> List[str]:
         """
         names of the samples dimensions for all blocks in this :py:class:`TensorMap`
         """
@@ -531,7 +531,7 @@ class TensorMap:
         return self.block(0).samples.names
 
     @property
-    def components_names(self) -> List[str]:
+    def component_names(self) -> List[str]:
         """
         names of the components dimensions for all blocks in this :py:class:`TensorMap`
         """
@@ -541,7 +541,7 @@ class TensorMap:
         return [c.names[0] for c in self.block(0).components]
 
     @property
-    def properties_names(self) -> List[str]:
+    def property_names(self) -> List[str]:
         """
         names of the properties dimensions for all blocks in this :py:class:`TensorMap`
         """

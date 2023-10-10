@@ -8,11 +8,11 @@ from .data import load_data
 def check_operation(reduce_over_samples):
     tensor = load_data("qm7-power-spectrum.npz")
 
-    assert tensor.samples_names == ["structure", "center"]
+    assert tensor.sample_names == ["structure", "center"]
     reduced_tensor = reduce_over_samples(tensor, "center")
 
     assert isinstance(reduced_tensor, torch.ScriptObject)
-    assert reduced_tensor.samples_names == ["structure"]
+    assert reduced_tensor.sample_names == ["structure"]
 
 
 def test_operations_as_python():

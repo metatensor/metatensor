@@ -95,7 +95,7 @@ def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along either the "samples" or
     "properties" `axis`.  `labels` is a :py:class:`Labels` objects that specify
-    the samples/properties names and indices that should be sliced, i.e. kept in
+    the sample/property names and indices that should be sliced, i.e. kept in
     the output :py:class:`TensorBlock`.
 
     Example: take an input :py:class:`TensorBlock` of shape (100, 1, 6), where
@@ -170,7 +170,7 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     """
     Slices an input :py:class:`TensorBlock` along either the "samples" or
     "properties" `axis`. `labels` is :py:class:`Labels` object that specifies
-    the samples/properties names and indices that should be sliced, i.e. kept in
+    the sample/property names and indices that should be sliced, i.e. kept in
     the output :py:class:`TensorBlock`.
 
     :param block: the input :py:class:`TensorBlock` to be sliced.

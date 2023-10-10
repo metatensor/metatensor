@@ -85,9 +85,9 @@ keys: key_1  key_2
 
 
 def test_labels_names(tensor):
-    assert tensor.samples_names == ["s"]
-    assert tensor.components_names == ["c"]
-    assert tensor.properties_names == ["p"]
+    assert tensor.sample_names == ["s"]
+    assert tensor.component_names == ["c"]
+    assert tensor.property_names == ["p"]
 
 
 def test_block(tensor):
@@ -392,9 +392,9 @@ def test_empty_tensor():
 
     assert empty_tensor.keys.names == ["key"]
 
-    assert empty_tensor.samples_names == []
-    assert empty_tensor.components_names == []
-    assert empty_tensor.properties_names == []
+    assert empty_tensor.sample_names == []
+    assert empty_tensor.component_names == []
+    assert empty_tensor.property_names == []
 
     # TODO
     # assert empty_tensor.blocks() == []
@@ -489,14 +489,14 @@ class TensorMapWrap:
     ) -> TensorMap:
         return self._c.components_to_properties(dimensions=dimensions)
 
-    def samples_names(self) -> List[str]:
-        return self._c.samples_names
+    def sample_names(self) -> List[str]:
+        return self._c.sample_names
 
-    def components_names(self) -> List[str]:
-        return self._c.components_names
+    def component_names(self) -> List[str]:
+        return self._c.component_names
 
-    def properties_names(self) -> List[str]:
-        return self._c.properties_names
+    def property_names(self) -> List[str]:
+        return self._c.property_names
 
     def print_(self, max_keys: int) -> str:
         return self._c.print(max_keys=max_keys)

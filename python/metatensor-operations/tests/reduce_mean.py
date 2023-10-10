@@ -20,9 +20,9 @@ def test_mean_samples_block():
     )
     bl1 = tensor_ps[0]
 
-    # check both passing a list and a single string for samples_names
-    reduce_tensor_se = metatensor.mean_over_samples(tensor_se, samples_names="center")
-    reduce_tensor_ps = metatensor.mean_over_samples(tensor_ps, samples_names=["center"])
+    # check both passing a list and a single string for sample_names
+    reduce_tensor_se = metatensor.mean_over_samples(tensor_se, sample_names="center")
+    reduce_tensor_ps = metatensor.mean_over_samples(tensor_ps, sample_names=["center"])
 
     assert np.all(
         np.mean(bl1.values[:4], axis=0) == reduce_tensor_ps.block(0).values[0]
@@ -147,9 +147,9 @@ def test_reduction_block_two_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = metatensor.mean_over_samples(X, samples_names=["samples3"])
-    reduce_X_23 = metatensor.mean_over_samples(X, samples_names="samples1")
-    reduce_X_2 = metatensor.mean_over_samples(X, samples_names=["samples1", "samples3"])
+    reduce_X_12 = metatensor.mean_over_samples(X, sample_names=["samples3"])
+    reduce_X_23 = metatensor.mean_over_samples(X, sample_names="samples1")
+    reduce_X_2 = metatensor.mean_over_samples(X, sample_names=["samples1", "samples3"])
 
     assert np.allclose(
         np.mean(X.block(0).values[:3], axis=0),

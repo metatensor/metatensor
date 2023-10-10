@@ -54,7 +54,7 @@ def test_append_samples():
         values=values,
     )
 
-    assert new_tensor.samples_names[-1] == "foo"
+    assert new_tensor.sample_names[-1] == "foo"
 
     for block in new_tensor:
         assert block.samples.values[:, -1] == values
@@ -69,7 +69,7 @@ def test_append_properties():
         values=values,
     )
 
-    assert new_tensor.properties_names[-1] == "foo"
+    assert new_tensor.property_names[-1] == "foo"
 
     for block in new_tensor:
         assert_equal(block.properties.values[:, -1], values)
@@ -110,7 +110,7 @@ def test_insert_samples():
         values=values,
     )
 
-    assert new_tensor.samples_names[index] == "foo"
+    assert new_tensor.sample_names[index] == "foo"
 
     for block in new_tensor:
         assert block.samples.values[:, index] == values
@@ -127,7 +127,7 @@ def test_insert_properties():
         values=values,
     )
 
-    assert new_tensor.properties_names[index] == "foo"
+    assert new_tensor.property_names[index] == "foo"
 
     for block in new_tensor:
         assert_equal(block.properties.values[:, index], values)
@@ -166,7 +166,7 @@ def test_permute_samples():
         ref_tensor, axis="samples", dimensions_indexes=dimensions_indexes
     )
 
-    assert new_tensor.samples_names == ["center", "structure"]
+    assert new_tensor.sample_names == ["center", "structure"]
 
     for key, block in new_tensor.items():
         ref_block = ref_tensor.block(key)
@@ -175,10 +175,10 @@ def test_permute_samples():
         )
         for parameter, gradient in block.gradients():
             if parameter == "positions":
-                gradient_samples_names = ["sample", "structure", "atom"]
+                gradient_sample_names = ["sample", "structure", "atom"]
             elif parameter == "cell":
-                gradient_samples_names = ["sample"]
-            assert gradient.samples.names == gradient_samples_names
+                gradient_sample_names = ["sample"]
+            assert gradient.samples.names == gradient_sample_names
 
 
 def test_permute_properties():
@@ -188,7 +188,7 @@ def test_permute_properties():
         ref_tensor, axis="properties", dimensions_indexes=dimensions_indexes
     )
 
-    assert new_tensor.properties_names == ["n2", "l", "n1"]
+    assert new_tensor.property_names == ["n2", "l", "n1"]
 
     for key, block in new_tensor.items():
         ref_block = ref_tensor.block(key)
@@ -216,19 +216,19 @@ def test_rename_samples():
         old="structure",
         new="foo",
     )
-    assert new_tensor.samples_names[0] == "foo"
+    assert new_tensor.sample_names[0] == "foo"
 
     for block in new_tensor:
         for parameter, gradient in block.gradients():
             if parameter == "positions":
-                gradient_samples_names = ["sample", "foo", "atom"]
+                gradient_sample_names = ["sample", "foo", "atom"]
             elif parameter == "cell":
-                gradient_samples_names = ["sample"]
-            assert gradient.samples.names == gradient_samples_names
+                gradient_sample_names = ["sample"]
+            assert gradient.samples.names == gradient_sample_names
 
 
 def test_rename_properties():
-    old = tensor().properties_names[0]
+    old = tensor().property_names[0]
 
     new_tensor = metatensor.rename_dimension(
         tensor(),
@@ -236,7 +236,7 @@ def test_rename_properties():
         old=old,
         new="foo",
     )
-    assert new_tensor.properties_names[0] == "foo"
+    assert new_tensor.property_names[0] == "foo"
 
     for block in new_tensor:
         for _, gradient in block.gradients():
@@ -259,7 +259,7 @@ def test_remove_samples():
         axis="samples",
         name="extra",
     )
-    assert new_tensor.samples_names == ["sample"]
+    assert new_tensor.sample_names == ["sample"]
 
 
 def test_remove_properties():
@@ -268,7 +268,7 @@ def test_remove_properties():
         axis="properties",
         name="extra",
     )
-    assert new_tensor.properties_names == ["properties"]
+    assert new_tensor.property_names == ["properties"]
 
     for block in new_tensor:
         for _, gradient in block.gradients():

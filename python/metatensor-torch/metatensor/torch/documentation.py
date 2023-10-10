@@ -954,15 +954,15 @@ class TensorMap:
 
     @property
     def sample_names(self) -> List[str]:
-        """names of the sample labels for all blocks in this tensor map"""
+        """names of the samples for all blocks in this tensor map"""
 
     @property
-    def components_names(self) -> List[List[str]]:
-        """names of the component labels for all blocks in this tensor map"""
+    def component_names(self) -> List[str]:
+        """names of the components for all blocks in this tensor map"""
 
     @property
     def property_names(self) -> List[str]:
-        """names of the property labels for all blocks in this tensor map"""
+        """names of the properties for all blocks in this tensor map"""
 
     def print(self, max_keys: int) -> str:
         """

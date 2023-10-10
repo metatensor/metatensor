@@ -111,9 +111,9 @@ keys: key_1  key_2
 
 
 def test_labels_names(tensor):
-    assert tensor.samples_names == ["s"]
-    assert tensor.components_names == ["c"]
-    assert tensor.properties_names == ["p"]
+    assert tensor.sample_names == ["s"]
+    assert tensor.component_names == ["c"]
+    assert tensor.property_names == ["p"]
 
 
 def test_block(tensor):
@@ -374,9 +374,9 @@ def test_empty_tensor():
 
     assert empty_tensor.keys.names == ["key"]
 
-    assert empty_tensor.samples_names == []
-    assert empty_tensor.components_names == []
-    assert empty_tensor.properties_names == []
+    assert empty_tensor.sample_names == []
+    assert empty_tensor.component_names == []
+    assert empty_tensor.property_names == []
 
     # check the `blocks` function
     assert empty_tensor.blocks() == []
