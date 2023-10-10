@@ -2,7 +2,7 @@
 name = "metatensor"
 version = "0.1.0-rc2"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.65"
 include = [
     "build.rs",
     "src/",

@@ -3,13 +3,13 @@ name = "metatensor-core"
 version = "0.1.0-rc2"
 edition = "2021"
 publish = false
-rust-version = "1.64"
+rust-version = "1.65"
 exclude = [
     "tests"
 ]
 
 [lib]
-# When our minimal Rust version becomes 1.64, we can pass these options directly
+# When our minimal Rust version becomes 1.65, we can pass these options directly
 # to Cargo. Until then, we build all the crate-type we need.
 name = "metatensor"
 crate-type = ["cdylib", "staticlib"]
