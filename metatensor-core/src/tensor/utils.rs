@@ -86,12 +86,12 @@ pub fn merge_gradient_samples(
     samples_mappings: &[Vec<mts_sample_mapping_t>],
 ) -> Result<Arc<Labels>, Error> {
     let mut new_gradient_samples = BTreeSet::new();
-    let mut new_gradient_samples_names = None;
+    let mut new_gradient_sample_names = None;
     for (KeyAndBlock{block, ..}, samples_mapping) in blocks.iter().zip(samples_mappings) {
         let gradient = block.gradient(gradient_name).expect("missing gradient");
 
-        if new_gradient_samples_names.is_none() {
-            new_gradient_samples_names = Some(gradient.samples.names());
+        if new_gradient_sample_names.is_none() {
+            new_gradient_sample_names = Some(gradient.samples.names());
         }
 
         for grad_sample in &*gradient.samples {
@@ -108,7 +108,7 @@ pub fn merge_gradient_samples(
     }
 
     let mut new_gradient_samples_builder = LabelsBuilder::new(
-        new_gradient_samples_names.expect("missing gradient samples names")
+        new_gradient_sample_names.expect("missing gradient sample names")
     )?;
 
     for sample in new_gradient_samples {
@@ -143,7 +143,7 @@ pub fn merge_samples(
         merged_samples.sort_unstable();
     }
 
-    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names).expect("invalid new samples names");
+    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names).expect("invalid new sample names");
     for sample in merged_samples {
         merged_samples_builder.add(&sample).expect("got duplicated samples");
     }

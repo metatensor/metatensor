@@ -178,9 +178,9 @@ TORCH_LIBRARY(metatensor, m) {
         .def("components_to_properties", &TensorMapHolder::components_to_properties, DOCSTRING,
             {torch::arg("dimensions")}
         )
-        .def_property("samples_names", &TensorMapHolder::samples_names)
-        .def_property("components_names", &TensorMapHolder::components_names)
-        .def_property("properties_names", &TensorMapHolder::properties_names)
+        .def_property("sample_names", &TensorMapHolder::sample_names)
+        .def_property("component_names", &TensorMapHolder::component_names)
+        .def_property("property_names", &TensorMapHolder::property_names)
         .def("print", &TensorMapHolder::print, DOCSTRING,
             {torch::arg("max_keys")}
         )

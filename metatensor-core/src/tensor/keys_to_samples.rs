@@ -140,13 +140,13 @@ fn merge_blocks_along_samples(
     }
 
     // collect and merge samples across the blocks
-    let new_samples_names = first_block.samples.names().iter()
+    let new_sample_names = first_block.samples.names().iter()
         .chain(extracted_names.iter())
         .copied()
         .collect();
     let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
-        new_samples_names,
+        new_sample_names,
         sort_samples,
     );
 

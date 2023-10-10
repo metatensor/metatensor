@@ -120,15 +120,15 @@ public:
 
     /// Get the names of the samples dimensions for all blocks in this
     /// `TensorMap`
-    std::vector<std::string> samples_names();
+    std::vector<std::string> sample_names();
 
     /// Get the names of the components dimensions for all blocks in this
     /// `TensorMap`
-    std::vector<std::string> components_names();
+    std::vector<std::string> component_names();
 
     /// Get the names of the properties dimensions for all blocks in this
     /// `TensorMap`
-    std::vector<std::string> properties_names();
+    std::vector<std::string> property_names();
 
     /// Get all (key => block) pairs in this `TensorMap`
     static std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> items(TorchTensorMap self);

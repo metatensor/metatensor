@@ -20,13 +20,13 @@ def test_sum_samples_block():
     )
     bl1 = tensor_ps[0]
 
-    # check both passing a list and a single string for samples_names
-    reduce_tensor_se = metatensor.sum_over_samples(tensor_se, samples_names=["center"])
-    reduce_tensor_ps = metatensor.sum_over_samples(tensor_ps, samples_names="center")
+    # check both passing a list and a single string for sample_names
+    reduce_tensor_se = metatensor.sum_over_samples(tensor_se, sample_names=["center"])
+    reduce_tensor_ps = metatensor.sum_over_samples(tensor_ps, sample_names="center")
 
     # checks that reduction over a block is the same as the tensormap operation
     reduce_block_se = metatensor.sum_over_samples_block(
-        tensor_se.block(0), samples_names="center"
+        tensor_se.block(0), sample_names="center"
     )
     assert np.allclose(reduce_block_se.values, reduce_tensor_se.block(0).values)
 
@@ -132,9 +132,9 @@ def test_reduction_block_two_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = metatensor.sum_over_samples(X, samples_names="samples3")
-    reduce_X_23 = metatensor.sum_over_samples(X, samples_names=["samples1"])
-    reduce_X_2 = metatensor.sum_over_samples(X, samples_names=["samples1", "samples3"])
+    reduce_X_12 = metatensor.sum_over_samples(X, sample_names="samples3")
+    reduce_X_23 = metatensor.sum_over_samples(X, sample_names=["samples1"])
+    reduce_X_2 = metatensor.sum_over_samples(X, sample_names=["samples1", "samples3"])
 
     assert np.all(
         np.sum(X.block(0).values[:3], axis=0) == reduce_X_12.block(0).values[0]

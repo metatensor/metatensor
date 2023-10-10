@@ -71,10 +71,10 @@ def append_dimension(tensor: TensorMap, axis: str, name: str, values) -> TensorM
         index = len(tensor.keys.names)
         return insert_dimension(tensor, axis, index, name, values)
     elif axis == "samples":
-        index = len(tensor.samples_names)
+        index = len(tensor.sample_names)
         return insert_dimension(tensor, axis, index, name, values)
     elif axis == "properties":
-        index = len(tensor.properties_names)
+        index = len(tensor.property_names)
         return insert_dimension(tensor, axis, index, name, values)
     else:
         raise ValueError(

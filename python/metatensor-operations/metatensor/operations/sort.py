@@ -13,22 +13,22 @@ def _sort_single_block(
     Sorts a single TensorBlock without the user input checking and sorting of gradients
     """
 
-    samples_names = block.samples.names
-    samples_values = block.samples.values
+    sample_names = block.samples.names
+    sample_values = block.samples.values
 
-    components_names: List[List[str]] = []
+    component_names: List[List[str]] = []
     components_values = []
     for component in block.components:
-        components_names.append(component.names)
+        component_names.append(component.names)
         components_values.append(component.values)
 
-    properties_names = block.properties.names
+    property_names = block.properties.names
     properties_values = block.properties.values
 
     values = block.values
     if "samples" in axes:
-        sorted_idx = _dispatch.argsort_labels_values(samples_values, reverse=descending)
-        samples_values = samples_values[sorted_idx]
+        sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        sample_values = sample_values[sorted_idx]
         values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(block.components):
@@ -44,11 +44,11 @@ def _sort_single_block(
         properties_values = properties_values[sorted_idx]
         values = _dispatch.take(values, sorted_idx, axis=-1)
 
-    samples_labels = Labels(names=samples_names, values=samples_values)
-    properties_labels = Labels(names=properties_names, values=properties_values)
+    samples_labels = Labels(names=sample_names, values=sample_values)
+    properties_labels = Labels(names=property_names, values=properties_values)
     components_labels = [
-        Labels(names=components_names[i], values=components_values[i])
-        for i in range(len(components_names))
+        Labels(names=component_names[i], values=components_values[i])
+        for i in range(len(component_names))
     ]
 
     return TensorBlock(

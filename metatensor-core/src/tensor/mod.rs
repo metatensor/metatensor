@@ -30,34 +30,34 @@ pub struct TensorMap {
 fn check_labels_names(
     block: &TensorBlock,
     sample_names: &[&str],
-    components_names: &[Vec<&str>],
+    component_names: &[Vec<&str>],
     context: &str,
 ) -> Result<(), Error> {
     if block.samples.names() != sample_names {
         return Err(Error::InvalidParameter(format!(
-            "all blocks must have the same sample label names, got [{}] and [{}]{}",
+            "all blocks must have the same sample names, got [{}] and [{}]{}",
             block.samples.names().join(", "),
             sample_names.join(", "),
             context,
         )));
     }
 
-    if block.components.len() != components_names.len() {
+    if block.components.len() != component_names.len() {
         return Err(Error::InvalidParameter(format!(
             "all blocks must contains the same set of components, the current \
             block has {} components while the first block has {}{}",
             block.components.len(),
-            components_names.len(),
+            component_names.len(),
             context,
         )));
     }
 
     for (component_i, component) in block.components.iter().enumerate() {
-        if component.names() != components_names[component_i] {
+        if component.names() != component_names[component_i] {
             return Err(Error::InvalidParameter(format!(
-                "all blocks must have the same component label names, got [{}] and [{}]{}",
+                "all blocks must have the same component names, got [{}] and [{}]{}",
                 component.names().join(", "),
-                components_names[component_i].join(", "),
+                component_names[component_i].join(", "),
                 context,
             )));
         }
@@ -89,7 +89,7 @@ fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
 #[derive(Debug, Clone, PartialEq)]
 struct GradientMetadata<'a> {
     sample_names: Vec<&'a str>,
-    components_names: Vec<Vec<&'a str>>,
+    component_names: Vec<Vec<&'a str>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,7 +106,7 @@ impl GradientMap<'_> {
         for (gradient_name, sub_gradient) in block.gradients() {
             let metadata = GradientMetadata {
                 sample_names: sub_gradient.samples.names(),
-                components_names: sub_gradient.components.iter()
+                component_names: sub_gradient.components.iter()
                     .map(|c| c.names())
                     .collect::<Vec<_>>(),
             };
@@ -137,22 +137,22 @@ impl TensorMap {
         if !blocks.is_empty() {
             // extract metadata from the first block
             let sample_names = blocks[0].samples.names();
-            let components_names = blocks[0].components.iter()
+            let component_names = blocks[0].components.iter()
                 .map(|c| c.names())
                 .collect::<Vec<_>>();
-            let properties_names = blocks[0].properties.names();
+            let property_names = blocks[0].properties.names();
             let gradient_map = GradientMap::new(&blocks[0]);
 
             for block in &blocks {
                 // check samples and components are the same as those of the first block
-                check_labels_names(block, &sample_names, &components_names, "")?;
+                check_labels_names(block, &sample_names, &component_names, "")?;
 
                 // check properties are the same as those of the first block
-                if block.properties.names() != properties_names {
+                if block.properties.names() != property_names {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same property label names, got [{}] and [{}]",
+                        "all blocks must have the same property names, got [{}] and [{}]",
                         block.properties.names().join(", "),
-                        properties_names.join(", "),
+                        property_names.join(", "),
                     )));
                 }
 
@@ -160,7 +160,7 @@ impl TensorMap {
                 if GradientMap::new(block) != gradient_map {
                     return Err(Error::InvalidParameter(
                         "all blocks must have the same set of gradients, with \
-                        the same samples, properties and components names, \
+                        the same sample, property and component names, \
                         and the same must be true for gradients of gradients".into(),
                     ));
                 }
@@ -325,8 +325,8 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same sample label \
-            names, got [something_else] and [samples]"
+            "invalid parameter: all blocks must have the same sample names, \
+            got [something_else] and [samples]"
         );
 
         /**********************************************************************/
@@ -376,8 +376,8 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same component label \
-            names, got [something_else] and [components]"
+            "invalid parameter: all blocks must have the same component names, \
+            got [something_else] and [components]"
         );
 
         /**********************************************************************/
@@ -401,8 +401,8 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same property label \
-            names, got [something_else] and [properties]"
+            "invalid parameter: all blocks must have the same property names, \
+            got [something_else] and [properties]"
         );
 
         // TODO: check error messages for gradients

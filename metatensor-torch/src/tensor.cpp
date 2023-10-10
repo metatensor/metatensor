@@ -366,7 +366,7 @@ static std::vector<std::string> labels_names(const metatensor::TensorBlock& bloc
     return result;
 }
 
-std::vector<std::string> TensorMapHolder::samples_names() {
+std::vector<std::string> TensorMapHolder::sample_names() {
     if (tensor_.keys().count() == 0) {
         return {};
     }
@@ -374,7 +374,7 @@ std::vector<std::string> TensorMapHolder::samples_names() {
     return labels_names(this->tensor_.block_by_id(0), 0);
 }
 
-std::vector<std::string> TensorMapHolder::components_names() {
+std::vector<std::string> TensorMapHolder::component_names() {
     auto result = std::vector<std::string>();
 
     if (tensor_.keys().count() != 0) {
@@ -392,7 +392,7 @@ std::vector<std::string> TensorMapHolder::components_names() {
     return result;
 }
 
-std::vector<std::string> TensorMapHolder::properties_names() {
+std::vector<std::string> TensorMapHolder::property_names() {
     if (tensor_.keys().count() == 0) {
         return {};
     }
