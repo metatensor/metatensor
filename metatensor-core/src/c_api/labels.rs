@@ -64,7 +64,7 @@ pub unsafe fn rust_to_mts_labels(labels: Arc<Labels>) -> mts_labels_t {
         labels.c_names().as_ptr().cast()
     };
 
-    let internal_ptr_ = Arc::into_raw(labels).cast::<c_void>() as *mut c_void;
+    let internal_ptr_ = Arc::into_raw(labels).cast::<c_void>().cast_mut();
 
     mts_labels_t {
         internal_ptr_,

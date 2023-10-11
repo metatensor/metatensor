@@ -35,7 +35,7 @@ impl Drop for ConstCString {
         // SAFETY: `CString::from_raw` is OK since we created this pointer with
         // `CString::into_raw`
         unsafe {
-            let str = CString::from_raw(self.0 as *mut _);
+            let str = CString::from_raw(self.0.cast_mut());
             drop(str);
         }
     }
