@@ -9,7 +9,16 @@ from setuptools import build_meta
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "..", "metatensor-core"))
-if os.path.exists(METATENSOR_CORE):
+FORCED_METATENSOR_CORE_VERSION = os.environ.get(
+    "METATENSOR_TORCH_BUILD_WITH_METATENSOR_TORCH_VERSION"
+)
+
+if FORCED_METATENSOR_CORE_VERSION is not None:
+    # force a specific version for metatensor-core, this is used when checking the build
+    # from a sdist on a non-released version
+    METATENSOR_CORE_DEP = f"metatensor-core =={FORCED_METATENSOR_CORE_VERSION}"
+
+elif os.path.exists(METATENSOR_CORE):
     # we are building from a git checkout
 
     # add a random uuid to the file url to prevent pip from using a cached
@@ -31,6 +40,4 @@ def get_requires_for_build_wheel(config_settings=None):
     return defaults + [METATENSOR_CORE_DEP]
 
 
-def get_requires_for_build_sdist(config_settings=None):
-    defaults = build_meta.get_requires_for_build_sdist(config_settings)
-    return defaults + [METATENSOR_CORE_DEP]
+get_requires_for_build_sdist = build_meta.get_requires_for_build_sdist
