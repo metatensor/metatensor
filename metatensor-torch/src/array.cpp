@@ -32,7 +32,7 @@ TorchDataArray::TorchDataArray(torch::Tensor tensor): tensor_(std::move(tensor))
 mts_data_origin_t TorchDataArray::origin() const {
     // mts_data_origin registration in a thread-safe way through C++11 static
     // initialization of a class with a constructor.
-    static MetatensorOriginRegistration REGISTRATION = MetatensorOriginRegistration("metatensor_torch::TorchDataArray");
+    static auto REGISTRATION = MetatensorOriginRegistration("metatensor_torch::TorchDataArray");
     return TORCH_DATA_ORIGIN;
 }
 

@@ -65,14 +65,14 @@ fn block_gradient(block: *const mts_block_t, parameter: &CStr) -> Option<*const 
     let status = unsafe { crate::c_api::mts_block_gradient(
             // the cast to mut pointer is fine since we are only returning a
             // non-mut mts_block_t below
-            block as *mut mts_block_t,
+            block.cast_mut(),
             parameter.as_ptr(),
             &mut gradient_block
         )
     };
 
     match crate::errors::check_status(status) {
-        Ok(()) => Some(gradient_block as *const _),
+        Ok(()) => Some(gradient_block.cast_const()),
         Err(error) => {
             if error.code == Some(MTS_INVALID_PARAMETER_ERROR) {
                 // there is no array for this gradient
@@ -121,7 +121,7 @@ impl<'a> TensorBlockRef<'a> {
         let mut array = mts_array_t::null();
         unsafe {
             crate::errors::check_status(crate::c_api::mts_block_data(
-                self.as_ptr() as *mut _,
+                self.as_ptr().cast_mut(),
                 &mut array
             )).expect("failed to get the array for a block");
         };
