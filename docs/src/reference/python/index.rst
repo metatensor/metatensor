@@ -30,3 +30,4 @@ These are documented in the next :ref:`documentation section
     io
     data
     misc
+    CHANGELOG.md

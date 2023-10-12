@@ -4,6 +4,7 @@ pygments >=2.11     # syntax highligthing
 breathe >=4.33      # C and C++ => sphinx through doxygen
 furo                # sphinx theme
 toml                # to extract version number out of Cargo.toml
+myst_parser         # include markdown documents in sphinx
 
 # required for autodoc
 numpy

@@ -39,3 +39,4 @@ main groups:
     block
     data
     misc
+    CHANGELOG.md
