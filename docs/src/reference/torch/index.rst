@@ -42,6 +42,7 @@ the following pages:
     block
     labels
     serialization
+    CHANGELOG.md
 
 All the :ref:`operations <python-api-operations>` are also available in the
 ``metatensor.torch`` module under the same name. All the functions have the same

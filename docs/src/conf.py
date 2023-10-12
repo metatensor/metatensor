@@ -59,6 +59,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_toggleprompt",
     "breathe",
+    "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

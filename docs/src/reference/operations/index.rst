@@ -52,3 +52,8 @@ List of all operations
     manipulation/index
     math/index
     set/index
+
+.. toctree::
+    :maxdepth: 1
+
+    CHANGELOG.md
