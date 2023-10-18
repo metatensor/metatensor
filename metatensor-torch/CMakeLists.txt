@@ -1,6 +1,10 @@
-# Torch seems to require features added in CMake 3.15, but does not
-# declare it in its own `cmake_minimum_required`
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
+
+if (POLICY CMP0135)
+    # Use download time as timestamp when extracting files from archives
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 
 if(NOT "${LAST_CMAKE_VERSION}" VERSION_EQUAL ${CMAKE_VERSION})
     set(LAST_CMAKE_VERSION ${CMAKE_VERSION} CACHE INTERNAL "Last version of cmake used to configure")
@@ -143,6 +147,28 @@ generate_export_header(metatensor_torch
     EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/exports.h
 )
 target_compile_definitions(metatensor_torch PRIVATE metatensor_torch_EXPORTS)
+
+#------------------------------------------------------------------------------#
+# External dependencies
+#------------------------------------------------------------------------------#
+include(FetchContent)
+
+# JSON library from https://github.com/nlohmann/json
+FetchContent_Declare(nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
+    URL_HASH SHA256=8c4b26bf4b422252e13f332bc5e388ec0ab5c3443d24399acb675e68278d341f
+)
+if (CMAKE_VERSION VERSION_GREATER 3.18)
+    FetchContent_MakeAvailable(nlohmann_json)
+else()
+    if (NOT nlohmann_json_POPULATED)
+        FetchContent_Populate(nlohmann_json)
+    endif()
+
+    add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR})
+endif()
+
+target_link_libraries(metatensor_torch PRIVATE nlohmann_json::nlohmann_json)
 
 
 if (METATENSOR_TORCH_TESTS)

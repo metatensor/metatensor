@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include <torch/torch.h>
+#include <nlohmann/json.hpp>
 
 #include <metatensor.hpp>
 
@@ -14,6 +15,54 @@ using namespace metatensor_torch;
 std::string NeighborsListOptionsHolder::repr() const {
     return "NeighborsListOptions(model_cutoff=" + std::to_string(model_cutoff_) + \
         ", full_list=" + (full_list_ ? "True" : "False") + ")";
+}
+
+std::string NeighborsListOptionsHolder::to_json() const {
+    nlohmann::json result;
+
+    result["type"] = "NeighborsListOptions";
+
+    // Store cutoff using it's binary representation to ensure perfect
+    // round-tripping of the data
+    static_assert(sizeof(double) == sizeof(int64_t));
+    int64_t int_cutoff = 0;
+    std::memcpy(&int_cutoff, &this->model_cutoff_, sizeof(double));
+    result["model_cutoff"] = int_cutoff;
+
+    result["full_list"] = this->full_list_;
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& json) {
+    auto data = nlohmann::json::parse(json);
+
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for NeighborsListOptions, expected an object");
+    }
+
+    if (!data.contains("type") || !data["type"].is_string()) {
+        throw std::runtime_error("expected 'type' in JSON for NeighborsListOptions, did not find it");
+    }
+
+    if (data["type"] != "NeighborsListOptions") {
+        throw std::runtime_error("'type' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
+    }
+
+
+    if (!data.contains("model_cutoff") || !data["model_cutoff"].is_number_integer()) {
+        throw std::runtime_error("'model_cutoff' in JSON for NeighborsListOptions must be a number");
+    }
+    auto int_cutoff = data["model_cutoff"].get<int64_t>();
+
+    if (!data.contains("full_list") || !data["full_list"].is_boolean()) {
+        throw std::runtime_error("'full_list' in JSON for NeighborsListOptions must be a boolean");
+    }
+    auto full_list = data["full_list"].get<bool>();
+    double model_cutoff = 0;
+    std::memcpy(&model_cutoff, &int_cutoff, sizeof(double));
+
+    return torch::make_intrusive<NeighborsListOptionsHolder>(model_cutoff, full_list);
 }
 
 // ========================================================================== //
@@ -189,5 +238,222 @@ std::vector<std::string> SystemHolder::known_data() const {
     for (const auto& it: data_) {
         result.emplace_back(it.first);
     }
+    return result;
+}
+
+
+// ========================================================================== //
+
+static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
+    nlohmann::json result;
+
+    result["type"] = "ModelOutput";
+    result["quantity"] = self.quantity;
+    result["unit"] = self.unit;
+    result["per_atom"] = self.per_atom;
+    result["forward_gradients"] = self.forward_gradients;
+
+    return result;
+}
+
+std::string ModelOutputHolder::to_json() const {
+    return model_output_to_json(*this).dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+static ModelOutput model_output_from_json(const nlohmann::json& data) {
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for ModelOutput, expected an object");
+    }
+
+    if (!data.contains("type") || !data["type"].is_string()) {
+        throw std::runtime_error("expected 'type' in JSON for ModelOutput, did not find it");
+    }
+
+    if (data["type"] != "ModelOutput") {
+        throw std::runtime_error("'type' in JSON for ModelOutput must be 'ModelOutput'");
+    }
+
+    auto result = torch::make_intrusive<ModelOutputHolder>();
+    if (data.contains("quantity")) {
+        if (!data["quantity"].is_string()) {
+            throw std::runtime_error("'quantity' in JSON for ModelOutput must be a string");
+        }
+        result->quantity = data["quantity"];
+    }
+
+    if (data.contains("unit")) {
+        if (!data["unit"].is_string()) {
+            throw std::runtime_error("'unit' in JSON for ModelOutput must be a string");
+        }
+        result->unit = data["unit"];
+    }
+
+    if (data.contains("per_atom")) {
+        if (!data["per_atom"].is_boolean()) {
+            throw std::runtime_error("'per_atom' in JSON for ModelOutput must be a boolean");
+        }
+        result->per_atom = data["per_atom"];
+    }
+
+    if (data.contains("forward_gradients")) {
+        if (!data["forward_gradients"].is_array()) {
+            throw std::runtime_error("'forward_gradients' in JSON for ModelOutput must be an array");
+        }
+
+        for (const auto& gradient: data["forward_gradients"]) {
+            if (!gradient.is_string()) {
+                throw std::runtime_error("'forward_gradients' in JSON for ModelOutput must be an array of strings");
+            }
+            result->forward_gradients.emplace_back(gradient);
+        }
+    }
+
+    return result;
+}
+
+ModelOutput ModelOutputHolder::from_json(const std::string& json) {
+    auto data = nlohmann::json::parse(json);
+    return model_output_from_json(data);
+}
+
+
+std::string ModelCapabilitiesHolder::to_json() const {
+    nlohmann::json result;
+
+    result["type"] = "ModelCapabilities";
+    result["length_unit"] = this->length_unit;
+    result["species"] = this->species;
+
+    auto outputs = nlohmann::json::object();
+    for (const auto& it: this->outputs) {
+        outputs[it.key()] = model_output_to_json(*it.value());
+    }
+    result["outputs"] = outputs;
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
+    auto data = nlohmann::json::parse(json);
+
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for ModelCapabilities, expected an object");
+    }
+
+    if (!data.contains("type") || !data["type"].is_string()) {
+        throw std::runtime_error("expected 'type' in JSON for ModelCapabilities, did not find it");
+    }
+
+    if (data["type"] != "ModelCapabilities") {
+        throw std::runtime_error("'type' in JSON for ModelCapabilities must be 'ModelCapabilities'");
+    }
+
+    auto result = torch::make_intrusive<ModelCapabilitiesHolder>();
+    if (data.contains("length_unit")) {
+        if (!data["length_unit"].is_string()) {
+            throw std::runtime_error("'length_unit' in JSON for ModelCapabilities must be a string");
+        }
+        result->length_unit = data["length_unit"];
+    }
+
+    if (data.contains("species")) {
+        if (!data["species"].is_array()) {
+            throw std::runtime_error("'species' in JSON for ModelCapabilities must be an array");
+        }
+
+        for (const auto& species: data["species"]) {
+            if (!species.is_number_integer()) {
+                throw std::runtime_error("'species' in JSON for ModelCapabilities must be an array of integers");
+            }
+            result->species.emplace_back(species);
+        }
+    }
+
+    if (data.contains("outputs")) {
+        if (!data["outputs"].is_object()) {
+            throw std::runtime_error("'outputs' in JSON for ModelCapabilities must be an object");
+        }
+
+        for (const auto& output: data["outputs"].items()) {
+            result->outputs.insert(output.key(), model_output_from_json(output.value()));
+        }
+    }
+
+    return result;
+}
+
+
+std::string ModelRunOptionsHolder::to_json() const {
+    nlohmann::json result;
+
+    result["type"] = "ModelRunOptions";
+    result["length_unit"] = this->length_unit;
+
+    if (this->selected_atoms) {
+        result["selected_atoms"] = this->selected_atoms.value();
+    } else {
+        result["selected_atoms"] = nlohmann::json();
+    }
+
+    auto outputs = nlohmann::json::object();
+    for (const auto& it: this->outputs) {
+        outputs[it.key()] = model_output_to_json(*it.value());
+    }
+    result["outputs"] = outputs;
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+ModelRunOptions ModelRunOptionsHolder::from_json(const std::string& json) {
+    auto data = nlohmann::json::parse(json);
+
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for ModelRunOptions, expected an object");
+    }
+
+    if (!data.contains("type") || !data["type"].is_string()) {
+        throw std::runtime_error("expected 'type' in JSON for ModelRunOptions, did not find it");
+    }
+
+    if (data["type"] != "ModelRunOptions") {
+        throw std::runtime_error("'type' in JSON for ModelRunOptions must be 'ModelRunOptions'");
+    }
+
+    auto result = torch::make_intrusive<ModelRunOptionsHolder>();
+    if (data.contains("length_unit")) {
+        if (!data["length_unit"].is_string()) {
+            throw std::runtime_error("'length_unit' in JSON for ModelRunOptions must be a string");
+        }
+        result->length_unit = data["length_unit"];
+    }
+
+    if (data.contains("selected_atoms")) {
+        if (data["selected_atoms"].is_null()) {
+            // nothing to do
+        } else {
+            if (!data["selected_atoms"].is_array()) {
+                throw std::runtime_error("'selected_atoms' in JSON for ModelRunOptions must be an array");
+            }
+
+            result->selected_atoms = std::vector<int64_t>();
+            for (const auto& atom: data["selected_atoms"]) {
+                if (!atom.is_number_integer()) {
+                    throw std::runtime_error("'selected_atoms' in JSON for ModelRunOptions must be an array of integers");
+                }
+                result->selected_atoms->emplace_back(atom.get<int64_t>());
+            }
+        }
+    }
+
+    if (data.contains("outputs")) {
+        if (!data["outputs"].is_object()) {
+            throw std::runtime_error("'outputs' in JSON for ModelRunOptions must be an object");
+        }
+
+        for (const auto& output: data["outputs"].items()) {
+            result->outputs.insert(output.key(), model_output_from_json(output.value()));
+        }
+    }
+
     return result;
 }
