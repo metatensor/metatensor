@@ -59,6 +59,11 @@ public:
     /// Implementation of Python's `__repr__`
     std::string repr() const;
 
+    /// Serialize a `NeighborsListOptions` to a JSON string.
+    std::string to_json() const;
+    /// Load a serialized `NeighborsListOptions` from a JSON string.
+    static NeighborsListOptions from_json(const std::string& json);
+
 private:
     // cutoff in the model units
     double model_cutoff_;
@@ -209,6 +214,11 @@ public:
 
     /// Which gradients should be computed in forward mode
     std::vector<std::string> forward_gradients;
+
+    /// Serialize a `ModelOutput` to a JSON string.
+    std::string to_json() const;
+    /// Load a serialized `ModelOutput` from a JSON string.
+    static ModelOutput from_json(const std::string& json);
 };
 
 
@@ -238,6 +248,11 @@ public:
 
     /// all possible outputs from this model and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;
+
+    /// Serialize a `ModelCapabilities` to a JSON string.
+    std::string to_json() const;
+    /// Load a serialized `ModelCapabilities` from a JSON string.
+    static ModelCapabilities from_json(const std::string& json);
 };
 
 
@@ -268,6 +283,11 @@ public:
 
     /// requested outputs for this run and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;
+
+    /// Serialize a `ModelRunOptions` to a JSON string.
+    std::string to_json() const;
+    /// Load a serialized `ModelRunOptions` from a JSON string.
+    static ModelRunOptions from_json(const std::string& json);
 };
 
 }
