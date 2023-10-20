@@ -46,7 +46,7 @@ jobs:
       - name: collect Python coverage
         run: |
             tox -e core-tests
-            tox -e operations-notorch-tests
+            tox -e operations-numpy-tests
             tox -e operations-torch-tests
             tox -e torch-tests
         env:
