@@ -331,6 +331,9 @@ def index_add(output_array, input_array, index):
     """
     index = to_index_array(index)
     if isinstance(input_array, TorchTensor):
+        if not isinstance(index, TorchTensor):
+            index = torch.tensor(index).to(device=input_array.device)
+
         _check_all_torch_tensor([output_array, input_array, index])
         output_array.index_add_(0, index, input_array)
     elif isinstance(input_array, np.ndarray):
@@ -644,7 +647,6 @@ def argsort_labels_values(labels_values, reverse: bool = False):
     :param reverse: if true, order is descending
 
     :return: indices corresponding to the sorted values in ``labels_values``
-
     """
     if isinstance(labels_values, TorchTensor):
         # torchscript does not support sorted for List[List[int]]
