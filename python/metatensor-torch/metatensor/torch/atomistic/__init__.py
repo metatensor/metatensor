@@ -11,3 +11,5 @@ else:
     ModelOutput = torch.classes.metatensor.ModelOutput
     ModelRunOptions = torch.classes.metatensor.ModelRunOptions
     ModelCapabilities = torch.classes.metatensor.ModelCapabilities
+
+from .model import MetatensorAtomisticModule  # noqa
