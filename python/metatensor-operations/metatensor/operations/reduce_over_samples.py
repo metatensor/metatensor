@@ -151,9 +151,15 @@ def _reduce_over_samples_block(
         return result_block
 
     # get which samples will still be there after reduction
-    new_samples, index = _dispatch.unique_with_inverse(
-        block_samples.values[:, sample_selected], axis=0
-    )
+    if len(remaining_sample_names) == 0:
+        new_samples = _dispatch.zeros_like(block_samples.values, shape=(1, 0))
+        index = _dispatch.zeros_like(
+            block_samples.values, shape=(block_samples.values.shape[0],)
+        )
+    else:
+        new_samples, index = _dispatch.unique_with_inverse(
+            block_samples.values[:, sample_selected], axis=0
+        )
 
     block_values = block.values
     other_shape = block_values.shape[1:]
