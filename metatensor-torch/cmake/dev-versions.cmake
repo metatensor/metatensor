@@ -38,6 +38,7 @@ function(n_commits_since_last_tag _tag_prefix_ _output_)
             RESULT_VARIABLE _status_
             OUTPUT_VARIABLE _n_commits_
             ERROR_VARIABLE _stderr_
+            WORKING_DIRECTORY ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
         )
 
         if (NOT ${_status_} EQUAL 0)

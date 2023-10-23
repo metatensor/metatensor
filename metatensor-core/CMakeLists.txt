@@ -69,18 +69,16 @@ set(EXTRA_RUST_FLAGS "" CACHE STRING "Flags used to build rust code")
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
 
-if (${METATENSOR_MAIN_PROJECT})
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "" AND "${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
-        message(STATUS "Setting build type to 'release' as none was specified.")
-        set(CMAKE_BUILD_TYPE "release"
-            CACHE STRING
-            "Choose the type of build, options are: debug or release"
-        FORCE)
-        set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS release debug)
-    endif()
+if("${CMAKE_BUILD_TYPE}" STREQUAL "" AND "${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
+    message(STATUS "Setting build type to 'release' as none was specified.")
+    set(CMAKE_BUILD_TYPE "release"
+        CACHE STRING
+        "Choose the type of build, options are: debug or release"
+    FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS release debug)
 endif()
 
-if(${METATENSOR_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_BUILD_TYPE}" STREQUAL ${CMAKE_BUILD_TYPE})
+if(${METATENSOR_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_BUILD_TYPE}")
     set(CACHED_LAST_CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE INTERNAL "Last build type used in configuration")
     message(STATUS "Building metatensor in ${CMAKE_BUILD_TYPE} mode")
 endif()
@@ -285,6 +283,7 @@ set(METATENSOR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/)
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
+    BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::shared INTERFACE cxx_std_11)
 
@@ -294,11 +293,11 @@ if (WIN32)
     )
 endif()
 
-
 set_target_properties(metatensor::static PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
     INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
+    BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::static INTERFACE cxx_std_11)
 
