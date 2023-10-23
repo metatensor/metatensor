@@ -116,6 +116,9 @@ add_library(metatensor_torch SHARED
 set_target_properties(metatensor_torch PROPERTIES
     BUILD_VERSION ${METATENSOR_TORCH_FULL_VERSION}
 )
+target_compile_definitions(metatensor_torch PRIVATE
+    METATENSOR_TORCH_VERSION="${METATENSOR_TORCH_FULL_VERSION}"
+)
 
 target_link_libraries(metatensor_torch PUBLIC torch metatensor::shared)
 target_compile_features(metatensor_torch PUBLIC cxx_std_17)

@@ -8,6 +8,9 @@
 
 using namespace metatensor_torch;
 
+std::string metatensor_torch::version() {
+    return METATENSOR_TORCH_VERSION;
+}
 
 mts_status_t metatensor_torch::details::create_torch_array(
     const uintptr_t* shape_ptr,

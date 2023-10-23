@@ -8,6 +8,7 @@ import torch
 import metatensor
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION, BUILD_TORCH_VERSION
+from .version import __version__
 
 
 Version = namedtuple("Version", ["major", "minor", "patch"])
@@ -113,3 +114,10 @@ def _load_library():
 
     # load the C++ operators and custom classes
     torch.ops.load_library(_lib_path())
+
+    lib_version = torch.ops.metatensor.version()
+    if not version_compatible(lib_version, __version__):
+        raise ImportError(
+            f"Trying to load the Python package metatensor-torch v{__version__} "
+            "with the incompatible metatensor-torch C++ library v{lib_version}"
+        )

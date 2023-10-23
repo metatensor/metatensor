@@ -13,6 +13,9 @@
 
 namespace metatensor_torch {
 
+/// Get the version of metatensor_torch
+METATENSOR_TORCH_EXPORT std::string version();
+
 namespace details {
     /// Function to be used as `mts_create_array_callback_t` to load data in
     /// torch Tensor.
