@@ -219,6 +219,9 @@ TORCH_LIBRARY(metatensor, m) {
             })
         ;
 
+    // standalone functions
+    m.def("version", metatensor_torch::version);
+
     m.def("load", metatensor_torch::load);
     m.def("save", metatensor_torch::save);
 }

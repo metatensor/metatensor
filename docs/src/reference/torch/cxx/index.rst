@@ -32,4 +32,4 @@ CMake after :ref:`installing metatensor's C++ Torch interface
     tensor
     block
     labels
-    serialization
+    miscellaneous

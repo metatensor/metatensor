@@ -1,20 +1,9 @@
-import sys
 import os
 import torch
 
 from ._c_lib import _load_library
 from . import utils  # noqa
-
-
-if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
-    import importlib.metadata
-
-    __version__ = importlib.metadata.version("metatensor-torch")
-
-else:
-    from pkg_resources import get_distribution
-
-    __version__ = get_distribution("metatensor-torch").version
+from .version import __version__  # noqa
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX") is not None:
     from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap
