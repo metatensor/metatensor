@@ -44,13 +44,46 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
+function(check_compatible_versions _actual_ _requested_)
+    if(${_actual_} MATCHES "^([0-9]+)\\.([0-9]+)")
+        set(_actual_major_ "${CMAKE_MATCH_1}")
+        set(_actual_minor_ "${CMAKE_MATCH_2}")
+    else()
+        message(FATAL_ERROR "Failed to parse actual version: ${_actual_}")
+    endif()
+
+    if(${_requested_} MATCHES "^([0-9]+)\\.([0-9]+)")
+        set(_requested_major_ "${CMAKE_MATCH_1}")
+        set(_requested_minor_ "${CMAKE_MATCH_2}")
+    else()
+        message(FATAL_ERROR "Failed to parse requested version: ${_requested_}")
+    endif()
+
+    if (${_requested_major_} EQUAL 0 AND ${_actual_minor_} EQUAL ${_requested_minor_})
+        # major version is 0 and same minor version, everything is fine
+    elseif (${_actual_major_} EQUAL ${_requested_major_})
+        # same major version, everything is fine
+    else()
+        # not compatible
+        message(FATAL_ERROR "Incompatible versions: we need ${_requested_}, but we got ${_actual_}")
+    endif()
+endfunction()
+
+
 # If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
 # in the same way we update the metatensor-torch version
 set(REQUIRED_METATENSOR_VERSION "0.1.0")
 create_development_version("${REQUIRED_METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_CORE_FULL_VERSION)
 string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
 
-find_package(metatensor ${REQUIRED_METATENSOR_VERSION} CONFIG REQUIRED)
+# Either metatensor is built as part of the same CMake project, or we try to
+# find the corresponding CMake package
+if (TARGET metatensor::shared)
+    get_target_property(METATENSOR_BUILD_VERSION metatensor::shared BUILD_VERSION)
+    check_compatible_versions(${METATENSOR_BUILD_VERSION} ${REQUIRED_METATENSOR_VERSION})
+else()
+    find_package(metatensor ${REQUIRED_METATENSOR_VERSION} CONFIG REQUIRED)
+endif()
 
 # FindCUDNN.cmake distributed with PyTorch is a bit broken, so we have a
 # fixed version in `cmake/FindCUDNN.cmake`
@@ -78,6 +111,10 @@ set(METATENSOR_TORCH_SOURCE
 add_library(metatensor_torch SHARED
     ${METATENSOR_TORCH_HEADERS}
     ${METATENSOR_TORCH_SOURCE}
+)
+
+set_target_properties(metatensor_torch PROPERTIES
+    BUILD_VERSION ${METATENSOR_TORCH_FULL_VERSION}
 )
 
 target_link_libraries(metatensor_torch PUBLIC torch metatensor::shared)

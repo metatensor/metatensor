@@ -33,3 +33,4 @@ cbindgen = { version = "=0.24.5", default-features = false }
 
 [dev-dependencies]
 which = "4"
+lazy_static = "1"
