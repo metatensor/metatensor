@@ -3,8 +3,12 @@
 This script calls git to get the number of commits since the last tag matching a
 pattern (pattern given on the command line).
 """
+import os
 import subprocess
 import sys
+
+
+ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def warn_and_exit(message, exit_code=0):
@@ -26,6 +30,19 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 2:
         warn_and_exit(f"usage: {sys.argv[0]} <tag-prefix>", exit_code=1)
+
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        check=False,
+        encoding="utf8",
+    )
+
+    if result.returncode != 0 or not os.path.samefile(result.stdout.strip(), ROOT):
+        warn_and_exit(
+            "the git root is not metatensor repository, if you are trying to build "
+            "metatensor from source please use a git checkout"
+        )
 
     tag_prefix = sys.argv[1]
 
