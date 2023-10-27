@@ -24,13 +24,11 @@ using System = torch::intrusive_ptr<SystemHolder>;
 /// Options for the calculation of a neighbors list
 class METATENSOR_TORCH_EXPORT NeighborsListOptionsHolder final: public torch::CustomClassHolder {
 public:
-    /// Create `NeighborsListOptions` with the given cutoff and full_list
-    NeighborsListOptionsHolder(double model_cutoff, bool full_list):
-        model_cutoff_(model_cutoff),
-        engine_cutoff_(model_cutoff),
-        full_list_(full_list)
-        {}
-
+    /// Create `NeighborsListOptions` with the given `cutoff` and `full_list`.
+    ///
+    /// `requestor` can be used to store information about who requested the
+    /// neighbors list.
+    NeighborsListOptionsHolder(double model_cutoff, bool full_list, std::string requestor = "");
     ~NeighborsListOptionsHolder() override = default;
 
     /// Spherical cutoff radius for this neighbors list, in the units of the model
@@ -56,8 +54,18 @@ public:
         return full_list_;
     }
 
+    /// Get the list of strings describing who requested this neighbors list
+    std::vector<std::string> requestors() const {
+        return requestors_;
+    }
+
+    /// Add a new requestor to the list of who requested this neighbors list
+    void add_requestor(std::string requestor);
+
     /// Implementation of Python's `__repr__`
     std::string repr() const;
+    /// Implementation of Python's `__str__`
+    std::string str() const;
 
     /// Serialize a `NeighborsListOptions` to a JSON string.
     std::string to_json() const;
@@ -70,14 +78,16 @@ private:
     // cutoff in the engine units
     double engine_cutoff_;
     bool full_list_;
+    std::vector<std::string> requestors_;
 };
 
-/// check `NeighborsListOptions` for equality
+/// Check `NeighborsListOptions` for equality. The `requestors` list is ignored
+/// when checking for equality
 inline bool operator==(const NeighborsListOptions& lhs, const NeighborsListOptions& rhs) {
     return lhs->model_cutoff() == rhs->model_cutoff() && lhs->full_list() == rhs->full_list();
 }
 
-/// check `NeighborsListOptions` for inequality
+/// Check `NeighborsListOptions` for inequality.
 inline bool operator!=(const NeighborsListOptions& lhs, const NeighborsListOptions& rhs) {
     return !(lhs == rhs);
 }
