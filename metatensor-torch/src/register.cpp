@@ -229,15 +229,19 @@ TORCH_LIBRARY(metatensor, m) {
     // ====================================================================== //
     m.class_<NeighborsListOptionsHolder>("NeighborsListOptions")
         .def(
-            torch::init<double, bool>(), DOCSTRING,
-            {torch::arg("model_cutoff"), torch::arg("full_list")}
+            torch::init<double, bool, std::string>(), DOCSTRING,
+            {torch::arg("model_cutoff"), torch::arg("full_list"), torch::arg("requestor") = ""}
         )
         .def_property("model_cutoff", &NeighborsListOptionsHolder::model_cutoff)
         .def_property("engine_cutoff", &NeighborsListOptionsHolder::engine_cutoff)
         .def("set_engine_unit", &NeighborsListOptionsHolder::set_engine_unit)
         .def_property("full_list", &NeighborsListOptionsHolder::full_list)
+        .def("requestors", &NeighborsListOptionsHolder::requestors)
+        .def("add_requestor", &NeighborsListOptionsHolder::add_requestor, DOCSTRING,
+            {torch::arg("requestor")}
+        )
         .def("__repr__", &NeighborsListOptionsHolder::repr)
-        .def("__str__", &NeighborsListOptionsHolder::repr)
+        .def("__str__", &NeighborsListOptionsHolder::str)
         .def("__eq__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator==))
         .def("__ne__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator!=))
         .def_pickle(

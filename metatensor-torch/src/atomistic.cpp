@@ -12,8 +12,52 @@
 using namespace metatensor_torch;
 
 
+NeighborsListOptionsHolder::NeighborsListOptionsHolder(
+    double model_cutoff,
+    bool full_list,
+    std::string requestor
+):
+    model_cutoff_(model_cutoff),
+    engine_cutoff_(model_cutoff),
+    full_list_(full_list)
+{
+    this->add_requestor(std::move(requestor));
+}
+
+
+void NeighborsListOptionsHolder::add_requestor(std::string requestor) {
+    if (requestor.empty()) {
+        return;
+    }
+
+    for (const auto& existing: requestors_) {
+        if (requestor == existing) {
+            return;
+        }
+    }
+
+    requestors_.emplace_back(requestor);
+}
+
 std::string NeighborsListOptionsHolder::repr() const {
-    return "NeighborsListOptions(model_cutoff=" + std::to_string(model_cutoff_) + \
+    auto ss = std::ostringstream();
+
+    ss << "NeighborsListOptions\n";
+    ss << "    model_cutoff: " << std::to_string(model_cutoff_) << "\n";
+    ss << "    full_list: " << (full_list_ ? "True" : "False") << "\n";
+
+    if (!requestors_.empty()) {
+        ss << "    requested by:\n";
+        for (const auto& requestor: requestors_) {
+            ss << "        - " << requestor << "\n";
+        }
+    }
+
+    return ss.str();
+}
+
+std::string NeighborsListOptionsHolder::str() const {
+    return "NeighborsListOptions(cutoff=" + std::to_string(model_cutoff_) + \
         ", full_list=" + (full_list_ ? "True" : "False") + ")";
 }
 
@@ -175,7 +219,7 @@ void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorB
     auto it = neighbors_.find(options);
     if (it != neighbors_.end()) {
         C10_THROW_ERROR(ValueError,
-            "the neighbors list for " + options->repr() + " already exists in this system"
+            "the neighbors list for " + options->str() + " already exists in this system"
         );
     }
 
@@ -186,7 +230,7 @@ TorchTensorBlock SystemHolder::get_neighbors_list(NeighborsListOptions options) 
     auto it = neighbors_.find(options);
     if (it == neighbors_.end()) {
         C10_THROW_ERROR(ValueError,
-            "No neighbors list for " + options->repr() + " was found.\n"
+            "No neighbors list for " + options->str() + " was found.\n"
             "Is it part of the `requested_neighbors_lists` for this model?"
         );
     }

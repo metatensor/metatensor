@@ -111,8 +111,14 @@ class System:
 class NeighborsListOptions:
     """Options for the calculation of a neighbors list"""
 
-    def __init__(self, model_cutoff: float, full_list: bool):
-        ...
+    def __init__(self, model_cutoff: float, full_list: bool, requestor: str = ""):
+        """
+        :param model_cutoff: spherical cutoff radius for the neighbors list, in the
+            model units
+        :param full_list: should the list be a full or half neighbors list
+        :param requestor: who requested this neighbors list, you can add additional
+            requestors later using :py:meth:`add_requestor`
+        """
 
     @property
     def model_cutoff(self) -> float:
@@ -134,6 +140,14 @@ class NeighborsListOptions:
         """
         Should the list be a full neighbors list (contains both the pair ``i->j`` and
         ``j->i``) or a half neighbors list (contains only the pair ``i->j``)
+        """
+
+    def requestors(self) -> List[str]:
+        """Get the list of modules requesting this neighbors list"""
+
+    def add_requestor(self, requestor: str):
+        """
+        Add another ``requestor`` to the list of modules requesting this neighbors list
         """
 
     def __repr__(self) -> str:

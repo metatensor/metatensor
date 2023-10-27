@@ -140,8 +140,11 @@ class MetatensorAtomisticModule(torch.nn.Module):
 
         # recursively explore `module` to get all the requested_neighbors_lists
         self._requested_neighbors_lists = []
-        _get_requested_neighbors_lists(self._module, self._requested_neighbors_lists)
-
+        _get_requested_neighbors_lists(
+            self._module,
+            self._module.__class__.__name__,
+            self._requested_neighbors_lists,
+        )
         # ============================================================================ #
 
         self._capabilities = capabilities
@@ -308,20 +311,25 @@ class MetatensorAtomisticModule(torch.nn.Module):
 
 def _get_requested_neighbors_lists(
     module: torch.nn.Module,
+    name: str,
     requested: List[NeighborsListOptions],
 ):
     if hasattr(module, "requested_neighbors_lists"):
         for new_options in module.requested_neighbors_lists():
+            new_options.add_requestor(name)
+
             already_requested = False
             for existing in requested:
                 if existing == new_options:
                     already_requested = True
+                    for requestor in new_options.requestors():
+                        existing.add_requestor(requestor)
 
             if not already_requested:
                 requested.append(new_options)
 
-    for child in module.children():
-        _get_requested_neighbors_lists(child, requested)
+    for child_name, child in module.named_children():
+        _get_requested_neighbors_lists(child, name + "." + child_name, requested)
 
 
 def _check_annotation(module: torch.nn.Module):
