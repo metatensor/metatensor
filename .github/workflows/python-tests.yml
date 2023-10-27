@@ -42,6 +42,8 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
+        with:
+          version: "v0.5.4"
 
       - name: setup MSVC command prompt
         uses: ilammy/msvc-dev-cmd@v1
