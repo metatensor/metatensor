@@ -539,3 +539,26 @@ def test_script_variable_scoping(tensor):
     # This segfaults
     scripted = torch.jit.script(problematic)
     assert scripted(tensor).item() == 42.0
+
+
+def test_keys_to_samples_same_device():
+    device = "cuda"
+    tensor_1 = TensorMap(
+        keys=Labels.range("keys", 2).to(device),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[1.0, 2.0]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[],
+                properties=Labels.range("properties", 2).to(device),
+            ),
+            TensorBlock(
+                values=torch.tensor([[3.0, 4.0]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[],
+                properties=Labels.range("properties", 2).to(device),
+            )
+        ]
+    )
+    tensor_2 = tensor_1.keys_to_samples("keys")
+    assert(tensor_2.block().samples.values.device == tensor_2.block().values.device)
