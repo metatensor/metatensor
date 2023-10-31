@@ -541,6 +541,7 @@ def test_script_variable_scoping(tensor):
     assert scripted(tensor).item() == 42.0
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
 def test_keys_to_samples_same_device():
     device = "cuda"
     tensor_1 = TensorMap(
