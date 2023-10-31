@@ -541,25 +541,39 @@ def test_script_variable_scoping(tensor):
     assert scripted(tensor).item() == 42.0
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
-def test_keys_to_samples_same_device():
-    device = "cuda"
-    tensor_1 = TensorMap(
+@pytest.fixture
+def meta_tensor():
+    device = "meta"
+    return TensorMap(
         keys=Labels.range("keys", 2).to(device),
         blocks=[
             TensorBlock(
-                values=torch.tensor([[1.0, 2.0]], device=device),
+                values=torch.tensor([[[1.0, 2.0]]], device=device),
                 samples=Labels.range("samples", 1).to(device),
-                components=[],
+                components=[Labels.range("component", 1).to(device)],
                 properties=Labels.range("properties", 2).to(device),
             ),
             TensorBlock(
-                values=torch.tensor([[3.0, 4.0]], device=device),
+                values=torch.tensor([[[3.0, 4.0]]], device=device),
                 samples=Labels.range("samples", 1).to(device),
-                components=[],
+                components=[Labels.range("component", 1).to(device)],
                 properties=Labels.range("properties", 2).to(device),
             ),
         ],
     )
-    tensor_2 = tensor_1.keys_to_samples("keys")
-    assert tensor_2.block().samples.values.device == tensor_2.block().values.device
+
+
+def test_keys_to_samples_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_samples("keys")
+    assert new_tensor.block().samples.values.device == new_tensor.block().values.device
+
+
+def test_keys_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_properties("keys")
+    assert new_tensor.block().samples.values.device == new_tensor.block().values.device
+
+
+def test_components_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.components_to_properties("component")
+    for block in new_tensor.blocks():
+        assert block.samples.values.device == block.values.device
