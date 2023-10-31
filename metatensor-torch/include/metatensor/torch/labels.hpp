@@ -100,6 +100,9 @@ public:
     /// Move the values for these Labels to the given `device`
     TorchLabels to(torch::IValue device) const;
 
+    /// Move the values for these Labels to the given `device`
+    TorchLabels to(torch::Device device) const;
+
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.
     torch::Tensor column(std::string dimension);

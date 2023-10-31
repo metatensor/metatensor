@@ -557,8 +557,8 @@ def test_keys_to_samples_same_device():
                 samples=Labels.range("samples", 1).to(device),
                 components=[],
                 properties=Labels.range("properties", 2).to(device),
-            )
-        ]
+            ),
+        ],
     )
     tensor_2 = tensor_1.keys_to_samples("keys")
-    assert(tensor_2.block().samples.values.device == tensor_2.block().values.device)
+    assert tensor_2.block().samples.values.device == tensor_2.block().values.device

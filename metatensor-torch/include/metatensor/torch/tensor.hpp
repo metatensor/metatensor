@@ -118,6 +118,10 @@ public:
     /// strings.
     TorchTensorMap components_to_properties(torch::IValue dimensions) const;
 
+    /// Return a new TorchTensorMap where all keys, blocks and relative labels
+    /// are on the requested `device`.
+    TorchTensorMap to(torch::Device device);
+
     /// Get the names of the samples dimensions for all blocks in this
     /// `TensorMap`
     std::vector<std::string> sample_names();
