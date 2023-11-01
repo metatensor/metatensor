@@ -337,7 +337,8 @@ TorchTensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, b
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), sort_samples);
-        return torch::make_intrusive<TensorMapHolder>(std::move(tensor))->to(device);
+        auto result = torch::make_intrusive<TensorMapHolder>(std::move(tensor));
+        return result->to(device);
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_properties first argument must be a `str`, list of `str` or `Labels`"
