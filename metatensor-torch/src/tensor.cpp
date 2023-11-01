@@ -350,7 +350,8 @@ TorchTensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool
     if (keys_to_move.isString() || keys_to_move.isList() || keys_to_move.isTuple()) {
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_samples first argument");
         auto tensor = tensor_.keys_to_samples(selection, sort_samples);
-        return torch::make_intrusive<TensorMapHolder>(std::move(tensor))->to(device);
+        auto result = torch::make_intrusive<TensorMapHolder>(std::move(tensor));
+        return result->to(device);
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), sort_samples);
