@@ -383,12 +383,15 @@ TorchLabels LabelsHolder::to(torch::IValue device) const {
             "'device' must be a string or a torch.device, got '" + device.type()->str() + "' instead"
         );
     }
+    return this->to(normalized_device);
+}
 
-    if (normalized_device == values_.device()) {
+TorchLabels LabelsHolder::to(torch::Device device) const {
+    if (device == values_.device()) {
         // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
     } else {
-        auto new_values = values_.to(normalized_device);
+        auto new_values = values_.to(device);
 
         // re-create new mts_labels_t and from them new metatensor::Labels with
         // the same names & values, but no user data. The user data will be

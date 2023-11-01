@@ -539,3 +539,51 @@ def test_script_variable_scoping(tensor):
     # This segfaults
     scripted = torch.jit.script(problematic)
     assert scripted(tensor).item() == 42.0
+
+
+@pytest.fixture
+def meta_tensor():
+    device = "meta"
+    return TensorMap(
+        keys=Labels.range("keys", 2).to(device),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[[1.0, 2.0]]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[Labels.range("component", 1).to(device)],
+                properties=Labels.range("properties", 2).to(device),
+            ),
+            TensorBlock(
+                values=torch.tensor([[[3.0, 4.0]]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[Labels.range("component", 1).to(device)],
+                properties=Labels.range("properties", 2).to(device),
+            ),
+        ],
+    )
+
+
+def test_keys_to_samples_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_samples("keys")
+    block = new_tensor.block()
+    assert new_tensor.keys.values.device == block.values.device
+    assert block.samples.values.device == block.values.device
+    assert block.components[0].values.device == block.values.device
+    assert block.properties.values.device == block.values.device
+
+
+def test_keys_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_properties("keys")
+    block = new_tensor.block()
+    assert new_tensor.keys.values.device == block.values.device
+    assert block.samples.values.device == block.values.device
+    assert block.components[0].values.device == block.values.device
+    assert block.properties.values.device == block.values.device
+
+
+def test_components_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.components_to_properties("component")
+    for block in new_tensor.blocks():
+        assert new_tensor.keys.values.device == block.values.device
+        assert block.samples.values.device == block.values.device
+        assert block.properties.values.device == block.values.device

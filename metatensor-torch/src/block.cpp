@@ -49,6 +49,24 @@ torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::copy() const {
     return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
 }
 
+torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::to(torch::Device device) {
+    const auto values = this->values().to(device);
+    const auto samples = this->samples()->to(device);
+    auto components = std::vector<torch::intrusive_ptr<LabelsHolder>>();
+    for (const auto& component : this->components()) {
+        components.push_back(component->to(device));
+    }
+    const auto properties = this->properties()->to(device);
+    auto block = torch::make_intrusive<TensorBlockHolder>(values, samples, components, properties);
+    for (const auto& gradient_name : this->gradients_list()) {
+        block->add_gradient(
+            gradient_name,
+            torch::make_intrusive<TensorBlockHolder>(this->block_.gradient(gradient_name), torch::IValue())->to(device)
+        );
+    }
+    return block;
+}
+
 torch::Tensor TensorBlockHolder::values() {
     auto array = block_.mts_array();
 

@@ -43,6 +43,10 @@ public:
     /// contained inside
     TorchTensorBlock copy() const;
 
+    /// Return a new TorchTensorBlock where all blocks and relative labels
+    /// are on the requested `device`.
+    TorchTensorBlock to(torch::Device device);
+
     /// Get a view in the values in this block
     torch::Tensor values();
 
