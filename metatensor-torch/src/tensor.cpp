@@ -366,7 +366,8 @@ TorchTensorMap TensorMapHolder::components_to_properties(torch::IValue dimension
     auto device = this->keys()->values().device();
     auto selection = extract_list_str(dimensions, "TensorMap::components_to_properties argument");
     auto tensor = this->tensor_.components_to_properties(selection);
-    return torch::make_intrusive<TensorMapHolder>(std::move(tensor))->to(device);
+    auto result = torch::make_intrusive<TensorMapHolder>(std::move(tensor));
+    return result->to(device);
 }
 
 static std::vector<std::string> labels_names(const metatensor::TensorBlock& block, size_t dimension) {
