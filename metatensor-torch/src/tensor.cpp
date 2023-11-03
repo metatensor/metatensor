@@ -1,4 +1,5 @@
 #include <metatensor.hpp>
+#include <string>
 
 #include "metatensor/torch/tensor.hpp"
 #include "metatensor/torch/array.hpp"
@@ -15,7 +16,48 @@ bool custom_class_is(torch::IValue ivalue) {
     return ivalue.type().get() == expected_type;
 }
 
-TensorMapHolder::TensorMapHolder(metatensor::TensorMap tensor): tensor_(std::move(tensor)) {}
+TensorMapHolder::TensorMapHolder(metatensor::TensorMap tensor): tensor_(std::move(tensor)) {
+    const auto keys_count = this->tensor_.keys().count();
+    if (keys_count == 0) return;  // nothing to check
+
+    auto block_0 = this->tensor_.block_by_id(0);
+    const auto array_0 = block_0.mts_array();
+    const auto* ptr_0 = static_cast<metatensor::DataArrayBase*>(array_0.ptr);
+    const auto* torch_tensor_wrapper_0 = dynamic_cast<const TorchDataArray*>(ptr_0);
+    if (torch_tensor_wrapper_0 == nullptr) {
+        C10_THROW_ERROR(ValueError,
+            "this TensorBlock does not contain a C++ torch Tensor"
+        );
+    }
+    const auto torch_tensor_0 = torch_tensor_wrapper_0->tensor();
+    const auto device = torch_tensor_0.device();
+    const auto dtype = torch_tensor_0.dtype();
+
+    for (size_t i=1; i<keys_count; i++) {
+        auto block = this->tensor_.block_by_id(i);
+        const auto array = block.mts_array();
+        const auto* ptr = static_cast<const metatensor::DataArrayBase*>(array.ptr);
+        const auto* torch_tensor_wrapper = dynamic_cast<const TorchDataArray*>(ptr);
+        if (torch_tensor_wrapper == nullptr) {
+            C10_THROW_ERROR(ValueError,
+                "this TensorBlock does not contain a C++ torch Tensor"
+            );
+        }
+        const auto torch_tensor = torch_tensor_wrapper->tensor();
+        if (torch_tensor.device() != device) {
+            C10_THROW_ERROR(ValueError,
+                "cannot create TensorMap: all blocks must be on the same device, "
+                "got " + torch_tensor.device().str() + " and " + device.str()
+            );
+        }
+        if (torch_tensor.dtype() != dtype) {
+            C10_THROW_ERROR(TypeError,
+                "cannot create TensorMap: all blocks must have the same dtype, "
+                "got " + std::string(torch_tensor.dtype().name()) + " and " + std::string(dtype.name())
+            );
+        }
+    }
+}
 
 static metatensor::TensorBlock block_from_torch(const TorchTensorBlock& block) {
     auto components = std::vector<metatensor::Labels>();
@@ -52,7 +94,31 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 
 TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensorBlock>& blocks):
     tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
-{}
+{
+    if (blocks.size() == 0) return;  // nothing to check
+
+    const auto device = keys->values().device();
+    // REVIEWME: Is this necessary or not?
+    // We could proceed like in the other constructor and only check the devices of the blocks.
+    
+    
+    const auto dtype = blocks[0]->values().dtype();
+
+    for (const auto& block : blocks) {
+        if (block->values().device() != device) {
+            C10_THROW_ERROR(ValueError,
+                "cannot create TensorMap: keys and blocks must be on the same device, "
+                "got " + block->values().device().str() + " and " + device.str()
+            );
+        }
+        if (block->values().dtype() != dtype) {
+            C10_THROW_ERROR(TypeError,
+                "cannot create TensorMap: all blocks must have the same dtype, "
+                "got " + std::string(block->values().dtype().name()) + " and " + std::string(dtype.name())
+            );
+        }
+    }
+}
 
 TorchTensorMap TensorMapHolder::copy() const {
     return torch::make_intrusive<TensorMapHolder>(this->tensor_.clone());
