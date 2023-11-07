@@ -39,12 +39,10 @@ mts_status_t metatensor_torch::details::create_torch_array(
 
 
 TorchTensorMap metatensor_torch::load(const std::string& path) {
-    return torch::make_intrusive<TensorMapHolder>(
-        metatensor::TensorMap::load(path, details::create_torch_array)
-    );
+    return TensorMapHolder::load(path);
 }
 
 
 void metatensor_torch::save(const std::string& path, TorchTensorMap tensor) {
-    metatensor::TensorMap::save(path, tensor->as_metatensor());
+    TensorMapHolder::save(path, tensor);
 }
