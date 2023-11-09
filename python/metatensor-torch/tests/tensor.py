@@ -587,3 +587,37 @@ def test_components_to_properties_same_device(meta_tensor):
         assert new_tensor.keys.values.device == block.values.device
         assert block.samples.values.device == block.values.device
         assert block.properties.values.device == block.values.device
+
+
+def test_different_device(meta_tensor):
+    with pytest.raises(ValueError):
+        TensorMap(
+            keys=meta_tensor.keys,
+            blocks=[
+                meta_tensor.blocks()[0],
+                TensorBlock(
+                    values=torch.tensor([[[3.0, 4.0]]]),
+                    samples=Labels.range("samples", 1),
+                    components=[Labels.range("component", 1)],
+                    properties=Labels.range("properties", 2),
+                ),
+            ],
+        )
+
+
+def test_different_dtype(meta_tensor):
+    with pytest.raises(TypeError):
+        TensorMap(
+            keys=meta_tensor.keys,
+            blocks=[
+                meta_tensor.blocks()[0],
+                TensorBlock(
+                    values=torch.tensor(
+                        [[[3.0, 4.0]]], device="meta", dtype=torch.float16
+                    ),
+                    samples=Labels.range("samples", 1).to("meta"),
+                    components=[Labels.range("component", 1).to("meta")],
+                    properties=Labels.range("properties", 2).to("meta"),
+                ),
+            ],
+        )

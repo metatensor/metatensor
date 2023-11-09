@@ -234,3 +234,32 @@ def test_script():
 
     module = TestModule()
     module = torch.jit.script(module)
+
+
+def test_different_device():
+    with pytest.raises(ValueError):
+        TensorBlock(
+            values=torch.tensor([[[3.0, 4.0]]], device="meta"),
+            samples=Labels.range("samples", 1),
+            components=[Labels.range("component", 1)],
+            properties=Labels.range("properties", 2),
+        )
+
+
+def test_different_dtype_gradient():
+    with pytest.raises(TypeError):
+        block = TensorBlock(
+            values=torch.tensor([[[3.0, 4.0]]]),
+            samples=Labels.range("samples", 1),
+            components=[Labels.range("component", 1)],
+            properties=Labels.range("properties", 2),
+        )
+        block.add_gradient(
+            "gradient",
+            TensorBlock(
+                values=torch.tensor([[[3.0, 4.0]]], dtype=torch.float16),
+                samples=Labels.range("samples", 1),
+                components=[Labels.range("component", 1)],
+                properties=Labels.range("properties", 2),
+            ),
+        )
