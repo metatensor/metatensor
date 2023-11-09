@@ -162,8 +162,8 @@ TEST_CASE("TensorMap") {
         auto tensor = test_tensor_map();
         REQUIRE_THROWS(
             TensorMapHolder(
-                tensor->keys->to(torch::kMeta),
-                tensor->blocks()
+                tensor->keys()->to(torch::kMeta),
+                metatensor_torch::TensorMapHolder::blocks(tensor)
             )
         );
     }
