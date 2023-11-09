@@ -333,6 +333,3 @@ def test_self_allclose_exceptions_gradient():
     )
     with pytest.raises(NotEqualError, match=message):
         metatensor.allclose_block_raise(block_5, block_4)
-
-
-# TODO: add tests with torch & torch scripting/tracing

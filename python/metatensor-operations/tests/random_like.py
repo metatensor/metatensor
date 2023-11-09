@@ -48,6 +48,3 @@ def test_random_uniform_like_error():
     )
     with pytest.raises(ValueError, match=message):
         tensor = metatensor.random_uniform_like(tensor, gradients=["positions", "err"])
-
-
-# TODO: add tests with torch & torch scripting/tracing

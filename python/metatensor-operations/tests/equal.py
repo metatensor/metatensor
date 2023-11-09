@@ -415,6 +415,3 @@ def test_self_equal_exceptions_gradient():
 
     with pytest.raises(NotEqualError, match="gradient 'g' values are not equal"):
         metatensor.equal_block_raise(block_6, block_7)
-
-
-# TODO: add tests with torch & torch scripting/tracing

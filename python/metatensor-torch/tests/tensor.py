@@ -396,8 +396,7 @@ def test_empty_tensor():
     assert empty_tensor.component_names == []
     assert empty_tensor.property_names == []
 
-    # TODO
-    # assert empty_tensor.blocks() == []
+    assert empty_tensor.blocks() == []
 
     selection = Labels(names="key", values=torch.IntTensor([[3]]))
     assert empty_tensor.blocks_matching(selection) == []
