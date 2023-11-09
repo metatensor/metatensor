@@ -44,6 +44,3 @@ def test_ones_like_error():
     message = "requested gradient 'err' in 'ones_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):
         tensor = metatensor.ones_like(tensor, gradients=["positions", "err"])
-
-
-# TODO: add tests with torch & torch scripting/tracing
