@@ -157,6 +157,16 @@ TEST_CASE("TensorMap") {
 
         CHECK(*block->properties() == metatensor::Labels({"component", "properties"}, {{0, 0}}));
     }
+
+    SECTION("different devices") {
+        auto tensor = test_tensor_map();
+        REQUIRE_THROWS(
+            TensorMapHolder(
+                tensor->keys.to(torch::kCPU),
+                tensor->blocks()
+            )
+        );
+    }
 }
 
 TEST_CASE("TensorMap serialization") {
