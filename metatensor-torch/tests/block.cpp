@@ -82,7 +82,7 @@ TEST_CASE("Blocks") {
         REQUIRE_THROWS(
             TensorBlockHolder(
                 torch::full({3, 2}, 11.0),
-                LabelsHolder::create({"s"}, {{0}, {2}, {1}}).to(torch::kMeta),
+                *(LabelsHolder::create({"s"}, {{0}, {2}, {1}})->to(torch::kMeta)),
                 std::vector<TorchLabels>{},
                 LabelsHolder::create({"p"}, {{0}, {1}})
             )
