@@ -78,7 +78,7 @@ TEST_CASE("Blocks") {
         }
     }
 
-    SECTION("gradients") {
+    SECTION("different devices") {
         REQUIRE_THROWS(
             TensorBlockHolder(
                 torch::full({3, 2}, 11.0),
