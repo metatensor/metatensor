@@ -59,11 +59,16 @@ def n_commits_since_last_tag():
         [sys.executable, script, TAG_PREFIX],
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        check=True,
         encoding="utf8",
     )
 
-    if output.stderr:
+    if output.returncode != 0:
+        raise Exception(
+            "failed to get number of commits since last tag.\n"
+            f"stdout: {output.stdout}\n"
+            f"stderr: {output.stderr}\n"
+        )
+    elif output.stderr:
         print(output.stderr, file=sys.stderr)
         return 0
     else:

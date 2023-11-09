@@ -35,19 +35,23 @@ function(n_commits_since_last_tag _tag_prefix_ _output_)
         execute_process(
             COMMAND "${Python_EXECUTABLE}" "${_script_}" "${_tag_prefix_}"
             RESULT_VARIABLE _status_
-            OUTPUT_VARIABLE _n_commits_
+            OUTPUT_VARIABLE _stdout_
             ERROR_VARIABLE _stderr_
             WORKING_DIRECTORY ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
         )
 
         if (NOT ${_status_} EQUAL 0)
+            message(WARNING
+                "n-commits-since-last-tag.py failed, version number might be wrong:\nstdout: ${_stdout_}\nstderr: ${_stderr_}")
             set(${_output_} 0 PARENT_SCOPE)
             return()
         endif()
 
         if (NOT "${_stderr_}" STREQUAL "")
-            message(WARNING "n-commits-since-last-tag.py gave some errors, version number might be wrong:\n${_stderr_}")
+            message(WARNING "n-commits-since-last-tag.py gave some errors, version number might be wrong:\nstdout: ${_stdout_}\nstderr: ${_stderr_}")
         endif()
+
+        set(_n_commits_ ${_stdout_})
     else()
         message(FATAL_ERROR "could not find the number of commits since the last tag")
     endif()
