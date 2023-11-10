@@ -590,7 +590,11 @@ def test_components_to_properties_same_device(meta_tensor):
 
 
 def test_different_device(meta_tensor):
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="cannot create TensorMap: keys and blocks "
+        "must be on the same device, got cpu and meta"
+    ):
         TensorMap(
             keys=meta_tensor.keys,
             blocks=[
@@ -606,7 +610,11 @@ def test_different_device(meta_tensor):
 
 
 def test_different_dtype(meta_tensor):
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match="cannot create TensorMap: all blocks must have "
+        "the same dtype, got c10::Half and float"
+    ):
         TensorMap(
             keys=meta_tensor.keys,
             blocks=[

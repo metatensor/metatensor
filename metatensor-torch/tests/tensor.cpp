@@ -160,11 +160,12 @@ TEST_CASE("TensorMap") {
 
     SECTION("different devices") {
         auto tensor = test_tensor_map();
-        REQUIRE_THROWS(
+        CHECK_THROWS_WITH(
             TensorMapHolder(
                 tensor->keys()->to(torch::kMeta),
                 metatensor_torch::TensorMapHolder::blocks(tensor)
-            )
+            ),
+            "cannot create TensorBlock: keys and blocks must be on the same device, got cpu and meta"
         );
     }
 }
