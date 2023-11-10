@@ -79,13 +79,14 @@ TEST_CASE("Blocks") {
     }
 
     SECTION("different devices") {
-        REQUIRE_THROWS(
+        CHECK_THROWS_WITH(
             TensorBlockHolder(
                 torch::full({3, 2}, 11.0),
                 LabelsHolder::create({"s"}, {{0}, {2}, {1}})->to(torch::kMeta),
                 std::vector<TorchLabels>{},
                 LabelsHolder::create({"p"}, {{0}, {1}})
-            )
+            ),
+            "expected error message..."
         );
     }
 }
