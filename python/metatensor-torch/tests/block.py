@@ -240,7 +240,7 @@ def test_different_device():
     with pytest.raises(
         ValueError,
         match="cannot create TensorBlock: values and samples must "
-        "be on the same device, got meta and cpu"
+        "be on the same device, got meta and cpu",
     ):
         TensorBlock(
             values=torch.tensor([[[3.0, 4.0]]], device="meta"),
@@ -252,9 +252,9 @@ def test_different_device():
 
 def test_different_dtype_gradient():
     with pytest.raises(
-        TypeError, 
+        TypeError,
         match="the gradient and the original block must "
-        "have the same dtype, got c10::Half and float"
+        "have the same dtype, got c10::Half and float",
     ):
         block = TensorBlock(
             values=torch.tensor([[[3.0, 4.0]]]),
