@@ -86,7 +86,10 @@ TEST_CASE("Blocks") {
                 std::vector<TorchLabels>{},
                 LabelsHolder::create({"p"}, {{0}, {1}})
             ),
-            "cannot create TensorBlock: values and samples must be on the same device, got cpu and meta"
+            Catch::StartsWith(
+                "cannot create TensorBlock: values and samples must be on "
+                "the same device, got cpu and meta"
+            )
         );
     }
 }

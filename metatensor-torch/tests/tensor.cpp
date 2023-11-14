@@ -165,7 +165,10 @@ TEST_CASE("TensorMap") {
                 tensor->keys()->to(torch::kMeta),
                 metatensor_torch::TensorMapHolder::blocks(tensor)
             ),
-            "cannot create TensorBlock: keys and blocks must be on the same device, got cpu and meta"
+            Catch::StartsWith(
+                "cannot create TensorMap: keys and blocks must be on the "
+                "same device, got cpu and meta"
+            )
         );
     }
 }
