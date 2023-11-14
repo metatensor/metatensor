@@ -1,7 +1,5 @@
 #include <torch/script.h>
 
-#include "metatensor.hpp"
-
 #include "metatensor/torch/labels.hpp"
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/tensor.hpp"
@@ -210,12 +208,8 @@ TORCH_LIBRARY(metatensor, m) {
             },
             // __setstate__
             [](torch::Tensor buffer) -> TorchTensorMap {
-                return torch::make_intrusive<TensorMapHolder>(
-                    metatensor::TensorMap::load_buffer(
-                        buffer.data_ptr<uint8_t>(),
-                        buffer.size(0),
-                        details::create_torch_array
-                    )
+                return TensorMapHolder::load_buffer(
+                    buffer.data_ptr<uint8_t>(), buffer.size(0)
                 );
             })
         ;

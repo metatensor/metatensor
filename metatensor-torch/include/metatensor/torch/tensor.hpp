@@ -24,9 +24,6 @@ using TorchTensorMap = torch::intrusive_ptr<TensorMapHolder>;
 /// of instances of `TensorMapHolder`.
 class METATENSOR_TORCH_EXPORT TensorMapHolder: public torch::CustomClassHolder {
 public:
-    /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
-    explicit TensorMapHolder(metatensor::TensorMap tensor);
-
     /// Create a new `TensorMapHolder` for TorchScript.
     ///
     /// In contrast to the TensorMap constructor, this does not move from the
@@ -146,9 +143,21 @@ public:
         return tensor_;
     }
 
+    /// Load a serialized TensorMap from the given path
+    static TorchTensorMap load(const std::string& path);
+
+    /// Serialize and save a TensorMap to the given path
+    static void save(const std::string& path, TorchTensorMap tensor);
+
+    /// Load a serialized TensorMap from the given in-memory buffer
+    static TorchTensorMap load_buffer(const uint8_t* buffer, size_t buffer_count);
+
 private:
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;
+
+    /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
+    explicit TensorMapHolder(metatensor::TensorMap tensor): tensor_(std::move(tensor)) {}
 };
 
 

@@ -77,4 +77,19 @@ TEST_CASE("Blocks") {
             CHECK(std::get<0>(entry) == "g");
         }
     }
+
+    SECTION("different devices") {
+        CHECK_THROWS_WITH(
+            TensorBlockHolder(
+                torch::full({3, 2}, 11.0),
+                LabelsHolder::create({"s"}, {{0}, {2}, {1}})->to(torch::kMeta),
+                std::vector<TorchLabels>{},
+                LabelsHolder::create({"p"}, {{0}, {1}})
+            ),
+            Catch::StartsWith(
+                "cannot create TensorBlock: values and samples must be on "
+                "the same device, got cpu and meta"
+            )
+        );
+    }
 }

@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 
 #include <metatensor.hpp>
 
@@ -32,7 +33,29 @@ TensorBlockHolder::TensorBlockHolder(
         /* parameter */ "",
         /* parent */ torch::IValue()
     )
-{}
+{
+    auto values_device = this->values().device();
+    if (values_device != this->samples()->values().device()) {
+        C10_THROW_ERROR(ValueError,
+            "cannot create TensorBlock: values and samples must be on the same device, "
+            "got " + values_device.str() + " and " + this->samples()->values().device().str()
+        );
+    }
+    for (const auto& component : this->components()) {
+        if (values_device != component->values().device()) {
+            C10_THROW_ERROR(ValueError,
+                "cannot create TensorBlock: values and components must be on the same device, "
+                "got " + values_device.str() + " and " + component->values().device().str()
+            );
+        }
+    }
+    if (values_device != this->properties()->values().device()) {
+        C10_THROW_ERROR(ValueError,
+                "cannot create TensorBlock: values and properties must be on the same device, "
+                "got " + values_device.str() + " and " + this->properties()->values().device().str()
+        );
+    }
+}
 
 
 TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent):
@@ -105,6 +128,20 @@ void TensorBlockHolder::add_gradient(const std::string& parameter, TorchTensorBl
         components_from_torch(gradient->components()),
         gradient->properties()->as_metatensor()
     );
+
+    if (gradient->values().device() != this->values().device()) {
+        C10_THROW_ERROR(ValueError,
+            "the gradient and the original block must be on the same device, "
+            "got " + gradient->values().device().str() + " and " + this->values().device().str()
+        );
+    }
+    if (gradient->values().scalar_type() != this->values().scalar_type()) {
+        C10_THROW_ERROR(TypeError,
+            "the gradient and the original block must have the same dtype, "
+            "got " + std::string(c10::toString(gradient->values().scalar_type())) +
+            " and " + std::string(c10::toString(this->values().scalar_type()))
+        );
+    }
 
     block_.add_gradient(parameter, std::move(gradient_block));
 }

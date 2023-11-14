@@ -234,3 +234,40 @@ def test_script():
 
     module = TestModule()
     module = torch.jit.script(module)
+
+
+def test_different_device():
+    with pytest.raises(
+        ValueError,
+        match="cannot create TensorBlock: values and samples must "
+        "be on the same device, got meta and cpu",
+    ):
+        TensorBlock(
+            values=torch.tensor([[[3.0, 4.0]]], device="meta"),
+            samples=Labels.range("samples", 1),
+            components=[Labels.range("component", 1)],
+            properties=Labels.range("properties", 2),
+        )
+
+
+def test_different_dtype_gradient():
+    with pytest.raises(
+        TypeError,
+        match="the gradient and the original block must "
+        "have the same dtype, got Half and Float",
+    ):
+        block = TensorBlock(
+            values=torch.tensor([[[3.0, 4.0]]]),
+            samples=Labels.range("samples", 1),
+            components=[Labels.range("component", 1)],
+            properties=Labels.range("properties", 2),
+        )
+        block.add_gradient(
+            "gradient",
+            TensorBlock(
+                values=torch.tensor([[[3.0, 4.0]]], dtype=torch.float16),
+                samples=Labels.range("samples", 1),
+                components=[Labels.range("component", 1)],
+                properties=Labels.range("properties", 2),
+            ),
+        )

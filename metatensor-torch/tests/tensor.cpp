@@ -157,6 +157,20 @@ TEST_CASE("TensorMap") {
 
         CHECK(*block->properties() == metatensor::Labels({"component", "properties"}, {{0, 0}}));
     }
+
+    SECTION("different devices") {
+        auto tensor = test_tensor_map();
+        CHECK_THROWS_WITH(
+            TensorMapHolder(
+                tensor->keys()->to(torch::kMeta),
+                metatensor_torch::TensorMapHolder::blocks(tensor)
+            ),
+            Catch::StartsWith(
+                "cannot create TensorMap: keys and blocks must be on the "
+                "same device, got cpu and meta"
+            )
+        );
+    }
 }
 
 TEST_CASE("TensorMap serialization") {
