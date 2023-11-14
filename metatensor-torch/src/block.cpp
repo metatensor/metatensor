@@ -135,10 +135,11 @@ void TensorBlockHolder::add_gradient(const std::string& parameter, TorchTensorBl
             "got " + gradient->values().device().str() + " and " + this->values().device().str()
         );
     }
-    if (gradient->values().dtype() != this->values().dtype()) {
+    if (gradient->values().scalar_type() != this->values().scalar_type()) {
         C10_THROW_ERROR(TypeError,
             "the gradient and the original block must have the same dtype, "
-            "got " + std::string(gradient->values().dtype().name()) + " and " + std::string(this->values().dtype().name())
+            "got " + std::string(c10::toString(gradient->values().scalar_type())) +
+            " and " + std::string(c10::toString(this->values().scalar_type()))
         );
     }
 

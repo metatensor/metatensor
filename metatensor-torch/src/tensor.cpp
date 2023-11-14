@@ -59,7 +59,7 @@ TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensor
     }
 
     auto device = keys->values().device();
-    auto dtype = blocks[0]->values().dtype();
+    auto scalar_type = blocks[0]->values().scalar_type();
 
     for (const auto& block : blocks) {
         if (block->values().device() != device) {
@@ -68,10 +68,11 @@ TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensor
                 "got " + block->values().device().str() + " and " + device.str()
             );
         }
-        if (block->values().dtype() != dtype) {
+        if (block->values().scalar_type() != scalar_type) {
             C10_THROW_ERROR(TypeError,
                 "cannot create TensorMap: all blocks must have the same dtype, "
-                "got " + std::string(block->values().dtype().name()) + " and " + std::string(dtype.name())
+                "got " + std::string(c10::toString(block->values().scalar_type())) +
+                " and " + std::string(c10::toString(scalar_type))
             );
         }
     }

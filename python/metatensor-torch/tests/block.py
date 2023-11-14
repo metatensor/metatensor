@@ -254,7 +254,7 @@ def test_different_dtype_gradient():
     with pytest.raises(
         TypeError,
         match="the gradient and the original block must "
-        "have the same dtype, got c10::Half and float",
+        "have the same dtype, got Half and Float",
     ):
         block = TensorBlock(
             values=torch.tensor([[[3.0, 4.0]]]),

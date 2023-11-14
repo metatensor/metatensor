@@ -613,7 +613,7 @@ def test_different_dtype(meta_tensor):
     with pytest.raises(
         TypeError,
         match="cannot create TensorMap: all blocks must have "
-        "the same dtype, got c10::Half and float",
+        "the same dtype, got Half and Float",
     ):
         TensorMap(
             keys=meta_tensor.keys,
