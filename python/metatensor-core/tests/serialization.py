@@ -16,6 +16,10 @@ from . import utils
 def tensor():
     return utils.tensor()
 
+@pytest.fixture
+def tensor_zero_len_block():
+    return utils.tensor_zero_len_block()
+
 
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
@@ -60,7 +64,6 @@ def test_load(use_numpy, memory_buffer):
     assert gradient.samples.names == ["sample", "structure", "atom"]
     assert gradient.values.shape == (59, 3, 5, 3)
 
-
 # using tmpdir as pytest-built-in fixture
 # https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
 @pytest.mark.parametrize("use_numpy", (True, False))
@@ -98,6 +101,22 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
             np.testing.assert_equal(data[f"{prefix}/values"], gradient.values)
             assert _npz_labels(data[f"{prefix}/samples"]) == gradient.samples
             assert _npz_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
+
+@pytest.mark.parametrize("use_numpy_save", (True, False))
+@pytest.mark.parametrize("use_numpy_load", (True, False))
+@pytest.mark.parametrize("memory_buffer", (True, False))
+def test_save_load_zero_length_block(use_numpy, memory_buffer, tensor_zero_len_block):
+    """
+    Tests that attempting to save and load a TensorMap with a zero-length axis block
+    does not raise an error, when using combinations of use_numpy for save and
+    load
+    """
+    if memory_buffer:
+        file = io.BytesIO()
+    else:
+        file = "serialize-test-zero-len-block.npz"
+    metatensor.save(file, tensor_zero_len_block, use_numpy=use_numpy_save)
+    metatensor.load(file, tensor_zero_len_block, use_numpy=use_numpy_load)
 
 
 def test_save_warning_errors(tmpdir, tensor):

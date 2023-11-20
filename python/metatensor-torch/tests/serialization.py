@@ -7,6 +7,11 @@ import metatensor.torch
 from . import utils
 
 
+@pytest.fixture
+def tensor_zero_len_block():
+    return utils.tensor_zero_len_block()
+
+
 def check_tensor(tensor):
     assert tensor.keys.names == [
         "spherical_harmonics_l",
@@ -74,3 +79,13 @@ def test_pickle(tmpdir):
         loaded = torch.load(tmpfile)
 
     check_tensor(loaded)
+
+
+def test_save_load_zero_length_block(tensor_zero_len_block):
+    """
+    Tests that attempting to save and load a TensorMap with a zero-length axis block
+    does not raise an error.
+    """
+    file = "serialize-test-zero-len-block.npz"
+    metatensor.save(file, tensor_zero_len_block)
+    metatensor.load(file, tensor_zero_len_block)

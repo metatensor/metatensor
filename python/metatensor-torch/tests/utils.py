@@ -121,3 +121,19 @@ def large_tensor(dtype=torch.float32, device="cpu"):
         ),
     )
     return TensorMap(keys, blocks)
+
+def tensor_zero_len_block():
+    """
+    A dummy TensorMap with a single block whose samples axis length is zero.
+    """
+    return TensorMap(
+        keys=Labels.single(),
+        blocks=[
+            TensorBlock(
+                values=torch.zeros((0, 1)),
+                samples=Labels(names=["_"], values=torch.zeros((0, 1))),
+                components=[],
+                properties=Labels.single(),
+            )
+        ],
+    )
