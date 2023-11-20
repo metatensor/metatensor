@@ -280,7 +280,6 @@ impl mts_array_t {
             });
         }
 
-        assert!(len > 0);
         assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts(data_ptr, len)
@@ -314,7 +313,6 @@ impl mts_array_t {
             });
         }
 
-        assert!(len > 0);
         assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts_mut(data_ptr, len)
