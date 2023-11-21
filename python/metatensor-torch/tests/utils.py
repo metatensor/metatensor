@@ -132,9 +132,11 @@ def tensor_zero_len_block():
         blocks=[
             TensorBlock(
                 values=torch.zeros((0, 1)),
-                samples=Labels(names=["_"], values=torch.zeros((0, 1))),
+                samples=Labels(
+                    names=["_"], values=torch.zeros((0, 1), dtype=torch.int32)
+                ),
                 components=[],
-                properties=Labels.single(),
+                properties=Labels.single(dtype=torch.int32),
             )
         ],
     )
