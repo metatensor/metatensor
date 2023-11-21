@@ -144,8 +144,7 @@ def test_save_load_zero_length_block(
         if memory_buffer:
             file.seek(0)
 
-    metatensor.load(file, use_numpy=use_numpy_load)
-    # metatensor.io.load_custom_array(file)
+        metatensor.load(file, use_numpy=use_numpy_load)
 
 
 def test_save_warning_errors(tmpdir, tensor):
