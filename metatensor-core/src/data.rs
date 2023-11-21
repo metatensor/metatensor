@@ -280,6 +280,11 @@ impl mts_array_t {
             });
         }
 
+        if len == 0 {
+            let data: &[f64] = &[];
+            return Ok(data);
+        }
+
         assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts(data_ptr, len)
@@ -311,6 +316,11 @@ impl mts_array_t {
             return Err(Error::External {
                 status, context: "calling mts_array_t.data failed".into()
             });
+        }
+
+        if len == 0 {
+            let data: &mut [f64] = &mut [];
+            return Ok(data);
         }
 
         assert!(!data_ptr.is_null());

@@ -83,5 +83,5 @@ def test_save_load_zero_length_block():
     """
     tensor_zero_len_block = utils.tensor_zero_len_block()
     file = "serialize-test-zero-len-block.npz"
-    metatensor.save(file, tensor_zero_len_block)
-    metatensor.load(file, tensor_zero_len_block)
+    metatensor.torch.save(file, tensor_zero_len_block)
+    metatensor.torch.load(file)

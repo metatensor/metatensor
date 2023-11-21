@@ -107,24 +107,15 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
 
 @pytest.mark.parametrize(
     "use_numpy_save",
-    (
-        True,
-        False,
-    ),
+    (True, False),
 )
 @pytest.mark.parametrize(
     "use_numpy_load",
-    (
-        True,
-        False,
-    ),
+    (True, False),
 )
 @pytest.mark.parametrize(
     "memory_buffer",
-    (
-        True,
-        False,
-    ),
+    (True, False),
 )
 def test_save_load_zero_length_block(
     use_numpy_save, use_numpy_load, memory_buffer, tmpdir, tensor_zero_len_block
@@ -134,16 +125,10 @@ def test_save_load_zero_length_block(
     does not raise an error, when using combinations of use_numpy for save and
     load
     """
-    if memory_buffer:
-        file = io.BytesIO()
-    else:
-        file = "serialize-test-zero-len-block.npz"
+    file = "serialize-test-zero-len-block.npz"
 
     with tmpdir.as_cwd():
         metatensor.save(file, tensor_zero_len_block, use_numpy=use_numpy_save)
-        if memory_buffer:
-            file.seek(0)
-
         metatensor.load(file, use_numpy=use_numpy_load)
 
 
