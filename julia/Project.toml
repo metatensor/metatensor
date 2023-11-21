@@ -1,0 +1,17 @@
+name = "Metatensor"
+uuid = "afba2530-6023-4bf7-b247-2c594027d0bd"
+authors = ["Guillaume Fraux <guillaume.fraux@epfl.ch>"]
+version = "0.1.0"
+
+[deps]
+Metatensor_jll = "0a60894c-bde1-5a72-bbe5-9f45bee4e041"
+
+[compat]
+Metatensor_jll = "= 0.1.0"
+julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

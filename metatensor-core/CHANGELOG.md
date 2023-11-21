@@ -40,6 +40,19 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-core Julia
+
+#### Added
+
+- the Julia bindings to metatensor-core in the Metatensor.jl package
+
+#### Fixed
+
+#### Changed
+
+#### Removed
+
+
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.0) - 2023-10-11
 
 ### metatensor-core C
