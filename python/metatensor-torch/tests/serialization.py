@@ -76,7 +76,7 @@ def test_pickle(tmpdir):
     check_tensor(loaded)
 
 
-def test_save_load_zero_length_block(tensor_zero_len_block):
+def test_save_load_zero_length_block():
     """
     Tests that attempting to save and load a TensorMap with a zero-length axis block
     does not raise an error.
