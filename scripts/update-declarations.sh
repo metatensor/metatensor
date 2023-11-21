@@ -35,3 +35,6 @@ extern "C" {}'
 
 # Regenerate Python bindings to the C API
 ./python/scripts/generate-declarations.py
+
+# Regenerate Julia bindings to the C API
+./julia/scripts/generate-declarations.py

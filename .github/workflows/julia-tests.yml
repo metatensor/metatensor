@@ -1,0 +1,51 @@
+name: Julia tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    # Check all PR
+
+concurrency:
+  group: julia-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  rust-tests:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / Julia ${{ matrix.julia-version }}
+    container: ${{ matrix.container }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            julia-version: "1.6"
+
+          - os: ubuntu-20.04
+            julia-version: "1.9"
+
+          - os: macos-11
+            julia-version: "1.9"
+
+          # TODO
+          # - os: windows-2019
+          #   julia-version: "1.9"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+
+      - name: build package
+        run: |
+          cd julia
+          julia --check-bounds=yes --inline=no --project -e 'using Pkg; Pkg.build("Metatensor")'
+
+      - name: run tests
+        run: |
+          cd julia
+          julia --check-bounds=yes --inline=no --project -e 'using Pkg; Pkg.test("Metatensor"; coverage=true)'
