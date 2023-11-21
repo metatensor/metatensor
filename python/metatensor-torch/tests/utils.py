@@ -136,7 +136,7 @@ def tensor_zero_len_block():
                     names=["_"], values=torch.zeros((0, 1), dtype=torch.int32)
                 ),
                 components=[],
-                properties=Labels.single(dtype=torch.int32),
+                properties=Labels.single(),
             )
         ],
     )
