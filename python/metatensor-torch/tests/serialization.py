@@ -74,3 +74,14 @@ def test_pickle(tmpdir):
         loaded = torch.load(tmpfile)
 
     check_tensor(loaded)
+
+
+def test_save_load_zero_length_block():
+    """
+    Tests that attempting to save and load a TensorMap with a zero-length axis block
+    does not raise an error.
+    """
+    tensor_zero_len_block = utils.tensor_zero_len_block()
+    file = "serialize-test-zero-len-block.npz"
+    metatensor.torch.save(file, tensor_zero_len_block)
+    metatensor.torch.load(file)

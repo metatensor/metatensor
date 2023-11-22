@@ -127,3 +127,20 @@ def large_tensor():
         ),
     )
     return TensorMap(keys, blocks)
+
+
+def tensor_zero_len_block():
+    """
+    A dummy TensorMap with a single block whose samples axis length is zero.
+    """
+    return TensorMap(
+        keys=Labels.single(),
+        blocks=[
+            TensorBlock(
+                values=np.zeros((0, 1)),
+                samples=Labels(names=["_"], values=np.zeros((0, 1))),
+                components=[],
+                properties=Labels.single(),
+            )
+        ],
+    )

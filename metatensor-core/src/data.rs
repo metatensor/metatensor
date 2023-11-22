@@ -280,7 +280,11 @@ impl mts_array_t {
             });
         }
 
-        assert!(len > 0);
+        if len == 0 {
+            let data: &[f64] = &[];
+            return Ok(data);
+        }
+
         assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts(data_ptr, len)
@@ -314,7 +318,11 @@ impl mts_array_t {
             });
         }
 
-        assert!(len > 0);
+        if len == 0 {
+            let data: &mut [f64] = &mut [];
+            return Ok(data);
+        }
+
         assert!(!data_ptr.is_null());
         let data = unsafe {
             std::slice::from_raw_parts_mut(data_ptr, len)
