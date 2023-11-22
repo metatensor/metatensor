@@ -4,6 +4,8 @@ Models
 .. autoclass:: metatensor.torch.atomistic.MetatensorAtomisticModule
     :members:
 
+.. autofunction:: metatensor.torch.atomistic.check_atomistic_model
+
 -------------------------------------------------------------------------------
 
 .. autoclass:: metatensor.torch.atomistic.ModelOutput
