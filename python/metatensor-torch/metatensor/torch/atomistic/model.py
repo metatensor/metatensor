@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
-from .. import TensorBlock
+from .. import TensorBlock, __version__
 from . import ModelCapabilities, ModelRunOptions, NeighborsListOptions, System
 from .units import KNOWN_QUANTITIES, Quantity
 
@@ -302,11 +302,16 @@ class MetatensorAtomisticModule(torch.nn.Module):
         # TODO: can we freeze these?
         # module = torch.jit.freeze(module)
 
-        # TODO: record torch version
-
         # TODO: record list of loaded extensions
 
-        torch.jit.save(module, file, _extra_files={})
+        torch.jit.save(
+            module,
+            file,
+            _extra_files={
+                "torch-version": torch.__version__,
+                "metatensor-version": __version__,
+            },
+        )
 
 
 def _get_requested_neighbors_lists(

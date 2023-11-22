@@ -501,3 +501,101 @@ ModelRunOptions ModelRunOptionsHolder::from_json(const std::string& json) {
 
     return result;
 }
+
+
+/******************************************************************************/
+
+static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
+    return std::string(
+        static_cast<char*>(std::get<0>(data).get()),
+        std::get<1>(data)
+    );
+}
+
+struct Version {
+    Version(std::string version): string(std::move(version)) {
+        size_t pos = 0;
+        try {
+            this->major = std::stoi(this->string, &pos);
+        } catch (const std::invalid_argument&) {
+            C10_THROW_ERROR(ValueError, "invalid version number: " + this->string);
+        }
+
+        if (this->string[pos] != '.' || this->string.size() == pos) {
+            C10_THROW_ERROR(ValueError, "invalid version number: " + this->string);
+        }
+
+        auto minor_version = this->string.substr(pos + 1);
+        try {
+            this->minor = std::stoi(minor_version, &pos);
+        } catch (const std::invalid_argument&) {
+            C10_THROW_ERROR(ValueError, "invalid version number: " + this->string);
+        }
+    }
+
+    /// Check if two version are compatible. `same_minor` indicates whether two
+    /// versions should have the same major AND minor number to be considered
+    /// compatible.
+    bool is_compatible(const Version& other, bool same_minor = false) const {
+        if (this->major != other.major) {
+            return false;
+        }
+
+        if (this->major == 0) {
+            same_minor = true;
+        }
+
+        if (same_minor && this->minor != other.minor) {
+            return false;
+        }
+
+        return true;
+    }
+
+    std::string string;
+    int major = 0;
+    int minor = 0;
+};
+
+void metatensor_torch::check_atomistic_model(std::string path) {
+    auto reader = caffe2::serialize::PyTorchStreamReader(path);
+
+    if (!reader.hasRecord("extra/metatensor-version")) {
+        C10_THROW_ERROR(ValueError,
+            "file at '" + path + "' does not contain a metatensor atomistic model"
+        );
+    }
+
+    auto recorded_mts_version = Version(record_to_string(
+        reader.getRecord("extra/metatensor-version")
+    ));
+    auto current_mts_version = Version(mts_version());
+
+    if (!current_mts_version.is_compatible(recorded_mts_version)) {
+        TORCH_WARN(
+            "Current metatensor version (", current_mts_version.string, ") ",
+            "is not compatible with the version (", recorded_mts_version.string,
+            ") used to export the model at '", path, "'; proceed at your own risk."
+        )
+    }
+
+    auto recorded_torch_version = Version(record_to_string(
+        reader.getRecord("extra/torch-version")
+    ));
+    auto current_torch_version = Version(TORCH_VERSION);
+    if (!current_torch_version.is_compatible(recorded_torch_version, true)) {
+        TORCH_WARN(
+            "Current torch version (", current_torch_version.string, ") ",
+            "is not compatible with the version (", recorded_torch_version.string,
+            ") used to export the model at '", path, "'; proceed at your own risk."
+        )
+    }
+}
+
+torch::jit::Module metatensor_torch::load_atomistic_model(
+    std::string path,
+    c10::optional<c10::Device> device
+) {
+    check_atomistic_model(path);
+    return torch::jit::load(path, device);
+}

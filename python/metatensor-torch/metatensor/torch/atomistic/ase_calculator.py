@@ -6,7 +6,13 @@ import numpy as np
 import torch
 
 from .. import Labels, TensorBlock
-from . import MetatensorAtomisticModule, ModelOutput, ModelRunOptions, System
+from . import (
+    MetatensorAtomisticModule,
+    ModelOutput,
+    ModelRunOptions,
+    System,
+    check_atomistic_model,
+)
 
 
 import ase  # isort: skip
@@ -56,6 +62,7 @@ class MetatensorCalculator(Calculator):
             if not os.path.exists(model):
                 raise InputError(f"given model path '{model}' does not exists")
 
+            check_atomistic_model(model)
             self._model = torch.jit.load(model)
         elif isinstance(model, torch.jit.RecursiveScriptModule):
             if model.original_name != "MetatensorAtomisticModule":

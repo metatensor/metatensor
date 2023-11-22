@@ -300,6 +300,16 @@ public:
     static ModelRunOptions from_json(const std::string& json);
 };
 
+/// Check the exported metatensor atomistic model at the given `path`, and
+/// warn/error as required.
+METATENSOR_TORCH_EXPORT void check_atomistic_model(std::string path);
+
+/// Check and then load the metatensor atomistic model at the given `path`.
+METATENSOR_TORCH_EXPORT torch::jit::Module load_atomistic_model(
+    std::string path,
+    c10::optional<c10::Device> device = c10::nullopt
+);
+
 }
 
 #endif

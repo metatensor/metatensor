@@ -242,3 +242,13 @@ class ModelRunOptions:
 
     outputs: Dict[str, ModelOutput]
     """requested outputs for this run and corresponding settings"""
+
+
+def check_atomistic_model(path: str):
+    """
+    Check that the file at ``path`` contains an exported metatensor atomistic model, and
+    that this model can be loaded in the current process.
+
+    This function should be called before :py:func:`torch.jit.load()` when loading an
+    existing model.
+    """

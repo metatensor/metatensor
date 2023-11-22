@@ -347,4 +347,6 @@ TORCH_LIBRARY(metatensor, m) {
             }
         )
         ;
+
+    m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
 }
