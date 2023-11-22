@@ -113,12 +113,8 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
     "use_numpy_load",
     (True, False),
 )
-@pytest.mark.parametrize(
-    "memory_buffer",
-    (True, False),
-)
 def test_save_load_zero_length_block(
-    use_numpy_save, use_numpy_load, memory_buffer, tmpdir, tensor_zero_len_block
+    use_numpy_save, use_numpy_load, tmpdir, tensor_zero_len_block
 ):
     """
     Tests that attempting to save and load a TensorMap with a zero-length axis block
