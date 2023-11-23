@@ -111,6 +111,7 @@ set(METATENSOR_TORCH_SOURCE
     "src/tensor.cpp"
     "src/misc.cpp"
     "src/atomistic.cpp"
+    "src/internal/shared_libraries.cpp"
     "src/register.cpp"
 )
 

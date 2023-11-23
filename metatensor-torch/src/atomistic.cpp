@@ -505,6 +505,8 @@ ModelRunOptions ModelRunOptionsHolder::from_json(const std::string& json) {
 
 /******************************************************************************/
 
+#include "internal/shared_libraries.hpp"
+
 static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
     return std::string(
         static_cast<char*>(std::get<0>(data).get()),
@@ -557,6 +559,16 @@ struct Version {
     int minor = 0;
 };
 
+struct Extension {
+    std::string name;
+    std::string path;
+};
+
+void from_json(const nlohmann::json& json, Extension& extension) {
+    json.at("name").get_to(extension.name);
+    json.at("path").get_to(extension.path);
+}
+
 void metatensor_torch::check_atomistic_model(std::string path) {
     auto reader = caffe2::serialize::PyTorchStreamReader(path);
 
@@ -576,7 +588,7 @@ void metatensor_torch::check_atomistic_model(std::string path) {
             "Current metatensor version (", current_mts_version.string, ") ",
             "is not compatible with the version (", recorded_mts_version.string,
             ") used to export the model at '", path, "'; proceed at your own risk."
-        )
+        );
     }
 
     auto recorded_torch_version = Version(record_to_string(
@@ -588,7 +600,35 @@ void metatensor_torch::check_atomistic_model(std::string path) {
             "Current torch version (", current_torch_version.string, ") ",
             "is not compatible with the version (", recorded_torch_version.string,
             ") used to export the model at '", path, "'; proceed at your own risk."
-        )
+        );
+    }
+
+    // Check that the extensions loaded while the model was exported are also
+    // loaded now. Since the model can be exported from a different machine, or
+    // the extensions might change how they organize code, we only try to do
+    // fuzzy matching on the file name, and warn if we can not find a match.
+    std::vector<Extension> extensions = nlohmann::json::parse(record_to_string(
+        reader.getRecord("extra/extensions")
+    ));
+
+    auto loaded_libraries = metatensor_torch::details::get_loaded_libraries();
+
+    for (const auto& extension: extensions) {
+        auto found = false;
+        for (const auto& library: loaded_libraries) {
+            if (library.find(extension.name) != std::string::npos) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            TORCH_WARN(
+                "The model at '", path, "' was exported with extension '",
+                extension.name, "' loaded (from '", extension.path, "'), ",
+                "but it does not seem to be currently loaded; proceed at your own risk."
+            );
+        }
     }
 }
 
