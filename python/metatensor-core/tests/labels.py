@@ -10,6 +10,7 @@ def test_constructor():
     assert labels.names == ["a", "b"]
     assert len(labels) == 1
     assert tuple(labels[0]) == (0, 0)
+    assert labels.device == "cpu"
 
     np.testing.assert_equal(labels.values, np.array([[0, 0]]))
 

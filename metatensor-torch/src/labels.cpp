@@ -371,19 +371,20 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) con
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), this->values());
 }
 
-TorchLabels LabelsHolder::to(torch::IValue device) const {
-    // transform torch::IValue into torch::Device
-    auto normalized_device = torch::Device("cpu");
-    if (device.isString()) {
-        normalized_device = torch::Device(device.toStringRef());
-    } else if (device.isDevice()) {
-        normalized_device = device.toDevice();
+TorchLabels LabelsHolder::to(torch::IValue device_ivalue) const {
+    auto device = this->device();
+    if (device_ivalue.isNone()) {
+        // nothing to do
+    } else if (device_ivalue.isString()) {
+        device = torch::Device(device_ivalue.toStringRef());
+    } else if (device_ivalue.isDevice()) {
+        device = device_ivalue.toDevice();
     } else {
         C10_THROW_ERROR(TypeError,
-            "'device' must be a string or a torch.device, got '" + device.type()->str() + "' instead"
+            "'device' must be a string or a torch.device, got '" + device_ivalue.type()->str() + "' instead"
         );
     }
-    return this->to(normalized_device);
+    return this->to(device);
 }
 
 TorchLabels LabelsHolder::to(torch::Device device) const {

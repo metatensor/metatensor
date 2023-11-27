@@ -96,6 +96,11 @@ public:
     /// dimensions list
     TorchLabels rename(std::string old_name, std::string new_name) const;
 
+    /// Get the current device for these `Labels`
+    torch::Device device() const {
+        return values_.device();
+    }
+
     /// Move the values for these Labels to the given `device`
     TorchLabels to(torch::IValue device) const;
 
@@ -247,7 +252,12 @@ public:
         return values_;
     }
 
-    /// Get the number of dimensions in this LabelsEntry.
+    /// Get the current device for this `LabelsEntry`
+    torch::Device device() const {
+        return values_.device();
+    }
+
+    /// Get the number of dimensions in this `LabelsEntry`.
     ///
     /// This is the same as `values().size(0)`
     int64_t size() const {
