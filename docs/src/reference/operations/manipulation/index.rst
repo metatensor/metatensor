@@ -4,6 +4,7 @@ Manipulation operations
 .. toctree::
     :maxdepth: 1
 
+    detach() <detach>
     drop_blocks() <drop-blocks>
     join() <join>
     manipulate dimension <manipulate-dimension>

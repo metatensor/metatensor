@@ -124,6 +124,17 @@ def copy(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def detach(array):
+    """Returns a new array, detached from the underlying computational graph, if any"""
+    if isinstance(array, TorchTensor):
+        return array.detach()
+    elif isinstance(array, np.ndarray):
+        # nothing to do
+        return array
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def eye_like(array, size: int):
     """
     Create an identity matrix with the given ``size``, and the same
@@ -501,7 +512,6 @@ def to(
     backend: Optional[str] = None,
     dtype: Optional[torch_dtype] = None,
     device: Optional[Union[str, torch_device]] = None,
-    requires_grad: Optional[bool] = None,
 ):
     """Convert the array to the specified backend."""
 
@@ -518,11 +528,7 @@ def to(
 
         # Perform the conversion
         if backend == "torch":
-            # We need this to keep gradients of the tensor
-            new_array = array.to(dtype=dtype).to(device=device)
-            if requires_grad is not None:
-                new_array.requires_grad_(requires_grad)
-            return new_array
+            return array.to(dtype=dtype).to(device=device)
 
         elif backend == "numpy":
             if torch_jit_is_scripting():
@@ -543,11 +549,7 @@ def to(
             return np.array(array, dtype=dtype)
 
         elif backend == "torch":
-            # If requires_grad is None, it is set to False by torch here
-            new_array = torch.tensor(array, dtype=dtype, device=device)
-            if requires_grad is not None:
-                new_array.requires_grad = requires_grad
-            return new_array
+            return torch.tensor(array, dtype=dtype, device=device)
         else:
             raise ValueError(f"Unknown backend: {backend}")
 

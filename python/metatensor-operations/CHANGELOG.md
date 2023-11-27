@@ -5,15 +5,21 @@ All notable changes to metatensor-operations are documented here, following the
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
-<!--
+
 ### Added
+
+- `detach()` function to detach all values in a TensorMap/TensorBlock from any
+  computational graph
 
 ### Fixed
 
 ### Changed
 
 ### Removed
--->
+
+- the `requires_grad` parameter of the `to()` operation. This is now covered by
+  `detach()` or an explicit loop over the blocks.
+
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.1.0) - 2023-10-11
 

@@ -51,10 +51,6 @@ def test_wrong_arguments_block(block):
     with pytest.raises(TypeError, match=message):
         metatensor.block_to(block, backend=10)
 
-    message = "the 'numpy' backend does not support `requires_grad=True`"
-    with pytest.raises(ValueError, match=message):
-        metatensor.block_to(block, backend="numpy", requires_grad=True)
-
     message = "backend 'jax' is not supported"
     with pytest.raises(ValueError, match=message):
         metatensor.block_to(block, backend="jax")
@@ -230,10 +226,6 @@ def test_wrong_arguments(tensor):
     with pytest.raises(TypeError, match=message):
         metatensor.to(tensor, backend=10)
 
-    message = "the 'numpy' backend does not support `requires_grad=True`"
-    with pytest.raises(ValueError, match=message):
-        metatensor.to(tensor, backend="numpy", requires_grad=True)
-
     message = "backend 'jax' is not supported"
     with pytest.raises(ValueError, match=message):
         metatensor.to(tensor, backend="jax")
@@ -246,25 +238,6 @@ def test_numpy_to_torch(tensor):
     assert metatensor.equal_metadata(new_tensor, tensor)
     for new_block in new_tensor:
         assert isinstance(new_block.values, torch.Tensor)
-
-
-@pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
-def test_numpy_to_torch_switching_requires_grad(tensor):
-    """
-    Test a `to` conversion from numpy to torch, switching requires_grad on and off.
-    """
-    new_tensor = metatensor.to(tensor, backend="torch")
-    assert metatensor.equal_metadata(new_tensor, tensor)
-    for new_block in new_tensor:
-        assert not new_block.values.requires_grad
-
-    new_tensor = metatensor.to(tensor, backend="torch", requires_grad=True)
-    for new_block in new_tensor:
-        assert new_block.values.requires_grad
-
-    new_tensor = metatensor.to(tensor, backend="torch", requires_grad=False)
-    for new_block in new_tensor:
-        assert not new_block.values.requires_grad
 
 
 @pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
