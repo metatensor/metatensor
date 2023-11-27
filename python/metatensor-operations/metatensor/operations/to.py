@@ -9,7 +9,6 @@ def to(
     backend: Optional[str] = None,
     dtype: Optional[_dispatch.torch_dtype] = None,
     device: Optional[Union[str, _dispatch.torch_device]] = None,
-    requires_grad: Optional[bool] = None,
 ) -> TensorMap:
     """
     Converts a :py:class:`TensorMap` to a different backend. Currently only
@@ -29,14 +28,6 @@ def to(
         :py:class:`TensorMap` should be stored. Can be specified as a variety of
         objects such as (but not limited to) :py:class:`torch.device` or
         :py:class:`str`.
-    :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
-        :py:class:`bool` indicating whether or not to use torch's autograd to
-        record operations on this block's data. If not specified (i.e.
-        ``requires_grad=None``), in the case that the input ``tensor`` is
-        already torch-based, the value of ``requires_grad`` will be preserved at
-        its current setting. In the case that ``tensor`` is numpy-based, upon
-        conversion to a torch tensor, torch will by default set
-        ``requires_grad`` to ``False``.
 
     :return: a :py:class:`TensorMap` converted to the specified backend, data
         type, and/or device.
@@ -56,7 +47,6 @@ def to(
             backend=backend,
             dtype=dtype,
             device=device,
-            requires_grad=requires_grad,
         )
         for i in range(len(tensor.keys))
     ]
@@ -74,7 +64,6 @@ def block_to(
     backend: Optional[str] = None,
     dtype: Optional[_dispatch.torch_dtype] = None,
     device: Optional[Union[str, _dispatch.torch_device]] = None,
-    requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock` to a different ``backend``. Currently
@@ -94,13 +83,6 @@ def block_to(
         :py:class:`TensorBlock` should be stored. Can be specified as a variety
         of objects such as (but not limited to) :py:class:`torch.device` or
         :py:class:`str`.
-    :param requires_grad: only applicable if ``backend`` is ``"torch"``. A
-        :py:class:`bool` indicating whether or not to use torch's autograd to
-        record operations on this block's data. If not specified (i.e.
-        ``None``), in the case that the input ``block`` is already torch-based,
-        the value of ``requires_grad`` will be preserved. In the case that
-        ``block`` is numpy-based, upon conversion to a torch tensor, torch will
-        by default set ``requires_grad`` to ``False``.
 
     :return: a :py:class:`TensorBlock` converted to the specified backend, data
         type, and/or device.
@@ -119,12 +101,6 @@ def block_to(
 
         if backend not in ["numpy", "torch"]:
             raise ValueError(f"backend '{backend}' is not supported")
-
-        if backend == "numpy":
-            if requires_grad is not None:
-                raise ValueError(
-                    "the 'numpy' backend does not support `requires_grad=True`"
-                )
 
     # Walk the tree of gradients without recursion (recursion is not supported by
     # TorchScript)
@@ -150,9 +126,7 @@ def block_to(
         if last_visited == "":
             # we're walking forward and it's the first time we see this block transform
             # and append to list of transformed blocks:
-            transformed_blocks.append(
-                _block_to(current_block, backend, dtype, device, requires_grad)
-            )
+            transformed_blocks.append(_block_to(current_block, backend, dtype, device))
             if n_gradients == 0:  # the current block has no gradients
                 # step back:
                 if len(current_location) == 0:
@@ -210,7 +184,6 @@ def _block_to(
     backend: Optional[str],
     dtype: Optional[_dispatch.torch_dtype] = None,
     device: Optional[Union[str, _dispatch.torch_device]] = None,
-    requires_grad: Optional[bool] = None,
 ) -> TensorBlock:
     """
     Converts a :py:class:`TensorBlock`, but not its gradients, to a different
@@ -224,7 +197,6 @@ def _block_to(
         backend=backend,
         dtype=dtype,
         device=device,
-        requires_grad=requires_grad,
     )
 
     if device is not None:
