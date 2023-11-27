@@ -9,5 +9,5 @@ dist/
 build/
 .tox/
 htmlcov/
-.coverage
+.coverage*
 coverage.xml
