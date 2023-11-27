@@ -309,9 +309,11 @@ def test_to():
     for device in devices:
         labels = Labels(names=("a", "b"), values=torch.IntTensor([[0, 0], [0, 1]]))
         assert labels.values.device.type == "cpu"
+        assert labels.device.type == "cpu"
 
         labels = labels.to(device)
         assert labels.values.device.type == torch.device(device).type
+        assert labels.device.type == torch.device(device).type
 
 
 def test_position():
@@ -512,6 +514,9 @@ class LabelsWrap:
     def values(self) -> Tensor:
         return self._c.values
 
+    def device(self) -> torch.device:
+        return self._c.device
+
     def to(self, device: torch.device) -> Labels:
         return self._c.to(device)
 
@@ -604,6 +609,9 @@ class LabelsEntryWrap:
 
     def values(self) -> Tensor:
         return self._c.values
+
+    def device(self) -> torch.device:
+        return self._c.device
 
     def _print(self) -> str:
         return self._c.print()

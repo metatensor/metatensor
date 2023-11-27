@@ -56,6 +56,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def_property("names", &LabelsEntryHolder::names)
         .def_property("values", &LabelsEntryHolder::values)
+        .def_property("device", &LabelsEntryHolder::device)
         .def("print", &LabelsEntryHolder::print)
         ;
 
@@ -99,8 +100,11 @@ TORCH_LIBRARY(metatensor, m) {
         .def("permute", &LabelsHolder::permute, DOCSTRING, {torch::arg("dimensions_indexes")})
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
-        // Expose just one of the two overloads of `to()`.
-        .def("to", [](const TorchLabels &self, torch::IValue device) { return self->to(device); }, DOCSTRING, {torch::arg("device")})
+        .def("to",
+            static_cast<TorchLabels (LabelsHolder::*)(torch::IValue) const>(&LabelsHolder::to),
+            DOCSTRING, {torch::arg("device")}
+        )
+        .def_property("device", &LabelsHolder::device)
         .def("position", &LabelsHolder::position, DOCSTRING,
             {torch::arg("entry")}
         )

@@ -96,6 +96,16 @@ class LabelsEntry:
         """
         return self._values
 
+    @property
+    def device(self) -> str:
+        """
+        Get the device of this labels entry.
+
+        This exists for compatibility with the TorchScript API, and always returns
+        ``"cpu"`` when called.
+        """
+        return "cpu"
+
     def print(self) -> str:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
@@ -660,6 +670,16 @@ class Labels:
         Defined for compatibility with the TorchScript version of metatensor.
         """
         return self
+
+    @property
+    def device(self) -> str:
+        """
+        Get the device of these Labels.
+
+        This exists for compatibility with the TorchScript API, and always returns
+        ``"cpu"`` when called.
+        """
+        return "cpu"
 
     def position(self, entry: Union[LabelsEntry, Sequence[int]]) -> Optional[int]:
         """
