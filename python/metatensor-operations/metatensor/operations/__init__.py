@@ -1,14 +1,6 @@
-import sys
+import importlib.metadata
 
-if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
-    import importlib.metadata
-
-    __version__ = importlib.metadata.version("metatensor-operations")
-
-else:
-    from pkg_resources import get_distribution
-
-    __version__ = get_distribution("metatensor-operations").version
+__version__ = importlib.metadata.version("metatensor-operations")
 
 
 from ._utils import NotEqualError  # noqa
