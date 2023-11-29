@@ -1,3 +1,4 @@
+import warnings
 from typing import List, Optional, Union
 
 import numpy as np
@@ -451,6 +452,28 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         if shape is None:
             shape = array.shape
         return np.random.rand(*shape).astype(array.dtype)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def requires_grad(array, value: bool):
+    """
+    Set ``requires_grad`` to ``value`` on ``array``. This does nothing on numpy arrays.
+    """
+    if isinstance(array, TorchTensor):
+        if value and array.requires_grad:
+            warnings.warn(
+                "setting `requires_grad=True` again on a Tensor will detach the Tensor",
+                stacklevel=1,  # show the warning as coming from the operation
+            )
+        return array.detach().requires_grad_(value)
+    elif isinstance(array, np.ndarray):
+        if value:
+            warnings.warn(
+                "`requires_grad=True` does nothing for numpy arrays",
+                stacklevel=1,  # show the warning as coming from the operation
+            )
+        return array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
