@@ -1,9 +1,10 @@
 import os
 import torch
 
+from .version import __version__  # noqa
 from ._c_lib import _load_library
 from . import utils  # noqa
-from .version import __version__  # noqa
+
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX") is not None:
     from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap

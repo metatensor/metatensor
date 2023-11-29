@@ -1,7 +1,6 @@
 import io
 import os
 import pickle
-import sys
 
 import numpy as np
 import pytest
@@ -149,10 +148,7 @@ def test_save_warning_errors(tmpdir, tensor):
             metatensor.save(tmpfile, tensor.block(0))
 
 
-if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
-    protocols = (4, 5)
-else:
-    protocols = (4,)
+protocols = (4, 5)
 
 
 @pytest.mark.parametrize("protocol", protocols)

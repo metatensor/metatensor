@@ -1,11 +1,7 @@
 import copy
 import ctypes
-import sys
+from pickle import PickleBuffer
 from typing import Dict, List, Sequence, Union
-
-
-if (sys.version_info.major >= 3) and (sys.version_info.minor >= 8):
-    from pickle import PickleBuffer
 
 import numpy as np
 

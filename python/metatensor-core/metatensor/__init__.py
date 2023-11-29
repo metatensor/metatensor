@@ -14,7 +14,6 @@
 # only declares dependencies on `metatensor-core` and `metatensor-operation`; as well
 # an an optional dependency on `metatensor-torch`.
 
-
 from .version import __version__  # noqa
 from . import utils  # noqa
 from .block import TensorBlock  # noqa
