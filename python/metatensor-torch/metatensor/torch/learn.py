@@ -3,7 +3,7 @@ import sys
 
 import torch
 
-import metatensor.operations
+import metatensor.learn
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
 
@@ -22,19 +22,19 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 #                           \______(_______;;; __;;;
 #
 #
-# This module tries to re-use code from `metatensor-operations` to expose TorchScript
+# This module tries to re-use code from `metatensor-learn` to expose TorchScript
 # compatible functions. To achieve this we need two things:
-#  - the code needs to use TorchScript compatible operations only
+#  - the code needs to use TorchScript compatible learn only
 #  - the type annotation of the functions have to refer to classes TorchScript knows
 #    about
 #
 # To achieve this, we import the modules in a special mode with `importlib`, first
-# creating the `metatensor.torch.operations._classes` module, containing all metatensor
+# creating the `metatensor.torch.learn._classes` module, containing all metatensor
 # classes plus a `TORCH_SCRIPT_MODE` constant to change the code between Python and
 # TorchScript modes.
 #
-# We then import the code from `metatensor-operations` into a custom module
-# `metatensor.torch.operations`. When code in this module tries to `from ._classes
+# We then import the code from `metatensor-learn` into a custom module
+# `metatensor.torch.learn`. When code in this module tries to `from ._classes
 # import ...`, the import is resolved to the values defined in the step above. This
 # allows to have the right type annotation on the functions.
 #
@@ -44,12 +44,12 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
 # Step 1: create te `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
-    "metatensor.torch.operations._classes",
+    "metatensor.torch.learn._classes",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
-# be made to the `metatensor/operations/_classes.py` file, which is used in non
+# be made to the `metatensor/learn/_classes.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
 module.__dict__["LabelsEntry"] = LabelsEntry
@@ -76,17 +76,17 @@ module.__dict__["check_isinstance"] = check_isinstance
 sys.modules[spec.name] = module
 
 
-# Step 2: create a module named `metatensor.torch.operations` (like the one that will be
-# created by importing the current file), but using code from `metatensor.operations`
+# Step 2: create a module named `metatensor.torch.learn` (like the one that will be
+# created by importing the current file), but using code from `metatensor.learn`
 spec = importlib.util.spec_from_file_location(
     # create a module with this name
-    "metatensor.torch.operations",
+    "metatensor.torch.learn",
     # using the code from there
-    metatensor.operations.__file__,
+    metatensor.learn.__file__,
 )
 
 module = importlib.util.module_from_spec(spec)
-# override `metatensor.torch.operations` (the module associated with the current file)
+# override `metatensor.torch.learn` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
