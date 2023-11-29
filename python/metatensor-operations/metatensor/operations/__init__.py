@@ -12,6 +12,8 @@ else:
 
 
 from ._utils import NotEqualError  # noqa
+from .checks import checks_enabled, unsafe_disable_checks, unsafe_enable_checks  # noqa
+
 from .abs import abs  # noqa
 from .add import add  # noqa
 from .allclose import (  # noqa
@@ -58,12 +60,12 @@ from .reduce_over_samples import (  # noqa
     var_over_samples_block,
 )
 from .remove_gradients import remove_gradients, remove_gradients_block  # noqa
+from .requires_grad import requires_grad, requires_grad_block  # noqa
 from .slice import slice, slice_block  # noqa
 from .solve import solve  # noqa
-from .split import split, split_block  # noqa
-from .to import block_to, to  # noqa
-from .subtract import subtract  # noqa
-from .unique_metadata import unique_metadata, unique_metadata_block  # noqa
-from .checks import checks_enabled, unsafe_disable_checks, unsafe_enable_checks  # noqa
-from .zeros_like import zeros_like, zeros_like_block  # noqa
 from .sort import sort, sort_block  # noqa
+from .split import split, split_block  # noqa
+from .subtract import subtract  # noqa
+from .to import block_to, to  # noqa
+from .unique_metadata import unique_metadata, unique_metadata_block  # noqa
+from .zeros_like import zeros_like, zeros_like_block  # noqa

@@ -26,8 +26,7 @@ def test_detach():
 
     if HAS_TORCH:
         tensor = metatensor.to(tensor, backend="torch")
-        for block in tensor:
-            block.values.requires_grad_(True)
+        tensor = metatensor.requires_grad(tensor)
 
         for block in tensor:
             assert block.values.requires_grad

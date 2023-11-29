@@ -10,6 +10,7 @@ Manipulation operations
     manipulate dimension <manipulate-dimension>
     one_hot() <one-hot>
     remove_gradients() <remove-gradients>
+    requires_grad() <requires-grad>
     samples reduction <samples-reduction>
     slice() <slice>
     split() <split>

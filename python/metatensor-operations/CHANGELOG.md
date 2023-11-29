@@ -8,8 +8,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `detach()` function to detach all values in a TensorMap/TensorBlock from any
+- `detach()` operation to detach all values in a TensorMap/TensorBlock from any
   computational graph
+- `requires_grad()` operation to set the `requires_grad` of all values in a
+  TensorMap/TensorBlock when storing data in torch Tensors.
 
 ### Fixed
 
@@ -18,7 +20,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 
 - the `requires_grad` parameter of the `to()` operation. This is now covered by
-  `detach()` or an explicit loop over the blocks.
+  `detach()` and `requires_grad()`.
 
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.1.0) - 2023-10-11

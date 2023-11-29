@@ -6,11 +6,12 @@ import metatensor.torch
 from .data import load_data
 
 
-def check_operation(detach):
+def check_operation(requires_grad):
     # this only runs basic checks functionality checks, and that the code produces
     # output with the right type
     tensor = load_data("qm7-power-spectrum.npz")
-    tensor = metatensor.torch.requires_grad(tensor)
+
+    tensor = requires_grad(tensor)
 
     assert isinstance(tensor, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -19,7 +20,7 @@ def check_operation(detach):
     for block in tensor:
         assert block.values.requires_grad
 
-    tensor = detach(tensor)
+    tensor = requires_grad(tensor, False)
 
     assert isinstance(tensor, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -30,10 +31,10 @@ def check_operation(detach):
 
 
 def test_operation_as_python():
-    check_operation(metatensor.torch.detach)
+    check_operation(metatensor.torch.requires_grad)
 
 
 def test_operation_as_torch_script():
-    scripted = torch.jit.script(metatensor.torch.detach)
+    scripted = torch.jit.script(metatensor.torch.requires_grad)
 
     check_operation(scripted)
