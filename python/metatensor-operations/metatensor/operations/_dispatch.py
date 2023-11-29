@@ -45,6 +45,20 @@ def _check_all_np_ndarray(arrays):
             )
 
 
+def abs(array):
+    """
+    Returns the absolute value of the elements in the array.
+
+    It is equivalent of np.abs(array) and torch.abs(tensor)
+    """
+    if isinstance(array, TorchTensor):
+        return torch.abs(array)
+    elif isinstance(array, np.ndarray):
+        return np.abs(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def all(a, axis: Optional[int] = None):
     """Test whether all array elements along a given axis evaluate to True.
 
@@ -65,7 +79,11 @@ def all(a, axis: Optional[int] = None):
 
 
 def allclose(
-    a: TorchTensor, b: TorchTensor, rtol: float, atol: float, equal_nan: bool = False
+    a: TorchTensor,
+    b: TorchTensor,
+    rtol: float,
+    atol: float,
+    equal_nan: bool = False,
 ):
     """Compare two arrays using ``allclose``
 
@@ -80,6 +98,37 @@ def allclose(
     elif isinstance(a, np.ndarray):
         _check_all_np_ndarray([b])
         return np.allclose(a=a, b=b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def argsort_labels_values(labels_values, reverse: bool = False):
+    """
+    Similar to :py:func:`np.argsort`, but sort the rows as one aggregated
+    tuple.
+
+    :param labels_values: numpy.array or torch.Tensor
+    :param reverse: if true, order is descending
+
+    :return: indices corresponding to the sorted values in ``labels_values``
+    """
+    if isinstance(labels_values, TorchTensor):
+        # torchscript does not support sorted for List[List[int]]
+        # so we temporary do this trick. this will be fixed with issue #366
+        max_int = torch.max(labels_values)
+        idx = torch.sum(
+            max_int ** torch.arange(labels_values.shape[1]) * labels_values, dim=1
+        )
+        return torch.argsort(idx, dim=-1, descending=reverse)
+    elif isinstance(labels_values, np.ndarray):
+        # Index is appended at the end to get the indices corresponding to the
+        # sorted values. Because we append the indices at the end and since metadata
+        # is unique, we do not affect the sorted order.
+        list_tuples: List[List[int]] = labels_values.tolist()
+        for i in range(len(labels_values)):
+            list_tuples[i].append(i)
+        list_tuples.sort(reverse=reverse)
+        return np.array(list_tuples)[:, -1]
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -113,6 +162,36 @@ def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def bool_array_like(bool_list: List[bool], like):
+    """
+    Converts the input list of bool to a numpy array or torch tensor
+    based on the type of `like`.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.array(bool_list).astype(bool)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def concatenate(arrays: List[TorchTensor], axis: int):
+    """
+    Concatenate a group of arrays along a given axis.
+
+    This function has the same behavior as ``numpy.concatenate(arrays, axis)``
+    and ``torch.concatenate(arrays, axis)``.
+    """
+    if isinstance(arrays[0], TorchTensor):
+        _check_all_torch_tensor(arrays)
+        return torch.concatenate(arrays, axis)
+    elif isinstance(arrays[0], np.ndarray):
+        _check_all_np_ndarray(arrays)
+        return np.concatenate(arrays, axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def copy(array):
     """Returns a copy of ``array``.
     The new data is not shared with the original array"""
@@ -131,79 +210,6 @@ def detach(array):
     elif isinstance(array, np.ndarray):
         # nothing to do
         return array
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def eye_like(array, size: int):
-    """
-    Create an identity matrix with the given ``size``, and the same
-    dtype and device as ``array``.
-    """
-
-    if isinstance(array, TorchTensor):
-        return torch.eye(size).to(array.dtype).to(array.device)
-    elif isinstance(array, np.ndarray):
-        return np.eye(size, dtype=array.dtype)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def bool_array_like(bool_list: List[bool], like):
-    """
-    Converts the input list of bool to a numpy array or torch tensor
-    based on the type of `like`.
-    """
-    if isinstance(like, TorchTensor):
-        return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
-    elif isinstance(like, np.ndarray):
-        return np.array(bool_list).astype(bool)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def int_array_like(int_list: List[int], like):
-    """
-    Converts the input list of int to a numpy array or torch tensor
-    based on the type of `like`.
-    """
-    if isinstance(like, TorchTensor):
-        return torch.tensor(int_list, dtype=torch.int64, device=like.device)
-    elif isinstance(like, np.ndarray):
-        return np.array(int_list).astype(np.int64)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def mask(array, axis: int, mask):
-    """
-    Applies a boolean mask along the specified axis.
-
-    This function indexes an `array` along an `axis` using the boolean values inside
-    `mask`. Only the indices for which `mask` is True will be part of the output array.
-
-    This operation is useful because array[..., mask] — i.e. indexing with a mask after
-    an ellipsis — is not supported in torchscript.
-    """
-    indices = where(mask)[0]  # use _dispatch.where to find the indices
-    if isinstance(array, TorchTensor):
-        return torch.index_select(array, dim=axis, index=indices)
-    elif isinstance(array, np.ndarray):
-        return np.take(array, indices, axis=axis)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def norm(array, axis=None):
-    """Compute the 2-norm (Frobenius norm for matrices) of the input array.
-
-    This calls the equivalent of ``np.linalg.norm(array, axis=axis)``, see this
-    function for more documentation.
-    """
-    if isinstance(array, TorchTensor):
-        return np.linalg.norm(array, axis=axis)
-    elif isinstance(array, np.ndarray):
-        return torch.linalg.norm(array, dim=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -232,34 +238,79 @@ def dot(A, B):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def solve(X, Y):
+def empty_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
-    Computes the solution of a square system of linear equations with a unique
-    solution.
+    Create an uninitialized array, with the given ``shape``, and similar dtype,
+    device and other options as ``array``.
 
-    This function has the same behavior as ``numpy.linalg.solve(X, Y)``.
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
+
+    This is the equivalent to ``np.empty_like(array, shape=shape)``.
     """
-    if isinstance(X, TorchTensor):
-        _check_all_torch_tensor([Y])
-        result = torch.linalg.solve(X, Y)
-        return result
-    elif isinstance(X, np.ndarray):
-        _check_all_np_ndarray([Y])
-        return np.linalg.solve(X, Y)
+    if isinstance(array, TorchTensor):
+        if shape is None:
+            shape = array.size()
+        return torch.empty(
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+        ).requires_grad_(requires_grad)
+    elif isinstance(array, np.ndarray):
+        return np.empty_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def sqrt(array):
-    """Compute the square root  of the input array.
-
-    This calls the equivalent of ``np.sqrt(array)``, see this
-    function for more documentation.
+def eye_like(array, size: int):
     """
+    Create an identity matrix with the given ``size``, and the same
+    dtype and device as ``array``.
+    """
+
     if isinstance(array, TorchTensor):
-        return torch.sqrt(array)
+        return torch.eye(size).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
-        return np.sqrt(array)
+        return np.eye(size, dtype=array.dtype)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def index_add(output_array, input_array, index):
+    """Accumulates in `output_array`
+    the elements of `array`
+    by adding to the indices in the order given in index.
+
+    it is equivalent of torch's:
+
+    output_array.index_add_(0, torch.tensor(index),input_array)
+
+    """
+    index = to_index_array(index)
+    if isinstance(input_array, TorchTensor):
+        if not isinstance(index, TorchTensor):
+            index = torch.tensor(index).to(device=input_array.device)
+
+        _check_all_torch_tensor([output_array, input_array, index])
+        output_array.index_add_(0, index, input_array)
+    elif isinstance(input_array, np.ndarray):
+        _check_all_np_ndarray([output_array, input_array, index])
+        np.add.at(output_array, index, input_array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def int_array_like(int_list: List[int], like):
+    """
+    Converts the input list of int to a numpy array or torch tensor
+    based on the type of `like`.
+    """
+    if isinstance(like, TorchTensor):
+        return torch.tensor(int_list, dtype=torch.int64, device=like.device)
+    elif isinstance(like, np.ndarray):
+        return np.array(int_list).astype(np.int64)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -301,8 +352,30 @@ def lstsq(X, Y, rcond: Optional[float], driver: Optional[str] = None):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def mask(array, axis: int, mask):
+    """
+    Applies a boolean mask along the specified axis.
+
+    This function indexes an `array` along an `axis` using the boolean values inside
+    `mask`. Only the indices for which `mask` is True will be part of the output array.
+
+    This operation is useful because array[..., mask] — i.e. indexing with a mask after
+    an ellipsis — is not supported in torchscript.
+    """
+    indices = where(mask)[0]  # use _dispatch.where to find the indices
+    if isinstance(array, TorchTensor):
+        return torch.index_select(array, dim=axis, index=indices)
+    elif isinstance(array, np.ndarray):
+        return np.take(array, indices, axis=axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def nan_to_num(
-    X, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None
+    X,
+    nan: float = 0.0,
+    posinf: Optional[float] = None,
+    neginf: Optional[float] = None,
 ):
     """Equivalent to np.nan_to_num(X, nan, posinf, neginf)"""
     if isinstance(X, TorchTensor):
@@ -313,70 +386,16 @@ def nan_to_num(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def concatenate(arrays: List[TorchTensor], axis: int):
-    """
-    Concatenate a group of arrays along a given axis.
+def norm(array, axis=None):
+    """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
-    This function has the same behavior as ``numpy.concatenate(arrays, axis)``
-    and ``torch.concatenate(arrays, axis)``.
-    """
-    if isinstance(arrays[0], TorchTensor):
-        _check_all_torch_tensor(arrays)
-        return torch.concatenate(arrays, axis)
-    elif isinstance(arrays[0], np.ndarray):
-        _check_all_np_ndarray(arrays)
-        return np.concatenate(arrays, axis)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def index_add(output_array, input_array, index):
-    """Accumulates in `output_array`
-    the elements of `array`
-    by adding to the indices in the order given in index.
-
-    it is equivalent of torch's:
-
-    output_array.index_add_(0, torch.tensor(index),input_array)
-
-    """
-    index = to_index_array(index)
-    if isinstance(input_array, TorchTensor):
-        if not isinstance(index, TorchTensor):
-            index = torch.tensor(index).to(device=input_array.device)
-
-        _check_all_torch_tensor([output_array, input_array, index])
-        output_array.index_add_(0, index, input_array)
-    elif isinstance(input_array, np.ndarray):
-        _check_all_np_ndarray([output_array, input_array, index])
-        np.add.at(output_array, index, input_array)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
-    """
-    Create an array filled with zeros, with the given ``shape``, and similar
-    dtype, device and other options as ``array``.
-
-    If ``shape`` is :py:obj:`None`, the array shape is used instead.
-    ``requires_grad`` is only used for torch tensors, and set the corresponding
-    value on the returned array.
-
-    This is the equivalent to ``np.zeros_like(array, shape=shape)``.
+    This calls the equivalent of ``np.linalg.norm(array, axis=axis)``, see this
+    function for more documentation.
     """
     if isinstance(array, TorchTensor):
-        if shape is None:
-            shape = array.size()
-
-        return torch.zeros(
-            shape,
-            dtype=array.dtype,
-            layout=array.layout,
-            device=array.device,
-        ).requires_grad_(requires_grad)
+        return np.linalg.norm(array, axis=axis)
     elif isinstance(array, np.ndarray):
-        return np.zeros_like(array, shape=shape, subok=False)
+        return torch.linalg.norm(array, dim=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -408,77 +427,6 @@ def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def empty_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
-    """
-    Create an uninitialized array, with the given ``shape``, and similar dtype,
-    device and other options as ``array``.
-
-    If ``shape`` is :py:obj:`None`, the array shape is used instead.
-    ``requires_grad`` is only used for torch tensors, and set the corresponding
-    value on the returned array.
-
-    This is the equivalent to ``np.empty_like(array, shape=shape)``.
-    """
-    if isinstance(array, TorchTensor):
-        if shape is None:
-            shape = array.size()
-        return torch.empty(
-            shape,
-            dtype=array.dtype,
-            layout=array.layout,
-            device=array.device,
-        ).requires_grad_(requires_grad)
-    elif isinstance(array, np.ndarray):
-        return np.empty_like(array, shape=shape, subok=False)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def abs(array):
-    """
-    Returns the absolute value of the elements in the array.
-
-    It is equivalent of np.abs(array) and torch.abs(tensor)
-    """
-    if isinstance(array, TorchTensor):
-        return torch.abs(array)
-    elif isinstance(array, np.ndarray):
-        return np.abs(array)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def sign(array):
-    """
-    Returns an indication of the sign of the elements in the array.
-
-    It is equivalent of np.sign(array) and torch.sign(tensor)
-    """
-    if isinstance(array, TorchTensor):
-        return torch.sign(array)
-    elif isinstance(array, np.ndarray):
-        return np.sign(array)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def stack(arrays: List[TorchTensor], axis: int):
-    """
-    Stack a group of arrays along a new axis.
-
-    This function has the same behavior as ``numpy.stack(arrays, axis)``
-    and ``torch.stack(arrays, axis)``.
-    """
-    if isinstance(arrays[0], TorchTensor):
-        _check_all_torch_tensor(arrays)
-        return torch.stack(arrays, axis)
-    elif isinstance(arrays[0], np.ndarray):
-        _check_all_np_ndarray(arrays)
-        return np.stack(arrays, axis)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
 def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
     Create an array with values randomly sampled from the uniform distribution
@@ -503,6 +451,92 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         if shape is None:
             shape = array.shape
         return np.random.rand(*shape).astype(array.dtype)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def sign(array):
+    """
+    Returns an indication of the sign of the elements in the array.
+
+    It is equivalent of np.sign(array) and torch.sign(tensor)
+    """
+    if isinstance(array, TorchTensor):
+        return torch.sign(array)
+    elif isinstance(array, np.ndarray):
+        return np.sign(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def solve(X, Y):
+    """
+    Computes the solution of a square system of linear equations with a unique
+    solution.
+
+    This function has the same behavior as ``numpy.linalg.solve(X, Y)``.
+    """
+    if isinstance(X, TorchTensor):
+        _check_all_torch_tensor([Y])
+        result = torch.linalg.solve(X, Y)
+        return result
+    elif isinstance(X, np.ndarray):
+        _check_all_np_ndarray([Y])
+        return np.linalg.solve(X, Y)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def sqrt(array):
+    """Compute the square root  of the input array.
+
+    This calls the equivalent of ``np.sqrt(array)``, see this
+    function for more documentation.
+    """
+    if isinstance(array, TorchTensor):
+        return torch.sqrt(array)
+    elif isinstance(array, np.ndarray):
+        return np.sqrt(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def stack(arrays: List[TorchTensor], axis: int):
+    """
+    Stack a group of arrays along a new axis.
+
+    This function has the same behavior as ``numpy.stack(arrays, axis)``
+    and ``torch.stack(arrays, axis)``.
+    """
+    if isinstance(arrays[0], TorchTensor):
+        _check_all_torch_tensor(arrays)
+        return torch.stack(arrays, axis)
+    elif isinstance(arrays[0], np.ndarray):
+        _check_all_np_ndarray(arrays)
+        return np.stack(arrays, axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def take(array, indices, axis: int):
+    """
+    See :py:func:`torch.index_select` or :py:func:`numpy.take` as reference.
+
+    Because numpy and torch have different APIs we went for the more limited one
+    in torch not supporting ``mode`` argument. The argument ``out`` is not supported
+    by TorchScript, or at least it is nontrivial to add
+
+    :param array: the array the elements are returned from
+    :param indices: the indices to take long an axes
+    :param axis: axis of array to take
+
+    :return: the elments at the indices in the array along dimension specified by the
+    axis
+    """
+    if isinstance(array, TorchTensor):
+        return torch.index_select(array, dim=axis, index=indices)
+    elif isinstance(array, np.ndarray):
+        return np.take(array, indices, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -617,55 +651,28 @@ def where(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def take(array, indices, axis: int):
+def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = False):
     """
-    See :py:func:`torch.index_select` or :py:func:`numpy.take` as reference.
+    Create an array filled with zeros, with the given ``shape``, and similar
+    dtype, device and other options as ``array``.
 
-    Because numpy and torch have different APIs we went for the more limited one
-    in torch not supporting ``mode`` argument. The argument ``out`` is not supported
-    by TorchScript, or at least it is nontrivial to add
+    If ``shape`` is :py:obj:`None`, the array shape is used instead.
+    ``requires_grad`` is only used for torch tensors, and set the corresponding
+    value on the returned array.
 
-    :param array: the array the elements are returned from
-    :param indices: the indices to take long an axes
-    :param axis: axis of array to take
-
-    :return: the elments at the indices in the array along dimension specified by the
-    axis
+    This is the equivalent to ``np.zeros_like(array, shape=shape)``.
     """
     if isinstance(array, TorchTensor):
-        return torch.index_select(array, dim=axis, index=indices)
+        if shape is None:
+            shape = array.size()
+
+        return torch.zeros(
+            shape,
+            dtype=array.dtype,
+            layout=array.layout,
+            device=array.device,
+        ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
-        return np.take(array, indices, axis=axis)
-    else:
-        raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-def argsort_labels_values(labels_values, reverse: bool = False):
-    """
-    Similar to :py:func:`np.argsort`, but sort the rows as one aggregated
-    tuple.
-
-    :param labels_values: numpy.array or torch.Tensor
-    :param reverse: if true, order is descending
-
-    :return: indices corresponding to the sorted values in ``labels_values``
-    """
-    if isinstance(labels_values, TorchTensor):
-        # torchscript does not support sorted for List[List[int]]
-        # so we temporary do this trick. this will be fixed with issue #366
-        max_int = torch.max(labels_values)
-        idx = torch.sum(
-            max_int ** torch.arange(labels_values.shape[1]) * labels_values, dim=1
-        )
-        return torch.argsort(idx, dim=-1, descending=reverse)
-    elif isinstance(labels_values, np.ndarray):
-        # Index is appended at the end to get the indices corresponding to the
-        # sorted values. Because we append the indices at the end and since metadata
-        # is unique, we do not affect the sorted order.
-        list_tuples: List[List[int]] = labels_values.tolist()
-        for i in range(len(labels_values)):
-            list_tuples[i].append(i)
-        list_tuples.sort(reverse=reverse)
-        return np.array(list_tuples)[:, -1]
+        return np.zeros_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
