@@ -232,7 +232,7 @@ def test_self_allclose_exceptions():
 
 def test_self_allclose_exceptions_gradient():
     block_1 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2.0]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -249,7 +249,7 @@ def test_self_allclose_exceptions_gradient():
     )
 
     block_2 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2.0]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -273,7 +273,7 @@ def test_self_allclose_exceptions_gradient():
         metatensor.allclose_block_raise(block_1, block_2)
 
     block_3 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2.0]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -294,7 +294,7 @@ def test_self_allclose_exceptions_gradient():
         metatensor.allclose_block_raise(block_1, block_3)
 
     block_4 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2.0]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -311,7 +311,7 @@ def test_self_allclose_exceptions_gradient():
     )
 
     block_5 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2.0]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),

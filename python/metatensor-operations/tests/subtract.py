@@ -193,7 +193,7 @@ def test_self_subtract_tensors_gradient():
 
 def test_self_subtract_scalar_gradient():
     block_1 = TensorBlock(
-        values=np.array([[1, 2], [3, 5]]),
+        values=np.array([[1.0, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels.range("p", 2),
@@ -201,7 +201,7 @@ def test_self_subtract_scalar_gradient():
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6.0, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels.range("sample", 2),
             components=[Labels.range("c", 2)],
             properties=block_1.properties,
@@ -209,7 +209,7 @@ def test_self_subtract_scalar_gradient():
     )
 
     block_2 = TensorBlock(
-        values=np.array([[11, 12], [13, 14], [15, 16]]),
+        values=np.array([[11.0, 12], [13, 14], [15, 16]]),
         samples=Labels(["s"], np.array([[0], [2], [7]])),
         components=[],
         properties=Labels.range("p", 2),
@@ -218,7 +218,7 @@ def test_self_subtract_scalar_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                [[[10.0, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels.range("sample", 3),
             components=[Labels.range("c", 2)],
@@ -235,7 +235,7 @@ def test_self_subtract_scalar_gradient():
     block_res_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6.0, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels.range("sample", 2),
             components=[Labels.range("c", 2)],
             properties=block_res_1.properties,
@@ -252,7 +252,7 @@ def test_self_subtract_scalar_gradient():
         parameter="g",
         gradient=TensorBlock(
             values=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                [[[10.0, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels.range("sample", 3),
             components=[Labels.range("c", 2)],

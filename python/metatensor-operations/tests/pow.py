@@ -11,19 +11,19 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_self_pow_scalar_gradient():
-    b1_s0 = np.array([1, 2])
-    b1_s2 = np.array([3, 5])
+    b1_s0 = np.array([1.0, 2])
+    b1_s2 = np.array([3.0, 5])
 
-    b1grad_s01 = np.array([[6, 1], [7, 2]])
-    b1grad_s11 = np.array([[8, 3], [9, 4]])
+    b1grad_s01 = np.array([[6.0, 1], [7, 2]])
+    b1grad_s11 = np.array([[8.0, 3], [9, 4]])
 
-    b2_s0 = np.array([11, 12])
-    b2_s2 = np.array([13, 14])
-    b2_s7 = np.array([15, 16])
+    b2_s0 = np.array([11.0, 12])
+    b2_s2 = np.array([13.0, 14])
+    b2_s7 = np.array([15.0, 16])
 
-    b2grad_s01 = np.array([[10, 11], [12, 13]])
-    b2grad_s11 = np.array([[14, 15], [10, 11]])
-    b2grad_s21 = np.array([[12, 13], [14, 15]])
+    b2grad_s01 = np.array([[10.0, 11], [12, 13]])
+    b2grad_s11 = np.array([[14.0, 15], [10, 11]])
+    b2grad_s21 = np.array([[12.0, 13], [14, 15]])
 
     block_1 = TensorBlock(
         values=np.vstack([b1_s0, b1_s2]),
@@ -119,13 +119,13 @@ def test_self_pow_scalar_gradient():
 
 
 def test_self_pow_components_scalar_gradient():
-    b1_s0_c00 = np.array([1, 2])
-    b1_s2_c01 = np.array([3, 5])
+    b1_s0_c00 = np.array([1.0, 2])
+    b1_s2_c01 = np.array([3.0, 5])
     b1_s0_c10 = np.array([1.1, 2.2])
     b1_s2_c11 = np.array([3.3, 5.5])
 
-    b1grad_s01_c00 = np.array([6, 1])
-    b1grad_s11_c01 = np.array([8, 3])
+    b1grad_s01_c00 = np.array([6.0, 1])
+    b1grad_s11_c01 = np.array([8.0, 3])
     b1grad_s01_c10 = np.array([7.1, 2.1])
     b1grad_s11_c11 = np.array([9.1, 4.1])
 
@@ -236,19 +236,19 @@ def test_self_pow_components_scalar_gradient():
 
 
 def test_self_pow_scalar_sqrt_gradient():
-    b1_s0 = np.array([1, 2])
+    b1_s0 = np.array([1.0, 2])
     b1_s2 = np.array([4.7, 7])
 
-    b1grad_s01 = np.array([[6, 1], [7, 2]])
-    b1grad_s11 = np.array([[8, 3], [9, 4]])
+    b1grad_s01 = np.array([[6.0, 1], [7, 2]])
+    b1grad_s11 = np.array([[8.0, 3], [9, 4]])
 
-    b2_s0 = np.array([11, 12])
-    b2_s2 = np.array([13, 14])
+    b2_s0 = np.array([11.0, 12])
+    b2_s2 = np.array([13.0, 14])
     b2_s7 = np.array([0.15, 1.6])
 
     b2grad_s01 = np.array([[10.6, 11], [1.2, 13]])
-    b2grad_s11 = np.array([[14, 1.5], [10, 11]])
-    b2grad_s21 = np.array([[12, 13.2], [14, 15]])
+    b2grad_s11 = np.array([[14.0, 1.5], [10, 11]])
+    b2grad_s21 = np.array([[12.0, 13.2], [14, 15]])
 
     block_1 = TensorBlock(
         values=np.vstack([b1_s0, b1_s2]),
@@ -343,7 +343,7 @@ def test_self_pow_scalar_sqrt_gradient():
 
 def test_self_pow_error():
     block = TensorBlock(
-        values=np.array([[1, 2], [3, 5]]),
+        values=np.array([[1.0, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels.range("p", 2),

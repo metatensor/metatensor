@@ -142,6 +142,13 @@ TORCH_LIBRARY(metatensor, m) {
             {torch::arg("parameter")}
         )
         .def("gradients", &TensorBlockHolder::gradients)
+        .def_property("device", &TensorBlockHolder::device)
+        .def_property("dtype", &TensorBlockHolder::scalar_type)
+        .def("to", &TensorBlockHolder::to, DOCSTRING, {
+            torch::arg("dtype") = torch::nullopt,
+            torch::arg("device") = torch::nullopt,
+            torch::arg("arrays") = torch::nullopt
+        })
         ;
 
     m.class_<TensorMapHolder>("TensorMap")

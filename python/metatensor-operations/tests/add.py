@@ -14,7 +14,7 @@ def keys():
 @pytest.fixture
 def tensor_A(keys):
     block_1 = TensorBlock(
-        values=np.array([[1, 2], [3, 5]]),
+        values=np.array([[1.0, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0], [1]])),
@@ -23,7 +23,7 @@ def tensor_A(keys):
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6.0, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels(["c"], np.array([[0], [1]])),
@@ -33,7 +33,7 @@ def tensor_A(keys):
     )
 
     block_2 = TensorBlock(
-        values=np.array([[1, 2], [3, 4], [5, 6]]),
+        values=np.array([[1.0, 2], [3, 4], [5, 6]]),
         samples=Labels(["s"], np.array([[0], [2], [7]])),
         components=[],
         properties=Labels(["p"], np.array([[0], [1]])),
@@ -43,7 +43,7 @@ def tensor_A(keys):
         parameter="g",
         gradient=TensorBlock(
             values=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                [[[10.0, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
                 ["sample", "g"],
@@ -175,7 +175,7 @@ def tensor_res_2(keys):
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=np.array([[[6, 1], [7, 2]], [[8, 3], [9, 4]]]),
+            values=np.array([[[6.0, 1], [7, 2]], [[8, 3], [9, 4]]]),
             samples=Labels(["sample", "g"], np.array([[0, 1], [1, 1]])),
             components=[
                 Labels(["c"], np.array([[0], [1]])),
@@ -194,7 +194,7 @@ def tensor_res_2(keys):
         parameter="g",
         gradient=TensorBlock(
             values=np.array(
-                [[[10, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
+                [[[10.0, 11], [12, 13]], [[14, 15], [10, 11]], [[12, 13], [14, 15]]]
             ),
             samples=Labels(
                 ["sample", "g"],

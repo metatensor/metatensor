@@ -55,7 +55,7 @@ def abs(array):
     if isinstance(array, TorchTensor):
         return torch.abs(array)
     elif isinstance(array, np.ndarray):
-        return np.abs(array)
+        return np.abs(array).astype(array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

@@ -1,10 +1,19 @@
 import copy
 import ctypes
-from typing import Generator, List, Sequence, Tuple
+import warnings
+from typing import Generator, List, Optional, Sequence, Tuple
 
+from . import data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
-from .data import Array, ArrayWrapper, mts_array_to_python_array
+from .data import (
+    Array,
+    ArrayWrapper,
+    Device,
+    DeviceWarning,
+    DType,
+    mts_array_to_python_array,
+)
 from .labels import Labels
 from .status import _check_pointer
 
@@ -79,6 +88,16 @@ class TensorBlock:
             properties._as_mts_labels_t(),
         )
         _check_pointer(self._actual_ptr)
+
+        if not data.array_device_is_cpu(self.values):
+            warnings.warn(
+                "Values and labels for this block are on different devices: "
+                f"labels are always on CPU, and values are on device '{self.device}'. "
+                "If you are using PyTorch and need the labels to also be on "
+                f"{self.device}, you should use `metatensor.torch.TensorBlock`.",
+                category=DeviceWarning,
+                stacklevel=2,
+            )
 
     @staticmethod
     def _from_ptr(ptr, parent):
@@ -348,6 +367,22 @@ class TensorBlock:
                 "a TensorMap or another TensorBlock"
             )
 
+        if self.dtype != gradient.dtype:
+            raise ValueError(
+                "values and the new gradient must have the same dtype, "
+                f"got {self.dtype} and {gradient.dtype}"
+            )
+
+        if self.device != gradient.device:
+            raise ValueError(
+                "values and the new gradient must be on the same device, "
+                f"got {self.device} and {gradient.device}"
+            )
+
+        # mts_block_add_gradient alreayd checks that all arrays have the same origin
+        # (i.e. they are all numpy, or all torch, or ...), so we don't need to check it
+        # again here.
+
         gradient_ptr = gradient._ptr
 
         # the gradient is moved inside this block, assign NULL to
@@ -385,6 +420,58 @@ class TensorBlock:
         """Get an iterator over all gradients defined in this block."""
         for parameter in self.gradients_list():
             yield (parameter, self.gradient(parameter))
+
+    @property
+    def dtype(self) -> DType:
+        """
+        Get the dtype of all the values and gradient arrays stored inside this
+        :py:class:`TensorBlock`.
+        """
+        return data.array_dtype(self.values)
+
+    @property
+    def device(self) -> Device:
+        """
+        Get the device of all the values and gradient arrays stored inside this
+        :py:class:`TensorBlock`.
+        """
+        return data.array_device(self.values)
+
+    def to(
+        self,
+        *,
+        dtype: Optional[DType] = None,
+        device: Optional[Device] = None,
+        arrays: Optional[str] = None,
+    ) -> "TensorBlock":
+        """
+        Move all the arrays in this block (values and gradients) to the given ``dtype``,
+        ``device`` and ``arrays`` backend.
+
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        :param arrays: new backend to use for the arrays. This can be either
+            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend)
+        """
+        values = self.values
+        if dtype is not None:
+            values = data.array_change_dtype(values, dtype)
+
+        if device is not None:
+            values = data.array_change_device(values, device)
+
+        if arrays is not None:
+            values = data.array_change_backend(values, arrays)
+
+        block = TensorBlock(values, self.samples, self.components, self.properties)
+        for parameter, gradient in self.gradients():
+            block.add_gradient(
+                parameter, gradient.to(dtype=dtype, device=device, arrays=arrays)
+            )
+
+        return block
 
 
 def _get_raw_array(lib, block_ptr) -> mts_array_t:

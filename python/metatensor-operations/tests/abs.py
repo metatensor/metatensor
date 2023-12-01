@@ -44,7 +44,7 @@ def tensor_complex_result():
     tensor = tensor_complex()
     for block in tensor:
         new_block = TensorBlock(
-            values=np.abs(block.values),
+            values=np.abs(block.values).astype(np.complex128),
             samples=block.samples,
             components=block.components,
             properties=block.properties,

@@ -1,10 +1,19 @@
 import copy
+import warnings
 
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-from metatensor import Labels, MetatensorError, TensorBlock
+
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock
 
 
 @pytest.fixture
@@ -324,3 +333,103 @@ def test_nested_gradients():
         block.gradient("gradient").gradient("gradient_of_gradient").values
     )
     assert np.all(grad_grad_values == np.array([[2.0]]))
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
+def test_different_device():
+    message = (
+        "Values and labels for this block are on different devices: "
+        "labels are always on CPU, and values are on device 'meta'."
+    )
+    with pytest.warns(DeviceWarning, match=message):
+        block = TensorBlock(
+            values=torch.tensor([[3.0, 4.0]], device="meta"),
+            samples=Labels.range("s", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        )
+
+    gradient = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]], device="cpu"),
+        samples=Labels.range("sample", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    message = "values and the new gradient must be on the same device, got meta and cpu"
+    with pytest.raises(ValueError, match=message):
+        block.add_gradient("g", gradient)
+
+
+def test_different_dtype():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0]], dtype=np.float64),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    message = (
+        "values and the new gradient must have the same dtype, got float64 and float32"
+    )
+    with pytest.raises(ValueError, match=message):
+        block.add_gradient(
+            "g",
+            TensorBlock(
+                values=np.array([[3.0, 4.0]], dtype=np.float32),
+                samples=Labels.range("sample", 1),
+                components=[],
+                properties=Labels.range("p", 2),
+            ),
+        )
+
+
+def test_to():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    block.add_gradient(
+        "g",
+        TensorBlock(
+            values=np.array([[3.0, 4.0]]),
+            samples=Labels.range("sample", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        ),
+    )
+
+    assert block.device == "cpu"
+    assert block.dtype == np.float64
+    assert block.gradient("g").dtype == np.float64
+
+    converted = block.to(dtype=np.float32)
+    assert converted.dtype == np.float32
+    assert converted.gradient("g").dtype == np.float32
+
+    if HAS_TORCH:
+        block = converted.to(arrays="torch")
+        assert isinstance(block.values, torch.Tensor)
+        assert isinstance(block.gradient("g").values, torch.Tensor)
+
+        devices = ["meta", torch.device("meta")]
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            devices.append("mps")
+            devices.append(torch.device("mps"))
+
+        if torch.cuda.is_available():
+            devices.append("cuda")
+            devices.append("cuda:0")
+            devices.append(torch.device("cuda"))
+
+        for device in devices:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                moved = block.to(device=device)
+
+            assert moved.device.type == torch.device(device).type
+            assert moved.gradient("g").device.type == torch.device(device).type

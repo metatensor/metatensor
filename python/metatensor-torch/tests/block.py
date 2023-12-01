@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pytest
 import torch
@@ -173,6 +173,128 @@ def test_gradients():
     assert gradients[0][0] == "g"
 
 
+def test_different_device():
+    message = (
+        "cannot create TensorBlock: values and samples must be on the same device, "
+        "got meta and cpu"
+    )
+    with pytest.raises(ValueError, match=message):
+        TensorBlock(
+            values=torch.tensor([[3.0, 4.0]], device="meta"),
+            samples=Labels.range("s", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        )
+
+    block = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    devices = []
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        devices.append("mps")
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+
+    for device in devices:
+        message = "values and the new gradient must be on the same device, got cpu and"
+        with pytest.raises(ValueError, match=message):
+            block.add_gradient(
+                "g",
+                TensorBlock(
+                    values=torch.tensor([[3.0, 4.0]], device=device),
+                    samples=Labels.range("sample", 1).to(device),
+                    components=[],
+                    properties=Labels.range("p", 2).to(device),
+                ),
+            )
+
+
+def test_different_dtype():
+    block = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    message = (
+        "values and the new gradient must have the same dtype, "
+        "got torch.float16 and torch.float32"
+    )
+    with pytest.raises(TypeError, match=message):
+        block.add_gradient(
+            "g",
+            TensorBlock(
+                values=torch.tensor([[3.0, 4.0]], dtype=torch.float16),
+                samples=Labels.range("sample", 1),
+                components=[],
+                properties=Labels.range("p", 2),
+            ),
+        )
+
+
+def test_to():
+    block = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    block.add_gradient(
+        "g",
+        TensorBlock(
+            values=torch.tensor([[3.0, 4.0]]),
+            samples=Labels.range("sample", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        ),
+    )
+
+    assert block.device.type == torch.device("cpu").type
+    check_dtype(block, torch.float32)
+    check_dtype(block.gradient("g"), torch.float32)
+
+    converted = block.to(dtype=torch.float64)
+    check_dtype(converted, torch.float64)
+    check_dtype(converted.gradient("g"), torch.float64)
+
+    devices = ["meta", torch.device("meta")]
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
+
+    for device in devices:
+        moved = block.to(device=device)
+        assert moved.device.type == torch.device(device).type
+        assert moved.gradient("g").device.type == torch.device(device).type
+
+    # this should run without error
+    moved = block.to(arrays=None)
+    moved = block.to(arrays="torch")
+
+    message = "`arrays` must be None or 'torch', got 'numpy' instead"
+    with pytest.raises(ValueError, match=message):
+        moved = block.to(arrays="numpy")
+
+
+# This function only works in script mode, because `block.dtype` is always an `int`, and
+# `torch.dtype` is only an int in script mode.
+@torch.jit.script
+def check_dtype(block: TensorBlock, dtype: torch.dtype):
+    assert block.dtype == dtype
+
+
 # define a wrapper class to make sure the types TorchScript uses for of all
 # C-defined functions matches what we expect
 class TensorBlockWrap:
@@ -226,6 +348,20 @@ class TensorBlockWrap:
     def gradients(self) -> List[Tuple[str, TensorBlock]]:
         return self._c.gradients()
 
+    def device(self) -> torch.device:
+        return self._c.device
+
+    def dtype(self) -> torch.dtype:
+        return self._c.dtype
+
+    def to(
+        self,
+        dtype: Optional[torch.dtype],
+        device: Optional[torch.device],
+        arrays: Optional[str],
+    ) -> TensorBlock:
+        return self._c.to(dtype=dtype, device=device, arrays=arrays)
+
 
 def test_script():
     class TestModule(torch.nn.Module):
@@ -234,40 +370,3 @@ def test_script():
 
     module = TestModule()
     module = torch.jit.script(module)
-
-
-def test_different_device():
-    with pytest.raises(
-        ValueError,
-        match="cannot create TensorBlock: values and samples must "
-        "be on the same device, got meta and cpu",
-    ):
-        TensorBlock(
-            values=torch.tensor([[[3.0, 4.0]]], device="meta"),
-            samples=Labels.range("samples", 1),
-            components=[Labels.range("component", 1)],
-            properties=Labels.range("properties", 2),
-        )
-
-
-def test_different_dtype_gradient():
-    message = (
-        "the gradient and the original block must have the same dtype, "
-        "got torch.float16 and torch.float32"
-    )
-    with pytest.raises(TypeError, match=message):
-        block = TensorBlock(
-            values=torch.tensor([[[3.0, 4.0]]]),
-            samples=Labels.range("samples", 1),
-            components=[Labels.range("component", 1)],
-            properties=Labels.range("properties", 2),
-        )
-        block.add_gradient(
-            "gradient",
-            TensorBlock(
-                values=torch.tensor([[[3.0, 4.0]]], dtype=torch.float16),
-                samples=Labels.range("samples", 1),
-                components=[Labels.range("component", 1)],
-                properties=Labels.range("properties", 2),
-            ),
-        )

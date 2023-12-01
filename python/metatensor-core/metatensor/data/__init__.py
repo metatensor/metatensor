@@ -1,4 +1,15 @@
-from .array import ArrayWrapper  # noqa
+from .array import (  # noqa
+    ArrayWrapper,
+    Device,
+    DType,
+    DeviceWarning,
+    array_device,
+    array_change_device,
+    array_dtype,
+    array_change_dtype,
+    array_device_is_cpu,
+    array_change_backend,
+)
 from .extract import (  # noqa
     Array,
     ExternalCpuArray,

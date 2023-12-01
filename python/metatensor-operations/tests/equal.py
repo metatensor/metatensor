@@ -12,26 +12,26 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 def test_equal_no_gradient():
     block_1 = TensorBlock(
-        values=np.array([[1, 2], [3, 5]], dtype=np.float64),
+        values=np.array([[1.0, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels.range("p", 2),
     )
     block_2 = TensorBlock(
-        values=np.array([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
+        values=np.array([[1.0, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
         samples=Labels.range("s", 6),
         components=[],
         properties=Labels.range("p", 2),
     )
 
     block_3 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4 = TensorBlock(
-        values=np.array([[23], [53], [83]]),
+        values=np.array([[23.0], [53], [83]]),
         samples=Labels(["s"], np.array([[0], [2], [7]])),
         components=[],
         properties=Labels(["p"], np.array([[6]])),
@@ -54,17 +54,16 @@ def test_equal_no_gradient():
         values=np.array(
             [
                 [
-                    [[1, 0.5], [4, 2], [1.5, 6.5]],
-                    [[2, 1], [6, 3], [6.1, 3.5]],
-                    [[9, 9], [9, 9.8], [10, 10.5]],
+                    [[1.0, 0.5], [4, 2], [1.5, 6.5]],
+                    [[2.0, 1], [6, 3], [6.1, 3.5]],
+                    [[9.0, 9], [9, 9.8], [10, 10.5]],
                 ],
                 [
-                    [[3, 1.5], [7, 3.5], [3.7, 1.5]],
-                    [[5, 2.5], [8, 4], [6.3, 1.5]],
-                    [[5, 7.1], [8, 4.8], [6.3, 14.466]],
+                    [[3.0, 1.5], [7, 3.5], [3.7, 1.5]],
+                    [[5.0, 2.5], [8, 4], [6.3, 1.5]],
+                    [[5.0, 7.1], [8, 4.8], [6.3, 14.466]],
                 ],
-            ],
-            dtype=np.float64,
+            ]
         ),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[
@@ -86,11 +85,11 @@ def test_equal_no_gradient():
     block_2_c = TensorBlock(
         values=np.array(
             [
-                [[[1, 2], [6.8, 2.8]], [[4.1, 6.2], [66.8, 62.8]]],
-                [[[3, 4], [36, 6.4]], [[83, 84], [73.76, 76.74]]],
-                [[[5, 6], [58, 68]], [[23.4, 5643.3], [234.5, 3247.6]]],
+                [[[1.0, 2], [6.8, 2.8]], [[4.1, 6.2], [66.8, 62.8]]],
+                [[[3.0, 4], [36, 6.4]], [[83, 84], [73.76, 76.74]]],
+                [[[5.0, 6], [58, 68]], [[23.4, 5643.3], [234.5, 3247.6]]],
                 [[[5.6, 6.6], [5.68, 668]], [[55.6, 676.76], [775.68, 0.668]]],
-                [[[1, 2], [17.7, 27.7]], [[77.1, 22.2], [1.11, 3.42]]],
+                [[[1.0, 2], [17.7, 27.7]], [[77.1, 22.2], [1.11, 3.42]]],
             ]
         ),
         samples=Labels.range("s", 5),
@@ -148,26 +147,26 @@ def test_self_equal_grad():
 
 def test_self_equal_exceptions():
     block_1 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_2 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["other_s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_3 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [6]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
     )
 
     block_4 = TensorBlock(
-        values=np.array([[[1], [4]], [[44], [2]]]),
+        values=np.array([[[1.0], [4]], [[44], [2]]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[
             Labels(["c"], np.array([[0], [6]])),
@@ -175,7 +174,7 @@ def test_self_equal_exceptions():
         properties=Labels(["p"], np.array([[0]])),
     )
     block_5 = TensorBlock(
-        values=np.array([[[1], [4]], [[44], [2]]]),
+        values=np.array([[[1.0], [4]], [[44], [2]]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[
             Labels(["other_c"], np.array([[0], [6]])),
@@ -184,7 +183,7 @@ def test_self_equal_exceptions():
     )
 
     block_6 = TensorBlock(
-        values=np.array([[[1], [4]], [[44], [2]]]),
+        values=np.array([[[1.0], [4]], [[44], [2]]]),
         samples=Labels(["s"], np.array([[2], [0]])),
         components=[
             Labels(["c"], np.array([[0], [6]])),
@@ -270,7 +269,7 @@ def test_self_equal_exceptions():
 
 def test_self_equal_exceptions_gradient():
     block_1 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -287,7 +286,7 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_2 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -311,7 +310,7 @@ def test_self_equal_exceptions_gradient():
         metatensor.equal_block_raise(block_1, block_2)
 
     block_3 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -331,7 +330,7 @@ def test_self_equal_exceptions_gradient():
         metatensor.equal_block_raise(block_1, block_3)
 
     block_4 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -348,7 +347,7 @@ def test_self_equal_exceptions_gradient():
     )
 
     block_5 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -372,7 +371,7 @@ def test_self_equal_exceptions_gradient():
         metatensor.equal_block_raise(block_5, block_4)
 
     block_6 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
@@ -396,7 +395,7 @@ def test_self_equal_exceptions_gradient():
         metatensor.equal_block_raise(block_5, block_6)
 
     block_7 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),

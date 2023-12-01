@@ -725,6 +725,82 @@ class TensorBlock:
         block.
         """
 
+    @property
+    def dtype(self) -> torch.dtype:
+        """
+        Get the dtype of all the values and gradient arrays stored inside this
+        :py:class:`TensorBlock`.
+
+        .. warning::
+
+            This function will only work when running the code in TorchScript mode (i.e.
+            after calling :py:func:`torch.jit.script` or :py:func:`torch.jit.trace` on
+            your own code). Trying to use this property in Python mode will result in
+            ``block.dtype`` being an integer, and comparing to false to any dtype:
+
+            .. code-block:: python
+
+                import torch
+                from metatensor.torch import Labels, TensorBlock
+
+                values = torch.tensor([[42.0]])
+                block = TensorBlock(
+                    values=values,
+                    samples=Labels.range("s", 1),
+                    components=[],
+                    properties=Labels.range("p", 1),
+                )
+
+                print(block.dtype)
+                # will output '6'
+
+                print(block.dtype == values.dtype)
+                # will output 'False' in Python, 'True' in TorchScript
+
+                print(block.dtype == block.values.dtype)
+                # will output 'False' in Python, 'True' in TorchScript
+
+
+            As a workaround, you can define a TorchScript function to do dtype
+            manipulations:
+
+            .. code-block:: python
+
+                @torch.jit.script
+                def dtype_equal(block: TensorBlock, dtype: torch.dtype) -> bool:
+                    return block.dtype == dtype
+
+
+                print(dtype_equal(block, torch.float32))
+                # will output 'True'
+        """
+
+    @property
+    def device(self) -> torch.device:
+        """
+        Get the device of all the values and gradient arrays stored inside this
+        :py:class:`TensorBlock`.
+        """
+
+    def to(
+        self,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+        arrays: Optional[str] = None,
+    ) -> "TensorBlock":
+        """
+        Move all the arrays in this block (values, gradients and labels) to the given
+        ``dtype``, ``device`` and ``arrays`` backend.
+
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        :param arrays: new backend to use for the arrays. This parameter is here for
+            compatibility with the pure Python API, can only be set  to ``"torch"`` or
+            ``None`` and does nothing.
+        """
+
 
 class TensorMap:
     """
