@@ -1,4 +1,5 @@
 import ctypes
+from typing import Union
 
 import numpy as np
 
@@ -52,6 +53,108 @@ def _origin_pytorch():
         _TORCH_STORAGE_ORIGIN = _register_origin(__name__ + ".torch")
 
     return _TORCH_STORAGE_ORIGIN
+
+
+if HAS_TORCH:
+    torch_dtype = torch.dtype
+    torch_device = torch.device
+else:
+
+    class torch_dtype:
+        pass
+
+    class torch_device:
+        pass
+
+
+DType = Union[np.dtype, torch_dtype]
+"""Type representing a dtype in either numpy or torch"""
+
+Device = Union[str, torch_device]
+"""Type representing a device in either numpy or torch"""
+
+
+def array_dtype(array) -> DType:
+    """Get the dtype of an array"""
+    if _is_numpy_array(array) or _is_torch_array(array):
+        return array.dtype
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_change_dtype(array, dtype: DType):
+    """Change the dtype of an array"""
+    if _is_numpy_array(array):
+        return array.astype(dtype)
+    elif _is_torch_array(array):
+        return array.to(dtype=dtype)
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_device(array) -> Device:
+    """Get the device of an array"""
+    if _is_numpy_array(array):
+        return "cpu"
+    elif _is_torch_array(array):
+        return array.device
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_device_is_cpu(array) -> bool:
+    """Check if the device of an array is CPU"""
+    if _is_numpy_array(array):
+        return True
+    elif _is_torch_array(array):
+        return array.device.type == torch.device("cpu").type
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_change_device(array, device: Device):
+    """Change the device of an array"""
+    if _is_numpy_array(array):
+        if device != "cpu":
+            raise ValueError(f"can not move numpy array to non-cpu device: {device}")
+        return array
+    elif _is_torch_array(array):
+        return array.to(device=device)
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_change_backend(array, backend: str):
+    if _is_numpy_array(array):
+        if backend == "numpy":
+            return array
+        elif backend == "torch":
+            if not HAS_TORCH:
+                raise ModuleNotFoundError(
+                    "can not convert to `torch` arrays since PyTorch is not installed"
+                )
+            else:
+                return torch.from_numpy(array)
+        else:
+            raise ValueError(f"unknown array backend: '{backend}'")
+
+    elif _is_torch_array(array):
+        if backend == "numpy":
+            return array.numpy()
+        elif backend == "torch":
+            return array
+        else:
+            raise ValueError(f"unknown array backend: '{backend}'")
+
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+class DeviceWarning(RuntimeWarning):
+    """
+    Custom warning class for device mismatch in :py:class:`TensorBlock` and
+    :py:class:`TensorMap`.
+    """
 
 
 class ArrayWrapper:

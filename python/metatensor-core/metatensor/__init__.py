@@ -20,6 +20,7 @@ from .block import TensorBlock  # noqa
 from .labels import Labels, LabelsEntry  # noqa
 from .status import MetatensorError  # noqa
 from .tensor import TensorMap  # noqa
+from .data import DeviceWarning  # noqa
 
 from .io import load, save  # noqa
 

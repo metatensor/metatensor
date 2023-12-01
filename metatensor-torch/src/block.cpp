@@ -70,30 +70,55 @@ TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, std::string 
     parent_(std::move(parent))
 {}
 
-torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::copy() const {
+TorchTensorBlock TensorBlockHolder::copy() const {
     return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
 }
 
-torch::intrusive_ptr<TensorBlockHolder> TensorBlockHolder::to(torch::Device device) {
-    const auto values = this->values().to(device);
-    const auto samples = this->samples()->to(device);
+TorchTensorBlock TensorBlockHolder::to(
+    torch::optional<torch::Dtype> dtype,
+    torch::optional<torch::Device> device,
+    torch::optional<std::string> arrays
+) const {
+    if (arrays.value_or("torch") != "torch") {
+        C10_THROW_ERROR(ValueError,
+            "`arrays` must be None or 'torch', got '" + arrays.value() + "' instead"
+        );
+    }
+
+    auto values = this->values().to(
+        dtype,
+        /*layout*/ torch::nullopt,
+        device,
+        /*pin_memory*/ torch::nullopt,
+        /*non_blocking*/ false,
+        /*copy*/ false,
+        /*memory_format*/ torch::MemoryFormat::Preserve
+    );
+
+    auto samples = this->samples()->to(device);
     auto components = std::vector<torch::intrusive_ptr<LabelsHolder>>();
     for (const auto& component : this->components()) {
         components.push_back(component->to(device));
     }
-    const auto properties = this->properties()->to(device);
+    auto properties = this->properties()->to(device);
+
     auto block = torch::make_intrusive<TensorBlockHolder>(values, samples, components, properties);
-    for (const auto& gradient_name : this->gradients_list()) {
-        block->add_gradient(
-            gradient_name,
-            torch::make_intrusive<TensorBlockHolder>(this->block_.gradient(gradient_name), torch::IValue())->to(device)
+    for (const auto& parameter : this->gradients_list()) {
+        auto gradient = TensorBlockHolder(
+            this->block_.gradient(parameter),
+            torch::IValue()
         );
+
+        block->add_gradient(parameter, gradient.to(dtype, device));
     }
     return block;
 }
 
-torch::Tensor TensorBlockHolder::values() {
-    auto array = block_.mts_array();
+torch::Tensor TensorBlockHolder::values() const {
+    // const_cast is fine here, because the returned torch::Tensor does not
+    // allow modifications to the underlying mts_array (only to the values
+    // inside the tensor).
+    auto array = const_cast<metatensor::TensorBlock&>(block_).mts_array();
 
     mts_data_origin_t origin = 0;
     metatensor::details::check_status(array.origin(array.ptr, &origin));
@@ -133,13 +158,13 @@ void TensorBlockHolder::add_gradient(const std::string& parameter, TorchTensorBl
 
     if (gradient->values().device() != this->values().device()) {
         C10_THROW_ERROR(ValueError,
-            "the gradient and the original block must be on the same device, "
-            "got " + gradient->values().device().str() + " and " + this->values().device().str()
+            "values and the new gradient must be on the same device, "
+            "got " + this->values().device().str() + " and " + gradient->values().device().str()
         );
     }
     if (gradient->values().scalar_type() != this->values().scalar_type()) {
         C10_THROW_ERROR(TypeError,
-            "the gradient and the original block must have the same dtype, "
+            "values and the new gradient must have the same dtype, "
             "got " + scalar_type_name(gradient->values().scalar_type()) +
             " and " + scalar_type_name(this->values().scalar_type())
         );

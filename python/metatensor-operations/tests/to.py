@@ -56,7 +56,7 @@ def test_wrong_arguments_block(block):
         metatensor.block_to(block, backend="jax")
 
 
-@pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_numpy_to_torch_block(block):
     """Test a `block_to` conversion from numpy to torch."""
     new_block = metatensor.block_to(block, backend="torch")
@@ -240,7 +240,7 @@ def test_numpy_to_torch(tensor):
         assert isinstance(new_block.values, torch.Tensor)
 
 
-@pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_torch_to_numpy(tensor):
     """Test a `to` conversion from torch to numpy."""
     tensor = metatensor.to(tensor, backend="torch")
@@ -250,7 +250,7 @@ def test_torch_to_numpy(tensor):
         assert isinstance(new_block.values, np.ndarray)
 
 
-@pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
 def test_numpy_to_torch_gpu(tensor):
     """Test a `to` conversion from numpy to a torch GPU tensor."""
@@ -261,7 +261,7 @@ def test_numpy_to_torch_gpu(tensor):
         assert new_block.values.is_cuda
 
 
-@pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
 def test_torch_to_gpu(tensor):
     """Test a `to` conversion from a torch CPU tensor to a torch GPU tensor."""

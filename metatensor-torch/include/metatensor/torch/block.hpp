@@ -43,12 +43,8 @@ public:
     /// contained inside
     TorchTensorBlock copy() const;
 
-    /// Return a new TorchTensorBlock where all blocks and relative labels
-    /// are on the requested `device`.
-    TorchTensorBlock to(torch::Device device);
-
     /// Get a view in the values in this block
-    torch::Tensor values();
+    torch::Tensor values() const;
 
     /// Get the labels in this block associated with either `"values"` or one
     /// gradient (by setting `values_gradients` to the gradient parameter); in
@@ -117,6 +113,24 @@ public:
 
     /// Get a all gradients and associated parameters in this block
     static std::vector<std::tuple<std::string, TorchTensorBlock>> gradients(TorchTensorBlock self);
+
+    /// Get the device for the values stored in this `TensorBlock`
+    torch::Device device() const {
+        return this->values().device();
+    }
+
+    /// Get the dtype for the values stored in this `TensorBlock`
+    torch::Dtype scalar_type() const {
+        return this->values().scalar_type();
+    }
+
+    /// Move all arrays in this block to the given `dtype`, `device` and
+    /// `arrays` backend. Only `"torch"` is supported for the `arrays` backend.
+    TorchTensorBlock to(
+        torch::optional<torch::Dtype> dtype = torch::nullopt,
+        torch::optional<torch::Device> device = torch::nullopt,
+        torch::optional<std::string> arrays = torch::nullopt
+    ) const;
 
     /// Implementation of __repr__/__str__ for Python
     std::string repr() const;

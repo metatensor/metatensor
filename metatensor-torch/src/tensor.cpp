@@ -88,9 +88,8 @@ TorchTensorMap TensorMapHolder::to(torch::Device device) {
     const auto keys = this->keys()->to(device);
     auto blocks = std::vector<torch::intrusive_ptr<TensorBlockHolder>>();
     for (size_t i=0; i<this->tensor_.keys().count(); i++) {
-        blocks.push_back(
-            torch::make_intrusive<TensorBlockHolder>(this->tensor_.block_by_id(i), torch::IValue())->to(device)
-        );
+        auto block = torch::make_intrusive<TensorBlockHolder>(this->tensor_.block_by_id(i), torch::IValue());
+        blocks.push_back(block->to(torch::nullopt, device));
     }
     return torch::make_intrusive<TensorMapHolder>(keys, blocks);
 }
