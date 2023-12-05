@@ -118,6 +118,7 @@ class MetatensorAtomisticModule(torch.nn.Module):
     >>> # export the model
     >>> with tempfile.TemporaryDirectory() as directory:
     ...     wrapped.export(os.path.join(directory, "constant-energy-model.pt"))
+    ...
     """
 
     # Some annotation to make the TorchScript compiler happy
@@ -233,7 +234,7 @@ class MetatensorAtomisticModule(torch.nn.Module):
             _check_outputs(self._capabilities, run_options)
 
             # check that the species of the system match the one the model supports
-            all_species = torch.unique(system.positions.samples.column("species"))
+            all_species = torch.unique(system.species)
             for species in all_species:
                 if species not in self._capabilities.species:
                     raise ValueError(
@@ -263,8 +264,8 @@ class MetatensorAtomisticModule(torch.nn.Module):
                 to_unit=self._capabilities.length_unit,
             )
 
-            system.positions.values[:] *= conversion
-            system.cell.values[:] *= conversion
+            system.positions[:] *= conversion
+            system.cell[:] *= conversion
 
             # also update the neighbors list distances
             for options in self._requested_neighbors_lists:

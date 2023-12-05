@@ -1,5 +1,5 @@
-#ifndef METATENSOR_TORCH_MLIP_HPP
-#define METATENSOR_TORCH_MLIP_HPP
+#ifndef METATENSOR_TORCH_ATOMISTIC_HPP
+#define METATENSOR_TORCH_ATOMISTIC_HPP
 
 #include <vector>
 #include <string>
@@ -97,42 +97,72 @@ inline bool operator!=(const NeighborsListOptions& lhs, const NeighborsListOptio
 /// be used as the input of metatensor atomistic models.
 class METATENSOR_TORCH_EXPORT SystemHolder final: public torch::CustomClassHolder {
 public:
-    /// Create a `SystemHolder` with the given positions and cell
-    SystemHolder(TorchTensorBlock positions_, TorchTensorBlock cell_);
+    /// Create a `SystemHolder` with the given `species`, `positions` and
+    /// `cell`.
+    ///
+    /// @param species 1D tensor of 32-bit integer representing the particles
+    ///        identity. For atoms, this is typically their atomic numbers.
+    /// @param positions 2D tensor of shape (len(species), 3) containing the
+    ///        Cartesian positions of all particles in the system.
+    /// @param cell 2D tensor of shape (3, 3), describing the bounding box/unit
+    ///        cell of the system. Each row should be one of the bounding box
+    ///        vector; and columns should contain the x, y, and z components of
+    ///        these vectors (i.e. the cell should be given in row-major order).
+    ///        Systems are assumed to obey periodic boundary conditions,
+    ///        non-periodic systems should set the cell to 0.
+    SystemHolder(torch::Tensor species, torch::Tensor positions, torch::Tensor cell);
     ~SystemHolder() override = default;
 
-    /// Positions and types/species of of the atoms in the system.
-    ///
-    /// This block must have two samples names "atom" and "species", where
-    /// "atom" is the index of the atom in the system; and "species" is the
-    /// atomic species (typically --- but not limited to --- the atomic number).
-    ///
-    /// The block must have a single component "xyz" with values `[0, 1, 2]`;
-    /// and a single property "position" with value 0.
-    TorchTensorBlock positions;
-
-    /// Unit cell/bounding box of the system. Non-periodic system should set all
-    /// the values to 0.
-    ///
-    /// This block must have a single sample "_" with value 0; two components
-    /// "cell_abc" and "xyz" both with values `[0, 1, 2]`; and a single property
-    /// "cell" with value 0. The values of the TensorBlock then correspond to to
-    /// the matrix of the cell vectors, in row-major order.
-    TorchTensorBlock cell;
-
-    /// Get the number of atoms in this system
-    int64_t size() const {
-        return  this->positions->values().size(0);
+    /// Get the species for all particles in the system.
+    torch::Tensor species() const {
+        return species_;
     }
+
+    /// Set species for all particles in the system
+    void set_species(torch::Tensor species);
+
+    /// Get the positions for the atoms in the system.
+    torch::Tensor positions() const {
+        return positions_;
+    }
+
+    /// Set positions for all particles in the system
+    void set_positions(torch::Tensor positions);
+
+    /// Unit cell/bounding box of the system.
+    torch::Tensor cell() const {
+        return cell_;
+    }
+
+    /// Set cell for the system
+    void set_cell(torch::Tensor cell);
+
+    /// Get the device used by all the data in this `System`
+    torch::Device device() const {
+        return species_.device();
+    }
+
+    /// Get the dtype used by all the floating point data in this `System`
+    torch::Dtype scalar_type() const {
+        return positions_.scalar_type();
+    }
+
+    /// Get the number of particles in this system
+    int64_t size() const {
+        return  this->species_.size(0);
+    }
+
+    // TODO: add `SystemHolder::to(dtype, device) -> TorchSystem` to convert
+    // dtype & device for a System
 
     /// Add a new neighbors list in this system corresponding to the given
     /// `options`.
     ///
     /// The neighbors list should have the following samples: "first_atom",
     /// "second_atom", "cell_shift_a", "cell_shift_b", "cell_shift_c",
-    /// containing the index of the first and second atoms (matching the "atom"
-    /// sample in the positions); and the number of cell vector a/b/c to add to
-    /// the positions difference to get the pair vector.
+    /// containing the index of the first and second atom and the number of
+    /// cell vector a/b/c to add to the positions difference to get the pair
+    /// vector.
     ///
     /// The neighbors should also have a single component "xyz" with values `[0,
     /// 1, 2]`; and a single property "distance" with value 0.
@@ -149,10 +179,13 @@ public:
     /// Get the list of neighbors lists registered with this `System`
     std::vector<NeighborsListOptions> known_neighbors_lists() const;
 
-    /// Add custom data to this system, stored as TensorBlocks.
+    /// Add custom data to this system, stored as `TensorBlock`.
     ///
     /// This is intended for experimentation with models that need more data as
     /// input, and moved into a field of `SystemHolder` later.
+    ///
+    /// @param name name of the data
+    /// @param values values of the data
     void add_data(std::string name, TorchTensorBlock values);
 
     /// Retrieve custom data stored in this System, or throw an error.
@@ -171,6 +204,10 @@ private:
             }
         }
     };
+
+    torch::Tensor species_;
+    torch::Tensor positions_;
+    torch::Tensor cell_;
 
     std::map<NeighborsListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
     std::unordered_map<std::string, TorchTensorBlock> data_;

@@ -6,6 +6,8 @@
 #include "metatensor/torch/array.hpp"
 #include "metatensor/torch/block.hpp"
 
+#include "internal/scalar_type_name.hpp"
+
 using namespace metatensor_torch;
 
 
@@ -138,8 +140,8 @@ void TensorBlockHolder::add_gradient(const std::string& parameter, TorchTensorBl
     if (gradient->values().scalar_type() != this->values().scalar_type()) {
         C10_THROW_ERROR(TypeError,
             "the gradient and the original block must have the same dtype, "
-            "got " + std::string(c10::toString(gradient->values().scalar_type())) +
-            " and " + std::string(c10::toString(this->values().scalar_type()))
+            "got " + scalar_type_name(gradient->values().scalar_type()) +
+            " and " + scalar_type_name(this->values().scalar_type())
         );
     }
 

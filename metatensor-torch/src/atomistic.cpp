@@ -1,5 +1,7 @@
 #include <cctype>
 #include <cstring>
+
+#include <algorithm>
 #include <sstream>
 
 #include <torch/torch.h>
@@ -8,9 +10,9 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/atomistic.hpp"
+#include "internal/scalar_type_name.hpp"
 
 using namespace metatensor_torch;
-
 
 NeighborsListOptionsHolder::NeighborsListOptionsHolder(
     double model_cutoff,
@@ -111,73 +113,185 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
 
 // ========================================================================== //
 
-SystemHolder::SystemHolder(TorchTensorBlock positions_, TorchTensorBlock cell_):
-    positions(std::move(positions_)),
-    cell(std::move(cell_))
+static bool is_floating_point(torch::Dtype dtype) {
+    return dtype == torch::kF16 || dtype == torch::kF32 || dtype == torch::kF64;
+}
+
+SystemHolder::SystemHolder(torch::Tensor species, torch::Tensor positions, torch::Tensor cell):
+    species_(std::move(species)),
+    positions_(std::move(positions)),
+    cell_(std::move(cell))
 {
-    // check the positions
-    auto samples_names = positions->samples()->names();
-    if (samples_names.size() != 2 || samples_names[0] != "atom" || samples_names[1] != "species") {
+    if (positions_.device() != species_.device() || cell_.device() != species_.device()) {
         C10_THROW_ERROR(ValueError,
-            "invalid samples for `positions`: the samples names must be "
-            "'atom' and 'species'"
+            "`species`, `positions`, and `cell` must be on the same device, got " +
+            species_.device().str() + ", " + positions_.device().str() + ", and " +
+            cell_.device().str()
         );
     }
 
-    auto components = positions->components();
-    if (components.size() != 1 || *components[0] != metatensor::Labels({"xyz"}, {{0}, {1}, {2}})) {
+    if (species_.sizes().size() != 1) {
         C10_THROW_ERROR(ValueError,
-            "invalid components for `positions`: there should be a single 'xyz'=[0, 1, 2] component"
+            "`species` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(species_.sizes().size()) + " dimensions"
         );
     }
 
-    if (*positions->properties() != metatensor::Labels({"position"}, {{0}})) {
+    if (torch::canCast(species_.scalar_type(), torch::kInt32)) {
+        species_ = species_.to(torch::kInt32);
+    } else {
         C10_THROW_ERROR(ValueError,
-            "invalid properties for `positions`: there should be a single 'positions'=0 property"
+            "`species` must be a tensor of integers, got " +
+            scalar_type_name(species_.scalar_type()) + " instead"
         );
     }
 
-    if (!positions->gradients_list().empty()) {
-        C10_THROW_ERROR(ValueError, "`positions` should not have any gradients");
-    }
-
-    // check the cell
-    if (*cell->samples() != metatensor::Labels({"_"}, {{0}})) {
+    auto n_atoms = species_.size(0);
+    if (positions_.sizes().size() != 2) {
         C10_THROW_ERROR(ValueError,
-            "invalid samples for `cell`: there should be a single '_'=0 sample"
+            "`positions` must be a 2 dimensional tensor, got a tensor with " +
+            std::to_string(positions_.sizes().size()) + " dimensions"
         );
     }
 
-    components = cell->components();
-    if (components.size() != 2) {
+    if (positions_.size(0) != n_atoms || positions_.size(1) != 3) {
         C10_THROW_ERROR(ValueError,
-            "invalid components for `cell`: there should be 2 components, got "
-            + std::to_string(components.size())
+            "`positions` must be a (n_atoms x 3) tensor, got a tensor with shape [" +
+            std::to_string(positions_.size(0)) + ", " + std::to_string(positions_.size(1)) + "]"
         );
     }
 
-    if (*components[0] != metatensor::Labels({"cell_abc"}, {{0}, {1}, {2}})) {
+    if (!is_floating_point(positions_.scalar_type())) {
         C10_THROW_ERROR(ValueError,
-            "invalid components for `cell`: the first component should be 'cell_abc'=[0, 1, 2]"
+            "`positions` must be a tensor of floating point data, got " +
+            scalar_type_name(positions_.scalar_type()) + " instead"
         );
     }
 
-    if (*components[1] != metatensor::Labels({"xyz"}, {{0}, {1}, {2}})) {
+    if (cell_.sizes().size() != 2) {
         C10_THROW_ERROR(ValueError,
-            "invalid components for `cell`: the second component should be 'xyz'=[0, 1, 2]"
+            "`cell` must be a 2 dimensional tensor, got a tensor with " +
+            std::to_string(cell_.sizes().size()) + " dimensions"
         );
     }
 
-    if (*cell->properties() != metatensor::Labels({"cell"}, {{0}})) {
+    if (cell_.size(0) != 3 || cell_.size(1) != 3) {
         C10_THROW_ERROR(ValueError,
-            "invalid properties for `cell`: there should be a single 'cell'=0 property"
+            "`cell` must be a (3 x 3) tensor, got a tensor with shape [" +
+            std::to_string(cell_.size(0)) + ", " + std::to_string(cell_.size(1)) + "]"
         );
     }
 
-    if (!cell->gradients_list().empty()) {
-        C10_THROW_ERROR(ValueError, "`cell` should not have any gradients");
+    if (cell_.scalar_type() != positions_.scalar_type()) {
+        C10_THROW_ERROR(ValueError,
+            "`cell` must be have the same dtype as `positions`, got " +
+            scalar_type_name(cell_.scalar_type()) + " and " +
+            scalar_type_name(positions_.scalar_type())
+        );
     }
 }
+
+
+void SystemHolder::set_species(torch::Tensor species) {
+    if (species.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "new `species` must be on the same device as existing data, got " +
+            species.device().str() + " and " + this->device().str()
+        );
+    }
+
+    if (species.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "new `species` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(species.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (species.size(0) != this->size()) {
+        C10_THROW_ERROR(ValueError,
+            "new `species` must contain " + std::to_string(this->size()) + " entries, "
+            "got a tensor with " + std::to_string(species.size(0)) + " values"
+        );
+    }
+
+    if (torch::canCast(species.scalar_type(), torch::kInt32)) {
+        species = species.to(torch::kInt32);
+    } else {
+        C10_THROW_ERROR(ValueError,
+            "new `species` must be a tensor of integers, got " +
+            scalar_type_name(species.scalar_type()) + " instead"
+        );
+    }
+
+    this->species_ = std::move(species);
+}
+
+
+void SystemHolder::set_positions(torch::Tensor positions) {
+    if (positions.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "new `positions` must be on the same device as existing data, got " +
+            positions.device().str() + " and " + this->device().str()
+        );
+    }
+
+    if (positions.scalar_type() != this->scalar_type()) {
+        C10_THROW_ERROR(ValueError,
+            "new `positions` must have the same dtype as existing data, got " +
+            scalar_type_name(positions.scalar_type()) + " and " + scalar_type_name(this->scalar_type())
+        );
+    }
+
+    if (positions.sizes().size() != 2) {
+        C10_THROW_ERROR(ValueError,
+            "new `positions` must be a 2 dimensional tensor, got a tensor with " +
+            std::to_string(positions.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (positions.size(0) != this->size() || positions.size(1) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "new `positions` must be a (n_atoms x 3) tensor, got a tensor with shape [" +
+            std::to_string(positions.size(0)) + ", " + std::to_string(positions.size(1)) + "]"
+        );
+    }
+
+    this->positions_ = std::move(positions);
+}
+
+
+void SystemHolder::set_cell(torch::Tensor cell) {
+    if (cell.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "new `cell` must be on the same device as existing data, got " +
+            cell.device().str() + " and " + this->device().str()
+        );
+    }
+
+    if (cell.scalar_type() != this->scalar_type()) {
+        C10_THROW_ERROR(ValueError,
+            "new `cell` must have the same dtype as existing data, got " +
+            scalar_type_name(cell.scalar_type()) + " and " + scalar_type_name(this->scalar_type())
+        );
+    }
+
+    if (cell.sizes().size() != 2) {
+        C10_THROW_ERROR(ValueError,
+            "new `cell` must be a 2 dimensional tensor, got a tensor with " +
+            std::to_string(cell.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (cell.size(0) != 3 || cell.size(1) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "new `cell` must be a (3 x 3) tensor, got a tensor with shape [" +
+            std::to_string(cell.size(0)) + ", " + std::to_string(cell.size(1)) + "]"
+        );
+    }
+
+    this->cell_ = std::move(cell);
+}
+
 
 void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorBlock neighbors) {
     // check the structure of the NL
@@ -215,7 +329,22 @@ void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorB
         C10_THROW_ERROR(ValueError, "`neighbors` should not have any gradients");
     }
 
-    // actually add the neighbors lists
+    const auto& values = neighbors->values();
+    if (values.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "`neighbors` device (" + values.device().str() + ") does not match "
+            "this system's device (" + this->device().str() +")"
+        );
+    }
+
+    if (values.scalar_type() != this->scalar_type()) {
+        C10_THROW_ERROR(ValueError,
+            "`neighbors` dtype (" + scalar_type_name(neighbors->values().scalar_type()) +
+            ") does not match this system's dtype (" + scalar_type_name(this->scalar_type()) +")"
+        );
+    }
+
+    // actually add the neighbors list
     auto it = neighbors_.find(options);
     if (it != neighbors_.end()) {
         C10_THROW_ERROR(ValueError,
@@ -245,35 +374,97 @@ std::vector<NeighborsListOptions> SystemHolder::known_neighbors_lists() const {
     return result;
 }
 
+bool is_alpha_or_digit(char c) {
+    return (('0' <= c) && (c <= '9')) ||
+           (('a' <= c) && (c <= 'z')) ||
+           (('A' <= c) && (c <= 'Z'));
+}
+
+static bool valid_ident(const std::string& string) {
+    if (string.empty()) {
+        return false;
+    }
+
+    for (const auto c: string) {
+        if (!(is_alpha_or_digit(c) || c == '_' || c == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static std::string string_lower(const std::string& value) {
+    auto copy = value;
+    std::transform(copy.begin(), copy.end(), copy.begin(),
+        [](unsigned char c){ return std::tolower(c); }
+    );
+    return copy;
+}
+
+static auto INVALID_DATA_NAMES = std::unordered_set<std::string>{
+    "species",
+    "positions", "position",
+    "cell",
+    "neighbors", "neighbor"
+};
 
 void SystemHolder::add_data(std::string name, TorchTensorBlock values) {
-    if (name == "positions" || name == "cell" || name == "neighbors") {
-        C10_THROW_ERROR(ValueError, "custom data can not be 'positions', 'cell', or 'neighbors'");
+    if (!valid_ident(name)) {
+        C10_THROW_ERROR(ValueError,
+            "custom data name '" + name + "' is invalid: only [a-z A-Z 0-9 _-] are accepted"
+        );
+    }
+
+    if (INVALID_DATA_NAMES.find(string_lower(name)) != INVALID_DATA_NAMES.end()) {
+        C10_THROW_ERROR(ValueError,
+            "custom data can not be named '" + name + "'"
+        );
     }
 
     if (data_.find(name) != data_.end()) {
-        C10_THROW_ERROR(ValueError, "custom data for '" + name + "' is already present in this system");
+        C10_THROW_ERROR(ValueError,
+            "custom data '" + name + "' is already present in this system"
+        );
+    }
+
+    const auto& values_tensor = values->values();
+    if (values_tensor.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "device (" + values_tensor.device().str() + ") of the custom data "
+            "'" + name + "' does not match this system device (" + this->device().str() +")"
+        );
+    }
+
+    if (values_tensor.scalar_type() != this->scalar_type()) {
+        C10_THROW_ERROR(ValueError,
+            "dtype (" + scalar_type_name(values_tensor.scalar_type()) + ") of " +
+            "custom data '" + name + "' does not match this system " +
+            "dtype (" + scalar_type_name(this->scalar_type()) +")"
+        );
     }
 
     data_.emplace(std::move(name), std::move(values));
 }
 
 TorchTensorBlock SystemHolder::get_data(std::string name) const {
-    if (name == "positions") {
-        return positions;
-    } else if (name == "cell") {
-        return cell;
-    } else {
-        auto it = data_.find(name);
-        if (it == data_.end()) {
-            C10_THROW_ERROR(ValueError,
-                "no data for '" + name + "' found in this system"
-            );
-        }
-
-        TORCH_WARN_ONCE("custom data (", name,") is experimental, please contact the developers to add your data in the main API");
-        return it->second;
+    if (INVALID_DATA_NAMES.find(string_lower(name)) != INVALID_DATA_NAMES.end()) {
+        C10_THROW_ERROR(ValueError,
+            "custom data can not be named '" + name + "'"
+        );
     }
+
+    auto it = data_.find(name);
+    if (it == data_.end()) {
+        C10_THROW_ERROR(ValueError,
+            "no data for '" + name + "' found in this system"
+        );
+    }
+
+    TORCH_WARN_ONCE(
+        "custom data '", name, "' is experimental, please contact metatensor's ",
+        "developers to add this data as a member of the `System` class"
+    );
+    return it->second;
 }
 
 
