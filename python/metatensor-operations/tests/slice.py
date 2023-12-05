@@ -530,7 +530,7 @@ def test_slice_errors(tensor):
         "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.slice(tensor.block(0), axis="samples", labels=samples),
+        metatensor.slice(tensor.block(0), axis="samples", labels=samples)
 
     message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
@@ -553,7 +553,7 @@ def test_slice_block_errors(tensor):
         "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.slice_block(tensor, axis="samples", labels=samples),
+        metatensor.slice_block(tensor, axis="samples", labels=samples)
 
     block = tensor.block(0)
     message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"

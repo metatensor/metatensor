@@ -235,11 +235,11 @@ def test_split_errors():
 
     message = "axis must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.split(tensor, axis=3.14, grouped_labels=grouped_labels),
+        metatensor.split(tensor, axis=3.14, grouped_labels=grouped_labels)
 
     message = "axis must be either 'samples' or 'properties'"
     with pytest.raises(ValueError, match=message):
-        metatensor.split(tensor, axis="buongiorno!", grouped_labels=grouped_labels),
+        metatensor.split(tensor, axis="buongiorno!", grouped_labels=grouped_labels)
 
     message = (
         "`grouped_labels` must be a list, " "not <class 'metatensor.labels.Labels'>"
@@ -289,4 +289,4 @@ def test_split_errors():
         "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.split_block(tensor, axis="samples", grouped_labels=[]),
+        metatensor.split_block(tensor, axis="samples", grouped_labels=[])
