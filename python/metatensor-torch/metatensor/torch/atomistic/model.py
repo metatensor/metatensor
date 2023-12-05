@@ -64,7 +64,9 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
     The returned dictionary should have the same keys as ``outputs``, and the values
     should contains the corresponding properties of the ``systems``, as computed for the
-    subset of atoms defined in ``selected_atoms``.
+    subset of atoms defined in ``selected_atoms``. For some specific outputs, there are
+    additional constrains on how the associated metadata should look like, documented in
+    the :ref:`atomistic-models-outputs` section.
 
     Additionally, the wrapped ``module`` should not already be compiled by TorchScript,
     and should be in "eval" mode (i.e. ``module.training`` should be ``False``).
