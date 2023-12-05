@@ -180,7 +180,7 @@ class ModelOutput:
         quantity: str = "",
         unit: str = "",
         per_atom: bool = False,
-        forward_gradients: List[str] = [],  # noqa B006
+        explicit_gradients: List[str] = [],  # noqa B006
     ):
         ...
 
@@ -199,8 +199,11 @@ class ModelOutput:
     per_atom: bool
     """Is the output defined per-atom or for the overall structure"""
 
-    forward_gradients: List[str]
-    """Which gradients should be computed in forward mode"""
+    explicit_gradients: List[str]
+    """
+    Which gradients should be computed eagerly and stored inside the output
+    :py:class:`TensorMap`.
+    """
 
 
 class ModelCapabilities:
@@ -229,8 +232,11 @@ class ModelCapabilities:
     """
 
 
-class ModelRunOptions:
-    """Options requested by the simulation engine when running with a model"""
+class ModelEvaluationOptions:
+    """
+    Options requested by the simulation engine/evaluation code when doing a single model
+    evaluation.
+    """
 
     def __init__(
         self,

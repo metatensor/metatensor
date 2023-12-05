@@ -1,15 +1,15 @@
 import os
 import pathlib
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
 
 from .. import Labels, TensorBlock
 from . import (
-    MetatensorAtomisticModule,
+    MetatensorAtomisticModel,
+    ModelEvaluationOptions,
     ModelOutput,
-    ModelRunOptions,
     System,
     check_atomistic_model,
 )
@@ -26,7 +26,7 @@ from ase.calculators.calculator import (  # isort: skip
 
 
 # import here to get an error early if the user is missing metatensor-operations
-from .. import sum_over_samples_block  # isort: skip
+from .. import sum_over_samples  # isort: skip
 
 FilePath = Union[str, bytes, pathlib.PurePath]
 
@@ -37,8 +37,8 @@ class MetatensorCalculator(Calculator):
     metatensor atomistic models to compute energy, forces and any other supported
     property.
 
-    This class can be initialized with any `MetatensorAtomisticModule`, and used to run
-    simulations using ASE's MD facilities.
+    This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
+    used to run simulations using ASE's MD facilities.
     """
 
     def __init__(
@@ -46,13 +46,13 @@ class MetatensorCalculator(Calculator):
         model: Union[
             FilePath,
             torch.jit.RecursiveScriptModule,
-            MetatensorAtomisticModule,
+            MetatensorAtomisticModel,
         ],
         check_consistency=False,
     ):
         """
         :param model: model to use for the calculation. This can be a file path, or a
-            Python instance of :py:class:`MetatensorAtomisticModule`.
+            Python instance of :py:class:`MetatensorAtomisticModel`.
         :param check_consistency: should we check the model for consistency when
             running, defaults to False.
         """
@@ -65,13 +65,13 @@ class MetatensorCalculator(Calculator):
             check_atomistic_model(model)
             self._model = torch.jit.load(model)
         elif isinstance(model, torch.jit.RecursiveScriptModule):
-            if model.original_name != "MetatensorAtomisticModule":
+            if model.original_name != "MetatensorAtomisticModel":
                 raise InputError(
-                    "torch model must be 'MetatensorAtomisticModule', "
+                    "torch model must be 'MetatensorAtomisticModel', "
                     f"got '{model.original_name}' instead"
                 )
             self._model = model
-        elif isinstance(model, MetatensorAtomisticModule):
+        elif isinstance(model, MetatensorAtomisticModel):
             self._model = model
         else:
             raise TypeError(f"unknown type for model: {type(model)}")
@@ -97,7 +97,8 @@ class MetatensorCalculator(Calculator):
     def run_model(
         self,
         atoms: ase.Atoms,
-        run_options: ModelRunOptions,
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorBlock]:
         """
         Run the model on the given ``atoms``, computing properties according to the
@@ -119,9 +120,14 @@ class MetatensorCalculator(Calculator):
                 options, neighbors=_compute_ase_neighbors(atoms, options)
             )
 
+        options = ModelEvaluationOptions(
+            length_unit="angstrom",
+            outputs=outputs,
+            selected_atoms=selected_atoms,
+        )
         return self._model(
-            system,
-            run_options,
+            systems=[system],
+            options=options,
             check_consistency=self.parameters["check_consistency"],
         )
 
@@ -173,46 +179,47 @@ class MetatensorCalculator(Calculator):
                 options, neighbors=_compute_ase_neighbors(atoms, options)
             )
 
-        run_options = ModelRunOptions(
+        run_options = ModelEvaluationOptions(
             length_unit="angstrom",
             selected_atoms=None,
             outputs=outputs,
         )
 
         outputs = self._model(
-            system,
+            [system],
             run_options,
             check_consistency=self.parameters["check_consistency"],
         )
         energy = outputs["energy"]
 
         if run_options.outputs["energy"].per_atom:
-            assert energy.values.shape == (len(atoms), 1)
+            assert len(energy) == 1
+            assert energy.sample_names == ["structure", "atom"]
+            assert torch.all(energy.block().samples["structure"] == 0)
             assert torch.all(
-                energy.samples.values.reshape(-1) == torch.arange(positions.shape[0])
+                energy.block().samples["atom"] == torch.arange(positions.shape[0])
             )
-            energies = energy
-            energy = sum_over_samples_block(energy, sample_names=["atom", "species"])
-        else:
-            assert energy.values.shape == (1, 1)
+            energies = energy.block().values
+            assert energies.shape == (len(atoms), 1)
 
-        assert len(energy.gradients_list()) == 0
+            energy = sum_over_samples(energy, sample_names=["atom"])
+
+        assert len(energy.block().gradients_list()) == 0
+        energy = energy.block().values
+        assert energy.shape == (1, 1)
 
         self.results = {}
 
         if "energies" in properties:
             self.results["energies"] = (
-                energies.values.detach().to(device="cpu").numpy().reshape(-1)
+                energies.detach().to(device="cpu").numpy().reshape(-1)
             )
 
-        assert energy.values.shape == (1, 1)
         if "energy" in properties:
-            self.results["energy"] = (
-                energy.values.detach().to(device="cpu").numpy()[0, 0]
-            )
+            self.results["energy"] = energy.detach().to(device="cpu").numpy()[0, 0]
 
         if do_backward:
-            energy.values.backward(-torch.ones_like(energy.values))
+            energy.backward(-torch.ones_like(energy))
 
         if "forces" in properties:
             self.results["forces"] = (
@@ -239,7 +246,7 @@ def _ase_properties_to_metatensor_outputs(properties):
     output = ModelOutput()
     output.quantity = "energy"
     output.unit = "ev"
-    output.forward_gradients = []
+    output.explicit_gradients = []
 
     if "energies" in properties or "stresses" in properties:
         output.per_atom = True
@@ -247,7 +254,7 @@ def _ase_properties_to_metatensor_outputs(properties):
         output.per_atom = False
 
     if "stresses" in properties:
-        output.forward_gradients = ["cell"]
+        output.explicit_gradients = ["cell"]
 
     return {"energy": output}
 

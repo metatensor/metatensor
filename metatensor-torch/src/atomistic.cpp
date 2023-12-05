@@ -486,7 +486,7 @@ static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
     result["quantity"] = self.quantity;
     result["unit"] = self.unit;
     result["per_atom"] = self.per_atom;
-    result["forward_gradients"] = self.forward_gradients;
+    result["explicit_gradients"] = self.explicit_gradients;
 
     return result;
 }
@@ -530,16 +530,16 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
         result->per_atom = data["per_atom"];
     }
 
-    if (data.contains("forward_gradients")) {
-        if (!data["forward_gradients"].is_array()) {
-            throw std::runtime_error("'forward_gradients' in JSON for ModelOutput must be an array");
+    if (data.contains("explicit_gradients")) {
+        if (!data["explicit_gradients"].is_array()) {
+            throw std::runtime_error("'explicit_gradients' in JSON for ModelOutput must be an array");
         }
 
-        for (const auto& gradient: data["forward_gradients"]) {
+        for (const auto& gradient: data["explicit_gradients"]) {
             if (!gradient.is_string()) {
-                throw std::runtime_error("'forward_gradients' in JSON for ModelOutput must be an array of strings");
+                throw std::runtime_error("'explicit_gradients' in JSON for ModelOutput must be an array of strings");
             }
-            result->forward_gradients.emplace_back(gradient);
+            result->explicit_gradients.emplace_back(gradient);
         }
     }
 
@@ -618,10 +618,10 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
 }
 
 
-std::string ModelRunOptionsHolder::to_json() const {
+std::string ModelEvaluationOptionsHolder::to_json() const {
     nlohmann::json result;
 
-    result["type"] = "ModelRunOptions";
+    result["type"] = "ModelEvaluationOptions";
     result["length_unit"] = this->length_unit;
 
     if (this->selected_atoms) {
@@ -639,25 +639,25 @@ std::string ModelRunOptionsHolder::to_json() const {
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
-ModelRunOptions ModelRunOptionsHolder::from_json(const std::string& json) {
+ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string& json) {
     auto data = nlohmann::json::parse(json);
 
     if (!data.is_object()) {
-        throw std::runtime_error("invalid JSON data for ModelRunOptions, expected an object");
+        throw std::runtime_error("invalid JSON data for ModelEvaluationOptions, expected an object");
     }
 
     if (!data.contains("type") || !data["type"].is_string()) {
-        throw std::runtime_error("expected 'type' in JSON for ModelRunOptions, did not find it");
+        throw std::runtime_error("expected 'type' in JSON for ModelEvaluationOptions, did not find it");
     }
 
-    if (data["type"] != "ModelRunOptions") {
-        throw std::runtime_error("'type' in JSON for ModelRunOptions must be 'ModelRunOptions'");
+    if (data["type"] != "ModelEvaluationOptions") {
+        throw std::runtime_error("'type' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'");
     }
 
-    auto result = torch::make_intrusive<ModelRunOptionsHolder>();
+    auto result = torch::make_intrusive<ModelEvaluationOptionsHolder>();
     if (data.contains("length_unit")) {
         if (!data["length_unit"].is_string()) {
-            throw std::runtime_error("'length_unit' in JSON for ModelRunOptions must be a string");
+            throw std::runtime_error("'length_unit' in JSON for ModelEvaluationOptions must be a string");
         }
         result->length_unit = data["length_unit"];
     }
@@ -667,22 +667,35 @@ ModelRunOptions ModelRunOptionsHolder::from_json(const std::string& json) {
             // nothing to do
         } else {
             if (!data["selected_atoms"].is_array()) {
-                throw std::runtime_error("'selected_atoms' in JSON for ModelRunOptions must be an array");
+                throw std::runtime_error("'selected_atoms' in JSON for ModelEvaluationOptions must be an array");
             }
 
-            result->selected_atoms = std::vector<int64_t>();
-            for (const auto& atom: data["selected_atoms"]) {
-                if (!atom.is_number_integer()) {
-                    throw std::runtime_error("'selected_atoms' in JSON for ModelRunOptions must be an array of integers");
+            result->selected_atoms = std::vector<std::vector<int64_t>>();
+            for (const auto& selection_by_system: data["selected_atoms"]) {
+                if (!data["selected_atoms"].is_array()) {
+                    throw std::runtime_error(
+                        "'selected_atoms' in JSON for ModelEvaluationOptions must be an array of arrays"
+                    );
                 }
-                result->selected_atoms->emplace_back(atom.get<int64_t>());
+
+                auto selection = std::vector<int64_t>();
+                for (const auto& atom: selection_by_system) {
+                    if (!atom.is_number_integer()) {
+                        throw std::runtime_error(
+                            "'selected_atoms' in JSON for ModelEvaluationOptions must be an array of array of integers"
+                        );
+                    }
+                    selection.emplace_back(atom.get<int64_t>());
+                }
+
+                result->selected_atoms->emplace_back(std::move(selection));
             }
         }
     }
 
     if (data.contains("outputs")) {
         if (!data["outputs"].is_object()) {
-            throw std::runtime_error("'outputs' in JSON for ModelRunOptions must be an object");
+            throw std::runtime_error("'outputs' in JSON for ModelEvaluationOptions must be an object");
         }
 
         for (const auto& output: data["outputs"].items()) {

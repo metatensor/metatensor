@@ -1,15 +1,14 @@
 import zipfile
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pytest
 import torch
 
-from metatensor.torch import Labels, TensorBlock
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
-    MetatensorAtomisticModule,
+    MetatensorAtomisticModel,
     ModelCapabilities,
     ModelOutput,
-    ModelRunOptions,
     NeighborsListOptions,
     System,
     check_atomistic_model,
@@ -29,16 +28,20 @@ class MinimalModel(torch.nn.Module):
     """The simplest possible metatensor atomistic model"""
 
     def forward(
-        self, system: System, run_options: ModelRunOptions
-    ) -> Dict[str, TensorBlock]:
-        if "dummy" in run_options.outputs:
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[List[List[int]]] = None,
+    ) -> Dict[str, TensorMap]:
+        if "dummy" in outputs:
+            block = TensorBlock(
+                values=torch.tensor([[0.0]]),
+                samples=Labels("s", torch.IntTensor([[0]])),
+                components=[],
+                properties=Labels("p", torch.IntTensor([[0]])),
+            )
             return {
-                "dummy": TensorBlock(
-                    values=torch.tensor([[0.0]]),
-                    samples=Labels("s", torch.IntTensor([[0]])),
-                    components=[],
-                    properties=Labels("p", torch.IntTensor([[0]])),
-                )
+                "dummy": TensorMap(Labels("_", torch.IntTensor([[0]])), [block]),
             }
         else:
             return {}
@@ -64,12 +67,12 @@ def model():
                 quantity="",
                 unit="",
                 per_atom=False,
-                forward_gradients=[],
+                explicit_gradients=[],
             ),
         },
     )
 
-    return MetatensorAtomisticModule(model, capabilities)
+    return MetatensorAtomisticModel(model, capabilities)
 
 
 def test_export(model, tmpdir):

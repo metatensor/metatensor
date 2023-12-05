@@ -2,7 +2,11 @@ from typing import Dict, List, Optional
 
 import torch
 
-from metatensor.torch.atomistic import ModelCapabilities, ModelOutput, ModelRunOptions
+from metatensor.torch.atomistic import (
+    ModelCapabilities,
+    ModelEvaluationOptions,
+    ModelOutput,
+)
 
 
 class ModelOutputWrap:
@@ -27,11 +31,11 @@ class ModelOutputWrap:
     def set_per_atom(self, per_atom: bool):
         self._c.per_atom = per_atom
 
-    def get_forward_gradients(self) -> List[str]:
-        return self._c.forward_gradients
+    def get_explicit_gradients(self) -> List[str]:
+        return self._c.explicit_gradients
 
-    def set_forward_gradients(self, forward_gradients: List[str]):
-        self._c.forward_gradients = forward_gradients
+    def set_explicit_gradients(self, explicit_gradients: List[str]):
+        self._c.explicit_gradients = explicit_gradients
 
 
 def test_output():
@@ -78,9 +82,9 @@ def test_capabilities():
     module = torch.jit.script(module)
 
 
-class ModelRunOptionsWrap:
+class ModelEvaluationOptionsWrap:
     def __init__(self):
-        self._c = ModelRunOptions()
+        self._c = ModelEvaluationOptions()
 
     def get_length_unit(self) -> str:
         return self._c.length_unit
@@ -88,10 +92,10 @@ class ModelRunOptionsWrap:
     def set_length_unit(self, unit: str):
         self._c.length_unit = unit
 
-    def get_selected_atoms(self) -> Optional[List[int]]:
+    def get_selected_atoms(self) -> Optional[List[List[int]]]:
         return self._c.selected_atoms
 
-    def set_selected_atoms(self, selected_atoms: Optional[List[int]]):
+    def set_selected_atoms(self, selected_atoms: Optional[List[List[int]]]):
         self._c.selected_atoms = selected_atoms
 
     def get_outputs(self) -> Dict[str, ModelOutput]:
@@ -106,7 +110,7 @@ class ModelRunOptionsWrap:
 
 def test_run_options():
     class TestModule(torch.nn.Module):
-        def forward(self, x: ModelRunOptionsWrap) -> ModelRunOptionsWrap:
+        def forward(self, x: ModelEvaluationOptionsWrap) -> ModelEvaluationOptionsWrap:
             return x
 
     module = TestModule()

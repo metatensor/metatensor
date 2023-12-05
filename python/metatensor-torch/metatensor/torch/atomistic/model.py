@@ -9,14 +9,20 @@ from typing import Dict, List, Optional
 
 import torch
 
-from .. import TensorBlock, __version__
-from . import ModelCapabilities, ModelRunOptions, NeighborsListOptions, System
+from .. import TensorMap, __version__
+from . import (
+    ModelCapabilities,
+    ModelEvaluationOptions,
+    ModelOutput,
+    NeighborsListOptions,
+    System,
+)
 from .units import KNOWN_QUANTITIES, Quantity
 
 
-class MetatensorAtomisticModule(torch.nn.Module):
+class MetatensorAtomisticModel(torch.nn.Module):
     """
-    :py:class:`MetatensorAtomisticModule` is the main entry point for atomistic machine
+    :py:class:`MetatensorAtomisticModel` is the main entry point for atomistic machine
     learning based on metatensor. It is the interface between custom, user-defined
     models and simulation engines. Users should wrap their models with this class, and
     use :py:meth:`export()` to save and export the model to a file. The exported models
@@ -27,13 +33,13 @@ class MetatensorAtomisticModule(torch.nn.Module):
     :py:class:`ModelCapabilities`). This includes what units the model expects as input
     and what properties the model can compute (using :py:class:`ModelOutput`). The
     simulation engine will then ask the model to compute some subset of these properties
-    (through a :py:class:`metatensor.torch.atomistic.ModelRunOptions`), on all or a
-    subset of atoms of an atomistic system.
+    (through a :py:class:`metatensor.torch.atomistic.ModelEvaluationOptions`), on all or
+    a subset of atoms of an atomistic system.
 
     Additionally, the wrapped ``module`` can request neighbors list to be computed by
     the simulation engine, and stored inside the input :py:class:`System`. This is done
     by defining ``requested_neighbors_lists(self) -> List[NeighborsListOptions]`` on the
-    wrapped model or any of it's sub-module. :py:class:`MetatensorAtomisticModule` will
+    wrapped model or any of it's sub-module. :py:class:`MetatensorAtomisticModel` will
     unify identical requests before storing them and exposing it's own
     :py:meth:`requested_neighbors_lists()` that should be used by the engine to know
     what it needs to compute.
@@ -43,18 +49,22 @@ class MetatensorAtomisticModule(torch.nn.Module):
 
 
     >>> import torch
+    >>> from typing import List, Dict, Optional
     >>> from metatensor.torch import Labels, TensorBlock
-    >>> from metatensor.torch.atomistic import ModelRunOptions, System
-    >>> class CustomModule(torch.nn.Module):
+    >>> from metatensor.torch.atomistic import ModelOutput, System
+    >>> class CustomModel(torch.nn.Module):
     ...     def forward(
-    ...         self, system: System, run_option: ModelRunOptions
-    ...     ) -> Dict[str, TensorBlock]:
+    ...         self,
+    ...         systems: List[System],
+    ...         outputs: Dict[str, ModelOutput],
+    ...         selected_atoms: Optional[List[List[int]]] = None,
+    ...     ) -> Dict[str, TensorMap]:
     ...         ...
     ...
 
-    The returned dictionary should have the same keys as ``run_option.outputs``, and the
-    values should contains the corresponding properties of the ``system``, as computed
-    for the subset of atoms defined in ``run_options.selected_atoms``.
+    The returned dictionary should have the same keys as ``outputs``, and the values
+    should contains the corresponding properties of the ``systems``, as computed for the
+    subset of atoms defined in ``selected_atoms``.
 
     Additionally, the wrapped ``module`` should not already be compiled by TorchScript,
     and should be in "eval" mode (i.e. ``module.training`` should be ``False``).
@@ -68,34 +78,47 @@ class MetatensorAtomisticModule(torch.nn.Module):
     ...         self.constant = torch.tensor(constant).reshape(1, 1)
     ...
     ...     def forward(
-    ...         self, system: System, run_options: ModelRunOptions
-    ...     ) -> Dict[str, TensorBlock]:
-    ...         outputs: Dict[str, TensorBlock] = {}
-    ...         if "energy" in run_options.outputs:
-    ...             if run_options.outputs["energy"].per_atom:
+    ...         self,
+    ...         systems: List[System],
+    ...         outputs: Dict[str, ModelOutput],
+    ...         selected_atoms: Optional[List[List[int]]] = None,
+    ...     ) -> Dict[str, TensorMap]:
+    ...         results: Dict[str, TensorMap] = {}
+    ...         if "energy" in outputs:
+    ...             if outputs["energy"].per_atom:
     ...                 raise NotImplementedError("per atom energy is not implemented")
     ...
-    ...             selected_atoms = run_options.selected_atoms
-    ...             if selected_atoms is None:
-    ...                 n_atoms = len(system)
-    ...             else:
-    ...                 n_atoms = len(selected_atoms)
+    ...             dtype = systems[0].positions.dtype
+    ...             energies = torch.zeros(len(systems), 1, dtype=dtype)
+    ...             for i, system in enumerate(systems):
+    ...                 if selected_atoms is None:
+    ...                     n_atoms = len(system)
+    ...                 else:
+    ...                     n_atoms = len(selected_atoms)
     ...
-    ...             outputs["energy"] = TensorBlock(
-    ...                 values=self.constant * n_atoms,
-    ...                 samples=Labels(["_"], torch.IntTensor([[0]])),
+    ...                 energies[i] = self.constant * n_atoms
+    ...
+    ...             systems_idx = torch.tensor([[i] for i in range(len(systems))])
+    ...             energy_block = TensorBlock(
+    ...                 values=energies,
+    ...                 samples=Labels(["system"], systems_idx.to(torch.int32)),
     ...                 components=[],
     ...                 properties=Labels(["energy"], torch.IntTensor([[0]])),
     ...             )
     ...
-    ...         return outputs
+    ...             results["energy"] = TensorMap(
+    ...                 keys=Labels(["_"], torch.IntTensor([[0]])),
+    ...                 blocks=[energy_block],
+    ...             )
+    ...
+    ...         return results
     ...
 
     Wrapping and exporting this model would then look like this:
 
     >>> import os
     >>> import tempfile
-    >>> from metatensor.torch.atomistic import MetatensorAtomisticModule
+    >>> from metatensor.torch.atomistic import MetatensorAtomisticModel
     >>> from metatensor.torch.atomistic import ModelCapabilities, ModelOutput
     >>> model = ConstantEnergy(constant=3.141592)
     >>> # put the model in inference mode
@@ -109,12 +132,12 @@ class MetatensorAtomisticModule(torch.nn.Module):
     ...             quantity="energy",
     ...             unit="eV",
     ...             per_atom=False,
-    ...             forward_gradients=[],
+    ...             explicit_gradients=[],
     ...         ),
     ...     },
     ... )
     >>> # wrap the model
-    >>> wrapped = MetatensorAtomisticModule(model, capabilities)
+    >>> wrapped = MetatensorAtomisticModel(model, capabilities)
     >>> # export the model
     >>> with tempfile.TemporaryDirectory() as directory:
     ...     wrapped.export(os.path.join(directory, "constant-energy-model.pt"))
@@ -175,6 +198,10 @@ class MetatensorAtomisticModule(torch.nn.Module):
             quantity = self._known_quantities[output.quantity]
             quantity.check_unit(output.unit)
 
+    def wrapped_module(self) -> torch.nn.Module:
+        """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
+        return self._module
+
     @torch.jit.export
     def capabilities(self) -> ModelCapabilities:
         """Get the capabilities of the wrapped model"""
@@ -206,10 +233,10 @@ class MetatensorAtomisticModule(torch.nn.Module):
 
     def forward(
         self,
-        system: System,
-        run_options: ModelRunOptions,
+        systems: List[System],
+        options: ModelEvaluationOptions,
         check_consistency: bool,
-    ) -> Dict[str, TensorBlock]:
+    ) -> Dict[str, TensorMap]:
         """Run the wrapped model and return the corresponding outputs.
 
         Before running the model, this will convert the ``system`` data from the engine
@@ -221,7 +248,7 @@ class MetatensorAtomisticModule(torch.nn.Module):
         :param system: input system on which we should run the model. The system should
             already contain all neighbors lists corresponding to the options in
             :py:meth:`requested_neighbors_lists()`.
-        :param run_options: _description_
+        :param options: options for this run of the model
         :param check_consistency: Should we run additional check that everything is
             consistent? This should be set to ``True`` when verifying a model, and to
             ``False`` once you are sure everything is running fine.
@@ -231,54 +258,60 @@ class MetatensorAtomisticModule(torch.nn.Module):
 
         if check_consistency:
             # check that the requested outputs match what the model can do
-            _check_outputs(self._capabilities, run_options)
+            _check_outputs(self._capabilities, options.outputs)
 
             # check that the species of the system match the one the model supports
-            all_species = torch.unique(system.species)
-            for species in all_species:
-                if species not in self._capabilities.species:
-                    raise ValueError(
-                        f"this model can not run for the atomic species '{species}'"
-                    )
+            for system in systems:
+                all_species = torch.unique(system.species)
+                for species in all_species:
+                    if species not in self._capabilities.species:
+                        raise ValueError(
+                            f"this model can not run for the atomic species '{species}'"
+                        )
 
-            # Check neighbors lists
-            known_neighbors_lists = system.known_neighbors_lists()
-            for request in self._requested_neighbors_lists:
-                found = False
-                for known in known_neighbors_lists:
-                    if request == known:
-                        found = True
+                # Check neighbors lists
+                known_neighbors_lists = system.known_neighbors_lists()
+                for request in self._requested_neighbors_lists:
+                    found = False
+                    for known in known_neighbors_lists:
+                        if request == known:
+                            found = True
 
-                if not found:
-                    raise ValueError(
-                        "missing neighbors list in the system: the model requested a "
-                        f"list for {request}, but it was not computed and stored in "
-                        "the system"
-                    )
+                    if not found:
+                        raise ValueError(
+                            "missing neighbors list in the system: the model requested "
+                            f"a list for {request}, but it was not computed and stored "
+                            "in the system"
+                        )
 
         # convert systems from engine to model units
-        if self._capabilities.length_unit != run_options.length_unit:
+        if self._capabilities.length_unit != options.length_unit:
             length = self._known_quantities["length"]
             conversion = length.conversion(
-                from_unit=run_options.length_unit,
+                from_unit=options.length_unit,
                 to_unit=self._capabilities.length_unit,
             )
 
-            system.positions[:] *= conversion
-            system.cell[:] *= conversion
+            for system in systems:
+                system.positions[:] *= conversion
+                system.cell[:] *= conversion
 
-            # also update the neighbors list distances
-            for options in self._requested_neighbors_lists:
-                neighbors = system.get_neighbors_list(options)
-                neighbors.values[:] *= conversion
+                # also update the neighbors list distances
+                for request in self._requested_neighbors_lists:
+                    neighbors = system.get_neighbors_list(request)
+                    neighbors.values[:] *= conversion
 
         # run the actual calculations
-        outputs = self._module(system=system, run_options=run_options)
+        outputs = self._module(
+            systems=systems,
+            outputs=options.outputs,
+            selected_atoms=options.selected_atoms,
+        )
 
         # convert outputs from model to engine units
         for name, output in outputs.items():
             declared = self._capabilities.outputs[name]
-            requested = run_options.outputs[name]
+            requested = options.outputs[name]
             if declared.quantity == "" or requested.quantity == "":
                 continue
 
@@ -289,9 +322,14 @@ class MetatensorAtomisticModule(torch.nn.Module):
                 )
 
             quantity = self._known_quantities[declared.quantity]
-            output.values[:] *= quantity.conversion(
+            conversion = quantity.conversion(
                 from_unit=declared.unit, to_unit=requested.unit
             )
+
+            for block in output.blocks():
+                block.values[:] *= conversion
+                for _, gradient in block.gradients():
+                    gradient.values[:] *= conversion
 
         return outputs
 
@@ -412,14 +450,18 @@ def _check_annotation(module: torch.nn.Module):
     # check annotations on forward
     annotations = module.forward.__annotations__
     expected_arguments = [
-        "system",
-        "run_options",
+        "systems",
+        "outputs",
+        "selected_atoms",
         "return",
     ]
 
     expected_signature = (
-        "`forward(self, system: System, run_options: ModelRunOptions) -> "
-        "Dict[str, TensorBlock]`"
+        "`forward(self, "
+        "systems: List[System], "
+        "outputs: Dict[str, ModelOutput], "
+        "selected_atoms: Optional[List[List[int]]]"
+        ") -> Dict[str, TensorMap]`"
     )
 
     if list(annotations.keys()) != expected_arguments:
@@ -428,27 +470,33 @@ def _check_annotation(module: torch.nn.Module):
             + expected_signature
         )
 
-    if annotations["system"] != System:
+    if annotations["systems"] != List[System]:
         raise TypeError(
-            "`system` argument must be a metatensor atomistic `System`, "
+            "`systems` argument must be a list of metatensor atomistic `System`, "
             f"not {annotations['system']}"
         )
 
-    if annotations["run_options"] != ModelRunOptions:
+    if annotations["outputs"] != Dict[str, ModelOutput]:
         raise TypeError(
-            "`run_options` argument must be a metatensor atomistic `ModelRunOptions`, "
-            f"not {annotations['run_options']}"
+            "`outputs` argument must be `Dict[str, ModelOutput]`, "
+            f"not {annotations['outputs']}"
         )
 
-    if annotations["return"] != Dict[str, TensorBlock]:
+    if annotations["selected_atoms"] != Optional[List[List[int]]]:
         raise TypeError(
-            "`forward()` must return a `Dict[str, TensorBlock]`, "
+            "`selected_atoms` argument must be `Optional[List[List[int]]]`, "
+            f"not {annotations['selected_atoms']}"
+        )
+
+    if annotations["return"] != Dict[str, TensorMap]:
+        raise TypeError(
+            "`forward()` must return a `Dict[str, TensorMap]`, "
             f"not {annotations['return']}"
         )
 
 
-def _check_outputs(capabilities: ModelCapabilities, run_options: ModelRunOptions):
-    for name, requested in run_options.outputs.items():
+def _check_outputs(capabilities: ModelCapabilities, outputs: Dict[str, ModelOutput]):
+    for name, requested in outputs.items():
         if name not in capabilities.outputs:
             raise ValueError(
                 f"this model can not compute '{name}', the implemented "
@@ -457,11 +505,11 @@ def _check_outputs(capabilities: ModelCapabilities, run_options: ModelRunOptions
 
         possible = capabilities.outputs[name]
 
-        for parameter in requested.forward_gradients:
-            if parameter not in possible.forward_gradients:
+        for parameter in requested.explicit_gradients:
+            if parameter not in possible.explicit_gradients:
                 raise ValueError(
-                    f"this model can not compute gradients of '{name}' with respect to "
-                    f"'{parameter}' in forward mode"
+                    f"this model can not compute explicit gradients of '{name}' "
+                    f"with respect to '{parameter}'"
                 )
 
         if requested.per_atom and not possible.per_atom:

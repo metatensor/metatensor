@@ -285,13 +285,13 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("quantity") = "",
                 torch::arg("unit") = "",
                 torch::arg("per_atom") = false,
-                torch::arg("forward_gradients") = std::vector<std::string>()
+                torch::arg("explicit_gradients") = std::vector<std::string>()
             }
         )
         .def_readwrite("quantity", &ModelOutputHolder::quantity)
         .def_readwrite("unit", &ModelOutputHolder::unit)
         .def_readwrite("per_atom", &ModelOutputHolder::per_atom)
-        .def_readwrite("forward_gradients", &ModelOutputHolder::forward_gradients)
+        .def_readwrite("explicit_gradients", &ModelOutputHolder::explicit_gradients)
         .def_pickle(
             [](const ModelOutput& self) -> std::string {
                 return self->to_json();
@@ -324,24 +324,28 @@ TORCH_LIBRARY(metatensor, m) {
         )
         ;
 
-    m.class_<ModelRunOptionsHolder>("ModelRunOptions")
+    m.class_<ModelEvaluationOptionsHolder>("ModelEvaluationOptions")
         .def(
-            torch::init<std::string, torch::optional<std::vector<int64_t>>, torch::Dict<std::string, ModelOutput>>(),
+            torch::init<
+                std::string,
+                torch::Dict<std::string, ModelOutput>,
+                torch::optional<std::vector<std::vector<int64_t>>>
+            >(),
             DOCSTRING, {
                 torch::arg("length_unit") = "",
-                torch::arg("selected_atoms") = torch::nullopt,
                 torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
+                torch::arg("selected_atoms") = torch::nullopt,
             }
         )
-        .def_readwrite("length_unit", &ModelRunOptionsHolder::length_unit)
-        .def_readwrite("selected_atoms", &ModelRunOptionsHolder::selected_atoms)
-        .def_readwrite("outputs", &ModelRunOptionsHolder::outputs)
+        .def_readwrite("length_unit", &ModelEvaluationOptionsHolder::length_unit)
+        .def_readwrite("selected_atoms", &ModelEvaluationOptionsHolder::selected_atoms)
+        .def_readwrite("outputs", &ModelEvaluationOptionsHolder::outputs)
         .def_pickle(
-            [](const ModelRunOptions& self) -> std::string {
+            [](const ModelEvaluationOptions& self) -> std::string {
                 return self->to_json();
             },
-            [](const std::string& data) -> ModelRunOptions {
-                return ModelRunOptionsHolder::from_json(data);
+            [](const std::string& data) -> ModelEvaluationOptions {
+                return ModelEvaluationOptionsHolder::from_json(data);
             }
         )
         ;
