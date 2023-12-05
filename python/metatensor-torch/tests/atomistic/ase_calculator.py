@@ -51,11 +51,6 @@ class LennardJones(torch.nn.Module):
             # TODO: add selected_atoms
             raise NotImplementedError("selected atoms is not yet implemented")
 
-        assert torch.all(
-            system.positions.samples.column("atom")
-            == torch.arange(system.positions.values.shape[0])
-        )
-
         neighbors = system.get_neighbors_list(self._nl_options)
         all_i = neighbors.samples.column("first_atom")
         all_j = neighbors.samples.column("second_atom")
@@ -63,9 +58,9 @@ class LennardJones(torch.nn.Module):
             ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
         ).values
 
-        species = system.positions.samples.column("species")
-        cell = system.cell.values.reshape(3, 3)
-        positions = system.positions.values.reshape(-1, 3)
+        species = system.species
+        cell = system.cell
+        positions = system.positions
 
         per_atoms = run_options.outputs["energy"].per_atom
         if per_atoms:
@@ -100,10 +95,14 @@ class LennardJones(torch.nn.Module):
                 energy[0] += e
 
         if per_atoms:
+            samples = Labels(
+                ["atom"],
+                torch.arange(positions.shape[0], dtype=torch.int32).reshape(-1, 1),
+            )
             return {
                 "energy": TensorBlock(
                     values=energy.reshape(-1, 1),
-                    samples=system.positions.samples,
+                    samples=samples,
                     components=[],
                     properties=Labels(["energy"], torch.IntTensor([[0]])),
                 )

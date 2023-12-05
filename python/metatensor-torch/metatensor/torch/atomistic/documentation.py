@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional
 
+import torch
+
 from ..documentation import TensorBlock
 
 
@@ -9,38 +11,45 @@ class System:
     be used as the input of metatensor atomistic models.
     """
 
-    positions: TensorBlock
-    """
-    Positions and types/species of of the atoms in the system.
+    def __init__(
+        self,
+        species: torch.Tensor,
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+    ):
+        """
+        Create a :py:class:`System` with the given ``species``, ``positions`` and
+        ``cell``.
 
-    This block must have two samples names ``"atom"`` and ``"species"``, where
-    ``"atom"`` is the index of the atom in the system; and ``"species"`` is the atomic
-    species (typically --- but not limited to --- the atomic number).
+        :param species: 1D tensor of integer representing the particles identity.
+            For atoms, this is typically their atomic numbers.
 
-    The block must have a single component ``"xyz"`` with values ``[0, 1, 2]``; and a
-    single property ``"position"`` with value 0.
+        :param positions: 2D tensor of shape (len(species), 3) containing the Cartesian
+            positions of all particles in the system.
 
-    The :py:class:`TensorBlock` values must contain the cartesian coordinates of the
-    atoms in the system that the model should know about (typically all atoms, but this
-    can be a subset of atoms, e.g. when using domain decomposition).
-    """
-
-    cell: TensorBlock
-    """
-    Unit cell/bounding box of the system. Non-periodic system should set all the values
-    to 0.
-
-    This block must have a single sample ``"_"`` with value 0; two components
-    ``"cell_abc"`` and ``"xyz"`` both with values ``[0, 1, 2]``; and a single property
-    ``"cell"`` with value 0. The values of the :py:class:`TensorBlock` then correspond
-    to to the matrix of the cell vectors, in row-major order.
-    """
-
-    def __init__(self, positions: TensorBlock, cell: TensorBlock):
-        ...
+        :param cell: 2D tensor of shape (3, 3), describing the bounding box/unit cell of
+            the system. Each row should be one of the bounding box vector; and columns
+            should contain the x, y, and z components of these vectors (i.e. the cell
+            should be given in row-major order). Systems are assumed to obey periodic
+            boundary conditions, non-periodic systems should set the cell to 0.
+        """
 
     def __len__(self) -> int:
         ...
+
+    @property
+    def species(self) -> torch.Tensor:
+        """Tensor of 32-bit integers representing the particles identity"""
+
+    @property
+    def positions(self) -> torch.Tensor:
+        """
+        Tensor of floating point values containing the particles cartesian coordinates
+        """
+
+    @property
+    def cell(self) -> torch.Tensor:
+        """Tensor of floating point values containing bounding box/cell of the system"""
 
     def add_neighbors_list(
         self,

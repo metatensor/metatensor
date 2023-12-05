@@ -110,8 +110,8 @@ class MetatensorCalculator(Calculator):
         :py:class:`ase.Atoms` when the model can predict properties not supported by the
         usual ASE's calculator interface.
         """
-        positions, cell = _ase_to_torch_data(atoms)
-        system = _torch_data_to_metatensor(atoms, positions, cell)
+        species, positions, cell = _ase_to_torch_data(atoms)
+        system = System(species, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
         for options in self._model.requested_neighbors_lists():
@@ -146,7 +146,7 @@ class MetatensorCalculator(Calculator):
         )
 
         outputs = _ase_properties_to_metatensor_outputs(properties)
-        positions, cell = _ase_to_torch_data(atoms)
+        species, positions, cell = _ase_to_torch_data(atoms)
 
         do_backward = False
         if "forces" in properties:
@@ -158,18 +158,16 @@ class MetatensorCalculator(Calculator):
 
             scaling = torch.eye(3, requires_grad=True, dtype=cell.dtype)
 
-            positions = positions.reshape(-1, 3) @ scaling
-            positions = positions.reshape(-1, 3, 1)
+            positions = positions @ scaling
             positions.retain_grad()
 
-            cell = cell.reshape(3, 3) @ scaling
-            cell = cell.reshape(1, 3, 3, 1)
+            cell = cell @ scaling
 
         if "stresses" in properties:
             raise NotImplementedError("'stresses' are not implemented yet")
 
         # convert from ase.Atoms to metatensor.torch.atomistic.System
-        system = _torch_data_to_metatensor(atoms, positions, cell)
+        system = System(species, positions, cell)
         for options in self._model.requested_neighbors_lists():
             system.add_neighbors_list(
                 options, neighbors=_compute_ase_neighbors(atoms, options)
@@ -190,7 +188,9 @@ class MetatensorCalculator(Calculator):
 
         if run_options.outputs["energy"].per_atom:
             assert energy.values.shape == (len(atoms), 1)
-            assert energy.samples == system.positions.samples
+            assert torch.all(
+                energy.samples.values.reshape(-1) == torch.arange(positions.shape[0])
+            )
             energies = energy
             energy = sum_over_samples_block(energy, sample_names=["atom", "species"])
         else:
@@ -216,7 +216,7 @@ class MetatensorCalculator(Calculator):
 
         if "forces" in properties:
             self.results["forces"] = (
-                system.positions.values.grad.to(device="cpu").numpy().reshape(-1, 3)
+                system.positions.grad.to(device="cpu").numpy().reshape(-1, 3)
             )
 
         if "stress" in properties:
@@ -305,10 +305,11 @@ def _compute_ase_neighbors(atoms, options):
 def _ase_to_torch_data(atoms):
     """Get the positions and cell from ASE atoms as torch tensors"""
 
-    positions = torch.from_numpy(atoms.positions).reshape(-1, 3, 1)
+    species = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
+    positions = torch.from_numpy(atoms.positions)
 
     if np.all(atoms.pbc):
-        cell = torch.from_numpy(atoms.cell[:]).reshape(1, 3, 3, 1)
+        cell = torch.from_numpy(atoms.cell[:])
     elif np.any(atoms.pbc):
         raise ValueError(
             f"partial PBC ({atoms.pbc}) are not currently supported in "
@@ -317,32 +318,4 @@ def _ase_to_torch_data(atoms):
     else:
         cell = torch.zeros((3, 3), dtype=torch.float64)
 
-    return positions, cell
-
-
-def _torch_data_to_metatensor(atoms, positions, cell):
-    """
-    Finish creating a ``System`` from ASE data. ``positions`` and ``cell`` should be
-    created with ``_ase_to_torch_data()``.
-
-    This is split into two different functions to allow modification of the
-    positions/cell before constructing the full system.
-    """
-    positions = TensorBlock(
-        values=positions,
-        samples=Labels(
-            ["atom", "species"],
-            torch.IntTensor([(i, s) for i, s in enumerate(atoms.numbers)]),
-        ),
-        components=[Labels.range("xyz", 3)],
-        properties=Labels.range("position", 1),
-    )
-
-    cell = TensorBlock(
-        values=cell.reshape(1, 3, 3, 1),
-        samples=Labels.single(),
-        components=[Labels.range("cell_abc", 3), Labels.range("xyz", 3)],
-        properties=Labels.range("cell", 1),
-    )
-
-    return System(positions, cell)
+    return species, positions, cell

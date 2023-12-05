@@ -1,6 +1,3 @@
-#include <iomanip>
-#include <sstream>
-
 #include <torch/script.h>
 
 #include "metatensor/torch/labels.hpp"
@@ -257,11 +254,12 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<SystemHolder>("System")
         .def(
-            torch::init<TorchTensorBlock, TorchTensorBlock>(), DOCSTRING,
-            {torch::arg("positions"), torch::arg("cell")}
+            torch::init<torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
+            {torch::arg("species"), torch::arg("positions"), torch::arg("cell")}
         )
-        .def_readwrite("positions", &SystemHolder::positions)
-        .def_readwrite("cell", &SystemHolder::cell)
+        .def_property("species", &SystemHolder::species, &SystemHolder::set_species)
+        .def_property("positions", &SystemHolder::positions, &SystemHolder::set_positions)
+        .def_property("cell", &SystemHolder::cell, &SystemHolder::set_cell)
         .def("__len__", &SystemHolder::size)
         .def("add_neighbors_list", &SystemHolder::add_neighbors_list, DOCSTRING,
             {torch::arg("options"), torch::arg("neighbors")}

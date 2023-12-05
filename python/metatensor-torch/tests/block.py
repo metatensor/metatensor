@@ -251,11 +251,11 @@ def test_different_device():
 
 
 def test_different_dtype_gradient():
-    with pytest.raises(
-        TypeError,
-        match="the gradient and the original block must "
-        "have the same dtype, got Half and Float",
-    ):
+    message = (
+        "the gradient and the original block must have the same dtype, "
+        "got torch.float16 and torch.float32"
+    )
+    with pytest.raises(TypeError, match=message):
         block = TensorBlock(
             values=torch.tensor([[[3.0, 4.0]]]),
             samples=Labels.range("samples", 1),
