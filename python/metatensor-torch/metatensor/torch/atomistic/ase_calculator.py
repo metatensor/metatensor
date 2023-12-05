@@ -181,8 +181,8 @@ class MetatensorCalculator(Calculator):
 
         run_options = ModelEvaluationOptions(
             length_unit="angstrom",
-            selected_atoms=None,
             outputs=outputs,
+            selected_atoms=None,
         )
 
         outputs = self._model(

@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
+from metatensor.torch import Labels
 from metatensor.torch.atomistic import (
     ModelCapabilities,
     ModelEvaluationOptions,
@@ -92,10 +93,10 @@ class ModelEvaluationOptionsWrap:
     def set_length_unit(self, unit: str):
         self._c.length_unit = unit
 
-    def get_selected_atoms(self) -> Optional[List[List[int]]]:
+    def get_selected_atoms(self) -> Optional[Labels]:
         return self._c.selected_atoms
 
-    def set_selected_atoms(self, selected_atoms: Optional[List[List[int]]]):
+    def set_selected_atoms(self, selected_atoms: Optional[Labels]):
         self._c.selected_atoms = selected_atoms
 
     def get_outputs(self) -> Dict[str, ModelOutput]:

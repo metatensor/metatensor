@@ -329,7 +329,7 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init<
                 std::string,
                 torch::Dict<std::string, ModelOutput>,
-                torch::optional<std::vector<std::vector<int64_t>>>
+                torch::optional<TorchLabels>
             >(),
             DOCSTRING, {
                 torch::arg("length_unit") = "",
@@ -338,8 +338,11 @@ TORCH_LIBRARY(metatensor, m) {
             }
         )
         .def_readwrite("length_unit", &ModelEvaluationOptionsHolder::length_unit)
-        .def_readwrite("selected_atoms", &ModelEvaluationOptionsHolder::selected_atoms)
         .def_readwrite("outputs", &ModelEvaluationOptionsHolder::outputs)
+        .def_property("selected_atoms",
+            &ModelEvaluationOptionsHolder::get_selected_atoms,
+            &ModelEvaluationOptionsHolder::set_selected_atoms
+        )
         .def_pickle(
             [](const ModelEvaluationOptions& self) -> std::string {
                 return self->to_json();

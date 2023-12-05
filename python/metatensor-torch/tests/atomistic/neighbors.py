@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 import torch
 from packaging import version
 
-from metatensor.torch import TensorMap
+from metatensor.torch import Labels, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
@@ -55,7 +55,7 @@ class ExampleModule(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[List[List[int]]],
+        selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
         return {}
 
@@ -71,7 +71,7 @@ class OtherModule(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[List[List[int]]],
+        selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
         return {}
 
@@ -90,7 +90,7 @@ class FullModel(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[List[List[int]]],
+        selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
         result = self.first(systems, outputs, selected_atoms)
         result.update(self.second(systems, outputs, selected_atoms))

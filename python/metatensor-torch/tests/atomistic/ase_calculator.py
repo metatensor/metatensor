@@ -44,7 +44,7 @@ class LennardJones(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[List[List[int]]] = None,
+        selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
         if "energy" not in outputs:
             return {}

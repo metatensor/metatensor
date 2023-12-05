@@ -125,14 +125,20 @@ TEST_CASE("Models metadata") {
             "type": "ModelOutput"
         }
     },
-    "selected_atoms": [[1, 2, 3], [4, 5]],
+    "selected_atoms": {
+        "names": ["system", "atom"],
+        "values": [0, 1, 4, 5]
+    },
     "type": "ModelEvaluationOptions"
 })";
 
         options = ModelEvaluationOptionsHolder::from_json(json);
         CHECK(options->length_unit == "very large");
-        auto expected_selection = std::vector<std::vector<int64_t>>{{1, 2, 3}, {4, 5}};
-        CHECK(options->selected_atoms == expected_selection);
+        auto expected_selection = LabelsHolder::create(
+            {"system", "atom"},
+            {{0, 1}, {4, 5}}
+        );
+        CHECK(*options->get_selected_atoms().value() == *expected_selection);
 
         output = options->outputs.at("foo");
         CHECK(output->quantity.empty());

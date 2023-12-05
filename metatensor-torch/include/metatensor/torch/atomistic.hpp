@@ -311,14 +311,10 @@ public:
 
     /// Initialize `ModelEvaluationOptions` with the given data
     ModelEvaluationOptionsHolder(
-        std::string length_unit_,
-        torch::Dict<std::string, ModelOutput> outputs_,
-        torch::optional<std::vector<std::vector<int64_t>>> selected_atoms_
-    ):
-        length_unit(std::move(length_unit_)),
-        outputs(outputs_),
-        selected_atoms(std::move(selected_atoms_))
-    {}
+        std::string length_unit,
+        torch::Dict<std::string, ModelOutput> outputs,
+        torch::optional<TorchLabels> selected_atoms
+    );
 
     ~ModelEvaluationOptionsHolder() override = default;
 
@@ -328,14 +324,24 @@ public:
     /// requested outputs for this run and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;
 
-    /// only run the calculation for a selected subset of atoms. If this is set
-    /// to `None`, run the calculation on all atoms
-    torch::optional<std::vector<std::vector<int64_t>>> selected_atoms = torch::nullopt;
+    /// Only run the calculation for a selected subset of atoms. If this is set
+    /// to `None`, run the calculation on all atoms. If this is a set of
+    /// `Labels`, it will have two dimensions named `"system"` and `"atom"`,
+    /// containing the 0-based indices of all the atoms in the selected subset.
+    torch::optional<TorchLabels> get_selected_atoms() const {
+        return selected_atoms_;
+    }
+
+    /// Setter for `selected_atoms`
+    void set_selected_atoms(torch::optional<TorchLabels> selected_atoms);
 
     /// Serialize a `ModelEvaluationOptions` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelEvaluationOptions` from a JSON string.
     static ModelEvaluationOptions from_json(const std::string& json);
+
+private:
+    torch::optional<TorchLabels> selected_atoms_ = torch::nullopt;
 };
 
 /// Check the exported metatensor atomistic model at the given `path`, and

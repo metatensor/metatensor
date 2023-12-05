@@ -618,14 +618,62 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
 }
 
 
+static void check_selected_atoms(const torch::optional<TorchLabels>& selected_atoms) {
+    if (selected_atoms) {
+        if (selected_atoms.value()->names() != std::vector<std::string>{"system", "atom"}) {
+            std::ostringstream oss;
+            oss << '[';
+            for (const auto& name: selected_atoms.value()->names()) {
+                oss << '\'' << name << "', ";
+            }
+            oss << ']';
+
+            C10_THROW_ERROR(ValueError,
+                "invalid `selected_atoms` names: expected ['system', 'atom'], "
+                "got " + oss.str()
+            );
+        }
+    }
+}
+
+ModelEvaluationOptionsHolder::ModelEvaluationOptionsHolder(
+    std::string length_unit_,
+    torch::Dict<std::string, ModelOutput> outputs_,
+    torch::optional<TorchLabels> selected_atoms
+):
+    length_unit(std::move(length_unit_)),
+    outputs(outputs_),
+    selected_atoms_(std::move(selected_atoms))
+{
+    check_selected_atoms(selected_atoms_);
+}
+
+
+void ModelEvaluationOptionsHolder::set_selected_atoms(torch::optional<TorchLabels> selected_atoms) {
+    check_selected_atoms(selected_atoms);
+    selected_atoms_ = std::move(selected_atoms);
+}
+
+
 std::string ModelEvaluationOptionsHolder::to_json() const {
     nlohmann::json result;
 
     result["type"] = "ModelEvaluationOptions";
     result["length_unit"] = this->length_unit;
 
-    if (this->selected_atoms) {
-        result["selected_atoms"] = this->selected_atoms.value();
+    if (this->selected_atoms_) {
+        const auto& selected_atoms = this->selected_atoms_.value();
+
+        auto selected_json = nlohmann::json::object();
+        selected_json["names"] = selected_atoms->names();
+        auto values = selected_atoms->values().to(torch::kCPU).contiguous();
+        auto size = static_cast<size_t>(selected_atoms->size() * selected_atoms->count());
+        selected_json["values"] = std::vector<int32_t>(
+            values.data_ptr<int32_t>(),
+            values.data_ptr<int32_t>() + size
+        );
+
+        result["selected_atoms"] = std::move(selected_json);
     } else {
         result["selected_atoms"] = nlohmann::json();
     }
@@ -666,30 +714,44 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string
         if (data["selected_atoms"].is_null()) {
             // nothing to do
         } else {
-            if (!data["selected_atoms"].is_array()) {
-                throw std::runtime_error("'selected_atoms' in JSON for ModelEvaluationOptions must be an array");
+            if (!data["selected_atoms"].is_object()) {
+                throw std::runtime_error("'selected_atoms' in JSON for ModelEvaluationOptions must be an object");
             }
 
-            result->selected_atoms = std::vector<std::vector<int64_t>>();
-            for (const auto& selection_by_system: data["selected_atoms"]) {
-                if (!data["selected_atoms"].is_array()) {
+            if (!data["selected_atoms"].contains("names") || !data["selected_atoms"]["names"].is_array()) {
+                throw std::runtime_error("'selected_atoms.names' in JSON for ModelEvaluationOptions must be an array");
+            }
+
+            auto names = std::vector<std::string>();
+            for (const auto& name: data["selected_atoms"]["names"]) {
+                if (!name.is_string()) {
                     throw std::runtime_error(
-                        "'selected_atoms' in JSON for ModelEvaluationOptions must be an array of arrays"
+                        "'selected_atoms.names' in JSON for ModelEvaluationOptions must be an array of strings"
                     );
                 }
-
-                auto selection = std::vector<int64_t>();
-                for (const auto& atom: selection_by_system) {
-                    if (!atom.is_number_integer()) {
-                        throw std::runtime_error(
-                            "'selected_atoms' in JSON for ModelEvaluationOptions must be an array of array of integers"
-                        );
-                    }
-                    selection.emplace_back(atom.get<int64_t>());
-                }
-
-                result->selected_atoms->emplace_back(std::move(selection));
+                names.emplace_back(name.get<std::string>());
             }
+
+
+            if (!data["selected_atoms"].contains("values") || !data["selected_atoms"]["values"].is_array()) {
+                throw std::runtime_error("'selected_atoms.values' in JSON for ModelEvaluationOptions must be an array");
+            }
+
+            auto values = std::vector<int32_t>();
+            for (const auto& value: data["selected_atoms"]["values"]) {
+                if (!value.is_number_integer()) {
+                    throw std::runtime_error(
+                        "'selected_atoms.values' in JSON for ModelEvaluationOptions must be an array of integers"
+                    );
+                }
+                values.emplace_back(value.get<int32_t>());
+            }
+            assert(values.size() % 2 == 0);
+
+            result->set_selected_atoms(torch::make_intrusive<LabelsHolder>(
+                std::move(names),
+                torch::tensor(values).reshape({-1, 2})
+            ));
         }
     }
 

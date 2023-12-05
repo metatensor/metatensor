@@ -9,7 +9,8 @@ from typing import Dict, List, Optional
 
 import torch
 
-from .. import TensorMap, __version__
+from .. import Labels, TensorMap
+from .. import __version__ as metatensor_version
 from . import (
     ModelCapabilities,
     ModelEvaluationOptions,
@@ -57,7 +58,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...         self,
     ...         systems: List[System],
     ...         outputs: Dict[str, ModelOutput],
-    ...         selected_atoms: Optional[List[List[int]]] = None,
+    ...         selected_atoms: Optional[Labels] = None,
     ...     ) -> Dict[str, TensorMap]:
     ...         ...
     ...
@@ -83,7 +84,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...         self,
     ...         systems: List[System],
     ...         outputs: Dict[str, ModelOutput],
-    ...         selected_atoms: Optional[List[List[int]]] = None,
+    ...         selected_atoms: Optional[Labels] = None,
     ...     ) -> Dict[str, TensorMap]:
     ...         results: Dict[str, TensorMap] = {}
     ...         if "energy" in outputs:
@@ -418,7 +419,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
             file,
             _extra_files={
                 "torch-version": torch.__version__,
-                "metatensor-version": __version__,
+                "metatensor-version": metatensor_version,
                 "extensions": json.dumps(extensions),
                 "metadata": json.dumps(export_metadata),
             },
@@ -462,7 +463,7 @@ def _check_annotation(module: torch.nn.Module):
         "`forward(self, "
         "systems: List[System], "
         "outputs: Dict[str, ModelOutput], "
-        "selected_atoms: Optional[List[List[int]]]"
+        "selected_atoms: Optional[Labels]"
         ") -> Dict[str, TensorMap]`"
     )
 
@@ -484,9 +485,9 @@ def _check_annotation(module: torch.nn.Module):
             f"not {annotations['outputs']}"
         )
 
-    if annotations["selected_atoms"] != Optional[List[List[int]]]:
+    if annotations["selected_atoms"] != Optional[Labels]:
         raise TypeError(
-            "`selected_atoms` argument must be `Optional[List[List[int]]]`, "
+            "`selected_atoms` argument must be `Optional[Labels]`, "
             f"not {annotations['selected_atoms']}"
         )
 
