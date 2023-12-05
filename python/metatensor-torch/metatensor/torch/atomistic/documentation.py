@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
-from ..documentation import TensorBlock
+from ..documentation import Labels, TensorBlock
 
 
 class System:
@@ -241,22 +241,26 @@ class ModelEvaluationOptions:
     def __init__(
         self,
         length_unit: str = "",
-        selected_atoms: Optional[List[int]] = None,
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
+        selected_atoms: Optional[Labels] = None,
     ):
         ...
 
     length_unit: str
     """unit of lengths the engine uses for the model input"""
 
-    selected_atoms: Optional[List[int]]
-    """
-    Only run the calculation for a selected subset of atoms. If this is set to ``None``,
-    run the calculation on all atoms.
-    """
-
     outputs: Dict[str, ModelOutput]
     """requested outputs for this run and corresponding settings"""
+
+    selected_atoms: Optional[Labels]
+    """
+    Only run the calculation for a selected subset of atoms.
+
+    If this is set to ``None``, run the calculation on all atoms. If this is a set of
+    :py:class:`metatensor.torch.Labels`, it will have two dimensions named ``"system"``
+    and ``"atom"``, containing the 0-based indices of all the atoms in the selected
+    subset.
+    """
 
 
 def check_atomistic_model(path: str):

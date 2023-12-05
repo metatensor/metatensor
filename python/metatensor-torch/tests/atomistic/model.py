@@ -31,7 +31,7 @@ class MinimalModel(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[List[List[int]]] = None,
+        selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
         if "dummy" in outputs:
             block = TensorBlock(
