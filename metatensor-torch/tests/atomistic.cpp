@@ -44,10 +44,10 @@ TEST_CASE("Models metadata") {
         output->quantity = "foo";
         output->unit = "bar";
         output->per_atom = false;
-        output->forward_gradients = {"baz", "not.this-one_"};
+        output->explicit_gradients = {"baz", "not.this-one_"};
 
         const auto* expected = R"({
-    "forward_gradients": [
+    "explicit_gradients": [
         "baz",
         "not.this-one_"
     ],
@@ -62,13 +62,13 @@ TEST_CASE("Models metadata") {
         std::string json = R"({
     "type": "ModelOutput",
     "quantity": "quantity",
-    "forward_gradients": []
+    "explicit_gradients": []
 })";
         output = ModelOutputHolder::from_json(json);
         CHECK(output->quantity == "quantity");
         CHECK(output->unit.empty());
         CHECK(output->per_atom == false);
-        CHECK(output->forward_gradients.empty());
+        CHECK(output->explicit_gradients.empty());
 
         CHECK_THROWS_WITH(
             ModelOutputHolder::from_json("{}"),
@@ -80,9 +80,9 @@ TEST_CASE("Models metadata") {
         );
     }
 
-    SECTION("ModelRunOptions") {
+    SECTION("ModelEvaluationOptions") {
         // save to JSON
-        auto options = torch::make_intrusive<ModelRunOptionsHolder>();
+        auto options = torch::make_intrusive<ModelEvaluationOptionsHolder>();
         options->length_unit = "mm";
 
         options->outputs.insert("output_1", torch::make_intrusive<ModelOutputHolder>());
@@ -96,14 +96,14 @@ TEST_CASE("Models metadata") {
     "length_unit": "mm",
     "outputs": {
         "output_1": {
-            "forward_gradients": [],
+            "explicit_gradients": [],
             "per_atom": false,
             "quantity": "",
             "type": "ModelOutput",
             "unit": ""
         },
         "output_2": {
-            "forward_gradients": [],
+            "explicit_gradients": [],
             "per_atom": true,
             "quantity": "",
             "type": "ModelOutput",
@@ -111,7 +111,7 @@ TEST_CASE("Models metadata") {
         }
     },
     "selected_atoms": null,
-    "type": "ModelRunOptions"
+    "type": "ModelEvaluationOptions"
 })";
         CHECK(options->to_json() == expected);
 
@@ -121,31 +121,32 @@ TEST_CASE("Models metadata") {
     "length_unit": "very large",
     "outputs": {
         "foo": {
-            "forward_gradients": ["test"],
+            "explicit_gradients": ["test"],
             "type": "ModelOutput"
         }
     },
-    "selected_atoms": [1, 2, 3],
-    "type": "ModelRunOptions"
+    "selected_atoms": [[1, 2, 3], [4, 5]],
+    "type": "ModelEvaluationOptions"
 })";
 
-        options = ModelRunOptionsHolder::from_json(json);
+        options = ModelEvaluationOptionsHolder::from_json(json);
         CHECK(options->length_unit == "very large");
-        CHECK(options->selected_atoms == std::vector<int64_t>{1, 2, 3});
+        auto expected_selection = std::vector<std::vector<int64_t>>{{1, 2, 3}, {4, 5}};
+        CHECK(options->selected_atoms == expected_selection);
 
         output = options->outputs.at("foo");
         CHECK(output->quantity.empty());
         CHECK(output->unit.empty());
         CHECK(output->per_atom == false);
-        CHECK(output->forward_gradients == std::vector<std::string>{"test"});
+        CHECK(output->explicit_gradients == std::vector<std::string>{"test"});
 
         CHECK_THROWS_WITH(
-            ModelRunOptionsHolder::from_json("{}"),
-            StartsWith("expected 'type' in JSON for ModelRunOptions, did not find it")
+            ModelEvaluationOptionsHolder::from_json("{}"),
+            StartsWith("expected 'type' in JSON for ModelEvaluationOptions, did not find it")
         );
         CHECK_THROWS_WITH(
-            ModelRunOptionsHolder::from_json("{\"type\": \"nope\"}"),
-            StartsWith("'type' in JSON for ModelRunOptions must be 'ModelRunOptions'")
+            ModelEvaluationOptionsHolder::from_json("{\"type\": \"nope\"}"),
+            StartsWith("'type' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'")
         );
     }
 
@@ -164,7 +165,7 @@ TEST_CASE("Models metadata") {
     "length_unit": "\u00b5m",
     "outputs": {
         "bar": {
-            "forward_gradients": [],
+            "explicit_gradients": [],
             "per_atom": true,
             "quantity": "something",
             "type": "ModelOutput",
@@ -186,7 +187,7 @@ TEST_CASE("Models metadata") {
     "length_unit": "\u00b5m",
     "outputs": {
         "foo": {
-            "forward_gradients": ["test"],
+            "explicit_gradients": ["test"],
             "type": "ModelOutput"
         }
     },
@@ -205,7 +206,7 @@ TEST_CASE("Models metadata") {
         CHECK(output->quantity.empty());
         CHECK(output->unit.empty());
         CHECK(output->per_atom == false);
-        CHECK(output->forward_gradients == std::vector<std::string>{"test"});
+        CHECK(output->explicit_gradients == std::vector<std::string>{"test"});
 
         CHECK_THROWS_WITH(
             ModelCapabilitiesHolder::from_json("{}"),

@@ -223,9 +223,9 @@ class ModelCapabilitiesHolder;
 /// TorchScript will always manipulate `ModelCapabilitiesHolder` through a `torch::intrusive_ptr`
 using ModelCapabilities = torch::intrusive_ptr<ModelCapabilitiesHolder>;
 
-class ModelRunOptionsHolder;
-/// TorchScript will always manipulate `ModelRunOptionsHolder` through a `torch::intrusive_ptr`
-using ModelRunOptions = torch::intrusive_ptr<ModelRunOptionsHolder>;
+class ModelEvaluationOptionsHolder;
+/// TorchScript will always manipulate `ModelEvaluationOptionsHolder` through a `torch::intrusive_ptr`
+using ModelEvaluationOptions = torch::intrusive_ptr<ModelEvaluationOptionsHolder>;
 
 
 /// Description of one of the quantity a model can compute
@@ -238,12 +238,12 @@ public:
         std::string quantity_,
         std::string unit_,
         bool per_atom_,
-        std::vector<std::string> forward_gradients_
+        std::vector<std::string> explicit_gradients_
     ):
         quantity(std::move(quantity_)),
         unit(std::move(unit_)),
         per_atom(per_atom_),
-        forward_gradients(std::move(forward_gradients_))
+        explicit_gradients(std::move(explicit_gradients_))
     {}
 
     ~ModelOutputHolder() override = default;
@@ -259,8 +259,9 @@ public:
     /// is the output defined per-atom or for the overall structure
     bool per_atom = false;
 
-    /// Which gradients should be computed in forward mode
-    std::vector<std::string> forward_gradients;
+    /// Which gradients should be computed eagerly and stored inside the output
+    /// `TensorMap`
+    std::vector<std::string> explicit_gradients;
 
     /// Serialize a `ModelOutput` to a JSON string.
     std::string to_json() const;
@@ -304,37 +305,37 @@ public:
 
 
 /// Options requested by the simulation engine when running with a model
-class METATENSOR_TORCH_EXPORT ModelRunOptionsHolder: public torch::CustomClassHolder {
+class METATENSOR_TORCH_EXPORT ModelEvaluationOptionsHolder: public torch::CustomClassHolder {
 public:
-    ModelRunOptionsHolder() = default;
+    ModelEvaluationOptionsHolder() = default;
 
-    /// Initialize `ModelRunOptions` with the given data
-    ModelRunOptionsHolder(
+    /// Initialize `ModelEvaluationOptions` with the given data
+    ModelEvaluationOptionsHolder(
         std::string length_unit_,
-        torch::optional<std::vector<int64_t>> selected_atoms_,
-        torch::Dict<std::string, ModelOutput> outputs_
+        torch::Dict<std::string, ModelOutput> outputs_,
+        torch::optional<std::vector<std::vector<int64_t>>> selected_atoms_
     ):
         length_unit(std::move(length_unit_)),
-        selected_atoms(std::move(selected_atoms_)),
-        outputs(outputs_)
+        outputs(outputs_),
+        selected_atoms(std::move(selected_atoms_))
     {}
 
-    ~ModelRunOptionsHolder() override = default;
+    ~ModelEvaluationOptionsHolder() override = default;
 
     /// unit of lengths the engine uses for the model input
     std::string length_unit;
 
-    /// only run the calculation for a selected subset of atoms. If this is set
-    /// to `None`, run the calculation on all atoms
-    torch::optional<std::vector<int64_t>> selected_atoms = torch::nullopt;
-
     /// requested outputs for this run and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;
 
-    /// Serialize a `ModelRunOptions` to a JSON string.
+    /// only run the calculation for a selected subset of atoms. If this is set
+    /// to `None`, run the calculation on all atoms
+    torch::optional<std::vector<std::vector<int64_t>>> selected_atoms = torch::nullopt;
+
+    /// Serialize a `ModelEvaluationOptions` to a JSON string.
     std::string to_json() const;
-    /// Load a serialized `ModelRunOptions` from a JSON string.
-    static ModelRunOptions from_json(const std::string& json);
+    /// Load a serialized `ModelEvaluationOptions` from a JSON string.
+    static ModelEvaluationOptions from_json(const std::string& json);
 };
 
 /// Check the exported metatensor atomistic model at the given `path`, and

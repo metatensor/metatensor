@@ -1,13 +1,13 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import torch
 from packaging import version
 
-from metatensor.torch import TensorBlock
+from metatensor.torch import TensorMap
 from metatensor.torch.atomistic import (
-    MetatensorAtomisticModule,
+    MetatensorAtomisticModel,
     ModelCapabilities,
-    ModelRunOptions,
+    ModelOutput,
     NeighborsListOptions,
     System,
 )
@@ -52,8 +52,11 @@ class ExampleModule(torch.nn.Module):
         self._name = name
 
     def forward(
-        self, system: System, run_options: ModelRunOptions
-    ) -> Dict[str, TensorBlock]:
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[List[List[int]]],
+    ) -> Dict[str, TensorMap]:
         return {}
 
     def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
@@ -65,8 +68,11 @@ class OtherModule(torch.nn.Module):
         super().__init__()
 
     def forward(
-        self, system: System, run_options: ModelRunOptions
-    ) -> Dict[str, TensorBlock]:
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[List[List[int]]],
+    ) -> Dict[str, TensorMap]:
         return {}
 
     def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
@@ -81,11 +87,14 @@ class FullModel(torch.nn.Module):
         self.other = OtherModule()
 
     def forward(
-        self, system: System, run_options: ModelRunOptions
-    ) -> Dict[str, TensorBlock]:
-        result = self.first(system, run_options)
-        result.update(self.second(system, run_options))
-        result.update(self.other(system, run_options))
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[List[List[int]]],
+    ) -> Dict[str, TensorMap]:
+        result = self.first(systems, outputs, selected_atoms)
+        result.update(self.second(systems, outputs, selected_atoms))
+        result.update(self.other(systems, outputs, selected_atoms))
 
         return result
 
@@ -94,7 +103,7 @@ def test_requested_neighbors_lists():
     model = FullModel()
     model.train(False)
 
-    atomistic = MetatensorAtomisticModule(model, ModelCapabilities())
+    atomistic = MetatensorAtomisticModel(model, ModelCapabilities())
     requests = atomistic.requested_neighbors_lists()
 
     assert len(requests) == 2

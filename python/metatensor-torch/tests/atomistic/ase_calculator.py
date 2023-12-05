@@ -1,16 +1,15 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import pytest
 import torch
 
-from metatensor.torch import Labels, TensorBlock
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
-    MetatensorAtomisticModule,
+    MetatensorAtomisticModel,
     ModelCapabilities,
     ModelOutput,
-    ModelRunOptions,
     NeighborsListOptions,
     System,
 )
@@ -42,82 +41,93 @@ class LennardJones(torch.nn.Module):
                 self._lj_params[a] = {b: (s, e, shift)}
 
     def forward(
-        self, system: System, run_options: ModelRunOptions
-    ) -> Dict[str, TensorBlock]:
-        if "energy" not in run_options.outputs:
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[List[List[int]]] = None,
+    ) -> Dict[str, TensorMap]:
+        if "energy" not in outputs:
             return {}
 
-        if run_options.selected_atoms is not None:
+        if selected_atoms is not None:
             # TODO: add selected_atoms
             raise NotImplementedError("selected atoms is not yet implemented")
 
-        neighbors = system.get_neighbors_list(self._nl_options)
-        all_i = neighbors.samples.column("first_atom")
-        all_j = neighbors.samples.column("second_atom")
-        all_S = neighbors.samples.view(
-            ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
-        ).values
+        per_atoms = outputs["energy"].per_atom
 
-        species = system.species
-        cell = system.cell
-        positions = system.positions
+        all_energies = []
+        for system in systems:
+            neighbors = system.get_neighbors_list(self._nl_options)
+            all_i = neighbors.samples.column("first_atom")
+            all_j = neighbors.samples.column("second_atom")
+            all_S = neighbors.samples.view(
+                ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
+            ).values
 
-        per_atoms = run_options.outputs["energy"].per_atom
-        if per_atoms:
-            energy = torch.zeros(positions.shape[0], dtype=positions.dtype)
-        else:
-            energy = torch.zeros(1, dtype=positions.dtype)
-
-        for i, j, S in zip(all_i, all_j, all_S):
-            i = int(i)
-            j = int(j)
-
-            sigma, epsilon, shift = self._lj_params[int(species[i])][int(species[j])]
-            distance = positions[j] - positions[i] + S.to(dtype=cell.dtype) @ cell
-            r2 = distance.dot(distance)
-
-            r6 = r2 * r2 * r2
-
-            sigma3 = sigma * sigma * sigma
-            sigma6 = sigma3 * sigma3
-
-            sigma_r_6 = sigma6 / r6
-            sigma_r_12 = sigma_r_6 * sigma_r_6
-
-            e = 4.0 * epsilon * (sigma_r_12 - sigma_r_6) - shift
+            species = system.species
+            cell = system.cell
+            positions = system.positions
 
             if per_atoms:
-                # We only compute each pair once (full_list=False in self._nl_options),
-                # and assign half of the energy to each atom
-                energy[i] += e / 2.0
-                energy[j] += e / 2.0
+                energy = torch.zeros(positions.shape[0], dtype=positions.dtype)
             else:
-                energy[0] += e
+                energy = torch.zeros(1, dtype=positions.dtype)
+
+            for i, j, S in zip(all_i, all_j, all_S):
+                i = int(i)
+                j = int(j)
+
+                sigma, epsilon, shift = self._lj_params[int(species[i])][
+                    int(species[j])
+                ]
+                distance = positions[j] - positions[i] + S.to(dtype=cell.dtype) @ cell
+                r2 = distance.dot(distance)
+
+                r6 = r2 * r2 * r2
+
+                sigma3 = sigma * sigma * sigma
+                sigma6 = sigma3 * sigma3
+
+                sigma_r_6 = sigma6 / r6
+                sigma_r_12 = sigma_r_6 * sigma_r_6
+
+                e = 4.0 * epsilon * (sigma_r_12 - sigma_r_6) - shift
+
+                if per_atoms:
+                    # We only compute each pair once (full_list=False in
+                    # self._nl_options), and assign half of the energy to each atom
+                    energy[i] += e / 2.0
+                    energy[j] += e / 2.0
+                else:
+                    energy[0] += e
+
+            all_energies.append(energy)
 
         if per_atoms:
-            samples = Labels(
-                ["atom"],
-                torch.arange(positions.shape[0], dtype=torch.int32).reshape(-1, 1),
-            )
-            return {
-                "energy": TensorBlock(
-                    values=energy.reshape(-1, 1),
-                    samples=samples,
-                    components=[],
-                    properties=Labels(["energy"], torch.IntTensor([[0]])),
-                )
-            }
-        else:
-            return {
-                "energy": TensorBlock(
-                    values=energy.reshape(1, 1),
-                    samples=Labels(["_"], torch.IntTensor([[0]])),
-                    components=[],
-                    properties=Labels(["energy"], torch.IntTensor([[0]])),
-                )
-            }
+            samples_list: List[List[int]] = []
+            for s, system in enumerate(systems):
+                for a in range(len(system)):
+                    samples_list.append([s, a])
 
-        return {}
+            samples = Labels(
+                ["structure", "atom"],
+                torch.tensor(samples_list, dtype=torch.int32),
+            )
+        else:
+            samples = Labels(
+                ["structure"],
+                torch.tensor([[s] for s in range(len(systems))], dtype=torch.int32),
+            )
+
+        block = TensorBlock(
+            values=torch.vstack(all_energies).reshape(-1, 1),
+            samples=samples,
+            components=[],
+            properties=Labels(["energy"], torch.IntTensor([[0]])),
+        )
+        return {
+            "energy": TensorMap(Labels(["_"], torch.IntTensor([[0]])), [block]),
+        }
 
     def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
         return [self._nl_options]
@@ -141,12 +151,12 @@ def model():
                 quantity="energy",
                 unit="ev",
                 per_atom=False,
-                forward_gradients=[],
+                explicit_gradients=[],
             ),
         },
     )
 
-    return MetatensorAtomisticModule(model, capabilities)
+    return MetatensorAtomisticModel(model, capabilities)
 
 
 def check_against_ase_lj(atoms, calculator):

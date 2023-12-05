@@ -15,7 +15,7 @@ Models
 .. doxygenclass:: metatensor_torch::ModelCapabilitiesHolder
     :members:
 
-.. doxygentypedef:: metatensor_torch::ModelRunOptions
+.. doxygentypedef:: metatensor_torch::ModelEvaluationOptions
 
-.. doxygenclass:: metatensor_torch::ModelRunOptionsHolder
+.. doxygenclass:: metatensor_torch::ModelEvaluationOptionsHolder
     :members:
