@@ -12,6 +12,7 @@ from . import (
     ModelOutput,
     System,
     check_atomistic_model,
+    register_autograd_neighbors,
 )
 
 
@@ -116,9 +117,13 @@ class MetatensorCalculator(Calculator):
 
         # Compute the neighbors lists requested by the model using ASE NL
         for options in self._model.requested_neighbors_lists():
-            system.add_neighbors_list(
-                options, neighbors=_compute_ase_neighbors(atoms, options)
+            neighbors = _compute_ase_neighbors(atoms, options)
+            register_autograd_neighbors(
+                system,
+                neighbors,
+                check_consistency=self.parameters["check_consistency"],
             )
+            system.add_neighbors_list(options, neighbors)
 
         options = ModelEvaluationOptions(
             length_unit="angstrom",
@@ -175,9 +180,13 @@ class MetatensorCalculator(Calculator):
         # convert from ase.Atoms to metatensor.torch.atomistic.System
         system = System(species, positions, cell)
         for options in self._model.requested_neighbors_lists():
-            system.add_neighbors_list(
-                options, neighbors=_compute_ase_neighbors(atoms, options)
+            neighbors = _compute_ase_neighbors(atoms, options)
+            register_autograd_neighbors(
+                system,
+                neighbors,
+                check_consistency=self.parameters["check_consistency"],
             )
+            system.add_neighbors_list(options, neighbors)
 
         run_options = ModelEvaluationOptions(
             length_unit="angstrom",

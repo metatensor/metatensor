@@ -1,8 +1,9 @@
 #include <cctype>
 #include <cstring>
 
-#include <algorithm>
+#include <array>
 #include <sstream>
+#include <algorithm>
 
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
@@ -95,7 +96,6 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
         throw std::runtime_error("'type' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
     }
 
-
     if (!data.contains("model_cutoff") || !data["model_cutoff"].is_number_integer()) {
         throw std::runtime_error("'model_cutoff' in JSON for NeighborsListOptions must be a number");
     }
@@ -109,6 +109,180 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
     std::memcpy(&model_cutoff, &int_cutoff, sizeof(double));
 
     return torch::make_intrusive<NeighborsListOptionsHolder>(model_cutoff, full_list);
+}
+
+// ========================================================================== //
+
+torch::Tensor NeighborsAutograd::forward(
+    torch::autograd::AutogradContext* ctx,
+    torch::Tensor positions,
+    torch::Tensor cell,
+    TorchTensorBlock neighbors,
+    bool check_consistency
+) {
+    auto distances = neighbors->values();
+
+    if (check_consistency) {
+        auto samples = neighbors->samples()->values();
+        for (int64_t sample_i=0; sample_i<samples.size(0); sample_i++) {
+            auto atom_i = samples[sample_i][0];
+            auto atom_j = samples[sample_i][1];
+            auto cell_shift = samples.index({sample_i, torch::indexing::Slice(2, 5)}).to(positions.scalar_type());
+
+            auto actual_distance = distances[sample_i].reshape({3});
+            auto expected_distance = positions[atom_j] - positions[atom_i] + cell_shift.matmul(cell);
+
+            auto diff_norm = (actual_distance - expected_distance).norm();
+            if (diff_norm.to(torch::kF64).item<double>() > 1e-6) {
+                std::ostringstream oss;
+
+                oss << "one neighbor pair does not match its metadata: ";
+                oss << "the pair between atom " << atom_i.item<int32_t>();
+                oss << " and atom " << atom_j.item<int32_t>() << " for the ";
+
+                auto cell_shift_i32 = samples.index({sample_i, torch::indexing::Slice(2, 5)});
+                oss << "[" << cell_shift_i32[0].item<int32_t>() << ", ";
+                oss << cell_shift_i32[1].item<int32_t>() << ", ";
+                oss << cell_shift_i32[2].item<int32_t>() << "] cell shift ";
+
+                auto expected_f64 = expected_distance.to(torch::kF64);
+                oss << "should have a distance vector of ";
+                oss << "[" << expected_f64[0].item<double>() << ", ";
+                oss << expected_f64[1].item<double>() << ", ";
+                oss << expected_f64[2].item<double>() << "] ";
+
+
+                auto actual_f64 = actual_distance.to(torch::kF64);
+                oss << "but has a distance vector of ";
+                oss << "[" << actual_f64[0].item<double>() << ", ";
+                oss << actual_f64[1].item<double>() << ", ";
+                oss << actual_f64[2].item<double>() << "] ";
+
+                C10_THROW_ERROR(ValueError, oss.str());
+            }
+        }
+    }
+
+    ctx->save_for_backward({positions, cell});
+    ctx->saved_data["neighbors"] = neighbors;
+
+    return distances;
+}
+
+
+std::vector<torch::Tensor> NeighborsAutograd::backward(
+    torch::autograd::AutogradContext* ctx,
+    std::vector<torch::Tensor> outputs_grad
+) {
+    auto distances_grad = outputs_grad[0];
+
+    auto saved_variables = ctx->get_saved_variables();
+    auto positions = saved_variables[0];
+    auto cell = saved_variables[1];
+    auto neighbors = ctx->saved_data["neighbors"].toCustomClass<TensorBlockHolder>();
+    auto samples = neighbors->samples()->values();
+    auto distances = neighbors->values();
+
+    auto positions_grad = torch::Tensor();
+    if (positions.requires_grad()) {
+        positions_grad = torch::zeros_like(positions);
+
+        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
+            auto atom_i = samples[sample_i][0].item<int32_t>();
+            auto atom_j = samples[sample_i][1].item<int32_t>();
+
+            auto all = torch::indexing::Slice();
+            auto grad = distances_grad.index({sample_i, all, 0});
+            positions_grad.index({atom_i, all}) -= grad;
+            positions_grad.index({atom_j, all}) += grad;
+        }
+    }
+
+    auto cell_grad = torch::Tensor();
+    if (cell.requires_grad()) {
+        cell_grad = torch::zeros_like(cell);
+
+        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
+            auto cell_shift = samples.index({
+                torch::indexing::Slice(sample_i, sample_i + 1),
+                torch::indexing::Slice(2, 5)
+            }).to(cell.scalar_type());
+
+            cell_grad += cell_shift.t().matmul(distances_grad[sample_i].t());
+        }
+    }
+
+    return {positions_grad, cell_grad, torch::Tensor(), torch::Tensor()};
+}
+
+void metatensor_torch::register_autograd_neighbors(
+    System system,
+    TorchTensorBlock neighbors,
+    bool check_consistency
+) {
+    auto distances = neighbors->values();
+    if (distances.requires_grad()) {
+        C10_THROW_ERROR(ValueError,
+            "`neighbors` is already part of a computational graph, "
+            "detach it before calling `register_autograd_neighbors()`"
+        );
+    }
+
+    // these checks should be fine in a normal use case, but might be false if
+    // someone gives weird data to the function. `check_consistency=True` should
+    // help debug this kind of issues.
+    if (check_consistency) {
+        if (system->positions().device() != distances.device()) {
+            C10_THROW_ERROR(ValueError,
+                "`system` and `neighbors` must be on the same device, "
+                "got " + system->positions().device().str() + " and " +
+                distances.device().str()
+            );
+        }
+
+        if (system->positions().scalar_type() != distances.scalar_type()) {
+            C10_THROW_ERROR(ValueError,
+                "`system` and `neighbors` must have the same dtype, "
+                "got " + scalar_type_name(system->positions().scalar_type()) +
+                " and " + scalar_type_name(distances.scalar_type())
+            );
+        }
+
+        auto expected_names = std::vector<std::string>{
+            "first_atom", "second_atom", "cell_shift_a", "cell_shift_b", "cell_shift_c"
+        };
+        if (neighbors->samples()->names() != expected_names) {
+            C10_THROW_ERROR(ValueError,
+                "invalid `neighbors`: expected sample names to be ['first_atom', "
+                "'second_atom', 'cell_shift_a', 'cell_shift_b', 'cell_shift_c']"
+            );
+        }
+
+        expected_names = std::vector<std::string>{"xyz"};
+        if (neighbors->components().size() != 1 || neighbors->components()[0]->names() != expected_names) {
+            C10_THROW_ERROR(ValueError,
+                "invalid `neighbors`: expected component names to be ['xyz']"
+            );
+        }
+
+        expected_names = std::vector<std::string>{"distance"};
+        if (neighbors->properties()->names() != expected_names) {
+            C10_THROW_ERROR(ValueError,
+                "invalid `neighbors`: expected property names to be ['distance']"
+            );
+        }
+    }
+
+    // WARNING: we are not using `torch::autograd::Function` in the usual way.
+    // Instead we pass already computed data (in `neighbors->values()`), and
+    // directly return the corresponding tensor in `forward()`. This still
+    // causes torch to register the right function for `backward`.
+    auto _ = NeighborsAutograd::apply(
+        system->positions(),
+        system->cell(),
+        neighbors,
+        check_consistency
+    );
 }
 
 // ========================================================================== //
@@ -341,6 +515,15 @@ void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorB
         C10_THROW_ERROR(ValueError,
             "`neighbors` dtype (" + scalar_type_name(neighbors->values().scalar_type()) +
             ") does not match this system's dtype (" + scalar_type_name(this->scalar_type()) +")"
+        );
+    }
+
+    auto requires_grad = positions_.requires_grad() || cell_.requires_grad();
+    if (requires_grad && !neighbors->values().requires_grad()) {
+        TORCH_WARN(
+            "This system's positions or cell requires grad, but the neighbors does not. ",
+            "You should use `register_autograd_neighbors()` to make sure the neighbors "
+            "distance vectors are integrated in the computational graph."
         );
     }
 

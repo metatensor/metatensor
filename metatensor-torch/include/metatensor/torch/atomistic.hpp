@@ -93,6 +93,48 @@ inline bool operator!=(const NeighborsListOptions& lhs, const NeighborsListOptio
 }
 
 
+/// Custom autograd node going (positions, cell) => neighbors list distances
+///
+/// This does not actually computes the neighbors list, but registers a new node
+/// in the overall computational graph, allowing to re-use neighbors list
+/// computed outside of torch. The public interface for this is the
+/// `register_autograd_neighbors()` function.
+class METATENSOR_TORCH_EXPORT NeighborsAutograd: public torch::autograd::Function<NeighborsAutograd> {
+public:
+    /// This does nothing unless `check_consistency` is true, in which case it
+    /// checks that the values in `neighbors` can be re-computed with the
+    /// samples and positions/cell
+    static torch::Tensor forward(
+        torch::autograd::AutogradContext* ctx,
+        torch::Tensor positions,
+        torch::Tensor cell,
+        TorchTensorBlock neighbors,
+        bool check_consistency
+    );
+
+    /// Compute the gradient of the output w.r.t. positions/cell
+    static std::vector<torch::Tensor> backward(
+        torch::autograd::AutogradContext* ctx,
+        std::vector<torch::Tensor> outputs_grad
+    );
+};
+
+/// Register a new autograd node going from (`system.positions`, `system.cell`)
+/// to the `neighbors` distance vectors.
+///
+/// This does not recompute the distance vectors, but work as-if all the data in
+/// `neighbors.values` was computed directly from `system.positions` and
+/// `system.cell`, allowing downstream models to use it directly with full
+/// autograd integration.
+///
+/// `check_consistency` can be set to `true` to run a handful of additional
+/// checks in case the data in neighbors does not follow what's expected.
+METATENSOR_TORCH_EXPORT void register_autograd_neighbors(
+    System system,
+    TorchTensorBlock neighbors,
+    bool check_consistency
+);
+
 /// A System contains all the information about an atomistic system; and should
 /// be used as the input of metatensor atomistic models.
 class METATENSOR_TORCH_EXPORT SystemHolder final: public torch::CustomClassHolder {

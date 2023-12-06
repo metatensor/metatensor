@@ -60,12 +60,8 @@ class LennardJones(torch.nn.Module):
             neighbors = system.get_neighbors_list(self._nl_options)
             all_i = neighbors.samples.column("first_atom")
             all_j = neighbors.samples.column("second_atom")
-            all_S = neighbors.samples.view(
-                ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
-            ).values
 
             species = system.species
-            cell = system.cell
             positions = system.positions
 
             if per_atoms:
@@ -73,14 +69,10 @@ class LennardJones(torch.nn.Module):
             else:
                 energy = torch.zeros(1, dtype=positions.dtype)
 
-            for i, j, S in zip(all_i, all_j, all_S):
-                i = int(i)
-                j = int(j)
-
+            for i, j, distance in zip(all_i, all_j, neighbors.values.reshape(-1, 3)):
                 sigma, epsilon, shift = self._lj_params[int(species[i])][
                     int(species[j])
                 ]
-                distance = positions[j] - positions[i] + S.to(dtype=cell.dtype) @ cell
                 r2 = distance.dot(distance)
 
                 r6 = r2 * r2 * r2

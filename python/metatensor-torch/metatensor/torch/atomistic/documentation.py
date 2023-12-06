@@ -271,3 +271,24 @@ def check_atomistic_model(path: str):
     This function should be called before :py:func:`torch.jit.load()` when loading an
     existing model.
     """
+
+
+def register_autograd_neighbors(
+    system: System, neighbors: TensorBlock, check_consistency: bool
+):
+    """
+    Register a new autograd node going from (``system.positions``, ``system.cell``) to
+    the ``neighbors`` distance vectors.
+
+    This does not recompute the distance vectors, but work as-if all the data in
+    ``neighbors.values`` was computed directly from ``system.positions`` and
+    ``system.cell``, allowing downstream models to use it directly with full autograd
+    integration.
+
+    :param system: system containing the positions and cell used to compute the
+        neighbors list
+    :param system: neighbors list, following the same format as
+        :py:meth:`System.add_neighbors_list`
+    :param check_consistency: can be set to ``True`` to run a handful of additional
+        checks in case the data in neighbors does not follow what's expected.
+    """

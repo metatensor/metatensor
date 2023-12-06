@@ -1,16 +1,22 @@
-from typing import Dict, List, Optional
-
+import pytest
 import torch
 from packaging import version
 
-from metatensor.torch import Labels, TensorMap
 from metatensor.torch.atomistic import (
-    MetatensorAtomisticModel,
-    ModelCapabilities,
-    ModelOutput,
     NeighborsListOptions,
     System,
+    register_autograd_neighbors,
 )
+
+
+try:
+    import ase
+
+    from metatensor.torch.atomistic.ase_calculator import _compute_ase_neighbors
+
+    HAVE_ASE = True
+except ImportError:
+    HAVE_ASE = False
 
 
 def test_neighbors_lists_options():
@@ -46,80 +52,103 @@ def test_neighbors_lists_options():
         assert repr(options) == expected
 
 
-class ExampleModule(torch.nn.Module):
-    def __init__(self, name):
-        super().__init__()
-        self._name = name
+@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbors list")
+def test_neighbors_autograd():
+    torch.manual_seed(0xDEADBEEF)
+    n_atoms = 20
+    cell_size = 6.0
+    positions = cell_size * torch.rand(
+        n_atoms, 3, dtype=torch.float64, requires_grad=True
+    )
+    cell = cell_size * torch.eye(3, dtype=torch.float64, requires_grad=True)
 
-    def forward(
-        self,
-        systems: List[System],
-        outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels],
-    ) -> Dict[str, TensorMap]:
-        return {}
+    def compute(positions, cell, options):
+        atoms = ase.Atoms(
+            "C" * positions.shape[0],
+            positions=positions.detach().numpy(),
+            cell=cell.detach().numpy(),
+            pbc=True,
+        )
+        neighbors = _compute_ase_neighbors(atoms, options)
 
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
-        return [NeighborsListOptions(1.0, False, self._name)]
+        system = System(
+            torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell
+        )
+        register_autograd_neighbors(system, neighbors)
 
+        return neighbors.values
 
-class OtherModule(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
+    options = NeighborsListOptions(model_cutoff=2.0, full_list=False)
+    torch.autograd.gradcheck(
+        compute,
+        (positions, cell, options),
+        fast_mode=True,
+    )
 
-    def forward(
-        self,
-        systems: List[System],
-        outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels],
-    ) -> Dict[str, TensorMap]:
-        return {}
-
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
-        return [NeighborsListOptions(2.0, True, "other module")]
-
-
-class FullModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.first = ExampleModule("first module")
-        self.second = ExampleModule("second module")
-        self.other = OtherModule()
-
-    def forward(
-        self,
-        systems: List[System],
-        outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels],
-    ) -> Dict[str, TensorMap]:
-        result = self.first(systems, outputs, selected_atoms)
-        result.update(self.second(systems, outputs, selected_atoms))
-        result.update(self.other(systems, outputs, selected_atoms))
-
-        return result
+    options = NeighborsListOptions(model_cutoff=2.0, full_list=True)
+    torch.autograd.gradcheck(
+        compute,
+        (positions, cell, options),
+        fast_mode=True,
+    )
 
 
-def test_requested_neighbors_lists():
-    model = FullModel()
-    model.train(False)
+@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbors list")
+def test_neighbors_autograd_errors():
+    n_atoms = 20
+    cell_size = 6.0
+    positions = cell_size * torch.rand(
+        n_atoms, 3, dtype=torch.float64, requires_grad=True
+    )
+    cell = cell_size * torch.eye(3, dtype=torch.float64, requires_grad=True)
 
-    atomistic = MetatensorAtomisticModel(model, ModelCapabilities())
-    requests = atomistic.requested_neighbors_lists()
+    atoms = ase.Atoms(
+        "C" * positions.shape[0],
+        positions=positions.detach().numpy(),
+        cell=cell.detach().numpy(),
+        pbc=True,
+    )
+    options = NeighborsListOptions(model_cutoff=2.0, full_list=False)
+    neighbors = _compute_ase_neighbors(atoms, options)
+    system = System(torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell)
+    register_autograd_neighbors(system, neighbors)
 
-    assert len(requests) == 2
+    message = (
+        "`neighbors` is already part of a computational graph, "
+        "detach it before calling `register_autograd_neighbors\\(\\)`"
+    )
+    with pytest.raises(ValueError, match=message):
+        register_autograd_neighbors(system, neighbors)
 
-    assert requests[0].model_cutoff == 1.0
-    assert not requests[0].full_list
-    assert requests[0].requestors() == [
-        "first module",
-        "FullModel.first",
-        "second module",
-        "FullModel.second",
-    ]
+    message = (
+        "one neighbor pair does not match its metadata: the pair between atom 0 and "
+        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
+        "\\[0.489917, 1.24926, 0.102936\\] but has a distance vector of "
+        "\\[1.46975, 3.74777, 0.308807\\]"
+    )
+    neighbors = _compute_ase_neighbors(atoms, options)
+    neighbors.values[:] *= 3
+    with pytest.raises(ValueError, match=message):
+        register_autograd_neighbors(system, neighbors, check_consistency=True)
 
-    assert requests[1].model_cutoff == 2.0
-    assert requests[1].full_list
-    assert requests[1].requestors() == [
-        "other module",
-        "FullModel.other",
-    ]
+    neighbors = _compute_ase_neighbors(atoms, options)
+    message = (
+        "`system` and `neighbors` must have the same dtype, "
+        "got torch.float32 and torch.float64"
+    )
+    system = System(
+        torch.from_numpy(atoms.numbers).to(torch.int32),
+        positions.to(torch.float32),
+        cell.to(torch.float32),
+    )
+    with pytest.raises(ValueError, match=message):
+        register_autograd_neighbors(system, neighbors, check_consistency=True)
+
+    message = "`system` and `neighbors` must be on the same device, got meta and cpu"
+    system = System(
+        torch.from_numpy(atoms.numbers).to(torch.int32).to(torch.device("meta")),
+        positions.to(torch.device("meta")),
+        cell.to(torch.device("meta")),
+    )
+    with pytest.raises(ValueError, match=message):
+        register_autograd_neighbors(system, neighbors, check_consistency=True)
