@@ -354,4 +354,12 @@ TORCH_LIBRARY(metatensor, m) {
         ;
 
     m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
+    m.def(
+        "register_autograd_neighbors("
+            "__torch__.torch.classes.metatensor.System system, "
+            "__torch__.torch.classes.metatensor.TensorBlock neighbors, "
+            "bool check_consistency = False"
+        ") -> ()",
+        register_autograd_neighbors
+    );
 }
