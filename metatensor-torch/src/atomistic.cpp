@@ -659,6 +659,29 @@ std::vector<std::string> SystemHolder::known_data() const {
     return result;
 }
 
+std::string SystemHolder::str() const {
+    auto result = std::ostringstream();
+    result << "System with " << this->size() << " atoms, ";
+
+    auto cell = cell_.to(torch::kCPU, torch::kF64);
+    if (torch::all(cell == torch::zeros_like(cell)).item<bool>()) {
+        result << "non periodic";
+    } else {
+        result << "periodic cell: [";
+        for (int64_t i=0; i<3; i++) {
+            for (int64_t j=0; j<3; j++) {
+                result << cell_.index({i, j}).item<double>();
+                if (j != 2 || i != 2) {
+                    result << ", ";
+                }
+            }
+        }
+        result << "]";
+    }
+
+    return result.str();
+}
+
 
 // ========================================================================== //
 

@@ -1,5 +1,6 @@
 import pytest
 import torch
+from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock
@@ -18,7 +19,7 @@ def positions():
 
 @pytest.fixture
 def cell():
-    return torch.rand((3, 3))
+    return torch.tensor([[12.0, 0, 0], [0, 12.3, 0], [0, 0, 10]])
 
 
 @pytest.fixture
@@ -56,6 +57,19 @@ def test_system(species, positions, cell, neighbors):
     assert torch.all(system.species == species)
     assert torch.all(system.positions == positions)
     assert torch.all(system.cell == cell)
+
+    expected = "System with 8 atoms, periodic cell: [12, 0, 0, 0, 12.3, 0, 0, 0, 10]"
+    assert str(system) == expected
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(system) == expected
+
+    system = System(species, positions, cell=torch.zeros_like(cell))
+    expected = "System with 8 atoms, non periodic"
+    assert str(system) == expected
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        # custom __repr__ definitions are only available since torch 2.1
+        assert repr(system) == expected
 
     options = NeighborsListOptions(model_cutoff=3.5, full_list=False)
     system.add_neighbors_list(options, neighbors)

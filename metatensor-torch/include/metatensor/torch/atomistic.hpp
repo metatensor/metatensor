@@ -236,6 +236,9 @@ public:
     /// Get the list of data registered with this `System`
     std::vector<std::string> known_data() const;
 
+    /// Implementation of `__str__` and `__repr__` for Python
+    std::string str() const;
+
 private:
     struct nl_options_compare {
         bool operator()(const NeighborsListOptions& a, const NeighborsListOptions& b) const {
