@@ -1,7 +1,7 @@
-.. _atomistic-models:
+.. _python-api-atomistic-models:
 
-Atomistic machine learning models
-=================================
+API reference
+=============
 
 The atomistic machine learning models capabilities of metatensor are part of the
 :ref:`TorchScript API <torch-api-reference>`, and are installed when
@@ -15,11 +15,10 @@ documented below, and is part of the ``metatensor.torch.atomistic`` module.
 
     systems
     models
-    outputs
 
 
-C++ interface for atomistic machine learning
---------------------------------------------
+C++ API reference
+-----------------
 
 The C++ API can be accessed by including ``<metatensor/torch/atomistic.hpp>``.
 

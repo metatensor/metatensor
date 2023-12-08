@@ -12,4 +12,3 @@ API reference
     c/index
     rust/index
     torch/index
-    atomistic/index

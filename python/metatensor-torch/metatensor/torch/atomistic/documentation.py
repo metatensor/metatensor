@@ -7,8 +7,8 @@ from ..documentation import Labels, TensorBlock
 
 class System:
     """
-    A System contains all the information about an atomistic system; and should
-    be used as the input of metatensor atomistic models.
+    A System contains all the information about an atomistic system; and should be used
+    as the input of metatensor atomistic models.
     """
 
     def __init__(
@@ -18,11 +18,21 @@ class System:
         cell: torch.Tensor,
     ):
         """
-        Create a :py:class:`System` with the given ``species``, ``positions`` and
-        ``cell``.
+        You can create a :py:class:`System` with ``species``, ``positions`` and ``cell``
+        tensors, or convert data from other libraries.
 
-        :param species: 1D tensor of integer representing the particles identity.
-            For atoms, this is typically their atomic numbers.
+        .. admonition:: Converting data to metatensor `System`
+
+            Some external packages provides ways to create :py:class:`System` using data
+            from other libraries:
+
+            - `rascaline`_ has the :py:func:`rascaline.torch.systems_to_torch()`
+              function that can convert from ASE, chemfiles and PySCF.
+
+            .. _rascaline: https://luthaf.fr/rascaline/latest/index.html
+
+        :param species: 1D tensor of integer representing the particles identity. For
+            atoms, this is typically their atomic numbers.
 
         :param positions: 2D tensor of shape (len(species), 3) containing the Cartesian
             positions of all particles in the system.

@@ -61,4 +61,5 @@ contributions from anyone, and we provide some :ref:`developer documentation
 
    get-started/index
    reference/index
+   atomistic/index
    devdoc/index
