@@ -1,5 +1,6 @@
-sphinx == 7.2.4
+sphinx == 7.2.6
 sphinx-toggleprompt # hide the prompt (>>>) in python doctests
+sphinx-gallery      # convert python files into nice documentation
 pygments >=2.11     # syntax highligthing
 breathe >=4.33      # C and C++ => sphinx through doxygen
 furo                # sphinx theme
@@ -9,3 +10,5 @@ myst_parser         # include markdown documents in sphinx
 # required for autodoc
 numpy
 torch
+
+matplotlib

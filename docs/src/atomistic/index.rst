@@ -45,3 +45,4 @@ by a model.
 
     reference/index
     outputs
+    ../examples/atomistic/index
