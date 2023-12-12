@@ -1,15 +1,12 @@
 import os
 import subprocess
+import sys
 from datetime import datetime
 
 import toml
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-# when importing metatensor-torch, this will change the definition of the classes
-# to include the documentation
-os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 # -- Project information -----------------------------------------------------
 
@@ -39,9 +36,24 @@ def build_doxygen_docs():
     subprocess.run(["doxygen", "Doxyfile"], cwd=os.path.join(ROOT, "docs"))
 
 
+def generate_examples():
+    # we can not run sphinx-gallery in the same process as the normal sphinx, since they
+    # need to import metatensor.torch differently (with and without
+    # METATENSOR_IMPORT_FOR_SPHINX=1). So instead we run it inside a small script, and
+    # include the corresponding output later.
+    script = os.path.join(ROOT, "docs", "scripts", "generate-examples.py")
+    subprocess.run([sys.executable, script])
+
+
 def setup(app):
     build_doxygen_docs()
+    generate_examples()
+
     app.add_css_file("css/metatensor.css")
+
+    # when importing metatensor-torch, this will change the definition of the classes
+    # to include the documentation
+    os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -58,6 +70,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx_toggleprompt",
+    "sphinx_gallery.gen_gallery",
     "breathe",
     "myst_parser",
 ]
@@ -68,17 +81,31 @@ extensions = [
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "Thumbs.db",
+    ".DS_Store",
+    "examples/index.rst",
+    "sg_execution_times.rst",
+]
+
+sphinx_gallery_conf = {
+    "filename_pattern": ".*",
+    "examples_dirs": [
+        os.path.join(ROOT, "python", "examples", "atomistic"),
+    ],
+    "gallery_dirs": [
+        os.path.join("examples", "atomistic"),
+    ],
+    # Make the code snippet for metatensor functions clickable
+    "reference_url": {"metatensor": None},
+    "prefer_full_module": ["metatensor"],
+}
 
 
 autoclass_content = "both"
 autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"
-
-intersphinx_mapping = {
-    "numpy": ("http://docs.scipy.org/doc/numpy/", None),
-}
 
 breathe_projects = {
     "metatensor": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),

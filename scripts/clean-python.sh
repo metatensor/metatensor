@@ -10,6 +10,9 @@ cd "$ROOT_DIR"
 
 rm -rf dist
 rm -rf build
+rm -rf docs/build
+rm -rf docs/src/examples
+rm -rf docs/src/sg_execution_times.rst
 
 rm -rf python/metatensor-core/metatensor-core-cxx-*.tar.gz
 rm -rf python/metatensor-core/dist
