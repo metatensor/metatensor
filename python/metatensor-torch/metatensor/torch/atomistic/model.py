@@ -5,11 +5,12 @@ import os
 import platform
 import shutil
 import site
+import warnings
 from typing import Dict, List, Optional
 
 import torch
 
-from .. import Labels, TensorMap
+from .. import Labels, TensorBlock, TensorMap
 from .. import __version__ as metatensor_version
 from . import (
     ModelCapabilities,
@@ -295,14 +296,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 to_unit=self._capabilities.length_unit,
             )
 
-            for system in systems:
-                system.positions[:] *= conversion
-                system.cell[:] *= conversion
-
-                # also update the neighbors list distances
-                for request in self._requested_neighbors_lists:
-                    neighbors = system.get_neighbors_list(request)
-                    neighbors.values[:] *= conversion
+            systems = _convert_systems_units(
+                systems,
+                conversion,
+                model_length_unit=self._capabilities.length_unit,
+                system_length_unit=options.length_unit,
+            )
 
         # run the actual calculations
         outputs = self._module(
@@ -329,10 +328,11 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 from_unit=declared.unit, to_unit=requested.unit
             )
 
-            for block in output.blocks():
-                block.values[:] *= conversion
-                for _, gradient in block.gradients():
-                    gradient.values[:] *= conversion
+            if conversion != 1.0:
+                for block in output.blocks():
+                    block.values[:] *= conversion
+                    for _, gradient in block.gradients():
+                        gradient.values[:] *= conversion
 
         return outputs
 
@@ -519,3 +519,51 @@ def _check_outputs(capabilities: ModelCapabilities, outputs: Dict[str, ModelOutp
             raise ValueError(
                 f"this model can not compute '{name}' per atom, only globally"
             )
+
+
+def _convert_systems_units(
+    systems: List[System],
+    conversion: float,
+    model_length_unit: str,
+    system_length_unit: str,
+) -> List[System]:
+    if conversion == 1.0:
+        return systems
+
+    new_systems: List[System] = []
+    for system in systems:
+        new_system = System(
+            species=system.species,
+            positions=conversion * system.positions,
+            cell=conversion * system.cell,
+        )
+
+        # also update the neighbors list distances
+        for request in system.known_neighbors_lists():
+            neighbors = system.get_neighbors_list(request)
+            new_system.add_neighbors_list(
+                request,
+                TensorBlock(
+                    values=conversion * neighbors.values,
+                    samples=neighbors.samples,
+                    components=neighbors.components,
+                    properties=neighbors.properties,
+                ),
+            )
+
+        known_data = system.known_data()
+        if len(known_data) != 0:
+            warnings.warn(
+                "the model requires a different length unit "
+                f"({model_length_unit}) than the system ({system_length_unit}), "
+                f"but we don't know how to convert custom data ({known_data}) "
+                "accordingly",
+                stacklevel=2,
+            )
+
+        for data in known_data:
+            new_system.add_data(data, system.get_data(data))
+
+        new_systems.append(new_system)
+
+    return new_systems
