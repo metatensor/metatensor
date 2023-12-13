@@ -116,7 +116,7 @@ class MetatensorCalculator(Calculator):
         system = System(species, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
-        for options in self._model.requested_neighbors_lists():
+        for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
             neighbors = _compute_ase_neighbors(atoms, options)
             register_autograd_neighbors(
                 system,
@@ -179,7 +179,7 @@ class MetatensorCalculator(Calculator):
 
         # convert from ase.Atoms to metatensor.torch.atomistic.System
         system = System(species, positions, cell)
-        for options in self._model.requested_neighbors_lists():
+        for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
             neighbors = _compute_ase_neighbors(atoms, options)
             register_autograd_neighbors(
                 system,
@@ -298,8 +298,12 @@ def _compute_ase_neighbors(atoms, options):
             samples.append((i, j, offset[0], offset[1], offset[2]))
             distances.append(distance.to(dtype=torch.float64))
 
-    samples = torch.tensor(samples, dtype=torch.int32)
-    distances = torch.vstack(distances)
+    if len(distances) == 0:
+        distances = torch.zeros((0, 3), dtype=positions.dtype)
+        samples = torch.zeros((0, 5), dtype=torch.int32)
+    else:
+        samples = torch.tensor(samples, dtype=torch.int32)
+        distances = torch.vstack(distances)
 
     return TensorBlock(
         values=distances.reshape(-1, 3, 1),

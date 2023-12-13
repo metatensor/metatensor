@@ -18,6 +18,7 @@ from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
 
 ase = pytest.importorskip("ase")
 import ase.build  # noqa  isort: skip
+import ase.units  # noqa  isort: skip
 import ase.calculators.lj  # noqa isort: skip
 
 
@@ -132,16 +133,48 @@ EPSILON = 0.1729
 
 @pytest.fixture
 def model():
-    model = LennardJones(cutoff=CUTOFF, params={(28, 28): (SIGMA, EPSILON)})
+    model = LennardJones(
+        cutoff=CUTOFF,
+        params={(28, 28): (SIGMA, EPSILON)},
+    )
     model.train(False)
 
     capabilities = ModelCapabilities(
-        length_unit="angstrom",
+        length_unit="Angstrom",
         species=[28],
         outputs={
             "energy": ModelOutput(
                 quantity="energy",
-                unit="ev",
+                unit="eV",
+                per_atom=False,
+                explicit_gradients=[],
+            ),
+        },
+    )
+
+    return MetatensorAtomisticModel(model, capabilities)
+
+
+@pytest.fixture
+def model_different_units():
+    model = LennardJones(
+        cutoff=CUTOFF * ase.units.Bohr,
+        params={
+            (28, 28): (
+                SIGMA * ase.units.Bohr,
+                EPSILON * ase.units.kJ / ase.units.mol,
+            )
+        },
+    )
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        length_unit="Bohr",
+        species=[28],
+        outputs={
+            "energy": ModelOutput(
+                quantity="energy",
+                unit="kJ/mol",
                 per_atom=False,
                 explicit_gradients=[],
             ),
@@ -167,6 +200,8 @@ def check_against_ase_lj(atoms, calculator):
 
 @pytest.fixture
 def atoms():
+    np.random.seed(0xDEADBEEF)
+
     atoms = ase.build.make_supercell(
         ase.build.bulk("Ni", "fcc", a=3.6, cubic=True), 2 * np.eye(3)
     )
@@ -175,16 +210,23 @@ def atoms():
     return atoms
 
 
-def test_python_model(model, atoms):
+def test_python_model(model, model_different_units, atoms):
     check_against_ase_lj(atoms, MetatensorCalculator(model))
+    check_against_ase_lj(atoms, MetatensorCalculator(model_different_units))
 
 
-def test_torch_script_model(model, atoms):
+def test_torch_script_model(model, model_different_units, atoms):
     model = torch.jit.script(model)
     check_against_ase_lj(atoms, MetatensorCalculator(model))
 
+    model_different_units = torch.jit.script(model_different_units)
+    check_against_ase_lj(atoms, MetatensorCalculator(model_different_units))
 
-def test_exported_model(tmpdir, model, atoms):
+
+def test_exported_model(tmpdir, model, model_different_units, atoms):
     path = os.path.join(tmpdir, "exported-model.pt")
     model.export(path)
+    check_against_ase_lj(atoms, MetatensorCalculator(path))
+
+    model_different_units.export(path)
     check_against_ase_lj(atoms, MetatensorCalculator(path))
