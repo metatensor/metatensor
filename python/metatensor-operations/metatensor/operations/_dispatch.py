@@ -279,6 +279,20 @@ def eye_like(array, size: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def get_device(array):
+    """
+    Returns the device of the array if it is a
+    ``torch.Tensor``, or "cpu" if it is a ``numpy.ndarray``.
+    """
+
+    if isinstance(array, TorchTensor):
+        return array.device
+    elif isinstance(array, np.ndarray):
+        return "cpu"
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def index_add(output_array, input_array, index):
     """Accumulates in `output_array`
     the elements of `array`

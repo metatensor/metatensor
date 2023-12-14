@@ -1,3 +1,4 @@
+from . import _dispatch
 from ._classes import Labels, TensorBlock
 
 
@@ -48,14 +49,16 @@ def block_from_array(array) -> TensorBlock:
             must have at least two dimensions. Too few provided: {n_dimensions}"
         )
 
+    samples = Labels.range("sample", shape[0])
     components = [
         Labels.range(f"component_{component_index+1}", axis_size)
         for component_index, axis_size in enumerate(shape[1:-1])
     ]
+    properties = Labels.range("property", shape[-1])
 
-    return TensorBlock(
-        values=array,
-        samples=Labels.range("sample", shape[0]),
-        components=components,
-        properties=Labels.range("property", shape[-1]),
-    )
+    device = _dispatch.get_device(array)
+    samples = samples.to(device)
+    components = [component.to(device) for component in components]
+    properties = properties.to(device)
+
+    return TensorBlock(array, samples, components, properties)

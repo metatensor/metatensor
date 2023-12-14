@@ -4,6 +4,14 @@ import pytest
 import metatensor
 
 
+try:
+    import torch  # noqa
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+
 @pytest.mark.parametrize("n_axes", [0, 1])
 def test_too_few_axes(n_axes):
     """Test block_from_array when too few axes are provided."""
@@ -50,3 +58,17 @@ def test_with_components():
     np.testing.assert_equal(
         block.properties.values, np.arange(array.shape[2]).reshape((-1, 1))
     )
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
+def test_device():
+    """Test block_from_array with a different device."""
+
+    array = torch.zeros((6, 5, 7), device="meta")
+    block = metatensor.block_from_array(array)
+    assert block.values is array
+    assert block.values.device.type == "meta"
+    assert isinstance(block.samples.values, np.ndarray)
+    for component in block.components:
+        assert isinstance(component.values, np.ndarray)
+    assert isinstance(block.properties.values, np.ndarray)
