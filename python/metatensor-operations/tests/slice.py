@@ -6,8 +6,10 @@ import pytest
 import metatensor
 from metatensor import Labels, TensorBlock, TensorMap
 
+
 try:
     import torch  # noqa
+
     HAS_TORCH = True
     if torch.cuda.is_available():
         HAS_CUDA = True
