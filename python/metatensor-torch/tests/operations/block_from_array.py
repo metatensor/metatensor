@@ -15,7 +15,7 @@ def check_operation(block_from_array, device):
         assert block._type().name() == "TensorBlock"
 
     # check values
-    if device != torch.device("meta"):
+    if device != "meta":
         assert torch.equal(block.values, values)
 
 

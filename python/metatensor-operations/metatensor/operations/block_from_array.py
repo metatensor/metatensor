@@ -57,9 +57,8 @@ def block_from_array(array) -> TensorBlock:
     properties = Labels.range("property", shape[-1])
 
     device = _dispatch.get_device(array)
-    if device is not None:  # i.e. if array is a torch.Tensor
-        samples = samples.to(array.device)
-        components = [component.to(array.device) for component in components]
-        properties = properties.to(array.device)
+    samples = samples.to(device)
+    components = [component.to(device) for component in components]
+    properties = properties.to(device)
 
     return TensorBlock(array, samples, components, properties)
