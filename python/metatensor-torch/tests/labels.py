@@ -42,10 +42,6 @@ def test_constructor():
         labels.values == torch.arange(33, dtype=torch.int32).reshape(33, 1)
     )
 
-    labels = Labels.range("test", 33, device="meta")
-    assert labels.names == ["test"]
-    assert labels.values.device.type == "meta"
-
 
 def test_constructor_errors():
     message = (
@@ -543,8 +539,8 @@ class LabelsWrap:
     def empty(self, names: Union[str, List[str]]) -> Labels:
         return Labels.empty(names)
 
-    def range_(self, name: str, end: int, device: Union[str, torch.device] = "cpu") -> Labels:
-        return Labels.range(name, end, device)
+    def range_(self, name: str, end: int) -> Labels:
+        return Labels.range(name, end)
 
     def union(self, other: Labels) -> Labels:
         return self._c.union(other=other)

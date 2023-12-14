@@ -1,5 +1,5 @@
-import torch
 import pytest
+import torch
 from packaging import version
 
 import metatensor.torch

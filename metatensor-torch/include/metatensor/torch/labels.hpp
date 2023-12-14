@@ -63,8 +63,8 @@ public:
     static TorchLabels empty(torch::IValue names);
 
     /// Create Labels with a single dimension with the given name and values in
-    /// the [0, stop) range, on the given device
-    static TorchLabels range(std::string name, int64_t end, torch::IValue device = torch::IValue(torch::kCPU));
+    /// the [0, stop) range
+    static TorchLabels range(std::string name, int64_t end);
 
     /// Create a `LabelsHolder` from a pre-existing `metatensor::Labels`
     explicit LabelsHolder(metatensor::Labels labels);
