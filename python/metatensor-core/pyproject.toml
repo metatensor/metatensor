@@ -39,7 +39,7 @@ requires = [
     "setuptools >=68",
     "packaging >=23",
     "wheel >=0.41",
-    "cmake",
+    "cmake <3.28",  # this should be changed once cmake 3.28.1 is on PyPI
 ]
 build-backend = "setuptools.build_meta"
 
