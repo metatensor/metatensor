@@ -236,10 +236,10 @@ class Labels:
         """
 
     @staticmethod
-    def range(name: str, end: int) -> "Labels":
+    def range(name: str, end: int, device: Union[str, torch.device] = "cpu") -> "Labels":
         """
         Create :py:class:`Labels` with a single dimension using the given
-        ``name`` and values in the ``[0, end)`` range.
+        ``name`` and values in the ``[0, end)`` range, on the given ``device``.
 
         :param name: name of the single dimension in the new labels.
         :param end: end of the range for labels

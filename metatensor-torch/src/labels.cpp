@@ -85,6 +85,21 @@ std::vector<std::string> metatensor_torch::details::normalize_names(torch::IValu
     return results;
 }
 
+static torch::Device normalize_device(torch::IValue device) {
+    // transforms a torch::IValue into a torch::Device
+    auto normalized_device = torch::Device("cpu");
+    if (device.isString()) {
+        normalized_device = torch::Device(device.toStringRef());
+    } else if (device.isDevice()) {
+        normalized_device = device.toDevice();
+    } else {
+        C10_THROW_ERROR(TypeError,
+            "'device' must be a string or a torch.device, got '" + device.type()->str() + "' instead"
+        );
+    }
+    return normalized_device;
+}
+
 LabelsHolder::LabelsHolder(
     std::vector<std::string> names,
     torch::Tensor values,
@@ -234,8 +249,9 @@ TorchLabels LabelsHolder::empty(torch::IValue names_ivalue) {
 }
 
 
-TorchLabels LabelsHolder::range(std::string name, int64_t end) {
-    auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
+TorchLabels LabelsHolder::range(std::string name, int64_t end, torch::IValue device) {
+    auto normalized_device = normalize_device(device);
+    auto options = torch::TensorOptions().dtype(torch::kInt32).device(normalized_device);
     auto values = torch::arange(end, options).reshape({end, 1});
     return torch::make_intrusive<LabelsHolder>(name, std::move(values));
 }
@@ -372,17 +388,7 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) con
 }
 
 TorchLabels LabelsHolder::to(torch::IValue device) const {
-    // transform torch::IValue into torch::Device
-    auto normalized_device = torch::Device("cpu");
-    if (device.isString()) {
-        normalized_device = torch::Device(device.toStringRef());
-    } else if (device.isDevice()) {
-        normalized_device = device.toDevice();
-    } else {
-        C10_THROW_ERROR(TypeError,
-            "'device' must be a string or a torch.device, got '" + device.type()->str() + "' instead"
-        );
-    }
+    auto normalized_device = normalize_device(device);
     return this->to(normalized_device);
 }
 
