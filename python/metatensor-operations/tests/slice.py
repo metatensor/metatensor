@@ -17,6 +17,7 @@ try:
         HAS_CUDA = False
 except ImportError:
     HAS_TORCH = False
+    HAS_CUDA = False
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
