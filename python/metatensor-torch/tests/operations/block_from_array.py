@@ -1,11 +1,12 @@
 import torch
+import pytest
 from packaging import version
 
 import metatensor.torch
 
 
-def check_operation(block_from_array):
-    values = torch.arange(42).reshape(2, 3, 7).to(torch.float64)
+def check_operation(block_from_array, device):
+    values = torch.arange(42, device=device).reshape(2, 3, 7).to(torch.float64)
     block = block_from_array(values)
 
     # check output type
@@ -17,9 +18,11 @@ def check_operation(block_from_array):
     assert torch.equal(block.values, values)
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.block_from_array)
+@pytest.mark.parametrize("device", ["cpu", "meta"])
+def test_operation_as_python(device):
+    check_operation(metatensor.torch.block_from_array, device)
 
 
-def test_operation_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.block_from_array))
+@pytest.mark.parametrize("device", ["cpu", "meta"])
+def test_operation_as_torch_script(device):
+    check_operation(torch.jit.script(metatensor.torch.block_from_array), device)
