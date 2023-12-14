@@ -19,6 +19,7 @@ else:
     load = torch.ops.metatensor.load
     save = torch.ops.metatensor.save
 
+from . import atomistic  # noqa
 
 try:
     import metatensor.operations  # noqa

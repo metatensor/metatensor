@@ -36,7 +36,7 @@ changelog = "https://lab-cosmo.github.io/metatensor/latest/reference/torch/CHANG
 requires = [
     "setuptools >=68",
     "packaging >=23",
-    "cmake",
+    "cmake <3.28",  # this should be changed once cmake 3.28.1 is on PyPI
     "torch >= 1.11",
 ]
 

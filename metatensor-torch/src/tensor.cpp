@@ -6,6 +6,8 @@
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/misc.hpp"
 
+#include "internal/scalar_type_name.hpp"
+
 using namespace metatensor_torch;
 
 template <typename T>
@@ -71,8 +73,8 @@ TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensor
         if (block->values().scalar_type() != scalar_type) {
             C10_THROW_ERROR(TypeError,
                 "cannot create TensorMap: all blocks must have the same dtype, "
-                "got " + std::string(c10::toString(block->values().scalar_type())) +
-                " and " + std::string(c10::toString(scalar_type))
+                "got " + scalar_type_name(block->values().scalar_type()) +
+                " and " + scalar_type_name(scalar_type)
             );
         }
     }

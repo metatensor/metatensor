@@ -56,11 +56,11 @@ the metatensor-compatible libraries!
     The following libraries use metatensor either as input, output or both:
 
     - `equisolve <https://github.com/lab-cosmo/equisolve/>`_: a companion to
-      metatensor implementing common ML models that take all the data as metatensor
-      TensorMaps;
+      metatensor implementing common ML models that take all the data as
+      metatensor TensorMaps;
     - `rascaline <https://github.com/Luthaf/rascaline/>`_: a library computing
-      physics-inspired representations of atomic systems. Rascaline always outputs
-      its representations in metatensor format;
+      physics-inspired representations of atomic systems. Rascaline always
+      outputs its representations in metatensor format;
     - `Q-stack <https://github.com/lcmd-epfl/Q-stack/>`_: library of pre- and
       post-processing tasks for Quantum Machine Learning; can output some of its
       data in metatensor format;
@@ -96,10 +96,10 @@ capacities provided by the first two goals of metatensor, researchers should be
 able to created and train such MLIPs and customize various parts of the model.
 
 The final objective of metatensor is to allow using these custom models inside
-large scale molecular simulation engines. To do this, we plan to integrate
-metatensor with `TorchScript <https://pytorch.org/docs/stable/jit.html>`_, and
-use the facilities of TorchScript to export the model from Python and then load
-and execute it inside the simulation engine. This is a planned feature, not
-implemented yet.
+large scale molecular simulation engines. To do this, we integrate metatensor
+with `TorchScript <https://pytorch.org/docs/stable/jit.html>`_, and use the
+facilities of TorchScript to export the model from Python and then load and
+execute it inside the simulation engine. This is documented in
+:ref:`atomistic-models`.
 
 .. TODO: add illustration
