@@ -427,12 +427,7 @@ class Labels:
         )
         """
 
-    @overload
-    def to(self, str) -> "Labels":
-        """move the values for these Labels to the given ``device``"""
-
-    @overload
-    def to(self, device) -> "Labels":
+    def to(self, device: Union[str, torch.device]) -> "Labels":
         """move the values for these Labels to the given ``device``"""
 
     def position(
