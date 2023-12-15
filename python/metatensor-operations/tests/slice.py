@@ -531,7 +531,7 @@ def test_slicing_all(tensor):
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
 @pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
 def test_slice_different_device():
-    array = torch.empty((6, 5, 7), device="cuda")  # doesn't work with meta
+    array = torch.empty((6, 5, 7), device="cuda")  # doesn't work with device=meta
     block = metatensor.block_from_array(array)
     tensor = TensorMap(Labels.range("_", 1), [block])
 
