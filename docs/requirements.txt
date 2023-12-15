@@ -11,4 +11,5 @@ myst_parser         # include markdown documents in sphinx
 numpy
 torch
 
-matplotlib
+# required for examples
+ase

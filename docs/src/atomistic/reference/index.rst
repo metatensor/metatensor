@@ -15,6 +15,7 @@ documented below, and is part of the ``metatensor.torch.atomistic`` module.
 
     systems
     models
+    ase
 
 
 C++ API reference

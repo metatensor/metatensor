@@ -42,7 +42,7 @@ def generate_examples():
     # METATENSOR_IMPORT_FOR_SPHINX=1). So instead we run it inside a small script, and
     # include the corresponding output later.
     script = os.path.join(ROOT, "docs", "scripts", "generate-examples.py")
-    subprocess.run([sys.executable, script])
+    subprocess.run([sys.executable, script], capture_output=False)
 
 
 def setup(app):
@@ -120,6 +120,8 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
+    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
