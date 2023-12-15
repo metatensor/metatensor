@@ -196,3 +196,15 @@ wrapper.export("exported-model.pt")
 
 # the file was created in the current directory
 print(glob.glob("*.pt"))
+
+
+# %%
+#
+# Now that we have an exported model, the next tutorial will show how you can use such a
+# model to run `Molecular Dynamics`_ simulation using the Atomic Simulating Environment
+# (`ASE`_).
+#
+# .. _Molecular Dynamics: https://en.wikipedia.org/wiki/Molecular_dynamics
+#
+# .. _ASE: https://wiki.fysik.dtu.dk/ase/
+#

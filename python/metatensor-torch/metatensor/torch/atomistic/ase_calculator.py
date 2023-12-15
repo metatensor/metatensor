@@ -18,8 +18,8 @@ from . import (
 
 import ase  # isort: skip
 import ase.neighborlist  # isort: skip
+import ase.calculators.calculator  # isort: skip
 from ase.calculators.calculator import (  # isort: skip
-    Calculator,
     InputError,
     PropertyNotImplementedError,
     all_properties as ALL_ASE_PROPERTIES,
@@ -32,11 +32,11 @@ from .. import sum_over_samples  # isort: skip
 FilePath = Union[str, bytes, pathlib.PurePath]
 
 
-class MetatensorCalculator(Calculator):
+class MetatensorCalculator(ase.calculators.calculator.Calculator):
     """
-    The :py:class:`MetatensorCalculator` class implements ASE's ``Calculator`` API using
-    metatensor atomistic models to compute energy, forces and any other supported
-    property.
+    The :py:class:`MetatensorCalculator` class implements ASE's
+    :py:class`ase.calculators.calculator.Calculator` API using metatensor atomistic
+    models to compute energy, forces and any other supported property.
 
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
@@ -46,14 +46,14 @@ class MetatensorCalculator(Calculator):
         self,
         model: Union[
             FilePath,
-            torch.jit.RecursiveScriptModule,
             MetatensorAtomisticModel,
         ],
         check_consistency=False,
     ):
         """
-        :param model: model to use for the calculation. This can be a file path, or a
-            Python instance of :py:class:`MetatensorAtomisticModel`.
+        :param model: model to use for the calculation. This can be a file path, a
+            Python instance of :py:class:`MetatensorAtomisticModel`, or the output of
+            :py:func:`torch.jit.script` on :py:class:`MetatensorAtomisticModel`.
         :param check_consistency: should we check the model for consistency when
             running, defaults to False.
         """
