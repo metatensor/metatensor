@@ -11,19 +11,19 @@ fn main() {
  *    documentation), make the corresponding changes in the rust sources.      *
  * =========================================================================== */";
 
+    let mut config: cbindgen::Config = Default::default();
+    config.language = cbindgen::Language::C;
+    config.cpp_compat = true;
+    config.include_guard = Some("METATENSOR_H".into());
+    config.include_version = false;
+    config.documentation = true;
+    config.documentation_style = cbindgen::DocumentationStyle::Doxy;
+    config.line_endings = cbindgen::LineEndingStyle::LF;
+    config.header = Some(generated_comment.into());
+
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
-        .with_config(cbindgen::Config {
-            language: cbindgen::Language::C,
-            cpp_compat: true,
-            include_guard: Some("METATENSOR_H".into()),
-            include_version: false,
-            documentation: true,
-            documentation_style: cbindgen::DocumentationStyle::Doxy,
-            line_endings: cbindgen::LineEndingStyle::LF,
-            header: Some(generated_comment.into()),
-            ..Default::default()
-        })
+        .with_config(config)
         .generate()
         .map(|data| {
             let mut path = PathBuf::from("include");
