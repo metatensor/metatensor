@@ -7,6 +7,19 @@ import metatensor
 from metatensor import Labels, TensorBlock, TensorMap
 
 
+try:
+    import torch  # noqa
+
+    HAS_TORCH = True
+    if torch.cuda.is_available():
+        HAS_CUDA = True
+    else:
+        HAS_CUDA = False
+except ImportError:
+    HAS_TORCH = False
+    HAS_CUDA = False
+
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 TEST_FILE = "qm7-spherical-expansion.npz"
 
@@ -515,6 +528,26 @@ def test_slicing_all(tensor):
     )
 
 
+@pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
+def test_slice_different_device():
+    array = torch.empty((6, 5, 7), device="cuda")  # doesn't work with device=meta
+    block = metatensor.block_from_array(array)
+    tensor = TensorMap(Labels.range("_", 1), [block])
+
+    # Slice only samples 2, 4
+    structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
+    samples = Labels(
+        names=["sample"],
+        values=structures_to_keep,
+    )
+    metatensor.slice(
+        tensor,
+        axis="samples",
+        labels=samples,
+    )
+
+
 # ===== Tests Errors =====
 
 
@@ -548,7 +581,7 @@ def test_slice_block_errors(tensor):
         values=centers_to_keep,
     )
 
-    message = message = (
+    message = (
         "`block` must be a metatensor TensorBlock, "
         "not <class 'metatensor.tensor.TensorMap'>"
     )

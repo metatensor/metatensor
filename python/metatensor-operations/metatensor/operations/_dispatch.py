@@ -381,6 +381,8 @@ def mask(array, axis: int, mask):
     if isinstance(array, TorchTensor):
         return torch.index_select(array, dim=axis, index=indices)
     elif isinstance(array, np.ndarray):
+        if isinstance(indices, TorchTensor):
+            indices = indices.detach().cpu().numpy()
         return np.take(array, indices, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
