@@ -32,5 +32,8 @@ static = []
 [build-dependencies]
 # we want a recent version of the cmake crate
 cmake = "0.1.49"
-which = "4"
+which = "5"
 glob = "0.3"
+
+# This is the last version supporting rustc 1.65
+home = "=0.5.5"

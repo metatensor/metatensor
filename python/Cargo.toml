@@ -9,4 +9,7 @@ rust-version = "1.65"
 path = "lib.rs"
 
 [dev-dependencies]
-which = "4"
+which = "5"
+
+# This is the last version supporting rustc 1.65
+home = "=0.5.5"
