@@ -66,7 +66,6 @@ if not (HAS_METATENSOR_LEARN) or not (HAS_METATENSOR_OPERATIONS):
 
 __all__ = [
     "Labels",
-    "LabelsEntry",
     "TensorBlock",
     "TensorMap",
 ]

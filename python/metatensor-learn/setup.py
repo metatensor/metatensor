@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import uuid
 
 import packaging.version
 from setuptools import setup
@@ -10,6 +11,9 @@ from setuptools.command.sdist import sdist
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
+METATENSOR_OPERATIONS = os.path.realpath(
+    os.path.join(ROOT, "..", "metatensor-operations")
+)
 
 METATENSOR_LEARN_VERSION = "0.0.0"
 
@@ -117,7 +121,22 @@ if __name__ == "__main__":
         with open(os.path.join(ROOT, authors[0])) as fd:
             authors = fd.read().splitlines()
 
-    install_requires = ["metatensor-operations"]
+    install_requires = []
+
+    # when packaging a release, we should never use local dependencies
+    METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_OPERATIONS):
+        # we are building from a git checkout or full repo archive
+
+        # add a random uuid to the file url to prevent pip from using a cached
+        # wheel for metatensor-core, and force it to re-build from scratch
+        uuid = uuid.uuid4()
+        install_requires.append(
+            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}?{uuid}"
+        )
+    else:
+        # we are building from a sdist/installing from a wheel
+        install_requires.append("metatensor-operations >=0.1.0,<0.2.0")
 
     setup(
         version=create_version_number(METATENSOR_LEARN_VERSION),

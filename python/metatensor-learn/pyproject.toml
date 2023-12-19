@@ -36,7 +36,6 @@ changelog = "https://lab-cosmo.github.io/metatensor/latest/reference/learn/CHANG
 requires = [
     "setuptools >=68",
     "packaging >=23",
-    "metatensor-operations >=0.1.0,<0.2.0"
 ]
 build-backend = "setuptools.build_meta"
 
