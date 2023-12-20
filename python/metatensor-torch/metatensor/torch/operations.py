@@ -42,7 +42,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 # used in `metatensor`, and one in `metatensor.torch`.
 
 
-# Step 1: create te `_classes` module as an empty module
+# Step 1: create the `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.operations._classes",
     loader=None,

@@ -21,6 +21,8 @@ else:
 
 from . import atomistic  # noqa
 
+MISSING_SUBPACKAGES = []
+
 try:
     import metatensor.operations  # noqa
 
@@ -32,15 +34,33 @@ except ImportError:
 if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa
     from .operations import *  # noqa
-
-
 else:
+    MISSING_SUBPACKAGES.append("metatensor-operations")
+
+
+try:
+    import metatensor.learn  # noqa
+
+    HAS_METATENSOR_LEARN = True
+except ImportError:
+    HAS_METATENSOR_LEARN = False
+
+
+if HAS_METATENSOR_LEARN:
+    from . import learn  # noqa
+    from .learn import *  # noqa
+else:
+    MISSING_SUBPACKAGES.append("metatensor-learn")
+
+
+if not (HAS_METATENSOR_LEARN) or not (HAS_METATENSOR_OPERATIONS):
     # __getattr__ is called when a symbol can not be found, we use it to give
-    # the user a better error message if they don't have metatensor-operations
+    # the user a better error message if they don't have all metatensor subpackages
     def __getattr__(name):
         raise AttributeError(
-            f"metatensor.torch.{name} is not defined, are you sure you have the "
-            "metatensor-operations package installed?"
+            f"metatensor.torch.{name} is not defined, you might have not "
+            "installed the corresponding metatensor subpackage "
+            f"({' or '.join(MISSING_SUBPACKAGES)})."
         )
 
 
