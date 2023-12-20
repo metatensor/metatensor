@@ -4,7 +4,7 @@ import sys
 import torch
 
 import metatensor.operations
-from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
+from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
 #                       CAREFUL ADVENTURER, HERE BE DRAGONS!
@@ -42,7 +42,7 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 # used in `metatensor`, and one in `metatensor.torch`.
 
 
-# Step 1: create te `_classes` module as an empty module
+# Step 1: create the `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.operations._classes",
     loader=None,
@@ -52,7 +52,6 @@ module = importlib.util.module_from_spec(spec)
 # be made to the `metatensor/operations/_classes.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
-module.__dict__["LabelsEntry"] = LabelsEntry
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
 module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting

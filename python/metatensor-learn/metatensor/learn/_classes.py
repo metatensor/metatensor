@@ -9,7 +9,7 @@
 #
 # Any change to this file MUST be also be made to `metatensor/torch/learn.py`.
 
-from metatensor import Labels, LabelsEntry, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 def torch_jit_is_scripting():
@@ -22,7 +22,6 @@ __all__ = [
     "Labels",
     "TensorBlock",
     "TensorMap",
-    "LabelsEntry",
     "torch_jit_is_scripting",
     "check_isinstance",
 ]

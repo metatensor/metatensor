@@ -4,45 +4,15 @@ import sys
 import torch
 
 import metatensor.learn
-from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
+from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
-#                       CAREFUL ADVENTURER, HERE BE DRAGONS!
-#
-#                                         \||/
-#                                         |  @___oo
-#                               /\  /\   / (__,,,,|
-#                              ) /^\) ^\/ _)
-#                              )   /^\/   _)
-#                              )   _ /  / _)
-#                          /\  )/\/ ||  | )_)
-#                         <  >      |(,,) )__)
-#                          ||      /    \)___)\
-#                          | \____(      )___) )___
-#                           \______(_______;;; __;;;
-#
-#
-# This module tries to re-use code from `metatensor-learn` to expose TorchScript
-# compatible functions. To achieve this we need two things:
-#  - the code needs to use TorchScript compatible learn only
-#  - the type annotation of the functions have to refer to classes TorchScript knows
-#    about
-#
-# To achieve this, we import the modules in a special mode with `importlib`, first
-# creating the `metatensor.torch.learn._classes` module, containing all metatensor
-# classes plus a `TORCH_SCRIPT_MODE` constant to change the code between Python and
-# TorchScript modes.
-#
-# We then import the code from `metatensor-learn` into a custom module
-# `metatensor.torch.learn`. When code in this module tries to `from ._classes
-# import ...`, the import is resolved to the values defined in the step above. This
-# allows to have the right type annotation on the functions.
-#
-# Overall, the same code is used to define two versions of each function: one will be
-# used in `metatensor`, and one in `metatensor.torch`.
+# ==================================================================================== #
+# see operations.py for an explanation of what's going on here.                        #
+# ==================================================================================== #
 
 
-# Step 1: create te `_classes` module as an empty module
+# Step 1: create the `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.learn._classes",
     loader=None,
@@ -52,7 +22,6 @@ module = importlib.util.module_from_spec(spec)
 # be made to the `metatensor/learn/_classes.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
-module.__dict__["LabelsEntry"] = LabelsEntry
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
 module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting

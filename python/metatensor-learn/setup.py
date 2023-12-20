@@ -10,7 +10,6 @@ from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
 METATENSOR_OPERATIONS = os.path.realpath(
     os.path.join(ROOT, "..", "metatensor-operations")
 )
