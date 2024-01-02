@@ -92,9 +92,11 @@ sphinx_gallery_conf = {
     "filename_pattern": ".*",
     "examples_dirs": [
         os.path.join(ROOT, "python", "examples", "atomistic"),
+        os.path.join(ROOT, "python", "examples", "learn", "data"),
     ],
     "gallery_dirs": [
         os.path.join("examples", "atomistic"),
+        os.path.join("examples", "learn", "data"),
     ],
     # Make the code snippet for metatensor functions clickable
     "reference_url": {"metatensor": None},
