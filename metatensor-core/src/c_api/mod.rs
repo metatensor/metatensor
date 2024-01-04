@@ -6,23 +6,16 @@ use once_cell::sync::Lazy;
 
 #[macro_use]
 mod status;
-
 pub use self::status::{catch_unwind, mts_status_t};
-pub use self::status::{MTS_SUCCESS, MTS_INVALID_PARAMETER_ERROR};
-pub use self::status::{MTS_BUFFER_SIZE_ERROR, MTS_INTERNAL_ERROR};
 
-pub mod labels;
-pub use self::labels::mts_labels_t;
+#[cfg(test)]
+pub use self::status::MTS_SUCCESS;
 
-pub mod data;
-
-pub mod blocks;
-pub use self::blocks::mts_block_t;
-
-pub mod tensor;
-pub use self::tensor::mts_tensormap_t;
-
-pub mod io;
+mod labels;
+mod data;
+mod blocks;
+mod tensor;
+mod io;
 
 mod utils;
 
