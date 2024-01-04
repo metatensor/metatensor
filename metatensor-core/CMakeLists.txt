@@ -172,28 +172,32 @@ endif()
 # Get the list of libraries linked by default by cargo/rustc to add when linking
 # to metatensor::static
 if (CARGO_VERSION_CHANGED)
+    include(cmake/tempdir.cmake)
+    get_tempdir(TMPDIR)
+
     # Adapted from https://github.com/corrosion-rs/corrosion/blob/dc1e4e5/cmake/FindRust.cmake
-    file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs")
     execute_process(
         COMMAND "${CARGO_EXE}" new --lib _cargo_required_libs
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        WORKING_DIRECTORY "${TMPDIR}"
         RESULT_VARIABLE cargo_new_result
         ERROR_QUIET
     )
 
     if (cargo_new_result)
-        message(FATAL_ERRPR "could not create empty project to find default static libs: ${cargo_new_result}")
+        message(FATAL_ERROR "could not create empty project to find default static libs: ${cargo_new_result}")
     endif()
 
-    file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs/Cargo.toml"
-        "[workspace]\nmembers=[]\n[lib]\ncrate-type=[\"staticlib\"]")
+    file(APPEND "${TMPDIR}/_cargo_required_libs/Cargo.toml" "[lib]\ncrate-type=[\"staticlib\"]")
 
     execute_process(
         COMMAND ${CARGO_EXE} rustc --verbose --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_cargo_required_libs"
+        WORKING_DIRECTORY "${TMPDIR}/_cargo_required_libs"
         RESULT_VARIABLE cargo_build_result
         ERROR_VARIABLE cargo_build_error_message
     )
+
+    # clean up the files
+    file(REMOVE_RECURSE "${TMPDIR}")
 
     if(cargo_build_result)
         message(FATAL_ERROR "could extract default static libs: ${cargo_build_result}")
