@@ -25,5 +25,9 @@ rm -rf python/metatensor-torch/metatensor-torch-cxx-*.tar.gz
 rm -rf python/metatensor-torch/dist
 rm -rf python/metatensor-torch/build
 
+rm -rf python/metatensor-learn/dist
+rm -rf python/metatensor-learn/build
+
 find . -name "*.egg-info" -exec rm -rf "{}" +
 find . -name "__pycache__" -exec rm -rf "{}" +
+find . -name ".coverage" -exec rm -rf "{}" +
