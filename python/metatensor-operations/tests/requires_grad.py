@@ -16,7 +16,7 @@ def test_requires_grad():
         # the npz is using DEFLATE compression, metatensor only supports STORED
         use_numpy=True,
     )
-    tensor = metatensor.to(tensor, backend="torch")
+    tensor = tensor.to(arrays="torch")
 
     for block in tensor:
         assert not block.values.requires_grad

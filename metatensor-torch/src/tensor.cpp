@@ -71,7 +71,7 @@ TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensor
             );
         }
         if (block->values().scalar_type() != scalar_type) {
-            C10_THROW_ERROR(TypeError,
+            C10_THROW_ERROR(ValueError,
                 "cannot create TensorMap: all blocks must have the same dtype, "
                 "got " + scalar_type_name(block->values().scalar_type()) +
                 " and " + scalar_type_name(scalar_type)
@@ -82,16 +82,6 @@ TensorMapHolder::TensorMapHolder(TorchLabels keys, const std::vector<TorchTensor
 
 TorchTensorMap TensorMapHolder::copy() const {
     return torch::make_intrusive<TensorMapHolder>(TensorMapHolder(this->tensor_.clone()));
-}
-
-TorchTensorMap TensorMapHolder::to(torch::Device device) {
-    const auto keys = this->keys()->to(device);
-    auto blocks = std::vector<torch::intrusive_ptr<TensorBlockHolder>>();
-    for (size_t i=0; i<this->tensor_.keys().count(); i++) {
-        auto block = torch::make_intrusive<TensorBlockHolder>(this->tensor_.block_by_id(i), torch::IValue());
-        blocks.push_back(block->to(torch::nullopt, device));
-    }
-    return torch::make_intrusive<TensorMapHolder>(keys, blocks);
 }
 
 TorchLabels TensorMapHolder::keys() const {
@@ -359,12 +349,12 @@ TorchTensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, b
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_properties first argument");
         auto tensor = tensor_.keys_to_properties(selection, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(device);
+        return result->to(torch::nullopt, device);
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(device);
+        return result->to(torch::nullopt, device);
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_properties first argument must be a `str`, list of `str` or `Labels`"
@@ -378,12 +368,12 @@ TorchTensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_samples first argument");
         auto tensor = tensor_.keys_to_samples(selection, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(device);
+        return result->to(torch::nullopt, device);
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(device);
+        return result->to(torch::nullopt, device);
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_samples first argument must be a `str`, list of `str` or `Labels`"
@@ -396,7 +386,7 @@ TorchTensorMap TensorMapHolder::components_to_properties(torch::IValue dimension
     auto selection = extract_list_str(dimensions, "TensorMap::components_to_properties argument");
     auto tensor = this->tensor_.components_to_properties(selection);
     auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-    return result->to(device);
+    return result->to(torch::nullopt, device);
 }
 
 static std::vector<std::string> labels_names(const metatensor::TensorBlock& block, size_t dimension) {
@@ -458,6 +448,37 @@ std::vector<std::tuple<TorchLabelsEntry, TorchTensorBlock>> TensorMapHolder::ite
         );
     }
     return result;
+}
+
+torch::Device TensorMapHolder::device() const {
+    return this->keys()->device();
+}
+
+torch::Dtype TensorMapHolder::scalar_type() const {
+    if (this->keys()->count() == 0) {
+        return torch::get_default_dtype_as_scalartype();
+    }
+
+    // const_cast is fine here since we will just extract and return a scalar
+    auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+    auto first_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+    return first_block->scalar_type();
+}
+
+TorchTensorMap TensorMapHolder::to(
+    torch::optional<torch::Dtype> dtype,
+    torch::optional<torch::Device> device,
+    torch::optional<std::string> arrays
+) const {
+    auto new_blocks = std::vector<TorchTensorBlock>();
+    for (int64_t block_i=0; block_i<this->keys()->count(); block_i++) {
+        // const_cast is fine here since we will return a new copy of the data
+        // with the different dtype/device
+        auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(block_i);
+        auto torch_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+        new_blocks.emplace_back(torch_block->to(dtype, device, arrays));
+    }
+    return torch::make_intrusive<TensorMapHolder>(this->keys()->to(device), new_blocks);
 }
 
 

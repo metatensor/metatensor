@@ -58,6 +58,5 @@ from .solve import solve  # noqa
 from .sort import sort, sort_block  # noqa
 from .split import split, split_block  # noqa
 from .subtract import subtract  # noqa
-from .to import block_to, to  # noqa
 from .unique_metadata import unique_metadata, unique_metadata_block  # noqa
 from .zeros_like import zeros_like, zeros_like_block  # noqa

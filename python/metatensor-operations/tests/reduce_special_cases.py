@@ -49,7 +49,7 @@ def test_reduction_all_samples():
     assert np.allclose(var_X[0].values, np.var(X[0].values, axis=0))
 
     if HAS_TORCH:
-        X = metatensor.to(X, backend="torch")
+        X = X.to(arrays="torch")
 
         sum_X = metatensor.sum_over_samples(X, sample_names=["s"])
         mean_X = metatensor.mean_over_samples(X, sample_names=["s"])

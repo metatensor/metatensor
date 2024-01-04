@@ -19,9 +19,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- the `requires_grad` parameter of the `to()` operation. This is now covered by
-  `detach()` and `requires_grad()`.
-
+- the `to` operation was removed. Similar functionality is now offered by
+  `TensorMap.to`, `TensorBlock.to`, and the operations `detach()` and
+  `requires_grad()`.
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.1.0) - 2023-10-11
 

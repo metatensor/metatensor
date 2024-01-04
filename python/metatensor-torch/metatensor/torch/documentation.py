@@ -1044,6 +1044,41 @@ class TensorMap:
             include all keys.
         """
 
+    @property
+    def device(self) -> torch.device:
+        """get the device of all the arrays stored inside this :py:class:`TensorMap`"""
+
+    @property
+    def dtype(self) -> torch.dtype:
+        """
+        get the dtype of all the arrays stored inside this :py:class:`TensorMap`
+
+        .. warning::
+
+            Due to limitations in TorchScript C++ extensions, the dtype is returned as
+            an integer, which can not be compared with :py:class:`torch.dtype`
+            instances. See :py:meth:`TensorBlock.dtype` for more information.
+        """
+
+    def to(
+        self,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+        arrays: Optional[str] = None,
+    ) -> "TensorMap":
+        """
+        Move all the data (keys and blocks) in this :py:class:`TensorMap` to the given
+        ``dtype``, ``device`` and ``arrays`` backend.
+
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        :param arrays: new backend to use for the arrays. This parameter is here for
+            compatibility with the pure Python API, can only be set  to ``"torch"`` or
+            ``None`` and does nothing.
+        """
+
 
 def load(path: str) -> TensorMap:
     """
