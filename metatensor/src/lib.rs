@@ -47,6 +47,7 @@ pub use self::labels::LabelsParIter;
 
 mod block;
 pub use self::block::{TensorBlock, TensorBlockRef, TensorBlockRefMut};
+pub use self::block::{TensorBlockData, TensorBlockDataMut};
 pub use self::block::{GradientsIter, GradientsMutIter};
 pub use self::block::LazyMetadata;
 
