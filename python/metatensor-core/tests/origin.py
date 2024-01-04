@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 def test_different_origins():
@@ -27,5 +27,10 @@ def test_different_origins():
         properties=Labels.single(),
     )
 
-    with pytest.raises(MetatensorError, match="different origins"):
+    message = (
+        "all blocks in a TensorMap must have the same origin, "
+        "got 'metatensor.data.array.numpy' and 'metatensor.data.array.torch'"
+    )
+
+    with pytest.raises(ValueError, match=message):
         TensorMap(keys=keys, blocks=[block_numpy, block_torch])

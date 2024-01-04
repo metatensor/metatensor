@@ -14,4 +14,3 @@ Manipulation operations
     samples reduction <samples-reduction>
     slice() <slice>
     split() <split>
-    to() <to>

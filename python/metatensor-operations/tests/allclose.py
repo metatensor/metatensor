@@ -12,26 +12,26 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 def test_allclose_nograd():
     block_1 = TensorBlock(
-        values=np.array([[1, 2], [3, 5]], dtype=np.float64),
+        values=np.array([[1.0, 2], [3, 5]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels.range("p", 2),
     )
     block_2 = TensorBlock(
-        values=np.array([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
+        values=np.array([[1.0, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]),
         samples=Labels.range("s", 6),
         components=[],
         properties=Labels.range("p", 2),
     )
 
     block_3 = TensorBlock(
-        values=np.array([[1], [2]]),
+        values=np.array([[1.0], [2]]),
         samples=Labels(["s"], np.array([[0], [2]])),
         components=[],
         properties=Labels(["p"], np.array([[0]])),
     )
     block_4 = TensorBlock(
-        values=np.array([[23], [53], [83]]),
+        values=np.array([[23.0], [53], [83]]),
         samples=Labels(["s"], np.array([[0], [2], [7]])),
         components=[],
         properties=Labels(["p"], np.array([[6]])),

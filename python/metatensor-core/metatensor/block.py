@@ -197,6 +197,13 @@ class TensorBlock:
         return not equal_block(self, other)
 
     @property
+    def _raw_values(self) -> mts_array_t:
+        """Get the raw ``mts_array_t`` corresponding to this block's values"""
+        data = mts_array_t()
+        self._lib.mts_block_data(self._ptr, data)
+        return data
+
+    @property
     def values(self) -> Array:
         """
         Get the values for this block.
@@ -205,8 +212,7 @@ class TensorBlock:
         ``ndarray`` and torch ``Tensor`` are supported.
         """
 
-        raw_array = _get_raw_array(self._lib, self._ptr)
-        return mts_array_to_python_array(raw_array, parent=self)
+        return mts_array_to_python_array(self._raw_values, parent=self)
 
     @property
     def samples(self) -> Labels:
@@ -472,9 +478,3 @@ class TensorBlock:
             )
 
         return block
-
-
-def _get_raw_array(lib, block_ptr) -> mts_array_t:
-    data = mts_array_t()
-    lib.mts_block_data(block_ptr, data)
-    return data

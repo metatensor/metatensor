@@ -1,13 +1,16 @@
 import copy
 import ctypes
+import warnings
 from pickle import PickleBuffer
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
+from . import data
 from ._c_api import c_uintptr_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
+from .data import Device, DeviceWarning, DType
 from .labels import Labels, LabelsEntry
 from .status import _check_pointer
 
@@ -63,9 +66,41 @@ class TensorMap:
         for block in blocks:
             if block._parent is not None:
                 raise ValueError(
-                    "can not use blocks from another tensor map in a new one, "
+                    "can not use blocks from another TensorMap in a new one, "
                     "use TensorBlock.copy() to make a copy of each block first"
                 )
+
+            block_origin = data.data_origin(block._raw_values)
+            first_block_origin = data.data_origin(blocks[0]._raw_values)
+            if block_origin != first_block_origin:
+                raise ValueError(
+                    "all blocks in a TensorMap must have the same origin, "
+                    f"got '{data.data_origin_name(first_block_origin)}' "
+                    f"and '{data.data_origin_name(block_origin)}'"
+                )
+
+            if block.device != blocks[0].device:
+                raise ValueError(
+                    "all blocks in a TensorMap must have the same device, "
+                    f"got '{blocks[0].device}' and '{block.device}'"
+                )
+
+            if block.dtype != blocks[0].dtype:
+                raise ValueError(
+                    "all blocks in a TensorMap must have the same dtype, "
+                    f"got {blocks[0].dtype} and {block.dtype}"
+                )
+
+        if len(blocks) > 0 and not data.array_device_is_cpu(blocks[0].values):
+            warnings.warn(
+                "Blocks values and keys for this TensorMap are on different devices: "
+                f"keys are always on CPU, and blocks values are on device "
+                f"'{blocks[0].device}'. If you are using PyTorch and need the labels "
+                f"to also be on {blocks[0].device}, you should use "
+                "`metatensor.torch.TensorMap`.",
+                category=DeviceWarning,
+                stacklevel=2,
+            )
 
         # all blocks are moved into the tensor map, assign NULL to `block._ptr` to
         # prevent accessing invalid data from Python and double free
@@ -558,6 +593,52 @@ class TensorMap:
         result = f"TensorMap with {len(self)} blocks\nkeys:"
         result += self.keys.print(max_entries=max_keys, indent=5)
         return result
+
+    @property
+    def device(self) -> Device:
+        """get the device of all the arrays stored inside this :py:class:`TensorMap`"""
+        if len(self.keys) == 0:
+            return "cpu"
+
+        return self.block_by_id(0).device
+
+    @property
+    def dtype(self) -> DType:
+        """get the dtype of all the arrays stored inside this :py:class:`TensorMap`"""
+        if len(self.keys) == 0:
+            return None
+
+        return self.block_by_id(0).dtype
+
+    def to(
+        self,
+        *,
+        dtype: Optional[DType] = None,
+        device: Optional[Device] = None,
+        arrays: Optional[str] = None,
+    ) -> "TensorMap":
+        """
+        Move all the arrays in this block (values and gradients) to the given ``dtype``,
+        ``device`` and ``arrays`` backend.
+
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        :param arrays: new backend to use for the arrays. This can be either
+            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend)
+        """
+        blocks = []
+
+        with warnings.catch_warnings():
+            # do not warn on device mismatch here, there will be a warning when
+            # constructing the TensorMap
+            warnings.simplefilter("ignore", DeviceWarning)
+
+            for block in self.blocks():
+                blocks.append(block.to(dtype=dtype, device=device, arrays=arrays))
+
+        return TensorMap(self.keys, blocks)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

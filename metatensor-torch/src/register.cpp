@@ -192,6 +192,13 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("sample_names", &TensorMapHolder::sample_names)
         .def_property("component_names", &TensorMapHolder::component_names)
         .def_property("property_names", &TensorMapHolder::property_names)
+        .def_property("device", &TensorMapHolder::device)
+        .def_property("dtype", &TensorMapHolder::scalar_type)
+        .def("to", &TensorMapHolder::to, DOCSTRING, {
+            torch::arg("dtype") = torch::nullopt,
+            torch::arg("device") = torch::nullopt,
+            torch::arg("arrays") = torch::nullopt
+        })
         .def("print", &TensorMapHolder::print, DOCSTRING,
             {torch::arg("max_keys")}
         )

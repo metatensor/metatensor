@@ -115,10 +115,6 @@ public:
     /// strings.
     TorchTensorMap components_to_properties(torch::IValue dimensions) const;
 
-    /// Return a new TorchTensorMap where all keys, blocks and relative labels
-    /// are on the requested `device`.
-    TorchTensorMap to(torch::Device device);
-
     /// Get the names of the samples dimensions for all blocks in this
     /// `TensorMap`
     std::vector<std::string> sample_names();
@@ -137,6 +133,20 @@ public:
     /// Print this TensorMap to a string, including at most `max_keys` in the
     /// output (-1 to include all keys).
     std::string print(int64_t max_keys) const;
+
+    /// Get the device for the values stored in this `TensorMap`
+    torch::Device device() const;
+
+    /// Get the dtype for the values stored in this `TensorMap`
+    torch::Dtype scalar_type() const;
+
+    /// Move this `TensorMap` to the given `dtype`, `device` and `arrays`
+    /// backend. Only `"torch"` is supported for the `arrays` backend.
+    TorchTensorMap to(
+        torch::optional<torch::Dtype> dtype = torch::nullopt,
+        torch::optional<torch::Device> device = torch::nullopt,
+        torch::optional<std::string> arrays = torch::nullopt
+    ) const;
 
     /// Get the underlying metatensor TensorMap
     const metatensor::TensorMap& as_metatensor() const {

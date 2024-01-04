@@ -1,13 +1,22 @@
 import copy
 import sys
+import warnings
 
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
+from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import utils
+
+
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 
 @pytest.fixture
@@ -416,3 +425,95 @@ def test_empty_tensor():
 
     with pytest.raises(MetatensorError, match=message):
         empty_tensor.keys_to_properties("key")
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
+def test_different_device():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        block_1 = TensorBlock(
+            values=torch.tensor([[3.0, 4.0]], device="meta"),
+            samples=Labels.range("s", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        )
+
+    message = (
+        "Blocks values and keys for this TensorMap are on different devices: "
+        "keys are always on CPU, and blocks values are on device 'meta'."
+    )
+    with pytest.warns(DeviceWarning, match=message):
+        _ = TensorMap(Labels.range("k", 1), [block_1.copy()])
+
+    block_2 = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    message = (
+        "all blocks in a TensorMap must have the same device, got 'meta' and 'cpu'"
+    )
+    with pytest.raises(ValueError, match=message):
+        _ = TensorMap(Labels.range("k", 2), [block_1, block_2])
+
+
+def test_different_dtype():
+    block_1 = TensorBlock(
+        values=np.array([[3.0, 4.0]], dtype=np.float64),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+    block_2 = TensorBlock(
+        values=np.array([[3.0, 4.0]], dtype=np.float32),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    message = (
+        "all blocks in a TensorMap must have the same dtype, got float64 and float32"
+    )
+    with pytest.raises(ValueError, match=message):
+        _ = TensorMap(Labels.range("k", 2), [block_1, block_2])
+
+
+def test_to():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+    tensor = TensorMap(Labels.range("k", 1), [block])
+
+    assert tensor.device == "cpu"
+    assert tensor.dtype == np.float64
+
+    converted = tensor.to(dtype=np.float32)
+    assert converted.dtype == np.float32
+
+    if HAS_TORCH:
+        tensor = converted.to(arrays="torch")
+        assert isinstance(tensor.block(0).values, torch.Tensor)
+
+        devices = ["meta", torch.device("meta")]
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            devices.append("mps")
+            devices.append(torch.device("mps"))
+
+        if torch.cuda.is_available():
+            devices.append("cuda")
+            devices.append("cuda:0")
+            devices.append(torch.device("cuda"))
+
+        for device in devices:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                moved = tensor.to(device=device)
+
+            assert moved.device.type == torch.device(device).type

@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pytest
 import torch
@@ -418,6 +418,133 @@ def test_empty_tensor():
         empty_tensor.keys_to_properties("key")
 
 
+@pytest.fixture
+def meta_tensor():
+    device = "meta"
+    return TensorMap(
+        keys=Labels.range("keys", 2).to(device),
+        blocks=[
+            TensorBlock(
+                values=torch.tensor([[[1.0, 2.0]]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[Labels.range("component", 1).to(device)],
+                properties=Labels.range("properties", 2).to(device),
+            ),
+            TensorBlock(
+                values=torch.tensor([[[3.0, 4.0]]], device=device),
+                samples=Labels.range("samples", 1).to(device),
+                components=[Labels.range("component", 1).to(device)],
+                properties=Labels.range("properties", 2).to(device),
+            ),
+        ],
+    )
+
+
+def test_keys_to_samples_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_samples("keys")
+    block = new_tensor.block()
+    assert new_tensor.keys.values.device == block.values.device
+    assert block.samples.values.device == block.values.device
+    assert block.components[0].values.device == block.values.device
+    assert block.properties.values.device == block.values.device
+
+
+def test_keys_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.keys_to_properties("keys")
+    block = new_tensor.block()
+    assert new_tensor.keys.values.device == block.values.device
+    assert block.samples.values.device == block.values.device
+    assert block.components[0].values.device == block.values.device
+    assert block.properties.values.device == block.values.device
+
+
+def test_components_to_properties_same_device(meta_tensor):
+    new_tensor = meta_tensor.components_to_properties("component")
+    for block in new_tensor.blocks():
+        assert new_tensor.keys.values.device == block.values.device
+        assert block.samples.values.device == block.values.device
+        assert block.properties.values.device == block.values.device
+
+
+def test_different_device(meta_tensor):
+    message = (
+        "cannot create TensorMap: keys and blocks must be on the same device, "
+        "got cpu and meta"
+    )
+    with pytest.raises(ValueError, match=message):
+        TensorMap(
+            keys=meta_tensor.keys,
+            blocks=[
+                meta_tensor.blocks()[0],
+                TensorBlock(
+                    values=torch.tensor([[[3.0, 4.0]]]),
+                    samples=Labels.range("samples", 1),
+                    components=[Labels.range("component", 1)],
+                    properties=Labels.range("properties", 2),
+                ),
+            ],
+        )
+
+
+def test_different_dtype(meta_tensor):
+    message = (
+        "cannot create TensorMap: all blocks must have the same dtype, "
+        "got torch.float16 and torch.float32"
+    )
+    with pytest.raises(ValueError, match=message):
+        TensorMap(
+            keys=meta_tensor.keys,
+            blocks=[
+                meta_tensor.blocks()[0],
+                TensorBlock(
+                    values=torch.tensor(
+                        [[[3.0, 4.0]]], device="meta", dtype=torch.float16
+                    ),
+                    samples=Labels.range("samples", 1).to("meta"),
+                    components=[Labels.range("component", 1).to("meta")],
+                    properties=Labels.range("properties", 2).to("meta"),
+                ),
+            ],
+        )
+
+
+def test_to(tensor):
+    assert tensor.device.type == torch.device("cpu").type
+    check_dtype(tensor, torch.float32)
+
+    converted = tensor.to(dtype=torch.float64)
+    check_dtype(converted, torch.float64)
+
+    devices = ["meta", torch.device("meta")]
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
+
+    for device in devices:
+        moved = tensor.to(device=device)
+        assert moved.device.type == torch.device(device).type
+
+    # this should run without error
+    moved = tensor.to(arrays=None)
+    moved = tensor.to(arrays="torch")
+
+    message = "`arrays` must be None or 'torch', got 'numpy' instead"
+    with pytest.raises(ValueError, match=message):
+        moved = tensor.to(arrays="numpy")
+
+
+# This function only works in script mode, because `block.dtype` is always an `int`, and
+# `torch.dtype` is only an int in script mode.
+@torch.jit.script
+def check_dtype(tensor: TensorMap, dtype: torch.dtype):
+    assert tensor.dtype == dtype
+
+
 # define a wrapper class to make sure the types TorchScript uses for of all
 # C-defined functions matches what we expect
 class TensorMapWrap:
@@ -500,6 +627,20 @@ class TensorMapWrap:
     def print_(self, max_keys: int) -> str:
         return self._c.print(max_keys=max_keys)
 
+    def device(self) -> torch.device:
+        return self._c.device
+
+    def dtype(self) -> torch.dtype:
+        return self._c.dtype
+
+    def to(
+        self,
+        dtype: Optional[torch.dtype],
+        device: Optional[torch.device],
+        arrays: Optional[str],
+    ) -> TensorMap:
+        return self._c.to(dtype=dtype, device=device, arrays=arrays)
+
 
 def test_script():
     class TestModule(torch.nn.Module):
@@ -538,93 +679,3 @@ def test_script_variable_scoping(tensor):
     # This segfaults
     scripted = torch.jit.script(problematic)
     assert scripted(tensor).item() == 42.0
-
-
-@pytest.fixture
-def meta_tensor():
-    device = "meta"
-    return TensorMap(
-        keys=Labels.range("keys", 2).to(device),
-        blocks=[
-            TensorBlock(
-                values=torch.tensor([[[1.0, 2.0]]], device=device),
-                samples=Labels.range("samples", 1).to(device),
-                components=[Labels.range("component", 1).to(device)],
-                properties=Labels.range("properties", 2).to(device),
-            ),
-            TensorBlock(
-                values=torch.tensor([[[3.0, 4.0]]], device=device),
-                samples=Labels.range("samples", 1).to(device),
-                components=[Labels.range("component", 1).to(device)],
-                properties=Labels.range("properties", 2).to(device),
-            ),
-        ],
-    )
-
-
-def test_keys_to_samples_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_samples("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
-
-
-def test_keys_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_properties("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
-
-
-def test_components_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.components_to_properties("component")
-    for block in new_tensor.blocks():
-        assert new_tensor.keys.values.device == block.values.device
-        assert block.samples.values.device == block.values.device
-        assert block.properties.values.device == block.values.device
-
-
-def test_different_device(meta_tensor):
-    message = (
-        "cannot create TensorMap: keys and blocks must be on the same device, "
-        "got cpu and meta"
-    )
-    with pytest.raises(ValueError, match=message):
-        TensorMap(
-            keys=meta_tensor.keys,
-            blocks=[
-                meta_tensor.blocks()[0],
-                TensorBlock(
-                    values=torch.tensor([[[3.0, 4.0]]]),
-                    samples=Labels.range("samples", 1),
-                    components=[Labels.range("component", 1)],
-                    properties=Labels.range("properties", 2),
-                ),
-            ],
-        )
-
-
-def test_different_dtype(meta_tensor):
-    message = (
-        "cannot create TensorMap: all blocks must have the same dtype, "
-        "got torch.float16 and torch.float32"
-    )
-    with pytest.raises(TypeError, match=message):
-        TensorMap(
-            keys=meta_tensor.keys,
-            blocks=[
-                meta_tensor.blocks()[0],
-                TensorBlock(
-                    values=torch.tensor(
-                        [[[3.0, 4.0]]], device="meta", dtype=torch.float16
-                    ),
-                    samples=Labels.range("samples", 1).to("meta"),
-                    components=[Labels.range("component", 1).to("meta")],
-                    properties=Labels.range("properties", 2).to("meta"),
-                ),
-            ],
-        )

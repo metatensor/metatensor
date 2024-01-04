@@ -6,10 +6,15 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
 
-<!--
 ### metatensor-torch C++
 
 #### Added
+
+- `TensorMap::to` and `TensorBlock::to` to change the device or dtype of torch
+  Tensor stored by metatensor
+- `Labels::device`, `TensorBlock::device` and `TensorMap::device`; as well as
+  `TensorMap::scalar_type`, and `TensorBlock::scalar_type` to query the current
+  device and scalar type/dtype used by the data.
 
 #### Fixed
 
@@ -22,12 +27,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
+- `TensorMap.to` and `TensorBlock.to` to change the device or dtype of torch
+  Tensor stored by metatensor
+- `Labels.device`, `TensorBlock.device` and `TensorMap.device`; as well as
+  `TensorMap.dtype`, and `TensorBlock.dtype` to query the current device and
+  dtype used by the data.
+
 #### Fixed
 
 #### Changed
 
 #### Removed
--->
 
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.1.0) - 2023-10-11

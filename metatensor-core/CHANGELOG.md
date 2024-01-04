@@ -6,7 +6,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
 
-<!--
 ### metatensor-core C++
 
 #### Added
@@ -33,12 +32,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
+- `TensorMap.to` and `TensorBlock.to` to change the device, dtype, or backend
+  (numpy or torch) of all arrays stored by metatensor
+- `Labels.device`, `TensorBlock.device` and `TensorMap.device`; as well as
+  `TensorMap.dtype`, and `TensorBlock.dtype` to query the current device and
+  dtype used by the data.
+
 #### Fixed
 
 #### Changed
 
 #### Removed
--->
+
 
 ### metatensor-core Julia
 
