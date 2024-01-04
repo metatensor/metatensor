@@ -46,12 +46,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
 
-#### Fixed
 
-#### Changed
+## [Version 0.1.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.1) - 2024-01-05
 
-#### Removed
+### Fixed
 
+- Fixed the build with Cargo 1.75 (#438)
+- Allowed saving and loading empty TensorMap; i.e. TensorMap where one of the
+  dimensions of the array has 0 elements (#419)
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.0) - 2023-10-11
 

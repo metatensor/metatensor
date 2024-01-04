@@ -15,6 +15,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.1.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.1) - 2024-01-05
+
+### Fixed
+
+- Fixed the build with Cargo 1.75
+
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.0) - 2023-10-11
 
 ### Added
