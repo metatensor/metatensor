@@ -21,7 +21,7 @@ build:
       - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/metatensor-torch
 
     post_build:
-      - cargo doc --no-deps --package metatensor
+      - cargo rustdoc --package metatensor -- --html-before-content docs/src/reference/rust/backlink.html
       - rm -rf $READTHEDOCS_OUTPUT/html/reference/rust/
       - cp -r target/doc/ $READTHEDOCS_OUTPUT/html/reference/rust/
       - cp docs/src/reference/rust/index.html $READTHEDOCS_OUTPUT/html/reference/rust/

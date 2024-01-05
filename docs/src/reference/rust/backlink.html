@@ -1,0 +1,49 @@
+<script>
+    const BACK_ARROW = `
+<svg id="svg" xmlns="http://www.w3.org/2000/svg"
+xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="0,
+0, 400,400"><g id="svgg"><path id="path0" d="M109.766 53.232 C 77.969
+75.947,49.712 96.143,46.974 98.113 L 41.994 101.693 104.589 143.425 C 139.016
+166.377,167.360 185.156,167.576 185.156 C 167.792 185.156,167.969
+174.950,167.969 162.475 C 167.969 132.051,168.441 131.005,180.675 134.344 C
+230.730 148.005,271.306 202.395,276.574 262.891 C 280.694 310.214,256.740
+357.846,216.072 383.194 C 208.890 387.670,208.989 388.031,216.929 386.304 C
+304.184 367.333,363.604 282.360,351.923 193.258 C 340.956 109.591,275.566
+55.676,182.585 53.635 C 172.898 53.422,172.527 53.351,170.475 51.301 L 168.359
+49.186 167.969 30.559 L 167.578 11.932 109.766 53.232 " stroke="none"
+fill="#000000" fill-rule="evenodd"></path></g></svg>
+`;
+
+    window.addEventListener("DOMContentLoaded", () => {
+        const pathname = window.location.pathname;
+        const metatensorRoot = pathname.replace(/reference\/rust\/metatensor\/.*$/, "index.html");
+
+        const template = document.createElement("template");
+        template.innerHTML = `<div id="metatensor-back-banner" class="width-limiter">
+            <a href="${metatensorRoot}">
+                ${BACK_ARROW}
+            </a>
+            <a href="${metatensorRoot}">
+                back to the main metatensor documentation
+            </a>
+        </div>`;
+
+        const main = document.querySelector("main");
+        main.prepend(template.content.firstChild);
+    })
+</script>
+
+<style>
+#metatensor-back-banner {
+    width: 100%;
+    height: 3em;
+    margin-bottom: 1em;
+    padding: 0.5em;
+    background-color: #d5e3ed;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 8px;
+}
+</style>
