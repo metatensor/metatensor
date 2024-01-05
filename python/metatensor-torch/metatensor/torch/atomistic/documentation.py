@@ -61,6 +61,36 @@ class System:
     def cell(self) -> torch.Tensor:
         """Tensor of floating point values containing bounding box/cell of the system"""
 
+    @property
+    def device(self) -> torch.device:
+        """get the device of all the arrays stored inside this :py:class:`System`"""
+
+    @property
+    def dtype(self) -> torch.dtype:
+        """
+        get the dtype of all the arrays stored inside this :py:class:`System`
+
+        .. warning::
+
+            Due to limitations in TorchScript C++ extensions, the dtype is returned as
+            an integer, which can not be compared with :py:class:`torch.dtype`
+            instances. See :py:meth:`TensorBlock.dtype` for more information.
+        """
+
+    def to(
+        self,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ) -> "System":
+        """
+        Move all the arrays in this system to the given ``dtype`` and ``device``.
+
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        """
+
     def add_neighbors_list(
         self,
         options: "NeighborsListOptions",

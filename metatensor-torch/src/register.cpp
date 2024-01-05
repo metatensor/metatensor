@@ -281,6 +281,12 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__len__", &SystemHolder::size)
         .def("__str__", &SystemHolder::str)
         .def("__repr__", &SystemHolder::str)
+        .def_property("device", &SystemHolder::device)
+        .def_property("dtype", &SystemHolder::scalar_type)
+        .def("to", &SystemHolder::to, DOCSTRING, {
+            torch::arg("dtype") = torch::nullopt,
+            torch::arg("device") = torch::nullopt,
+        })
         .def("add_neighbors_list", &SystemHolder::add_neighbors_list, DOCSTRING,
             {torch::arg("options"), torch::arg("neighbors")}
         )

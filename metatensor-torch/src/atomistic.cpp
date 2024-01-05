@@ -466,6 +466,51 @@ void SystemHolder::set_cell(torch::Tensor cell) {
     this->cell_ = std::move(cell);
 }
 
+System SystemHolder::to(
+    torch::optional<torch::Dtype> dtype,
+    torch::optional<torch::Device> device
+) const {
+    auto system = torch::make_intrusive<SystemHolder>(
+        this->species().to(
+            /*dtype*/ torch::nullopt,
+            /*layout*/ torch::nullopt,
+            device,
+            /*pin_memory*/ torch::nullopt,
+            /*non_blocking*/ false,
+            /*copy*/ false,
+            /*memory_format*/ torch::MemoryFormat::Preserve
+        ),
+        this->positions().to(
+            dtype,
+            /*layout*/ torch::nullopt,
+            device,
+            /*pin_memory*/ torch::nullopt,
+            /*non_blocking*/ false,
+            /*copy*/ false,
+            /*memory_format*/ torch::MemoryFormat::Preserve
+        ),
+        this->cell().to(
+            dtype,
+            /*layout*/ torch::nullopt,
+            device,
+            /*pin_memory*/ torch::nullopt,
+            /*non_blocking*/ false,
+            /*copy*/ false,
+            /*memory_format*/ torch::MemoryFormat::Preserve
+        )
+    );
+
+    for (const auto& it: this->neighbors_) {
+        system->add_neighbors_list(it.first, it.second->to(dtype, device));
+    }
+
+    for (const auto& it: this->data_) {
+        system->add_data(it.first, it.second->to(dtype, device));
+    }
+
+    return system;
+}
+
 
 void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorBlock neighbors) {
     // check the structure of the NL

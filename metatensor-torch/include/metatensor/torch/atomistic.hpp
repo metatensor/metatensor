@@ -189,13 +189,16 @@ public:
         return positions_.scalar_type();
     }
 
+    /// Move all the data in this `System` to the given `dtype` and `device`.
+    System to(
+        torch::optional<torch::Dtype> dtype = torch::nullopt,
+        torch::optional<torch::Device> device = torch::nullopt
+    ) const;
+
     /// Get the number of particles in this system
     int64_t size() const {
         return  this->species_.size(0);
     }
-
-    // TODO: add `SystemHolder::to(dtype, device) -> TorchSystem` to convert
-    // dtype & device for a System
 
     /// Add a new neighbors list in this system corresponding to the given
     /// `options`.

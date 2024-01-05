@@ -10,8 +10,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
-- `TensorMap::to` and `TensorBlock::to` to change the device or dtype of torch
-  Tensor stored by metatensor
+- `TensorBlock::to`, `TensorMap::to`, and `System::to` to change the device or
+  dtype of torch Tensor stored by metatensor
 - `Labels::device`, `TensorBlock::device` and `TensorMap::device`; as well as
   `TensorMap::scalar_type`, and `TensorBlock::scalar_type` to query the current
   device and scalar type/dtype used by the data.
@@ -27,8 +27,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
-- `TensorMap.to` and `TensorBlock.to` to change the device or dtype of torch
-  Tensor stored by metatensor
+- `TensorBlock.to`, `TensorMap.to` and `System.to` to change the device or dtype
+  of torch Tensor stored by metatensor
 - `Labels.device`, `TensorBlock.device` and `TensorMap.device`; as well as
   `TensorMap.dtype`, and `TensorBlock.dtype` to query the current device and
   dtype used by the data.
