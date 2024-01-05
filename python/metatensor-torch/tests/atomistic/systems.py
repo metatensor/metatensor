@@ -440,3 +440,36 @@ def test_neighbors_validation(system):
         )
 
         system.add_neighbors_list(options, neighbors)
+
+
+def test_to(system, neighbors):
+    options = NeighborsListOptions(model_cutoff=3.5, full_list=False)
+    system.add_neighbors_list(options, neighbors)
+    system.add_data("test-data", neighbors)
+
+    assert system.device.type == torch.device("cpu").type
+    check_dtype(system, torch.float32)
+
+    converted = system.to(dtype=torch.float64)
+    check_dtype(converted, torch.float64)
+
+    devices = ["meta", torch.device("meta")]
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
+
+    for device in devices:
+        moved = system.to(device=device)
+        assert moved.device.type == torch.device(device).type
+
+
+# This function only works in script mode, because `block.dtype` is always an `int`, and
+# `torch.dtype` is only an int in script mode.
+@torch.jit.script
+def check_dtype(system: System, dtype: torch.dtype):
+    assert system.dtype == dtype
