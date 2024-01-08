@@ -156,8 +156,8 @@ include(FetchContent)
 
 # JSON library from https://github.com/nlohmann/json
 FetchContent_Declare(nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
-    URL_HASH SHA256=8c4b26bf4b422252e13f332bc5e388ec0ab5c3443d24399acb675e68278d341f
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
 )
 if (CMAKE_VERSION VERSION_GREATER 3.18)
     FetchContent_MakeAvailable(nlohmann_json)
