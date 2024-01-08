@@ -238,6 +238,13 @@ add_library(metatensor::shared SHARED IMPORTED GLOBAL)
 set(METATENSOR_SHARED_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}metatensor${CMAKE_SHARED_LIBRARY_SUFFIX}")
 set(METATENSOR_IMPLIB_LOCATION "${METATENSOR_SHARED_LOCATION}.lib")
 
+if (MINGW)
+    # `rustc` does not follow the usual naming scheme for DLL with mingw (it
+    # would typically be 'libmetatensor.dll')
+    set(METATENSOR_SHARED_LOCATION "${CARGO_OUTPUT_DIR}/metatensor.dll")
+    set(METATENSOR_IMPLIB_LOCATION "${CARGO_OUTPUT_DIR}/libmetatensor.dll.a")
+endif()
+
 add_library(metatensor::static STATIC IMPORTED GLOBAL)
 set(METATENSOR_STATIC_LOCATION "${CARGO_OUTPUT_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}metatensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
