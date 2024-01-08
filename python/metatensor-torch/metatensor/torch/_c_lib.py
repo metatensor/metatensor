@@ -119,5 +119,5 @@ def _load_library():
     if not version_compatible(lib_version, __version__):
         raise ImportError(
             f"Trying to load the Python package metatensor-torch v{__version__} "
-            "with the incompatible metatensor-torch C++ library v{lib_version}"
+            f"with the incompatible metatensor-torch C++ library v{lib_version}"
         )
