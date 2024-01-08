@@ -51,7 +51,13 @@ jobs:
             rust-version: stable
             rust-target: x86_64-pc-windows-msvc
             cargo-build-flags: --features=rayon
-            extra-name: ""
+            extra-name: " / MSVC"
+
+          - os: windows-2019
+            rust-version: stable
+            rust-target: x86_64-pc-windows-gnu
+            cargo-build-flags: --features=rayon
+            extra-name: " / MinGW"
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:20.04'
