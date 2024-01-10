@@ -11,7 +11,10 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/atomistic.hpp"
+#include "metatensor/torch/misc.hpp"
+
 #include "internal/scalar_type_name.hpp"
+
 
 using namespace metatensor_torch;
 
@@ -1098,7 +1101,7 @@ void metatensor_torch::check_atomistic_model(std::string path) {
     auto recorded_mts_version = Version(record_to_string(
         reader.getRecord("extra/metatensor-version")
     ));
-    auto current_mts_version = Version(mts_version());
+    auto current_mts_version = Version(metatensor_torch::version());
 
     if (!current_mts_version.is_compatible(recorded_mts_version)) {
         TORCH_WARN(
