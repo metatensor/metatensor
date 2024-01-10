@@ -7,16 +7,19 @@ With the creation of metatensor, we have three main use cases in mind:
 
 1. provide an exchange format for the atomistic machine learning ecosystem,
    making different players in this ecosystem more interoperable with one
-   another and enhancing collaboration;
+   another and enhancing collaboration: :ref:`metatensor-goal-exchange`;
 2. make it easier and faster to prototype new machine learning representations,
-   models and algorithms applied to atomistic modeling;
+   models and algorithms applied to atomistic modeling:
+   :ref:`metatensor-goal-prototype`;
 3. run large scale simulations using machine learning interatomic potentials,
    with fully customizable potentials, directly defined by the researchers
-   running the simulations.
+   running the simulations: :ref:`metatensor-goal-simulation`;
 
 If you agree with any of these goals, you might find metatensor useful! We try to
 make metatensor usable for any single one of these goals, it is perfectly fine to
 only use it for a subset of its capacities.
+
+.. _metatensor-goal-exchange:
 
 Metatensor as an exchange format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,6 +32,14 @@ one of these libraries lives mostly separated from the others, resulting in a
 lot of duplicated effort. With metatensor, we want to provide a way for these
 libraries to communicate with one another, by giving everyone a *lingua franca*,
 a way to share data and metadata.
+
+.. figure:: ../static/images/goal-exchange.*
+    :width: 400px
+    :align: center
+
+    Illustration of machine learning workflows, going from some input data to a
+    prediction. Metatensor enables the creation of workflows mixing different
+    libraries together in new ways.
 
 This goal is enabled by multiple features of metatensor: first, metatensor allows
 storing data coming from many different sources, without requiring to first
@@ -47,24 +58,25 @@ As a developer a library in the atomistic machine learning ecosystem, you can
 provide conversion functions to and from metatensor
 :py:class:`metatensor.TensorMap` (either inside your own code or in a small
 conversion package) to enable using your library in conjunction with the rest of
-the metatensor-compatible libraries!
-
-.. TODO: add illustration
+the metatensor ecosystem!
 
 .. admonition:: libraries using metatensor
 
     The following libraries use metatensor either as input, output or both:
 
-    - `equisolve <https://github.com/lab-cosmo/equisolve/>`_: a companion to
-      metatensor implementing common ML models that take all the data as
-      metatensor TensorMaps;
     - `rascaline <https://github.com/Luthaf/rascaline/>`_: a library computing
-      physics-inspired representations of atomic systems. Rascaline always
-      outputs its representations in metatensor format;
+      physics-inspired representations of atomic systems, the computed
+      representations are given in metatensor format;
+    - `torch_spex <https://github.com/lab-cosmo/torch_spex/>`_: pure PyTorch
+      implementation of spherical expansion representation, with GPU and
+      learnable representations support, which outputs to metatensor format;
+    - `metatensor-models <https://github.com/lab-cosmo/metatensor-models/>`_: an
+      end-to-end training and evaluation library for models based on metatensor;
     - `Q-stack <https://github.com/lcmd-epfl/Q-stack/>`_: library of pre- and
       post-processing tasks for Quantum Machine Learning; can output some of its
       data in metatensor format;
 
+.. _metatensor-goal-prototype:
 
 Metatensor as a prototyping tool
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -84,11 +96,28 @@ format across the whole ML pipeline; meaning the metadata is kept up to date
 with the data, and arbitrary gradients are automatically updated to stay
 consistent with the values.
 
-.. TODO: add illustration
+.. table:: Where similar functionalities is provided by different packages
+    :widths: auto
+
+    +-------------+----------------------------------+---------------------------+--------------------------------------+
+    |  Package    | Core data class                  |  Operations               |  Machine learning models facilities  |
+    +=============+==================================+===========================+======================================+
+    |  numpy      | :py:class:`numpy.ndarray`        | :py:func:`numpy.sum`      |  `scikit-learn`_                     |
+    +-------------+----------------------------------+---------------------------+--------------------------------------+
+    |  torch      | :py:class:`torch.Tensor`         | :py:func:`torch.add`      | :py:class:`torch.nn.Module`,         |
+    |             |                                  |                           | :py:class:`torch.utils.data.Dataset` |
+    +-------------+----------------------------------+---------------------------+--------------------------------------+
+    |  metatensor | :py:class:`metatensor.TensorMap` | :py:func:`metatensor.add` | Work in progress, will be part of    |
+    |             |                                  |                           | the ``metatensor-learn`` package     |
+    +-------------+----------------------------------+---------------------------+--------------------------------------+
 
 
-Metatensor for running simulation with custom models
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _scikit-learn: https://scikit-learn.org/
+
+.. _metatensor-goal-simulation:
+
+Metatensor for atomistic simulations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 One particularly interesting class of machine learning model for atomistic
 modelling is machine learning interatomic potentials (MLIPs). Using the
@@ -102,4 +131,11 @@ facilities of TorchScript to export the model from Python and then load and
 execute it inside the simulation engine. This is documented in
 :ref:`atomistic-models`.
 
-.. TODO: add illustration
+.. figure:: ../static/images/goal-simulations.*
+    :width: 500px
+    :align: center
+
+    Different steps in the workflow of running simulations with metatensor.
+    Defining a model, training a model and running simulations with it can be
+    done by different users; and the same metatensor-based model can be used
+    with multiple simulation engines.
