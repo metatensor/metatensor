@@ -27,7 +27,7 @@ The overall sources of truth for version numbers are:
   Python package.
 
 When doing a build from a git checkout, we use
-``scripts/n-commits-since-last-tag.sh`` to determine the number of commits since
+``scripts/n-commits-since-last-tag.py`` to determine the number of commits since
 the last tag matching the current package. If there where no commits since the
 last tag, the version number from the list above is kept as-is. If there where
 commits, the version number if updated, and a ``dev<X>`` suffix is added to

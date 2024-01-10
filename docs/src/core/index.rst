@@ -167,8 +167,8 @@ data arrays.
     Currently, the following array types are integrated with metatensor:
 
     - `Numpy's ndarray`_ from Python,
-    - `PyTorch's Tensor`_ from Python, including full support for autograd and
-      different device (data living on CPU memory, GPU memory, …),
+    - `PyTorch's Tensor`_ from Python and C++, including full support for
+      autograd and different device (data living on CPU memory, GPU memory, …),
     - `Rust's ndarray`_ from Rust, more specifically ``ndarray::ArrayD<f64>``,
     - A very bare-bone N-dimensional array in metatensor C++ API:
       :cpp:class:`metatensor::SimpleDataArray`
