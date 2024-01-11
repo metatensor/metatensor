@@ -1,6 +1,6 @@
 .. _atomistic-models:
 
-Atomistic Models
+Atomistic models
 ================
 
 While metatensor is a generic sparse data container able to store data and

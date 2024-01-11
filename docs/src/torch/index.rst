@@ -1,9 +1,5 @@
-.. _torch-api-reference:
-
-TorchScript API reference
-=========================
-
-.. py:currentmodule:: metatensor.torch
+TorchScript interface
+=====================
 
 We provide a special PyTorch C++ extension exporting all of the core metatensor
 types in a way compatible with the TorchScript compiler, allowing users to save
@@ -32,16 +28,17 @@ to
 should be 80% of the work required to make a model developed in Python with
 :py:mod:`metatensor.operations` compatible with TorchScript.
 
-The documentation for the three usual core classes of metatensor can be found in
-the following pages:
+
+.. toctree::
+    :maxdepth: 2
+
+    reference/index
+
 
 .. toctree::
     :maxdepth: 1
+    :hidden:
 
-    tensor
-    block
-    labels
-    serialization
     CHANGELOG.md
 
 All the :ref:`operations <python-api-operations>` are also available in the
@@ -50,20 +47,10 @@ behavior, but the versions in ``metatensor.torch`` are annotated with the types
 from ``metatensor.torch``, and compatible with TorchScript compilation. For
 example :py:func:`metatensor.add()` is available as ``metatensor.torch.add()``.
 
---------------------------------------------------------------------------------
-
-If you want to use metatensor's TorchScript API from C++, you might be interested
-in the following documentation:
-
-.. toctree::
-    :maxdepth: 1
-
-    cxx/index
-
 .. _python-vs-torch:
 
 Differences between Python and TorchScript API
-----------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Python and TorchScript interfaces to metatensor are very similar, and have
 some level of overlap (it is possible to store data in torch ``Tensor`` with the

@@ -11,7 +11,7 @@ structure, illustrated below. This class defines a block-sparse data format,
 where each :py:class:`block <metatensor.TensorBlock>` is stored using
 `coordinate`_ sparse storage. The schematic below represents a TensorMap made of
 multiple TensorBlocks, and the overall data format is explained further in the
-:ref:`getting started <userdoc-core-concepts>` section of this documentation. If
+:ref:`core classes <core-classes>` section of this documentation. If
 you are using metatensor from Python, we additionally provide a collection of
 mathematical, logical and other utility :ref:`operations
 <python-api-operations>` to make working with TensorMaps more convenient.
@@ -37,9 +37,9 @@ With the creation of metatensor, we want to achieve three goals:
    running the simulations.
 
 For more information on these goals and how we are trying to fulfill them,
-please read the corresponding :ref:`documentation page <userdoc-goals>`.
-Metatensor is still in the alpha phase of software development, so expect some
-rough corners and sharp edges.
+please read the corresponding :ref:`documentation page <about>`. Metatensor is
+still in the alpha phase of software development, so expect some rough corners
+and sharp edges.
 
 Development team
 ----------------
@@ -59,7 +59,10 @@ contributions from anyone, and we provide some :ref:`developer documentation
    :maxdepth: 2
    :caption: Content:
 
-   get-started/index
-   reference/index
+   about
+   installation
+   core/index
+   operations/index
+   torch/index
    atomistic/index
    devdoc/index

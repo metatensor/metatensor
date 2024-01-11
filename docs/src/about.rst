@@ -1,7 +1,7 @@
-.. _userdoc-goals:
+.. _about:
 
-Goals of this library
-=====================
+What is metatensor
+==================
 
 With the creation of metatensor, we have three main use cases in mind:
 

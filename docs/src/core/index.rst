@@ -1,11 +1,24 @@
-.. _userdoc-core-concepts:
+.. _core-classes:
 
-Core concepts
-=============
+Core classes
+============
 
-This page explains the main types and core concepts you need to understand to
-use metatensor, without tying it to how a specific library is using metatensor to
-store it's own data.
+This page explains the main classes and core concepts you need to understand to
+use metatensor, without tying it to how a specific library is using metatensor
+to store it's own data. These main classes are available from multiple
+languages, as documented below:
+
+.. toctree::
+    :maxdepth: 2
+
+    reference/index
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    CHANGELOG.md
+
 
 .. py:currentmodule:: metatensor
 

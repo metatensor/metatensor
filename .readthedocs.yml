@@ -21,10 +21,10 @@ build:
       - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/metatensor-torch
 
     post_build:
-      - cargo rustdoc --package metatensor -- --html-before-content docs/src/reference/rust/backlink.html
-      - rm -rf $READTHEDOCS_OUTPUT/html/reference/rust/
-      - cp -r target/doc/ $READTHEDOCS_OUTPUT/html/reference/rust/
-      - cp docs/src/reference/rust/index.html $READTHEDOCS_OUTPUT/html/reference/rust/
+      - cargo rustdoc --package metatensor -- --html-before-content docs/src/core/reference/rust/backlink.html
+      - rm -rf $READTHEDOCS_OUTPUT/html/core/reference/rust/
+      - cp -r target/doc/ $READTHEDOCS_OUTPUT/html/core/reference/rust/
+      - cp docs/src/core/reference/rust/index.html $READTHEDOCS_OUTPUT/html/core/reference/rust/
 
 
 # Build documentation in the docs/ directory with Sphinx

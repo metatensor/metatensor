@@ -44,4 +44,3 @@ The functions and types provided in ``metatensor.hpp`` can be grouped as follow:
     block
     data
     misc
-    CHANGELOG.md
