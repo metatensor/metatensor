@@ -1,7 +1,5 @@
-.. _python-api-operations:
-
-Python operations reference
-===========================
+Operations
+==========
 
 The Python API for metatensor also provides functions which operate on
 :py:class:`metatensor.TensorMap`, :py:class:`metatensor.TensorBlock`, and
@@ -12,8 +10,20 @@ The list of all operations currently implemented is available below. If you need
 any other operation, please `open an issue
 <https://github.com/lab-cosmo/metatensor/issues>`_!
 
+.. toctree::
+    :maxdepth: 2
+
+    reference/index
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    CHANGELOG.md
+
+
 Using operations with PyTorch
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 `PyTorch`_ is a very popular framework for machine learning, providing multiple
 tools to make writing and training models easier. There are two ways to use
@@ -38,22 +48,3 @@ the operations with PyTorch:
   fully TorchScript compatible.
 
 .. _PyTorch: https://pytorch.org/
-
-List of all operations
-----------------------
-
-.. toctree::
-    :maxdepth: 2
-
-    checks/index
-    creation/index
-    linear_algebra/index
-    logic/index
-    manipulation/index
-    math/index
-    set/index
-
-.. toctree::
-    :maxdepth: 1
-
-    CHANGELOG.md

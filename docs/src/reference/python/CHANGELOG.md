@@ -1,1 +1,0 @@
-../../../../metatensor-core/CHANGELOG.md
