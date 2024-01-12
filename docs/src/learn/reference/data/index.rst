@@ -9,7 +9,7 @@ Data utilites
 
 .. _learn-data-dataset:
 
-Dataset 
+Dataset
 -------
 
 .. autofunction:: metatensor.learn.data.Dataset
@@ -25,11 +25,9 @@ Dataloader
 
 .. _learn-data-collate:
 
-Collate
--------
+Collating data
+--------------
 
 .. autofunction:: metatensor.learn.data.group
 
 .. autofunction:: metatensor.learn.data.group_and_join
-
-

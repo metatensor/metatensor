@@ -79,8 +79,6 @@ def group_and_join(
         samples in the batch, but with the samples collated for each respective
         field. If the data fields are :py:class:`torch.Tensor` or
         :py:class:`TensorMap` objects, they are joined along the samples axis.
-
-    TODO: docstring example
     """
     data: List[Union[TensorMap, torch.Tensor]] = []
     names = [name if name != "sample_id" else "sample_ids" for name in batch[0]._fields]

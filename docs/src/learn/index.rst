@@ -9,3 +9,4 @@ utilities that facilitate the construction and training of such models.
     :maxdepth: 4
 
     reference/index
+    ../examples/learn/index
