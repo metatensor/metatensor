@@ -19,6 +19,7 @@ build:
       # the `python` section below since it does not allow to specify
       # `--extra-index-url`
       - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/metatensor-torch
+      - pip install python/metatensor-learn
 
     post_build:
       - cargo rustdoc --package metatensor -- --html-before-content docs/src/core/reference/rust/backlink.html

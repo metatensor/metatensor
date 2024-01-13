@@ -64,5 +64,6 @@ contributions from anyone, and we provide some :ref:`developer documentation
    core/index
    operations/index
    torch/index
+   learn/index
    atomistic/index
    devdoc/index

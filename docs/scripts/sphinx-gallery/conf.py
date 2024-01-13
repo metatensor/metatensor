@@ -14,9 +14,11 @@ ROOT = os.path.realpath(os.path.join(HERE, "..", "..", ".."))
 sphinx_gallery_conf = {
     "filename_pattern": ".*",
     "examples_dirs": [
+        os.path.join(ROOT, "python", "examples", "learn"),
         os.path.join(ROOT, "python", "examples", "atomistic"),
     ],
     "gallery_dirs": [
+        os.path.join(ROOT, "docs", "src", "examples", "learn"),
         os.path.join(ROOT, "docs", "src", "examples", "atomistic"),
     ],
     "matplotlib_animations": True,

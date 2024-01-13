@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 
 import toml
+from sphinx_gallery.sorting import FileNameSortKey
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -91,14 +92,20 @@ exclude_patterns = [
 sphinx_gallery_conf = {
     "filename_pattern": ".*",
     "examples_dirs": [
+        os.path.join(ROOT, "python", "examples", "learn"),
         os.path.join(ROOT, "python", "examples", "atomistic"),
     ],
     "gallery_dirs": [
+        os.path.join("examples", "learn"),
         os.path.join("examples", "atomistic"),
     ],
     # Make the code snippet for metatensor functions clickable
     "reference_url": {"metatensor": None},
-    "prefer_full_module": ["metatensor"],
+    "prefer_full_module": [
+        "metatensor",
+        r"metatensor\.learn\.data",
+    ],
+    "within_subsection_order": FileNameSortKey,
 }
 
 
