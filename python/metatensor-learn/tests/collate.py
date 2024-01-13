@@ -122,6 +122,7 @@ def test_group_and_join_tensormaps():
     )
     assert metatensor.equal(batch.y, target_tensor)
 
+
 def test_group_and_join_torch_tensormaps():
     """
     Tests that data of arbitrary types is collated correctly using
@@ -129,7 +130,7 @@ def test_group_and_join_torch_tensormaps():
     from metatensor-torch are handled correctly.
     """
     try:
-        from metatensor.torch import TensorMap, TensorBlock, Labels
+        from metatensor.torch import Labels, TensorBlock, TensorMap
     except ImportError:
         pytest.skip("metatensor-torch not installed")
     dset = Dataset(
