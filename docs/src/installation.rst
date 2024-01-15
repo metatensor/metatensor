@@ -1,5 +1,7 @@
-Installation
-============
+.. _getting-started:
+
+Getting started
+===============
 
 Metatensor is available fro multiple programming languages, and how to install
 and use it will depend on the programming language you are using.
