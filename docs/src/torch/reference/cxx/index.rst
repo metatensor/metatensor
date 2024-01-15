@@ -9,8 +9,7 @@ should then link with libtorch, and the both the ``metatensor_torch`` and
 ``metatensor`` shared libraries.
 
 The easiest way to link to everything and set the right compiler flags is to use
-CMake after :ref:`installing metatensor's C++ Torch interface
-<install-torch-script>`:
+CMake after :ref:`installing metatensor's C++ Torch interface <install-torch-cxx>`:
 
 .. code-block:: cmake
 

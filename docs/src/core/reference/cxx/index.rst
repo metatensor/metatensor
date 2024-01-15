@@ -5,9 +5,9 @@ C++ API reference
 
 Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-reference>`.
 You can the provided classes and functions in your own code by :ref:`installing
-the corresponding shared library and header <install-c-lib>`, and then including
-``metatensor.hpp`` and linking with ``-lmetatensor``. Alternatively, we provide a
-cmake package config file, allowing you to do use metatensor like this (after
+the corresponding shared library and header <install-c>`, and then including
+``metatensor.hpp`` and linking with ``-lmetatensor``. Alternatively, we provide
+a cmake package config file, allowing you to do use metatensor like this (after
 installation):
 
 .. code-block:: cmake

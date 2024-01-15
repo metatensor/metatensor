@@ -5,7 +5,7 @@ API reference
 
 The atomistic machine learning models capabilities of metatensor are part of the
 :ref:`TorchScript API <torch-api-reference>`, and are installed when
-:ref:`installing the TorchScript API <install-torch-script>`.
+:ref:`installing the TorchScript API <install-torch>`.
 
 These capabilities can be used from either Python or C++. The Python API is
 documented below, and is part of the ``metatensor.torch.atomistic`` module.
