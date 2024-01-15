@@ -13,3 +13,4 @@ API reference
     :maxdepth: 3
 
     data/index
+    nn/index
