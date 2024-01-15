@@ -9,10 +9,10 @@ C++, and most languages used nowadays). Convenient wrappers of the C API are
 also provided for :ref:`Python <python-api-reference>` users.
 
 The C API is implemented in Rust. You can use these functions in your own code
-by :ref:`installing the corresponding shared library and header
-<install-c-lib>`, and then including ``metatensor.h`` and linking with
-``-lmetatensor``. Alternatively, we provide a cmake package config file, allowing
-you to do use ``metatensor`` like this (after installation):
+by :ref:`installing the corresponding shared library and header <install-c>`,
+and then including ``metatensor.h`` and linking with ``-lmetatensor``.
+Alternatively, we provide a cmake package config file, allowing you to do use
+``metatensor`` like this (after installation):
 
 .. code-block:: cmake
 

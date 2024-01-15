@@ -25,11 +25,10 @@ with extra metadata for atomic — and other particles — systems.
     :height: 32px
     :alt: Python
 
-
 .. grid::
 
     .. grid-item-card:: 🚀 Getting started
-        :link: getting-started
+        :link: installation
         :link-type: ref
         :columns: 12 12 6 6
         :margin: 0 3 0 0

@@ -7,7 +7,7 @@ Python API reference
 
 Most users will find the Python interface to ``metatensor`` to be the most
 convenient to use. This interface is built on top of the C API, and can be
-:ref:`installed independently <install-python-lib>`. The functions and classes
+:ref:`installed independently <install-python>`. The functions and classes
 provided in ``metatensor`` can be grouped as follows:
 
 - the three core classes: :py:class:`TensorMap`, :py:class:`TensorBlock`,

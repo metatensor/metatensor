@@ -8,7 +8,7 @@ types in a way compatible with the TorchScript compiler, allowing users to save
 and load models based on metatensor everywhere TorchScript is supported. In
 particular, this allow to define, train and save a model from Python, and then
 load it with pure C++ code, without requiring a Python interpreter. Please refer
-to the :ref:`installation instructions <install-torch-script>` to know how to
+to the :ref:`installation instructions <install-torch>` to know how to
 install the Python and C++ sides of this library.
 
 The classes and functions in the TorchScript API are kept as close as possible
