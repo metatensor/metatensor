@@ -3,61 +3,126 @@ Metatensor
 
 Metatensor is a specialized data storage format for all your atomistic machine
 learning needs, and more. Think numpy ``ndarray`` or pytorch ``Tensor`` equipped
-with extra metadata for atomic — and other particles — systems. The core of this
-library is written in Rust and we provide API for C, C++, and Python.
+with extra metadata for atomic — and other particles — systems.
 
-The main class of metatensor is the :py:class:`metatensor.TensorMap` data
-structure, illustrated below. This class defines a block-sparse data format,
-where each :py:class:`block <metatensor.TensorBlock>` is stored using
-`coordinate`_ sparse storage. The schematic below represents a TensorMap made of
-multiple TensorBlocks, and the overall data format is explained further in the
-:ref:`core classes <core-classes>` section of this documentation. If
-you are using metatensor from Python, we additionally provide a collection of
-mathematical, logical and other utility :ref:`operations
-<python-api-operations>` to make working with TensorMaps more convenient.
+.. |C| image:: ../static/images/logo-c.*
+    :width: 32px
+    :height: 32px
+    :alt: C
 
-.. _coordinate: https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)
+.. |Cxx| image:: ../static/images/logo-cxx.*
+    :width: 32px
+    :height: 32px
+    :alt: C++
 
-.. image:: ../static/images/TensorMap.*
-    :width: 400px
-    :align: center
+.. |Rust| image:: ../static/images/logo-rust.*
+    :width: 32px
+    :height: 32px
+    :alt: Rust
 
-Why metatensor
---------------
+.. |Python| image:: ../static/images/logo-python.*
+    :width: 32px
+    :height: 32px
+    :alt: Python
 
-With the creation of metatensor, we want to achieve three goals:
 
-1. provide an interchange format for the atomistic machine learning ecosystem,
-   making different players in this ecosystem more interoperable with one
-   another;
-2. make it easier and faster to prototype new machine learning representations,
-   models and algorithms applied to atomistic modeling;
-3. run large scale simulations using machine learning interatomic potentials,
-   with fully customizable potentials, directly defined by the researchers
-   running the simulations.
+.. grid::
 
-For more information on these goals and how we are trying to fulfill them,
-please read the corresponding :ref:`documentation page <about>`. Metatensor is
-still in the alpha phase of software development, so expect some rough corners
-and sharp edges.
+    .. grid-item-card:: 🚀 Getting started
+        :link: getting-started
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
 
-Development team
-----------------
+        Install the right version of metatensor for your programming language!
+        The core of this library is written in Rust and we provide API for C,
+        C++, and Python.
 
-Metatensor is developed in the `COSMO laboratory`_ at `EPFL`_, and made
-available to everyone under the `BSD 3-clauses license <LICENSE_>`_. We welcome
-contributions from anyone, and we provide some :ref:`developer documentation
-<devdoc>` for newcomers.
+        +++
+        |Python| |Cxx| |C| |Rust|
 
-.. _COSMO laboratory: https://www.epfl.ch/labs/cosmo/
-.. _EPFL: https://www.epfl.ch/
-.. _LICENSE: https://github.com/lab-cosmo/metatensor/blob/master/LICENSE
+    .. grid-item-card:: 💡 What is metatensor
+        :link: about
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
 
---------------------------------------------------------------------------------
+        Learn about the core goals of metatensor, and what the library is about:
+
+        - an exchange format for ML data;
+        - a prototyping tool for new models;
+        - an interface for atomistic simulations.
+
+    .. grid-item-card:: 🛠️ Core classes
+        :link: core-classes
+        :link-type: ref
+        :columns: 12 12 4 4
+        :margin: 0 3 0 0
+
+        Explore the core types of metatensor: :py:class:`TensorMap`,
+        :py:class:`TensorBlock` and :py:class:`Labels`, and discover how to used
+        them.
+
+        +++
+        |Python| |Cxx| |C| |Rust|
+
+
+    .. grid-item-card:: 📈 Operations
+        :link: metatensor-operations
+        :link-type: ref
+        :columns: 12 12 4 4
+        :margin: 0 3 0 0
+
+        Use `operations` to manipulate the core types of metatensor and write
+        new algorithms operating on metatensor's sparse data.
+
+        +++
+        |Python|
+
+
+    .. grid-item-card:: 🔥 TorchScript interface
+        :link: metatensor-torch
+        :link-type: ref
+        :columns: 12 12 4 4
+        :margin: 0 3 0 0
+
+        Learn about the TorchScript version of metatensor, used to export and
+        execute custom models with non-Python software.
+
+        +++
+        |Python| |Cxx|
+
+
+    .. grid-item-card:: 🧑‍💻 Defining new models
+        :link: metatensor-learn
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Use the utility class with the same API as torch or scikit-learn to
+        define full models working with metatensor!
+
+        +++
+        |Python|
+
+
+    .. grid-item-card:: ⚛️ Running atomistic simulations
+        :link: atomistic-models
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Learn about the facilities provided to define atomistic models, and use
+        them to run molecular dynamics simulations and more!
+
+        +++
+        |Python| |Cxx|
+
+
 
 .. toctree::
    :maxdepth: 2
-   :caption: Content:
+   :hidden:
 
    about
    installation

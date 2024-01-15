@@ -1,3 +1,5 @@
+.. _metatensor-learn:
+
 Machine learning models
 =======================
 
