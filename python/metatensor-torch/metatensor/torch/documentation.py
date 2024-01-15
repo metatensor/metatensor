@@ -719,11 +719,8 @@ class TensorBlock:
             (e.g. ``positions``, ``cell``, ...)
         """
 
-    def gradients(self) -> Dict[str, "TensorBlock"]:
-        """
-        Get an iterator over all (parameter, gradients) pairs defined in this
-        block.
-        """
+    def gradients(self) -> List[Tuple[str, "TensorBlock"]]:
+        """Get a list of all (parameter, gradients) pairs defined in this block."""
 
     @property
     def dtype(self) -> torch.dtype:
