@@ -1,5 +1,5 @@
-Miscelaneous
-============
+Miscellaneous
+=============
 
 Error handling
 --------------

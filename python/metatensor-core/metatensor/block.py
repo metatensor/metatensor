@@ -111,7 +111,7 @@ class TensorBlock:
         obj._gradient_parameters = []
         obj._actual_ptr = ptr
         # keep a reference to the parent object (usually a TensorMap) to
-        # prevent it from beeing garbage-collected & removing this block
+        # prevent it from being garbage-collected & removing this block
         obj._parent = parent
         return obj
 
@@ -385,7 +385,7 @@ class TensorBlock:
                 f"got {self.device} and {gradient.device}"
             )
 
-        # mts_block_add_gradient alreayd checks that all arrays have the same origin
+        # mts_block_add_gradient already checks that all arrays have the same origin
         # (i.e. they are all numpy, or all torch, or ...), so we don't need to check it
         # again here.
 
