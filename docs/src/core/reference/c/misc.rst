@@ -1,5 +1,7 @@
-Miscelaneous
-============
+Miscellaneous
+=============
+
+.. doxygenfunction:: mts_version
 
 Error handling
 --------------
@@ -15,6 +17,8 @@ Error handling
 .. doxygendefine:: MTS_BUFFER_SIZE_ERROR
 
 .. doxygendefine:: MTS_INTERNAL_ERROR
+
+.. doxygenfunction:: mts_disable_panic_printing
 
 
 Serialization

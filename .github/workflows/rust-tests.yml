@@ -131,11 +131,15 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pycparser
 
-      - name: check that Rust/Python C API declarations are up to date
+      - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
           # bindgen is already installed on GitHub Actions VM
           ./scripts/update-declarations.sh
           git diff --exit-code
+
+      - name: check that C API functions are all documented
+        run: |
+          python scripts/check-c-api-docs.py
 
   # make sure no debug print stays in the code
   check-debug-prints:
