@@ -165,12 +165,11 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
 
 
 def _check_empty_block(block, sliced_block, axis):
-    # Define the axis that should be sliced to zero (axis1)
-    # and the one that should not be sliced (axis2)
     if axis == "s":
         sliced_axis, unsliced_axis = 0, -1
     else:
         sliced_axis, unsliced_axis = -1, 0
+
     # sliced block has no values
     assert len(sliced_block.values.flatten()) == 0
     # sliced block has dimension zero for properties
@@ -257,9 +256,8 @@ def test_slice_samples(tensor):
         labels=samples,
     )
 
-    for block in sliced_tensor:
-        # all blocks are empty
-        _check_empty_block(block, sliced_tensor.block(key), "s")
+    for sliced_block in sliced_tensor:
+        _check_empty_block(tensor.block(key), sliced_block, "s")
 
 
 # ===== Tests for slicing along properties =====
