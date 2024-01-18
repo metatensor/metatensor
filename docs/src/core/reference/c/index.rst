@@ -3,6 +3,31 @@
 C API reference
 ===============
 
+.. note::
+
+  This is the documentation for ``metatensor-core`` version
+  |metatensor-core-version|. For other versions, look in the following pages:
+
+  .. grid::
+    :margin: 0 0 0 0
+
+    .. grid-item-card:: Version 0.1.0
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.0/reference/c/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+    .. grid-item-card:: Version 0.1.1
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.1/reference/c/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+
 ``metatensor`` offers a C API that can be called from any language able to call
 C functions (in particular, this includes Python, Fortran with ``iso_c_env``,
 C++, and most languages used nowadays). Convenient wrappers of the C API are

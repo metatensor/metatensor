@@ -3,6 +3,31 @@
 C++ API reference
 =================
 
+.. note::
+
+  This is the documentation for ``metatensor-core`` version
+  |metatensor-core-version|. For other versions, look in the following pages:
+
+  .. grid::
+    :margin: 0 0 0 0
+
+    .. grid-item-card:: Version 0.1.0
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.0/reference/cxx/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+    .. grid-item-card:: Version 0.1.1
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.1/reference/cxx/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+
 Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-reference>`.
 You can the provided classes and functions in your own code by :ref:`installing
 the corresponding shared library and header <install-c>`, and then including

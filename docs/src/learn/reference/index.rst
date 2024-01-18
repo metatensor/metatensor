@@ -3,6 +3,12 @@
 API reference
 =============
 
+.. note::
+
+  This is the documentation for ``metatensor-learn`` version
+  |metatensor-learn-version|.
+
+
 .. toctree::
     :maxdepth: 3
 
