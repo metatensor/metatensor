@@ -313,3 +313,14 @@ Guidelines for writing Python doc strings
 .. _`sphinx format` : https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 .. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
 .. _`doctest` : https://docs.python.org/3/library/doctest.html
+
+Useful developer scripts
+------------------------
+
+The following scripts can be useful to developers:
+
+- `./scripts/clean-python.sh`: remove all generated files related to Python,
+  including all build caches
+- `./scripts/update-declarations.sh`: update API declaration in Python, Rust and
+  Julia from the latest version of the `metatensor.h` header. This should be
+  used after any change to the C API.
