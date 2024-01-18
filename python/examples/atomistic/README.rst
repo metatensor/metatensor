@@ -1,2 +1,4 @@
+.. _atomistic-tutorials:
+
 Tutorials
 =========

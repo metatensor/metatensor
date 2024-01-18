@@ -1,0 +1,1 @@
+../../../python/metatensor-learn/CHANGELOG.md

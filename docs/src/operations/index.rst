@@ -6,14 +6,30 @@ Operations
 The Python API for metatensor also provides functions which operate on
 :py:class:`metatensor.TensorMap`, :py:class:`metatensor.TensorBlock`, and
 :py:class:`metatensor.Labels` and can be used to build your own Machine Learning
-models.
+models. These operations are provided in the ``metatensor-operations`` python
+package, which is installed by default when doing ``pip install metatensor``.
 
 The list of all operations currently implemented is available below. If you need
 any other operation, please `open an issue
 <https://github.com/lab-cosmo/metatensor/issues>`_!
 
+.. grid::
+
+    .. grid-item-card:: |Python-16x16| Operations API reference
+        :link: python-api-operations
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Read the documentation for all the functions in the
+        ``metatensor-operations`` Python package.
+
+        +++
+        Documentation for version |metatensor-operations-version|
+
 .. toctree::
     :maxdepth: 2
+    :hidden:
 
     reference/index
 
