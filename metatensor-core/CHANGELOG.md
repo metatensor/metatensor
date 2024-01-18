@@ -6,7 +6,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
 
-### metatensor-core C++
+<!-- Possible sections for each package:
 
 #### Added
 
@@ -15,17 +15,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Changed
 
 #### Removed
+-->
+
+### metatensor-core C++
 
 
 ### metatensor-core C
-
-#### Added
-
-#### Fixed
-
-#### Changed
-
-#### Removed
 
 
 ### metatensor-core Python
@@ -37,12 +32,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `Labels.device`, `TensorBlock.device` and `TensorMap.device`; as well as
   `TensorMap.dtype`, and `TensorBlock.dtype` to query the current device and
   dtype used by the data.
-
-#### Fixed
-
-#### Changed
-
-#### Removed
 
 
 ### metatensor-core Julia
