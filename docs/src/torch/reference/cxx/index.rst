@@ -13,17 +13,20 @@ CMake after :ref:`installing metatensor's C++ Torch interface <install-torch-cxx
 
 .. code-block:: cmake
 
-    # This will find metatensor_torch, metatensor and Torch on your system
+    cmake_minimum_required(VERSION 3.16)
+    project(my-project CXX)
+
     find_package(metatensor_torch)
 
     # add executables/libraries
-    add_executable(MyExecutable my_sources.cxx)
-    add_library(MyLibrary my_sources.cxx)
+    add_executable(my-exe exe-source.cpp)
+    add_library(my-lib lib-source.cpp)
 
-    # Link to metatensor_torch, this makes the headers accessible
-    # and link to the right libraries
-    target_link_libraries(MyExecutable metatensor_torch)
-    target_link_libraries(MyLibrary metatensor_torch)
+    # Link to metatensor, this makes the header accessible and link to the right
+    # libraries.
+    target_link_libraries(my-exe metatensor_torch)
+    target_link_libraries(my-lib metatensor_torch)
+
 
 .. toctree::
     :maxdepth: 1

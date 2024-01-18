@@ -3,13 +3,51 @@
 TorchScript interface
 =====================
 
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
+    reference/index
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    CHANGELOG.md
+
 We provide a special PyTorch C++ extension exporting all of the core metatensor
 types in a way compatible with the TorchScript compiler, allowing users to save
-and load models based on metatensor everywhere TorchScript is supported. In
-particular, this allow to define, train and save a model from Python, and then
-load it with pure C++ code, without requiring a Python interpreter. Please refer
-to the :ref:`installation instructions <install-torch>` to know how to
-install the Python and C++ sides of this library.
+and load models based on metatensor everywhere TorchScript is supported. This
+allow to define, train and save a model from Python, and then load it with pure
+C++ code, without requiring a Python interpreter. Please refer to the
+:ref:`installation instructions <install-torch>` to know how to install the
+Python and C++ sides of this library.
+
+.. grid::
+
+    .. grid-item-card:: |Python-16x16| TorchScript Python API reference
+        :link: torch-api-reference
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Read the documentation for all the classes and functions in the
+        ``metatensor-torch`` Python package.
+
+        +++
+        Documentation for version |metatensor-torch-version|
+
+    .. grid-item-card:: |Cxx-16x16| TorchScript C++ API reference
+        :link: torch-cxx-api-reference
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Read the documentation for all the classes and functions in the
+        ``metatensor/torch.hpp`` C++ header.
+
+        +++
+        Documentation for version |metatensor-torch-version|
 
 The classes and functions in the TorchScript API are kept as close as possible
 to the classes and functions of the pure Python API, with the explicit goal that
@@ -28,22 +66,8 @@ to
     from metatensor.torch import TensorMap, TensorBlock, Labels
 
 should be 80% of the work required to make a model developed in Python with
-:py:mod:`metatensor.operations` compatible with TorchScript.
-
-
-.. toctree::
-    :maxdepth: 2
-
-    reference/index
-
-
-.. toctree::
-    :maxdepth: 1
-    :hidden:
-
-    CHANGELOG.md
-
-All the :ref:`operations <python-api-operations>` are also available in the
+:py:mod:`metatensor.operations` compatible with TorchScript. In particular, all
+the :ref:`operations <python-api-operations>` are also available in the
 ``metatensor.torch`` module under the same name. All the functions have the same
 behavior, but the versions in ``metatensor.torch`` are annotated with the types
 from ``metatensor.torch``, and compatible with TorchScript compilation. For

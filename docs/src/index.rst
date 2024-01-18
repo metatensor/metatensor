@@ -74,14 +74,14 @@ with extra metadata for atomic — and other particles — systems.
         |Python-32x32| |Cxx-32x32|
 
 
-    .. grid-item-card:: 🧑‍💻 Defining new models
+    .. grid-item-card:: 🧑‍💻 Learning utilities
         :link: metatensor-learn
         :link-type: ref
         :columns: 12 12 6 6
         :margin: 0 3 0 0
 
         Use the utility class with the same API as torch or scikit-learn to
-        define full models working with metatensor!
+        train models using metatensor!
 
         +++
         |Python-32x32|
