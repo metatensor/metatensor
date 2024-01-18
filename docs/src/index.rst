@@ -5,26 +5,6 @@ Metatensor is a specialized data storage format for all your atomistic machine
 learning needs, and more. Think numpy ``ndarray`` or pytorch ``Tensor`` equipped
 with extra metadata for atomic — and other particles — systems.
 
-.. |C| image:: ../static/images/logo-c.*
-    :width: 32px
-    :height: 32px
-    :alt: C
-
-.. |Cxx| image:: ../static/images/logo-cxx.*
-    :width: 32px
-    :height: 32px
-    :alt: C++
-
-.. |Rust| image:: ../static/images/logo-rust.*
-    :width: 32px
-    :height: 32px
-    :alt: Rust
-
-.. |Python| image:: ../static/images/logo-python.*
-    :width: 32px
-    :height: 32px
-    :alt: Python
-
 .. grid::
 
     .. grid-item-card:: 🚀 Getting started
@@ -38,7 +18,7 @@ with extra metadata for atomic — and other particles — systems.
         C++, and Python.
 
         +++
-        |Python| |Cxx| |C| |Rust|
+        |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
 
     .. grid-item-card:: 💡 What is metatensor
         :link: about
@@ -53,17 +33,19 @@ with extra metadata for atomic — and other particles — systems.
         - an interface for atomistic simulations.
 
     .. grid-item-card:: 🛠️ Core classes
-        :link: core-classes
+        :link: core-classes-overview
         :link-type: ref
         :columns: 12 12 4 4
         :margin: 0 3 0 0
+
+        .. py:currentmodule:: metatensor
 
         Explore the core types of metatensor: :py:class:`TensorMap`,
         :py:class:`TensorBlock` and :py:class:`Labels`, and discover how to used
         them.
 
         +++
-        |Python| |Cxx| |C| |Rust|
+        |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
 
 
     .. grid-item-card:: 📈 Operations
@@ -76,7 +58,7 @@ with extra metadata for atomic — and other particles — systems.
         new algorithms operating on metatensor's sparse data.
 
         +++
-        |Python|
+        |Python-32x32|
 
 
     .. grid-item-card:: 🔥 TorchScript interface
@@ -89,7 +71,7 @@ with extra metadata for atomic — and other particles — systems.
         execute custom models with non-Python software.
 
         +++
-        |Python| |Cxx|
+        |Python-32x32| |Cxx-32x32|
 
 
     .. grid-item-card:: 🧑‍💻 Defining new models
@@ -102,7 +84,7 @@ with extra metadata for atomic — and other particles — systems.
         define full models working with metatensor!
 
         +++
-        |Python|
+        |Python-32x32|
 
 
     .. grid-item-card:: ⚛️ Running atomistic simulations
@@ -115,7 +97,7 @@ with extra metadata for atomic — and other particles — systems.
         them to run molecular dynamics simulations and more!
 
         +++
-        |Python| |Cxx|
+        |Python-32x32| |Cxx-32x32|
 
 
 

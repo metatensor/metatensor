@@ -16,17 +16,30 @@ Alternatively, we provide a cmake package config file, allowing you to do use
 
 .. code-block:: cmake
 
+    cmake_minimum_required(VERSION 3.16)
+    project(my-project C)
+
     find_package(metatensor)
 
     # add executables/libraries
-    add_executable(MyExecutable my_sources.c)
-    add_library(MyLibrary my_sources.c)
+    add_executable(my-exe exe-source.c)
+    add_library(my-lib lib-source.c)
 
-    # Links metatensor with MyExecutable, this makes the header accessible
-    target_link_libraries(MyExecutable metatensor)
+    # Link to metatensor, this makes the header accessible and link to the right
+    # libraries.
+    #
+    # The `metatensor` target will be an alias for `metatensor::shared`
+    # or `metatensor::static` depending how you've installed the code.
+    target_link_libraries(my-exe metatensor)
+    target_link_libraries(my-lib metatensor)
 
-    # alternatively, use the static build of metatensor
-    # target_link_libraries(MyExecutable metatensor::static)
+    # alternatively, you can explicitly use the static or shared build of
+    # metatensor. Unless you have a very specific need for a static build, we
+    # recommend using the shared version of metatensor: this will allow to pass
+    # data from your code to any other code using metatensor.
+
+    # target_link_libraries(my-exe metatensor::shared)
+    # target_link_libraries(my-exe metatensor::static)
 
 The functions and types provided in ``metatensor.h`` can be grouped in five
 main groups:

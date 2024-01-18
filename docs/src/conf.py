@@ -57,6 +57,48 @@ def setup(app):
     os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 
+rst_prolog = """
+.. |C-32x32| image:: /../static/images/logo-c.*
+    :width: 32px
+    :height: 32px
+    :alt: C
+
+.. |C-16x16| image:: /../static/images/logo-c.*
+    :width: 16px
+    :height: 16px
+    :alt: C
+
+.. |Cxx-32x32| image:: /../static/images/logo-cxx.*
+    :width: 32px
+    :height: 32px
+    :alt: C++
+
+.. |Cxx-16x16| image:: /../static/images/logo-cxx.*
+    :width: 16px
+    :height: 16px
+    :alt: C++
+
+.. |Rust-32x32| image:: /../static/images/logo-rust.*
+    :width: 32px
+    :height: 32px
+    :alt: Rust
+
+.. |Rust-16x16| image:: /../static/images/logo-rust.*
+    :width: 16px
+    :height: 16px
+    :alt: Rust
+
+.. |Python-32x32| image:: /../static/images/logo-python.*
+    :width: 32px
+    :height: 32px
+    :alt: Python
+
+.. |Python-16x16| image:: /../static/images/logo-python.*
+    :width: 16px
+    :height: 16px
+    :alt: Python
+"""
+
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "4.0.0"
