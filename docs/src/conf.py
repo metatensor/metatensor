@@ -3,8 +3,15 @@ import subprocess
 import sys
 from datetime import datetime
 
-import toml
 from sphinx_gallery.sorting import FileNameSortKey
+
+
+# when importing metatensor-torch, this will change the definition of the classes
+# to include the documentation
+os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
+
+import metatensor  # noqa: E402
+import metatensor.torch  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -14,16 +21,6 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 project = "metatensor"
 author = ", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines())
 copyright = f"{datetime.now().date().year}, {author}"
-
-
-def load_version_from_cargo_toml():
-    with open(os.path.join(ROOT, "metatensor-core", "Cargo.toml")) as fd:
-        data = toml.load(fd)
-    return data["package"]["version"]
-
-
-# The full version, including alpha/beta/rc tags
-release = load_version_from_cargo_toml()
 
 
 def build_doxygen_docs():
@@ -42,8 +39,10 @@ def generate_examples():
     # need to import metatensor.torch differently (with and without
     # METATENSOR_IMPORT_FOR_SPHINX=1). So instead we run it inside a small script, and
     # include the corresponding output later.
+    del os.environ["METATENSOR_IMPORT_FOR_SPHINX"]
     script = os.path.join(ROOT, "docs", "scripts", "generate-examples.py")
     subprocess.run([sys.executable, script], capture_output=False)
+    os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 
 def setup(app):
@@ -52,12 +51,13 @@ def setup(app):
 
     app.add_css_file("css/metatensor.css")
 
-    # when importing metatensor-torch, this will change the definition of the classes
-    # to include the documentation
-    os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
+rst_prolog = f"""
+.. |metatensor-core-version| replace:: {metatensor.__version__}
+.. |metatensor-torch-version| replace:: {metatensor.torch.__version__}
+.. |metatensor-operations-version| replace:: {metatensor.operations.__version__}
+.. |metatensor-learn-version| replace:: {metatensor.learn.__version__}
 
-rst_prolog = """
 .. |C-32x32| image:: /../static/images/logo-c.*
     :width: 32px
     :height: 32px
@@ -129,6 +129,7 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "examples/index.rst",
+    "examples/sg_execution_times.rst",
     "sg_execution_times.rst",
 ]
 
@@ -180,6 +181,8 @@ intersphinx_mapping = {
 # a list of builtin themes.
 #
 html_theme = "furo"
+
+html_title = "Metatensor"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

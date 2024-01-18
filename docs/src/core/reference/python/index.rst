@@ -3,6 +3,31 @@
 Python API reference
 ====================
 
+.. note::
+
+  This is the documentation for ``metatensor-core`` version
+  |metatensor-core-version|. For other versions, look in the following pages:
+
+  .. grid::
+    :margin: 0 0 0 0
+
+    .. grid-item-card:: Version 0.1.0
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.0/reference/python/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+    .. grid-item-card:: Version 0.1.1
+      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.1/reference/python/index.html
+      :link-type: url
+      :columns: 12 6 3 3
+      :text-align: center
+      :class-body: sd-p-2
+      :class-title: sd-mb-0
+
+
 .. py:currentmodule:: metatensor
 
 Most users will find the Python interface to ``metatensor`` to be the most
