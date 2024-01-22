@@ -23,7 +23,8 @@ def tensor_zero_len_block():
 
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
-def test_load(use_numpy, memory_buffer):
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load(use_numpy, memory_buffer, standalone_fn):
     path = os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -43,10 +44,10 @@ def test_load(use_numpy, memory_buffer):
     else:
         file = path
 
-    tensor = metatensor.load(
-        file,
-        use_numpy=use_numpy,
-    )
+    if standalone_fn:
+        tensor = metatensor.load(file, use_numpy=use_numpy)
+    else:
+        tensor = TensorMap.load(file, use_numpy=use_numpy)
 
     assert isinstance(tensor, TensorMap)
     assert tensor.keys.names == [
@@ -69,7 +70,8 @@ def test_load(use_numpy, memory_buffer):
 # https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
-def test_save(use_numpy, memory_buffer, tmpdir, tensor):
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
     """Check that as saved file loads fine with numpy."""
 
     if memory_buffer:
@@ -78,7 +80,11 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
         file = "serialize-test.npz"
 
     with tmpdir.as_cwd():
-        metatensor.save(file, tensor, use_numpy=use_numpy)
+        if standalone_fn:
+            metatensor.save(file, tensor, use_numpy=use_numpy)
+        else:
+            tensor.save(file, use_numpy=use_numpy)
+
         if memory_buffer:
             file.seek(0)
 
@@ -104,14 +110,8 @@ def test_save(use_numpy, memory_buffer, tmpdir, tensor):
             assert _npz_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
 
 
-@pytest.mark.parametrize(
-    "use_numpy_save",
-    (True, False),
-)
-@pytest.mark.parametrize(
-    "use_numpy_load",
-    (True, False),
-)
+@pytest.mark.parametrize("use_numpy_save", (True, False))
+@pytest.mark.parametrize("use_numpy_load", (True, False))
 def test_save_load_zero_length_block(
     use_numpy_save, use_numpy_load, tmpdir, tensor_zero_len_block
 ):

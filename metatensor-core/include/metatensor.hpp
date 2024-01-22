@@ -33,6 +33,8 @@ namespace metatensor_torch {
 
 namespace metatensor {
 class Labels;
+class TensorMap;
+class TensorBlock;
 
 /// Exception class used for all errors in metatensor
 class Error: public std::runtime_error {
@@ -166,7 +168,18 @@ namespace details {
     inline size_t linear_index(const std::vector<size_t>& shape, const std::vector<size_t>& index) {
         return linear_index(shape, index.data(), index.size());
     }
+
+    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
 }
+
+
+/******************************************************************************/
+/******************************************************************************/
+/*                                                                            */
+/*                 N-Dimensional arrays handling                              */
+/*                                                                            */
+/******************************************************************************/
+/******************************************************************************/
 
 
 /// Simple N-dimensional array interface
@@ -438,9 +451,596 @@ bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     return !(lhs == rhs);
 }
 
-namespace details {
-    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
+
+/// `DataArrayBase` manages n-dimensional arrays used as data in a block or
+/// tensor map. The array itself if opaque to this library and can come from
+/// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
+/// with numpy or torch. The data does not have to live on CPU, or even on the
+/// same machine where this code is executed.
+///
+/// **WARNING**: all function implementations **MUST** be thread-safe, and can
+/// be called from multiple threads at the same time. The `DataArrayBase` itself
+/// might be moved from one thread to another.
+class DataArrayBase {
+public:
+    DataArrayBase() = default;
+    virtual ~DataArrayBase() = default;
+
+    /// DataArrayBase can be copy-constructed
+    DataArrayBase(const DataArrayBase&) = default;
+    /// DataArrayBase can be copy-assigned
+    DataArrayBase& operator=(const DataArrayBase&) = default;
+    /// DataArrayBase can be move-constructed
+    DataArrayBase(DataArrayBase&&) noexcept = default;
+    /// DataArrayBase can be move-assigned
+    DataArrayBase& operator=(DataArrayBase&&) noexcept = default;
+
+    /// Convert a concrete `DataArrayBase` to a C-compatible `mts_array_t`
+    ///
+    /// The `mts_array_t` takes ownership of the data, which should be released
+    /// with `mts_array_t::destroy`.
+    static mts_array_t to_mts_array_t(std::unique_ptr<DataArrayBase> data) {
+        mts_array_t array;
+        std::memset(&array, 0, sizeof(array));
+
+        array.ptr = data.release();
+
+        array.destroy = [](void* array) {
+            auto ptr = std::unique_ptr<DataArrayBase>(static_cast<DataArrayBase*>(array));
+            // let ptr go out of scope
+        };
+
+        array.origin = [](const void* array, mts_data_origin_t* origin) {
+            return details::catch_exceptions([](const void* array, mts_data_origin_t* origin){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                *origin = cxx_array->origin();
+                return MTS_SUCCESS;
+            }, array, origin);
+        };
+
+        array.copy = [](const void* array, mts_array_t* new_array) {
+            return details::catch_exceptions([](const void* array, mts_array_t* new_array){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                auto copy = cxx_array->copy();
+                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
+                return MTS_SUCCESS;
+            }, array, new_array);
+        };
+
+        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
+            return details::catch_exceptions([](
+                const void* array,
+                const uintptr_t* shape,
+                uintptr_t shape_count,
+                mts_array_t* new_array
+            ) {
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                auto cxx_shape = std::vector<size_t>();
+                for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
+                    cxx_shape.push_back(static_cast<size_t>(shape[i]));
+                }
+                auto copy = cxx_array->create(std::move(cxx_shape));
+                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
+                return MTS_SUCCESS;
+            }, array, shape, shape_count, new_array);
+        };
+
+        array.data = [](void* array, double** data) {
+            return details::catch_exceptions([](void* array, double** data){
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                *data = cxx_array->data();
+                return MTS_SUCCESS;
+            }, array, data);
+        };
+
+        array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
+            return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto& cxx_shape = cxx_array->shape();
+                *shape = cxx_shape.data();
+                *shape_count = static_cast<uintptr_t>(cxx_shape.size());
+                return MTS_SUCCESS;
+            }, array, shape, shape_count);
+        };
+
+        array.reshape = [](void* array, const uintptr_t* shape, uintptr_t shape_count) {
+            return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
+                cxx_array->reshape(std::move(cxx_shape));
+                return MTS_SUCCESS;
+            }, array, shape, shape_count);
+        };
+
+        array.swap_axes = [](void* array, uintptr_t axis_1, uintptr_t axis_2) {
+            return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                cxx_array->swap_axes(axis_1, axis_2);
+                return MTS_SUCCESS;
+            }, array, axis_1, axis_2);
+        };
+
+        array.move_samples_from = [](
+            void* array,
+            const void* input,
+            const mts_sample_mapping_t* samples,
+            uintptr_t samples_count,
+            uintptr_t property_start,
+            uintptr_t property_end
+        ) {
+            return details::catch_exceptions([](
+                void* array,
+                const void* input,
+                const mts_sample_mapping_t* samples,
+                uintptr_t samples_count,
+                uintptr_t property_start,
+                uintptr_t property_end
+            ) {
+                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* cxx_input = static_cast<const DataArrayBase*>(input);
+                auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
+
+                cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
+                return MTS_SUCCESS;
+            }, array, input, samples, samples_count, property_start, property_end);
+        };
+
+        return array;
+    }
+
+    /// Get "data origin" for this array in.
+    ///
+    /// Users of `DataArrayBase` should register a single data
+    /// origin with `mts_register_data_origin`, and use it for all compatible
+    /// arrays.
+    virtual mts_data_origin_t origin() const = 0;
+
+    /// Make a copy of this DataArrayBase and return the new array. The new
+    /// array is expected to have the same data origin and parameters (data
+    /// type, data location, etc.)
+    virtual std::unique_ptr<DataArrayBase> copy() const = 0;
+
+    /// Create a new array with the same options as the current one (data type,
+    /// data location, etc.) and the requested `shape`.
+    ///
+    /// The new array should be filled with zeros.
+    virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
+
+    /// Get a pointer to the underlying data storage.
+    ///
+    /// This function is allowed to fail if the data is not accessible in RAM,
+    /// not stored as 64-bit floating point values, or not stored as a
+    /// C-contiguous array.
+    virtual double* data() & = 0;
+
+    double* data() && = delete;
+
+    /// Get the shape of this array
+    virtual const std::vector<uintptr_t>& shape() const & = 0;
+
+    const std::vector<uintptr_t>& shape() && = delete;
+
+    /// Set the shape of this array to the given `shape`
+    virtual void reshape(std::vector<uintptr_t> shape) = 0;
+
+    /// Swap the axes `axis_1` and `axis_2` in this `array`.
+    virtual void swap_axes(uintptr_t axis_1, uintptr_t axis_2) = 0;
+
+    /// Set entries in the current array taking data from the `input` array.
+    ///
+    /// This array is guaranteed to be created by calling `mts_array_t::create`
+    /// with one of the arrays in the same block or tensor map as the `input`.
+    ///
+    /// The `samples` indicate where the data should be moved from `input` to
+    /// the current DataArrayBase.
+    ///
+    /// This function should copy data from `input[samples[i].input, ..., :]` to
+    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
+    /// to `samples_count`. All indexes are 0-based.
+    virtual void move_samples_from(
+        const DataArrayBase& input,
+        std::vector<mts_sample_mapping_t> samples,
+        uintptr_t property_start,
+        uintptr_t property_end
+    ) = 0;
+};
+
+
+/// Very basic implementation of DataArrayBase in C++.
+///
+/// This is included as an example implementation of DataArrayBase, and to make
+/// metatensor usable without additional dependencies. For other uses cases, it
+/// might be better to implement DataArrayBase on your data, using
+/// functionalities from `Eigen`, `Boost.Array`, etc.
+class SimpleDataArray: public metatensor::DataArrayBase {
+public:
+    /// Create a SimpleDataArray with the given `shape`, and all elements set to
+    /// `value`
+    SimpleDataArray(std::vector<uintptr_t> shape, double value = 0.0):
+        shape_(std::move(shape)), data_(details::product(shape_), value) {}
+
+    /// Create a SimpleDataArray with the given `shape` and `data`.
+    ///
+    /// The data is interpreted as a row-major n-dimensional array.
+    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<double> data):
+        shape_(std::move(shape)),
+        data_(std::move(data))
+    {
+        if (data_.size() != details::product(shape_)) {
+            throw Error("the shape and size of the data don't match in SimpleDataArray");
+        }
+    }
+
+    ~SimpleDataArray() override = default;
+
+    /// SimpleDataArray can be copy-constructed
+    SimpleDataArray(const SimpleDataArray&) = default;
+    /// SimpleDataArray can be copy-assigned
+    SimpleDataArray& operator=(const SimpleDataArray&) = default;
+    /// SimpleDataArray can be move-constructed
+    SimpleDataArray(SimpleDataArray&&) noexcept = default;
+    /// SimpleDataArray can be move-assigned
+    SimpleDataArray& operator=(SimpleDataArray&&) noexcept = default;
+
+    mts_data_origin_t origin() const override {
+        mts_data_origin_t origin = 0;
+        mts_register_data_origin("metatensor::SimpleDataArray", &origin);
+        return origin;
+    }
+
+    double* data() & override {
+        return data_.data();
+    }
+
+    const std::vector<uintptr_t>& shape() const & override {
+        return shape_;
+    }
+
+    void reshape(std::vector<uintptr_t> shape) override {
+        if (details::product(shape_) != details::product(shape)) {
+            throw metatensor::Error("invalid shape in reshape");
+        }
+        shape_ = std::move(shape);
+    }
+
+    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+        auto new_data = std::vector<double>(details::product(shape_), 0.0);
+        auto new_shape = shape_;
+        std::swap(new_shape[axis_1], new_shape[axis_2]);
+
+        for (size_t i=0; i<details::product(shape_); i++) {
+            auto index = details::cartesian_index(shape_, i);
+            std::swap(index[axis_1], index[axis_2]);
+
+            new_data[details::linear_index(new_shape, index)] = data_[i];
+        }
+
+        shape_ = std::move(new_shape);
+        data_ = std::move(new_data);
+    }
+
+    std::unique_ptr<DataArrayBase> copy() const override {
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
+    }
+
+    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
+    }
+
+    void move_samples_from(
+        const DataArrayBase& input,
+        std::vector<mts_sample_mapping_t> samples,
+        uintptr_t property_start,
+        uintptr_t property_end
+    ) override {
+        const auto& input_array = dynamic_cast<const SimpleDataArray&>(input);
+        assert(input_array.shape_.size() == this->shape_.size());
+
+        size_t property_count = property_end - property_start;
+        size_t property_dim = shape_.size() - 1;
+        assert(input_array.shape_[property_dim] == property_count);
+
+        auto input_index = std::vector<size_t>(shape_.size(), 0);
+        auto output_index = std::vector<size_t>(shape_.size(), 0);
+
+        for (const auto& sample: samples) {
+            input_index[0] = sample.input;
+            output_index[0] = sample.output;
+
+            if (property_dim == 1) {
+                // no components
+                for (size_t property_i=0; property_i<property_count; property_i++) {
+                    input_index[property_dim] = property_i;
+                    output_index[property_dim] = property_i + property_start;
+
+                    auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
+                    this->data_[details::linear_index(shape_, output_index)] = value;
+                }
+            } else {
+                auto last_component_dim = shape_.size() - 2;
+                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                    input_index[component_i] = 0;
+                }
+
+                bool done = false;
+                while (!done) {
+                    for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                        output_index[component_i] = input_index[component_i];
+                    }
+
+                    for (size_t property_i=0; property_i<property_count; property_i++) {
+                        input_index[property_dim] = property_i;
+                        output_index[property_dim] = property_i + property_start;
+
+                        auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
+                        this->data_[details::linear_index(shape_, output_index)] = value;
+                    }
+
+                    input_index[last_component_dim] += 1;
+                    for (size_t component_i=last_component_dim; component_i>2; component_i--) {
+                        if (input_index[component_i] >= shape_[component_i]) {
+                            input_index[component_i] = 0;
+                            input_index[component_i - 1] += 1;
+                        }
+                    }
+
+                    if (input_index[1] >= shape_[1]) {
+                        done = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get a const view of the data managed by this SimpleDataArray
+    NDArray<double> view() const {
+        return NDArray<double>(data_.data(), shape_);
+    }
+
+    /// Get a mutable view of the data managed by this SimpleDataArray
+    NDArray<double> view() {
+        return NDArray<double>(data_.data(), shape_);
+    }
+
+    /// Extract a reference to SimpleDataArray out of an `mts_array_t`.
+    ///
+    /// This function fails if the `mts_array_t` does not contain a
+    /// SimpleDataArray.
+    static SimpleDataArray& from_mts_array(mts_array_t& array) {
+        mts_data_origin_t origin = 0;
+        auto status = array.origin(array.ptr, &origin);
+        if (status != MTS_SUCCESS) {
+            throw Error("failed to get data origin");
+        }
+
+        std::array<char, 64> buffer = {0};
+        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
+            throw Error("this array is not a metatensor::SimpleDataArray");
+        }
+
+        auto* base = static_cast<DataArrayBase*>(array.ptr);
+        return dynamic_cast<SimpleDataArray&>(*base);
+    }
+
+    /// Extract a const reference to SimpleDataArray out of an `mts_array_t`.
+    ///
+    /// This function fails if the `mts_array_t` does not contain a
+    /// SimpleDataArray.
+    static const SimpleDataArray& from_mts_array(const mts_array_t& array) {
+        mts_data_origin_t origin = 0;
+        auto status = array.origin(array.ptr, &origin);
+        if (status != MTS_SUCCESS) {
+            throw Error("failed to get data origin");
+        }
+
+        std::array<char, 64> buffer = {0};
+        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
+            throw Error("this array is not a metatensor::SimpleDataArray");
+        }
+
+        const auto* base = static_cast<const DataArrayBase*>(array.ptr);
+        return dynamic_cast<const SimpleDataArray&>(*base);
+    }
+
+private:
+    std::vector<uintptr_t> shape_;
+    std::vector<double> data_;
+
+    friend bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs);
+};
+
+/// Two SimpleDataArray compare as equal if they have the exact same shape and
+/// data.
+inline bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
+    return lhs.shape_ == rhs.shape_ && lhs.data_ == rhs.data_;
 }
+
+/// Two SimpleDataArray compare as equal if they have the exact same shape and
+/// data.
+inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
+    return !(lhs == rhs);
+}
+
+
+/// An implementation of `DataArrayBase` containing no data.
+///
+/// This class only tracks it's shape, and can be used when only the metadata
+/// of a `TensorBlock` is important, leaving the data unspecified.
+class EmptyDataArray: public metatensor::DataArrayBase {
+public:
+    /// Create ae `EmptyDataArray` with the given `shape`
+    EmptyDataArray(std::vector<uintptr_t> shape):
+        shape_(std::move(shape)) {}
+
+    ~EmptyDataArray() override = default;
+
+    /// EmptyDataArray can be copy-constructed
+    EmptyDataArray(const EmptyDataArray&) = default;
+    /// EmptyDataArray can be copy-assigned
+    EmptyDataArray& operator=(const EmptyDataArray&) = default;
+    /// EmptyDataArray can be move-constructed
+    EmptyDataArray(EmptyDataArray&&) noexcept = default;
+    /// EmptyDataArray can be move-assigned
+    EmptyDataArray& operator=(EmptyDataArray&&) noexcept = default;
+
+    mts_data_origin_t origin() const override {
+        mts_data_origin_t origin = 0;
+        mts_register_data_origin("metatensor::EmptyDataArray", &origin);
+        return origin;
+    }
+
+    double* data() & override {
+        throw metatensor::Error("can not call `data` for an EmptyDataArray");
+    }
+
+    const std::vector<uintptr_t>& shape() const & override {
+        return shape_;
+    }
+
+    void reshape(std::vector<uintptr_t> shape) override {
+        if (details::product(shape_) != details::product(shape)) {
+            throw metatensor::Error("invalid shape in reshape");
+        }
+        shape_ = std::move(shape);
+    }
+
+    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+        std::swap(shape_[axis_1], shape_[axis_2]);
+    }
+
+    std::unique_ptr<DataArrayBase> copy() const override {
+        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
+    }
+
+    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
+    }
+
+    void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
+        throw metatensor::Error("can not call `move_samples_from` for an EmptyDataArray");
+    }
+
+private:
+    std::vector<uintptr_t> shape_;
+};
+
+namespace details {
+    /// Default callback for data array creating in `TensorMap::load`, which
+    /// will create a `SimpleDataArray`.
+    inline mts_status_t default_create_array(
+        const uintptr_t* shape_ptr,
+        uintptr_t shape_count,
+        mts_array_t* array
+    ) {
+        return details::catch_exceptions([](const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t* array){
+            auto shape = std::vector<size_t>();
+            for (size_t i=0; i<shape_count; i++) {
+                shape.push_back(static_cast<size_t>(shape_ptr[i]));
+            }
+
+            auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
+            *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
+
+            return MTS_SUCCESS;
+        }, shape_ptr, shape_count, array);
+    }
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/*                                                                            */
+/*                           I/O functionalities                              */
+/*                                                                            */
+/******************************************************************************/
+/******************************************************************************/
+
+namespace io {
+    /// Save a `TensorMap` to the file at `path`.
+    ///
+    /// If the file exists, it will be overwritten.
+    ///
+    /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+    /// without compression (storage method is `STORED`), where each file is
+    /// stored as a `.npy` array. See the C API documentation for more
+    /// information on the format.
+    void save(const std::string& path, const TensorMap& tensor);
+
+    /// Save a `TensorMap` to an in-memory buffer.
+    ///
+    /// The `Buffer` template parameter can be set to any type that can be
+    /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+    template <typename Buffer = std::vector<uint8_t>>
+    Buffer save_buffer(const TensorMap& tensor);
+
+    template<>
+    std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& tensor);
+
+    /*!
+     * Load a previously saved `TensorMap` from the given path.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     *
+     * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+     * without compression (storage method is `STORED`), where each file is
+     * stored as a `.npy` array. See the C API documentation for more
+     * information on the format.
+     */
+    TensorMap load(
+        const std::string& path,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+
+    /*!
+     * Load a previously saved `TensorMap` from the given `buffer`, containing
+     * `buffer_count` elements.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     */
+    TensorMap load_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+
+
+    /// Load a previously saved `TensorMap` from the given `buffer`.
+    ///
+    /// The `Buffer` template parameter would typically be a
+    /// `std::vector<uint8_t>` or a `std::string`, but any container with
+    /// contiguous data and an `item_type` with the same size as a `uint8_t` can
+    /// work.
+    template <typename Buffer>
+    TensorMap load_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+/*                                                                            */
+/*                                Labels                                      */
+/*                                                                            */
+/******************************************************************************/
+/******************************************************************************/
+
 
 /// It is possible to store some user-provided data inside `Labels`, and access
 /// it later. This class is used to take ownership of the data and corresponding
@@ -877,7 +1477,6 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
         Labels(names, values.data(), values.shape()[0]) {}
 
-
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
     friend class TensorMap;
     friend class TensorBlock;
@@ -939,492 +1538,12 @@ inline bool operator!=(const Labels& lhs, const Labels& rhs) {
     return !(lhs == rhs);
 }
 
+
 /******************************************************************************/
 /******************************************************************************/
-/******************************************************************************/
-
-
-/// `DataArrayBase` manages n-dimensional arrays used as data in a block or
-/// tensor map. The array itself if opaque to this library and can come from
-/// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
-/// with numpy or torch. The data does not have to live on CPU, or even on the
-/// same machine where this code is executed.
-///
-/// **WARNING**: all function implementations **MUST** be thread-safe, and can
-/// be called from multiple threads at the same time. The `DataArrayBase` itself
-/// might be moved from one thread to another.
-class DataArrayBase {
-public:
-    DataArrayBase() = default;
-    virtual ~DataArrayBase() = default;
-
-    /// DataArrayBase can be copy-constructed
-    DataArrayBase(const DataArrayBase&) = default;
-    /// DataArrayBase can be copy-assigned
-    DataArrayBase& operator=(const DataArrayBase&) = default;
-    /// DataArrayBase can be move-constructed
-    DataArrayBase(DataArrayBase&&) noexcept = default;
-    /// DataArrayBase can be move-assigned
-    DataArrayBase& operator=(DataArrayBase&&) noexcept = default;
-
-    /// Convert a concrete `DataArrayBase` to a C-compatible `mts_array_t`
-    ///
-    /// The `mts_array_t` takes ownership of the data, which should be released
-    /// with `mts_array_t::destroy`.
-    static mts_array_t to_mts_array_t(std::unique_ptr<DataArrayBase> data) {
-        mts_array_t array;
-        std::memset(&array, 0, sizeof(array));
-
-        array.ptr = data.release();
-
-        array.destroy = [](void* array) {
-            auto ptr = std::unique_ptr<DataArrayBase>(static_cast<DataArrayBase*>(array));
-            // let ptr go out of scope
-        };
-
-        array.origin = [](const void* array, mts_data_origin_t* origin) {
-            return details::catch_exceptions([](const void* array, mts_data_origin_t* origin){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                *origin = cxx_array->origin();
-                return MTS_SUCCESS;
-            }, array, origin);
-        };
-
-        array.copy = [](const void* array, mts_array_t* new_array) {
-            return details::catch_exceptions([](const void* array, mts_array_t* new_array){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                auto copy = cxx_array->copy();
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-                return MTS_SUCCESS;
-            }, array, new_array);
-        };
-
-        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
-            return details::catch_exceptions([](
-                const void* array,
-                const uintptr_t* shape,
-                uintptr_t shape_count,
-                mts_array_t* new_array
-            ) {
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                auto cxx_shape = std::vector<size_t>();
-                for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
-                    cxx_shape.push_back(static_cast<size_t>(shape[i]));
-                }
-                auto copy = cxx_array->create(std::move(cxx_shape));
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-                return MTS_SUCCESS;
-            }, array, shape, shape_count, new_array);
-        };
-
-
-        array.data = [](void* array, double** data) {
-            return details::catch_exceptions([](void* array, double** data){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                *data = cxx_array->data();
-                return MTS_SUCCESS;
-            }, array, data);
-        };
-
-        array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
-            return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                const auto& cxx_shape = cxx_array->shape();
-                *shape = cxx_shape.data();
-                *shape_count = static_cast<uintptr_t>(cxx_shape.size());
-                return MTS_SUCCESS;
-            }, array, shape, shape_count);
-        };
-
-        array.reshape = [](void* array, const uintptr_t* shape, uintptr_t shape_count) {
-            return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
-                cxx_array->reshape(std::move(cxx_shape));
-                return MTS_SUCCESS;
-            }, array, shape, shape_count);
-        };
-
-        array.swap_axes = [](void* array, uintptr_t axis_1, uintptr_t axis_2) {
-            return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                cxx_array->swap_axes(axis_1, axis_2);
-                return MTS_SUCCESS;
-            }, array, axis_1, axis_2);
-        };
-
-        array.move_samples_from = [](
-            void* array,
-            const void* input,
-            const mts_sample_mapping_t* samples,
-            uintptr_t samples_count,
-            uintptr_t property_start,
-            uintptr_t property_end
-        ) {
-            return details::catch_exceptions([](
-                void* array,
-                const void* input,
-                const mts_sample_mapping_t* samples,
-                uintptr_t samples_count,
-                uintptr_t property_start,
-                uintptr_t property_end
-            ) {
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                const auto* cxx_input = static_cast<const DataArrayBase*>(input);
-                auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
-
-                cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
-                return MTS_SUCCESS;
-            }, array, input, samples, samples_count, property_start, property_end);
-        };
-
-        return array;
-    }
-
-    /// Get "data origin" for this array in.
-    ///
-    /// Users of `DataArrayBase` should register a single data
-    /// origin with `mts_register_data_origin`, and use it for all compatible
-    /// arrays.
-    virtual mts_data_origin_t origin() const = 0;
-
-
-    /// Make a copy of this DataArrayBase and return the new array. The new
-    /// array is expected to have the same data origin and parameters (data
-    /// type, data location, etc.)
-    virtual std::unique_ptr<DataArrayBase> copy() const = 0;
-
-    /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `shape`.
-    ///
-    /// The new array should be filled with zeros.
-    virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
-
-
-    /// Get a pointer to the underlying data storage.
-    ///
-    /// This function is allowed to fail if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    virtual double* data() & = 0;
-
-    double* data() && = delete;
-
-    /// Get the shape of this array
-    virtual const std::vector<uintptr_t>& shape() const & = 0;
-
-    const std::vector<uintptr_t>& shape() && = delete;
-
-    /// Set the shape of this array to the given `shape`
-    virtual void reshape(std::vector<uintptr_t> shape) = 0;
-
-    /// Swap the axes `axis_1` and `axis_2` in this `array`.
-    virtual void swap_axes(uintptr_t axis_1, uintptr_t axis_2) = 0;
-
-
-    /// Set entries in the current array taking data from the `input` array.
-    ///
-    /// This array is guaranteed to be created by calling `mts_array_t::create`
-    /// with one of the arrays in the same block or tensor map as the `input`.
-    ///
-    /// The `samples` indicate where the data should be moved from `input` to
-    /// the current DataArrayBase.
-    ///
-    /// This function should copy data from `input[samples[i].input, ..., :]` to
-    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
-    /// to `samples_count`. All indexes are 0-based.
-    virtual void move_samples_from(
-        const DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
-    ) = 0;
-
-};
-
-
-/// Very basic implementation of DataArrayBase in C++.
-///
-/// This is included as an example implementation of DataArrayBase, and to make
-/// metatensor usable without additional dependencies. For other uses cases, it
-/// might be better to implement DataArrayBase on your data, using
-/// functionalities from `Eigen`, `Boost.Array`, etc.
-class SimpleDataArray: public metatensor::DataArrayBase {
-public:
-    /// Create a SimpleDataArray with the given `shape`, and all elements set to
-    /// `value`
-    SimpleDataArray(std::vector<uintptr_t> shape, double value = 0.0):
-        shape_(std::move(shape)), data_(details::product(shape_), value) {}
-
-    /// Create a SimpleDataArray with the given `shape` and `data`.
-    ///
-    /// The data is interpreted as a row-major n-dimensional array.
-    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<double> data):
-        shape_(std::move(shape)),
-        data_(std::move(data))
-    {
-        if (data_.size() != details::product(shape_)) {
-            throw Error("the shape and size of the data don't match in SimpleDataArray");
-        }
-    }
-
-    ~SimpleDataArray() override = default;
-
-    /// SimpleDataArray can be copy-constructed
-    SimpleDataArray(const SimpleDataArray&) = default;
-    /// SimpleDataArray can be copy-assigned
-    SimpleDataArray& operator=(const SimpleDataArray&) = default;
-    /// SimpleDataArray can be move-constructed
-    SimpleDataArray(SimpleDataArray&&) noexcept = default;
-    /// SimpleDataArray can be move-assigned
-    SimpleDataArray& operator=(SimpleDataArray&&) noexcept = default;
-
-    mts_data_origin_t origin() const override {
-        mts_data_origin_t origin = 0;
-        mts_register_data_origin("metatensor::SimpleDataArray", &origin);
-        return origin;
-    }
-
-    double* data() & override {
-        return data_.data();
-    }
-
-    const std::vector<uintptr_t>& shape() const & override {
-        return shape_;
-    }
-
-    void reshape(std::vector<uintptr_t> shape) override {
-        if (details::product(shape_) != details::product(shape)) {
-            throw metatensor::Error("invalid shape in reshape");
-        }
-        shape_ = std::move(shape);
-    }
-
-    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
-        auto new_data = std::vector<double>(details::product(shape_), 0.0);
-        auto new_shape = shape_;
-        std::swap(new_shape[axis_1], new_shape[axis_2]);
-
-        for (size_t i=0; i<details::product(shape_); i++) {
-            auto index = details::cartesian_index(shape_, i);
-            std::swap(index[axis_1], index[axis_2]);
-
-            new_data[details::linear_index(new_shape, index)] = data_[i];
-        }
-
-        shape_ = std::move(new_shape);
-        data_ = std::move(new_data);
-    }
-
-    std::unique_ptr<DataArrayBase> copy() const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
-    }
-
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
-    }
-
-    void move_samples_from(
-        const DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
-    ) override {
-        const auto& input_array = dynamic_cast<const SimpleDataArray&>(input);
-        assert(input_array.shape_.size() == this->shape_.size());
-
-        size_t property_count = property_end - property_start;
-        size_t property_dim = shape_.size() - 1;
-        assert(input_array.shape_[property_dim] == property_count);
-
-        auto input_index = std::vector<size_t>(shape_.size(), 0);
-        auto output_index = std::vector<size_t>(shape_.size(), 0);
-
-        for (const auto& sample: samples) {
-            input_index[0] = sample.input;
-            output_index[0] = sample.output;
-
-            if (property_dim == 1) {
-                // no components
-                for (size_t property_i=0; property_i<property_count; property_i++) {
-                    input_index[property_dim] = property_i;
-                    output_index[property_dim] = property_i + property_start;
-
-                    auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
-                    this->data_[details::linear_index(shape_, output_index)] = value;
-                }
-            } else {
-                auto last_component_dim = shape_.size() - 2;
-                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                    input_index[component_i] = 0;
-                }
-
-                bool done = false;
-                while (!done) {
-                    for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                        output_index[component_i] = input_index[component_i];
-                    }
-
-                    for (size_t property_i=0; property_i<property_count; property_i++) {
-                        input_index[property_dim] = property_i;
-                        output_index[property_dim] = property_i + property_start;
-
-                        auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
-                        this->data_[details::linear_index(shape_, output_index)] = value;
-                    }
-
-                    input_index[last_component_dim] += 1;
-                    for (size_t component_i=last_component_dim; component_i>2; component_i--) {
-                        if (input_index[component_i] >= shape_[component_i]) {
-                            input_index[component_i] = 0;
-                            input_index[component_i - 1] += 1;
-                        }
-                    }
-
-                    if (input_index[1] >= shape_[1]) {
-                        done = true;
-                    }
-                }
-            }
-        }
-    }
-
-    /// Get a const view of the data managed by this SimpleDataArray
-    NDArray<double> view() const {
-        return NDArray<double>(data_.data(), shape_);
-    }
-
-    /// Get a mutable view of the data managed by this SimpleDataArray
-    NDArray<double> view() {
-        return NDArray<double>(data_.data(), shape_);
-    }
-
-    /// Extract a reference to SimpleDataArray out of an `mts_array_t`.
-    ///
-    /// This function fails if the `mts_array_t` does not contain a
-    /// SimpleDataArray.
-    static SimpleDataArray& from_mts_array(mts_array_t& array) {
-        mts_data_origin_t origin = 0;
-        auto status = array.origin(array.ptr, &origin);
-        if (status != MTS_SUCCESS) {
-            throw Error("failed to get data origin");
-        }
-
-        std::array<char, 64> buffer = {0};
-        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
-        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
-            throw Error("this array is not a metatensor::SimpleDataArray");
-        }
-
-        auto* base = static_cast<DataArrayBase*>(array.ptr);
-        return dynamic_cast<SimpleDataArray&>(*base);
-    }
-
-    /// Extract a const reference to SimpleDataArray out of an `mts_array_t`.
-    ///
-    /// This function fails if the `mts_array_t` does not contain a
-    /// SimpleDataArray.
-    static const SimpleDataArray& from_mts_array(const mts_array_t& array) {
-        mts_data_origin_t origin = 0;
-        auto status = array.origin(array.ptr, &origin);
-        if (status != MTS_SUCCESS) {
-            throw Error("failed to get data origin");
-        }
-
-        std::array<char, 64> buffer = {0};
-        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
-        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
-            throw Error("this array is not a metatensor::SimpleDataArray");
-        }
-
-        const auto* base = static_cast<const DataArrayBase*>(array.ptr);
-        return dynamic_cast<const SimpleDataArray&>(*base);
-    }
-
-private:
-    std::vector<uintptr_t> shape_;
-    std::vector<double> data_;
-
-    friend bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs);
-};
-
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-inline bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
-    return lhs.shape_ == rhs.shape_ && lhs.data_ == rhs.data_;
-}
-
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
-    return !(lhs == rhs);
-}
-
-
-/// An implementation of `DataArrayBase` containing no data.
-///
-/// This class only tracks it's shape, and can be used when only the metadata
-/// of a `TensorBlock` is important, leaving the data unspecified.
-class EmptyDataArray: public metatensor::DataArrayBase {
-public:
-    /// Create ae `EmptyDataArray` with the given `shape`
-    EmptyDataArray(std::vector<uintptr_t> shape):
-        shape_(std::move(shape)) {}
-
-    ~EmptyDataArray() override = default;
-
-    /// EmptyDataArray can be copy-constructed
-    EmptyDataArray(const EmptyDataArray&) = default;
-    /// EmptyDataArray can be copy-assigned
-    EmptyDataArray& operator=(const EmptyDataArray&) = default;
-    /// EmptyDataArray can be move-constructed
-    EmptyDataArray(EmptyDataArray&&) noexcept = default;
-    /// EmptyDataArray can be move-assigned
-    EmptyDataArray& operator=(EmptyDataArray&&) noexcept = default;
-
-    mts_data_origin_t origin() const override {
-        mts_data_origin_t origin = 0;
-        mts_register_data_origin("metatensor::EmptyDataArray", &origin);
-        return origin;
-    }
-
-    double* data() & override {
-        throw metatensor::Error("can not call `data` for an EmptyDataArray");
-    }
-
-    const std::vector<uintptr_t>& shape() const & override {
-        return shape_;
-    }
-
-    void reshape(std::vector<uintptr_t> shape) override {
-        if (details::product(shape_) != details::product(shape)) {
-            throw metatensor::Error("invalid shape in reshape");
-        }
-        shape_ = std::move(shape);
-    }
-
-    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
-        std::swap(shape_[axis_1], shape_[axis_2]);
-    }
-
-    std::unique_ptr<DataArrayBase> copy() const override {
-        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
-    }
-
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
-    }
-
-    void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
-        throw metatensor::Error("can not call `move_samples_from` for an EmptyDataArray");
-    }
-
-private:
-    std::vector<uintptr_t> shape_;
-};
-
-
-/******************************************************************************/
+/*                                                                            */
+/*                             TensorBlock                                    */
+/*                                                                            */
 /******************************************************************************/
 /******************************************************************************/
 
@@ -1755,29 +1874,12 @@ private:
 
 /******************************************************************************/
 /******************************************************************************/
+/*                                                                            */
+/*                               TensorMap                                    */
+/*                                                                            */
+/******************************************************************************/
 /******************************************************************************/
 
-namespace details {
-    /// Default callback for data array creating in `TensorMap::load`, which
-    /// will create a `SimpleDataArray`.
-    inline mts_status_t default_create_array(
-        const uintptr_t* shape_ptr,
-        uintptr_t shape_count,
-        mts_array_t* array
-    ) {
-        return details::catch_exceptions([](const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t* array){
-            auto shape = std::vector<size_t>();
-            for (size_t i=0; i<shape_count; i++) {
-                shape.push_back(static_cast<size_t>(shape_ptr[i]));
-            }
-
-            auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
-            *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
-
-            return MTS_SUCCESS;
-        }, shape_ptr, shape_count, array);
-    }
-}
 
 /// A TensorMap is the main user-facing class of this library, and can store any
 /// kind of data used in atomistic machine learning.
@@ -2034,41 +2136,29 @@ public:
     }
 
     /*!
-     * Load a previously saved `TensorMap` from the given path.
-     *
      * \verbatim embed:rst:leading-asterisk
      *
-     * ``create_array`` will be used to create new arrays when constructing the
-     * blocks and gradients, the default version will create data using
-     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
-     * for more information.
+     * Load a previously saved `TensorMap` from the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load`, and provided as a
+     * convenience API.
      *
      * \endverbatim
-     *
-     * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
-     * without compression (storage method is `STORED`), where each file is
-     * stored as a `.npy` array. See the C API documentation for more
-     * information on the format.
      */
     static TensorMap load(
         const std::string& path,
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
-        auto* ptr = mts_tensormap_load(path.c_str(), create_array);
-        details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return metatensor::io::load(path, create_array);
     }
 
     /*!
-     * Load a previously saved `TensorMap` from the given `buffer`, containing
-     * `buffer_count` elements.
-     *
      * \verbatim embed:rst:leading-asterisk
      *
-     * ``create_array`` will be used to create new arrays when constructing the
-     * blocks and gradients, the default version will create data using
-     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
-     * for more information.
+     * Load a previously saved `TensorMap` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
+     * provided as a convenience API.
      *
      * \endverbatim
      */
@@ -2077,98 +2167,68 @@ public:
         size_t buffer_count,
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
-        auto* ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
-        details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return metatensor::io::load_buffer(buffer, buffer_count, create_array);
     }
 
     /*!
-     * Load a previously saved `TensorMap` from the given `buffer`
-     *
      * \verbatim embed:rst:leading-asterisk
      *
-     * ``create_array`` will be used to create new arrays when constructing the
-     * blocks and gradients, the default version will create data using
-     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
-     * for more information.
+     * Load a previously saved `TensorMap` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
+     * provided as a convenience API.
      *
      * \endverbatim
      */
+    template <typename Buffer>
     static TensorMap load_buffer(
-        const std::string& buffer,
+        const Buffer& buffer,
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
-        return TensorMap::load_buffer(
-            reinterpret_cast<const uint8_t*>(buffer.data()),
-            buffer.size(),
-            create_array
-        );
+        return metatensor::io::load_buffer<Buffer>(buffer, create_array);
     }
 
     /*!
-     * Load a previously saved `TensorMap` from the given `buffer`
-     *
      * \verbatim embed:rst:leading-asterisk
      *
-     * ``create_array`` will be used to create new arrays when constructing the
-     * blocks and gradients, the default version will create data using
-     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
-     * for more information.
+     * Save a `TensorMap` to the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
+     * convenience API.
      *
      * \endverbatim
      */
-    static TensorMap load_buffer(
-        const std::vector<uint8_t>& buffer,
-        mts_create_array_callback_t create_array = details::default_create_array
-    ) {
-        return TensorMap::load_buffer(
-            buffer.data(),
-            buffer.size(),
-            create_array
-        );
+    void save(const std::string& path) const {
+        return metatensor::io::save(path, *this);
     }
 
-    /// Save the given `TensorMap` to a file at `path`.
-    ///
-    /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP
-    /// file without compression (storage method is `STORED`), where each file
-    /// is stored as a `.npy` array. See the C API documentation for more
-    /// information on the format.
-    static void save(const std::string& path, const TensorMap& tensor) {
-        details::check_status(mts_tensormap_save(path.c_str(), tensor.tensor_));
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save a `TensorMap` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    std::vector<uint8_t> save_buffer() const {
+        return metatensor::io::save_buffer(*this);
     }
 
-    /// Save a tensor map to an in-memory buffer.
-    static std::vector<uint8_t> save_buffer(const TensorMap& tensor) {
-        std::vector<uint8_t> buffer;
-
-        auto* ptr = buffer.data();
-        auto size = buffer.size();
-
-        auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
-            auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
-            buffer->resize(new_size, '\0');
-            return buffer->data();
-        };
-
-        details::check_status(mts_tensormap_save_buffer(
-            &ptr,
-            &size,
-            &buffer,
-            realloc,
-            tensor.tensor_
-        ));
-
-        buffer.resize(size, '\0');
-
-        return buffer;
-    }
-
-    /// Similar to `TensorMap::save_buffer`, but return the result as a
-    /// `std::string`.
-    static std::string save_string_buffer(const TensorMap& tensor) {
-        auto buffer = TensorMap::save_buffer(tensor);
-        return std::string(buffer.begin(), buffer.end());
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save a `TensorMap` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    template <typename Buffer>
+    Buffer save_buffer() const {
+        return metatensor::io::save_buffer<Buffer>(*this);
     }
 
     /// Get the `mts_tensormap_t` pointer corresponding to this `TensorMap`.
@@ -2195,6 +2255,89 @@ private:
     mts_tensormap_t* tensor_;
 };
 
+
+/******************************************************************************/
+/******************************************************************************/
+/*                                                                            */
+/*                   I/O functionalities implementation                       */
+/*                                                                            */
+/******************************************************************************/
+/******************************************************************************/
+
+
+namespace io {
+    inline void save(const std::string& path, const TensorMap& tensor) {
+        details::check_status(mts_tensormap_save(path.c_str(), tensor.as_mts_tensormap_t()));
+    }
+
+    template <typename Buffer>
+    Buffer save_buffer(const TensorMap& tensor) {
+        auto buffer = metatensor::io::save_buffer<std::vector<uint8_t>>(tensor);
+        return Buffer(buffer.begin(), buffer.end());
+    }
+
+    template<>
+    inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& tensor) {
+        std::vector<uint8_t> buffer;
+
+        auto* ptr = buffer.data();
+        auto size = buffer.size();
+
+        auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
+            auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
+            buffer->resize(new_size, '\0');
+            return buffer->data();
+        };
+
+        details::check_status(mts_tensormap_save_buffer(
+            &ptr,
+            &size,
+            &buffer,
+            realloc,
+            tensor.as_mts_tensormap_t()
+        ));
+
+        buffer.resize(size, '\0');
+
+        return buffer;
+    }
+
+    inline TensorMap load(
+        const std::string& path,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
+    }
+
+    inline TensorMap load_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
+    }
+
+    template <typename Buffer>
+    TensorMap load_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array
+    ) {
+        static_assert(
+            sizeof(typename Buffer::value_type) == sizeof(uint8_t),
+            "`Buffer` must be a container of uint8_t or equivalent"
+        );
+
+        return metatensor::io::load_buffer(
+            reinterpret_cast<const uint8_t*>(buffer.data()),
+            buffer.size(),
+            create_array
+        );
+    }
+}
 
 }
 

@@ -493,21 +493,56 @@ std::string TensorMapHolder::print(int64_t max_keys) const {
 
 TorchTensorMap TensorMapHolder::load(const std::string& path) {
     return torch::make_intrusive<TensorMapHolder>(
-        TensorMapHolder(metatensor::TensorMap::load(path, details::create_torch_array))
+        TensorMapHolder(metatensor::io::load(path, details::create_torch_array))
+    );
+}
+
+TorchTensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
+    if (buffer.scalar_type() != torch::kUInt8) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a tensor of uint8, not " +
+            scalar_type_name(buffer.scalar_type())
+        );
+    }
+
+    if (buffer.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a 1-dimensional tensor"
+        );
+    }
+
+    return torch::make_intrusive<TensorMapHolder>(
+        TensorMapHolder(metatensor::io::load_buffer(
+            buffer.data_ptr<uint8_t>(),
+            static_cast<size_t>(buffer.size(0)),
+            details::create_torch_array
+        ))
     );
 }
 
 
-void TensorMapHolder::save(const std::string& path, TorchTensorMap tensor) {
-    metatensor::TensorMap::save(path, tensor->as_metatensor());
+void TensorMapHolder::save(const std::string& path) const {
+    return metatensor::io::save(path, this->as_metatensor());
 }
 
-TorchTensorMap TensorMapHolder::load_buffer(const uint8_t* buffer, size_t buffer_count) {
-    return torch::make_intrusive<TensorMapHolder>(
-        TensorMapHolder(metatensor::TensorMap::load_buffer(
-            buffer,
-            buffer_count,
-            details::create_torch_array
-        ))
+torch::Tensor TensorMapHolder::save_buffer() const {
+    auto buffer = metatensor::io::save_buffer(this->as_metatensor());
+    // move the buffer to the heap so it can escape this function
+    // `torch::from_blob` does not take ownership of the data,
+    // so we need to register a custom deleter to clean up when
+    // the tensor is no longer used
+    auto* buffer_data = new std::vector<uint8_t>(std::move(buffer));
+
+    auto options = torch::TensorOptions().dtype(torch::kU8).device(torch::kCPU);
+    auto deleter = [=](void* data) {
+        delete buffer_data;
+    };
+
+    // use a tensor of bytes to store the data
+    return torch::from_blob(
+        buffer_data->data(),
+        {static_cast<int64_t>(buffer_data->size())},
+        deleter,
+        options
     );
 }

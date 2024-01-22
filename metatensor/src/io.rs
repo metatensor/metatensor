@@ -75,6 +75,8 @@ pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
 
 /// Save the given tensor to a file.
 ///
+/// If the file already exists, it is overwritten.
+///
 /// The format used is documented in the [`load`] function, and is based on
 /// numpy's NPZ format (i.e. zip archive containing NPY files).
 pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(), Error> {

@@ -1,8 +1,9 @@
 import copy
 import ctypes
+import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import Dict, List, Optional, Sequence, Union
+from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
@@ -125,17 +126,6 @@ class TensorMap:
         obj._blocks = []
         return obj
 
-    @classmethod
-    def _from_pickle(cls, buffer: Union[bytes, bytearray]):
-        """
-        Passed to pickler to reconstruct TensorMap from bytes object
-        """
-        from .io import create_numpy_array, load_buffer_custom_array
-
-        # TODO: make it so when saving data in torch tensors, we load back data in torch
-        # tensors.
-        return load_buffer_custom_array(buffer, create_numpy_array)
-
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
             self._lib.mts_tensormap_free(self._ptr)
@@ -155,6 +145,32 @@ class TensorMap:
         """
         return copy.deepcopy(self)
 
+    def __len__(self):
+        return len(self.keys)
+
+    def __repr__(self) -> str:
+        return self.print(4)
+
+    def __str__(self) -> str:
+        return self.print(-1)
+
+    def __getitem__(self, selection) -> TensorBlock:
+        """This is equivalent to self.block(selection)"""
+        return self.block(selection)
+
+    # ===== Serialization support ===== #
+
+    @classmethod
+    def _from_pickle(cls, buffer: Union[bytes, bytearray]):
+        """
+        Passed to pickler to reconstruct TensorMap from bytes object
+        """
+        from .io import create_numpy_array, load_buffer_custom_array
+
+        # TODO: make it so when saving data in torch tensors, we load back data in torch
+        # tensors.
+        return load_buffer_custom_array(buffer, create_numpy_array)
+
     def __reduce_ex__(self, protocol: int):
         """
         Used by the Pickler to dump TensorMap object to bytes object. When protocol >= 5
@@ -168,18 +184,26 @@ class TensorMap:
         else:
             return self._from_pickle, (buffer.raw,)
 
-    def __len__(self):
-        return len(self.keys)
+    @staticmethod
+    def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> "TensorMap":
+        """
+        Load a serialized :py:class:`TensorMap` from a file or a buffer, calling
+        :py:func:`metatensor.load`.
+        """
+        from .io import load
 
-    def __repr__(self) -> str:
-        return self.print(4)
+        return load(file=file, use_numpy=use_numpy)
 
-    def __str__(self) -> str:
-        return self.print(-1)
+    def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
+        """
+        Save this :py:class:`TensorMap` to a file or a buffer, calling
+        :py:func:`metatensor.save`.
+        """
+        from .io import save
 
-    def __getitem__(self, selection) -> TensorBlock:
-        """This is equivalent to self.block(selection)"""
-        return self.block(selection)
+        return save(file=file, tensor=self, use_numpy=use_numpy)
+
+    # ===== Math functions, implemented using metatensor-operations ===== #
 
     def __eq__(self, other):
         from metatensor.operations import equal
@@ -228,6 +252,8 @@ class TensorMap:
 
     def __pos__(self):
         return self
+
+    # ===== Data manipulation ===== #
 
     @property
     def keys(self) -> Labels:

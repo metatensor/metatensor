@@ -641,6 +641,20 @@ class TensorMapWrap:
     ) -> TensorMap:
         return self._c.to(dtype=dtype, device=device, arrays=arrays)
 
+    @staticmethod
+    def load(path: str) -> TensorMap:
+        return TensorMap.load(path)
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> TensorMap:
+        return TensorMap.load_buffer(buffer)
+
+    def save(self, path: str):
+        return self._c.save(path)
+
+    def save_buffer(self) -> torch.Tensor:
+        return self._c.save_buffer()
+
 
 def test_script():
     class TestModule(torch.nn.Module):

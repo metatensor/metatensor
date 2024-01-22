@@ -1,8 +1,6 @@
 #ifndef METATENSOR_TORCH_MISC_HPP
 #define METATENSOR_TORCH_MISC_HPP
 
-#include <vector>
-
 #include <torch/script.h>
 
 #include <metatensor.hpp>
@@ -28,8 +26,16 @@ namespace details {
 /// Load a previously saved `TensorMap` from the given path.
 METATENSOR_TORCH_EXPORT TorchTensorMap load(const std::string& path);
 
+/// Load a previously saved `TensorMap` from the given in-memory buffer
+/// (represented as a `torch::Tensor` of bytes)
+METATENSOR_TORCH_EXPORT TorchTensorMap load_buffer(torch::Tensor buffer);
+
 /// Save the given `TensorMap` to a file at `path`
 METATENSOR_TORCH_EXPORT void save(const std::string& path, TorchTensorMap tensor);
+
+/// Save the given `TensorMap` to an in-memory buffer (represented as a
+/// `torch::Tensor` of bytes)
+METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TorchTensorMap tensor);
 
 }
 
