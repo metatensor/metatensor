@@ -320,6 +320,13 @@ fn bindgen_test_layout_mts_array_t() {
         )
     );
 }
+pub type mts_realloc_buffer_t = ::std::option::Option<
+    unsafe extern "C" fn(
+        user_data: *mut ::std::os::raw::c_void,
+        ptr: *mut u8,
+        new_size: usize,
+    ) -> *mut u8,
+>;
 pub type mts_create_array_callback_t = ::std::option::Option<
     unsafe extern "C" fn(
         shape: *const usize,
@@ -465,6 +472,30 @@ extern "C" {
         keys_to_move: mts_labels_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
+    #[must_use]
+    pub fn mts_labels_load(
+        path: *const ::std::os::raw::c_char,
+        labels: *mut mts_labels_t,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_load_buffer(
+        buffer: *const u8,
+        buffer_count: usize,
+        labels: *mut mts_labels_t,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_save(
+        path: *const ::std::os::raw::c_char,
+        labels: mts_labels_t,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_save_buffer(
+        buffer: *mut *mut u8,
+        buffer_count: *mut usize,
+        realloc_user_data: *mut ::std::os::raw::c_void,
+        realloc: mts_realloc_buffer_t,
+        labels: mts_labels_t,
+    ) -> mts_status_t;
     pub fn mts_tensormap_load(
         path: *const ::std::os::raw::c_char,
         create_array: mts_create_array_callback_t,
@@ -484,13 +515,7 @@ extern "C" {
         buffer: *mut *mut u8,
         buffer_count: *mut usize,
         realloc_user_data: *mut ::std::os::raw::c_void,
-        realloc: ::std::option::Option<
-            unsafe extern "C" fn(
-                user_data: *mut ::std::os::raw::c_void,
-                ptr: *mut u8,
-                new_size: usize,
-            ) -> *mut u8,
-        >,
+        realloc: mts_realloc_buffer_t,
         tensor: *const mts_tensormap_t,
     ) -> mts_status_t;
 }

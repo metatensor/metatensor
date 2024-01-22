@@ -30,6 +30,7 @@ MTS_INTERNAL_ERROR = 255
 
 mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
+mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
 
 class mts_block_t(ctypes.Structure):
@@ -280,6 +281,34 @@ def setup_functions(lib):
     ]
     lib.mts_tensormap_keys_to_samples.restype = POINTER(mts_tensormap_t)
 
+    lib.mts_labels_load.argtypes = [
+        ctypes.c_char_p,
+        POINTER(mts_labels_t),
+    ]
+    lib.mts_labels_load.restype = _check_status
+
+    lib.mts_labels_load_buffer.argtypes = [
+        ctypes.c_char_p,
+        c_uintptr_t,
+        POINTER(mts_labels_t),
+    ]
+    lib.mts_labels_load_buffer.restype = _check_status
+
+    lib.mts_labels_save.argtypes = [
+        ctypes.c_char_p,
+        mts_labels_t,
+    ]
+    lib.mts_labels_save.restype = _check_status
+
+    lib.mts_labels_save_buffer.argtypes = [
+        POINTER(ctypes.c_char_p),
+        POINTER(c_uintptr_t),
+        ctypes.c_void_p,
+        mts_realloc_buffer_t,
+        mts_labels_t,
+    ]
+    lib.mts_labels_save_buffer.restype = _check_status
+
     lib.mts_tensormap_load.argtypes = [
         ctypes.c_char_p,
         mts_create_array_callback_t,
@@ -303,7 +332,7 @@ def setup_functions(lib):
         POINTER(ctypes.c_char_p),
         POINTER(c_uintptr_t),
         ctypes.c_void_p,
-        CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t),
+        mts_realloc_buffer_t,
         POINTER(mts_tensormap_t),
     ]
     lib.mts_tensormap_save_buffer.restype = _check_status

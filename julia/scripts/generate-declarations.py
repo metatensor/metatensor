@@ -245,6 +245,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
 # ====== Enf of manual definitions ====== #
 """

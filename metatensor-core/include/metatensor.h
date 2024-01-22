@@ -227,6 +227,19 @@ typedef struct mts_array_t {
 } mts_array_t;
 
 /**
+ * Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
+ * and `mts_labels_save_buffer`.
+ *
+ * This function takes an existing pointer in `ptr` and a new length in
+ * `new_size`, and grow the allocation. If the pointer is `NULL`, it should
+ * create a new allocation. If it is unable to allocate memory, it should
+ * return a `NULL` pointer. This follows the API of the standard C function
+ * `realloc`, with an additional parameter `user_data` that can be used to hold
+ * custom data.
+ */
+typedef uint8_t *(*mts_realloc_buffer_t)(void *user_data, uint8_t *ptr, uintptr_t new_size);
+
+/**
  * Function pointer to create a new `mts_array_t` when de-serializing tensor
  * maps.
  *
@@ -832,6 +845,87 @@ struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap
                                                       bool sort_samples);
 
 /**
+ * Load labels from the file at the given path.
+ *
+ * Labels are stored using numpy's NPY format, so the file will typically use
+ * the `.npy` extension.
+ *
+ * This function allocates memory which must be released `mts_labels_free` when
+ * you don't need it anymore.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param labels pointer to empty Labels
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_load(const char *path, struct mts_labels_t *labels);
+
+/**
+ * Load labels from the given in-memory buffer.
+ *
+ * This function allocates memory which must be released `mts_labels_free` when
+ * you don't need it anymore.
+ *
+ * @param buffer buffer containing a previously serialized `mts_labels_t`
+ * @param buffer_count number of elements in the buffer
+ * @param labels pointer to empty Labels
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_load_buffer(const uint8_t *buffer,
+                                    uintptr_t buffer_count,
+                                    struct mts_labels_t *labels);
+
+/**
+ * Save labels to the file at the given path.
+ *
+ * If the file already exists, it is overwritten.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param labels Labels to save to the file
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_save(const char *path, struct mts_labels_t labels);
+
+/**
+ * Save labels to an in-memory buffer.
+ *
+ * On input, `*buffer` should contain the address of a starting buffer (which
+ * can be NULL) and `*buffer_count` should contain the size of the allocation
+ * (0 if `*buffer` is NULL).
+ *
+ * On output, `*buffer` will contain the serialized data, and `*buffer_count`
+ * the total number of written bytes (which might be less than the allocation
+ * size).
+ *
+ * Users of this function are responsible for freeing the `*buffer` when they
+ * are done with it, using the function matching the `realloc` callback.
+ *
+ * @param buffer pointer to the buffer the tensor will be stored to, which can
+ *        change due to reallocations.
+ * @param buffer_count pointer to the buffer size on input, number of written
+ *        bytes on output
+ * @param realloc_user_data custom data for the `realloc` callback. This will
+ *        be passed as the first argument to `realloc` as-is.
+ * @param realloc function that allows to grow the buffer allocation
+ * @param labels Labels that will saved to the buffer
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
+ *          message.
+ */
+mts_status_t mts_labels_save_buffer(uint8_t **buffer,
+                                    uintptr_t *buffer_count,
+                                    void *realloc_user_data,
+                                    mts_realloc_buffer_t realloc,
+                                    struct mts_labels_t labels);
+
+/**
  * Load a tensor map from the file at the given path.
  *
  * Arrays for the values and gradient data will be created with the given
@@ -924,12 +1018,6 @@ mts_status_t mts_tensormap_save(const char *path, const struct mts_tensormap_t *
 /**
  * Save a tensor map to an in-memory buffer.
  *
- * The `realloc` callback should take an existing pointer and a new length, and
- * grow the allocation. If the pointer is `NULL`, it should create a new
- * allocation. If it is unable to allocate memory, it should return a `NULL`
- * pointer. This follows the API of the standard C function `realloc`, with an
- * additional parameter `user_data` that can be used to hold custom data.
- *
  * On input, `*buffer` should contain the address of a starting buffer (which
  * can be NULL) and `*buffer_count` should contain the size of the allocation.
  *
@@ -944,7 +1032,7 @@ mts_status_t mts_tensormap_save(const char *path, const struct mts_tensormap_t *
  *        change due to reallocations.
  * @param buffer_count pointer to the buffer size on input, number of written
  *        bytes on output
- * @param realloc_user_data Custom data for the `realloc` callback. This will
+ * @param realloc_user_data custom data for the `realloc` callback. This will
  *        be passed as the first argument to `realloc` as-is.
  * @param realloc function that allows to grow the buffer allocation
  * @param tensor tensor map that will saved to the buffer
@@ -956,9 +1044,7 @@ mts_status_t mts_tensormap_save(const char *path, const struct mts_tensormap_t *
 mts_status_t mts_tensormap_save_buffer(uint8_t **buffer,
                                        uintptr_t *buffer_count,
                                        void *realloc_user_data,
-                                       uint8_t *(*realloc)(void *user_data,
-                                                           uint8_t *ptr,
-                                                           uintptr_t new_size),
+                                       mts_realloc_buffer_t realloc,
                                        const struct mts_tensormap_t *tensor);
 
 #ifdef __cplusplus
