@@ -82,7 +82,7 @@ pub fn catch_unwind<F>(function: F) -> mts_status_t where F: FnOnce() -> Result<
 /// Check that pointers (used as C API function parameters) are not null.
 #[macro_export]
 #[doc(hidden)]
-macro_rules! check_pointers {
+macro_rules! check_pointers_non_null {
     ($pointer: ident) => {
         if $pointer.is_null() {
             return Err($crate::Error::InvalidParameter(
@@ -94,7 +94,7 @@ macro_rules! check_pointers {
         }
     };
     ($($pointer: ident),* $(,)?) => {
-        $(check_pointers!($pointer);)*
+        $(check_pointers_non_null!($pointer);)*
     }
 }
 

@@ -70,7 +70,7 @@ pub unsafe extern fn mts_tensormap(
     let status = catch_unwind(move || {
         let mut blocks_vec = Vec::new();
         if blocks_count != 0 {
-            check_pointers!(blocks);
+            check_pointers_non_null!(blocks);
 
             let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count);
             // check for uniqueness of the pointers: we don't want to move out
@@ -145,7 +145,7 @@ pub unsafe extern fn mts_tensormap_copy(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        check_pointers!(tensor);
+        check_pointers_non_null!(tensor);
         let new_tensor = (*tensor).try_clone()?;
         let boxed = Box::new(mts_tensormap_t(new_tensor));
 
@@ -181,7 +181,7 @@ pub unsafe extern fn mts_tensormap_keys(
     keys: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, keys);
+        check_pointers_non_null!(tensor, keys);
 
         if (*keys).is_rust() {
             return Err(Error::InvalidParameter(
@@ -216,7 +216,7 @@ pub unsafe extern fn mts_tensormap_block_by_id(
     index: usize,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, block);
+        check_pointers_non_null!(tensor, block);
 
         let blocks = (*tensor).blocks_mut();
         match blocks.get_mut(index) {
@@ -263,7 +263,7 @@ pub unsafe extern fn mts_tensormap_blocks_matching(
     selection: mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, count);
+        check_pointers_non_null!(tensor, count);
 
         if *count != (*tensor).keys().count() {
             return Err(Error::InvalidParameter(format!(
@@ -280,7 +280,7 @@ pub unsafe extern fn mts_tensormap_blocks_matching(
             return Ok(());
         }
 
-        check_pointers!(block_indexes);
+        check_pointers_non_null!(block_indexes);
         let block_indexes = std::slice::from_raw_parts_mut(block_indexes, *count);
 		for (idx,block) in rust_blocks.into_iter().enumerate() {
             block_indexes[idx] = block;
@@ -338,7 +338,7 @@ pub unsafe extern fn mts_tensormap_keys_to_properties(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers!(tensor);
+        check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
         let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
@@ -381,12 +381,12 @@ pub unsafe extern fn mts_tensormap_components_to_properties(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers!(tensor, dimensions);
+        check_pointers_non_null!(tensor, dimensions);
 
         assert!(dimensions_count != 0);
         let mut rust_dimensions = Vec::new();
         for &dimension in std::slice::from_raw_parts(dimensions, dimensions_count) {
-            check_pointers!(dimension);
+            check_pointers_non_null!(dimension);
             let dimension = CStr::from_ptr(dimension).to_str().expect("invalid utf8");
             rust_dimensions.push(dimension);
         }
@@ -446,7 +446,7 @@ pub unsafe extern fn mts_tensormap_keys_to_samples(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers!(tensor);
+        check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
         let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
