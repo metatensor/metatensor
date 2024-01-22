@@ -6,6 +6,9 @@ use metatensor::TensorMap;
 fn load_file() {
     let tensor = metatensor::io::load("./tests/data.npz").unwrap();
     check_tensor(&tensor);
+
+    let tensor = TensorMap::load("./tests/data.npz").unwrap();
+    check_tensor(&tensor);
 }
 
 
@@ -16,6 +19,9 @@ fn load_buffer() {
     file.read_to_end(&mut buffer).unwrap();
 
     let tensor = metatensor::io::load_buffer(&buffer).unwrap();
+    check_tensor(&tensor);
+
+    let tensor = TensorMap::load_buffer(&buffer).unwrap();
     check_tensor(&tensor);
 }
 
@@ -29,7 +35,10 @@ fn save_buffer() {
 
     let mut saved = Vec::new();
     metatensor::io::save_buffer(&tensor, &mut saved).unwrap();
+    assert_eq!(buffer, saved);
 
+    saved.clear();
+    tensor.save_buffer(&mut saved).unwrap();
     assert_eq!(buffer, saved);
 }
 

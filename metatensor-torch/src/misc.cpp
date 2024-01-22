@@ -42,7 +42,15 @@ TorchTensorMap metatensor_torch::load(const std::string& path) {
     return TensorMapHolder::load(path);
 }
 
+TorchTensorMap metatensor_torch::load_buffer(torch::Tensor buffer) {
+    return TensorMapHolder::load_buffer(buffer);
+}
+
 
 void metatensor_torch::save(const std::string& path, TorchTensorMap tensor) {
-    TensorMapHolder::save(path, tensor);
+    tensor->save(path);
+}
+
+torch::Tensor metatensor_torch::save_buffer(TorchTensorMap tensor) {
+    return tensor->save_buffer();
 }

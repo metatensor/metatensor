@@ -156,11 +156,16 @@ public:
     /// Load a serialized TensorMap from the given path
     static TorchTensorMap load(const std::string& path);
 
-    /// Serialize and save a TensorMap to the given path
-    static void save(const std::string& path, TorchTensorMap tensor);
+    /// Load a serialized TensorMap from an in-memory buffer (represented as a
+    /// `torch::Tensor` of bytes)
+    static TorchTensorMap load_buffer(torch::Tensor buffer);
 
-    /// Load a serialized TensorMap from the given in-memory buffer
-    static TorchTensorMap load_buffer(const uint8_t* buffer, size_t buffer_count);
+    /// Serialize and save a TensorMap to the given path
+    void save(const std::string& path) const;
+
+    /// Serialize and save a TensorMap to an in-memory buffer (represented as a
+    /// `torch::Tensor` of bytes)
+    torch::Tensor save_buffer() const;
 
 private:
     /// Underlying metatensor TensorMap

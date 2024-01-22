@@ -163,6 +163,10 @@ TORCH_LIBRARY(metatensor, m) {
             {torch::arg("selection")}
         )
         .def("copy", &TensorMapHolder::copy)
+        .def("save", &TensorMapHolder::save, DOCSTRING, {torch::arg("file")})
+        .def("save_buffer", &TensorMapHolder::save_buffer)
+        .def_static("load", &TensorMapHolder::load)
+        .def_static("load_buffer", &TensorMapHolder::load_buffer)
         .def("items", &TensorMapHolder::items)
         .def_property("keys", &TensorMapHolder::keys)
         .def("blocks_matching", &TensorMapHolder::blocks_matching, DOCSTRING,
@@ -204,40 +208,19 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def_pickle(
             // __getstate__
-            [](const TorchTensorMap& self) -> torch::Tensor {
-                auto buffer = metatensor::TensorMap::save_buffer(self->as_metatensor());
-                // move the buffer to the heap so it can escape this function
-                // `torch::from_blob` does not take ownership of the data,
-                // so we need to register a custom deleter to clean up when
-                // the tensor is no longer used
-                auto* buffer_data = new std::vector<uint8_t>(std::move(buffer));
-
-                auto options = torch::TensorOptions().dtype(torch::kU8).device(torch::kCPU);
-                auto deleter = [=](void* data) {
-                    delete buffer_data;
-                };
-
-                // use a tensor of bytes to store the data
-                return torch::from_blob(
-                    buffer_data->data(),
-                    {static_cast<int64_t>(buffer_data->size())},
-                    deleter,
-                    options
-                );
-            },
+            [](const TorchTensorMap& self){ return self->save_buffer(); },
             // __setstate__
-            [](torch::Tensor buffer) -> TorchTensorMap {
-                return TensorMapHolder::load_buffer(
-                    buffer.data_ptr<uint8_t>(), buffer.size(0)
-                );
-            })
+            [](torch::Tensor buffer){ return metatensor_torch::load_buffer(buffer); }
+        )
         ;
 
     // standalone functions
     m.def("version", metatensor_torch::version);
 
     m.def("load", metatensor_torch::load);
+    m.def("load_buffer", metatensor_torch::load_buffer);
     m.def("save", metatensor_torch::save);
+    m.def("save_buffer", metatensor_torch::save_buffer);
 
     // ====================================================================== //
     //               code specific to atomistic simulations                   //

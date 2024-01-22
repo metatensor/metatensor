@@ -19,6 +19,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
+#### Added
+
+- Offer serialization functionality as free standing functions (i.e. `metatensor::io::load`)
+  in addition to the existing associated functions (i.e. `TensorMap::load`) (#453)
+
+#### Changed
+
+- `TensorMap::save_string_buffer` has been replaced with the template version of
+  `TensorMap::save_buffer`
+
 
 ### metatensor-core C
 
@@ -32,6 +42,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `Labels.device`, `TensorBlock.device` and `TensorMap.device`; as well as
   `TensorMap.dtype`, and `TensorBlock.dtype` to query the current device and
   dtype used by the data.
+- Offer serialization functionality as member functions (i.e. `TensorMap.load`)
+  in addition to the existing free standing functions (i.e. `metatensor.load`) (#453)
 
 
 ### metatensor-core Julia

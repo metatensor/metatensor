@@ -129,6 +129,34 @@ impl TensorMap {
         return Ok(unsafe { TensorMap::from_raw(ptr) });
     }
 
+    /// Load a `TensorMap` from the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::load`]
+    pub fn load(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
+        return crate::io::load(path);
+    }
+
+    /// Load a `TensorMap` from an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::load_buffer`]
+    pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
+        return crate::io::load_buffer(buffer);
+    }
+
+    /// Save the given tensor to the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::save`]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), Error> {
+        return crate::io::save(path, self);
+    }
+
+    /// Save the given tensor to an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::save_buffer`]
+    pub fn save_buffer(&self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        return crate::io::save_buffer(self, buffer);
+    }
+
     /// Get the keys defined in this `TensorMap`
     #[inline]
     pub fn keys(&self) -> &Labels {

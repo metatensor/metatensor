@@ -220,7 +220,9 @@ TEST_CASE("TensorMap serialization") {
     SECTION("loading file") {
         // DATA_NPZ is defined by cmake and expand to the path of tests/data.npz
         auto tensor = TensorMap::load(DATA_NPZ);
+        check_loaded_tensor(tensor);
 
+        tensor = metatensor::io::load(DATA_NPZ);
         check_loaded_tensor(tensor);
     }
 
@@ -228,6 +230,10 @@ TEST_CASE("TensorMap serialization") {
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 0);
         auto tensor = TensorMap::load(DATA_NPZ, custom_create_array);
         // 27 blocks, one array for values, one array for gradients
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
+
+        CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+        tensor = metatensor::io::load(DATA_NPZ, custom_create_array);
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
     }
 
@@ -239,9 +245,14 @@ TEST_CASE("TensorMap serialization") {
         auto buffer = string_stream.str();
 
         auto tensor = TensorMap::load_buffer(buffer);
+        tensor = metatensor::io::load_buffer(buffer);
         check_loaded_tensor(tensor);
 
-        auto saved = TensorMap::save_string_buffer(tensor);
+        auto saved = tensor.save_buffer<std::string>();
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        saved = metatensor::io::save_buffer<std::string>(tensor);
         REQUIRE(saved.size() == buffer.size());
         CHECK(saved == buffer);
 

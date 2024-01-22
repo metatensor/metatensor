@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import torch
 
 import metatensor.torch
@@ -27,18 +28,40 @@ def check_tensor(tensor):
 
 
 def test_load():
-    loaded = metatensor.torch.load(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "metatensor",
-            "tests",
-            "data.npz",
-        ),
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor",
+        "tests",
+        "data.npz",
     )
 
+    loaded = metatensor.torch.load(path)
+    check_tensor(loaded)
+
+    loaded = metatensor.torch.TensorMap.load(path)
+    check_tensor(loaded)
+
+
+def test_load_buffer():
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor",
+        "tests",
+        "data.npz",
+    )
+
+    buffer = torch.tensor(np.fromfile(path, dtype="uint8"))
+
+    loaded = metatensor.torch.load_buffer(buffer)
+    check_tensor(loaded)
+
+    loaded = metatensor.torch.TensorMap.load_buffer(buffer)
     check_tensor(loaded)
 
 
@@ -52,7 +75,34 @@ def test_save(tmpdir):
         metatensor.torch.save(tmpfile, tensor)
         data = metatensor.torch.load(tmpfile)
 
-    assert len(data.keys) == 4
+        assert len(data.keys) == 4
+
+        tensor.save(tmpfile)
+        data = metatensor.torch.load(tmpfile)
+
+        assert len(data.keys) == 4
+
+
+def test_save_buffer():
+    """Check that we can save and load a tensor to an in-memory buffer"""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor",
+        "tests",
+        "data.npz",
+    )
+
+    buffer = torch.tensor(np.fromfile(path, dtype="uint8"))
+    tensor = metatensor.torch.load_buffer(buffer)
+
+    saved = metatensor.torch.save_buffer(tensor)
+    assert torch.all(buffer == saved)
+
+    saved = tensor.save_buffer()
+    assert torch.all(buffer == saved)
 
 
 def test_pickle(tmpdir):
