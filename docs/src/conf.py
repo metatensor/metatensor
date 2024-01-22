@@ -3,10 +3,11 @@ import subprocess
 import sys
 from datetime import datetime
 
+from sphinx.domains.c import CObject
 from sphinx_gallery.sorting import FileNameSortKey
 
 
-# when importing metatensor-torch, this will change the definition of the classes
+# When importing metatensor-torch, this will change the definition of the classes
 # to include the documentation
 os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
@@ -15,6 +16,46 @@ import metatensor.torch  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
+# ------------------------------------------------------------------------------------ #
+# Monkey patching the C domain in sphinx to include functions in the page-local TOC.
+# This is inspired by similar code in the C++ domain
+
+
+def _object_hierarchy_parts(self, sig_node):
+    names = self.env.temp_data["c:last_symbol"].get_full_nested_name().names
+    return tuple(map(str, names))
+
+
+def _toc_entry_name(self, sig_node):
+    if not sig_node.get("_toc_parts"):
+        return ""
+
+    config = self.env.app.config
+    objtype = sig_node.parent.get("objtype")
+    if config.add_function_parentheses and objtype in {"function", "method"}:
+        parens = "()"
+    else:
+        parens = ""
+
+    *parents, name = sig_node["_toc_parts"]
+    if config.toc_object_entries_show_parents == "domain":
+        return ".".join((*self.env.temp_data.get("c:domain_name", ()), name + parens))
+    if config.toc_object_entries_show_parents == "hide":
+        return name + parens
+    if config.toc_object_entries_show_parents == "all":
+        return ".".join(parents + [name + parens])
+
+    return ""
+
+
+CObject._object_hierarchy_parts = _object_hierarchy_parts
+CObject._toc_entry_name = _toc_entry_name
+
+# End of monkey-patching code
+# ------------------------------------------------------------------------------------ #
+
 
 # -- Project information -----------------------------------------------------
 
