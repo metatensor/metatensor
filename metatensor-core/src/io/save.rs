@@ -4,7 +4,7 @@ use zip::{ZipWriter, DateTime};
 use crate::{TensorMap, TensorBlock, Error, mts_array_t};
 
 use super::npy_header::{Header, DataType};
-use super::labels::write_npy_labels;
+use super::labels::save_labels;
 
 
 /// Save the given tensor to a file (or any other writer).
@@ -21,7 +21,7 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
 
     let path = String::from("keys.npy");
     archive.start_file(&path, options).map_err(|e| (path, e))?;
-    write_npy_labels(&mut archive, tensor.keys())?;
+    save_labels(&mut archive, tensor.keys())?;
 
     for (block_i, block) in tensor.blocks().iter().enumerate() {
         write_block(&mut archive, &format!("blocks/{}", block_i), true, block)?;
@@ -49,18 +49,18 @@ fn write_block<W: std::io::Write + std::io::Seek>(
 
     let path = format!("{}/samples.npy", prefix);
     archive.start_file(&path, options).map_err(|e| (path, e))?;
-    write_npy_labels(archive, &block.samples)?;
+    save_labels(archive, &block.samples)?;
 
     for (i, component) in block.components.iter().enumerate() {
         let path = format!("{}/components/{}.npy", prefix, i);
         archive.start_file(&path, options).map_err(|e| (path, e))?;
-        write_npy_labels(archive, component)?;
+        save_labels(archive, component)?;
     }
 
     if values {
         let path = format!("{}/properties.npy", prefix);
         archive.start_file(&path, options).map_err(|e| (path.clone(), e))?;
-        write_npy_labels(archive, &block.properties)?;
+        save_labels(archive, &block.properties)?;
     }
 
     for (parameter, gradient) in block.gradients() {

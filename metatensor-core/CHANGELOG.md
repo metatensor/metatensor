@@ -32,6 +32,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C
 
+#### Added
+
+- `mts_labels_save`, `mts_labels_load`, `mts_labels_save_buffer`, and
+  `mts_labels_load_buffer` to handle serialization of `mts_labels_t`
+
 
 ### metatensor-core Python
 

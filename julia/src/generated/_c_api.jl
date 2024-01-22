@@ -18,6 +18,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
 # ====== Enf of manual definitions ====== #
 
@@ -311,6 +312,38 @@ function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_mov
     )
 end
 
+function mts_labels_load(path::Ptr{Cchar}, labels::Ptr{mts_labels_t})
+    ccall((:mts_labels_load, libmetatensor), 
+        mts_status_t,
+        (Ptr{Cchar}, Ptr{mts_labels_t},),
+        path, labels
+    )
+end
+
+function mts_labels_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, labels::Ptr{mts_labels_t})
+    ccall((:mts_labels_load_buffer, libmetatensor), 
+        mts_status_t,
+        (Ptr{UInt8}, UIntptr, Ptr{mts_labels_t},),
+        buffer, buffer_count, labels
+    )
+end
+
+function mts_labels_save(path::Ptr{Cchar}, labels::mts_labels_t)
+    ccall((:mts_labels_save, libmetatensor), 
+        mts_status_t,
+        (Ptr{Cchar}, mts_labels_t,),
+        path, labels
+    )
+end
+
+function mts_labels_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntptr}, realloc_user_data::Ptr{Cvoid}, realloc::mts_realloc_buffer_t, labels::mts_labels_t)
+    ccall((:mts_labels_save_buffer, libmetatensor), 
+        mts_status_t,
+        (Ptr{Ptr{UInt8}}, Ptr{UIntptr}, Ptr{Cvoid}, mts_realloc_buffer_t, mts_labels_t,),
+        buffer, buffer_count, realloc_user_data, realloc, labels
+    )
+end
+
 function mts_tensormap_load(path::Ptr{Cchar}, create_array::mts_create_array_callback_t)
     ccall((:mts_tensormap_load, libmetatensor), 
         Ptr{mts_tensormap_t},
@@ -335,10 +368,10 @@ function mts_tensormap_save(path::Ptr{Cchar}, tensor::Ptr{mts_tensormap_t})
     )
 end
 
-function mts_tensormap_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntptr}, realloc_user_data::Ptr{Cvoid}, realloc::Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UInt8}, UIntptr) -> Ptr{UInt8} =#, tensor::Ptr{mts_tensormap_t})
+function mts_tensormap_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntptr}, realloc_user_data::Ptr{Cvoid}, realloc::mts_realloc_buffer_t, tensor::Ptr{mts_tensormap_t})
     ccall((:mts_tensormap_save_buffer, libmetatensor), 
         mts_status_t,
-        (Ptr{Ptr{UInt8}}, Ptr{UIntptr}, Ptr{Cvoid}, Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UInt8}, UIntptr) -> Ptr{UInt8} =#, Ptr{mts_tensormap_t},),
+        (Ptr{Ptr{UInt8}}, Ptr{UIntptr}, Ptr{Cvoid}, mts_realloc_buffer_t, Ptr{mts_tensormap_t},),
         buffer, buffer_count, realloc_user_data, realloc, tensor
     )
 end

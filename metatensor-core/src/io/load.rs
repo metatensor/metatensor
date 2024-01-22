@@ -7,7 +7,7 @@ use zip::ZipArchive;
 use crate::{TensorMap, TensorBlock, Labels, Error, mts_array_t};
 
 use super::check_for_extra_bytes;
-use super::labels::read_npy_labels;
+use super::labels::load_labels;
 use super::npy_header::{Header, DataType};
 
 
@@ -55,7 +55,7 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     let mut archive = ZipArchive::new(reader).map_err(|e| ("<root>".into(), e))?;
 
     let path = String::from("keys.npy");
-    let keys = read_npy_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
+    let keys = load_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
 
     if archive.by_name("blocks/0/values/data.npy").is_ok() {
         return Err(Error::Serialization(
@@ -95,13 +95,13 @@ fn read_block<R, F>(
 
     let path = format!("{}/samples.npy", prefix);
     let samples_file = archive.by_name(&path).map_err(|e| (path, e))?;
-    let samples = Arc::new(read_npy_labels(samples_file)?);
+    let samples = Arc::new(load_labels(samples_file)?);
 
     let mut components = Vec::new();
     for i in 0..(shape.len() - 2) {
         let path = format!("{}/components/{}.npy", prefix, i);
         let component_file = archive.by_name(&path).map_err(|e| (path, e))?;
-        components.push(Arc::new(read_npy_labels(component_file)?));
+        components.push(Arc::new(load_labels(component_file)?));
     }
 
     let properties = if let Some(ref properties) = properties {
@@ -109,7 +109,7 @@ fn read_block<R, F>(
     } else {
         let path = format!("{}/properties.npy", prefix);
         let properties_file = archive.by_name(&path).map_err(|e| (path, e))?;
-        Arc::new(read_npy_labels(properties_file)?)
+        Arc::new(load_labels(properties_file)?)
     };
 
     let mut block = TensorBlock::new(data, samples, components, properties.clone())?;

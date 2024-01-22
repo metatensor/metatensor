@@ -11,7 +11,7 @@ use crate::{Error, Labels, LabelsBuilder, LabelValue};
 /// associating name and either "<i4" for little endian file or ">i4" for big
 /// endian file. Data is stored in exactly the same way as inside a `Labels`,
 /// i.e. a big blob of 32-bit integers.
-pub fn read_npy_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
+pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
     let header = Header::from_reader(&mut reader)?;
     if header.fortran_order {
         return Err(Error::Serialization("Labels can not be loaded from fortran-order arrays".into()));
@@ -40,7 +40,7 @@ pub fn read_npy_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error>
 ///
 /// See [`read_npy_labels`] for more information on how `Labels` are stored to
 /// files.
-pub fn write_npy_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result<(), Error> {
+pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result<(), Error> {
     let mut type_descriptor = Vec::new();
     for name in labels.names() {
         if cfg!(target_endian = "little") {

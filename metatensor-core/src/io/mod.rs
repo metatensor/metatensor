@@ -1,11 +1,13 @@
 mod npy_header;
 mod labels;
+pub use self::labels::load_labels;
 
 mod load;
 pub use self::load::load;
 
 mod save;
 pub use self::save::save;
+pub use self::labels::save_labels;
 
 use crate::Error;
 

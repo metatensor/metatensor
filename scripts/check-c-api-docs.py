@@ -47,10 +47,6 @@ def functions_in_outline():
         "mts_disable_panic_printing",
         "mts_get_data_origin",
         "mts_register_data_origin",
-        "mts_tensormap_load",
-        "mts_tensormap_load_buffer",
-        "mts_tensormap_save",
-        "mts_tensormap_save_buffer",
     ]
 
     for root, _, paths in os.walk(C_API_DOCS):
