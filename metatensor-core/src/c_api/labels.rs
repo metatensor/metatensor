@@ -165,7 +165,7 @@ pub unsafe extern fn mts_labels_position(
     result: *mut i64
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(values, result);
+        check_pointers_non_null!(values, result);
         if !labels.is_rust() {
             return Err(Error::InvalidParameter(
                 "these labels do not support calling mts_labels_position, \
@@ -209,7 +209,7 @@ pub unsafe extern fn mts_labels_create(
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(labels);
+        check_pointers_non_null!(labels);
 
         if (*labels).is_rust() {
             return Err(Error::InvalidParameter(
@@ -278,7 +278,7 @@ pub unsafe extern fn mts_labels_user_data(
     user_data: *mut *mut c_void,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(user_data);
+        check_pointers_non_null!(user_data);
 
         if !labels.is_rust() {
             return Err(Error::InvalidParameter(

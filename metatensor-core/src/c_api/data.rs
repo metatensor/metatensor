@@ -22,7 +22,7 @@ pub unsafe extern fn mts_register_data_origin(
     origin: *mut mts_data_origin_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(name, origin);
+        check_pointers_non_null!(name, origin);
 
         let name = CStr::from_ptr(name).to_str().unwrap();
         *origin = crate::register_data_origin(name.into());
@@ -49,7 +49,7 @@ pub unsafe extern fn mts_get_data_origin(
     buffer_size: usize,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(buffer);
+        check_pointers_non_null!(buffer);
 
         let origin = crate::get_data_origin(origin);
         return copy_str_to_c(&origin, buffer, buffer_size);

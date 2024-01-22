@@ -82,7 +82,7 @@ pub unsafe extern fn mts_tensormap_load(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        check_pointers!(path);
+        check_pointers_non_null!(path);
 
         let create_array = wrap_create_array(&create_array);
 
@@ -130,7 +130,7 @@ pub unsafe extern fn mts_tensormap_load_buffer(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        check_pointers!(buffer);
+        check_pointers_non_null!(buffer);
         assert!(buffer_count > 0);
 
         let create_array = wrap_create_array(&create_array);
@@ -193,7 +193,7 @@ pub unsafe extern fn mts_tensormap_save(
     tensor: *const mts_tensormap_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(path, tensor);
+        check_pointers_non_null!(path, tensor);
 
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufWriter::new(File::create(path)?);
@@ -368,7 +368,7 @@ pub unsafe extern fn mts_tensormap_save_buffer(
     tensor: *const mts_tensormap_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(tensor, buffer_count, buffer);
+        check_pointers_non_null!(tensor, buffer_count, buffer);
 
         if realloc.is_none() {
             return Err(Error::InvalidParameter(

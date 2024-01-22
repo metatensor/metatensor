@@ -70,7 +70,7 @@ pub unsafe extern fn mts_block(
 
         let mut rust_components = Vec::new();
         if components_count != 0 {
-            check_pointers!(components);
+            check_pointers_non_null!(components);
             for component in std::slice::from_raw_parts(components, components_count) {
                 rust_components.push(mts_labels_to_rust(component)?);
             }
@@ -136,7 +136,7 @@ pub unsafe extern fn mts_block_copy(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        check_pointers!(block);
+        check_pointers_non_null!(block);
         let new_block = (*block).try_clone()?;
         let boxed = Box::new(mts_block_t(new_block));
 
@@ -175,7 +175,7 @@ pub unsafe extern fn mts_block_labels(
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(block, labels);
+        check_pointers_non_null!(block, labels);
 
         if (*labels).is_rust() {
             return Err(Error::InvalidParameter(
@@ -251,7 +251,7 @@ pub unsafe extern fn mts_block_gradient(
     gradient: *mut *mut mts_block_t
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(block, parameter);
+        check_pointers_non_null!(block, parameter);
         let parameter = CStr::from_ptr(parameter).to_str().unwrap();
 
         let gradient_rust = (*block).gradient_mut(parameter).ok_or_else(|| {
@@ -281,7 +281,7 @@ pub unsafe extern fn mts_block_data(
     data: *mut mts_array_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(block, data);
+        check_pointers_non_null!(block, data);
         *data = (*block).values.raw_copy();
         Ok(())
     })
@@ -317,7 +317,7 @@ pub unsafe extern fn mts_block_add_gradient(
     gradient: *mut mts_block_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(block, parameter);
+        check_pointers_non_null!(block, parameter);
         // TODO: add a check that the block is not already part of a tensor map?
         let parameter = CStr::from_ptr(parameter).to_str().unwrap();
 
@@ -347,7 +347,7 @@ pub unsafe extern fn mts_block_gradients_list(
     parameters_count: *mut usize
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers!(block, parameters, parameters_count);
+        check_pointers_non_null!(block, parameters, parameters_count);
 
         let list = (*block).gradient_parameters_c();
         (*parameters_count) = list.len();
