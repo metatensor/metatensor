@@ -172,6 +172,9 @@ namespace details {
     Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
 }
 
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
 
 /******************************************************************************/
 /******************************************************************************/
@@ -977,6 +980,21 @@ namespace io {
     template<>
     std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& tensor);
 
+    /// Save `Labels` to the file at `path`.
+    ///
+    /// If the file exists, it will be overwritten.
+    void save(const std::string& path, const Labels& labels);
+
+    /// Save `Labels` to an in-memory buffer.
+    ///
+    /// The `Buffer` template parameter can be set to any type that can be
+    /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+    template <typename Buffer = std::vector<uint8_t>>
+    Buffer save_buffer(const Labels& labels);
+
+    template<>
+    std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const Labels& labels);
+
     /*!
      * Load a previously saved `TensorMap` from the given path.
      *
@@ -1030,6 +1048,22 @@ namespace io {
         const Buffer& buffer,
         mts_create_array_callback_t create_array = details::default_create_array
     );
+
+    /// Load previously saved `Labels` from the given path.
+    Labels load_labels(const std::string& path);
+
+    /// Load previously saved `Labels` from the given `buffer`, containing
+    /// `buffer_count` elements.
+    Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
+
+    /// Load a previously saved `Labels` from the given `buffer`.
+    ///
+    /// The `Buffer` template parameter would typically be a
+    /// `std::vector<uint8_t>` or a `std::string`, but any container with
+    /// contiguous data and an `item_type` with the same size as a `uint8_t` can
+    /// work.
+    template <typename Buffer>
+    Labels load_labels_buffer(const Buffer& buffer);
 }
 
 
@@ -1453,6 +1487,92 @@ public:
         );
     }
 
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load previously saved ``Labels`` from the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_labels`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static Labels load(const std::string& path) {
+        return metatensor::io::load_labels(path);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load previously saved ``Labels`` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_labels_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static Labels load_buffer(const uint8_t* buffer, size_t buffer_count) {
+        return metatensor::io::load_labels_buffer(buffer, buffer_count);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load previously saved ``Labels`` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_labels_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    template <typename Buffer>
+    static Labels load_buffer(const Buffer& buffer) {
+        return metatensor::io::load_labels_buffer<Buffer>(buffer);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save ``Labels`` to the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
+     * convenience API.
+     *
+     * \endverbatim
+     */
+    void save(const std::string& path) const {
+        return metatensor::io::save(path, *this);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save ``Labels`` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    std::vector<uint8_t> save_buffer() const {
+        return metatensor::io::save_buffer(*this);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save ``Labels`` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    template <typename Buffer>
+    Buffer save_buffer() const {
+        return metatensor::io::save_buffer<Buffer>(*this);
+    }
+
 private:
     explicit Labels(): values_(static_cast<const int32_t*>(nullptr), {0, 0})
     {
@@ -1478,6 +1598,8 @@ private:
         Labels(names, values.data(), values.shape()[0]) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
+    friend Labels io::load_labels(const std::string &path);
+    friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
     friend class TensorMap;
     friend class TensorBlock;
 
@@ -1880,7 +2002,6 @@ private:
 /******************************************************************************/
 /******************************************************************************/
 
-
 /// A TensorMap is the main user-facing class of this library, and can store any
 /// kind of data used in atomistic machine learning.
 ///
@@ -2138,7 +2259,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved `TensorMap` from the given path.
+     * Load a previously saved ``TensorMap`` from the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::load`, and provided as a
      * convenience API.
@@ -2155,7 +2276,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved `TensorMap` from a in-memory buffer.
+     * Load a previously saved ``TensorMap`` from a in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
      * provided as a convenience API.
@@ -2173,7 +2294,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved `TensorMap` from a in-memory buffer.
+     * Load a previously saved ``TensorMap`` from a in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
      * provided as a convenience API.
@@ -2191,7 +2312,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a `TensorMap` to the given path.
+     * Save a ``TensorMap`` to the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
      * convenience API.
@@ -2205,7 +2326,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a `TensorMap` to an in-memory buffer.
+     * Save a ``TensorMap`` to an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
      * provided as a convenience API.
@@ -2219,7 +2340,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a `TensorMap` to an in-memory buffer.
+     * Save a ``TensorMap`` to an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
      * provided as a convenience API.
@@ -2302,6 +2423,42 @@ namespace io {
         return buffer;
     }
 
+    inline void save(const std::string& path, const Labels& labels) {
+        details::check_status(mts_labels_save(path.c_str(), labels.as_mts_labels_t()));
+    }
+
+    template <typename Buffer>
+    Buffer save_buffer(const Labels& labels) {
+        auto buffer = metatensor::io::save_buffer<std::vector<uint8_t>>(labels);
+        return Buffer(buffer.begin(), buffer.end());
+    }
+
+    template<>
+    inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const Labels& labels) {
+        std::vector<uint8_t> buffer;
+
+        auto* ptr = buffer.data();
+        auto size = buffer.size();
+
+        auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
+            auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
+            buffer->resize(new_size, '\0');
+            return buffer->data();
+        };
+
+        details::check_status(mts_labels_save_buffer(
+            &ptr,
+            &size,
+            &buffer,
+            realloc,
+            labels.as_mts_labels_t()
+        ));
+
+        buffer.resize(size, '\0');
+
+        return buffer;
+    }
+
     inline TensorMap load(
         const std::string& path,
         mts_create_array_callback_t create_array
@@ -2335,6 +2492,41 @@ namespace io {
             reinterpret_cast<const uint8_t*>(buffer.data()),
             buffer.size(),
             create_array
+        );
+    }
+
+    inline Labels load_labels(const std::string& path) {
+        mts_labels_t labels;
+        std::memset(&labels, 0, sizeof(labels));
+
+        details::check_status(mts_labels_load(
+            path.c_str(), &labels
+        ));
+
+        return Labels(labels);
+    }
+
+    inline Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count) {
+        mts_labels_t labels;
+        std::memset(&labels, 0, sizeof(labels));
+
+        details::check_status(mts_labels_load_buffer(
+            buffer, buffer_count, &labels
+        ));
+
+        return Labels(labels);
+    }
+
+    template <typename Buffer>
+    Labels load_labels_buffer(const Buffer& buffer) {
+        static_assert(
+            sizeof(typename Buffer::value_type) == sizeof(uint8_t),
+            "`Buffer` must be a container of uint8_t or equivalent"
+        );
+
+        return metatensor::io::load_labels_buffer(
+            reinterpret_cast<const uint8_t*>(buffer.data()),
+            buffer.size()
         );
     }
 }

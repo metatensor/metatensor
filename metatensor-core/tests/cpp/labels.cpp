@@ -1,3 +1,6 @@
+#include <fstream>
+#include <sstream>
+
 #include <catch.hpp>
 
 #include <metatensor.hpp>
@@ -189,4 +192,64 @@ TEST_CASE("User data") {
     // Check that the `user_data_delete` function was called the
     // appropriate number of times
     CHECK(DELETE_CALL_MARKER == 10000001);
+}
+
+void check_loaded_labels(metatensor::Labels& labels) {
+    CHECK(labels.names().size() == 3);
+    CHECK(labels.names()[0] == std::string("spherical_harmonics_l"));
+    CHECK(labels.names()[1] == std::string("center_species"));
+    CHECK(labels.names()[2] == std::string("neighbor_species"));
+    CHECK(labels.count() == 27);
+}
+
+TEST_CASE("Serialization") {
+    SECTION("loading file") {
+        // TEST_KEYS_NPY_PATH is defined by cmake and expand to the path of
+        // `tests/keys.npy`
+        auto labels = Labels::load(TEST_KEYS_NPY_PATH);
+        check_loaded_labels(labels);
+
+        labels = metatensor::io::load_labels(TEST_KEYS_NPY_PATH);
+        check_loaded_labels(labels);
+    }
+
+    SECTION("Load/Save with buffers") {
+        // read the whole file into a buffer
+        std::ifstream file(TEST_KEYS_NPY_PATH, std::ios::binary);
+        std::ostringstream string_stream;
+        string_stream << file.rdbuf();
+        auto buffer = string_stream.str();
+
+        auto labels = Labels::load_buffer(buffer);
+        check_loaded_labels(labels);
+
+        labels = metatensor::io::load_labels_buffer(buffer);
+        check_loaded_labels(labels);
+
+        auto saved = labels.save_buffer<std::string>();
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        saved = metatensor::io::save_buffer<std::string>(labels);
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        // using the raw C API, without user_data in the callback, and making
+        // the callback a small wrapper around std::realloc
+        uint8_t* raw_buffer = nullptr;
+        uintptr_t buflen = 0;
+        auto status = mts_labels_save_buffer(
+            &raw_buffer,
+            &buflen,
+            nullptr,
+            [](void*, uint8_t* ptr, uintptr_t new_size){
+                return static_cast<uint8_t*>(std::realloc(ptr, new_size));
+            },
+            labels.as_mts_labels_t()
+        );
+        REQUIRE(status == MTS_SUCCESS);
+        CHECK(saved == std::string(raw_buffer, raw_buffer + buflen));
+
+        std::free(raw_buffer);
+    }
 }
