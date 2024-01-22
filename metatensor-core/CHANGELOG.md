@@ -23,6 +23,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Offer serialization functionality as free standing functions (i.e. `metatensor::io::load`)
   in addition to the existing associated functions (i.e. `TensorMap::load`) (#453)
+- Serialization of labels with `Labels::save()`, `Labels::load`,
+  `Labels::save_buffer`, `Labels::load_buffer` and the corresponding free
+  functions.
 
 #### Changed
 
