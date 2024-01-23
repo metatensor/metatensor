@@ -1,11 +1,10 @@
-//! Input/Output facilities for storing [`TensorMap`] on disk
-
 use std::ffi::CString;
-use std::os::raw::c_void;
 
-use crate::c_api::{mts_array_t, mts_status_t, MTS_SUCCESS};
+use crate::c_api::{mts_array_t, mts_status_t};
 use crate::errors::{check_status, check_ptr};
 use crate::{TensorMap, Error, Array};
+
+use super::realloc_vec;
 
 /// Load the serialized tensor map from the given path.
 ///
@@ -88,28 +87,6 @@ pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(),
     }
 }
 
-
-/// Implementation of realloc for `Vec<u8>`, used in `save_buffer`
-unsafe extern fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: usize) -> *mut u8 {
-    let mut result = std::ptr::null_mut();
-    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
-
-    let status = crate::errors::catch_unwind(move || {
-        let vector = &mut *user_data.cast::<Vec<u8>>();
-        vector.resize(new_size, 0);
-
-        // force the closure to capture the full unwind_wrapper, not just
-        // unwind_wrapper.0
-        let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = vector.as_mut_ptr();
-    });
-
-    if status != MTS_SUCCESS {
-        return std::ptr::null_mut();
-    }
-
-    return result;
-}
 
 /// Save the given `tensor` to an in-memory `buffer`.
 ///

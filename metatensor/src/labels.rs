@@ -225,6 +225,34 @@ impl Labels {
         return builder.finish();
     }
 
+    /// Load `Labels` from the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::load_labels`]
+    pub fn load(path: impl AsRef<std::path::Path>) -> Result<Labels, Error> {
+        return crate::io::load_labels(path);
+    }
+
+    /// Load a `TensorMap` from an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::load_buffer`]
+    pub fn load_buffer(buffer: &[u8]) -> Result<Labels, Error> {
+        return crate::io::load_labels_buffer(buffer);
+    }
+
+    /// Save the given tensor to the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::save`]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), Error> {
+        return crate::io::save_labels(path, self);
+    }
+
+    /// Save the given tensor to an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::save_buffer`]
+    pub fn save_buffer(&self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        return crate::io::save_labels_buffer(self, buffer);
+    }
+
     /// Get the number of entries/named values in a single label
     #[inline]
     pub fn size(&self) -> usize {
