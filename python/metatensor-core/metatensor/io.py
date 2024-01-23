@@ -5,7 +5,7 @@ from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
-from ._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t, mts_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .data.array import ArrayWrapper, _is_numpy_array, _is_torch_array
@@ -47,6 +47,38 @@ def create_torch_array(shape_ptr, shape_count, array):
     data = torch.empty(shape, dtype=torch.float64, device="cpu")
     wrapper = ArrayWrapper(data)
     array[0] = wrapper.into_mts_array()
+
+
+def save(
+    file: Union[str, pathlib.Path, BinaryIO],
+    data: Union[TensorMap, Labels],
+    use_numpy=False,
+):
+    """
+    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to the
+    given ``file``.
+
+    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a ZIP file
+    without compression (storage method is ``STORED``), where each file is stored as a
+    ``.npy`` array. See the C API documentation for more information on the format.
+
+    :param file: where to save the data. This can be a string, :py:class:`pathlib.Path`
+        containing the path to the file to load, or a file-like object that should be
+        opened in binary mode.
+    :param data: data to serialize and save
+    :param use_numpy: should we use numpy or the native serializer implementation? Numpy
+        should be able to process more dtypes than the native implementation, which is
+        limited to float64, but the native implementation is usually faster than going
+        through numpy. This is ignored when saving :py:class:`Labels`.
+    """
+    if isinstance(data, Labels):
+        return _save_labels(file=file, labels=data)
+    elif isinstance(data, TensorMap):
+        return _save_tensor(file=file, tensor=data, use_numpy=use_numpy)
+    else:
+        raise TypeError(
+            f"`data` must be either 'Labels' or 'TensorMap', not {type(data)}"
+        )
 
 
 def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap:
@@ -156,57 +188,104 @@ def load_buffer_custom_array(
     return TensorMap._from_ptr(ptr)
 
 
-def save(
-    file: Union[str, pathlib.Path, BinaryIO],
-    tensor: TensorMap,
-    use_numpy=False,
-):
-    """Save the given :py:class:`TensorMap` to a ``file``.
+def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
+    """
+    Load previously saved :py:class:`Labels` from the given file.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a ZIP file
-    without compression (storage method is ``STORED``), where each file is stored as a
-    ``.npy`` array. See the C API documentation for more information on the format.
+    :param file: file to load: this can be a string, a :py:class:`pathlib.Path`
+        containing the path to the file to load, or a file-like object opened in binary
+        mode.
+    """
+    if isinstance(file, (str, pathlib.Path)):
+        lib = _get_library()
+
+        if isinstance(file, str):
+            path = file.encode("utf8")
+        elif isinstance(path, pathlib.Path):
+            path = bytes(path)
+
+        labels = mts_labels_t()
+        lib.mts_labels_load(path, labels)
+        return Labels._from_mts_labels_t(labels)
+
+    else:
+        # assume we have a file-like object
+        buffer = file.read()
+        assert isinstance(buffer, bytes)
+
+        return _load_labels_buffer_raw(buffer)
+
+
+def _save_labels(
+    file: Union[str, pathlib.Path, BinaryIO],
+    labels: Labels,
+):
+    """
+    Save :py:class:`Labels` to the given file.
 
     :param file: where to save the data. This can be a string, :py:class:`pathlib.Path`
         containing the path to the file to load, or a file-like object that should be
         opened in binary mode.
-    :param tensor: tensor to save
-    :param use_numpy: should we use numpy or the native implementation? Numpy should be
-        able to process more dtypes than the native implementation, which is limited to
-        float64, but the native implementation is usually faster than going through
-        numpy.
+    :param labels: Labels to save
     """
-    if not isinstance(tensor, TensorMap):
-        raise TypeError(f"tensor should be a 'TensorMap', not {type(tensor)}")
+    assert isinstance(labels, Labels)
 
     if isinstance(file, (str, pathlib.Path)):
-        if not file.endswith(".npz"):
-            file += ".npz"
+        if not file.endswith(".npy"):
+            file += ".npy"
             warnings.warn(
-                message=f"adding '.npz' extension, the file will be saved at '{file}'",
+                message=f"adding '.npy' extension, the file will be saved at '{file}'",
                 stacklevel=1,
             )
 
-    if use_numpy:
-        all_entries = _tensor_map_to_dict(tensor)
-        np.savez(file, **all_entries)
-    else:
-        lib = _get_library()
+    lib = _get_library()
+    if isinstance(file, (str, pathlib.Path)):
         if isinstance(file, str):
-            lib.mts_tensormap_save(file.encode("utf8"), tensor._ptr)
+            path = file.encode("utf8")
         elif isinstance(file, pathlib.Path):
-            lib.mts_tensormap_save(bytes(file), tensor._ptr)
-        else:
-            # assume we have a file-like object
-            buffer = save_buffer_raw_(tensor)
-            file.write(buffer.raw)
+            path = bytes(file)
+
+        lib.mts_labels_save(path, labels._labels)
+    else:
+        # assume we have a file-like object
+        buffer = _save_labels_buffer_raw(labels)
+        file.write(buffer.raw)
 
 
-def save_buffer_raw_(tensor: TensorMap):
-    """Save a TensorMap to an in-memory buffer, returning the data as a ctypes array"""
-
+def _save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
+    """
+    Save Labels to an in-memory buffer, returning the data as a ctypes array of
+    ``ctypes.c_char``.
+    """
     lib = _get_library()
 
+    return _save_buffer_raw(lib.mts_labels_save_buffer, labels._labels)
+
+
+def _load_labels_buffer_raw(buffer: Union[bytes, bytearray]):
+    lib = _get_library()
+
+    if isinstance(buffer, bytearray):
+        char_array = ctypes.c_char * len(buffer)
+        buffer = char_array.from_buffer(buffer)
+
+    labels = mts_labels_t()
+    lib.mts_labels_load_buffer(buffer, len(buffer), labels)
+
+    return Labels._from_mts_labels_t(labels)
+
+
+def _save_tensormap_buffer_raw(tensor: TensorMap) -> ctypes.Array:
+    """
+    Save a TensorMap to an in-memory buffer, returning the data as a ctypes array of
+    ``ctypes.c_char``.
+    """
+    lib = _get_library()
+
+    return _save_buffer_raw(lib.mts_tensormap_save_buffer, tensor._ptr)
+
+
+def _save_buffer_raw(mts_function, data) -> ctypes.Array:
     def realloc(buffer, _ptr, new_size):
         try:
             # convert void* to PyObject* and dereference to get a PyObject
@@ -226,10 +305,10 @@ def save_buffer_raw_(tensor: TensorMap):
             _save_exception(error)
             return None
 
-    # start with a buffer of 1024 bytes in a ctypes string buffer (i.e. array of c_char)
+    # start with a buffer of 128 bytes in a ctypes string buffer (i.e. array of c_char)
     # we will be able to resize the allocation in `realloc` above, but the type will
-    # stay `array of 1024 c_char elements`.
-    buffer = ctypes.create_string_buffer(1024)
+    # stay `array of 128 c_char elements`.
+    buffer = ctypes.create_string_buffer(128)
 
     # store the initial pointer and buffer_size on the stack, they will be modified by
     # `mts_tensormap_save_buffer`
@@ -240,21 +319,54 @@ def save_buffer_raw_(tensor: TensorMap):
         ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t
     )
 
-    lib.mts_tensormap_save_buffer(
+    mts_function(
         buffer_ptr,
         buffer_size,
         # convert PyObject to void* to pass it to realloc
         ctypes.cast(ctypes.pointer(ctypes.py_object(buffer)), ctypes.c_void_p),
         realloc_type(realloc),
-        tensor._ptr,
+        data,
     )
 
     # remove extra data from the buffer, resizing it to the number of written bytes
-    # (stored in buffer_size by `mts_tensormap_save_buffer`)
+    # (stored in buffer_size by the mts_function)
     ctypes.resize(buffer, buffer_size.value)
     buffer._length_ = buffer_size.value
 
     return buffer
+
+
+def _save_tensor(
+    file: Union[str, pathlib.Path, BinaryIO],
+    tensor: TensorMap,
+    use_numpy=False,
+):
+    assert isinstance(tensor, TensorMap)
+
+    if isinstance(file, (str, pathlib.Path)):
+        if not file.endswith(".npz"):
+            file += ".npz"
+            warnings.warn(
+                message=f"adding '.npz' extension, the file will be saved at '{file}'",
+                stacklevel=1,
+            )
+
+    if use_numpy:
+        all_entries = _tensor_map_to_dict(tensor)
+        np.savez(file, **all_entries)
+    else:
+        lib = _get_library()
+        if isinstance(file, (str, pathlib.Path)):
+            if isinstance(file, str):
+                path = file.encode("utf8")
+            elif isinstance(file, pathlib.Path):
+                path = bytes(file)
+
+            lib.mts_tensormap_save(path, tensor._ptr)
+        else:
+            # assume we have a file-like object
+            buffer = _save_tensormap_buffer_raw(tensor)
+            file.write(buffer.raw)
 
 
 def _array_to_numpy(array):

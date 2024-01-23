@@ -176,9 +176,9 @@ class TensorMap:
         Used by the Pickler to dump TensorMap object to bytes object. When protocol >= 5
         it supports PickleBuffer which reduces number of copies needed
         """
-        import metatensor
+        from .io import _save_tensormap_buffer_raw
 
-        buffer = metatensor.io.save_buffer_raw_(self)
+        buffer = _save_tensormap_buffer_raw(self)
         if protocol >= 5:
             return self._from_pickle, (PickleBuffer(buffer),)
         else:
@@ -189,6 +189,10 @@ class TensorMap:
         """
         Load a serialized :py:class:`TensorMap` from a file or a buffer, calling
         :py:func:`metatensor.load`.
+
+        :param file: file path or file object to load from
+        :param use_numpy: should we use the numpy loader or metatensor's. See
+            :py:func:`metatensor.load` for more information.
         """
         from .io import load
 
@@ -198,10 +202,14 @@ class TensorMap:
         """
         Save this :py:class:`TensorMap` to a file or a buffer, calling
         :py:func:`metatensor.save`.
+
+        :param file: file path or file object to save to
+        :param use_numpy: should we use the numpy serializer or metatensor's. See
+            :py:func:`metatensor.save` for more information.
         """
         from .io import save
 
-        return save(file=file, tensor=self, use_numpy=use_numpy)
+        return save(file=file, data=self, use_numpy=use_numpy)
 
     # ===== Math functions, implemented using metatensor-operations ===== #
 

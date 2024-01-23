@@ -52,7 +52,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   dtype used by the data.
 - Offer serialization functionality as member functions (i.e. `TensorMap.load`)
   in addition to the existing free standing functions (i.e. `metatensor.load`) (#453)
-
+- Serialization of labels with `Labels.save`, `Labels.load`,
+  `Labels.save_buffer`, `Labels.load_buffer` and the corresponding free
+  functions.
 
 ### metatensor-core Julia
 

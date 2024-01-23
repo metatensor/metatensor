@@ -22,7 +22,7 @@ from .status import MetatensorError  # noqa
 from .tensor import TensorMap  # noqa
 from .data import DeviceWarning  # noqa
 
-from .io import load, save  # noqa
+from .io import load, load_labels, save  # noqa
 
 try:
     from . import operations  # noqa
