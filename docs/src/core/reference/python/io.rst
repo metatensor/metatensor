@@ -7,6 +7,8 @@ Serialization
 
 .. autofunction:: metatensor.save
 
+.. autofunction:: metatensor.load_labels
+
 --------------------------------------------------------------------------------
 
 .. autofunction:: metatensor.io.load_custom_array

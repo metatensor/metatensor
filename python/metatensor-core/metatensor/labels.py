@@ -1,6 +1,8 @@
 import ctypes
 import io
-from typing import List, Optional, Sequence, Tuple, Union, overload
+import pathlib
+from pickle import PickleBuffer
+from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
@@ -477,6 +479,55 @@ class Labels:
             )
         else:
             return self._labels
+
+    # ===== Serialization support ===== #
+
+    @classmethod
+    def _from_pickle(cls, buffer: Union[bytes, bytearray]):
+        """
+        Passed to pickler to reconstruct Labels from bytes object
+        """
+        from .io import _load_labels_buffer_raw
+
+        return _load_labels_buffer_raw(buffer)
+
+    def __reduce_ex__(self, protocol: int):
+        """
+        Used by the Pickler to dump Labels object to bytes object. When protocol >= 5
+        it supports PickleBuffer which reduces number of copies needed
+        """
+        from .io import _save_labels_buffer_raw
+
+        buffer = _save_labels_buffer_raw(self)
+        if protocol >= 5:
+            return self._from_pickle, (PickleBuffer(buffer),)
+        else:
+            return self._from_pickle, (buffer.raw,)
+
+    @staticmethod
+    def load(file: Union[str, pathlib.Path, BinaryIO]) -> "Labels":
+        """
+        Load a serialized :py:class:`Labels` from a file or a buffer, calling
+        :py:func:`metatensor.load_labels`.
+
+        :param file: file path or file object to load from
+        """
+        from .io import load_labels
+
+        return load_labels(file=file)
+
+    def save(self, file: Union[str, pathlib.Path, BinaryIO]):
+        """
+        Save these :py:class:`Labels` to a file or a buffer, calling
+        :py:func:`metatensor.save`.
+
+        :param file: file path or file object to save to
+        """
+        from .io import save
+
+        return save(file=file, data=self)
+
+    # ===== Data manipulation ===== #
 
     @property
     def names(self) -> List[str]:

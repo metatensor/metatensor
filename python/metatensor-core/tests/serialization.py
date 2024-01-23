@@ -11,9 +11,17 @@ from metatensor import Labels, TensorBlock, TensorMap
 from . import utils
 
 
+PICKLE_PROTOCOLS = (4, 5)
+
+
 @pytest.fixture
 def tensor():
     return utils.tensor()
+
+
+@pytest.fixture
+def labels():
+    return utils.tensor().keys
 
 
 @pytest.fixture
@@ -141,17 +149,15 @@ def test_save_warning_errors(tmpdir, tensor):
     tmpfile = "serialize-test.npz"
 
     message = (
-        "tensor should be a 'TensorMap', " "not <class 'metatensor.block.TensorBlock'>"
+        "`data` must be either 'Labels' or 'TensorMap', "
+        "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
         with tmpdir.as_cwd():
             metatensor.save(tmpfile, tensor.block(0))
 
 
-protocols = (4, 5)
-
-
-@pytest.mark.parametrize("protocol", protocols)
+@pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
 def test_pickle(protocol, tmpdir, tensor):
     """
     Checks that pickling and unpickling a tensor map results in the same tensor map
@@ -284,3 +290,81 @@ def test_nested_gradients(tmpdir, use_numpy):
 def _npz_labels(data):
     names = data.dtype.names
     return Labels(names=names, values=data.view(dtype=np.int32).reshape(-1, len(names)))
+
+
+@pytest.mark.parametrize("memory_buffer", (True, False))
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load_labels(memory_buffer, standalone_fn):
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor",
+        "tests",
+        "keys.npy",
+    )
+
+    if memory_buffer:
+        with open(path, "rb") as fd:
+            buffer = fd.read()
+
+        assert isinstance(buffer, bytes)
+        file = io.BytesIO(buffer)
+    else:
+        file = path
+
+    if standalone_fn:
+        labels = metatensor.load_labels(file)
+    else:
+        labels = Labels.load(file)
+
+    assert isinstance(labels, Labels)
+    assert labels.names == [
+        "spherical_harmonics_l",
+        "center_species",
+        "neighbor_species",
+    ]
+    assert len(labels) == 27
+
+
+@pytest.mark.parametrize("memory_buffer", (True, False))
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
+    """Check that as saved file loads fine with numpy."""
+
+    if memory_buffer:
+        file = io.BytesIO()
+    else:
+        file = "serialize-test.npy"
+
+    with tmpdir.as_cwd():
+        if standalone_fn:
+            metatensor.save(file, labels)
+        else:
+            labels.save(file)
+
+        if memory_buffer:
+            file.seek(0)
+
+        data = np.load(file)
+
+    assert _npz_labels(data) == labels
+
+
+@pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
+def test_pickle_labels(protocol, tmpdir, labels):
+    """
+    Checks that pickling and unpickling Labels results in the same Labels
+    """
+
+    tmpfile = "serialize-test.pickle"
+
+    with tmpdir.as_cwd():
+        with open(tmpfile, "wb") as f:
+            pickle.dump(labels, f, protocol=protocol)
+
+        with open(tmpfile, "rb") as f:
+            labels_loaded = pickle.load(f)
+
+    np.testing.assert_equal(labels, labels_loaded)
