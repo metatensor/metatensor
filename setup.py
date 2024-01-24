@@ -15,7 +15,7 @@ METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor-operations")
 METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor-torch")
 METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor-learn")
 
-METATENSOR_VERSION = "0.1.0"
+METATENSOR_VERSION = "0.2.0"
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -136,10 +136,10 @@ if __name__ == "__main__":
         extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}?{uuid}"
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core >=0.1.0,<0.2.0")
-        install_requires.append("metatensor-operations >=0.1.0,<0.2.0")
-        install_requires.append("metatensor-learn >=0.1.0,<0.2.0")
-        extras_require["torch"] = "metatensor-torch >=0.1.0,<0.2.0"
+        install_requires.append("metatensor-core")
+        install_requires.append("metatensor-operations")
+        install_requires.append("metatensor-learn")
+        extras_require["torch"] = "metatensor-torch"
 
     setup(
         version=create_version_number(METATENSOR_VERSION),
