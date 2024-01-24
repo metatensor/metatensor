@@ -110,6 +110,9 @@ jobs:
       - name: build metatensor-operations sdist and wheel
         run: python -m build python/metatensor-operations --outdir=dist/
 
+      - name: build metatensor-learn sdist and wheel
+        run: python -m build python/metatensor-learn --outdir=dist/
+
       - name: build metatensor-torch sdist
         run: python -m build python/metatensor-torch --sdist --outdir=dist/
 
@@ -155,6 +158,17 @@ jobs:
           files: |
             dist/metatensor-operations-*.tar.gz
             dist/metatensor_operations-*.whl
+          prerelease: ${{ contains(github.ref, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload to GitHub release (metatensor-learn)
+        if: startsWith(github.ref, 'refs/tags/metatensor-learn-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/metatensor-learn-*.tar.gz
+            dist/metatensor_learn-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
