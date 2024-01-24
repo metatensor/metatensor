@@ -13,6 +13,7 @@ ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor-core")
 METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor-operations")
 METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor-torch")
+METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor-learn")
 
 METATENSOR_VERSION = "0.1.0"
 
@@ -111,12 +112,14 @@ if __name__ == "__main__":
     install_requires = []
     extras_require = {}
 
-    # when creating a sdist, we should never use local dependencies
+    # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+
     if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
         # we are building from a git checkout
         assert os.path.exists(METATENSOR_OPERATIONS)
         assert os.path.exists(METATENSOR_TORCH)
+        assert os.path.exists(METATENSOR_LEARN)
 
         # add a random uuid to the file url to prevent pip from using a cached
         # wheel for metatensor-core, and force it to re-build from scratch
@@ -127,11 +130,15 @@ if __name__ == "__main__":
         install_requires.append(
             f"metatensor-operations @ file://{METATENSOR_OPERATIONS}?{uuid}",
         )
+        install_requires.append(
+            f"metatensor-learn @ file://{METATENSOR_LEARN}?{uuid}",
+        )
         extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}?{uuid}"
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("metatensor-core >=0.1.0,<0.2.0")
         install_requires.append("metatensor-operations >=0.1.0,<0.2.0")
+        install_requires.append("metatensor-learn >=0.1.0,<0.2.0")
         extras_require["torch"] = "metatensor-torch >=0.1.0,<0.2.0"
 
     setup(

@@ -120,8 +120,9 @@ if __name__ == "__main__":
 
     install_requires = []
 
-    # when packaging a release, we should never use local dependencies
+    # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+
     if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
         # we are building from a git checkout or full repo archive
 
