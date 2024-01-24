@@ -8,7 +8,8 @@ from . import utils  # noqa
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX") is not None:
     from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap
-    from .documentation import load, save, load_buffer, save_buffer
+    from .documentation import load, load_labels, load_labels_buffer, load_buffer
+    from .documentation import save, save_buffer
 else:
     _load_library()
     Labels = torch.classes.metatensor.Labels
@@ -18,6 +19,8 @@ else:
 
     load = torch.ops.metatensor.load
     load_buffer = torch.ops.metatensor.load_buffer
+    load_labels = torch.ops.metatensor.load_labels
+    load_labels_buffer = torch.ops.metatensor.load_labels_buffer
     save = torch.ops.metatensor.save
     save_buffer = torch.ops.metatensor.save_buffer
 

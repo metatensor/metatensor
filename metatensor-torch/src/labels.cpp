@@ -5,6 +5,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/labels.hpp"
+#include "internal/scalar_type_name.hpp"
 
 using namespace metatensor_torch;
 
@@ -752,6 +753,63 @@ std::string LabelsHolder::repr() const {
 
     output << this->print(-1, 3) << "\n)";
     return output.str();
+}
+
+
+TorchLabels LabelsHolder::load(const std::string& path) {
+    return torch::make_intrusive<LabelsHolder>(
+        LabelsHolder(metatensor::io::load_labels(path))
+    );
+}
+
+
+TorchLabels LabelsHolder::load_buffer(torch::Tensor buffer) {
+    if (buffer.scalar_type() != torch::kUInt8) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a tensor of uint8, not " +
+            scalar_type_name(buffer.scalar_type())
+        );
+    }
+
+    if (buffer.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a 1-dimensional tensor"
+        );
+    }
+
+    return torch::make_intrusive<LabelsHolder>(
+        LabelsHolder(metatensor::io::load_labels_buffer(
+            buffer.data_ptr<uint8_t>(),
+            static_cast<size_t>(buffer.size(0))
+        ))
+    );
+}
+
+
+void LabelsHolder::save(const std::string& path) const {
+    return metatensor::io::save(path, this->as_metatensor());
+}
+
+torch::Tensor LabelsHolder::save_buffer() const {
+    auto buffer = metatensor::io::save_buffer(this->as_metatensor());
+    // move the buffer to the heap so it can escape this function
+    // `torch::from_blob` does not take ownership of the data,
+    // so we need to register a custom deleter to clean up when
+    // the tensor is no longer used
+    auto* buffer_data = new std::vector<uint8_t>(std::move(buffer));
+
+    auto options = torch::TensorOptions().dtype(torch::kU8).device(torch::kCPU);
+    auto deleter = [=](void* data) {
+        delete buffer_data;
+    };
+
+    // use a tensor of bytes to store the data
+    return torch::from_blob(
+        buffer_data->data(),
+        {static_cast<int64_t>(buffer_data->size())},
+        deleter,
+        options
+    );
 }
 
 /******************************************************************************/

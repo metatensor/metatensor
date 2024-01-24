@@ -298,6 +298,67 @@ class Labels:
         different values)
         """
 
+    @staticmethod
+    def load(path: str) -> "Labels":
+        """
+        Load a serialized :py:class:`Labels` from the file at ``path``, this is
+        equivalent to :py:func:`metatensor.torch.load_labels`.
+
+        :param path: Path of the file containing a saved :py:class:`TensorMap`
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the mean
+            time, you should use :py:func:`metatensor.torch.load_labels` instead of this
+            function to save your code to TorchScript.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+        """
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> "Labels":
+        """
+        Load a serialized :py:class:`Labels` from an in-memory ``buffer``, this is
+        equivalent to :py:func:`metatensor.torch.load_labels_buffer`.
+
+        :param buffer: torch Tensor representing an in-memory buffer
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the mean
+            time, you should use :py:func:`metatensor.torch.load_labels_buffer` instead
+            of this function to save your code to TorchScript.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+        """
+
+    def save(self, path: str):
+        """
+        Save these :py:class:`Labels` to a file, this is equivalent to
+        :py:func:`metatensor.torch.save`.
+
+        :param path: Path of the file. If the file already exists, it will be
+            overwritten
+        """
+
+    def save_buffer(self) -> torch.Tensor:
+        """
+        Save these :py:class:`Labels` to an in-memory buffer, this is equivalent to
+        :py:func:`metatensor.torch.save_buffer`.
+        """
+
     def append(self, name: str, values: torch.Tensor) -> "Labels":
         """Append a new dimension to the end of the :py:class:`Labels`.
 
@@ -1151,31 +1212,51 @@ def load(path: str) -> TensorMap:
     """
 
 
-def save(path: str, tensor: TensorMap):
+def load_labels(path: str) -> Labels:
     """
-    Save the given :py:class:`TensorMap` to a file at ``path``.
+    Load previously saved :py:class:`Labels` from the given file.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
-    ZIP file without compression (storage method is ``STORED``), where each file
-    is stored as a ``.npy`` array. See the C API documentation for more
-    information on the format.
+    :param path: path of the file to load
+    """
+
+
+def save(path: str, data: Union[TensorMap, Labels]):
+    """
+    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to the
+    given file at the given ``path``.
+
+    If the file already exists, it is overwritten. When saving a :py:class:`TensorMap`,
+    the file extension should be ``.npz``; and when saving :py:class:`Labels` it should
+    be ``.npy``
 
     :param path: path of the file where to save the data
-    :param tensor: tensor to save
+    :param data: data to serialize and save
     """
 
 
 def load_buffer(buffer: torch.Tensor) -> TensorMap:
     """
-    Load a previously saved :py:class:`TensorMap` from an in-memory buffer.
+    Load a previously saved :py:class:`TensorMap` from an in-memory buffer, stored
+    inside a 1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
-    :param buffer: On-CPU tensor of Uint8 representing a in-memory buffer
+    :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
     """
 
 
-def save_buffer(tensor: TensorMap) -> torch.Tensor:
+def load_labels_buffer(buffer: torch.Tensor) -> Labels:
     """
-    Save the given :py:class:`TensorMap` to an in-memory buffer.
+    Load a previously saved :py:class:`Labels` from an in-memory buffer, stored inside a
+    1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
-    :param tensor: tensor to save
+    :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
+    """
+
+
+def save_buffer(data: Union[TensorMap, Labels]) -> torch.Tensor:
+    """
+    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to an
+    in-memory buffer, represented as 1-dimensional :py:class:`torch.Tensor` of
+    ``uint8``.
+
+    :param data: data to serialize and save
     """

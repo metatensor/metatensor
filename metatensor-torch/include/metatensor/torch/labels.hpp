@@ -179,6 +179,20 @@ public:
     /// output.
     std::tuple<TorchLabels, torch::Tensor, torch::Tensor> intersection_and_mapping(const TorchLabels& other) const;
 
+    /// Load serialized Labels from the given path
+    static TorchLabels load(const std::string& path);
+
+    /// Load serialized Labels from an in-memory buffer (represented as a
+    /// `torch::Tensor` of bytes)
+    static TorchLabels load_buffer(torch::Tensor buffer);
+
+    /// Serialize and save Labels to the given path
+    void save(const std::string& path) const;
+
+    /// Serialize and save Labels to an in-memory buffer (represented as a
+    /// `torch::Tensor` of bytes)
+    torch::Tensor save_buffer() const;
+
 private:
     /// main constructor, checking everything in debug mode & registering the
     /// `values` as user data for the `labels`.

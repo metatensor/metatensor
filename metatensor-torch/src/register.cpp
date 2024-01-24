@@ -28,6 +28,49 @@ static torch::IValue labels_getitem(const TorchLabels& self, torch::IValue index
     }
 }
 
+template <typename T>
+bool custom_class_is(torch::IValue ivalue) {
+    assert(ivalue.isCustomClass());
+
+    // this is inspired by the code inside `torch::IValue.toCustomClass<T>()`
+    auto* expected_type = torch::getCustomClassType<torch::intrusive_ptr<T>>().get();
+    return ivalue.type().get() == expected_type;
+}
+
+static void save_ivalue(const std::string& path, torch::IValue data) {
+    if (data.isCustomClass()) {
+        if (custom_class_is<TensorMapHolder>(data)) {
+            auto tensor = data.toCustomClass<TensorMapHolder>();
+            return metatensor_torch::save(path, tensor);
+        } else if (custom_class_is<LabelsHolder>(data)) {
+            auto labels = data.toCustomClass<LabelsHolder>();
+            return metatensor_torch::save(path, labels);
+        }
+    }
+
+    C10_THROW_ERROR(TypeError,
+        "data` must be either 'Labels' or 'TensorMap' in `save`, not "
+        + data.type()->str()
+    );
+}
+
+static torch::Tensor save_ivalue_buffer(torch::IValue data) {
+    if (data.isCustomClass()) {
+        if (custom_class_is<TensorMapHolder>(data)) {
+            auto tensor = data.toCustomClass<TensorMapHolder>();
+            return metatensor_torch::save_buffer(tensor);
+        } else if (custom_class_is<LabelsHolder>(data)) {
+            auto labels = data.toCustomClass<LabelsHolder>();
+            return metatensor_torch::save_buffer(labels);
+        }
+    }
+
+    C10_THROW_ERROR(TypeError,
+        "data` must be either 'Labels' or 'TensorMap' in `save_buffer`, not "
+        + data.type()->str()
+    );
+}
+
 
 TORCH_LIBRARY(metatensor, m) {
     // There is no way to access the docstrings from Python, so we don't bother
@@ -87,6 +130,10 @@ TORCH_LIBRARY(metatensor, m) {
         .def_static("single", &LabelsHolder::single)
         .def_static("empty", &LabelsHolder::empty)
         .def_static("range", &LabelsHolder::range)
+        .def("save", &LabelsHolder::save, DOCSTRING, {torch::arg("file")})
+        .def("save_buffer", &LabelsHolder::save_buffer)
+        .def_static("load", &LabelsHolder::load)
+        .def_static("load_buffer", &LabelsHolder::load_buffer)
         .def("entry", labels_entry, DOCSTRING, {torch::arg("index")})
         .def("column", &LabelsHolder::column, DOCSTRING, {torch::arg("dimension")})
         .def("view", [](const TorchLabels& self, torch::IValue names) {
@@ -117,6 +164,12 @@ TORCH_LIBRARY(metatensor, m) {
         .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
         .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})
         .def("intersection_and_mapping", &LabelsHolder::intersection_and_mapping, DOCSTRING, {torch::arg("other")})
+        .def_pickle(
+            // __getstate__
+            [](const TorchLabels& self){ return self->save_buffer(); },
+            // __setstate__
+            [](torch::Tensor buffer){ return metatensor_torch::load_labels_buffer(buffer); }
+        )
         ;
 
     m.class_<TensorBlockHolder>("TensorBlock")
@@ -215,12 +268,28 @@ TORCH_LIBRARY(metatensor, m) {
         ;
 
     // standalone functions
-    m.def("version", metatensor_torch::version);
+    m.def("version() -> str", metatensor_torch::version);
 
-    m.def("load", metatensor_torch::load);
-    m.def("load_buffer", metatensor_torch::load_buffer);
-    m.def("save", metatensor_torch::save);
-    m.def("save_buffer", metatensor_torch::save_buffer);
+    m.def(
+        "load(str path) -> __torch__.torch.classes.metatensor.TensorMap",
+        metatensor_torch::load
+    );
+    m.def(
+        "load_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorMap",
+        metatensor_torch::load_buffer
+    );
+
+    m.def(
+        "load_labels(str path) -> __torch__.torch.classes.metatensor.Labels",
+        metatensor_torch::load_labels
+    );
+    m.def(
+        "load_labels_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.Labels",
+        metatensor_torch::load_labels_buffer
+    );
+
+    m.def("save(str path, Any data) -> ()", save_ivalue);
+    m.def("save_buffer(Any data) -> Tensor", save_ivalue_buffer);
 
     // ====================================================================== //
     //               code specific to atomistic simulations                   //
