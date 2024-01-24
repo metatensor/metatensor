@@ -14,7 +14,7 @@ METATENSOR_OPERATIONS = os.path.realpath(
     os.path.join(ROOT, "..", "metatensor-operations")
 )
 
-METATENSOR_LEARN_VERSION = "0.0.0"
+METATENSOR_LEARN_VERSION = "0.1.0"
 
 
 class bdist_egg_disabled(bdist_egg):

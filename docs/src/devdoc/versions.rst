@@ -23,6 +23,9 @@ The overall sources of truth for version numbers are:
 - the ``METATENSOR_OPERATIONS_VERSION`` variable in
   ``python/metatensor-operations/setup.py`` for the ``metatensor-operations``
   Python package.
+- the ``METATENSOR_LEARN_VERSION`` variable in
+  ``python/metatensor-learn/setup.py`` for the ``metatensor-learn``
+  Python package.
 - the ``METATENSOR_VERSION`` variable in ``setup.py`` for the ``metatensor``
   Python package.
 
