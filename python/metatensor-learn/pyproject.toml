@@ -29,7 +29,7 @@ classifiers = [
 homepage = "https://lab-cosmo.github.io/metatensor/latest/"
 documentation = "https://lab-cosmo.github.io/metatensor/latest/"
 repository = "https://github.com/lab-cosmo/metatensor"
-changelog = "https://lab-cosmo.github.io/metatensor/latest/reference/learn/CHANGELOG.html"
+changelog = "https://lab-cosmo.github.io/metatensor/latest/learn/CHANGELOG.html"
 
 ### ======================================================================== ###
 [build-system]
