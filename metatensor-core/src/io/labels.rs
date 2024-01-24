@@ -1,8 +1,40 @@
+use std::io::BufReader;
+
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 
 use super::npy_header::{Header, DataType};
-use super::check_for_extra_bytes;
+use super::{check_for_extra_bytes, PathOrBuffer};
 use crate::{Error, Labels, LabelsBuilder, LabelValue};
+
+
+/// Check if the file/buffer in `data` looks like it could contain serialized
+/// `Labels`.
+///
+/// We check the file extension and if the file content starts with the right
+/// header for NPY files.
+pub fn looks_like_labels_data(mut data: PathOrBuffer) -> bool {
+    match data {
+        PathOrBuffer::Path(path) => {
+            let path = std::path::Path::new(path);
+            if let Some(extension) = path.extension() {
+                if extension.eq_ignore_ascii_case("npy") {
+                    return true;
+                }
+            }
+
+            match std::fs::File::open(path) {
+                Ok(file) => {
+                    let mut buffer = BufReader::new(file);
+                    return looks_like_labels_data(PathOrBuffer::Buffer(&mut buffer));
+                },
+                Err(_) => { return false; }
+            }
+        },
+        PathOrBuffer::Buffer(ref mut buffer) => {
+            return Header::from_reader(buffer).is_ok();
+        },
+    }
+}
 
 /// Read `Labels` stored using numpy's NPY format.
 ///

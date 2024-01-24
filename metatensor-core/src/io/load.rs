@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::io::BufReader;
 use std::sync::Arc;
 
 use byteorder::{LittleEndian, BigEndian, ReadBytesExt};
@@ -6,9 +7,44 @@ use zip::ZipArchive;
 
 use crate::{TensorMap, TensorBlock, Labels, Error, mts_array_t};
 
-use super::check_for_extra_bytes;
+use super::{check_for_extra_bytes, PathOrBuffer};
 use super::labels::load_labels;
 use super::npy_header::{Header, DataType};
+
+
+/// Check if the file/buffer in `data` looks like it could contain a serialized
+/// `TensorMap`.
+///
+/// We check the file extension and if the file seems to be a `npz` file
+/// containing `keys`
+pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
+    match data {
+        PathOrBuffer::Path(path) => {
+            let path = std::path::Path::new(path);
+            if let Some(extension) = path.extension() {
+                if extension.eq_ignore_ascii_case("npz") {
+                    return true;
+                }
+            }
+
+            match std::fs::File::open(path) {
+                Ok(file) => {
+                    let mut buffer = BufReader::new(file);
+                    return looks_like_tensormap_data(PathOrBuffer::Buffer(&mut buffer));
+                },
+                Err(_) => { return false; }
+            }
+        },
+        PathOrBuffer::Buffer(ref mut buffer) => {
+            match ZipArchive::new(buffer) {
+                Ok(mut archive) => {
+                    return archive.by_name("keys.npy").is_ok()
+                }
+                Err(_) => { return false; }
+            }
+        },
+    }
+}
 
 
 /// Load the serialized tensor map from the given path.

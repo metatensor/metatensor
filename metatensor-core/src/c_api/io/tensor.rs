@@ -90,7 +90,21 @@ pub unsafe extern fn mts_tensormap_load(
 
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufReader::new(File::open(path)?);
-        let tensor = crate::io::load(file, create_array)?;
+        let tensor = crate::io::load(file, create_array)
+            .map_err(|err| match err {
+                Error::Serialization(message) => {
+                    if crate::io::looks_like_labels_data(crate::io::PathOrBuffer::Path(path)) {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from '{}', use `load_labels` to load Labels: {}", path, message
+                        ))
+                    } else {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from '{}': {}", path, message
+                        ))
+                    }
+                }
+                err => return err,
+            })?;
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -137,10 +151,26 @@ pub unsafe extern fn mts_tensormap_load_buffer(
 
         let create_array = wrap_create_array(&create_array);
 
-        let buffer = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
-        let cursor = std::io::Cursor::new(buffer);
+        let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+        let cursor = std::io::Cursor::new(slice);
 
-        let tensor = crate::io::load(cursor, create_array)?;
+        let tensor = crate::io::load(cursor, create_array)
+            .map_err(|err| match err {
+                Error::Serialization(message) => {
+                    let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+                    let mut cursor = std::io::Cursor::new(slice);
+                    if crate::io::looks_like_labels_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from buffer, use `load_labels_buffer` to load Labels: {}", message
+                        ))
+                    } else {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from buffer: {}", message
+                        ))
+                    }
+                }
+                err => return err,
+            })?;
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0

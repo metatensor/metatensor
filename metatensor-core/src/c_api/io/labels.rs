@@ -41,7 +41,22 @@ pub unsafe extern fn mts_labels_load(
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufReader::new(File::open(path)?);
 
-        let rust_labels = crate::io::load_labels(file)?;
+        let rust_labels = crate::io::load_labels(file)
+            .map_err(|err| match err {
+                Error::Serialization(message) => {
+                    if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Path(path)) {
+                    Error::Serialization(format!(
+                        "unable to load Labels from '{}', use `load` to load TensorMap: {}", path, message
+                    ))
+                } else {
+                    Error::Serialization(format!(
+                        "unable to load Labels from '{}': {}", path, message
+                    ))
+                }
+                }
+                err => return err,
+            })?;
+
         *labels = rust_to_mts_labels(Arc::new(rust_labels));
 
         Ok(())
@@ -73,10 +88,30 @@ pub unsafe extern fn mts_labels_load_buffer(
             ));
         }
 
-        let buffer = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
-        let cursor = std::io::Cursor::new(buffer);
+        let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+        let cursor = std::io::Cursor::new(slice);
 
-        let rust_labels = crate::io::load_labels(cursor)?;
+        let rust_labels = crate::io::load_labels(cursor)
+            .map_err(|err| match err {
+                Error::Serialization(message) => {
+                    // check if the buffer actually contains TensorMap and
+                    // not Labels
+                    let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+                    let mut cursor = std::io::Cursor::new(slice);
+
+                    if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                        Error::Serialization(format!(
+                            "unable to load Labels from buffer, use `load_buffer` to load TensorMap: {}", message
+                        ))
+                    } else {
+                        Error::Serialization(format!(
+                            "unable to load Labels from buffer: {}", message
+                        ))
+                    }
+                }
+                err => return err,
+            })?;
+
         *labels = rust_to_mts_labels(Arc::new(rust_labels));
 
         Ok(())

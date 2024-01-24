@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import metatensor
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import utils
 
@@ -368,3 +368,43 @@ def test_pickle_labels(protocol, tmpdir, labels):
             labels_loaded = pickle.load(f)
 
     np.testing.assert_equal(labels, labels_loaded)
+
+
+def test_wrong_load_error():
+    data_root = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "metatensor", "tests"
+    )
+
+    message = (
+        "serialization format error: unable to load a TensorMap from '.*', "
+        "use `load_labels` to load Labels"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        metatensor.load(os.path.join(data_root, "keys.npy"))
+
+    message = (
+        "serialization format error: unable to load a TensorMap from buffer, "
+        "use `load_labels_buffer` to load Labels"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        with open(os.path.join(data_root, "keys.npy"), "rb") as fd:
+            buffer = fd.read()
+
+        metatensor.load(io.BytesIO(buffer))
+
+    message = (
+        "serialization format error: unable to load Labels from '.*', "
+        "use `load` to load TensorMap: start does not match magic string"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        metatensor.load_labels(os.path.join(data_root, "data.npz"))
+
+    message = (
+        "serialization format error: unable to load Labels from buffer, "
+        "use `load_buffer` to load TensorMap: start does not match magic string"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        with open(os.path.join(data_root, "data.npz"), "rb") as fd:
+            buffer = fd.read()
+
+        metatensor.load_labels(io.BytesIO(buffer))
