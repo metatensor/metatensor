@@ -54,3 +54,20 @@ void metatensor_torch::save(const std::string& path, TorchTensorMap tensor) {
 torch::Tensor metatensor_torch::save_buffer(TorchTensorMap tensor) {
     return tensor->save_buffer();
 }
+
+
+TorchLabels metatensor_torch::load_labels(const std::string& path) {
+    return LabelsHolder::load(path);
+}
+
+TorchLabels metatensor_torch::load_labels_buffer(torch::Tensor buffer) {
+    return LabelsHolder::load_buffer(buffer);
+}
+
+void metatensor_torch::save(const std::string& path, TorchLabels labels) {
+    labels->save(path);
+}
+
+torch::Tensor metatensor_torch::save_buffer(TorchLabels labels) {
+    return labels->save_buffer();
+}
