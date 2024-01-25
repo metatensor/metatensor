@@ -230,3 +230,13 @@ def test_exported_model(tmpdir, model, model_different_units, atoms):
 
     model_different_units.export(path)
     check_against_ase_lj(atoms, MetatensorCalculator(path))
+
+
+def test_get_properties(model, atoms):
+    atoms.calc = MetatensorCalculator(model)
+
+    properties = atoms.get_properties(["energy", "forces", "stress"])
+
+    assert np.all(properties["energy"] == atoms.get_potential_energy())
+    assert np.all(properties["forces"] == atoms.get_forces())
+    assert np.all(properties["stress"] == atoms.get_stress())

@@ -35,7 +35,7 @@ FilePath = Union[str, bytes, pathlib.PurePath]
 class MetatensorCalculator(ase.calculators.calculator.Calculator):
     """
     The :py:class:`MetatensorCalculator` class implements ASE's
-    :py:class`ase.calculators.calculator.Calculator` API using metatensor atomistic
+    :py:class:`ase.calculators.calculator.Calculator` API using metatensor atomistic
     models to compute energy, forces and any other supported property.
 
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
@@ -238,7 +238,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         if "stress" in properties:
             volume = atoms.cell.volume
             scaling_grad = -scaling.grad.to(device="cpu").numpy().reshape(3, 3)
-            self.results["stress"] = scaling_grad / volume
+            self.results["stress"] = _full_3x3_to_voigt_6_stress(scaling_grad / volume)
 
 
 def _ase_properties_to_metatensor_outputs(properties):
@@ -339,3 +339,21 @@ def _ase_to_torch_data(atoms):
         cell = torch.zeros((3, 3), dtype=torch.float64)
 
     return species, positions, cell
+
+
+def _full_3x3_to_voigt_6_stress(stress):
+    ase.stress.full_3x3_to_voigt_6_stress
+    """
+    Re-implementation of ``ase.stress.full_3x3_to_voigt_6_stress`` which does not do the
+    stress symmetrization correctly (they do ``(stress[1, 2] + stress[1, 2]) / 2.0``)
+    """
+    return np.transpose(
+        [
+            stress[0, 0],
+            stress[1, 1],
+            stress[2, 2],
+            (stress[1, 2] + stress[2, 1]) / 2.0,
+            (stress[0, 2] + stress[2, 0]) / 2.0,
+            (stress[0, 1] + stress[1, 0]) / 2.0,
+        ]
+    )
