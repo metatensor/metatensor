@@ -462,14 +462,15 @@ class TensorBlock:
             ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend)
         """
         values = self.values
+
+        if arrays is not None:
+            values = data.array_change_backend(values, arrays)
+
         if dtype is not None:
             values = data.array_change_dtype(values, dtype)
 
         if device is not None:
             values = data.array_change_device(values, device)
-
-        if arrays is not None:
-            values = data.array_change_backend(values, arrays)
 
         block = TensorBlock(values, self.samples, self.components, self.properties)
         for parameter, gradient in self.gradients():
