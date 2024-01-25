@@ -10,13 +10,23 @@ metatensor to store it's own data.
     .. grid-item-card:: 🔬 Core classes overview
         :link: core-classes-overview
         :link-type: ref
-        :columns: 12 12 12 12
+        :columns: 12 12 6 6
         :margin: 0 3 0 0
 
 
         Explore the core types of metatensor: ``TensorMap``, ``TensorBlock`` and
         ``Labels``, and how they are used to store data, metadata and gradients
         of the data together.
+
+    .. grid-item-card:: 💡 Tutorials
+        :link: core-tutorials
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+
+        Learn how to use the core classes with Python code examples, and improve your
+        understanding of data and metadata storage with metatensor.
 
 Metatensor main classes are available from multiple languages, all documented
 below.
@@ -81,6 +91,7 @@ below.
     reference/cxx/index
     reference/c/index
     reference/rust/index
+    ../examples/core/index
 
 .. toctree::
     :maxdepth: 1
