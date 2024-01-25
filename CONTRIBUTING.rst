@@ -1,6 +1,6 @@
 Contribution via pull requests are always welcome. Source code is available from
 `Github`_. Before submitting a pull request, please open an issue to discuss
-your changes. Use only the `master` branch as target branch when submitting a pull request (PR).
+your changes. Use only the `master` branch as the target branch when submitting a pull request (PR).
 
 .. _`Github` : https://github.com/lab-cosmo/metatensor
 
