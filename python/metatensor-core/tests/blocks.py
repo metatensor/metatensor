@@ -433,3 +433,33 @@ def test_to():
 
             assert moved.device.type == torch.device(device).type
             assert moved.gradient("g").device.type == torch.device(device).type
+
+
+def test_to_torch_multiple_args():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    block.add_gradient(
+        "g",
+        TensorBlock(
+            values=np.array([[3.0, 4.0]]),
+            samples=Labels.range("sample", 1),
+            components=[],
+            properties=Labels.range("p", 2),
+        ),
+    )
+
+    assert block.device == "cpu"
+    assert block.dtype == np.float64
+    assert block.gradient("g").dtype == np.float64
+
+    if HAS_TORCH:
+        block = block.to(arrays="torch", dtype=torch.float32)
+        assert isinstance(block.values, torch.Tensor)
+        assert isinstance(block.gradient("g").values, torch.Tensor)
+        assert block.values.dtype == torch.float32
+        assert block.gradient("g").values.dtype == torch.float32
