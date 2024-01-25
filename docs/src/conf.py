@@ -156,6 +156,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_toggleprompt",
     "sphinx_gallery.gen_gallery",
+    "sphinxcontrib.details.directive",
     "breathe",
     "myst_parser",
     "sphinx_design",
@@ -179,10 +180,12 @@ exclude_patterns = [
 sphinx_gallery_conf = {
     "filename_pattern": ".*",
     "examples_dirs": [
+        os.path.join(ROOT, "python", "examples", "core"),
         os.path.join(ROOT, "python", "examples", "learn"),
         os.path.join(ROOT, "python", "examples", "atomistic"),
     ],
     "gallery_dirs": [
+        os.path.join("examples", "core"),
         os.path.join("examples", "learn"),
         os.path.join("examples", "atomistic"),
     ],
@@ -193,6 +196,7 @@ sphinx_gallery_conf = {
         r"metatensor\.learn\.data",
     ],
     "within_subsection_order": FileNameSortKey,
+    "remove_config_comments": True,
 }
 
 
