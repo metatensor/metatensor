@@ -17,14 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.2.1) - 2024-01-26
+
 ### metatensor-torch C++
 
 #### Added
 
-- Offer serialization functionality as member functions (i.e. `TensorMap.load`)
+- Offer serialization functionality as member functions (i.e. `TensorMap::load`)
   in addition to the existing free standing functions (i.e. `metatensor_torch::load`) (#453)
-- In-memory serialization with `TensorMap.save_buffer`, `TensorMap.load_buffer`,
-  and the respective free standing functions
+- In-memory serialization with `TensorMap::save_buffer`, `TensorMap::load_buffer`,
+  and the respective free standing functions (#455)
+- Serialization of Labels, with the same API as `TensorMap` (#455)
+
 
 ### metatensor-torch Python
 
@@ -33,7 +37,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Offer serialization functionality as member functions (i.e. `TensorMap.load`)
   in addition to the existing free standing functions (i.e. `metatensor.torch.load`) (#453)
 - In-memory serialization with `TensorMap.save_buffer`, `TensorMap.load_buffer`,
-  and the respective free standing functions
+  and the respective free standing functions (#455)
+- Serialization of Labels, with the same API as `TensorMap` (#455)
 
 ## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.2.0) - 2024-01-08
 

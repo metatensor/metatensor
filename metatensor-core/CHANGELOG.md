@@ -19,13 +19,27 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
+### metatensor-core C
+
+### metatensor-core Python
+
+### metatensor-core Julia
+
+#### Added
+
+- the Julia bindings to metatensor-core in the Metatensor.jl package
+
+## [Version 0.1.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.2) - 2024-01-26
+
+### metatensor-core C++
+
 #### Added
 
 - Offer serialization functionality as free standing functions (i.e. `metatensor::io::load`)
   in addition to the existing associated functions (i.e. `TensorMap::load`) (#453)
-- Serialization of labels with `Labels::save()`, `Labels::load`,
+- Serialization of labels with `Labels::save`, `Labels::load`,
   `Labels::save_buffer`, `Labels::load_buffer` and the corresponding free
-  functions.
+  functions. (#455)
 
 #### Changed
 
@@ -55,13 +69,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Serialization of labels with `Labels.save`, `Labels.load`,
   `Labels.save_buffer`, `Labels.load_buffer` and the corresponding free
   functions.
-
-### metatensor-core Julia
-
-#### Added
-
-- the Julia bindings to metatensor-core in the Metatensor.jl package
-
 
 ## [Version 0.1.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.1) - 2024-01-05
 
