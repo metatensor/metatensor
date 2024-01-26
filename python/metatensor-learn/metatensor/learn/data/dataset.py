@@ -1,6 +1,7 @@
 """
 Module for defining a Dataset or IndexedDataset.
 """
+
 from collections import namedtuple
 from typing import List, NamedTuple, Optional
 

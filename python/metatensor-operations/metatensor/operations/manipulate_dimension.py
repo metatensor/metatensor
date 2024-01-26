@@ -15,6 +15,7 @@ changing the columns of the :py:class:`metatensor.Labels` within).
 
 .. autofunction:: metatensor.rename_dimension
 """
+
 from typing import List
 
 from ._classes import TensorBlock, TensorMap

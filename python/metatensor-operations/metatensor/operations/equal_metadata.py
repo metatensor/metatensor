@@ -1,6 +1,7 @@
 """
 Module for checking equivalence in metadata between 2 TensorMaps
 """
+
 from typing import List, Union
 
 from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting

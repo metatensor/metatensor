@@ -1,6 +1,7 @@
 """
 Module for testing the Dataset class in :py:module:`dataset`.
 """
+
 import re
 
 import numpy as np
