@@ -26,6 +26,7 @@ Note that :py:class:`metatensor.unsafe_enable_checks()` or
 :py:class:`metatensor.unsafe_disable_checks()` overwrite the defintion of the enviroment
 variable.
 """
+
 import os
 
 

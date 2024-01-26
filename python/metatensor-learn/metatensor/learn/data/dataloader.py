@@ -1,6 +1,7 @@
 """
 Module containing the DataLoader.
 """
+
 from typing import Callable
 
 import torch

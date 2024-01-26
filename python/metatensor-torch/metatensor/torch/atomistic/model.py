@@ -60,8 +60,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...         systems: List[System],
     ...         outputs: Dict[str, ModelOutput],
     ...         selected_atoms: Optional[Labels] = None,
-    ...     ) -> Dict[str, TensorMap]:
-    ...         ...
+    ...     ) -> Dict[str, TensorMap]: ...
     ...
 
     The returned dictionary should have the same keys as ``outputs``, and the values

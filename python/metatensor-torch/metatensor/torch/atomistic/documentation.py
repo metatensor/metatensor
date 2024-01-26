@@ -44,8 +44,7 @@ class System:
             boundary conditions, non-periodic systems should set the cell to 0.
         """
 
-    def __len__(self) -> int:
-        ...
+    def __len__(self) -> int: ...
 
     @property
     def species(self) -> torch.Tensor:
@@ -199,17 +198,13 @@ class NeighborsListOptions:
         Add another ``requestor`` to the list of modules requesting this neighbors list
         """
 
-    def __repr__(self) -> str:
-        ...
+    def __repr__(self) -> str: ...
 
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
 
-    def __eq__(self, other: "NeighborsListOptions") -> bool:
-        ...
+    def __eq__(self, other: "NeighborsListOptions") -> bool: ...
 
-    def __ne__(self, other: "NeighborsListOptions") -> bool:
-        ...
+    def __ne__(self, other: "NeighborsListOptions") -> bool: ...
 
 
 class ModelOutput:
@@ -221,8 +216,7 @@ class ModelOutput:
         unit: str = "",
         per_atom: bool = False,
         explicit_gradients: List[str] = [],  # noqa B006
-    ):
-        ...
+    ): ...
 
     quantity: str
     """
@@ -254,8 +248,7 @@ class ModelCapabilities:
         length_unit: str = "",
         species: List[int] = [],  # noqa B006
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
-    ):
-        ...
+    ): ...
 
     length_unit: str
     """unit of lengths the model expects as input"""
@@ -283,8 +276,7 @@ class ModelEvaluationOptions:
         length_unit: str = "",
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
         selected_atoms: Optional[Labels] = None,
-    ):
-        ...
+    ): ...
 
     length_unit: str
     """unit of lengths the engine uses for the model input"""

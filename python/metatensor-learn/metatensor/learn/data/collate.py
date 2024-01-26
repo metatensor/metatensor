@@ -1,6 +1,7 @@
 """
 Module containing a collate function for use in a Dataloader.
 """
+
 from collections import namedtuple
 from typing import List, NamedTuple, Optional, Union
 
