@@ -198,6 +198,23 @@ class TensorMap:
 
         return load(file=file, use_numpy=use_numpy)
 
+    @staticmethod
+    def load_buffer(
+        buffer: Union[bytes, bytearray, memoryview],
+        use_numpy=False,
+    ) -> "Labels":
+        """
+        Load a serialized :py:class:`TensorMap` from a buffer, calling
+        :py:func:`metatensor.io.load_buffer`.
+
+        :param buffer: in-memory buffer containing the data
+        :param use_numpy: should we use the numpy loader or metatensor's. See
+            :py:func:`metatensor.load` for more information.
+        """
+        from .io import load_buffer
+
+        return load_buffer(buffer=buffer)
+
     def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
         """
         Save this :py:class:`TensorMap` to a file or a buffer, calling
@@ -210,6 +227,18 @@ class TensorMap:
         from .io import save
 
         return save(file=file, data=self, use_numpy=use_numpy)
+
+    def save_buffer(self, use_numpy=False) -> memoryview:
+        """
+        Save this :py:class:`TensorMap` to an in-memory buffer, calling
+        :py:func:`metatensor.io.save_buffer`.
+
+        :param use_numpy: should we use numpy serialization or metatensor's. See
+            :py:func:`metatensor.save` for more information.
+        """
+        from .io import save_buffer
+
+        return save_buffer(data=self, use_numpy=use_numpy)
 
     # ===== Math functions, implemented using metatensor-operations ===== #
 

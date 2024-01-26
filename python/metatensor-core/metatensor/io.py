@@ -1,4 +1,5 @@
 import ctypes
+import io
 import pathlib
 import warnings
 from typing import BinaryIO, Callable, Union
@@ -81,6 +82,32 @@ def save(
         )
 
 
+def save_buffer(
+    data: Union[TensorMap, Labels],
+    use_numpy=False,
+) -> memoryview:
+    """
+    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to an
+    in-memory buffer.
+
+    :param data: data to serialize and save
+    :param use_numpy: should we use numpy or the native serializer implementation?
+    """
+    if isinstance(data, Labels):
+        return memoryview(_save_labels_buffer_raw(labels=data))
+    elif isinstance(data, TensorMap):
+        if use_numpy:
+            file = io.BytesIO()
+            save(file, data=data, use_numpy=use_numpy)
+            return file.getbuffer()
+        else:
+            return memoryview(_save_tensormap_buffer_raw(tensor=data))
+    else:
+        raise TypeError(
+            f"`data` must be either 'Labels' or 'TensorMap', not {type(data)}"
+        )
+
+
 def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given file.
@@ -108,6 +135,21 @@ def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap
             assert isinstance(buffer, bytes)
 
             return load_buffer_custom_array(buffer, create_numpy_array)
+
+
+def load_buffer(
+    buffer: Union[bytes, bytearray, memoryview], use_numpy=False
+) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from an in-memory buffer.
+
+    :param buffer: In-memory buffer containing a serialized ``TensorMap``
+    :param use_numpy: should we use numpy or the native implementation?
+    """
+    if use_numpy:
+        return _read_npz(io.BytesIO(buffer))
+    else:
+        return load_buffer_custom_array(buffer, create_numpy_array)
 
 
 CreateArrayCallback = Callable[
@@ -151,7 +193,7 @@ def load_custom_array(
 
 
 def load_buffer_custom_array(
-    buffer: Union[bytes, bytearray],
+    buffer: Union[bytes, bytearray, memoryview],
     create_array: CreateArrayCallback,
 ) -> TensorMap:
     """
@@ -178,6 +220,12 @@ def load_buffer_custom_array(
     if isinstance(buffer, bytearray):
         char_array = ctypes.c_char * len(buffer)
         buffer = char_array.from_buffer(buffer)
+    elif isinstance(buffer, memoryview):
+        char_array = ctypes.c_char * len(buffer)
+        # FIXME: we would prefer not to make a copy here, but ctypes does not support
+        # passing a memory view to C, even if it is contiguous.
+        # https://github.com/python/cpython/issues/60190
+        buffer = char_array.from_buffer_copy(buffer)
 
     ptr = lib.mts_tensormap_load_buffer(
         buffer,
@@ -213,7 +261,31 @@ def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
         buffer = file.read()
         assert isinstance(buffer, bytes)
 
-        return _load_labels_buffer_raw(buffer)
+        return load_labels_buffer(buffer)
+
+
+def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
+    """
+    Load previously saved :py:class:`Labels` from an in-memory buffer.
+
+    :param buffer: in-memory buffer containing saved :py:class:`Labels`
+    """
+    lib = _get_library()
+
+    if isinstance(buffer, bytearray):
+        char_array = ctypes.c_char * len(buffer)
+        buffer = char_array.from_buffer(buffer)
+    elif isinstance(buffer, memoryview):
+        char_array = ctypes.c_char * len(buffer)
+        # FIXME: we would prefer not to make a copy here, but ctypes does not support
+        # passing a memory view to C, even if it is contiguous.
+        # https://github.com/python/cpython/issues/60190
+        buffer = char_array.from_buffer_copy(buffer)
+
+    labels = mts_labels_t()
+    lib.mts_labels_load_buffer(buffer, len(buffer), labels)
+
+    return Labels._from_mts_labels_t(labels)
 
 
 def _save_labels(
@@ -260,19 +332,6 @@ def _save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
     lib = _get_library()
 
     return _save_buffer_raw(lib.mts_labels_save_buffer, labels._labels)
-
-
-def _load_labels_buffer_raw(buffer: Union[bytes, bytearray]):
-    lib = _get_library()
-
-    if isinstance(buffer, bytearray):
-        char_array = ctypes.c_char * len(buffer)
-        buffer = char_array.from_buffer(buffer)
-
-    labels = mts_labels_t()
-    lib.mts_labels_load_buffer(buffer, len(buffer), labels)
-
-    return Labels._from_mts_labels_t(labels)
 
 
 def _save_tensormap_buffer_raw(tensor: TensorMap) -> ctypes.Array:

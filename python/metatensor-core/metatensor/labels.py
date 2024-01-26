@@ -487,9 +487,9 @@ class Labels:
         """
         Passed to pickler to reconstruct Labels from bytes object
         """
-        from .io import _load_labels_buffer_raw
+        from .io import load_labels_buffer
 
-        return _load_labels_buffer_raw(buffer)
+        return load_labels_buffer(buffer)
 
     def __reduce_ex__(self, protocol: int):
         """
@@ -507,7 +507,7 @@ class Labels:
     @staticmethod
     def load(file: Union[str, pathlib.Path, BinaryIO]) -> "Labels":
         """
-        Load a serialized :py:class:`Labels` from a file or a buffer, calling
+        Load a serialized :py:class:`Labels` from a file, calling
         :py:func:`metatensor.load_labels`.
 
         :param file: file path or file object to load from
@@ -516,16 +516,36 @@ class Labels:
 
         return load_labels(file=file)
 
+    @staticmethod
+    def load_buffer(buffer: Union[bytes, bytearray, memoryview]) -> "Labels":
+        """
+        Load a serialized :py:class:`Labels` from a buffer, calling
+        :py:func:`metatensor.io.load_labels_buffer`.
+
+        :param buffer: in-memory buffer containing the data
+        """
+        from .io import load_labels_buffer
+
+        return load_labels_buffer(buffer=buffer)
+
     def save(self, file: Union[str, pathlib.Path, BinaryIO]):
         """
-        Save these :py:class:`Labels` to a file or a buffer, calling
-        :py:func:`metatensor.save`.
+        Save these :py:class:`Labels` to a file, calling :py:func:`metatensor.save`.
 
         :param file: file path or file object to save to
         """
         from .io import save
 
         return save(file=file, data=self)
+
+    def save_buffer(self) -> memoryview:
+        """
+        Save these :py:class:`Labels` to an in-memory buffer, calling
+        :py:func:`metatensor.io.save_buffer`.
+        """
+        from .io import save_buffer
+
+        return save_buffer(data=self)
 
     # ===== Data manipulation ===== #
 
