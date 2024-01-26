@@ -48,14 +48,19 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
             buffer = fd.read()
 
         assert isinstance(buffer, bytes)
-        file = io.BytesIO(buffer)
     else:
         file = path
 
     if standalone_fn:
-        tensor = metatensor.load(file, use_numpy=use_numpy)
+        if memory_buffer:
+            tensor = metatensor.io.load_buffer(buffer, use_numpy=use_numpy)
+        else:
+            tensor = metatensor.load(file, use_numpy=use_numpy)
     else:
-        tensor = TensorMap.load(file, use_numpy=use_numpy)
+        if memory_buffer:
+            tensor = TensorMap.load_buffer(buffer, use_numpy=use_numpy)
+        else:
+            tensor = TensorMap.load(file, use_numpy=use_numpy)
 
     assert isinstance(tensor, TensorMap)
     assert tensor.keys.names == [
@@ -81,20 +86,21 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
 @pytest.mark.parametrize("standalone_fn", (True, False))
 def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
     """Check that as saved file loads fine with numpy."""
-
-    if memory_buffer:
-        file = io.BytesIO()
-    else:
-        file = "serialize-test.npz"
-
     with tmpdir.as_cwd():
-        if standalone_fn:
-            metatensor.save(file, tensor, use_numpy=use_numpy)
-        else:
-            tensor.save(file, use_numpy=use_numpy)
-
         if memory_buffer:
-            file.seek(0)
+            if standalone_fn:
+                buffer = metatensor.io.save_buffer(tensor, use_numpy=use_numpy)
+            else:
+                buffer = tensor.save_buffer(use_numpy=use_numpy)
+
+            file = io.BytesIO(buffer)
+
+        else:
+            file = "serialize-test.npz"
+            if standalone_fn:
+                metatensor.save(file, tensor, use_numpy=use_numpy)
+            else:
+                tensor.save(file, use_numpy=use_numpy)
 
         data = np.load(file)
 
@@ -310,14 +316,19 @@ def test_load_labels(memory_buffer, standalone_fn):
             buffer = fd.read()
 
         assert isinstance(buffer, bytes)
-        file = io.BytesIO(buffer)
     else:
         file = path
 
     if standalone_fn:
-        labels = metatensor.load_labels(file)
+        if memory_buffer:
+            labels = metatensor.io.load_labels_buffer(buffer)
+        else:
+            labels = metatensor.load_labels(file)
     else:
-        labels = Labels.load(file)
+        if memory_buffer:
+            labels = Labels.load_buffer(buffer)
+        else:
+            labels = Labels.load(file)
 
     assert isinstance(labels, Labels)
     assert labels.names == [
@@ -332,20 +343,20 @@ def test_load_labels(memory_buffer, standalone_fn):
 @pytest.mark.parametrize("standalone_fn", (True, False))
 def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
     """Check that as saved file loads fine with numpy."""
-
-    if memory_buffer:
-        file = io.BytesIO()
-    else:
-        file = "serialize-test.npy"
-
     with tmpdir.as_cwd():
-        if standalone_fn:
-            metatensor.save(file, labels)
-        else:
-            labels.save(file)
-
         if memory_buffer:
-            file.seek(0)
+            if standalone_fn:
+                buffer = metatensor.io.save_buffer(labels)
+            else:
+                buffer = labels.save_buffer()
+
+            file = io.BytesIO(buffer)
+        else:
+            file = "serialize-test.npy"
+            if standalone_fn:
+                metatensor.save(file, labels)
+            else:
+                labels.save(file)
 
         data = np.load(file)
 
