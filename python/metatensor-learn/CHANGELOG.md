@@ -19,5 +19,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `ModuleMap` and `Linear` modules, following torch.nn.ModuleDict and torch.nn.Linear
+  in PyTorch but adapted for `TensorMap`'s;
+
 - `Dataset` and `DataLoader` facilities, following the corresponding classes in
   PyTorch;
