@@ -36,7 +36,7 @@ class TestLinear:
             in_keys=single_block_tensor_torch.keys,
             in_features=[2],
             out_features=[2],
-            bias=[False],
+            bias=[True],
             out_properties=[single_block_tensor_torch[0].properties],
         )
         # testing initialization by sequence arguments
@@ -44,7 +44,7 @@ class TestLinear:
             in_keys=single_block_tensor_torch.keys,
             in_features=2,
             out_features=2,
-            bias=False,
+            bias=True,
             out_properties=single_block_tensor_torch[0].properties,
         )
         for i in range(len(tensor_module_init_seq)):
@@ -63,7 +63,8 @@ class TestLinear:
                 " initialization"
             )
             assert (
-                tensor_module_init_seq[i].bias == tensor_module_init_nonseq[i].bias
+                tensor_module_init_seq[i].bias.shape
+                == tensor_module_init_nonseq[i].bias.shape
             ), (
                 "bias differ when using sequential and non sequential input for"
                 " initialization"
@@ -100,5 +101,10 @@ class TestLinear:
             axis="samples",
             labels=Labels(["sample", "structure"], np.array([[0, 0], [1, 1]])),
         )
-        module = Linear.from_weights(weights)
+        bias = metatensor.slice(
+            single_block_tensor_torch,
+            axis="samples",
+            labels=Labels(["sample", "structure"], np.array([[3, 3]])),
+        )
+        module = Linear.from_weights(weights, bias)
         module(single_block_tensor_torch)

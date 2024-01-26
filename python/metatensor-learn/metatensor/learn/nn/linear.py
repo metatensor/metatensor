@@ -109,7 +109,7 @@ class Linear(ModuleMap):
     @classmethod
     def from_weights(cls, weights: TensorMap, bias: Optional[TensorMap] = None):
         """
-        Construct a linear module map from a tensor map.
+        Construct a linear module map from a tensor map for the weights and bias.
 
         :param weights:
             The weight tensor map from which we create the linear modules.  The

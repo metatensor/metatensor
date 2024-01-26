@@ -27,7 +27,7 @@ class TestLinearMap:
             in_keys=single_block_tensor.keys,
             in_features=[2],
             out_features=[2],
-            bias=[False],
+            bias=[True],
             out_properties=[single_block_tensor[0].properties],
         )
         # testing initialization by sequence arguments
@@ -35,7 +35,7 @@ class TestLinearMap:
             in_keys=single_block_tensor.keys,
             in_features=2,
             out_features=2,
-            bias=False,
+            bias=True,
             out_properties=single_block_tensor[0].properties,
         )
         for i in range(len(tensor_module_init_seq)):
@@ -54,7 +54,8 @@ class TestLinearMap:
                 " initialization"
             )
             assert (
-                tensor_module_init_seq[i].bias == tensor_module_init_nonseq[i].bias
+                tensor_module_init_seq[i].bias.shape
+                == tensor_module_init_nonseq[i].bias.shape
             ), (
                 "bias differ when using sequential and non sequential input for"
                 " initialization"
@@ -91,7 +92,12 @@ class TestLinearMap:
             axis="samples",
             labels=Labels(["sample", "structure"], np.array([[0, 0], [1, 1]])),
         )
-        module = Linear.from_weights(weights)
+        bias = metatensor.torch.slice(
+            single_block_tensor,
+            axis="samples",
+            labels=Labels(["sample", "structure"], np.array([[3, 3]])),
+        )
+        module = Linear.from_weights(weights, bias)
         module(single_block_tensor)
 
     def test_torchscript_linear(self, single_block_tensor):  # noqa F811
