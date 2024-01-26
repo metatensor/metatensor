@@ -18,7 +18,7 @@ The overall sources of truth for version numbers are:
   ``metatensor-core`` C, C++ API and Python API.
 - the ``version`` field in ``metatensor/Cargo.toml`` for the ``metatensor`` Rust
   crate.
-- the ``VERSION`` file in ``metatensor-torch/`` for ``metatensor-core`` C++ and
+- the ``VERSION`` file in ``metatensor-torch/`` for ``metatensor-torch`` C++ and
   Python API.
 - the ``METATENSOR_OPERATIONS_VERSION`` variable in
   ``python/metatensor-operations/setup.py`` for the ``metatensor-operations``

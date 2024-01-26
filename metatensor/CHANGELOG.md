@@ -15,10 +15,16 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.1.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.2) - 2024-01-26
+
 ### Added
 
 - Offer serialization functionality as associated functions (i.e. `TensorMap::load`)
   in addition to the existing free standing functions (i.e. `metatensor::io::load`) (#453)
+
+- Serialization of labels with `Labels::save`, `Labels::load`,
+  `Labels::save_buffer`, `Labels::load_buffer` and the corresponding free
+  functions. (#455)
 
 ## [Version 0.1.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.1) - 2024-01-05
 
