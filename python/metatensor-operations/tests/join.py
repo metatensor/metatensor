@@ -356,3 +356,42 @@ def test_union_join(axis, components_tensor):
                 )
 
             assert joined_gradient.values.shape == ref_gradient_shape
+
+
+@pytest.mark.parametrize("axis", ["samples", "properties"])
+@pytest.mark.parametrize("sort_samples", [True, False])
+def test_sort_samples(axis, sort_samples):
+    """Test that samples are sorted as requested."""
+    values_0 = np.array([[0]])
+    values_1 = np.array([[1]])
+
+    keys = Labels(names="_", values=values_0)
+
+    properties = Labels(names="p", values=values_0)
+    samples_0 = Labels(names="s", values=values_0)
+    samples_1 = Labels(names="s", values=values_1)
+
+    block_0 = TensorBlock(
+        values=values_0, samples=samples_0, components=[], properties=properties
+    )
+    block_1 = TensorBlock(
+        values=values_0, samples=samples_1, components=[], properties=properties
+    )
+
+    tensor_0 = TensorMap(keys=keys, blocks=[block_0])
+    tensor_1 = TensorMap(keys=keys, blocks=[block_1])
+
+    # reverse order of tensors
+    joined_tensor = metatensor.join(
+        [tensor_1, tensor_0],
+        axis=axis,
+        sort_samples=sort_samples,
+        remove_tensor_name=True,
+    )
+
+    if sort_samples:
+        ref_samples = Labels(names="s", values=np.array([0, 1]).reshape(-1, 1))
+    else:
+        ref_samples = Labels(names="s", values=np.array([1, 0]).reshape(-1, 1))
+
+    assert joined_tensor.block(0).samples == ref_samples
