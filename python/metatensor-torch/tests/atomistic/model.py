@@ -173,9 +173,9 @@ def test_units():
         if name == "angstrom":
             assert value == ase.units.Ang / ase.units.Ang
         elif name == "bohr":
-            assert value == ase.units.Bohr / ase.units.Ang
+            assert value == ase.units.Ang / ase.units.Bohr
         elif name in ["nanometer", "nm"]:
-            assert value == ase.units.nm / ase.units.Ang
+            assert value == ase.units.Ang / ase.units.nm
         else:
             raise Exception(f"missing name in test: {name}")
 
@@ -185,12 +185,12 @@ def test_units():
         if name == "ev":
             assert value == ase.units.eV / ase.units.eV
         elif name == "mev":
-            assert value == (ase.units.eV / 1000) / ase.units.eV
+            assert value == ase.units.eV / (ase.units.eV / 1000)
         elif name == "hartree":
-            assert value == ase.units.Hartree / ase.units.eV
+            assert value == ase.units.eV / ase.units.Hartree
         elif name == "kcal/mol":
-            assert value == (ase.units.kcal / ase.units.mol) / ase.units.eV
+            assert value == ase.units.eV / (ase.units.kcal / ase.units.mol)
         elif name == "kj/mol":
-            assert value == (ase.units.kJ / ase.units.mol) / ase.units.eV
+            assert value == ase.units.eV / (ase.units.kJ / ase.units.mol)
         else:
             raise Exception(f"missing name in test: {name}")
