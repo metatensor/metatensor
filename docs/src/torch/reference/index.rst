@@ -11,21 +11,17 @@ API reference
   .. grid::
     :margin: 0 0 0 0
 
-    .. grid-item-card:: Version 0.2.0
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-torch-v0.2.0/reference/torch/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.2.1
+        :tag-prefix: metatensor-torch-v
+        :url-suffix: torch/reference/index.html
 
-    .. grid-item-card:: Version 0.1.0
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-torch-v0.1.0/reference/torch/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.2.0
+        :tag-prefix: metatensor-torch-v
+        :url-suffix: reference/torch/index.html
+
+    .. grid-item-version:: 0.1.0
+        :tag-prefix: metatensor-torch-v
+        :url-suffix: reference/torch/index.html
 
 
 .. py:currentmodule:: metatensor.torch

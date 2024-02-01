@@ -3,12 +3,6 @@
 Learning utilities
 ==================
 
-.. admonition:: 🚧 Work in progress
-
-    This package is a work in progress, not yet released on PyPI. If you want to
-    use it, you'll need to install a :ref:`development version
-    <dev-install-python>` of ``metatensor-learn``.
-
 One important target application for the metatensor data format is its usage in
 machine learning models. This submodule contains building blocks and utilities
 that facilitate the construction and training of such models.
@@ -16,7 +10,7 @@ that facilitate the construction and training of such models.
 .. grid::
 
     .. grid-item-card:: |Python-16x16| API reference
-        :link: torch-api-reference
+        :link: learn-api-reference
         :link-type: ref
         :columns: 12 12 6 6
         :margin: 0 3 0 0
