@@ -53,19 +53,19 @@ KNOWN_QUANTITIES = {
         baseline="angstrom",
         conversions={
             "angstrom": 1.0,
-            "bohr": 0.5291772105638411,
-            "nanometer": 10.0,
-            "nm": 10.0,
+            "bohr": 1.8897261258369282,
+            "nanometer": 0.1,
+            "nm": 0.1,
         },
     ),
     "energy": Quantity(
         baseline="ev",
         conversions={
             "ev": 1.0,
-            "mev": 1e-3,
-            "hartree": 27.211386024367243,
-            "kcal/mol": 0.04336410390059322,
-            "kj/mol": 0.010364269574711572,
+            "mev": 1000.0,
+            "hartree": 0.03674932247495664,
+            "kcal/mol": 23.060548012069496,
+            "kj/mol": 96.48533288249877,
         },
     ),
 }

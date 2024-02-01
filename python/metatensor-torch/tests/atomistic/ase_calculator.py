@@ -158,11 +158,11 @@ def model():
 @pytest.fixture
 def model_different_units():
     model = LennardJones(
-        cutoff=CUTOFF * ase.units.Bohr,
+        cutoff=CUTOFF / ase.units.Bohr,
         params={
             (28, 28): (
-                SIGMA * ase.units.Bohr,
-                EPSILON * ase.units.kJ / ase.units.mol,
+                SIGMA / ase.units.Bohr,
+                EPSILON / ase.units.kJ * ase.units.mol,
             )
         },
     )
