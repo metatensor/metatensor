@@ -52,6 +52,7 @@ def join(
     tensors: List[TensorMap],
     axis: str,
     different_keys: str = "error",
+    sort_samples: bool = False,
     remove_tensor_name: bool = False,
 ) -> TensorMap:
     """Join a sequence of :py:class:`TensorMap` with the same blocks along an axis.
@@ -70,6 +71,8 @@ def join(
         ``"error"`` keys in all tensors have to be the same. For ``"intersection"`` only
         blocks present in all tensors will be taken into account. For ``"union"``
         missing keys will be treated like if they where associated with an empty block.
+    :param sort_samples: whether to sort the samples of the merged ``tensors`` or keep
+        them in their original order.
     :param remove_tensor_name:
         Remove the extra ``tensor`` dimension from labels if possible. See examples
         above for the case where this is applicable.
@@ -250,11 +253,6 @@ def join(
     else:
         names_list = [tensor.property_names for tensor in tensors]
 
-    # We use functools to flatten a list of sublists::
-    #
-    #   [('a', 'b', 'c'), ('a', 'b')] -> ['a', 'b', 'c', 'a', 'b']
-    #
-    # A nested list with sublist of different shapes can not be handled by `set`.
     names_list_flattened: List[str] = []
     for names in names_list:
         names_list_flattened += names
@@ -326,9 +324,9 @@ def join(
     tensor = TensorMap(keys=keys, blocks=blocks)
 
     if axis == "samples":
-        tensor_joined = tensor.keys_to_samples("tensor")
+        tensor_joined = tensor.keys_to_samples("tensor", sort_samples=sort_samples)
     else:
-        tensor_joined = tensor.keys_to_properties("tensor")
+        tensor_joined = tensor.keys_to_properties("tensor", sort_samples=sort_samples)
 
     if remove_tensor_name and _disjoint_tensor_labels(tensors, axis):
         return remove_dimension(tensor_joined, name="tensor", axis=axis)

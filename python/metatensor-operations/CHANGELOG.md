@@ -17,6 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 #### Removed
 -->
 
+### Changed
+
+- `join()` operation now includes the `sort_samples` argument to control the
+  sorting of samples in the output joined TensorMap. This defaults to False, opposite
+  to the previous default behaviour.
+
 ### Added
 
 - `detach()` operation to detach all values in a TensorMap/TensorBlock from any
