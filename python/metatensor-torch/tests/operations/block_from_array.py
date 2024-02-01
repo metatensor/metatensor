@@ -1,3 +1,5 @@
+import io
+
 import pytest
 import torch
 from packaging import version
@@ -27,3 +29,9 @@ def test_operation_as_python(device):
 @pytest.mark.parametrize("device", ["cpu", "meta"])
 def test_operation_as_torch_script(device):
     check_operation(torch.jit.script(metatensor.torch.block_from_array), device)
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.block_from_array)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)

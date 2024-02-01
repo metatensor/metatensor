@@ -1,3 +1,5 @@
+import io
+
 import torch
 from packaging import version
 
@@ -56,3 +58,9 @@ def test_operation_as_python():
 
 def test_operation_as_torch_script():
     check_operation(torch.jit.script(metatensor.torch.lstsq))
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.lstsq)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)

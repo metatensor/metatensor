@@ -1,3 +1,5 @@
+import io
+
 import torch
 
 import metatensor.torch
@@ -42,3 +44,18 @@ def test_operations_as_torch_script():
     check_operation_block(scripted)
     scripted = torch.jit.script(metatensor.torch.equal_block_raise)
     check_operation_block_raise(scripted)
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.equal)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    scripted = torch.jit.script(metatensor.torch.equal_raise)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    scripted = torch.jit.script(metatensor.torch.equal_block)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    scripted = torch.jit.script(metatensor.torch.equal_block_raise)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
