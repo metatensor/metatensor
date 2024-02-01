@@ -61,7 +61,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         if isinstance(model, (str, bytes, pathlib.PurePath)):
             if not os.path.exists(model):
-                raise InputError(f"given model path '{model}' does not exists")
+                raise InputError(f"given model path '{model}' does not exist")
 
             check_atomistic_model(model)
             self._model = torch.jit.load(model)
