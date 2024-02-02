@@ -68,7 +68,7 @@ with extra metadata for atomic — and other particles — systems.
         :margin: 0 3 0 0
 
         Learn about the TorchScript version of metatensor, used to export and
-        execute custom models with non-Python software.
+        execute custom models inside non-Python software.
 
         +++
         |Python-32x32| |Cxx-32x32|
