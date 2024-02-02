@@ -36,6 +36,33 @@ class TensorBlock:
     of parameters. In this case, each gradient is a :py:class:`TensorBlock` with
     a separate set of samples and possibly components, but which shares the same
     property labels as the original :py:class:`TensorBlock`.
+
+    >>> import numpy as np
+    >>> block = TensorBlock(
+    ...     values=np.array(
+    ...         [
+    ...             [1, 2, 4],
+    ...             [3, 5, 6],
+    ...         ]
+    ...     ),
+    ...     samples=Labels("samples", np.array([[4], [2]])),
+    ...     components=[],
+    ...     properties=Labels("properties", np.array([[0], [1], [2]])),
+    ... )
+    >>> block
+    TensorBlock
+        samples (2): ['samples']
+        components (): []
+        properties (3): ['properties']
+        gradients: None
+    >>> block.samples
+    Labels(
+        samples
+           4
+           2
+    )
+    >>> block.values[block.samples.position([2])]
+    array([3, 5, 6])
     """
 
     def __init__(
