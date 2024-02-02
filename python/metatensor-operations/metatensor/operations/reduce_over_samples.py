@@ -202,7 +202,10 @@ def _reduce_over_samples_block(
 
     # check if the reduce operation reduce all the samples
     if len(remaining_sample_names) == 0:
-        samples_label = Labels.single()
+        samples_label = Labels(
+            names="_",
+            values=_dispatch.zeros_like(block_samples.values, shape=(1, 1)),
+        )
     else:
         samples_label = Labels(
             remaining_sample_names,

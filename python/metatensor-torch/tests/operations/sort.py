@@ -1,3 +1,5 @@
+import io
+
 import pytest
 import torch
 
@@ -134,3 +136,12 @@ def test_operation_as_torch_script(tensor, tensor_sorted):
 
 def test_operation_as_python(tensor, tensor_sorted):
     check_operation(metatensor.torch.sort, tensor, tensor_sorted)
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.sort)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

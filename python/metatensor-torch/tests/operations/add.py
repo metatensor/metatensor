@@ -1,3 +1,5 @@
+import io
+
 import torch
 
 import metatensor.torch
@@ -18,3 +20,12 @@ def test_operation_as_python():
 
 def test_operation_as_torch_script():
     check_operation(torch.jit.script(metatensor.torch.add))
+
+
+def test_save_load():
+    scripted = torch.jit.script(metatensor.torch.add)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

@@ -223,6 +223,20 @@ class Labels:
         Create :py:class:`Labels` to use when there is no relevant metadata and
         only one entry in the corresponding dimension (e.g. keys when a tensor
         map contains a single block).
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the
+            meantime, if you need to :py:func:`torch.jit.save` code containing
+            this function, you can implement it manually in a few lines.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
     @staticmethod
@@ -243,6 +257,20 @@ class Labels:
 
         :param name: name of the single dimension in the new labels.
         :param end: end of the range for labels
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the
+            meantime, if you need to :py:func:`torch.jit.save` code containing
+            this function, you can implement it manually in a few lines.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
 
         >>> from metatensor.torch import Labels
         >>> labels = Labels.range("dummy", 7)
@@ -626,6 +654,20 @@ class TensorBlock:
             data.
         :param properties: labels describing the properties (last dimension of the
             array)
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the
+            meantime, if you need to :py:func:`torch.jit.save` code containing
+            this function, you can implement it manually in a few lines.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
     @property

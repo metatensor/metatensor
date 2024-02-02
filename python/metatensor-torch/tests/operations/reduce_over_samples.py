@@ -1,3 +1,5 @@
+import io
+
 import torch
 
 import metatensor.torch
@@ -60,3 +62,35 @@ def test_reduction_all_samples():
     assert torch.all(mean_X[0].values == torch.mean(X[0].values, axis=0))
     assert torch.allclose(std_X[0].values, torch.std(X[0].values, correction=0, axis=0))
     assert torch.allclose(var_X[0].values, torch.var(X[0].values, correction=0, axis=0))
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.sum_over_samples)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.mean_over_samples)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.std_over_samples)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.var_over_samples)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

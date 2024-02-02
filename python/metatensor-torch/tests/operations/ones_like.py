@@ -1,3 +1,5 @@
+import io
+
 import torch
 from packaging import version
 
@@ -30,3 +32,12 @@ def test_operation_as_python():
 def test_operation_as_torch_script():
     scripted = torch.jit.script(metatensor.torch.ones_like)
     check_operation(scripted)
+
+
+def test_save():
+    scripted = torch.jit.script(metatensor.torch.ones_like)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

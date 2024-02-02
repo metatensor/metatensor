@@ -1,3 +1,5 @@
+import io
+
 import torch
 
 import metatensor.torch
@@ -93,3 +95,36 @@ def test_operations_as_torch_script():
     check_permute(torch.jit.script(metatensor.torch.permute_dimensions))
     check_remove(torch.jit.script(metatensor.torch.remove_dimension))
     check_rename(torch.jit.script(metatensor.torch.rename_dimension))
+
+
+def test_save_load():
+    scripted = torch.jit.script(metatensor.torch.append_dimension)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.insert_dimension)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.permute_dimensions)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.remove_dimension)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
+    scripted = torch.jit.script(metatensor.torch.rename_dimension)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
