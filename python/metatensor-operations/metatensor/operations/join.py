@@ -401,7 +401,10 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                     array=reference_block.values,
                     shape=(0,) + reference_block.values.shape[1:],
                 )
-                samples = Labels.empty(reference_block.samples.names)
+                samples = Labels(
+                    names=reference_block.samples.names,
+                    values=_dispatch.empty((0, len(reference_block.samples.names))),
+                )
                 properties = reference_block.properties
             else:
                 assert axis == "properties"
@@ -410,7 +413,10 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                     shape=reference_block.values.shape[:-1] + (0,),
                 )
                 samples = reference_block.samples
-                properties = Labels.empty(reference_block.properties.names)
+                properties = Labels(
+                    names=reference_block.properties.names,
+                    values=_dispatch.empty((len(reference_block.properties.names), 0)),
+                )
 
             new_block = TensorBlock(
                 values=values,
@@ -430,7 +436,10 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                         array=gradient.values,
                         shape=(0,) + gradient.values.shape[1:],
                     )
-                    gradient_samples = Labels.empty(gradient.samples.names)
+                    gradient_samples = Labels(
+                        names=gradient.samples.names,
+                        values=_dispatch.empty((0, len(gradient.samples.names))),
+                    )
                 else:
                     values = _dispatch.empty_like(
                         array=gradient.values,
