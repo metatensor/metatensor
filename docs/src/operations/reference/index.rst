@@ -12,13 +12,9 @@ API reference
   .. grid::
     :margin: 0 0 0 0
 
-    .. grid-item-card:: Version 0.1.0
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-operations-v0.1.0/reference/operations/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.1.0
+        :tag-prefix: metatensor-operations-v
+        :url-suffix: reference/operations/index.html
 
 
 .. toctree::

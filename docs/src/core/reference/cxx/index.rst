@@ -11,22 +11,17 @@ C++ API reference
   .. grid::
     :margin: 0 0 0 0
 
-    .. grid-item-card:: Version 0.1.0
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.0/reference/cxx/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.1.2
+      :tag-prefix: metatensor-core-v
+      :url-suffix: core/reference/cxx/index.html
 
-    .. grid-item-card:: Version 0.1.1
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-core-v0.1.1/reference/cxx/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.1.1
+      :tag-prefix: metatensor-core-v
+      :url-suffix: reference/cxx/index.html
 
+    .. grid-item-version:: 0.1.0
+      :tag-prefix: metatensor-core-v
+      :url-suffix: reference/cxx/index.html
 
 Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-reference>`.
 You can the provided classes and functions in your own code by :ref:`installing

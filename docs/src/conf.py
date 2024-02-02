@@ -16,6 +16,7 @@ import metatensor.torch  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(os.path.join(ROOT, "docs", "extensions"))
 
 
 # ------------------------------------------------------------------------------------ #
@@ -158,6 +159,7 @@ extensions = [
     "breathe",
     "myst_parser",
     "sphinx_design",
+    "versions_list",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

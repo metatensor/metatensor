@@ -12,13 +12,13 @@ API reference
   .. grid::
     :margin: 0 0 0 0
 
-    .. grid-item-card:: Version 0.2.0
-      :link: https://lab-cosmo.github.io/metatensor/metatensor-torch-v0.2.0/reference/torch/index.html
-      :link-type: url
-      :columns: 12 6 3 3
-      :text-align: center
-      :class-body: sd-p-2
-      :class-title: sd-mb-0
+    .. grid-item-version:: 0.2.1
+        :tag-prefix: metatensor-torch-v
+        :url-suffix: atomistic/reference/index.html
+
+    .. grid-item-version:: 0.2.0
+        :tag-prefix: metatensor-torch-v
+        :url-suffix: atomistic/reference/index.html
 
 
 The atomistic machine learning models capabilities of metatensor are part of the

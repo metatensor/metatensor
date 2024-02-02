@@ -28,10 +28,10 @@ and use it will depend on the programming language you are using.
 
 
         This will install the ``metatensor`` package, as well as
-        ``metatensor-core``, and ``metatensor-operations``. We provide pre-built
-        version of ``metatensor-core`` for Linux (x64), Windows (x64) and macOS
-        (x64 and ARM64). The other packages are pure Python package that should
-        install on any operating system.
+        ``metatensor-core``, ``metatensor-operations`` and ``metatensor-learn``.
+        We provide pre-built version of ``metatensor-core`` for Linux (x64),
+        Windows (x64) and macOS (x64 and ARM64). The other packages are pure
+        Python package that should install on any operating system.
 
         You can install any of these sub-packages one by one with
 
@@ -39,6 +39,7 @@ and use it will depend on the programming language you are using.
 
             pip install metatensor-core
             pip install metatensor-operations
+            pip install metatensor-learn
 
         **TorchScript integration**: If you also want to use the TorchScript
         bindings to metatensor, use this instead (see :ref:`this page
@@ -47,15 +48,6 @@ and use it will depend on the programming language you are using.
         .. code-block:: bash
 
             pip install metatensor[torch]
-
-
-        **Experimental packages**: ``metatensor-learn`` is still experimental
-        and only the development version can be installed (see :ref:`this page
-        <dev-install-python>` for more information):
-
-        .. code-block:: bash
-
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-learn
 
 
     .. tab-item:: C and C++

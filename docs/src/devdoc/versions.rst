@@ -56,4 +56,10 @@ should add a tag on the corresponding commit, following this naming convention
 When releasing multiple packages at the same time, the corresponding commit will
 have multiple tags.
 
+The tag should be pushed to GitHub and the CI will build the code and create the
+corresponding `releases`_, and deploy the documentation for this release on
+GitHub pages. Once this is done, you should update the release descriptions on
+GitHub, and add links to the new releases version on the API references pages.
+
 .. _semantic versioning: https://semver.org/
+.. _releases: https://github.com/lab-cosmo/metatensor/releases
