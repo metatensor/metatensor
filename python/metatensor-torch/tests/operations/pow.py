@@ -28,3 +28,6 @@ def test_save():
     scripted = torch.jit.script(metatensor.torch.pow)
     buffer = io.BytesIO()
     torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

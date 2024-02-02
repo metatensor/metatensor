@@ -41,7 +41,10 @@ def test_operations_as_torch_script():
     check_operation(scripted)
 
 
-def test_save():
+def test_save_load():
     scripted = torch.jit.script(metatensor.torch.join)
     buffer = io.BytesIO()
     torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()

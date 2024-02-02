@@ -49,20 +49,22 @@ def block_from_array(array) -> TensorBlock:
             must have at least two dimensions. Too few provided: {n_dimensions}"
         )
 
-    samples = Labels.range("sample", shape[0])
-    Labels(
-        names="sample",
-        values=_dispatch.int_array_like(range(shape[0]), array),
+    samples = Labels(
+        names=["sample"],
+        values=_dispatch.int_array_like(list(range(shape[0])), array).reshape(-1, 1),
     )
     components = [
         Labels(
-            names=f"component_{component_index+1}",
-            values=_dispatch.int_array_like(range(axis_size), array),
+            names=[f"component_{component_index+1}"],
+            values=_dispatch.int_array_like(list(range(axis_size)), array).reshape(
+                -1, 1
+            ),
         )
         for component_index, axis_size in enumerate(shape[1:-1])
     ]
     properties = Labels(
-        names="property", values=_dispatch.int_array_like(range(shape[-1]), array)
+        names=["property"],
+        values=_dispatch.int_array_like(list(range(shape[-1])), array).reshape(-1, 1),
     )
 
     device = _dispatch.get_device(array)

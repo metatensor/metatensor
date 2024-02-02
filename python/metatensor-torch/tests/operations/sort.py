@@ -145,8 +145,3 @@ def test_save():
     buffer.seek(0)
     torch.jit.load(buffer)
     buffer.close()
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()

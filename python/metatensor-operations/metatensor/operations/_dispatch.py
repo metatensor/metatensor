@@ -320,10 +320,17 @@ def index_add(output_array, input_array, index):
 def int_array_like(int_list: List[int], like):
     """
     Converts the input list of int to a numpy array or torch tensor
-    based on the type of `like`.
+    based on the device of `like`.
+
+    If the backend is torch and the device is "meta",
+    the device is set to "cpu".
     """
     if isinstance(like, TorchTensor):
-        return torch.tensor(int_list, dtype=torch.int64, device=like.device)
+        if like.device.type == "meta":
+            device = torch.device("cpu")
+        else:
+            device = like.device
+        return torch.tensor(int_list, dtype=torch.int64, device=device)
     elif isinstance(like, np.ndarray):
         return np.array(int_list).astype(np.int64)
     else:

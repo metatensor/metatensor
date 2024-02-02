@@ -296,7 +296,12 @@ def join(
             if names_are_same:
                 properties = block.properties
             else:
-                properties = Labels.range("property", len(block.properties))
+                properties = Labels(
+                    names=["property"],
+                    values=_dispatch.int_array_like(
+                        list(range(len(block.properties))), block.properties.values
+                    ),
+                )
 
             new_block = TensorBlock(
                 values=block.values,
@@ -403,7 +408,10 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                 )
                 samples = Labels(
                     names=reference_block.samples.names,
-                    values=_dispatch.empty((0, len(reference_block.samples.names))),
+                    values=_dispatch.empty_like(
+                        reference_block.samples.values,
+                        (0, len(reference_block.samples.names)),
+                    ),
                 )
                 properties = reference_block.properties
             else:
@@ -415,7 +423,10 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                 samples = reference_block.samples
                 properties = Labels(
                     names=reference_block.properties.names,
-                    values=_dispatch.empty((len(reference_block.properties.names), 0)),
+                    values=_dispatch.empty_like(
+                        reference_block.properties.values,
+                        (len(reference_block.properties.names), 0),
+                    ),
                 )
 
             new_block = TensorBlock(
@@ -438,7 +449,9 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                     )
                     gradient_samples = Labels(
                         names=gradient.samples.names,
-                        values=_dispatch.empty((0, len(gradient.samples.names))),
+                        values=_dispatch.empty_like(
+                            gradient.samples.values, (0, len(gradient.samples.names))
+                        ),
                     )
                 else:
                     values = _dispatch.empty_like(
