@@ -125,8 +125,7 @@ class Linear(ModuleMap):
             out_features=[len(weights[i].properties) for i in range(len(weights))],
             bias=False,
             device=weights.device,
-            dtype=weights[0].values.dtype,  # due to bug metatensor/issues/464
-            #  we use the dtype of the values
+            dtype=weights[0].values.dtype,  # dtype is consistent over blocks in map
             out_properties=[weights[i].properties for i in range(len(weights))],
         )
         for i in range(len(weights)):
