@@ -323,7 +323,10 @@ def int_array_like(int_list: List[int], like):
     based on the device of `like`.
 
     If the backend is torch and the device is "meta",
-    the device is set to "cpu".
+    the device is set to "cpu". This is useful in case where
+    we create labels for a block that is on the meta device.
+    In that case, `int_list` are the labels, and `like` are the block
+    values.
     """
     if isinstance(like, TorchTensor):
         if like.device.type == "meta":
