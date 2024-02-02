@@ -300,7 +300,7 @@ def join(
                     names=["property"],
                     values=_dispatch.int_array_like(
                         list(range(len(block.properties))), block.properties.values
-                    ),
+                    ).reshape(-1, 1),
                 )
 
             new_block = TensorBlock(
@@ -425,7 +425,7 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
                     names=reference_block.properties.names,
                     values=_dispatch.empty_like(
                         reference_block.properties.values,
-                        (len(reference_block.properties.names), 0),
+                        (0, len(reference_block.properties.names)),
                     ),
                 )
 
