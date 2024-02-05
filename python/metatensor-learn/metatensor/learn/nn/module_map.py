@@ -33,9 +33,8 @@ class ModuleMap(ModuleList):
     tensor block that corresponding to the`i`th key in :param in_keys:.
 
     :param in_keys:
-        A :py:class:`metatensor.Labels` object that determines the keys of the module
-        map that are ass the TensorMaps that are assumed to be in the input tensor map
-        in the :py:meth:`forward` function.
+        A :py:class:`metatensor.Labels` object with the keys of the module map that are 
+        assumed to be in the input tensor map in the :py:meth:`forward` function.
 
     :param modules:
         A sequence of modules applied in the :py:meth:`forward` function on the input
@@ -124,7 +123,7 @@ class ModuleMap(ModuleList):
         tensor([[15.],
                 [11.]], grad_fn=<MmBackward0>)
 
-        Lets look at the metadata
+        Let's look at the metadata
 
         >>> tensor[0]
         TensorBlock
@@ -249,7 +248,7 @@ class ModuleMap(ModuleList):
 
     def forward(self, tensor: TensorMap) -> TensorMap:
         """
-        Takes a tensor map and applies the modules on each key it.
+        Apply the modules on each block in ``tensor``. ``tensor`` must have the same set of keys as the modules used to initialize this :py:class:`ModuleMap`
 
         :param tensor:
             input tensor map

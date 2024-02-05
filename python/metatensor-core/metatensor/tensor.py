@@ -22,7 +22,7 @@ class TensorMap:
     data used in atomistic machine learning similar to a Python :py:class:`dict`.
 
     A tensor map contains a list of :py:class:`TensorBlock`, each one associated with a
-    key. A blocks can either accessed one by one with the :py:func:`TensorMap.block`
+    key. Blocks can either be accessed one by one with the :py:func:`TensorMap.block`
     function, or by iterating over the tensor map itself:
 
     .. code-block:: python
@@ -574,7 +574,7 @@ class TensorMap:
 
         This function will remove ``keys_to_move`` from the keys, and find all blocks
         with the same remaining keys values. Then it will merge these blocks along the
-        properties direction (i.e. do an *horizontal* concatenation).
+        properties direction (i.e. do a *horizontal* concatenation).
 
         If ``keys_to_move`` is given as strings, then the new property labels will
         **only** contain entries from the existing blocks. For example, merging a block
