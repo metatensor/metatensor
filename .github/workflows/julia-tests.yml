@@ -40,12 +40,30 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
 
-      - name: build package
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+        with:
+          version: "v0.5.4"
+
+      - name: Setup sccache environnement variables
         run: |
-          cd julia
-          julia --check-bounds=yes --inline=no --project -e 'using Pkg; Pkg.build("Metatensor")'
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
+      - name: setup package
+        run: |
+          julia -e 'using Pkg; Pkg.add(url="https://github.com/Luthaf/Metatensor_jll.jl")'
+          julia -e 'using Pkg; Pkg.develop(path="./julia")'
+
+      - name: build local version of libmetatensor
+        run: julia julia/deps/build_local.jl
 
       - name: run tests
-        run: |
-          cd julia
-          julia --check-bounds=yes --inline=no --project -e 'using Pkg; Pkg.test("Metatensor"; coverage=true)'
+        run: julia --check-bounds=yes --inline=no -e 'using Pkg; Pkg.test("Metatensor"; coverage=true)'

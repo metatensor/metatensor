@@ -1,0 +1,8 @@
+[Metatensor]
+# Set this to the path of a local build of metatensor to use it instead of
+# Metatensor_jll.
+#
+# In particular, this is set by `deps/build_local.jl` when using the local
+# checkout to build the core library.
+
+# libmetatensor = "/path/to/libmetatensor.so"
