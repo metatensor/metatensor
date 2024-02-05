@@ -23,6 +23,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sample_id`, and provided collate functions `group` and `group_and_join`
   updated accordingly.
 
+#### Fixed
+
+- Removal of usage of Labels.range in nn modules to support torch.jit.save see metatensor issue #410
+
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.1.0) - 2024-01-26
 
 ### Added
