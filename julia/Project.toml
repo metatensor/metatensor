@@ -5,9 +5,10 @@ version = "0.1.0"
 
 [deps]
 Metatensor_jll = "0a60894c-bde1-5a72-bbe5-9f45bee4e041"
+Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 
 [compat]
-Metatensor_jll = "= 0.1.0"
+Metatensor_jll = "= 0.1.2"
 julia = "1.6"
 
 [extras]

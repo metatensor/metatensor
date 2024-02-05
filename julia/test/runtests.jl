@@ -7,7 +7,7 @@ TESTS = [
 
 function main()
     @testset "Version" begin
-        @test Metatensor.version() == "0.1.0"
+        @test startswith(Metatensor.lib.version(), "0.")
     end
 
     for test in TESTS
