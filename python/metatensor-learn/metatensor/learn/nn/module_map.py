@@ -248,7 +248,8 @@ class ModuleMap(ModuleList):
 
     def forward(self, tensor: TensorMap) -> TensorMap:
         """
-        Apply the modules on each block in ``tensor``. ``tensor`` must have the same set of keys as the modules used to initialize this :py:class:`ModuleMap`
+        Apply the modules on each block in ``tensor``. ``tensor`` must have the same
+        set of keys as the modules used to initialize this :py:class:`ModuleMap`.
 
         :param tensor:
             input tensor map
