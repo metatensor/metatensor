@@ -33,7 +33,7 @@ class ModuleMap(ModuleList):
     tensor block that corresponding to the`i`th key in :param in_keys:.
 
     :param in_keys:
-        A :py:class:`metatensor.Labels` object with the keys of the module map that are 
+        A :py:class:`metatensor.Labels` object with the keys of the module map that are
         assumed to be in the input tensor map in the :py:meth:`forward` function.
 
     :param modules:
