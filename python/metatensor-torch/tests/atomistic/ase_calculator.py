@@ -19,6 +19,7 @@ from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
 ase = pytest.importorskip("ase")
 import ase.build  # noqa  isort: skip
 import ase.units  # noqa  isort: skip
+import ase.md  # noqa  isort: skip
 import ase.calculators.lj  # noqa isort: skip
 
 
@@ -240,3 +241,36 @@ def test_get_properties(model, atoms):
     assert np.all(properties["energy"] == atoms.get_potential_energy())
     assert np.all(properties["forces"] == atoms.get_forces())
     assert np.all(properties["stress"] == atoms.get_stress())
+
+
+def test_serialize_ase(tmpdir, model, atoms):
+    calculator = MetatensorCalculator(model)
+
+    message = (
+        "can not save metatensor model in ASE `todict`, please initialize "
+        "`MetatensorCalculator` with a path to a saved model file if you need to use "
+        "`todict"
+    )
+    with pytest.raises(RuntimeError, match=message):
+        calculator.todict()
+
+    # save with exported model
+    path = os.path.join(tmpdir, "exported-model.pt")
+    model.export(path)
+
+    calculator = MetatensorCalculator(path)
+    data = calculator.todict()
+    _ = MetatensorCalculator.fromdict(data)
+
+    # check the standard trajectory format of ASE, which uses `todict`/`fromdict`
+    atoms.calc = MetatensorCalculator(path)
+    with tmpdir.as_cwd():
+        dyn = ase.md.VelocityVerlet(
+            atoms,
+            timestep=2 * ase.units.fs,
+            trajectory="file.traj",
+        )
+        dyn.run(10)
+
+        atoms = ase.io.read("file.traj", "-1")
+        assert atoms.calc is not None

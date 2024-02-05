@@ -59,12 +59,17 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         """
         super().__init__()
 
+        self.parameters = {
+            "check_consistency": check_consistency,
+        }
+
         if isinstance(model, (str, bytes, pathlib.PurePath)):
             if not os.path.exists(model):
                 raise InputError(f"given model path '{model}' does not exist")
 
             check_atomistic_model(model)
             self._model = torch.jit.load(model)
+            self.parameters["model_path"] = str(model)
         elif isinstance(model, torch.jit.RecursiveScriptModule):
             if model.original_name != "MetatensorAtomisticModel":
                 raise InputError(
@@ -77,23 +82,23 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         else:
             raise TypeError(f"unknown type for model: {type(model)}")
 
-        self.parameters = {
-            "model": model,
-            "check_consistency": check_consistency,
-        }
-
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
         self.implemented_properties = ALL_ASE_PROPERTIES
 
     def todict(self):
-        # used by ASE to save the calculator
-        raise NotImplementedError("todict is not yet implemented")
+        if "model_path" not in self.parameters:
+            raise RuntimeError(
+                "can not save metatensor model in ASE `todict`, please initialize "
+                "`MetatensorCalculator` with a path to a saved model file if you need "
+                "to use `todict`"
+            )
+
+        return self.parameters
 
     @classmethod
-    def fromdict(cls, dict):
-        # used by ASE to load a saved calculator
-        raise NotImplementedError("fromdict is not yet implemented")
+    def fromdict(cls, data):
+        return MetatensorCalculator(data["model_path"], data["check_consistency"])
 
     def run_model(
         self,
