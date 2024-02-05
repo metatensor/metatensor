@@ -30,8 +30,7 @@ def group(batch: List[NamedTuple]) -> NamedTuple:
     :return: a named tuple, with the named fields the same as in the original
         samples in the batch, but with the samples grouped by data field.
     """
-    names = [name if name != "sample_id" else "sample_ids" for name in batch[0]._fields]
-    return namedtuple("Batch", names)(*list(zip(*batch)))
+    return namedtuple("Batch", batch[0]._fields)(*list(zip(*batch)))
 
 
 def group_and_join(
@@ -82,13 +81,13 @@ def group_and_join(
         :py:class:`TensorMap` objects, they are joined along the samples axis.
     """
     data: List[Union[TensorMap, torch.Tensor]] = []
-    names = [name if name != "sample_id" else "sample_ids" for name in batch[0]._fields]
+    names = batch[0]._fields
     if fields_to_join is None:
         fields_to_join = names
     if join_kwargs is None:
         join_kwargs = {}
     for name, field in zip(names, list(zip(*batch))):
-        if name == "sample_ids":  # special case, keep as is
+        if name == "sample_id":  # special case, keep as is
             data.append(field)
             continue
         # Join tensors or TensorMaps if requested

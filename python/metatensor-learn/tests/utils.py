@@ -228,7 +228,7 @@ def indexed_dataset_in_mem(sample_indices):
     """Create an indexed dataset with everything in memory"""
     inputs, outputs, auxiliaries = generate_data(sample_indices)
     return IndexedDataset(
-        sample_ids=sample_indices,
+        sample_id=sample_indices,
         input=inputs,
         output=outputs,
         auxiliary=auxiliaries,
@@ -239,7 +239,7 @@ def indexed_dataset_on_disk(sample_indices):
     """Create an indexed dataset with everything on disk"""
     _ = generate_data(sample_indices)
     return IndexedDataset(
-        sample_ids=sample_indices,
+        sample_id=sample_indices,
         input=partial(transform, filename="input"),
         output=partial(transform, filename="output"),
         auxiliary=partial(transform, filename="auxiliary"),
@@ -253,7 +253,7 @@ def indexed_dataset_mixed_mem_disk(sample_indices):
     """
     inputs, outputs, _ = generate_data(sample_indices)
     return IndexedDataset(
-        sample_ids=sample_indices,
+        sample_id=sample_indices,
         input=inputs,
         output=outputs,
         auxiliary=partial(transform, filename="auxiliary"),
