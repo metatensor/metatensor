@@ -9,8 +9,14 @@ import pytest
 torch = pytest.importorskip("torch")
 
 import metatensor  # noqa: E402
+import metatensor.torch  # noqa: E402
 from metatensor import Labels, TensorBlock, TensorMap  # noqa: E402
-from metatensor.learn.data import Dataset, group, group_and_join  # noqa: E402
+from metatensor.learn.data import (  # noqa: E402
+    DataLoader,
+    Dataset,
+    group,
+    group_and_join,
+)
 
 
 def test_group_object_types():
@@ -316,3 +322,31 @@ def test_group_and_join_tensormaps_different_keys_union():
         ],
     )
     assert metatensor.equal(batch.y, target_tensor)
+
+
+def test_group_and_join_script_object():
+    """
+    Tests that data of arbitrary types is collated correctly using
+    `group_and_join` collate fxn. Specifically, this tests that a torch script
+    object that isn't a TensorMap is handled correctly.
+    """
+    # Create a metatensor.torch.TensorBlock - i.e. a torchscript object that
+    # isn't a TensorMap
+    tensorblock = metatensor.torch.TensorBlock(
+        values=torch.ones((1, 1)),
+        samples=metatensor.torch.Labels(
+            names=["sample_index"], values=torch.tensor([[0]])
+        ),
+        components=[],
+        properties=metatensor.torch.Labels(names=["p"], values=torch.tensor([[0]])),
+    )
+    tensormap = metatensor.torch.TensorMap(
+        keys=metatensor.torch.Labels(
+            names=["a"], values=torch.tensor([0]).reshape(-1, 1)
+        ),
+        blocks=[tensorblock.copy()],
+    )
+
+    dset = Dataset(a=[tensorblock], b=[tensormap])
+    dloader = DataLoader(dset, batch_size=2, collate_fn=group_and_join)
+    next(iter(dloader))  # this errors if type-check logic not correct
