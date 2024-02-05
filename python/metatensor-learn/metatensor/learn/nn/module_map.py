@@ -123,7 +123,7 @@ class ModuleMap(ModuleList):
         tensor([[15.],
                 [11.]], grad_fn=<MmBackward0>)
 
-        Lets look at the metadata
+        Let's look at the metadata
 
         >>> tensor[0]
         TensorBlock
