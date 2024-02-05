@@ -100,7 +100,7 @@ def test_indexed_dataloader_indices_shuffle(create_dataset, tmpdir):
 
         matching = []
         for batch_i, batch in enumerate(dloader):
-            matching.append(np.all(batch.sample_ids == batched_indices[batch_i]))
+            matching.append(np.all(batch.sample_id == batched_indices[batch_i]))
 
         assert np.all(matching)
 
@@ -124,7 +124,7 @@ def test_dataloader_collate_fn_group_and_join(tmpdir):
                         in metatensor.unique_metadata(
                             field, "samples", "sample_index"
                         ).values
-                        for A in batch.sample_ids
+                        for A in batch.sample_id
                     ]
                 )
 
@@ -140,7 +140,7 @@ def test_dataloader_collate_fn_group(tmpdir):
         for batch in dloader:
             for field in [batch.input, batch.output, batch.auxiliary]:
                 assert isinstance(field, tuple)
-                for i, A in enumerate(batch.sample_ids):
+                for i, A in enumerate(batch.sample_id):
                     assert isinstance(field[i], TensorMap)
                     assert (
                         A

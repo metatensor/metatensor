@@ -71,7 +71,7 @@ print(dataset[3])
 #
 # Suppose the unique indexes for our 5 samples are:
 
-sample_ids = [
+sample_id = [
     "cat",
     4,
     ("small", "cow"),
@@ -79,11 +79,11 @@ sample_ids = [
     0,
 ]
 
-# Build an IndexedDataset, specifying the unique sample indexes with ``sample_ids``
+# Build an IndexedDataset, specifying the unique sample indexes with ``sample_id``
 dataset = IndexedDataset(
     x=x_data,
     y=y_data,
-    sample_ids=sample_ids,
+    sample_id=sample_id,
 )
 
 # %%
@@ -124,8 +124,7 @@ print(dataset.get_sample("cat"))
 # A :py:class:`DataLoader` can be constructed on top of an :py:class:`IndexedDataset`
 # in the same way as a :py:class:`Dataset`. Batches are accessed by iterating over the
 # :py:class:`DataLoader`, though this time the ``Batch`` named tuple returned by the
-# data loader will contain the unique sample indexes ``sample_ids`` (note: plural for
-# the batch, singular for the sample) as the first field.
+# data loader will contain the unique sample indexes ``sample_id`` as the first field.
 
 dataloader = DataLoader(dataset, batch_size=2)
 
@@ -145,7 +144,7 @@ for ids, x, y in dataloader:
 # -----------------------------------------------------------------
 #
 # When defining an :py:class:`IndexedDataset` with data fields on-disk, i.e. to be
-# loaded lazily, the sample indexes passed as the ``sample_ids`` kwarg to the
+# loaded lazily, the sample indexes passed as the ``sample_id`` kwarg to the
 # constructor are used as the arguments to the load function.
 #
 # To demonstrate this, as we did in the previous tutorial, let's save the ``x`` data to
@@ -157,7 +156,7 @@ for ids, x, y in dataloader:
 # Create a directory to save the dummy x data to disk
 os.makedirs("data", exist_ok=True)
 
-for i, x in zip(sample_ids, x_data):
+for i, x in zip(sample_id, x_data):
     torch.save(x, f"data/x_{i}.pt")
 
 # %%
@@ -180,7 +179,7 @@ def load_x(sample_id):
 # Now when we define an IndexedDataset, the 'x' data field can be passed as a
 # callable.
 
-mixed_dataset = IndexedDataset(x=load_x, y=y_data, sample_ids=sample_ids)
+mixed_dataset = IndexedDataset(x=load_x, y=y_data, sample_id=sample_id)
 print(mixed_dataset.get_sample("dog"))
 print(mixed_dataset.get_sample(("small", "cow")))
 
@@ -196,11 +195,11 @@ print(mixed_dataset.get_sample(("small", "cow")))
 #
 # For instance, imagine we have a global Dataset of 1000 samples, with indices [0, ...,
 # 999], but only want to build a dataset for samples with indices [4, 7, 200, 5, 999],
-# in that order. We can pass these indices kwarg ``sample_ids``.
+# in that order. We can pass these indices kwarg ``sample_id``.
 
 # Build an IndexedDataset, specifying the subset sample indexes in a specific order
-sample_ids = [4, 7, 200, 5, 999]
-dataset = IndexedDataset(x=x_data, y=y_data, sample_ids=sample_ids)
+sample_id = [4, 7, 200, 5, 999]
+dataset = IndexedDataset(x=x_data, y=y_data, sample_id=sample_id)
 
 # %%
 #

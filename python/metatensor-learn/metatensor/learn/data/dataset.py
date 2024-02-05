@@ -104,9 +104,9 @@ class Dataset(_BaseDataset):
     """
 
     def __init__(self, size: Optional[int] = None, **kwargs):
-        if "sample_ids" in kwargs:
+        if "sample_id" in kwargs:
             raise ValueError(
-                "Keyword argument 'sample_ids' is not accepted by Dataset."
+                "Keyword argument 'sample_id' is not accepted by Dataset."
                 " For an indexed dataset, use the IndexedDataset class"
                 " instead."
             )
@@ -151,45 +151,43 @@ class IndexedDataset(_BaseDataset):
     the keyword is the name of the field, and the value is either a list of data
     objects or a callable.
 
-    `sample_ids` must be a unique list of any hashable object. Each respective
-    sample ID is assigned an internal numeric index from 0 to `len(sample_ids)`
+    `sample_id` must be a unique list of any hashable object. Each respective
+    sample ID is assigned an internal numeric index from 0 to `len(sample_id)`
     - 1. This is used to internally index the dataset, and can be used to access
     a given sample. For instance, `dataset[0]` returns a named tuple of all data
     fields for the first sample in the dataset, i.e. the one with unique sample
-    ID at `sample_ids[0]`. In order to access a sample by its ID, use the
+    ID at `sample_id[0]`. In order to access a sample by its ID, use the
     Dataset.get_sample method.
 
     A data field kwarg passed as a list must be comprised of the same type of
-    object, and its length must be consistent with the length of `sample_ids`
+    object, and its length must be consistent with the length of `sample_id`
     and the length of all other data fields passed as lists.
 
     Otherwise a data field kwarg passed as a callable must take a single
     argument corresponding to the unique sample ID (i.e. those passed in
-    `sample_ids`) and return the data object for that sample ID. This data field
+    `sample_id`) and return the data object for that sample ID. This data field
     for a given sample is then only lazily loaded into memory when the
     Dataset.__getitem__ or Dataset.get_sample methods are called.
 
-    :param sample_ids: A list of unique IDs for each sample in the dataset.
+    :param sample_id: A list of unique IDs for each sample in the dataset.
     :param kwargs: Keyword arguments specifying the data fields for the dataset.
     """
 
-    def __init__(self, sample_ids: List, **kwargs):
+    def __init__(self, sample_id: List, **kwargs):
         if "size" in kwargs:
             raise ValueError(
                 "Keyword argument 'size' is not accepted by IndexedDataset."
                 " For a dataset defined on size rather than explicit sample IDs,"
                 " use the Dataset class instead."
             )
-        if len(set(sample_ids)) != len(sample_ids):
+        if len(set(sample_id)) != len(sample_id):
             raise ValueError("Sample IDs must be unique. Found duplicate sample IDs.")
 
         super(IndexedDataset, self).__init__(
-            arg_name="sample_ids", size=len(sample_ids), **kwargs
+            arg_name="sample_id", size=len(sample_id), **kwargs
         )
-        self._sample_ids = sample_ids
-        self._sample_id_to_idx = {
-            sample_id: idx for idx, sample_id in enumerate(sample_ids)
-        }
+        self._sample_id = sample_id
+        self._sample_id_to_idx = {smpl_id: idx for idx, smpl_id in enumerate(sample_id)}
 
     def __getitem__(self, idx: int) -> NamedTuple:
         """
@@ -203,15 +201,15 @@ class IndexedDataset(_BaseDataset):
         if idx not in self._indices:
             raise ValueError(f"Index {idx} not in dataset")
         names = ["sample_id"] + self._field_names
-        sample_data = [self._sample_ids[idx]]
+        sample_data = [self._sample_id[idx]]
         for name in self._field_names:
             if callable(self._data[name]):  # lazy load using sample ID
                 try:
-                    sample_data.append(self._data[name](self._sample_ids[idx]))
+                    sample_data.append(self._data[name](self._sample_id[idx]))
                 except Exception as e:
                     raise IOError(
                         f"Error loading data field '{name}' for sample"
-                        f" ID {self._sample_ids[idx]}: {e}"
+                        f" ID {self._sample_id[idx]}: {e}"
                     )
             else:
                 assert isinstance(self._data[name], list)

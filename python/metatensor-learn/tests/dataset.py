@@ -117,7 +117,7 @@ def test_indexed_dataset_fields():
     dset = IndexedDataset(
         a=[torch.zeros((1, 1)) for _ in range(10)],
         c=[torch.zeros((1, 1)) for _ in range(10)],
-        sample_ids=list(range(10)),
+        sample_id=list(range(10)),
         b=[torch.zeros((1, 1)) for _ in range(10)],
     )
     assert np.all(dset[5]._fields == ("sample_id", "a", "c", "b"))
@@ -147,7 +147,7 @@ def test_indexed_dataset_fields_arbitrary_types():
     dset = IndexedDataset(
         a=["hello" for _ in range(10)],
         c=[(3, 4, 7) for _ in range(10)],
-        sample_ids=list(range(10)),
+        sample_id=list(range(10)),
         b=[0 for _ in range(10)],
     )
     assert dset[5].a == "hello"
@@ -218,7 +218,7 @@ def test_indexed_dataset_invalid_callable():
     with pytest.raises(IOError) as excinfo:
         dset = IndexedDataset(
             c=lambda y: metatensor.load(f"path/to/{y}"),
-            sample_ids=["cat", "dog"],
+            sample_id=["cat", "dog"],
         )
         dset.get_sample("cat")
     assert message in str(excinfo.value)
@@ -252,7 +252,7 @@ def test_indexed_dataset_inconsistent_lengths():
     the appropriate error.
     """
     message = (
-        "Number of samples inconsistent between argument 'sample_ids' (9) "
+        "Number of samples inconsistent between argument 'sample_id' (9) "
         "and data fields in kwargs: ([10])"
     )
     with pytest.raises(ValueError, match=re.escape(message)):
@@ -260,11 +260,11 @@ def test_indexed_dataset_inconsistent_lengths():
             a=lambda x: f"path/to/{x}",
             c=lambda y: f"path/to/{y}",
             x=list(range(10)),
-            sample_ids=list(range(9)),
+            sample_id=list(range(9)),
         )
 
 
-def test_indexed_dataset_nonunique_sample_ids():
+def test_indexed_dataset_nonunique_sample_id():
     """
     Tests the appropriate error is raised when non-unique sample IDs are
     passed.
@@ -273,5 +273,5 @@ def test_indexed_dataset_nonunique_sample_ids():
     with pytest.raises(ValueError, match=message):
         IndexedDataset(
             a=[1, 2, 3],
-            sample_ids=["a", "b", "a"],
+            sample_id=["a", "b", "a"],
         )
