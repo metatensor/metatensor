@@ -70,10 +70,10 @@ def group_and_join(
         passed that are either invalid or are names of fields that aren't these
         types will be silently ignored.
     :param join_kwargs: keyword arguments passed to the
-        :py:func:`metatensor.join` function, to be used when joining data
-        fields comprised of :py:class:`TensorMap` objects. If none, the defaults
-        are used - see the function documentation for details. The
-        `axis="samples"` arg is set by default.
+        :py:func:`metatensor.join` function, to be used when joining data fields
+        comprised of :py:class:`TensorMap` objects. If none, the defaults are
+        used - see the function documentation for details. The `axis="samples"`
+        arg is set by default.
 
     :return: a named tuple, with the named fields the same as in the original
         samples in the batch, but with the samples collated for each respective
@@ -90,16 +90,21 @@ def group_and_join(
         if name == "sample_id":  # special case, keep as is
             data.append(field)
             continue
-        # Join tensors or TensorMaps if requested
-        if isinstance(field[0], TensorMap) and name in fields_to_join:
-            data.append(metatensor.join(field, axis="samples", **join_kwargs))
-        elif isinstance(field[0], torch.ScriptObject):
-            if field[0]._has_method("keys_to_properties"):
-                # inferred torch.TensorMap type
+
+        if name in fields_to_join:  # Join tensors if requested
+            if isinstance(field[0], TensorMap):
+                # metatensor.TensorMap type
+                data.append(metatensor.join(field, axis="samples", **join_kwargs))
+            elif isinstance(field[0], torch.ScriptObject) and field[0]._has_method(
+                "keys_to_properties"
+            ):  # inferred metatensor.torch.TensorMap type
                 data.append(metatensor.torch.join(field, axis="samples", **join_kwargs))
-        elif isinstance(field[0], torch.Tensor) and name in fields_to_join:
-            data.append(torch.vstack(field))
-        else:
+            elif isinstance(field[0], torch.Tensor):  # torch.Tensor type
+                data.append(torch.vstack(field))
+            else:
+                data.append(field)
+
+        else:  # otherwise just keep as a list
             data.append(field)
 
     return namedtuple("Batch", names)(*data)
