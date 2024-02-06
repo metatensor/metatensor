@@ -112,7 +112,7 @@ class Linear(ModuleMap):
         Construct a linear module map from a tensor map for the weights and bias.
 
         :param weights:
-            The weight tensor map from which we create the linear modules.  The
+            The weight tensor map from which we create the linear modules. The
             properties of the tensor map describe the input dimension and the samples
             describe the output dimension.
 
