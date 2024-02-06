@@ -4,6 +4,8 @@ from typing import List, Optional, Union
 import torch
 from torch.nn import Module, ModuleList
 
+from metatensor.operations import _dispatch
+
 from .._classes import Labels, LabelsEntry, TensorBlock, TensorMap
 
 
@@ -280,7 +282,13 @@ class ModuleMap(ModuleList):
 
         out_values = module.forward(block.values)
         if self._out_properties is None:
-            properties = Labels.range("_", out_values.shape[-1])
+            # we do not use range because of metatensor/issues/410
+            properties = Labels(
+                "_",
+                _dispatch.int_array_like(
+                    list(range(out_values.shape[-1])), block.samples.values
+                ).reshape(-1, 1),
+            )
         else:
             properties = self._out_properties[module_idx]
         return TensorBlock(

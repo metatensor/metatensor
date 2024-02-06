@@ -1,3 +1,5 @@
+import io
+
 import numpy as np
 import pytest
 import torch
@@ -117,3 +119,11 @@ def test_torchscript_linear(single_block_tensor):  # noqa F811
 
     # tests if member functions work that do not appear in forward
     tensor_module_script.get_module(single_block_tensor.keys[0])
+
+    # test save load
+    scripted = torch.jit.script(tensor_module_script)
+    buffer = io.BytesIO()
+    torch.jit.save(scripted, buffer)
+    buffer.seek(0)
+    torch.jit.load(buffer)
+    buffer.close()
