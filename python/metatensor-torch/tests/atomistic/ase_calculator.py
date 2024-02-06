@@ -271,6 +271,7 @@ def test_serialize_ase(tmpdir, model, atoms):
             trajectory="file.traj",
         )
         dyn.run(10)
+        dyn.close()
 
         atoms = ase.io.read("file.traj", "-1")
         assert atoms.calc is not None

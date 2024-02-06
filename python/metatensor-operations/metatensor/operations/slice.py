@@ -6,6 +6,7 @@ from ._classes import (
     check_isinstance,
     torch_jit_is_scripting,
 )
+from ._dispatch import TorchTensor
 
 
 def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
@@ -224,8 +225,18 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
             if len(gradient.gradients_list()) != 0:
                 raise NotImplementedError("gradients of gradients are not supported")
 
+            sample_column = gradient.samples.column("sample")
+            if not isinstance(gradient.samples.values, TorchTensor) and isinstance(
+                samples_mask, TorchTensor
+            ):
+                # Torch complains if `sample_column` is numpy since it tries to convert
+                # it to a Tensor, but the numpy array is read-only. Making a copy
+                # removes the read-only marker
+                sample_column = sample_column.copy()
+
             # Create a samples filter for the Gradient TensorBlock
-            grad_samples_mask = samples_mask[gradient.samples.column("sample")]
+            grad_samples_mask = samples_mask[sample_column]
+
             new_grad_samples_values = _dispatch.mask(
                 gradient.samples.values, 0, grad_samples_mask
             )
