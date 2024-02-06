@@ -1,15 +1,26 @@
+import numpy as np
 import pytest
+
+from metatensor import Labels
 
 
 torch = pytest.importorskip("torch")
-
-import numpy as np  # noqa: E402
 from torch.nn import Module, Sigmoid  # noqa: E402
 
-from metatensor import Labels  # noqa: E402
 from metatensor.learn.nn import ModuleMap  # noqa: E402
 
-from .utils import TORCH_KWARGS, single_block_tensor_torch  # noqa F411 E402
+from .utils import (  # noqa E402
+    TORCH_KWARGS,
+    random_single_block_no_components_tensor_map,
+)
+
+
+@pytest.fixture
+def single_block_tensor_torch():
+    """
+    random tensor map with no components using torch as array backend
+    """
+    return random_single_block_no_components_tensor_map(use_torch=True)
 
 
 class MockModule(Module):
@@ -37,9 +48,7 @@ def set_random_generator():
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
-def test_module_map_single_block_tensor(
-    single_block_tensor_torch, out_properties  # noqa F811
-):
+def test_module_map_single_block_tensor(single_block_tensor_torch, out_properties):
     modules = []
     for key in single_block_tensor_torch.keys:
         modules.append(

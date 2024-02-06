@@ -1,21 +1,24 @@
 import io
 
-import numpy as np
 import pytest
 import torch
 
 import metatensor.torch
-from metatensor import Labels
-from metatensor.torch import allclose_raise
+from metatensor.torch import Labels, allclose_raise
 from metatensor.torch.learn.nn import Linear
 
-from .utils import TORCH_KWARGS, single_block_tensor  # noqa F401
+from .utils import TORCH_KWARGS, random_single_block_no_components_tensor_map
+
+
+@pytest.fixture
+def single_block_tensor():
+    return random_single_block_no_components_tensor_map()
 
 
 @pytest.fixture(scope="module", autouse=True)
 def set_random_generator():
     """Set the random generator to same seed before each test is run.
-    Otherwise test behaviour is dependend on the order of the tests
+    Otherwise test behaviour is dependent on the order of the tests
     in this file and the number of parameters of the test.
     """
     torch.random.manual_seed(122578741812)
@@ -23,7 +26,7 @@ def set_random_generator():
     torch.set_default_dtype(TORCH_KWARGS["dtype"])
 
 
-def test_linear_single_block_tensor(single_block_tensor):  # noqa F811
+def test_linear_single_block_tensor(single_block_tensor):
     # testing initialization by non sequence arguments
     tensor_module_init_nonseq = Linear(
         in_keys=single_block_tensor.keys,
@@ -89,22 +92,23 @@ def test_linear_single_block_tensor(single_block_tensor):  # noqa F811
             assert gradient.properties == out_gradient.properties
 
 
-def test_linear_from_weight(single_block_tensor):  # noqa F811
+def test_linear_from_weight(single_block_tensor):
+    print(type(single_block_tensor.block().values))
     weights = metatensor.torch.slice(
         single_block_tensor,
         axis="samples",
-        labels=Labels(["sample", "structure"], np.array([[0, 0], [1, 1]])),
+        labels=Labels(["sample", "structure"], torch.IntTensor([[0, 0], [1, 1]])),
     )
     bias = metatensor.torch.slice(
         single_block_tensor,
         axis="samples",
-        labels=Labels(["sample", "structure"], np.array([[3, 3]])),
+        labels=Labels(["sample", "structure"], torch.IntTensor([[3, 3]])),
     )
     module = Linear.from_weights(weights, bias)
     module(single_block_tensor)
 
 
-def test_torchscript_linear(single_block_tensor):  # noqa F811
+def test_torchscript_linear(single_block_tensor):
     tensor_module = Linear(
         single_block_tensor.keys,
         in_features=len(single_block_tensor[0].properties),
