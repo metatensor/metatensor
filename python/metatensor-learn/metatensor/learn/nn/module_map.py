@@ -341,3 +341,32 @@ class ModuleMap(ModuleList):
             representation += f"  ({key!r}): {self[i]!r}\n"
         representation += ")"
         return representation
+
+    # def to(
+    #    self,
+    #    device: torch.device = None,
+    #    dtype: torch.dtype = None,
+    #    non_blocking: bool = None,
+    #    copy: bool = None,
+    #    memory_format: torch.memory_format = None,
+    # ):
+    #    # (Pdb) tensor_module_script.to(torch.float32, "cpu")
+    #    # *** TypeError: to() received an invalid combination of arguments - got (torch.dtype, str), but expected one of: # noqa
+    #    # * (torch.device device, torch.dtype dtype, bool non_blocking, bool copy, *, torch.memory_format memory_format) # noqa
+    #    # * (torch.dtype dtype, bool non_blocking, bool copy, *, torch.memory_format memory_format)  # noqa
+    #    # * (Tensor tensor, bool non_blocking, bool copy, *, torch.memory_format memory_format)  # noqa
+    #    if copy is None or copy:
+    #        return self.copy() # TODO
+    #    else:
+    #        for _, parameter in self._modules.items():
+    #            parameter.to(device, dtype)  # non_block, copy, memory=
+    #        if self._out_properties is not None:
+    #            self._out_properties = self._out_properties.to(
+    #                    device=device,
+    #                    dtype=dtype,
+    #                    non_blocking=non_blocking,
+    #                    memory_format=memory_format)
+    #        if copy is None or copy:
+    #            return self.copy() # TODO
+    #        else:
+    #        return self

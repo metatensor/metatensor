@@ -10,6 +10,15 @@ from metatensor.torch.learn.nn import ModuleMap
 from .utils import TORCH_KWARGS, single_block_tensor  # noqa F401
 
 
+try:
+    if torch.cuda.is_available():
+        HAS_CUDA = True
+    else:
+        HAS_CUDA = False
+except ImportError:
+    HAS_CUDA = False
+
+
 class MockModule(Module):
     def __init__(self, in_features, out_features):
         super().__init__()
@@ -21,13 +30,17 @@ class MockModule(Module):
         return self._last_layer(self._activation(self._linear(input)))
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def set_random_generator():
     """Set the random generator to same seed before each test is run.
     Otherwise test behaviour is dependend on the order of the tests
     in this file and the number of parameters of the test.
     """
     torch.random.manual_seed(122578741812)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def set_default_torch_resources():
     torch.set_default_device(TORCH_KWARGS["device"])
     torch.set_default_dtype(TORCH_KWARGS["dtype"])
 
@@ -81,6 +94,70 @@ def test_module_map_single_block_tensor(
                 )
             else:
                 assert out_block.gradient(parameter).properties == out_properties[0]
+
+
+@pytest.mark.parametrize(
+    "out_properties", [None, [Labels(["a", "b"], torch.tensor([[1, 1]]))]]
+)
+@pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
+def test_cuda_module_map_to(single_block_tensor, out_properties):  # noqa F811
+    """
+    We set the correct default device for initialization and check if the module this
+    works once the default device has been changed. This catches cases where the default
+    device or a hard coded device is used for tensor created within the forward
+    function.
+    """
+    # check if default device cuda -> cpu
+    torch.set_default_device("cuda")
+    modules = []
+    for key in single_block_tensor.keys:
+        modules.append(
+            MockModule(
+                in_features=len(single_block_tensor.block(key).properties),
+                out_features=5,
+            )
+        )
+    # recreate out_properties to move to default device to check if `to` operation later
+    # moves them to correct device
+    if out_properties is not None:
+        out_properties = [
+            out_properties_label.to(torch.device("cuda"))
+            for out_properties_label in out_properties
+        ]
+    tensor_module = ModuleMap(
+        single_block_tensor.keys, modules, out_properties=out_properties
+    )
+    tensor_module.to("cpu")
+    single_block_tensor = single_block_tensor.to(device="cpu")
+    with torch.no_grad():
+        out_tensor = tensor_module(single_block_tensor)
+    assert out_tensor.device.type == "cpu"
+
+    # cpu -> cuda
+    torch.set_default_device("cpu")
+    modules = []
+    for key in single_block_tensor.keys:
+        modules.append(
+            MockModule(
+                in_features=len(single_block_tensor.block(key).properties),
+                out_features=5,
+            )
+        )
+    # recreate out_properties to move to default device to check if `to` operation later
+    # moves them to correct device
+    if out_properties is not None:
+        out_properties = [
+            out_properties_label.to("cpu") for out_properties_label in out_properties
+        ]
+    tensor_module = ModuleMap(
+        single_block_tensor.keys, modules, out_properties=out_properties
+    )
+    tensor_module.to("cuda")
+    single_block_tensor = single_block_tensor.to(device="cuda")
+    with torch.no_grad():
+        out_tensor = tensor_module(single_block_tensor)
+
+    assert out_tensor.device.type == "cuda"
 
 
 def test_torchscript_module_map(single_block_tensor):  # noqa F811

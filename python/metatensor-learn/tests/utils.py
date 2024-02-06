@@ -19,7 +19,9 @@ from metatensor.learn.data import Dataset, IndexedDataset  # noqa: E402
 TORCH_KWARGS = {"device": "cpu", "dtype": torch.float32}
 
 
-def random_single_block_no_components_tensor_map(use_torch, use_metatensor_torch):
+def random_single_block_no_components_tensor_map(
+    use_torch, use_metatensor_torch, device=None
+):
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
@@ -33,7 +35,7 @@ def random_single_block_no_components_tensor_map(use_torch, use_metatensor_torch
 
         from metatensor.torch import Labels, TensorBlock, TensorMap
 
-        create_int32_array = partial(torch.tensor, dtype=torch.int32)
+        create_int32_array = partial(torch.tensor, dtype=torch.int32, device=device)
     else:
         import numpy as np
 
@@ -44,7 +46,7 @@ def random_single_block_no_components_tensor_map(use_torch, use_metatensor_torch
     if use_torch:
         import torch
 
-        create_random_array = partial(torch.rand, **TORCH_KWARGS)
+        create_random_array = partial(torch.rand, dtype=torch.float32, device=device)
     else:
         import numpy as np
 
