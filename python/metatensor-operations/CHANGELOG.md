@@ -17,6 +17,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 #### Removed
 -->
 
+## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.0) - 2024-02-07
+
 ### Changed
 
 - `join()` operation now includes the `sort_samples` argument to control the
