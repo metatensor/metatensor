@@ -17,6 +17,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 #### Removed
 -->
 
+## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.0) - 2024-02-07
+
 ### Changed
 
 - Pluralization removed for special kwarg `sample_ids` of `IndexedDataset` ->
@@ -25,7 +27,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 #### Fixed
 
-- Removal of usage of Labels.range in nn modules to support torch.jit.save see metatensor issue #410
+- Removal of usage of Labels.range in nn modules to support torch.jit.save (#410)
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.1.0) - 2024-01-26
 

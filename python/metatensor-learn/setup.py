@@ -14,7 +14,7 @@ METATENSOR_OPERATIONS = os.path.realpath(
     os.path.join(ROOT, "..", "metatensor-operations")
 )
 
-METATENSOR_LEARN_VERSION = "0.1.0"
+METATENSOR_LEARN_VERSION = "0.2.0"
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         )
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-operations >=0.1.0,<0.2.0")
+        install_requires.append("metatensor-operations >=0.2.0,<0.3.0")
 
     setup(
         version=create_version_number(METATENSOR_LEARN_VERSION),
