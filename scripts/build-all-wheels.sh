@@ -19,6 +19,7 @@ METATENSOR_CORE_VERSION=$(basename "$(find "$TMP_DIR"/dist -name "metatensor-cor
 METATENSOR_CORE_VERSION=${METATENSOR_CORE_VERSION%.tar.gz}
 
 python -m build python/metatensor-operations --outdir "$TMP_DIR"/dist
+python -m build python/metatensor-learn --outdir "$TMP_DIR"/dist
 python -m build . --outdir "$TMP_DIR"/dist
 
 # for metatensor-torch, we need a pre-built version of metatensor-core, so

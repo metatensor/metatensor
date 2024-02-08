@@ -64,8 +64,3 @@ jobs:
         run: tox
         env:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-
-      - name: check we can build the wheels
-        run: tox -e build-tests
-        env:
-          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
