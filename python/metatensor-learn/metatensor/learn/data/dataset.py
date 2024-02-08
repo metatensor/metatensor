@@ -70,6 +70,13 @@ class _BaseDataset(torch.utils.data.Dataset):
         """
         return self._size
 
+    def __iter__(self):
+        """
+        Returns an iterator over the dataset.
+        """
+        for idx in self._indices:
+            yield self[idx]
+
 
 class Dataset(_BaseDataset):
     """

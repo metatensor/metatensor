@@ -275,3 +275,38 @@ def test_indexed_dataset_nonunique_sample_id():
             a=[1, 2, 3],
             sample_id=["a", "b", "a"],
         )
+
+
+def test_iterate_over_dataset():
+    """
+    Tests iterating over the Dataset object.
+    """
+    dset = Dataset(
+        a=[torch.ones((1, 1)) * i for i in range(5)],
+        c=[torch.zeros((1, 1)) * 10 for _ in range(5)],
+        b=[torch.zeros((1, 1)) for _ in range(5)],
+    )
+
+    for i, sample in enumerate(dset):
+        assert sample.a == torch.ones((1, 1)) * i
+        assert sample.c == torch.zeros((1, 1))
+        assert sample.b == torch.zeros((1, 1))
+
+
+def test_iterate_over_indexeddataset():
+    """
+    Tests iterating over the IndexedDataset object.
+    """
+    sample_ids = ["dog", "cat", "fish", "bird", "mouse"]
+    dset = IndexedDataset(
+        a=[torch.ones((1, 1)) * i for i in range(5)],
+        c=[torch.zeros((1, 1)) * 10 for _ in range(5)],
+        b=[torch.zeros((1, 1)) for _ in range(5)],
+        sample_id=sample_ids,
+    )
+
+    for i, sample in enumerate(dset):
+        assert sample.sample_id == sample_ids[i]
+        assert sample.a == torch.ones((1, 1)) * i
+        assert sample.c == torch.zeros((1, 1))
+        assert sample.b == torch.zeros((1, 1))
