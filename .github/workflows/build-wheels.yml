@@ -177,6 +177,7 @@ jobs:
         run: |
           rm dist/metatensor-core-*.tar.gz
           rm dist/metatensor-torch-*.tar.gz
+          rm dist/metatensor-learn-*.tar.gz
           rm dist/metatensor-operations-*.tar.gz
 
       - name: upload to GitHub release (metatensor-python)
