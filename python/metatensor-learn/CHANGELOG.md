@@ -8,13 +8,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- Possible sections
 
-#### Added
+### Added
 
-#### Fixed
+### Fixed
 
-#### Changed
+### Changed
 
-#### Removed
+### Removed
 -->
 
 ## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.0) - 2024-02-07
@@ -25,7 +25,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sample_id`, and provided collate functions `group` and `group_and_join`
   updated accordingly.
 
-#### Fixed
+### Fixed
 
 - Removal of usage of Labels.range in nn modules to support torch.jit.save (#410)
 
