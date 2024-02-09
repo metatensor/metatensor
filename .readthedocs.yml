@@ -11,8 +11,8 @@ build:
     - cmake
   tools:
     # Set the version of Python and other tools we need
-    python: "3.11"
-    rust: "1.70"
+    python: "3.12"
+    rust: "1.75"
   jobs:
     post_install:
       # install metatensor-torch with the CPU version of PyTorch we can not use
