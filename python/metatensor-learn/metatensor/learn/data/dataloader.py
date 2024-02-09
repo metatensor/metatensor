@@ -2,8 +2,6 @@
 Module containing the DataLoader.
 """
 
-from typing import Callable
-
 import torch
 
 from .collate import group_and_join
@@ -11,20 +9,17 @@ from .collate import group_and_join
 
 class DataLoader(torch.utils.data.DataLoader):
     """
-    Class for loading data from an `:py:class:`torch.utils.data.Dataset` object
-    with a default collate function that supports :py:class:`torch.Tensor`,
-    :py:class:`atomistic.Systems`, or :py:class:`TensorMap`.
+    Class for loading data from an :py:class:`torch.utils.data.Dataset` object with a
+    default collate function (:py:func:`metatensor.learn.data.group_and_join`) that
+    supports :py:class:`torch.Tensor`, :py:class:`metatensor.torch.atomistic.System`,
+    :py:class:`metatensor.TensorMap`, and :py:class:`metatensor.torch.TensorMap`.
 
-    Any argument as accepted by the torch
-    :py:class:`torch.utils.data.DataLoader` parent class is supported. Please
-    refer to
-    https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
+    The dataset wil typically be :py:class:`metatensor.learn.Dataset` or
+    :py:class:`metatensor.learn.IndexedDataset`.
+
+    Any argument as accepted by the torch :py:class:`torch.utils.data.DataLoader` parent
+    class is supported.
     """
 
-    def __init__(
-        self,
-        dataset: torch.utils.data.Dataset,
-        collate_fn: Callable = group_and_join,
-        **kwargs,
-    ):
+    def __init__(self, dataset, collate_fn=group_and_join, **kwargs):
         super().__init__(dataset, collate_fn=collate_fn, **kwargs)
