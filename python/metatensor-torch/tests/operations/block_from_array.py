@@ -7,9 +7,10 @@ from packaging import version
 import metatensor.torch
 
 
-def check_operation(block_from_array, device):
+@pytest.mark.parametrize("device", ["cpu", "meta"])
+def test_block_from_array(device):
     values = torch.arange(42, device=device).reshape(2, 3, 7).to(torch.float64)
-    block = block_from_array(values)
+    block = metatensor.torch.block_from_array(values)
 
     # check output type
     assert isinstance(block, torch.ScriptObject)
@@ -21,20 +22,8 @@ def check_operation(block_from_array, device):
         assert torch.equal(block.values, values)
 
 
-@pytest.mark.parametrize("device", ["cpu", "meta"])
-def test_operation_as_python(device):
-    check_operation(metatensor.torch.block_from_array, device)
-
-
-@pytest.mark.parametrize("device", ["cpu", "meta"])
-def test_operation_as_torch_script(device):
-    check_operation(torch.jit.script(metatensor.torch.block_from_array), device)
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.block_from_array)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.block_from_array, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

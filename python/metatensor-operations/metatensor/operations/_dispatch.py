@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 
-from ._classes import torch_jit_is_scripting
+from ._backend import torch_jit_is_scripting
 
 
 try:

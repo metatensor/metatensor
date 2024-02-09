@@ -1,79 +1,18 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
+from ._backend import (
+    TensorBlock,
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
 from ._utils import (
     _check_blocks_raise,
     _check_same_gradients_raise,
     _check_same_keys_raise,
 )
-
-
-def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
-    if not torch_jit_is_scripting():
-        if not check_isinstance(A, TensorMap):
-            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
-
-    r"""Return a new :class:`TensorMap` with the values being the element-wise
-    division of ``A`` and ``B``.
-
-    If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
-
-    If gradients are present in ``A``:
-
-    *  ``B`` is a scalar then:
-
-       .. math::
-            \nabla(A / B) =  \nabla A / B
-
-    *  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
-        The multiplication is performed with the rule of the derivatives:
-
-       .. math::
-            \nabla(A / B) =(B*\nabla A-A*\nabla B)/B^2
-
-    :param A: First :py:class:`TensorMap` for the division.
-    :param B: Second instance for the division. Parameter can be a scalar
-            or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
-            metadata of ``A``.
-
-    :return: New :py:class:`TensorMap` with the same metadata as ``A``.
-    """
-
-    blocks: List[TensorBlock] = []
-    if torch_jit_is_scripting():
-        is_tensor_map = isinstance(B, TensorMap)
-    else:
-        is_tensor_map = check_isinstance(B, TensorMap)
-
-    if isinstance(B, (float, int)):
-        B = float(B)
-        for block_A in A.blocks():
-            blocks.append(_divide_block_constant(block=block_A, constant=B))
-    elif is_tensor_map:
-        _check_same_keys_raise(A, B, "divide")
-        for key, block_A in A.items():
-            block_B = B.block(key)
-            _check_blocks_raise(
-                block_A,
-                block_B,
-                fname="divide",
-            )
-            _check_same_gradients_raise(
-                block_A,
-                block_B,
-                fname="divide",
-            )
-            blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
-    else:
-        if torch_jit_is_scripting():
-            extra = ""
-        else:
-            extra = f", not {type(B)}"
-
-        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
-
-    return TensorMap(A.keys, blocks)
 
 
 def _divide_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
@@ -161,3 +100,71 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
         )
 
     return result_block
+
+
+@torch_jit_script
+def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
+    if not torch_jit_is_scripting():
+        if not check_isinstance(A, TensorMap):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
+    r"""Return a new :class:`TensorMap` with the values being the element-wise
+    division of ``A`` and ``B``.
+
+    If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
+
+    If gradients are present in ``A``:
+
+    *  ``B`` is a scalar then:
+
+       .. math::
+            \nabla(A / B) =  \nabla A / B
+
+    *  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
+        The multiplication is performed with the rule of the derivatives:
+
+       .. math::
+            \nabla(A / B) =(B*\nabla A-A*\nabla B)/B^2
+
+    :param A: First :py:class:`TensorMap` for the division.
+    :param B: Second instance for the division. Parameter can be a scalar
+            or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
+            metadata of ``A``.
+
+    :return: New :py:class:`TensorMap` with the same metadata as ``A``.
+    """
+
+    blocks: List[TensorBlock] = []
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(B, TensorMap)
+    else:
+        is_tensor_map = check_isinstance(B, TensorMap)
+
+    if isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
+            blocks.append(_divide_block_constant(block=block_A, constant=B))
+    elif is_tensor_map:
+        _check_same_keys_raise(A, B, "divide")
+        for key, block_A in A.items():
+            block_B = B.block(key)
+            _check_blocks_raise(
+                block_A,
+                block_B,
+                fname="divide",
+            )
+            _check_same_gradients_raise(
+                block_A,
+                block_B,
+                fname="divide",
+            )
+            blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
+    else:
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(B)}"
+
+        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
+
+    return TensorMap(A.keys, blocks)

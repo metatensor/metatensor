@@ -6,32 +6,7 @@ Module to find the absolute values of a :py:class:`TensorMap`, returning a new
 from typing import List
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
-
-
-def abs(A: TensorMap) -> TensorMap:
-    r"""
-    Return a new :py:class:`TensorMap` with the same metadata as A and absolute
-    values of ``A``.
-
-    .. math::
-        A \rightarrow = \vert A \vert
-
-    If gradients are present in ``A``:
-
-    .. math::
-        \nabla(A) \rightarrow \nabla(\vert A \vert) = (A/\vert A \vert)*\nabla A
-
-    :param A: the input :py:class:`TensorMap`.
-
-    :return: a new :py:class:`TensorMap` with the same metadata as ``A`` and
-        absolute values of ``A``.
-    """
-    blocks: List[TensorBlock] = []
-    keys = A.keys
-    for i in range(len(keys)):
-        blocks.append(_abs_block(block=A.block(keys.entry(i))))
-    return TensorMap(keys, blocks)
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 
 
 def _abs_block(block: TensorBlock) -> TensorBlock:
@@ -74,3 +49,29 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         result_block.add_gradient(parameter, gradient)
 
     return result_block
+
+
+@torch_jit_script
+def abs(A: TensorMap) -> TensorMap:
+    r"""
+    Return a new :py:class:`TensorMap` with the same metadata as A and absolute
+    values of ``A``.
+
+    .. math::
+        A \rightarrow = \vert A \vert
+
+    If gradients are present in ``A``:
+
+    .. math::
+        \nabla(A) \rightarrow \nabla(\vert A \vert) = (A/\vert A \vert)*\nabla A
+
+    :param A: the input :py:class:`TensorMap`.
+
+    :return: a new :py:class:`TensorMap` with the same metadata as ``A`` and
+        absolute values of ``A``.
+    """
+    blocks: List[TensorBlock] = []
+    keys = A.keys
+    for i in range(len(keys)):
+        blocks.append(_abs_block(block=A.block(keys.entry(i))))
+    return TensorMap(keys, blocks)

@@ -16,6 +16,17 @@ def torch_jit_is_scripting():
     return False
 
 
+def torch_jit_script(function):
+    """
+    This function takes the place of ``@torch.jit.script`` when running in pure Python
+    mode (i.e. when using classes from metatensor-core).
+
+    When used as a decorator (``@torch_jit_script def foo()``), it does nothing to the
+    function.
+    """
+    return function
+
+
 check_isinstance = isinstance
 
 __all__ = [
@@ -23,5 +34,6 @@ __all__ = [
     "TensorBlock",
     "TensorMap",
     "torch_jit_is_scripting",
+    "torch_jit_script",
     "check_isinstance",
 ]

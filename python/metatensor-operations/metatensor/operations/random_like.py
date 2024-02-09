@@ -1,10 +1,78 @@
 from typing import List, Optional, Union
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import _check_gradient_presence_raise
 
 
+@torch_jit_script
+def random_uniform_like_block(
+    block: TensorBlock,
+    gradients: Optional[Union[List[str], str]] = None,
+    requires_grad: bool = False,
+) -> TensorBlock:
+    """
+    Return a new :py:class:`TensorBlock` with the same metadata as block, and
+    all values randomly sampled from the uniform distribution between 0 and 1.
+
+    :param block:
+        Input block from which the metadata is taken.
+
+    :param gradients:
+        Which gradients should be present in the output. If this is
+        :py:obj:`None` (default) all gradient of ``block`` are present in the
+        new :py:class:`TensorBlock`. If this is an empty list ``[]``, no
+        gradients information is copied.
+
+    :param requires_grad:
+        If autograd should record operations for the returned tensor. This
+        option is only relevant for torch.
+    """
+    values = _dispatch.rand_like(
+        block.values,
+        requires_grad=requires_grad,
+    )
+    result_block = TensorBlock(
+        values=values,
+        samples=block.samples,
+        components=block.components,
+        properties=block.properties,
+    )
+
+    if isinstance(gradients, str):
+        gradients = [gradients]
+
+    if gradients is None:
+        gradients = block.gradients_list()
+    else:
+        _check_gradient_presence_raise(
+            block=block, parameters=gradients, fname="random_uniform_like"
+        )
+
+    for parameter in gradients:
+        gradient = block.gradient(parameter)
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        gradient_values = _dispatch.rand_like(
+            gradient.values,
+            requires_grad=requires_grad,
+        )
+
+        result_block.add_gradient(
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient_values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=gradient.properties,
+            ),
+        )
+
+    return result_block
+
+
+@torch_jit_script
 def random_uniform_like(
     tensor: TensorMap,
     gradients: Optional[Union[List[str], str]] = None,
@@ -110,69 +178,3 @@ def random_uniform_like(
             )
         )
     return TensorMap(tensor.keys, blocks)
-
-
-def random_uniform_like_block(
-    block: TensorBlock,
-    gradients: Optional[Union[List[str], str]] = None,
-    requires_grad: bool = False,
-) -> TensorBlock:
-    """
-    Return a new :py:class:`TensorBlock` with the same metadata as block, and
-    all values randomly sampled from the uniform distribution between 0 and 1.
-
-    :param block:
-        Input block from which the metadata is taken.
-
-    :param gradients:
-        Which gradients should be present in the output. If this is
-        :py:obj:`None` (default) all gradient of ``block`` are present in the
-        new :py:class:`TensorBlock`. If this is an empty list ``[]``, no
-        gradients information is copied.
-
-    :param requires_grad:
-        If autograd should record operations for the returned tensor. This
-        option is only relevant for torch.
-    """
-    values = _dispatch.rand_like(
-        block.values,
-        requires_grad=requires_grad,
-    )
-    result_block = TensorBlock(
-        values=values,
-        samples=block.samples,
-        components=block.components,
-        properties=block.properties,
-    )
-
-    if isinstance(gradients, str):
-        gradients = [gradients]
-
-    if gradients is None:
-        gradients = block.gradients_list()
-    else:
-        _check_gradient_presence_raise(
-            block=block, parameters=gradients, fname="random_uniform_like"
-        )
-
-    for parameter in gradients:
-        gradient = block.gradient(parameter)
-        if len(gradient.gradients_list()) != 0:
-            raise NotImplementedError("gradients of gradients are not supported")
-
-        gradient_values = _dispatch.rand_like(
-            gradient.values,
-            requires_grad=requires_grad,
-        )
-
-        result_block.add_gradient(
-            parameter=parameter,
-            gradient=TensorBlock(
-                values=gradient_values,
-                samples=gradient.samples,
-                components=gradient.components,
-                properties=gradient.properties,
-            ),
-        )
-
-    return result_block

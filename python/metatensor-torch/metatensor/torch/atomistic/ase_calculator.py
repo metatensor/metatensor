@@ -26,8 +26,9 @@ from ase.calculators.calculator import (  # isort: skip
 )
 
 
-# import here to get an error early if the user is missing metatensor-operations
-from .. import sum_over_samples  # isort: skip
+if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
+    # this can not be imported when building the documentation
+    from .. import sum_over_samples  # isort: skip
 
 FilePath = Union[str, bytes, pathlib.PurePath]
 

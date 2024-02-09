@@ -5,7 +5,7 @@ import torch
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
-from .data import load_data
+from ._data import load_data
 
 
 def check_operation(reduce_over_samples):
@@ -18,21 +18,15 @@ def check_operation(reduce_over_samples):
     assert reduced_tensor.sample_names == ["structure"]
 
 
-def test_operations_as_python():
+def test_reduce_over_samples():
     check_operation(metatensor.torch.sum_over_samples)
     check_operation(metatensor.torch.mean_over_samples)
     check_operation(metatensor.torch.std_over_samples)
     check_operation(metatensor.torch.var_over_samples)
 
 
-def test_operations_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.sum_over_samples))
-    check_operation(torch.jit.script(metatensor.torch.mean_over_samples))
-    check_operation(torch.jit.script(metatensor.torch.std_over_samples))
-    check_operation(torch.jit.script(metatensor.torch.var_over_samples))
-
-
 def test_reduction_all_samples():
+    """Check that reducing all samples to a single one works"""
     block_1 = TensorBlock(
         values=torch.tensor(
             [
@@ -65,32 +59,22 @@ def test_reduction_all_samples():
 
 
 def test_save():
-    scripted = torch.jit.script(metatensor.torch.sum_over_samples)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.mean_over_samples)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.std_over_samples)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.var_over_samples)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.sum_over_samples, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.mean_over_samples, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.std_over_samples, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.var_over_samples, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

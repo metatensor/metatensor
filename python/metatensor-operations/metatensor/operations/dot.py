@@ -1,10 +1,51 @@
 from typing import List
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import _check_same_keys_raise
 
 
+def _dot_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
+    if not block_1.properties == block_2.properties:
+        raise ValueError("TensorBlocks in `dot` should have the same properties")
+
+    if len(block_2.components) > 0:
+        raise ValueError("the second TensorMap in `dot` should not have components")
+
+    if len(block_2.gradients_list()) > 0:
+        raise ValueError("the second TensorMap in `dot` should not have gradients")
+
+    # values = block_1.values @ block_2.values.T
+    values = _dispatch.dot(block_1.values, block_2.values)
+
+    result_block = TensorBlock(
+        values=values,
+        samples=block_1.samples,
+        components=block_1.components,
+        properties=block_2.samples,
+    )
+
+    for parameter, gradient in block_1.gradients():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        # gradient_values = gradient.values @ block_2.values.T
+        gradient_values = _dispatch.dot(gradient.values, block_2.values)
+
+        result_block.add_gradient(
+            parameter=parameter,
+            gradient=TensorBlock(
+                values=gradient_values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=result_block.properties,
+            ),
+        )
+
+    return result_block
+
+
+@torch_jit_script
 def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     """Compute the dot product of two :py:class:`TensorMap`.
 
@@ -79,43 +120,3 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
         blocks.append(_dot_block(block_1=block_1, block_2=block_2))
 
     return TensorMap(tensor_1.keys, blocks)
-
-
-def _dot_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
-    if not block_1.properties == block_2.properties:
-        raise ValueError("TensorBlocks in `dot` should have the same properties")
-
-    if len(block_2.components) > 0:
-        raise ValueError("the second TensorMap in `dot` should not have components")
-
-    if len(block_2.gradients_list()) > 0:
-        raise ValueError("the second TensorMap in `dot` should not have gradients")
-
-    # values = block_1.values @ block_2.values.T
-    values = _dispatch.dot(block_1.values, block_2.values)
-
-    result_block = TensorBlock(
-        values=values,
-        samples=block_1.samples,
-        components=block_1.components,
-        properties=block_2.samples,
-    )
-
-    for parameter, gradient in block_1.gradients():
-        if len(gradient.gradients_list()) != 0:
-            raise NotImplementedError("gradients of gradients are not supported")
-
-        # gradient_values = gradient.values @ block_2.values.T
-        gradient_values = _dispatch.dot(gradient.values, block_2.values)
-
-        result_block.add_gradient(
-            parameter=parameter,
-            gradient=TensorBlock(
-                values=gradient_values,
-                samples=gradient.samples,
-                components=gradient.components,
-                properties=result_block.properties,
-            ),
-        )
-
-    return result_block

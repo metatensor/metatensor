@@ -1,7 +1,8 @@
 from . import _dispatch
-from ._classes import Labels
+from ._backend import Labels, torch_jit_script
 
 
+@torch_jit_script
 def one_hot(labels: Labels, dimension: Labels):
     """Generates one-hot encoding from a Labels object.
 

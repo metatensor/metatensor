@@ -14,7 +14,7 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
 # Step 1: create the `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
-    "metatensor.torch.learn._classes",
+    "metatensor.torch.learn._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)

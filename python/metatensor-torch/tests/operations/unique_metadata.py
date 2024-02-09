@@ -5,13 +5,13 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(unique_metadata):
+def test_unique_metadata():
     tensor = load_data("qm7-power-spectrum.npz")
 
-    unique_labels = unique_metadata(
+    unique_labels = metatensor.torch.unique_metadata(
         tensor,
         axis="samples",
         names=["structure"],
@@ -26,7 +26,7 @@ def check_operation(unique_metadata):
     assert unique_labels.names == ["structure"]
 
     # repeat with gradients
-    unique_labels = unique_metadata(
+    unique_labels = metatensor.torch.unique_metadata(
         tensor,
         axis="samples",
         names=["atom"],
@@ -40,11 +40,11 @@ def check_operation(unique_metadata):
     assert unique_labels.names == ["atom"]
 
 
-def check_operation_block(unique_metadata_block):
+def test_unique_metadata_block():
     tensor = load_data("qm7-power-spectrum.npz")
     block = tensor.block(0)
 
-    unique_labels = unique_metadata_block(
+    unique_labels = metatensor.torch.unique_metadata_block(
         block,
         axis="samples",
         names=["structure"],
@@ -59,7 +59,7 @@ def check_operation_block(unique_metadata_block):
     assert unique_labels.names == ["structure"]
 
     # repeat with gradients
-    unique_labels = unique_metadata_block(
+    unique_labels = metatensor.torch.unique_metadata_block(
         block,
         axis="samples",
         names=["atom"],
@@ -73,20 +73,8 @@ def check_operation_block(unique_metadata_block):
     assert unique_labels.names == ["atom"]
 
 
-def test_operations_as_python():
-    check_operation(metatensor.torch.unique_metadata)
-    check_operation_block(metatensor.torch.unique_metadata_block)
-
-
-def test_operations_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.unique_metadata))
-    check_operation_block(torch.jit.script(metatensor.torch.unique_metadata_block))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.unique_metadata)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.unique_metadata, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

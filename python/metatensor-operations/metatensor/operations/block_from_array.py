@@ -1,7 +1,8 @@
 from . import _dispatch
-from ._classes import Labels, TensorBlock
+from ._backend import Labels, TensorBlock, torch_jit_script
 
 
+@torch_jit_script
 def block_from_array(array) -> TensorBlock:
     """
     Creates a simple TensorBlock from an array.

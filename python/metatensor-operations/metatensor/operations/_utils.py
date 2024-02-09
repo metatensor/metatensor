@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap
 
 
 class NotEqualError(Exception):

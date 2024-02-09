@@ -44,7 +44,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 
 # Step 1: create the `_classes` module as an empty module
 spec = importlib.util.spec_from_loader(
-    "metatensor.torch.operations._classes",
+    "metatensor.torch.operations._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
@@ -55,6 +55,7 @@ module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
 module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
+module.__dict__["torch_jit_script"] = torch.jit.script
 
 
 def check_isinstance(obj, ty):
