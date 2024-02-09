@@ -24,18 +24,18 @@ jobs:
             do-valgrind: true
 
           - os: ubuntu-20.04
-            torch-version: 2.1.*
+            torch-version: 2.2.*
             python-version: "3.11"
             cargo-test-flags:
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-11
-            torch-version: 2.1.*
+            torch-version: 2.2.*
             python-version: "3.11"
             cargo-test-flags: --release
 
           - os: windows-2019
-            torch-version: 2.1.*
+            torch-version: 2.2.*
             python-version: "3.11"
             cargo-test-flags: --release
     steps:
