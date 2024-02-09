@@ -3,8 +3,6 @@ Neural Network
 
 * :ref:`learn-nn-modules`
 
-.. automodule:: metatensor.learn.nn
-
 .. _learn-nn-modules:
 
 Modules

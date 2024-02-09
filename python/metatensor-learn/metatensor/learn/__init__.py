@@ -12,8 +12,6 @@ except ImportError:
 
 
 if HAS_TORCH:
-    from . import data, nn  # noqa
-
-    __all__ = ["data", "nn"]
-
-__all__ = []
+    from . import data, nn  # noqa: F401
+    from .data import DataLoader, Dataset, IndexedDataset  # noqa: F401
+    from .nn import ModuleMap, Linear  # noqa: F401

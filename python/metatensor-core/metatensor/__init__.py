@@ -14,18 +14,18 @@
 # only declares dependencies on `metatensor-core` and `metatensor-operation`; as well
 # an an optional dependency on `metatensor-torch`.
 
-from .version import __version__  # noqa
-from . import utils  # noqa
-from .block import TensorBlock  # noqa
-from .labels import Labels, LabelsEntry  # noqa
-from .status import MetatensorError  # noqa
-from .tensor import TensorMap  # noqa
-from .data import DeviceWarning  # noqa
+from .version import __version__  # noqa: F401
+from . import utils  # noqa: F401
+from .block import TensorBlock  # noqa: F401
+from .labels import Labels, LabelsEntry  # noqa: F401
+from .status import MetatensorError  # noqa: F401
+from .tensor import TensorMap  # noqa: F401
+from .data import DeviceWarning  # noqa: F401
 
-from .io import load, load_labels, save  # noqa
+from .io import load, load_labels, save  # noqa: F401
 
 try:
-    from . import operations  # noqa
+    from . import operations  # noqa: F401
 
     HAS_METATENSOR_OPERATIONS = True
 except ImportError:
@@ -33,16 +33,22 @@ except ImportError:
 
 
 if HAS_METATENSOR_OPERATIONS:
-    from .operations import *  # noqa
+    from .operations import *  # noqa: F401, F403
 
 else:
-    # __getattr__ is called when a symbol can not be found, we use it to give
+    # __getattr__ is called when a module attribute can not be found, we use it to give
     # the user a better error message if they don't have metatensor-operations
     def __getattr__(name):
         raise AttributeError(
             f"metatensor.{name} is not defined, are you sure you have the "
             "metatensor-operations package installed?"
         )
+
+
+try:
+    from . import learn  # noqa: F401
+except ImportError:
+    pass
 
 
 __all__ = [
