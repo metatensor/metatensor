@@ -177,6 +177,10 @@ related shells:
     # or
     cargo test
 
+If you encounter hard to understand error messages when running tests with
+TorchScript, you can disable the Python to TorchScript compilation by setting
+``PYTORCH_JIT=0`` in your environment.
+
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/
 

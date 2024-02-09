@@ -1,10 +1,16 @@
 from typing import Union
 
-from ._classes import TensorMap
-from .add import add, check_isinstance, torch_jit_is_scripting
+from ._backend import (
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
+from .add import add
 from .multiply import multiply
 
 
+@torch_jit_script
 def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the subtract
     of ``A`` and ``B``.

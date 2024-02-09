@@ -5,15 +5,67 @@ Module for finding unique metadata for TensorMaps and TensorBlocks
 from typing import List, Optional, Tuple, Union
 
 from . import _dispatch
-from ._classes import (
+from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
     check_isinstance,
     torch_jit_is_scripting,
+    torch_jit_script,
 )
 
 
+def _unique_from_blocks(
+    blocks: List[TensorBlock],
+    axis: str,
+    names: List[str],
+) -> Labels:
+    """
+    Finds the unique metadata of a list of blocks along the given ``axis`` and
+    for the specified ``names``.
+    """
+    all_values = []
+    for block in blocks:
+        if axis == "samples":
+            all_values.append(block.samples.view(names).values)
+        else:
+            assert axis == "properties"
+            all_values.append(block.properties.view(names).values)
+
+    unique_values = _dispatch.unique(_dispatch.concatenate(all_values, axis=0), axis=0)
+    return Labels(names=names, values=unique_values)
+
+
+def _check_args(
+    axis: str,
+    names: List[str],
+    gradient: Optional[str] = None,
+):
+    """Checks input args for `unique_metadata_block`"""
+
+    if not torch_jit_is_scripting():
+        if not isinstance(axis, str):
+            raise TypeError(f"`axis` must be a string, not {type(axis)}")
+
+        if not isinstance(names, list):
+            raise TypeError(f"`names` must be a list of strings, not {type(names)}")
+
+        for name in names:
+            if not isinstance(name, str):
+                raise TypeError(f"`names` elements must be a strings, not {type(name)}")
+
+    if gradient is not None:
+        if not torch_jit_is_scripting():
+            if not isinstance(gradient, str):
+                raise TypeError(f"`gradient` must be a string, not {type(gradient)}")
+
+    if axis not in ["samples", "properties"]:
+        raise ValueError(
+            f"`axis` must be either 'samples' or 'properties', not '{axis}'"
+        )
+
+
+@torch_jit_script
 def unique_metadata(
     tensor: TensorMap,
     axis: str,
@@ -127,6 +179,7 @@ def unique_metadata(
     return _unique_from_blocks(blocks, axis, names)
 
 
+@torch_jit_script
 def unique_metadata_block(
     block: TensorBlock,
     axis: str,
@@ -211,53 +264,3 @@ def unique_metadata_block(
         blocks = [block.gradient(gradient)]
 
     return _unique_from_blocks(blocks, axis, names)
-
-
-def _unique_from_blocks(
-    blocks: List[TensorBlock],
-    axis: str,
-    names: List[str],
-) -> Labels:
-    """
-    Finds the unique metadata of a list of blocks along the given ``axis`` and
-    for the specified ``names``.
-    """
-    all_values = []
-    for block in blocks:
-        if axis == "samples":
-            all_values.append(block.samples.view(names).values)
-        else:
-            assert axis == "properties"
-            all_values.append(block.properties.view(names).values)
-
-    unique_values = _dispatch.unique(_dispatch.concatenate(all_values, axis=0), axis=0)
-    return Labels(names=names, values=unique_values)
-
-
-def _check_args(
-    axis: str,
-    names: List[str],
-    gradient: Optional[str] = None,
-):
-    """Checks input args for `unique_metadata_block`"""
-
-    if not torch_jit_is_scripting():
-        if not isinstance(axis, str):
-            raise TypeError(f"`axis` must be a string, not {type(axis)}")
-
-        if not isinstance(names, list):
-            raise TypeError(f"`names` must be a list of strings, not {type(names)}")
-
-        for name in names:
-            if not isinstance(name, str):
-                raise TypeError(f"`names` elements must be a strings, not {type(name)}")
-
-    if gradient is not None:
-        if not torch_jit_is_scripting():
-            if not isinstance(gradient, str):
-                raise TypeError(f"`gradient` must be a string, not {type(gradient)}")
-
-    if axis not in ["samples", "properties"]:
-        raise ValueError(
-            f"`axis` must be either 'samples' or 'properties', not '{axis}'"
-        )

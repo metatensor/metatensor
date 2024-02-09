@@ -18,7 +18,7 @@ changing the columns of the :py:class:`metatensor.Labels` within).
 
 from typing import List
 
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 
 
 def _check_axis(axis: str):
@@ -29,61 +29,7 @@ def _check_axis(axis: str):
         )
 
 
-def append_dimension(tensor: TensorMap, axis: str, name: str, values) -> TensorMap:
-    """Append a :py:class:`metatensor.Labels` dimension along the given axis.
-
-    For ``axis=="samples"`` the new dimension is `not` appended to gradients.
-
-    :param tensor: the input :py:class:`TensorMap`.
-    :param axis: axis for which the ``name`` should be appended. Allowed are ``"keys"``,
-        ``"properties"`` or ``"samples"``.
-    :param name: name of the dimension be appended
-    :param values: values of the dimension to be appended (``np.array`` or
-        ``torch.Tensor`` according to whether ``metatensor`` or ``metatensor.torch`` is
-        being used)
-
-    :raises ValueError: if ``axis`` is a not valid value
-
-    :return: a new :py:class:`metatensor.TensorMap` with appended labels dimension.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import metatensor
-    >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["foo"], np.array([[0]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
-    >>> tensor
-    TensorMap with 1 blocks
-    keys: foo
-           0
-    >>> metatensor.append_dimension(
-    ...     tensor,
-    ...     axis="keys",
-    ...     name="bar",
-    ...     values=np.array([1]),
-    ... )
-    TensorMap with 1 blocks
-    keys: foo  bar
-           0    1
-    """
-    if axis == "keys":
-        index = len(tensor.keys.names)
-        return insert_dimension(tensor, axis, index, name, values)
-    elif axis == "samples":
-        index = len(tensor.sample_names)
-        return insert_dimension(tensor, axis, index, name, values)
-    elif axis == "properties":
-        index = len(tensor.property_names)
-        return insert_dimension(tensor, axis, index, name, values)
-    else:
-        raise ValueError(
-            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
-            "'properties'."
-        )
-
-
+@torch_jit_script
 def insert_dimension(
     tensor: TensorMap,
     axis: str,
@@ -171,6 +117,63 @@ def insert_dimension(
     return TensorMap(keys=keys, blocks=blocks)
 
 
+@torch_jit_script
+def append_dimension(tensor: TensorMap, axis: str, name: str, values) -> TensorMap:
+    """Append a :py:class:`metatensor.Labels` dimension along the given axis.
+
+    For ``axis=="samples"`` the new dimension is `not` appended to gradients.
+
+    :param tensor: the input :py:class:`TensorMap`.
+    :param axis: axis for which the ``name`` should be appended. Allowed are ``"keys"``,
+        ``"properties"`` or ``"samples"``.
+    :param name: name of the dimension be appended
+    :param values: values of the dimension to be appended (``np.array`` or
+        ``torch.Tensor`` according to whether ``metatensor`` or ``metatensor.torch`` is
+        being used)
+
+    :raises ValueError: if ``axis`` is a not valid value
+
+    :return: a new :py:class:`metatensor.TensorMap` with appended labels dimension.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import metatensor
+    >>> values = np.array([[1, 2], [3, 4]])
+    >>> block = metatensor.block_from_array(values)
+    >>> keys = metatensor.Labels(["foo"], np.array([[0]]))
+    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> tensor
+    TensorMap with 1 blocks
+    keys: foo
+           0
+    >>> metatensor.append_dimension(
+    ...     tensor,
+    ...     axis="keys",
+    ...     name="bar",
+    ...     values=np.array([1]),
+    ... )
+    TensorMap with 1 blocks
+    keys: foo  bar
+           0    1
+    """
+    if axis == "keys":
+        index = len(tensor.keys.names)
+        return insert_dimension(tensor, axis, index, name, values)
+    elif axis == "samples":
+        index = len(tensor.sample_names)
+        return insert_dimension(tensor, axis, index, name, values)
+    elif axis == "properties":
+        index = len(tensor.property_names)
+        return insert_dimension(tensor, axis, index, name, values)
+    else:
+        raise ValueError(
+            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
+            "'properties'."
+        )
+
+
+@torch_jit_script
 def permute_dimensions(
     tensor: TensorMap, axis: str, dimensions_indexes: List[int]
 ) -> TensorMap:
@@ -250,6 +253,7 @@ def permute_dimensions(
     return TensorMap(keys=keys, blocks=blocks)
 
 
+@torch_jit_script
 def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     """Remove a :py:class:`metatensor.Labels` dimension along the given axis.
 
@@ -344,6 +348,7 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     return TensorMap(keys=keys, blocks=blocks)
 
 
+@torch_jit_script
 def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> TensorMap:
     """Rename a :py:class:`metatensor.Labels` dimension name for a given axis.
 

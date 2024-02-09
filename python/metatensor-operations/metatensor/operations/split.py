@@ -1,15 +1,86 @@
 from typing import Dict, List
 
-from ._classes import (
+from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
     check_isinstance,
     torch_jit_is_scripting,
+    torch_jit_script,
 )
 from .slice import _slice_block
 
 
+def _split_block(
+    block: TensorBlock,
+    axis: str,
+    grouped_labels: List[Labels],
+) -> List[TensorBlock]:
+    """
+    Splits a TensorBlock into mutliple blocks, as in the public function
+    :py:func:`split_block` but with no input checks. Note that the block is
+    currently split into N new blocks by performing N number of slice
+    operations. There may be a more efficient way of doing it, but this is not
+    yet implemented.
+    """
+    new_blocks: List[TensorBlock] = []
+    for indices in grouped_labels:
+        # perform the slice either along the samples or properties axis
+        new_block = _slice_block(block, axis=axis, labels=indices)
+        new_blocks.append(new_block)
+
+    return new_blocks
+
+
+def _check_args(block: TensorBlock, axis: str, grouped_labels: List[Labels]):
+    """
+    Checks the arguments passed to :py:func:`split` and :py:func:`split_block`.
+    """
+    # Check types
+    if not torch_jit_is_scripting():
+        if not isinstance(axis, str):
+            raise TypeError(f"axis must be a string, not {type(axis)}")
+
+        if not isinstance(grouped_labels, list):
+            raise TypeError(
+                f"`grouped_labels` must be a list, not {type(grouped_labels)}"
+            )
+
+        for labels in grouped_labels:
+            if not check_isinstance(labels, Labels):
+                raise TypeError(
+                    "`grouped_labels` elements must be metatensor Labels, "
+                    f"not {type(labels)}"
+                )
+
+    if axis not in ["samples", "properties"]:
+        raise ValueError("axis must be either 'samples' or 'properties'")
+
+    # If passed as an empty list, return now
+    if len(grouped_labels) == 0:
+        return
+
+    # Check the Labels names are equivalent for all Labels in grouped_labels
+    reference_names = grouped_labels[0].names
+    for labels in grouped_labels[1:]:
+        if labels.names != reference_names:
+            raise ValueError(
+                "the dimensions names of all Labels in `grouped_labels`"
+                f" must be the same, got {reference_names} and {labels.names}"
+            )
+
+    # Check the names in grouped_labels Labels are contained within the names for
+    # the block
+    names = block.samples.names if axis == "samples" else block.properties.names
+    for name in reference_names:
+        if name not in names:
+            raise ValueError(
+                f"the '{name}' dimension name in `grouped_labels` is not part of "
+                f"the {axis} names of the input tensor"
+            )
+
+
+@torch_jit_script
 def split(
     tensor: TensorMap,
     axis: str,
@@ -84,6 +155,7 @@ def split(
     ]
 
 
+@torch_jit_script
 def split_block(
     block: TensorBlock,
     axis: str,
@@ -139,72 +211,3 @@ def split_block(
     _check_args(block, axis, grouped_labels)
 
     return _split_block(block, axis, grouped_labels)
-
-
-def _split_block(
-    block: TensorBlock,
-    axis: str,
-    grouped_labels: List[Labels],
-) -> List[TensorBlock]:
-    """
-    Splits a TensorBlock into mutliple blocks, as in the public function
-    :py:func:`split_block` but with no input checks. Note that the block is
-    currently split into N new blocks by performing N number of slice
-    operations. There may be a more efficient way of doing it, but this is not
-    yet implemented.
-    """
-    new_blocks: List[TensorBlock] = []
-    for indices in grouped_labels:
-        # perform the slice either along the samples or properties axis
-        new_block = _slice_block(block, axis=axis, labels=indices)
-        new_blocks.append(new_block)
-
-    return new_blocks
-
-
-def _check_args(block: TensorBlock, axis: str, grouped_labels: List[Labels]):
-    """
-    Checks the arguments passed to :py:func:`split` and :py:func:`split_block`.
-    """
-    # Check types
-    if not torch_jit_is_scripting():
-        if not isinstance(axis, str):
-            raise TypeError(f"axis must be a string, not {type(axis)}")
-
-        if not isinstance(grouped_labels, list):
-            raise TypeError(
-                f"`grouped_labels` must be a list, not {type(grouped_labels)}"
-            )
-
-        for labels in grouped_labels:
-            if not check_isinstance(labels, Labels):
-                raise TypeError(
-                    "`grouped_labels` elements must be metatensor Labels, "
-                    f"not {type(labels)}"
-                )
-
-    if axis not in ["samples", "properties"]:
-        raise ValueError("axis must be either 'samples' or 'properties'")
-
-    # If passed as an empty list, return now
-    if len(grouped_labels) == 0:
-        return
-
-    # Check the Labels names are equivalent for all Labels in grouped_labels
-    reference_names = grouped_labels[0].names
-    for labels in grouped_labels[1:]:
-        if labels.names != reference_names:
-            raise ValueError(
-                "the dimensions names of all Labels in `grouped_labels`"
-                f" must be the same, got {reference_names} and {labels.names}"
-            )
-
-    # Check the names in grouped_labels Labels are contained within the names for
-    # the block
-    names = block.samples.names if axis == "samples" else block.properties.names
-    for name in reference_names:
-        if name not in names:
-            raise ValueError(
-                f"the '{name}' dimension name in `grouped_labels` is not part of "
-                f"the {axis} names of the input tensor"
-            )

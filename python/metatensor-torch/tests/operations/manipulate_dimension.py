@@ -4,7 +4,7 @@ import torch
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
 def get_tensor_map():
@@ -24,11 +24,11 @@ def get_tensor_map():
     return metatensor.torch.TensorMap(keys, blocks)
 
 
-def check_append(append):
+def test_append():
     tensor = get_tensor_map()
 
     assert tensor.sample_names == ["structure", "center"]
-    new_tensor = append(
+    new_tensor = metatensor.torch.append_dimension(
         tensor, "samples", "center_2", tensor.block(0).samples.column("center")
     )
 
@@ -36,11 +36,11 @@ def check_append(append):
     assert new_tensor.sample_names == ["structure", "center", "center_2"]
 
 
-def check_insert(insert):
+def test_insert():
     tensor = get_tensor_map()
 
     assert tensor.sample_names == ["structure", "center"]
-    new_tensor = insert(
+    new_tensor = metatensor.torch.insert_dimension(
         tensor, "samples", 1, "center_2", tensor.block(0).samples.column("center")
     )
 
@@ -48,83 +48,63 @@ def check_insert(insert):
     assert new_tensor.sample_names == ["structure", "center_2", "center"]
 
 
-def check_permute(permute):
+def test_permute():
     tensor = get_tensor_map()
 
     assert tensor.sample_names == ["structure", "center"]
-    new_tensor = permute(tensor, "samples", [1, 0])
+    new_tensor = metatensor.torch.permute_dimensions(tensor, "samples", [1, 0])
 
     assert isinstance(new_tensor, torch.ScriptObject)
     assert new_tensor.sample_names == ["center", "structure"]
 
 
-def check_remove(remove):
+def test_remove():
     tensor = get_tensor_map()
 
     assert tensor.sample_names == ["structure", "center"]
     new_tensor = metatensor.torch.append_dimension(
         tensor, "samples", "center_2", tensor.block(0).samples.column("center")
     )
-    new_tensor = remove(new_tensor, "samples", "center_2")
+    new_tensor = metatensor.torch.remove_dimension(new_tensor, "samples", "center_2")
 
     assert isinstance(new_tensor, torch.ScriptObject)
     assert new_tensor.sample_names == ["structure", "center"]
 
 
-def check_rename(rename):
+def test_rename():
     tensor = get_tensor_map()
 
     assert tensor.sample_names == ["structure", "center"]
-    new_tensor = rename(tensor, "samples", "center", "center_2")
+    new_tensor = metatensor.torch.rename_dimension(
+        tensor, "samples", "center", "center_2"
+    )
 
     assert isinstance(new_tensor, torch.ScriptObject)
     assert new_tensor.sample_names == ["structure", "center_2"]
 
 
-def test_operations_as_python():
-    check_append(metatensor.torch.append_dimension)
-    check_insert(metatensor.torch.insert_dimension)
-    check_permute(metatensor.torch.permute_dimensions)
-    check_remove(metatensor.torch.remove_dimension)
-    check_rename(metatensor.torch.rename_dimension)
-
-
-def test_operations_as_torch_script():
-    check_append(torch.jit.script(metatensor.torch.append_dimension))
-    check_insert(torch.jit.script(metatensor.torch.insert_dimension))
-    check_permute(torch.jit.script(metatensor.torch.permute_dimensions))
-    check_remove(torch.jit.script(metatensor.torch.remove_dimension))
-    check_rename(torch.jit.script(metatensor.torch.rename_dimension))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.append_dimension)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.insert_dimension)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.permute_dimensions)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.remove_dimension)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.rename_dimension)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.append_dimension, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.insert_dimension, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.permute_dimensions, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.remove_dimension, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.rename_dimension, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

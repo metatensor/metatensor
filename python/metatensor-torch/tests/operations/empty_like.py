@@ -5,12 +5,12 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(empty_like):
+def test_empty_like():
     tensor = load_data("qm7-power-spectrum.npz")
-    empty_tensor = empty_like(tensor)
+    empty_tensor = metatensor.torch.empty_like(tensor)
 
     # right output type
     assert isinstance(empty_tensor, torch.ScriptObject)
@@ -21,19 +21,8 @@ def check_operation(empty_like):
     assert metatensor.torch.equal_metadata(empty_tensor, tensor)
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.empty_like)
-
-
-def test_operation_as_torch_script():
-    scripted = torch.jit.script(metatensor.torch.empty_like)
-    check_operation(scripted)
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.empty_like)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.empty_like, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

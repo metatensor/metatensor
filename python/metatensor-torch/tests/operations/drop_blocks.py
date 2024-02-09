@@ -6,10 +6,10 @@ from packaging import version
 import metatensor.torch
 from metatensor.torch import Labels
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(drop_blocks):
+def test_drop_blocks():
     # this only runs basic checks functionality checks, and that the code produces
     # output with the right type
     tensor = load_data("qm7-power-spectrum.npz")
@@ -22,7 +22,7 @@ def check_operation(drop_blocks):
 
     keys_to_drop = Labels(names=["species_center"], values=torch.tensor([[1], [8]]))
 
-    tensor = drop_blocks(tensor, keys_to_drop)
+    tensor = metatensor.torch.drop_blocks(tensor, keys_to_drop)
 
     # check type
     assert isinstance(tensor, torch.ScriptObject)
@@ -34,18 +34,8 @@ def check_operation(drop_blocks):
     assert tensor.keys == expected_keys
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.drop_blocks)
-
-
-def test_operation_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.drop_blocks))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.drop_blocks)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.drop_blocks, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

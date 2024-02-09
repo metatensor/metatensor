@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 import torch
 
-from .._classes import Labels, TensorMap
+from .._backend import Labels, TensorMap
 from .module_map import ModuleMap
 
 

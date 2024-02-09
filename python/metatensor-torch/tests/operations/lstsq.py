@@ -7,7 +7,7 @@ import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
-def check_operation(lstsq):
+def test_lstsq():
     X_tensor = TensorMap(
         keys=Labels.single(),
         blocks=[
@@ -30,7 +30,7 @@ def check_operation(lstsq):
             )
         ],
     )
-    solution_tensor = lstsq(X_tensor, Y_tensor, rcond=1e-14)
+    solution_tensor = metatensor.torch.lstsq(X_tensor, Y_tensor, rcond=1e-14)
 
     # check output type
     assert isinstance(solution_tensor, torch.ScriptObject)
@@ -52,18 +52,8 @@ def check_operation(lstsq):
     assert metatensor.torch.equal(solution_tensor, expected_solution)
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.lstsq)
-
-
-def test_operation_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.lstsq))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.lstsq)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.lstsq, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

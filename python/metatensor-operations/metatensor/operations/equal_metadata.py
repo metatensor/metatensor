@@ -4,7 +4,13 @@ Module for checking equivalence in metadata between 2 TensorMaps
 
 from typing import List, Union
 
-from ._classes import TensorBlock, TensorMap, check_isinstance, torch_jit_is_scripting
+from ._backend import (
+    TensorBlock,
+    TensorMap,
+    check_isinstance,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
 from ._utils import (
     NotEqualError,
     _check_blocks_impl,
@@ -70,6 +76,7 @@ def _equal_metadata_block_impl(
     return ""
 
 
+@torch_jit_script
 def equal_metadata(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
@@ -154,6 +161,7 @@ def equal_metadata(
     return not bool(_equal_metadata_impl(tensor_1, tensor_2, check))
 
 
+@torch_jit_script
 def equal_metadata_raise(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
@@ -239,6 +247,7 @@ def equal_metadata_raise(
         raise NotEqualError(message)
 
 
+@torch_jit_script
 def equal_metadata_block(
     block_1: TensorBlock,
     block_2: TensorBlock,
@@ -292,6 +301,7 @@ def equal_metadata_block(
     return not bool(_equal_metadata_block_impl(block_1, block_2, check))
 
 
+@torch_jit_script
 def equal_metadata_block_raise(
     block_1: TensorBlock,
     block_2: TensorBlock,

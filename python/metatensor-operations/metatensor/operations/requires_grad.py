@@ -1,28 +1,10 @@
 from typing import List
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 
 
-def requires_grad(tensor: TensorMap, requires_grad: bool = True) -> TensorMap:
-    """
-    Set ``requires_grad`` on all arrays (blocks and gradients of blocks) in this
-    ``tensor`` to the provided value.
-
-    This is mainly intended for torch arrays, and will warn if trying to set
-    ``requires_grad=True`` with numpy arrays.
-
-    :param tensor: :py:class:`TensorMap` to modify
-    :param requires_grad: new value for ``requires_grad``
-    """
-
-    blocks: List[TensorBlock] = []
-    for block in tensor.blocks():
-        blocks.append(requires_grad_block(block, requires_grad=requires_grad))
-
-    return TensorMap(tensor.keys, blocks)
-
-
+@torch_jit_script
 def requires_grad_block(block: TensorBlock, requires_grad: bool = True) -> TensorBlock:
     """
     Set ``requires_grad`` on the values and all gradients in this ``block`` to the
@@ -57,3 +39,23 @@ def requires_grad_block(block: TensorBlock, requires_grad: bool = True) -> Tenso
         )
 
     return new_block
+
+
+@torch_jit_script
+def requires_grad(tensor: TensorMap, requires_grad: bool = True) -> TensorMap:
+    """
+    Set ``requires_grad`` on all arrays (blocks and gradients of blocks) in this
+    ``tensor`` to the provided value.
+
+    This is mainly intended for torch arrays, and will warn if trying to set
+    ``requires_grad=True`` with numpy arrays.
+
+    :param tensor: :py:class:`TensorMap` to modify
+    :param requires_grad: new value for ``requires_grad``
+    """
+
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
+        blocks.append(requires_grad_block(block, requires_grad=requires_grad))
+
+    return TensorMap(tensor.keys, blocks)

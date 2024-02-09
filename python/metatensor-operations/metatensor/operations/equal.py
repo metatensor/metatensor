@@ -1,5 +1,5 @@
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import (
     NotEqualError,
     _check_blocks_impl,
@@ -47,6 +47,7 @@ def _equal_block_impl(block_1: TensorBlock, block_2: TensorBlock) -> str:
     return ""
 
 
+@torch_jit_script
 def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
     """Compare two :py:class:`TensorMap`.
 
@@ -68,6 +69,7 @@ def equal(tensor_1: TensorMap, tensor_2: TensorMap) -> bool:
     return not bool(_equal_impl(tensor_1=tensor_1, tensor_2=tensor_2))
 
 
+@torch_jit_script
 def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap) -> None:
     """
     Compare two :py:class:`TensorMap`, raising :py:class:`NotEqualError` if they
@@ -88,6 +90,7 @@ def equal_raise(tensor_1: TensorMap, tensor_2: TensorMap) -> None:
         raise NotEqualError(message)
 
 
+@torch_jit_script
 def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
     """
     Compare two :py:class:`TensorBlock`.
@@ -109,6 +112,7 @@ def equal_block(block_1: TensorBlock, block_2: TensorBlock) -> bool:
     return not bool(_equal_block_impl(block_1=block_1, block_2=block_2))
 
 
+@torch_jit_script
 def equal_block_raise(block_1: TensorBlock, block_2: TensorBlock) -> None:
     """
     Compare two :py:class:`TensorBlock`, raising

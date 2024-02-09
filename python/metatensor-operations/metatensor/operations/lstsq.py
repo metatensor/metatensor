@@ -2,7 +2,7 @@ import warnings
 from typing import List, Optional
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import (
     _check_blocks_raise,
     _check_same_gradients_raise,
@@ -10,6 +10,38 @@ from ._utils import (
 )
 
 
+def _lstsq_block(
+    X: TensorBlock, Y: TensorBlock, rcond: Optional[float], driver: Optional[str] = None
+) -> TensorBlock:
+    _check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
+    _check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
+
+    # reshape components together with the samples
+    X_n_properties = X.values.shape[-1]
+    X_values = X.values.reshape(-1, X_n_properties)
+
+    Y_n_properties = Y.values.shape[-1]
+    Y_values = Y.values.reshape(-1, Y_n_properties)
+
+    for parameter, X_gradient in X.gradients():
+        X_gradient_values = X_gradient.values.reshape(-1, X_n_properties)
+        X_values = _dispatch.concatenate((X_values, X_gradient_values), axis=0)
+
+        Y_gradient = Y.gradient(parameter)
+        Y_gradient_values = Y_gradient.values.reshape(-1, Y_n_properties)
+        Y_values = _dispatch.concatenate((Y_values, Y_gradient_values), axis=0)
+
+    weights = _dispatch.lstsq(X_values, Y_values, rcond=rcond, driver=driver)
+
+    return TensorBlock(
+        values=weights.T,
+        samples=Y.properties,
+        components=[],
+        properties=X.properties,
+    )
+
+
+@torch_jit_script
 def lstsq(
     X: TensorMap,
     Y: TensorMap,
@@ -115,34 +147,3 @@ def lstsq(
         blocks.append(_lstsq_block(X_block, Y_block, rcond=rcond, driver=driver))
 
     return TensorMap(X.keys, blocks)
-
-
-def _lstsq_block(
-    X: TensorBlock, Y: TensorBlock, rcond: Optional[float], driver: Optional[str] = None
-) -> TensorBlock:
-    _check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
-    _check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
-
-    # reshape components together with the samples
-    X_n_properties = X.values.shape[-1]
-    X_values = X.values.reshape(-1, X_n_properties)
-
-    Y_n_properties = Y.values.shape[-1]
-    Y_values = Y.values.reshape(-1, Y_n_properties)
-
-    for parameter, X_gradient in X.gradients():
-        X_gradient_values = X_gradient.values.reshape(-1, X_n_properties)
-        X_values = _dispatch.concatenate((X_values, X_gradient_values), axis=0)
-
-        Y_gradient = Y.gradient(parameter)
-        Y_gradient_values = Y_gradient.values.reshape(-1, Y_n_properties)
-        Y_values = _dispatch.concatenate((Y_values, Y_gradient_values), axis=0)
-
-    weights = _dispatch.lstsq(X_values, Y_values, rcond=rcond, driver=driver)
-
-    return TensorBlock(
-        values=weights.T,
-        samples=Y.properties,
-        components=[],
-        properties=X.properties,
-    )

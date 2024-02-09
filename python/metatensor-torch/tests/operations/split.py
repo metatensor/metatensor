@@ -7,7 +7,7 @@ import metatensor.torch
 from metatensor.torch import Labels, TensorMap
 
 
-def check_operation(split):
+def test_split():
     tensor = TensorMap(
         keys=Labels.single(),
         blocks=[
@@ -22,12 +22,12 @@ def check_operation(split):
         Labels(names=["property"], values=torch.tensor([[0], [1]])),
         Labels(names=["property"], values=torch.tensor([[2]])),
     ]
-    split_tensors_samples = split(
+    split_tensors_samples = metatensor.torch.split(
         tensor,
         axis="samples",
         grouped_labels=split_labels_samples,
     )
-    split_tensors_properties = split(
+    split_tensors_properties = metatensor.torch.split(
         tensor,
         axis="properties",
         grouped_labels=split_labels_properties,
@@ -59,7 +59,7 @@ def check_operation(split):
     )
 
 
-def check_operation_block(split_block):
+def test_split_block():
     block = metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
     split_labels_samples = [
         Labels(names=["sample"], values=torch.tensor([[0]])),
@@ -69,12 +69,12 @@ def check_operation_block(split_block):
         Labels(names=["property"], values=torch.tensor([[0], [1]])),
         Labels(names=["property"], values=torch.tensor([[2]])),
     ]
-    split_blocks_samples = split_block(
+    split_blocks_samples = metatensor.torch.split_block(
         block,
         axis="samples",
         grouped_labels=split_labels_samples,
     )
-    split_blocks_properties = split_block(
+    split_blocks_properties = metatensor.torch.split_block(
         block,
         axis="properties",
         grouped_labels=split_labels_properties,
@@ -100,26 +100,13 @@ def check_operation_block(split_block):
     assert torch.equal(split_blocks_properties[1].values, torch.tensor([[2], [5]]))
 
 
-def test_operations_as_python():
-    check_operation(metatensor.torch.split)
-    check_operation_block(metatensor.torch.split_block)
-
-
-def test_operations_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.split))
-    check_operation_block(torch.jit.script(metatensor.torch.split_block))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.split)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.split_block)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.split, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.split_block, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

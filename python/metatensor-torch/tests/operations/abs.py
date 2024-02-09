@@ -5,12 +5,12 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(abs):
+def test_abs():
     tensor = load_data("qm7-power-spectrum.npz")
-    abs_tensor = abs(tensor)
+    abs_tensor = metatensor.torch.abs(tensor)
 
     # check output type
     assert isinstance(abs_tensor, torch.ScriptObject)
@@ -25,18 +25,8 @@ def check_operation(abs):
         assert torch.all(block.values >= 0.0)
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.abs)
-
-
-def test_operation_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.abs))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.sum_over_samples)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.sum_over_samples, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

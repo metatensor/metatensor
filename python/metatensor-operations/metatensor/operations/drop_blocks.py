@@ -1,15 +1,17 @@
 from typing import List
 
 from . import _dispatch
-from ._classes import (
+from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
     check_isinstance,
     torch_jit_is_scripting,
+    torch_jit_script,
 )
 
 
+@torch_jit_script
 def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
     """
     Drop specified key/block pairs from a TensorMap.

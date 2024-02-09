@@ -6,7 +6,7 @@ from torch.nn import Module, ModuleList
 
 from metatensor.operations import _dispatch
 
-from .._classes import Labels, LabelsEntry, TensorBlock, TensorMap
+from .._backend import Labels, LabelsEntry, TensorBlock, TensorMap
 
 
 @torch.jit.interface

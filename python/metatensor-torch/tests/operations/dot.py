@@ -5,12 +5,12 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(dot):
+def test_dot():
     tensor = load_data("qm7-power-spectrum.npz")
-    dot_tensor = dot(
+    dot_tensor = metatensor.torch.dot(
         tensor, metatensor.torch.remove_gradients(tensor, ["positions", "cell"])
     )
 
@@ -32,18 +32,8 @@ def check_operation(dot):
         )
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.dot)
-
-
-def test_operation_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.dot))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.dot)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.dot, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

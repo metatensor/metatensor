@@ -5,12 +5,12 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(ones_like):
+def test_ones_like():
     tensor = load_data("qm7-power-spectrum.npz")
-    ones_tensor = ones_like(tensor)
+    ones_tensor = metatensor.torch.ones_like(tensor)
 
     # right output type
     assert isinstance(ones_tensor, torch.ScriptObject)
@@ -25,19 +25,8 @@ def check_operation(ones_like):
         assert torch.all(block.values == 1)
 
 
-def test_operation_as_python():
-    check_operation(metatensor.torch.ones_like)
-
-
-def test_operation_as_torch_script():
-    scripted = torch.jit.script(metatensor.torch.ones_like)
-    check_operation(scripted)
-
-
 def test_save():
-    scripted = torch.jit.script(metatensor.torch.ones_like)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.ones_like, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

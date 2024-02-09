@@ -1,7 +1,13 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
+from ._backend import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
 
 
 def _sort_single_gradient_block(
@@ -137,6 +143,7 @@ def _sort_single_block(
     )
 
 
+@torch_jit_script
 def sort_block(
     block: TensorBlock,
     axes: Union[str, List[str]] = "all",
@@ -258,6 +265,7 @@ def sort_block(
     return result_block
 
 
+@torch_jit_script
 def sort(
     tensor: TensorMap,
     axes: Union[str, List[str]] = "all",

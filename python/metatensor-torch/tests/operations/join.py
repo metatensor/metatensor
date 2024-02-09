@@ -5,12 +5,12 @@ from packaging import version
 
 import metatensor.torch
 
-from .data import load_data
+from ._data import load_data
 
 
-def check_operation(join):
+def test_join():
     tensor = load_data("qm7-power-spectrum.npz")
-    joined_tensor = join([tensor, tensor], axis="properties")
+    joined_tensor = metatensor.torch.join([tensor, tensor], axis="properties")
 
     assert isinstance(joined_tensor, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -32,19 +32,8 @@ def check_operation(join):
     )
 
 
-def test_operations_as_python():
-    check_operation(metatensor.torch.join)
-
-
-def test_operations_as_torch_script():
-    scripted = torch.jit.script(metatensor.torch.join)
-    check_operation(scripted)
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.join)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.join, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
