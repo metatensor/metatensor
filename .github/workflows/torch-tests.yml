@@ -39,7 +39,7 @@ jobs:
             python-version: "3.12"
             cargo-test-flags: --release
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -50,7 +50,7 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -61,9 +61,9 @@ jobs:
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.4
         with:
-          version: "v0.5.4"
+          version: "v0.7.7"
 
       - name: Setup sccache environnement variables
         run: |
