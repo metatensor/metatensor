@@ -4,7 +4,6 @@ import sys
 from datetime import datetime
 
 from sphinx.domains.c import CObject
-from sphinx_gallery.sorting import FileNameSortKey
 
 
 # When importing metatensor-torch, this will change the definition of the classes
@@ -17,6 +16,17 @@ import metatensor.torch  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.append(os.path.join(ROOT, "docs", "extensions"))
+
+
+# We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
+# examples and generate the actual output for our shinx-gallery. This is necessary
+# because here we have to set `METATENSOR_IMPORT_FOR_SPHINX` to `"1"` allowing the
+# correct generation of the class and function docstrings which are seperate from the
+# actual code.
+#
+# We register and use the same sphinx gallery configuration as in the pseudo project.
+sys.path.append(os.path.join(ROOT, "docs"))
+from generate_examples.conf import sphinx_gallery_conf  # noqa
 
 
 # ------------------------------------------------------------------------------------ #
@@ -82,7 +92,7 @@ def generate_examples():
     # METATENSOR_IMPORT_FOR_SPHINX=1). So instead we run it inside a small script, and
     # include the corresponding output later.
     del os.environ["METATENSOR_IMPORT_FOR_SPHINX"]
-    script = os.path.join(ROOT, "docs", "scripts", "generate-examples.py")
+    script = os.path.join(ROOT, "docs", "generate_examples", "generate-examples.py")
     subprocess.run([sys.executable, script], capture_output=False)
     os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
@@ -176,29 +186,6 @@ exclude_patterns = [
     "examples/sg_execution_times.rst",
     "sg_execution_times.rst",
 ]
-
-sphinx_gallery_conf = {
-    "filename_pattern": ".*",
-    "examples_dirs": [
-        os.path.join(ROOT, "python", "examples", "core"),
-        os.path.join(ROOT, "python", "examples", "learn"),
-        os.path.join(ROOT, "python", "examples", "atomistic"),
-    ],
-    "gallery_dirs": [
-        os.path.join("examples", "core"),
-        os.path.join("examples", "learn"),
-        os.path.join("examples", "atomistic"),
-    ],
-    # Make the code snippet for metatensor functions clickable
-    "reference_url": {"metatensor": None},
-    "prefer_full_module": [
-        "metatensor",
-        r"metatensor\.learn\.data",
-    ],
-    "within_subsection_order": FileNameSortKey,
-    "remove_config_comments": True,
-}
-
 
 autoclass_content = "both"
 autodoc_member_order = "bysource"
