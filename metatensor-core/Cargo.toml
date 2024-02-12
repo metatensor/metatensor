@@ -16,7 +16,7 @@ crate-type = ["cdylib", "staticlib"]
 bench = false
 
 [dependencies]
-ahash = "0.8"
+ahash = "=0.8.7"  # last version supporting rustc 1.65
 hashbrown = "0.14"
 indexmap = "2"
 once_cell = "1"
