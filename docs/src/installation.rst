@@ -103,8 +103,8 @@ and use it will depend on the programming language you are using.
         +-------------------------------------------+-----------------------------------------------+----------------+
         | ``METATENSOR_INSTALL_BOTH_STATIC_SHARED`` | Install both the shared and static version    | ON             |
         |                                           | of the library. If ``OFF`` only the library   |                |
-        |                                           | defined in ``BUILD_SHARED_LIBS`` will be      |                |
-        |                                           | build.                                        |                |
+        |                                           | selected by ``BUILD_SHARED_LIBS`` will be     |                |
+        |                                           | built.                                        |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
 
 
