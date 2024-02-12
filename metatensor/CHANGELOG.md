@@ -15,6 +15,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.1.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.3) - 2024-02-12
+
+### Fixed
+
+- Fixed build with older versions of rustc by pinning dependencies of
+  metatensor-core (#505 and #506)
+
 ## [Version 0.1.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.2) - 2024-01-26
 
 ### Added
