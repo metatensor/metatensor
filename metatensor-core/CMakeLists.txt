@@ -232,8 +232,6 @@ if (CARGO_VERSION_CHANGED)
     endif()
 endif()
 
-# ============================================================================ #
-
 file(GLOB_RECURSE ALL_RUST_SOURCES
     ${PROJECT_SOURCE_DIR}/Cargo.toml
     ${PROJECT_SOURCE_DIR}/src/**.rs
@@ -275,6 +273,19 @@ if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
+if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
+    set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
+else()
+    if (BUILD_SHARED_LIBS)
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
+        set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME}")
+    else()
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
+        set(FILES_CREATED_BY_CARGO "${METATENSOR_STATIC_LIB_NAME}")
+    endif()
+endif()
+
 add_custom_target(cargo-build-metatensor ALL
     COMMAND
         ${CMAKE_COMMAND} -E env
@@ -284,7 +295,7 @@ add_custom_target(cargo-build-metatensor ALL
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
-    COMMENT "Building ${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME} with cargo"
+    COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
     BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
 )
 
