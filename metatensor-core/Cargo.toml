@@ -9,10 +9,7 @@ exclude = [
 ]
 
 [lib]
-# When our minimal Rust version becomes 1.65, we can pass these options directly
-# to Cargo. Until then, we build all the crate-type we need.
 name = "metatensor"
-crate-type = ["cdylib", "staticlib"]
 bench = false
 
 [dependencies]
@@ -28,7 +25,6 @@ num-traits = {version = "0.2", default-features = false}
 zip = {version = "0.6", default-features = false}
 
 [build-dependencies]
-# pin cbdingen until https://github.com/mozilla/cbindgen/issues/841 is fixed
 cbindgen = { version = "0.26", default-features = false }
 
 [dev-dependencies]
