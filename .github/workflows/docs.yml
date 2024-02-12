@@ -15,7 +15,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: setup rust
@@ -23,7 +23,7 @@ jobs:
         with:
           toolchain: stable
       - name: setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: install dependencies

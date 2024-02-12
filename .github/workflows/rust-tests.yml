@@ -66,7 +66,7 @@ jobs:
           apt install -y software-properties-common
           apt install -y cmake make gcc g++ git curl
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -87,9 +87,9 @@ jobs:
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.4
         with:
-          version: "v0.5.4"
+          version: "v0.7.7"
 
       - name: Setup sccache environnement variables
         run: |
@@ -113,10 +113,10 @@ jobs:
     runs-on: ubuntu-20.04
     name: check C API declarations
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -147,7 +147,7 @@ jobs:
     name: check leftover debug print
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: install ripgrep
         run: |
