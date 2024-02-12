@@ -39,6 +39,8 @@ cd "$TMP_DIR"
 # use metatensor rust crate in a project using workspaces).
 echo "[workspace]" >> "$ARCHIVE_NAME/Cargo.toml"
 
+cargo generate-lockfile --manifest-path "$ARCHIVE_NAME/Cargo.toml"
+
 tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 

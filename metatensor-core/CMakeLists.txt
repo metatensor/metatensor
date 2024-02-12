@@ -127,16 +127,21 @@ endif()
 # ============================================================================ #
 # determine Cargo flags
 
+set(CARGO_BUILD_ARG "")
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.lock)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--locked")
+endif()
+
 # TODO: support multiple configuration generators (MSVC, ...)
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
 if ("${BUILD_TYPE}" STREQUAL "debug")
-    set(CARGO_BUILD_ARG "")
     set(CARGO_BUILD_TYPE "debug")
 elseif("${BUILD_TYPE}" STREQUAL "release")
-    set(CARGO_BUILD_ARG "--release")
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--release")
     set(CARGO_BUILD_TYPE "release")
 elseif("${BUILD_TYPE}" STREQUAL "relwithdebinfo")
-    set(CARGO_BUILD_ARG "--release")
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--release")
     set(CARGO_BUILD_TYPE "release")
 else()
     message(FATAL_ERROR "unsuported build type: ${CMAKE_BUILD_TYPE}")
@@ -190,7 +195,7 @@ if (CARGO_VERSION_CHANGED)
     file(APPEND "${TMPDIR}/_cargo_required_libs/Cargo.toml" "[lib]\ncrate-type=[\"staticlib\"]")
 
     execute_process(
-        COMMAND ${CARGO_EXE} rustc --verbose --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
+        COMMAND ${CARGO_EXE} rustc --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
         WORKING_DIRECTORY "${TMPDIR}/_cargo_required_libs"
         RESULT_VARIABLE cargo_build_result
         ERROR_VARIABLE cargo_build_error_message
