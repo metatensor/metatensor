@@ -27,6 +27,14 @@ def torch_jit_script(function):
     return function
 
 
+def torch_jit_annotate(type, value):
+    """
+    This function takes the place of ``torch.jit.annotate`` when running in pure Python
+    mode (i.e. when using classes from metatensor-core).
+    """
+    return value
+
+
 check_isinstance = isinstance
 
 __all__ = [

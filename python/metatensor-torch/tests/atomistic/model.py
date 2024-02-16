@@ -36,12 +36,13 @@ class MinimalModel(torch.nn.Module):
         if "dummy" in outputs:
             block = TensorBlock(
                 values=torch.tensor([[0.0]]),
-                samples=Labels("s", torch.IntTensor([[0]])),
-                components=[],
-                properties=Labels("p", torch.IntTensor([[0]])),
+                samples=Labels("s", torch.tensor([[0]])),
+                components=torch.jit.annotate(List[Labels], []),
+                properties=Labels("p", torch.tensor([[0]])),
             )
+            tensor = TensorMap(Labels("_", torch.tensor([[0]])), [block])
             return {
-                "dummy": TensorMap(Labels("_", torch.IntTensor([[0]])), [block]),
+                "dummy": tensor,
             }
         else:
             return {}

@@ -37,9 +37,9 @@ def test_reduction_all_samples():
         ),
         samples=Labels.range("s", 3),
         components=[],
-        properties=Labels(["p"], torch.IntTensor([[0], [1], [5]])),
+        properties=Labels(["p"], torch.tensor([[0], [1], [5]])),
     )
-    keys = Labels(names=["key_1", "key_2"], values=torch.IntTensor([[0, 0]]))
+    keys = Labels(names=["key_1", "key_2"], values=torch.tensor([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
     sum_X = metatensor.torch.sum_over_samples(X, sample_names=["s"])

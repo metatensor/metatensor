@@ -112,14 +112,12 @@ class SingleAtomEnergy(torch.nn.Module):
         # add metadata to the output
         block = TensorBlock(
             values=energy,
-            samples=Labels("system", torch.arange(len(systems), dtype=torch.int32)),
+            samples=Labels("system", torch.arange(len(systems))),
             components=[],
-            properties=Labels("energy", torch.IntTensor([[0]])),
+            properties=Labels("energy", torch.tensor([[0]])),
         )
         return {
-            "energy": TensorMap(
-                keys=Labels("_", torch.IntTensor([[0]])), blocks=[block]
-            )
+            "energy": TensorMap(keys=Labels("_", torch.tensor([[0]])), blocks=[block])
         }
 
 

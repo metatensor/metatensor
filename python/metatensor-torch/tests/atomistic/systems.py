@@ -9,7 +9,7 @@ from metatensor.torch.atomistic import NeighborsListOptions, System
 
 @pytest.fixture
 def species():
-    return torch.IntTensor([1, -2, 3, 1, 1, 1, 3, 3])
+    return torch.tensor([1, -2, 3, 1, 1, 1, 3, 3])
 
 
 @pytest.fixture
@@ -448,13 +448,19 @@ def test_to(system, neighbors):
     system.add_data("test-data", neighbors)
 
     assert system.device.type == torch.device("cpu").type
-    check_dtype(system, torch.float32)
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        check_dtype(system, torch.float32)
 
     converted = system.to(dtype=torch.float64)
-    check_dtype(converted, torch.float64)
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+    if (
+        hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_available()
+        and torch.backends.mps.is_built()
+    ):
         devices.append("mps")
         devices.append(torch.device("mps"))
 

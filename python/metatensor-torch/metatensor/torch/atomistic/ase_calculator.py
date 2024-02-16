@@ -306,9 +306,9 @@ def _compute_ase_neighbors(atoms, options):
 
     if len(distances) == 0:
         distances = torch.zeros((0, 3), dtype=positions.dtype)
-        samples = torch.zeros((0, 5), dtype=torch.int32)
+        samples = torch.zeros((0, 5))
     else:
-        samples = torch.tensor(samples, dtype=torch.int32)
+        samples = torch.tensor(samples)
         distances = torch.vstack(distances)
 
     return TensorBlock(

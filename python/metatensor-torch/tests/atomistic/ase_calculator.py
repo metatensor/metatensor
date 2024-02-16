@@ -60,8 +60,8 @@ class LennardJones(torch.nn.Module):
         all_energies = []
         for system in systems:
             neighbors = system.get_neighbors_list(self._nl_options)
-            all_i = neighbors.samples.column("first_atom")
-            all_j = neighbors.samples.column("second_atom")
+            all_i = neighbors.samples.column("first_atom").to(torch.long)
+            all_j = neighbors.samples.column("second_atom").to(torch.long)
 
             species = system.species
             positions = system.positions
@@ -103,24 +103,18 @@ class LennardJones(torch.nn.Module):
                 for a in range(len(system)):
                     samples_list.append([s, a])
 
-            samples = Labels(
-                ["structure", "atom"],
-                torch.tensor(samples_list, dtype=torch.int32),
-            )
+            samples = Labels(["structure", "atom"], torch.tensor(samples_list))
         else:
-            samples = Labels(
-                ["structure"],
-                torch.tensor([[s] for s in range(len(systems))], dtype=torch.int32),
-            )
+            samples = Labels(["structure"], torch.arange(len(systems)).reshape(-1, 1))
 
         block = TensorBlock(
             values=torch.vstack(all_energies).reshape(-1, 1),
             samples=samples,
-            components=[],
-            properties=Labels(["energy"], torch.IntTensor([[0]])),
+            components=torch.jit.annotate(List[Labels], []),
+            properties=Labels(["energy"], torch.tensor([[0]])),
         )
         return {
-            "energy": TensorMap(Labels(["_"], torch.IntTensor([[0]])), [block]),
+            "energy": TensorMap(Labels("_", torch.tensor([[0]])), [block]),
         }
 
     def requested_neighbors_lists(self) -> List[NeighborsListOptions]:

@@ -730,7 +730,7 @@ class TensorBlock:
         >>> from metatensor.torch import TensorBlock, Labels
         >>> block = TensorBlock(
         ...     values=torch.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["structure"], torch.IntTensor([[0], [2], [4]])),
+        ...     samples=Labels(["structure"], torch.tensor([[0], [2], [4]])),
         ...     components=[Labels.range("component", 1)],
         ...     properties=Labels.range("property", 1),
         ... )
@@ -738,7 +738,7 @@ class TensorBlock:
         ...     values=torch.full((2, 1, 1), 11.0),
         ...     samples=Labels(
         ...         names=["sample", "parameter"],
-        ...         values=torch.IntTensor([[0, -2], [2, 3]]),
+        ...         values=torch.tensor([[0, -2], [2, 3]]),
         ...     ),
         ...     components=[Labels.range("component", 1)],
         ...     properties=Labels.range("property", 1),
