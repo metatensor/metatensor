@@ -288,3 +288,28 @@ def test_not_unique_after():
     )
     with pytest.raises(metatensor.status.MetatensorError, match=match):
         metatensor.remove_dimension(tensor(), axis="keys", name="center_type")
+
+
+def test_insert_dimension_wrong_size():
+    """
+    Tests that passing an int for the `values` is ok, but an array of the
+    wrong size isn't
+    """
+
+    message = "the new `values` contains 1 entries, but the Labels contains 52"
+    with pytest.raises(ValueError, match=message):
+        metatensor.insert_dimension(
+            tensor(),
+            axis="samples",
+            name="new_dimension",
+            values=np.array([0]),
+            index=0,
+        )
+
+    metatensor.insert_dimension(
+        tensor(),
+        axis="samples",
+        name="new_dimension",
+        values=0,
+        index=0,
+    )

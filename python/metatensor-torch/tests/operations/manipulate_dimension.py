@@ -31,6 +31,11 @@ def test_append():
     assert isinstance(new_tensor, torch.ScriptObject)
     assert new_tensor.sample_names == ["system", "atom", "center_2"]
 
+    # using an integer value
+    new_tensor = metatensor.torch.append_dimension(tensor, "properties", "new", 4)
+    assert isinstance(new_tensor, torch.ScriptObject)
+    assert new_tensor.property_names == ["l", "n_1", "n_2", "new"]
+
 
 def test_insert():
     tensor = get_tensor_map()
@@ -42,6 +47,12 @@ def test_insert():
 
     assert isinstance(new_tensor, torch.ScriptObject)
     assert new_tensor.sample_names == ["system", "center_2", "atom"]
+
+    # using an integer value
+    new_tensor = metatensor.torch.insert_dimension(tensor, "properties", 0, "new", 3)
+
+    assert isinstance(new_tensor, torch.ScriptObject)
+    assert new_tensor.property_names == ["new", "l", "n_1", "n_2"]
 
 
 def test_permute():
