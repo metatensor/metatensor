@@ -614,6 +614,12 @@ class Labels:
         if len(values.shape) != 1:
             raise ValueError("`values` must be a 1D array")
 
+        if values.shape[0] != len(self):
+            raise ValueError(
+                f"the new `values` contains {values.shape[0]} entries, "
+                f"but the Labels contains {len(self)}"
+            )
+
         new_values = np.insert(self.values, index, values, axis=1)
 
         return Labels(names=new_names, values=new_values)
