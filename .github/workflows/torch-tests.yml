@@ -77,5 +77,5 @@ jobs:
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-          METATENSOR_TORCH_TEST_VERSION: ${{ matrix.torch-version }}
+          METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}

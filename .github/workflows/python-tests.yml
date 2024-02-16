@@ -13,18 +13,22 @@ concurrency:
 jobs:
   python-tests:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }} / Torch ${{ matrix.torch-version }}
     strategy:
       matrix:
         include:
           - os: ubuntu-20.04
             python-version: "3.8"
+            torch-version: "2.2.*"
           - os: ubuntu-20.04
             python-version: "3.12"
+            torch-version: "2.2.*"
           - os: macos-11
             python-version: "3.12"
+            torch-version: "2.2.*"
           - os: windows-2019
             python-version: "3.12"
+            torch-version: "2.2.*"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,3 +68,4 @@ jobs:
         run: tox
         env:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
