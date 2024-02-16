@@ -105,12 +105,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...             energy_block = TensorBlock(
     ...                 values=energies,
     ...                 samples=Labels(["system"], systems_idx.to(torch.int32)),
-    ...                 components=[],
-    ...                 properties=Labels(["energy"], torch.IntTensor([[0]])),
+    ...                 components=torch.jit.annotate(List[Labels], []),
+    ...                 properties=Labels(["energy"], torch.tensor([[0]])),
     ...             )
     ...
     ...             results["energy"] = TensorMap(
-    ...                 keys=Labels(["_"], torch.IntTensor([[0]])),
+    ...                 keys=Labels(["_"], torch.tensor([[0]])),
     ...                 blocks=[energy_block],
     ...             )
     ...
@@ -344,6 +344,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
             is removed and re-created.
         """
         module = self.eval()
+        if os.environ.get("PYTORCH_JIT") == "0":
+            raise RuntimeError(
+                "found PYTORCH_JIT=0 in the environment, "
+                "we can not export models without TorchScript"
+            )
+
         try:
             module = torch.jit.script(module)
         except RuntimeError as e:

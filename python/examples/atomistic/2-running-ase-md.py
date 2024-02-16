@@ -107,17 +107,14 @@ class HarmonicModel(torch.nn.Module):
             energy[i] += torch.sum(self.force_constant * (system.positions - r0) ** 2)
 
         # add metadata to the output
-        systems_id = torch.arange(len(systems), dtype=torch.int32)
         block = TensorBlock(
             values=energy,
-            samples=Labels("system", systems_id.reshape(-1, 1)),
+            samples=Labels("system", torch.arange(len(systems)).reshape(-1, 1)),
             components=[],
-            properties=Labels("energy", torch.IntTensor([[0]])),
+            properties=Labels("energy", torch.tensor([[0]])),
         )
         return {
-            "energy": TensorMap(
-                keys=Labels("_", torch.IntTensor([[0]])), blocks=[block]
-            )
+            "energy": TensorMap(keys=Labels("_", torch.tensor([[0]])), blocks=[block])
         }
 
 
