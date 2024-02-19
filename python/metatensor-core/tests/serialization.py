@@ -64,18 +64,19 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
 
     assert isinstance(tensor, TensorMap)
     assert tensor.keys.names == [
-        "spherical_harmonics_l",
-        "center_species",
-        "neighbor_species",
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
     ]
     assert len(tensor.keys) == 27
 
-    block = tensor.block(spherical_harmonics_l=2, center_species=6, neighbor_species=1)
-    assert block.samples.names == ["structure", "center"]
+    block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert block.samples.names == ["system", "atom"]
     assert block.values.shape == (9, 5, 3)
 
     gradient = block.gradient("positions")
-    assert gradient.samples.names == ["sample", "structure", "atom"]
+    assert gradient.samples.names == ["sample", "system", "atom"]
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
@@ -332,9 +333,10 @@ def test_load_labels(memory_buffer, standalone_fn):
 
     assert isinstance(labels, Labels)
     assert labels.names == [
-        "spherical_harmonics_l",
-        "center_species",
-        "neighbor_species",
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
     ]
     assert len(labels) == 27
 

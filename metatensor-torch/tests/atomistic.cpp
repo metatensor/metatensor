@@ -126,7 +126,7 @@ TEST_CASE("Models metadata") {
         }
     },
     "selected_atoms": {
-        "names": ["structure", "atom"],
+        "names": ["system", "atom"],
         "values": [0, 1, 4, 5]
     },
     "class": "ModelEvaluationOptions"
@@ -135,7 +135,7 @@ TEST_CASE("Models metadata") {
         options = ModelEvaluationOptionsHolder::from_json(json);
         CHECK(options->length_unit == "very large");
         auto expected_selection = LabelsHolder::create(
-            {"structure", "atom"},
+            {"system", "atom"},
             {{0, 1}, {4, 5}}
         );
         CHECK(*options->get_selected_atoms().value() == *expected_selection);

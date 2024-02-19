@@ -67,7 +67,7 @@ class MyCustomModel(torch.nn.Module):
 #
 # Finally, ``selected_atoms`` is also set by whoever is using the model, and is either
 # ``None``, meaning all atoms should be included in the calculation, or a
-# :py:class:`metatensor.torch.Labels` object containing two dimensions: ``"structure"``
+# :py:class:`metatensor.torch.Labels` object containing two dimensions: ``"system"``
 # and ``"atom"``, with values corresponding to the structure/atoms indexes to include in
 # the calculation. For example when working with additive atom-centered models, only
 # atoms in ``selected_atoms`` will be used as atomic centers, but all atoms will be
@@ -151,7 +151,7 @@ model = SingleAtomEnergy(
 # -------------------
 #
 # Once your model has been trained, we can export it to a model file, that can be used
-# to run simulations or make predictions on new structures. This is done with the
+# to run simulations or make predictions on new systems. This is done with the
 # :py:class:`MetatensorAtomisticModel` class, which takes your model and make sure it
 # follows the required interface.
 #

@@ -101,9 +101,9 @@ class LennardJones(torch.nn.Module):
                 for a in range(len(system)):
                     samples_list.append([s, a])
 
-            samples = Labels(["structure", "atom"], torch.tensor(samples_list))
+            samples = Labels(["system", "atom"], torch.tensor(samples_list))
         else:
-            samples = Labels(["structure"], torch.arange(len(systems)).reshape(-1, 1))
+            samples = Labels(["system"], torch.arange(len(systems)).reshape(-1, 1))
 
         block = TensorBlock(
             values=torch.vstack(all_energies).reshape(-1, 1),

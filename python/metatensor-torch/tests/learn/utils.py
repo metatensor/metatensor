@@ -10,7 +10,7 @@ def random_single_block_no_components_tensor_map():
     block = TensorBlock(
         values=torch.rand(4, 2, **TORCH_KWARGS),
         samples=Labels(
-            ["sample", "structure"],
+            ["sample", "system"],
             torch.tensor([[0, 0], [1, 1], [2, 2], [3, 3]]),
         ),
         components=[],
@@ -19,7 +19,7 @@ def random_single_block_no_components_tensor_map():
     positions_gradient = TensorBlock(
         values=torch.rand(7, 3, 2, **TORCH_KWARGS),
         samples=Labels(
-            ["sample", "structure", "center"],
+            ["sample", "system", "atom"],
             torch.tensor(
                 [
                     [0, 0, 1],
@@ -40,8 +40,8 @@ def random_single_block_no_components_tensor_map():
     cell_gradient = TensorBlock(
         values=torch.rand(4, 6, 2, **TORCH_KWARGS),
         samples=Labels(
-            ["sample", "structure"],
-            torch.tensor([[0, 0], [1, 1], [2, 2], [3, 3]]),
+            ["sample"],
+            torch.tensor([[0], [1], [2], [3]]),
         ),
         components=[
             Labels(

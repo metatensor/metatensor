@@ -213,7 +213,7 @@ def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
     .. code-block:: python
 
         samples = Labels(
-            names=["structure", "center"],
+            names=["system", "atom"],
             values=np.array([[0, 1], [0, 6], [1, 6], [3, 16]]),  # must be a 2D-array
         )
         properties = Labels(
@@ -302,7 +302,7 @@ def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     .. code-block:: python
 
         samples = Labels(
-            names=["structure", "center"],
+            names=["system", "atom"],
             values=np.array([[0, 1], [0, 6], [1, 6], [3, 16]]),  # must be a 2D-array
         )
         properties = Labels(

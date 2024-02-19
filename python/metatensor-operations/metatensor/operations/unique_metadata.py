@@ -202,7 +202,7 @@ def unique_metadata_block(
     and ``names``. This will have length zero but the names will be the same as
     passed in ``names``.
 
-    For example, to find the unique ``"structure"`` indices in the ``"samples"``
+    For example, to find the unique ``"system"`` indices in the ``"samples"``
     metadata present in a given :py:class:`TensorBlock`:
 
     .. code-block:: python
@@ -212,7 +212,7 @@ def unique_metadata_block(
         unique_samples = metatensor.unique_metadata_block(
             block,
             axis="samples",
-            names=["structure"],
+            names=["system"],
         )
 
     To find the unique ``"atom"`` indices along the ``"samples"`` axis present

@@ -115,7 +115,7 @@ def lstsq(
     ...         [0.0, 1.0],
     ...     ]
     ... )
-    >>> samples = Labels("structure", np.array([[0], [1]]))
+    >>> samples = Labels("system", np.array([[0], [1]]))
     >>> components = []
     >>> properties = Labels("properties", np.array([[0], [1]]))
     >>> keys = Labels(names="key", values=np.array([[0]]))

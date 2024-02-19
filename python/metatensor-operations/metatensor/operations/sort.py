@@ -172,15 +172,13 @@ def sort_block(
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
-    ...     samples=Labels(
-    ...         ["structures", "centers"], np.array([[0, 3], [0, 1], [0, 2]])
-    ...     ),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 3], [0, 1], [0, 2]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
     ... )
     >>> print(block)
     TensorBlock
-        samples (3): ['structures', 'centers']
+        samples (3): ['system', 'atom']
         components (): []
         properties (3): ['n', 'l']
         gradients: None
@@ -294,15 +292,13 @@ def sort(
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block_1 = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
-    ...     samples=Labels(
-    ...         ["structures", "centers"], np.array([[0, 3], [0, 1], [0, 2]])
-    ...     ),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 3], [0, 1], [0, 2]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[1, 0], [2, 0], [0, 0]])),
     ... )
     >>> block_2 = TensorBlock(
     ...     values=np.arange(3).reshape(1, 3),
-    ...     samples=Labels(["structures", "centers"], np.array([[0, 0]])),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[1, 0], [2, 0], [0, 0]])),
     ... )
