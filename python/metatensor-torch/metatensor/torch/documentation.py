@@ -730,7 +730,7 @@ class TensorBlock:
         >>> from metatensor.torch import TensorBlock, Labels
         >>> block = TensorBlock(
         ...     values=torch.full((3, 1, 1), 1.0),
-        ...     samples=Labels(["structure"], torch.tensor([[0], [2], [4]])),
+        ...     samples=Labels(["system"], torch.tensor([[0], [2], [4]])),
         ...     components=[Labels.range("component", 1)],
         ...     properties=Labels.range("property", 1),
         ... )
@@ -746,7 +746,7 @@ class TensorBlock:
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
         TensorBlock
-            samples (3): ['structure']
+            samples (3): ['system']
             components (1): ['component']
             properties (1): ['property']
             gradients: ['parameter']
@@ -764,7 +764,7 @@ class TensorBlock:
         >>> from metatensor.torch import TensorBlock, Labels
         >>> block = TensorBlock(
         ...     values=torch.full((3, 1, 5), 1.0),
-        ...     samples=Labels(["structure"], torch.tensor([[0], [2], [4]])),
+        ...     samples=Labels(["system"], torch.tensor([[0], [2], [4]])),
         ...     components=[Labels.range("component", 1)],
         ...     properties=Labels.range("property", 5),
         ... )

@@ -387,7 +387,7 @@ def sum_over_samples_block(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     :param block:
         input :py:class:`TensorBlock`
@@ -408,7 +408,7 @@ def sum_over_samples_block(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -421,12 +421,12 @@ def sum_over_samples_block(
     ...     components=[],
     ...     properties=Labels.range("properties", 3),
     ... )
-    >>> block_sum = sum_over_samples_block(block, sample_names="center")
+    >>> block_sum = sum_over_samples_block(block, sample_names="atom")
     >>> print(block_sum.samples)
     Labels(
-        structure
-            0
-            1
+        system
+          0
+          1
     )
     >>> print(block_sum.values)
     [[ 4  7 10]
@@ -455,7 +455,7 @@ def sum_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     :param tensor:
         input :py:class:`TensorMap`
@@ -476,7 +476,7 @@ def sum_over_samples(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -491,19 +491,19 @@ def sum_over_samples(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
-    >>> tensor_sum = sum_over_samples(tensor, sample_names="center")
-    >>> # only 'structure' is left as a sample
+    >>> tensor_sum = sum_over_samples(tensor, sample_names="atom")
+    >>> # only 'system' is left as a sample
     >>> print(tensor_sum.block(0))
     TensorBlock
-        samples (2): ['structure']
+        samples (2): ['system']
         components (): []
         properties (3): ['properties']
         gradients: None
     >>> print(tensor_sum.block(0).samples)
     Labels(
-        structure
-            0
-            1
+        system
+          0
+          1
     )
     >>> print(tensor_sum.block(0).values)
     [[ 4  7 10]
@@ -554,7 +554,7 @@ def mean_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.
@@ -607,7 +607,7 @@ def std_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples()`.
@@ -667,7 +667,7 @@ def var_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.

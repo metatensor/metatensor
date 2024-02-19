@@ -96,7 +96,7 @@ def split(
     specified indices for the corresponding group.
 
     For example, to split a tensor along the "samples" axis, according to the
-    "structure" index, where structures 0, 6, and 7 are in the first returned
+    "system" index, where system 0, 6, and 7 are in the first returned
     :py:class`TensorMap`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
     third:
 
@@ -108,9 +108,9 @@ def split(
             tensor,
             axis="samples",
             grouped_labels=[
-                Labels(names=["structure"], values=np.array([[0], [6], [7]])),
-                Labels(names=["structure"], values=np.array([[2], [3], [4]])),
-                Labels(names=["structure"], values=np.array([[1], [5], [8], [10]])),
+                Labels(names=["system"], values=np.array([[0], [6], [7]])),
+                Labels(names=["system"], values=np.array([[2], [3], [4]])),
+                Labels(names=["system"], values=np.array([[1], [5], [8], [10]])),
             ],
         )
 
@@ -170,8 +170,8 @@ def split_block(
     ``tensor``, but with the dimensions of the blocks reduced to only contain the
     specified indices for the corresponding group.
 
-    For example, to split a block along the "samples" axis, according to the "structure"
-    index, where structures 0, 6, and 7 are in the first returned :py:class`TensorMap`;
+    For example, to split a block along the "samples" axis, according to the "system"
+    index, where system 0, 6, and 7 are in the first returned :py:class`TensorMap`;
     2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the third:
 
     .. code-block:: python
@@ -182,9 +182,9 @@ def split_block(
             block,
             axis="samples",
             grouped_labels=[
-                Labels(names=["structure"], values=np.array([[0], [6]])),
-                Labels(names=["structure"], values=np.array([[2], [3]])),
-                Labels(names=["structure"], values=np.array([[1], [5], [10]])),
+                Labels(names=["system"], values=np.array([[0], [6]])),
+                Labels(names=["system"], values=np.array([[2], [3]])),
+                Labels(names=["system"], values=np.array([[1], [5], [10]])),
             ],
         )
 

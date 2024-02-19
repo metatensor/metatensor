@@ -99,12 +99,12 @@ def test_linear_from_weight(single_block_tensor_torch):
     weights = metatensor.slice(
         single_block_tensor_torch,
         axis="samples",
-        labels=Labels(["sample", "structure"], np.array([[0, 0], [1, 1]])),
+        labels=Labels(["sample", "system"], np.array([[0, 0], [1, 1]])),
     )
     bias = metatensor.slice(
         single_block_tensor_torch,
         axis="samples",
-        labels=Labels(["sample", "structure"], np.array([[3, 3]])),
+        labels=Labels(["sample", "system"], np.array([[3, 3]])),
     )
     module = Linear.from_weights(weights, bias)
     module(single_block_tensor_torch)

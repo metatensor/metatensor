@@ -874,7 +874,7 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
 
 static void check_selected_atoms(const torch::optional<TorchLabels>& selected_atoms) {
     if (selected_atoms) {
-        if (selected_atoms.value()->names() != std::vector<std::string>{"structure", "atom"}) {
+        if (selected_atoms.value()->names() != std::vector<std::string>{"system", "atom"}) {
             std::ostringstream oss;
             oss << '[';
             for (const auto& name: selected_atoms.value()->names()) {
@@ -883,7 +883,7 @@ static void check_selected_atoms(const torch::optional<TorchLabels>& selected_at
             oss << ']';
 
             C10_THROW_ERROR(ValueError,
-                "invalid `selected_atoms` names: expected ['structure', 'atom'], "
+                "invalid `selected_atoms` names: expected ['system', 'atom'], "
                 "got " + oss.str()
             );
         }

@@ -209,8 +209,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         if run_options.outputs["energy"].per_atom:
             assert len(energy) == 1
-            assert energy.sample_names == ["structure", "atom"]
-            assert torch.all(energy.block().samples["structure"] == 0)
+            assert energy.sample_names == ["system", "atom"]
+            assert torch.all(energy.block().samples["system"] == 0)
             assert torch.all(
                 energy.block().samples["atom"] == torch.arange(positions.shape[0])
             )

@@ -43,24 +43,24 @@ mod tensor {
     }
 
     fn check_tensor(tensor: &TensorMap) {
-        assert_eq!(tensor.keys().names(), ["spherical_harmonics_l", "center_species", "neighbor_species"]);
+        assert_eq!(tensor.keys().names(), ["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
         assert_eq!(tensor.keys().count(), 27);
 
         let block = tensor.block_by_id(13);
 
         assert_eq!(block.values().as_array().shape(), [9, 3, 3]);
-        assert_eq!(block.samples().names(), ["structure", "center"]);
+        assert_eq!(block.samples().names(), ["system", "atom"]);
         assert_eq!(block.components().len(), 1);
-        assert_eq!(block.components()[0].names(), ["spherical_harmonics_m"]);
+        assert_eq!(block.components()[0].names(), ["o3_mu"]);
         assert_eq!(block.properties().names(), ["n"]);
 
         assert_eq!(block.gradient_list(), ["positions"]);
         let gradient = block.gradient("positions").unwrap();
         assert_eq!(gradient.values().as_array().shape(), [27, 3, 3, 3]);
-        assert_eq!(gradient.samples().names(), ["sample", "structure", "atom"]);
+        assert_eq!(gradient.samples().names(), ["sample", "system", "atom"]);
         assert_eq!(gradient.components().len(), 2);
-        assert_eq!(gradient.components()[0].names(), ["gradient_direction"]);
-        assert_eq!(gradient.components()[1].names(), ["spherical_harmonics_m"]);
+        assert_eq!(gradient.components()[0].names(), ["xyz"]);
+        assert_eq!(gradient.components()[1].names(), ["o3_mu"]);
         assert_eq!(gradient.properties().names(), ["n"]);
     }
 }
@@ -111,7 +111,7 @@ mod labels {
 
 
     fn check_labels(labels: &Labels) {
-        assert_eq!(labels.names(), ["spherical_harmonics_l", "center_species", "neighbor_species"]);
+        assert_eq!(labels.names(), ["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
         assert_eq!(labels.count(), 27);
     }
 }
