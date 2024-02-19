@@ -118,8 +118,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :py:class:`ase.Atoms` when the model can predict properties not supported by the
         usual ASE's calculator interface.
         """
-        species, positions, cell = _ase_to_torch_data(atoms)
-        system = System(species, positions, cell)
+        types, positions, cell = _ase_to_torch_data(atoms)
+        system = System(types, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
         for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
@@ -163,7 +163,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
 
         outputs = _ase_properties_to_metatensor_outputs(properties)
-        species, positions, cell = _ase_to_torch_data(atoms)
+        types, positions, cell = _ase_to_torch_data(atoms)
 
         do_backward = False
         if "forces" in properties:
@@ -184,7 +184,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             raise NotImplementedError("'stresses' are not implemented yet")
 
         # convert from ase.Atoms to metatensor.torch.atomistic.System
-        system = System(species, positions, cell)
+        system = System(types, positions, cell)
         for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
             neighbors = _compute_ase_neighbors(atoms, options)
             register_autograd_neighbors(
@@ -331,7 +331,7 @@ def _compute_ase_neighbors(atoms, options):
 def _ase_to_torch_data(atoms):
     """Get the positions and cell from ASE atoms as torch tensors"""
 
-    species = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
+    types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
     positions = torch.from_numpy(atoms.positions)
 
     if np.all(atoms.pbc):
@@ -344,7 +344,7 @@ def _ase_to_torch_data(atoms):
     else:
         cell = torch.zeros((3, 3), dtype=torch.float64)
 
-    return species, positions, cell
+    return types, positions, cell
 
 
 def _full_3x3_to_voigt_6_stress(stress):

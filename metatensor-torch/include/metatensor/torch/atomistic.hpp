@@ -139,12 +139,12 @@ METATENSOR_TORCH_EXPORT void register_autograd_neighbors(
 /// be used as the input of metatensor atomistic models.
 class METATENSOR_TORCH_EXPORT SystemHolder final: public torch::CustomClassHolder {
 public:
-    /// Create a `SystemHolder` with the given `species`, `positions` and
+    /// Create a `SystemHolder` with the given `types`, `positions` and
     /// `cell`.
     ///
-    /// @param species 1D tensor of 32-bit integer representing the particles
+    /// @param types 1D tensor of 32-bit integer representing the particles
     ///        identity. For atoms, this is typically their atomic numbers.
-    /// @param positions 2D tensor of shape (len(species), 3) containing the
+    /// @param positions 2D tensor of shape (len(types), 3) containing the
     ///        Cartesian positions of all particles in the system.
     /// @param cell 2D tensor of shape (3, 3), describing the bounding box/unit
     ///        cell of the system. Each row should be one of the bounding box
@@ -152,16 +152,16 @@ public:
     ///        these vectors (i.e. the cell should be given in row-major order).
     ///        Systems are assumed to obey periodic boundary conditions,
     ///        non-periodic systems should set the cell to 0.
-    SystemHolder(torch::Tensor species, torch::Tensor positions, torch::Tensor cell);
+    SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell);
     ~SystemHolder() override = default;
 
-    /// Get the species for all particles in the system.
-    torch::Tensor species() const {
-        return species_;
+    /// Get the particle types for all particles in the system.
+    torch::Tensor types() const {
+        return types_;
     }
 
-    /// Set species for all particles in the system
-    void set_species(torch::Tensor species);
+    /// Set types for all particles in the system
+    void set_types(torch::Tensor types);
 
     /// Get the positions for the atoms in the system.
     torch::Tensor positions() const {
@@ -181,7 +181,7 @@ public:
 
     /// Get the device used by all the data in this `System`
     torch::Device device() const {
-        return species_.device();
+        return this->types_.device();
     }
 
     /// Get the dtype used by all the floating point data in this `System`
@@ -197,7 +197,7 @@ public:
 
     /// Get the number of particles in this system
     int64_t size() const {
-        return  this->species_.size(0);
+        return this->types_.size(0);
     }
 
     /// Add a new neighbors list in this system corresponding to the given
@@ -253,7 +253,7 @@ private:
         }
     };
 
-    torch::Tensor species_;
+    torch::Tensor types_;
     torch::Tensor positions_;
     torch::Tensor cell_;
 
@@ -326,11 +326,11 @@ public:
     /// Initialize `ModelCapabilities` with the given data
     ModelCapabilitiesHolder(
         std::string length_unit_,
-        std::vector<int64_t> species_,
+        std::vector<int64_t> types_,
         torch::Dict<std::string, ModelOutput> outputs_
     ):
         length_unit(std::move(length_unit_)),
-        species(std::move(species_)),
+        types(std::move(types_)),
         outputs(outputs_)
     {}
 
@@ -339,8 +339,8 @@ public:
     /// unit of lengths the model expects as input
     std::string length_unit;
 
-    /// which atomic species the model can handle
-    std::vector<int64_t> species;
+    /// which particle types the model can handle
+    std::vector<int64_t> types;
 
     /// all possible outputs from this model and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;

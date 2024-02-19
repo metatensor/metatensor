@@ -17,6 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-torch C++
+
+#### Changed
+
+- `System::species` has been renamed to `System::types`.
+
+### metatensor-torch Python
+
+#### Changed
+
+- `System.species` has been renamed to `System.types`.
+
 ## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.2.1) - 2024-01-26
 
 ### metatensor-torch C++

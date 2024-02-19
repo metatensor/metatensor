@@ -63,7 +63,7 @@ class LennardJones(torch.nn.Module):
             all_i = neighbors.samples.column("first_atom").to(torch.long)
             all_j = neighbors.samples.column("second_atom").to(torch.long)
 
-            species = system.species
+            types = system.types
             positions = system.positions
 
             if per_atoms:
@@ -72,9 +72,7 @@ class LennardJones(torch.nn.Module):
                 energy = torch.zeros(1, dtype=positions.dtype)
 
             for i, j, distance in zip(all_i, all_j, neighbors.values.reshape(-1, 3)):
-                sigma, epsilon, shift = self._lj_params[int(species[i])][
-                    int(species[j])
-                ]
+                sigma, epsilon, shift = self._lj_params[int(types[i])][int(types[j])]
                 r2 = distance.dot(distance)
 
                 r6 = r2 * r2 * r2
@@ -136,7 +134,7 @@ def model():
 
     capabilities = ModelCapabilities(
         length_unit="Angstrom",
-        species=[28],
+        types=[28],
         outputs={
             "energy": ModelOutput(
                 quantity="energy",
@@ -165,7 +163,7 @@ def model_different_units():
 
     capabilities = ModelCapabilities(
         length_unit="Bohr",
-        species=[28],
+        types=[28],
         outputs={
             "energy": ModelOutput(
                 quantity="energy",

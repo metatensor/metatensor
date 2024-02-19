@@ -62,7 +62,7 @@ def model():
 
     capabilities = ModelCapabilities(
         length_unit="angstrom",
-        species=[1, 2, 3],
+        types=[1, 2, 3],
         outputs={
             "dummy": ModelOutput(
                 quantity="",

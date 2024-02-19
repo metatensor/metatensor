@@ -325,9 +325,9 @@ TORCH_LIBRARY(metatensor, m) {
     m.class_<SystemHolder>("System")
         .def(
             torch::init<torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
-            {torch::arg("species"), torch::arg("positions"), torch::arg("cell")}
+            {torch::arg("types"), torch::arg("positions"), torch::arg("cell")}
         )
-        .def_property("species", &SystemHolder::species, &SystemHolder::set_species)
+        .def_property("types", &SystemHolder::types, &SystemHolder::set_types)
         .def_property("positions", &SystemHolder::positions, &SystemHolder::set_positions)
         .def_property("cell", &SystemHolder::cell, &SystemHolder::set_cell)
         .def("__len__", &SystemHolder::size)
@@ -385,12 +385,12 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init<std::string, std::vector<int64_t>, torch::Dict<std::string, ModelOutput>>(),
             DOCSTRING, {
                 torch::arg("length_unit") = "",
-                torch::arg("species") = std::vector<int64_t>(),
+                torch::arg("types") = std::vector<int64_t>(),
                 torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
             }
         )
         .def_readwrite("length_unit", &ModelCapabilitiesHolder::length_unit)
-        .def_readwrite("species", &ModelCapabilitiesHolder::species)
+        .def_readwrite("types", &ModelCapabilitiesHolder::types)
         .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
         .def_pickle(
             [](const ModelCapabilities& self) -> std::string {

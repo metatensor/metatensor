@@ -58,11 +58,11 @@ class ModelCapabilitiesWrap:
     def set_length_unit(self, unit: str):
         self._c.length_unit = unit
 
-    def get_species(self) -> List[int]:
-        return self._c.species
+    def get_types(self) -> List[int]:
+        return self._c.types
 
-    def set_species(self, species: List[int]):
-        self._c.species = species
+    def set_types(self, types: List[int]):
+        self._c.types = types
 
     def get_outputs(self) -> Dict[str, ModelOutput]:
         return self._c.outputs

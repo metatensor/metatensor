@@ -70,7 +70,7 @@ std::string NeighborsListOptionsHolder::str() const {
 std::string NeighborsListOptionsHolder::to_json() const {
     nlohmann::json result;
 
-    result["type"] = "NeighborsListOptions";
+    result["class"] = "NeighborsListOptions";
 
     // Store cutoff using it's binary representation to ensure perfect
     // round-tripping of the data
@@ -91,12 +91,12 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
         throw std::runtime_error("invalid JSON data for NeighborsListOptions, expected an object");
     }
 
-    if (!data.contains("type") || !data["type"].is_string()) {
-        throw std::runtime_error("expected 'type' in JSON for NeighborsListOptions, did not find it");
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for NeighborsListOptions, did not find it");
     }
 
-    if (data["type"] != "NeighborsListOptions") {
-        throw std::runtime_error("'type' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
+    if (data["class"] != "NeighborsListOptions") {
+        throw std::runtime_error("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
     }
 
     if (!data.contains("model_cutoff") || !data["model_cutoff"].is_number_integer()) {
@@ -294,36 +294,36 @@ static bool is_floating_point(torch::Dtype dtype) {
     return dtype == torch::kF16 || dtype == torch::kF32 || dtype == torch::kF64;
 }
 
-SystemHolder::SystemHolder(torch::Tensor species, torch::Tensor positions, torch::Tensor cell):
-    species_(std::move(species)),
+SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell):
+    types_(std::move(types)),
     positions_(std::move(positions)),
     cell_(std::move(cell))
 {
-    if (positions_.device() != species_.device() || cell_.device() != species_.device()) {
+    if (positions_.device() != types_.device() || cell_.device() != types_.device()) {
         C10_THROW_ERROR(ValueError,
-            "`species`, `positions`, and `cell` must be on the same device, got " +
-            species_.device().str() + ", " + positions_.device().str() + ", and " +
+            "`types`, `positions`, and `cell` must be on the same device, got " +
+            types_.device().str() + ", " + positions_.device().str() + ", and " +
             cell_.device().str()
         );
     }
 
-    if (species_.sizes().size() != 1) {
+    if (types_.sizes().size() != 1) {
         C10_THROW_ERROR(ValueError,
-            "`species` must be a 1 dimensional tensor, got a tensor with " +
-            std::to_string(species_.sizes().size()) + " dimensions"
+            "`types` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(types_.sizes().size()) + " dimensions"
         );
     }
 
-    if (torch::canCast(species_.scalar_type(), torch::kInt32)) {
-        species_ = species_.to(torch::kInt32);
+    if (torch::canCast(types_.scalar_type(), torch::kInt32)) {
+        types_ = types_.to(torch::kInt32);
     } else {
         C10_THROW_ERROR(ValueError,
-            "`species` must be a tensor of integers, got " +
-            scalar_type_name(species_.scalar_type()) + " instead"
+            "`types` must be a tensor of integers, got " +
+            scalar_type_name(types_.scalar_type()) + " instead"
         );
     }
 
-    auto n_atoms = species_.size(0);
+    auto n_atoms = types_.size(0);
     if (positions_.sizes().size() != 2) {
         C10_THROW_ERROR(ValueError,
             "`positions` must be a 2 dimensional tensor, got a tensor with " +
@@ -369,38 +369,38 @@ SystemHolder::SystemHolder(torch::Tensor species, torch::Tensor positions, torch
 }
 
 
-void SystemHolder::set_species(torch::Tensor species) {
-    if (species.device() != this->device()) {
+void SystemHolder::set_types(torch::Tensor types) {
+    if (types.device() != this->device()) {
         C10_THROW_ERROR(ValueError,
-            "new `species` must be on the same device as existing data, got " +
-            species.device().str() + " and " + this->device().str()
+            "new `types` must be on the same device as existing data, got " +
+            types.device().str() + " and " + this->device().str()
         );
     }
 
-    if (species.sizes().size() != 1) {
+    if (types.sizes().size() != 1) {
         C10_THROW_ERROR(ValueError,
-            "new `species` must be a 1 dimensional tensor, got a tensor with " +
-            std::to_string(species.sizes().size()) + " dimensions"
+            "new `types` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(types.sizes().size()) + " dimensions"
         );
     }
 
-    if (species.size(0) != this->size()) {
+    if (types.size(0) != this->size()) {
         C10_THROW_ERROR(ValueError,
-            "new `species` must contain " + std::to_string(this->size()) + " entries, "
-            "got a tensor with " + std::to_string(species.size(0)) + " values"
+            "new `types` must contain " + std::to_string(this->size()) + " entries, "
+            "got a tensor with " + std::to_string(types.size(0)) + " values"
         );
     }
 
-    if (torch::canCast(species.scalar_type(), torch::kInt32)) {
-        species = species.to(torch::kInt32);
+    if (torch::canCast(types.scalar_type(), torch::kInt32)) {
+        types = types.to(torch::kInt32);
     } else {
         C10_THROW_ERROR(ValueError,
-            "new `species` must be a tensor of integers, got " +
-            scalar_type_name(species.scalar_type()) + " instead"
+            "new `types` must be a tensor of integers, got " +
+            scalar_type_name(types.scalar_type()) + " instead"
         );
     }
 
-    this->species_ = std::move(species);
+    this->types_ = std::move(types);
 }
 
 
@@ -474,7 +474,7 @@ System SystemHolder::to(
     torch::optional<torch::Device> device
 ) const {
     auto system = torch::make_intrusive<SystemHolder>(
-        this->species().to(
+        this->types().to(
             /*dtype*/ torch::nullopt,
             /*layout*/ torch::nullopt,
             device,
@@ -633,7 +633,7 @@ static std::string string_lower(const std::string& value) {
 }
 
 static auto INVALID_DATA_NAMES = std::unordered_set<std::string>{
-    "species",
+    "types",
     "positions", "position",
     "cell",
     "neighbors", "neighbor"
@@ -736,7 +736,7 @@ std::string SystemHolder::str() const {
 static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
     nlohmann::json result;
 
-    result["type"] = "ModelOutput";
+    result["class"] = "ModelOutput";
     result["quantity"] = self.quantity;
     result["unit"] = self.unit;
     result["per_atom"] = self.per_atom;
@@ -754,12 +754,12 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
         throw std::runtime_error("invalid JSON data for ModelOutput, expected an object");
     }
 
-    if (!data.contains("type") || !data["type"].is_string()) {
-        throw std::runtime_error("expected 'type' in JSON for ModelOutput, did not find it");
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for ModelOutput, did not find it");
     }
 
-    if (data["type"] != "ModelOutput") {
-        throw std::runtime_error("'type' in JSON for ModelOutput must be 'ModelOutput'");
+    if (data["class"] != "ModelOutput") {
+        throw std::runtime_error("'class' in JSON for ModelOutput must be 'ModelOutput'");
     }
 
     auto result = torch::make_intrusive<ModelOutputHolder>();
@@ -809,9 +809,9 @@ ModelOutput ModelOutputHolder::from_json(const std::string& json) {
 std::string ModelCapabilitiesHolder::to_json() const {
     nlohmann::json result;
 
-    result["type"] = "ModelCapabilities";
+    result["class"] = "ModelCapabilities";
     result["length_unit"] = this->length_unit;
-    result["species"] = this->species;
+    result["types"] = this->types;
 
     auto outputs = nlohmann::json::object();
     for (const auto& it: this->outputs) {
@@ -829,12 +829,12 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
         throw std::runtime_error("invalid JSON data for ModelCapabilities, expected an object");
     }
 
-    if (!data.contains("type") || !data["type"].is_string()) {
-        throw std::runtime_error("expected 'type' in JSON for ModelCapabilities, did not find it");
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for ModelCapabilities, did not find it");
     }
 
-    if (data["type"] != "ModelCapabilities") {
-        throw std::runtime_error("'type' in JSON for ModelCapabilities must be 'ModelCapabilities'");
+    if (data["class"] != "ModelCapabilities") {
+        throw std::runtime_error("'class' in JSON for ModelCapabilities must be 'ModelCapabilities'");
     }
 
     auto result = torch::make_intrusive<ModelCapabilitiesHolder>();
@@ -845,16 +845,16 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
         result->length_unit = data["length_unit"];
     }
 
-    if (data.contains("species")) {
-        if (!data["species"].is_array()) {
-            throw std::runtime_error("'species' in JSON for ModelCapabilities must be an array");
+    if (data.contains("types")) {
+        if (!data["types"].is_array()) {
+            throw std::runtime_error("'types' in JSON for ModelCapabilities must be an array");
         }
 
-        for (const auto& species: data["species"]) {
-            if (!species.is_number_integer()) {
-                throw std::runtime_error("'species' in JSON for ModelCapabilities must be an array of integers");
+        for (const auto& type: data["types"]) {
+            if (!type.is_number_integer()) {
+                throw std::runtime_error("'types' in JSON for ModelCapabilities must be an array of integers");
             }
-            result->species.emplace_back(species);
+            result->types.emplace_back(type);
         }
     }
 
@@ -874,7 +874,7 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
 
 static void check_selected_atoms(const torch::optional<TorchLabels>& selected_atoms) {
     if (selected_atoms) {
-        if (selected_atoms.value()->names() != std::vector<std::string>{"system", "atom"}) {
+        if (selected_atoms.value()->names() != std::vector<std::string>{"structure", "atom"}) {
             std::ostringstream oss;
             oss << '[';
             for (const auto& name: selected_atoms.value()->names()) {
@@ -883,7 +883,7 @@ static void check_selected_atoms(const torch::optional<TorchLabels>& selected_at
             oss << ']';
 
             C10_THROW_ERROR(ValueError,
-                "invalid `selected_atoms` names: expected ['system', 'atom'], "
+                "invalid `selected_atoms` names: expected ['structure', 'atom'], "
                 "got " + oss.str()
             );
         }
@@ -912,7 +912,7 @@ void ModelEvaluationOptionsHolder::set_selected_atoms(torch::optional<TorchLabel
 std::string ModelEvaluationOptionsHolder::to_json() const {
     nlohmann::json result;
 
-    result["type"] = "ModelEvaluationOptions";
+    result["class"] = "ModelEvaluationOptions";
     result["length_unit"] = this->length_unit;
 
     if (this->selected_atoms_) {
@@ -948,12 +948,12 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string
         throw std::runtime_error("invalid JSON data for ModelEvaluationOptions, expected an object");
     }
 
-    if (!data.contains("type") || !data["type"].is_string()) {
-        throw std::runtime_error("expected 'type' in JSON for ModelEvaluationOptions, did not find it");
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for ModelEvaluationOptions, did not find it");
     }
 
-    if (data["type"] != "ModelEvaluationOptions") {
-        throw std::runtime_error("'type' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'");
+    if (data["class"] != "ModelEvaluationOptions") {
+        throw std::runtime_error("'class' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'");
     }
 
     auto result = torch::make_intrusive<ModelEvaluationOptionsHolder>();

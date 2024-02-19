@@ -129,7 +129,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     >>> # Define the model capabilities
     >>> capabilities = ModelCapabilities(
     ...     length_unit="angstrom",
-    ...     species=[1, 2, 6, 8, 12],
+    ...     types=[1, 2, 6, 8, 12],
     ...     outputs={
     ...         "energy": ModelOutput(
     ...             quantity="energy",
@@ -263,13 +263,13 @@ class MetatensorAtomisticModel(torch.nn.Module):
             # check that the requested outputs match what the model can do
             _check_outputs(self._capabilities, options.outputs)
 
-            # check that the species of the system match the one the model supports
+            # check that the types of the system match the one the model supports
             for system in systems:
-                all_species = torch.unique(system.species)
-                for species in all_species:
-                    if species not in self._capabilities.species:
+                all_types = torch.unique(system.types)
+                for atom_type in all_types:
+                    if atom_type not in self._capabilities.types:
                         raise ValueError(
-                            f"this model can not run for the atomic species '{species}'"
+                            f"this model can not run for the atomic type '{atom_type}'"
                         )
 
                 # Check neighbors lists
@@ -538,7 +538,7 @@ def _convert_systems_units(
     new_systems: List[System] = []
     for system in systems:
         new_system = System(
-            species=system.species,
+            types=system.types,
             positions=conversion * system.positions,
             cell=conversion * system.cell,
         )

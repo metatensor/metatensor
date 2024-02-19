@@ -13,12 +13,12 @@ class System:
 
     def __init__(
         self,
-        species: torch.Tensor,
+        types: torch.Tensor,
         positions: torch.Tensor,
         cell: torch.Tensor,
     ):
         """
-        You can create a :py:class:`System` with ``species``, ``positions`` and ``cell``
+        You can create a :py:class:`System` with ``types``, ``positions`` and ``cell``
         tensors, or convert data from other libraries.
 
         .. admonition:: Converting data to metatensor `System`
@@ -31,10 +31,10 @@ class System:
 
             .. _rascaline: https://luthaf.fr/rascaline/latest/index.html
 
-        :param species: 1D tensor of integer representing the particles identity. For
+        :param types: 1D tensor of integer representing the particles identity. For
             atoms, this is typically their atomic numbers.
 
-        :param positions: 2D tensor of shape (len(species), 3) containing the Cartesian
+        :param positions: 2D tensor of shape (len(types), 3) containing the Cartesian
             positions of all particles in the system.
 
         :param cell: 2D tensor of shape (3, 3), describing the bounding box/unit cell of
@@ -44,10 +44,11 @@ class System:
             boundary conditions, non-periodic systems should set the cell to 0.
         """
 
-    def __len__(self) -> int: ...
+    def __len__(self) -> int:
+        pass
 
     @property
-    def species(self) -> torch.Tensor:
+    def types(self) -> torch.Tensor:
         """Tensor of 32-bit integers representing the particles identity"""
 
     @property
@@ -198,13 +199,17 @@ class NeighborsListOptions:
         Add another ``requestor`` to the list of modules requesting this neighbors list
         """
 
-    def __repr__(self) -> str: ...
+    def __repr__(self) -> str:
+        pass
 
-    def __str__(self) -> str: ...
+    def __str__(self) -> str:
+        pass
 
-    def __eq__(self, other: "NeighborsListOptions") -> bool: ...
+    def __eq__(self, other: "NeighborsListOptions") -> bool:
+        pass
 
-    def __ne__(self, other: "NeighborsListOptions") -> bool: ...
+    def __ne__(self, other: "NeighborsListOptions") -> bool:
+        pass
 
 
 class ModelOutput:
@@ -216,7 +221,8 @@ class ModelOutput:
         unit: str = "",
         per_atom: bool = False,
         explicit_gradients: List[str] = [],  # noqa B006
-    ): ...
+    ):
+        pass
 
     quantity: str
     """
@@ -246,15 +252,16 @@ class ModelCapabilities:
     def __init__(
         self,
         length_unit: str = "",
-        species: List[int] = [],  # noqa B006
+        types: List[int] = [],  # noqa B006
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
-    ): ...
+    ):
+        pass
 
     length_unit: str
     """unit of lengths the model expects as input"""
 
-    species: List[int]
-    """which atomic species the model can handle"""
+    types: List[int]
+    """which atomic types the model can handle"""
 
     outputs: Dict[str, ModelOutput]
     """
@@ -276,7 +283,8 @@ class ModelEvaluationOptions:
         length_unit: str = "",
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
         selected_atoms: Optional[Labels] = None,
-    ): ...
+    ):
+        pass
 
     length_unit: str
     """unit of lengths the engine uses for the model input"""
