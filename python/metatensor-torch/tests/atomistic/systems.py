@@ -8,7 +8,7 @@ from metatensor.torch.atomistic import NeighborsListOptions, System
 
 
 @pytest.fixture
-def species():
+def types():
     return torch.tensor([1, -2, 3, 1, 1, 1, 3, 3])
 
 
@@ -23,8 +23,8 @@ def cell():
 
 
 @pytest.fixture
-def system(species, positions, cell):
-    return System(species=species, positions=positions, cell=cell)
+def system(types, positions, cell):
+    return System(types=types, positions=positions, cell=cell)
 
 
 @pytest.fixture
@@ -51,10 +51,10 @@ def neighbors():
     )
 
 
-def test_system(species, positions, cell, neighbors):
-    system = System(species, positions, cell)
+def test_system(types, positions, cell, neighbors):
+    system = System(types, positions, cell)
 
-    assert torch.all(system.species == species)
+    assert torch.all(system.types == types)
     assert torch.all(system.positions == positions)
     assert torch.all(system.cell == cell)
 
@@ -64,7 +64,7 @@ def test_system(species, positions, cell, neighbors):
         # custom __repr__ definitions are only available since torch 2.1
         assert repr(system) == expected
 
-    system = System(species, positions, cell=torch.zeros_like(cell))
+    system = System(types, positions, cell=torch.zeros_like(cell))
     expected = "System with 8 atoms, non periodic"
     assert str(system) == expected
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -135,49 +135,49 @@ def test_custom_data(system):
         system.add_data("data-name", data)
 
 
-def test_data_validation(species, positions, cell):
+def test_data_validation(types, positions, cell):
     # this should run without error:
-    system = System(species, positions, cell)
+    system = System(types, positions, cell)
 
-    # ===== species checks ===== #
+    # ===== types checks ===== #
     message = (
-        "`species`, `positions`, and `cell` must be on the same device, "
+        "`types`, `positions`, and `cell` must be on the same device, "
         "got meta, cpu, and cpu"
     )
     with pytest.raises(ValueError, match=message):
-        System(species.to(device="meta"), positions, cell)
+        System(types.to(device="meta"), positions, cell)
 
     message = (
-        "new `species` must be on the same device as existing data, got meta and cpu"
+        "new `types` must be on the same device as existing data, got meta and cpu"
     )
     with pytest.raises(ValueError, match=message):
-        system.species = species.to(device="meta")
+        system.types = types.to(device="meta")
 
-    message = "`species` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
+    message = "`types` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
     with pytest.raises(ValueError, match=message):
-        System(species.reshape(-1, 1), positions, cell)
+        System(types.reshape(-1, 1), positions, cell)
 
     message = (
-        "new `species` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
+        "new `types` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
     )
     with pytest.raises(ValueError, match=message):
-        system.species = species.reshape(-1, 1)
+        system.types = types.reshape(-1, 1)
 
-    message = "`species` must be a tensor of integers, got torch.float64 instead"
+    message = "`types` must be a tensor of integers, got torch.float64 instead"
     with pytest.raises(ValueError, match=message):
-        System(species.to(dtype=torch.float64), positions, cell)
+        System(types.to(dtype=torch.float64), positions, cell)
 
-    message = "`species` must be a tensor of integers, got torch.float64 instead"
+    message = "`types` must be a tensor of integers, got torch.float64 instead"
     with pytest.raises(ValueError, match=message):
-        system.species = species.to(dtype=torch.float64)
+        system.types = types.to(dtype=torch.float64)
 
     # ===== positions checks ===== #
     message = (
-        "`species`, `positions`, and `cell` must be on the same device, "
+        "`types`, `positions`, and `cell` must be on the same device, "
         "got cpu, meta, and cpu"
     )
     with pytest.raises(ValueError, match=message):
-        System(species, positions.to(device="meta"), cell)
+        System(types, positions.to(device="meta"), cell)
 
     message = (
         "new `positions` must be on the same device as existing data, got meta and cpu"
@@ -189,7 +189,7 @@ def test_data_validation(species, positions, cell):
         "`positions` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
     )
     with pytest.raises(ValueError, match=message):
-        System(species, positions.reshape(1, -1, 3), cell)
+        System(types, positions.reshape(1, -1, 3), cell)
 
     message = (
         "new `positions` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
@@ -202,7 +202,7 @@ def test_data_validation(species, positions, cell):
         "got a tensor with shape \\[8, 3\\]"
     )
     with pytest.raises(ValueError, match=message):
-        System(torch.hstack([species, species]), positions, cell)
+        System(torch.hstack([types, types]), positions, cell)
 
     message = (
         "`positions` must be a \\(n_atoms x 3\\) tensor, "
@@ -215,7 +215,7 @@ def test_data_validation(species, positions, cell):
         "`positions` must be a tensor of floating point data, got torch.int32 instead"
     )
     with pytest.raises(ValueError, match=message):
-        System(species, positions.to(dtype=torch.int32), cell)
+        System(types, positions.to(dtype=torch.int32), cell)
 
     message = (
         "new `positions` must have the same dtype as existing data, "
@@ -226,11 +226,11 @@ def test_data_validation(species, positions, cell):
 
     # ===== cell checks ===== #
     message = (
-        "`species`, `positions`, and `cell` must be on the same device, "
+        "`types`, `positions`, and `cell` must be on the same device, "
         "got cpu, cpu, and meta"
     )
     with pytest.raises(ValueError, match=message):
-        System(species, positions, cell.to(device="meta"))
+        System(types, positions, cell.to(device="meta"))
 
     message = "new `cell` must be on the same device as existing data, got meta and cpu"
     with pytest.raises(ValueError, match=message):
@@ -238,7 +238,7 @@ def test_data_validation(species, positions, cell):
 
     message = "`cell` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
     with pytest.raises(ValueError, match=message):
-        System(species, positions, cell.reshape(3, 1, 3))
+        System(types, positions, cell.reshape(3, 1, 3))
 
     message = (
         "new `cell` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
@@ -248,7 +248,7 @@ def test_data_validation(species, positions, cell):
 
     message = "`cell` must be a \\(3 x 3\\) tensor, got a tensor with shape \\[6, 3\\]"
     with pytest.raises(ValueError, match=message):
-        System(species, positions, torch.vstack([cell, cell]))
+        System(types, positions, torch.vstack([cell, cell]))
 
     message = (
         "new `cell` must be a \\(3 x 3\\) tensor, got a tensor with shape \\[6, 3\\]"
@@ -261,7 +261,7 @@ def test_data_validation(species, positions, cell):
         "got torch.int32 and torch.float32"
     )
     with pytest.raises(ValueError, match=message):
-        System(species, positions, cell.to(dtype=torch.int32))
+        System(types, positions, cell.to(dtype=torch.int32))
 
     message = (
         "new `cell` must have the same dtype as existing data, "

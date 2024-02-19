@@ -82,9 +82,9 @@ class MyCustomModel(torch.nn.Module):
 
 
 class SingleAtomEnergy(torch.nn.Module):
-    def __init__(self, energy_by_species: Dict[int, float]):
+    def __init__(self, energy_by_atom_type: Dict[int, float]):
         super().__init__()
-        self.energy_by_species = energy_by_species
+        self.energy_by_atom_type = energy_by_atom_type
 
     def forward(
         self,
@@ -106,8 +106,8 @@ class SingleAtomEnergy(torch.nn.Module):
         # compute the energy for each system by adding together the energy for each atom
         energy = torch.zeros((len(systems), 1), dtype=systems[0].positions.dtype)
         for i, system in enumerate(systems):
-            for species in system.species:
-                energy[i] += self.energy_by_species[int(species)]
+            for atom_type in system.types:
+                energy[i] += self.energy_by_atom_type[int(atom_type)]
 
         # add metadata to the output
         block = TensorBlock(
@@ -129,7 +129,7 @@ class SingleAtomEnergy(torch.nn.Module):
 # standard PyTorch tools.
 
 model = SingleAtomEnergy(
-    energy_by_species={
+    energy_by_atom_type={
         1: -6.492647589968434,
         6: -38.054950840332474,
         8: -83.97955098636527,
@@ -175,12 +175,12 @@ outputs = {
 # one you defined in ``capabilities.outputs``, then :py:class:`MetatensorAtomisticModel`
 # will handle the necessary conversions for you.
 #
-# Finally, we need to declare which species are supported by the model, to ensure we
+# Finally, we need to declare which atom types are supported by the model, to ensure we
 # don't use a model trained for Copper with a Tungsten dataset.
 
 capabilities = ModelCapabilities(
     length_unit="Angstrom",
-    species=[1, 6, 8],
+    types=[1, 6, 8],
     outputs=outputs,
 )
 

@@ -34,11 +34,11 @@ associated with ``key_1 = 0`` and ``key_2 = 1``, and so on.
 Different key dimensions can have different purposes, but some typical keys
 dimensions you'll encounter when working with atomistic data are the following:
 
-- **atomic species dimensions**: when using a one-hot encoding of different
-  atomic species (or atomic elements) in a structure, the resulting data is
-  sparse, containing implicit zeros if a given species is not present in a
-  structure. This is the case of the ``species_center`` and various
-  ``species_neighbor`` key dimensions produced by `rascaline`_.
+- **atomic types dimensions**: when using a one-hot encoding of different
+  atomic types (or atomic elements) in a structure, the resulting data is
+  sparse, containing implicit zeros if a given type is not present in a
+  structure. This is the case of the ``center_type`` and various
+  ``neighbor_type`` key dimensions produced by `rascaline`_.
 - **symmetry markers**: Another use case for metatensor is to store and
   manipulate equivariant data, i.e. data that transforms in a known, specific
   way when the corresponding atomic structure is transformed. This is typically

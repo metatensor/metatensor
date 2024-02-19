@@ -12,9 +12,9 @@ TEST_CASE("Models metadata") {
         // save to JSON
         auto options = torch::make_intrusive<NeighborsListOptionsHolder>(3.5426, true);
         const auto* expected = R"({
+    "class": "NeighborsListOptions",
     "full_list": true,
-    "model_cutoff": 4615159644819978768,
-    "type": "NeighborsListOptions"
+    "model_cutoff": 4615159644819978768
 })";
         CHECK(options->to_json() == expected);
 
@@ -22,7 +22,7 @@ TEST_CASE("Models metadata") {
         std::string json = R"({
     "model_cutoff": 4615159644819978768,
     "full_list": false,
-    "type": "NeighborsListOptions"
+    "class": "NeighborsListOptions"
 })";
         options = NeighborsListOptionsHolder::from_json(json);
         CHECK(options->model_cutoff() == 3.5426);
@@ -30,11 +30,11 @@ TEST_CASE("Models metadata") {
 
         CHECK_THROWS_WITH(
             NeighborsListOptionsHolder::from_json("{}"),
-            StartsWith("expected 'type' in JSON for NeighborsListOptions, did not find it")
+            StartsWith("expected 'class' in JSON for NeighborsListOptions, did not find it")
         );
         CHECK_THROWS_WITH(
-            NeighborsListOptionsHolder::from_json("{\"type\": \"nope\"}"),
-            StartsWith("'type' in JSON for NeighborsListOptions must be 'NeighborsListOptions'")
+            NeighborsListOptionsHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'")
         );
     }
 
@@ -47,20 +47,20 @@ TEST_CASE("Models metadata") {
         output->explicit_gradients = {"baz", "not.this-one_"};
 
         const auto* expected = R"({
+    "class": "ModelOutput",
     "explicit_gradients": [
         "baz",
         "not.this-one_"
     ],
     "per_atom": false,
     "quantity": "foo",
-    "type": "ModelOutput",
     "unit": "bar"
 })";
         CHECK(output->to_json() == expected);
 
         // load from JSON
         std::string json = R"({
-    "type": "ModelOutput",
+    "class": "ModelOutput",
     "quantity": "quantity",
     "explicit_gradients": []
 })";
@@ -72,11 +72,11 @@ TEST_CASE("Models metadata") {
 
         CHECK_THROWS_WITH(
             ModelOutputHolder::from_json("{}"),
-            StartsWith("expected 'type' in JSON for ModelOutput, did not find it")
+            StartsWith("expected 'class' in JSON for ModelOutput, did not find it")
         );
         CHECK_THROWS_WITH(
-            ModelOutputHolder::from_json("{\"type\": \"nope\"}"),
-            StartsWith("'type' in JSON for ModelOutput must be 'ModelOutput'")
+            ModelOutputHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for ModelOutput must be 'ModelOutput'")
         );
     }
 
@@ -93,25 +93,25 @@ TEST_CASE("Models metadata") {
         options->outputs.insert("output_2", output);
 
         const auto* expected = R"({
+    "class": "ModelEvaluationOptions",
     "length_unit": "mm",
     "outputs": {
         "output_1": {
+            "class": "ModelOutput",
             "explicit_gradients": [],
             "per_atom": false,
             "quantity": "",
-            "type": "ModelOutput",
             "unit": ""
         },
         "output_2": {
+            "class": "ModelOutput",
             "explicit_gradients": [],
             "per_atom": true,
             "quantity": "",
-            "type": "ModelOutput",
             "unit": "something"
         }
     },
-    "selected_atoms": null,
-    "type": "ModelEvaluationOptions"
+    "selected_atoms": null
 })";
         CHECK(options->to_json() == expected);
 
@@ -122,20 +122,20 @@ TEST_CASE("Models metadata") {
     "outputs": {
         "foo": {
             "explicit_gradients": ["test"],
-            "type": "ModelOutput"
+            "class": "ModelOutput"
         }
     },
     "selected_atoms": {
-        "names": ["system", "atom"],
+        "names": ["structure", "atom"],
         "values": [0, 1, 4, 5]
     },
-    "type": "ModelEvaluationOptions"
+    "class": "ModelEvaluationOptions"
 })";
 
         options = ModelEvaluationOptionsHolder::from_json(json);
         CHECK(options->length_unit == "very large");
         auto expected_selection = LabelsHolder::create(
-            {"system", "atom"},
+            {"structure", "atom"},
             {{0, 1}, {4, 5}}
         );
         CHECK(*options->get_selected_atoms().value() == *expected_selection);
@@ -148,11 +148,11 @@ TEST_CASE("Models metadata") {
 
         CHECK_THROWS_WITH(
             ModelEvaluationOptionsHolder::from_json("{}"),
-            StartsWith("expected 'type' in JSON for ModelEvaluationOptions, did not find it")
+            StartsWith("expected 'class' in JSON for ModelEvaluationOptions, did not find it")
         );
         CHECK_THROWS_WITH(
-            ModelEvaluationOptionsHolder::from_json("{\"type\": \"nope\"}"),
-            StartsWith("'type' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'")
+            ModelEvaluationOptionsHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'")
         );
     }
 
@@ -160,7 +160,7 @@ TEST_CASE("Models metadata") {
         // save to JSON
         auto capabilities = torch::make_intrusive<ModelCapabilitiesHolder>();
         capabilities->length_unit = "µm";
-        capabilities->species = {1, 2, -43};
+        capabilities->types = {1, 2, -43};
 
         auto output = torch::make_intrusive<ModelOutputHolder>();
         output->per_atom = true;
@@ -168,22 +168,22 @@ TEST_CASE("Models metadata") {
         capabilities->outputs.insert("bar", output);
 
         const auto* expected = R"({
+    "class": "ModelCapabilities",
     "length_unit": "\u00b5m",
     "outputs": {
         "bar": {
+            "class": "ModelOutput",
             "explicit_gradients": [],
             "per_atom": true,
             "quantity": "something",
-            "type": "ModelOutput",
             "unit": ""
         }
     },
-    "species": [
+    "types": [
         1,
         2,
         -43
-    ],
-    "type": "ModelCapabilities"
+    ]
 })";
         CHECK(capabilities->to_json() == expected);
 
@@ -194,19 +194,19 @@ TEST_CASE("Models metadata") {
     "outputs": {
         "foo": {
             "explicit_gradients": ["test"],
-            "type": "ModelOutput"
+            "class": "ModelOutput"
         }
     },
-    "species": [
+    "types": [
         1,
         -2
     ],
-    "type": "ModelCapabilities"
+    "class": "ModelCapabilities"
 })";
 
         capabilities = ModelCapabilitiesHolder::from_json(json);
         CHECK(capabilities->length_unit == "µm");
-        CHECK(capabilities->species == std::vector<int64_t>{1, -2});
+        CHECK(capabilities->types == std::vector<int64_t>{1, -2});
 
         output = capabilities->outputs.at("foo");
         CHECK(output->quantity.empty());
@@ -216,11 +216,11 @@ TEST_CASE("Models metadata") {
 
         CHECK_THROWS_WITH(
             ModelCapabilitiesHolder::from_json("{}"),
-            StartsWith("expected 'type' in JSON for ModelCapabilities, did not find it")
+            StartsWith("expected 'class' in JSON for ModelCapabilities, did not find it")
         );
         CHECK_THROWS_WITH(
-            ModelCapabilitiesHolder::from_json("{\"type\": \"nope\"}"),
-            StartsWith("'type' in JSON for ModelCapabilities must be 'ModelCapabilities'")
+            ModelCapabilitiesHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for ModelCapabilities must be 'ModelCapabilities'")
         );
     }
 }

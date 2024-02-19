@@ -306,14 +306,14 @@ def sort(
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[1, 0], [2, 0], [0, 0]])),
     ... )
-    >>> tm = TensorMap(
-    ...     keys=Labels(["species"], np.array([[1], [0]])), blocks=[block_2, block_1]
+    >>> tensor = TensorMap(
+    ...     keys=Labels(["types"], np.array([[1], [0]])), blocks=[block_2, block_1]
     ... )
-    >>> metatensor.sort(tm, axes="keys")
+    >>> metatensor.sort(tensor, axes="keys")
     TensorMap with 2 blocks
-    keys: species
-             0
-             1
+    keys: types
+            0
+            1
     """
     if isinstance(axes, str):
         axes_list: List[str] = []
