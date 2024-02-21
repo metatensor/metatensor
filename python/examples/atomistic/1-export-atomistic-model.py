@@ -169,19 +169,25 @@ outputs = {
 
 # %%
 #
-# The model capabilities include the set of outputs it can compute, but also the unit of
-# lengths it uses for positions and cell. If someone tries to use your model with a
-# different unit of length, or request some of the outputs in a different unit than the
-# one you defined in ``capabilities.outputs``, then :py:class:`MetatensorAtomisticModel`
-# will handle the necessary conversions for you.
+# In addition to the set of outputs a model can compute, the capabilities also include:
 #
-# Finally, we need to declare which atom types are supported by the model, to ensure we
-# don't use a model trained for Copper with a Tungsten dataset.
+# - the set of ``atomic_types`` the model can handle;
+# - the ``interaction_range`` of the model, i.e. how far away from one particle the
+#   model needs to know about other particles. This is mainly relevant for domain
+#   decomposition, and running simulations on multiple nodes;
+# - the ``length_unit`` the model expects as input. This applies to the
+#   ``interaction_range``, any neighbors list cutoff, the atoms positions and the system
+#   cell. If this is set to a non empty string, :py:class:`MetatensorAtomisticModel`
+#   will handle the necessary unit conversions for you;
+# - the set of ``supported_devices`` on which the model can run. These should be ordered
+#   according to the model preference.
 
 capabilities = ModelCapabilities(
-    length_unit="Angstrom",
-    types=[1, 6, 8],
     outputs=outputs,
+    atomic_types=[1, 6, 8],
+    interaction_range=0.0,
+    length_unit="Angstrom",
+    supported_devices=["cpu"],
 )
 
 # %%

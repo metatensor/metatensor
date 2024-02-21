@@ -101,13 +101,13 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
         throw std::runtime_error("'model_cutoff' in JSON for NeighborsListOptions must be a number");
     }
     auto int_cutoff = data["model_cutoff"].get<int64_t>();
+    double model_cutoff = 0;
+    std::memcpy(&model_cutoff, &int_cutoff, sizeof(double));
 
     if (!data.contains("full_list") || !data["full_list"].is_boolean()) {
         throw std::runtime_error("'full_list' in JSON for NeighborsListOptions must be a boolean");
     }
     auto full_list = data["full_list"].get<bool>();
-    double model_cutoff = 0;
-    std::memcpy(&model_cutoff, &int_cutoff, sizeof(double));
 
     return torch::make_intrusive<NeighborsListOptionsHolder>(model_cutoff, full_list);
 }

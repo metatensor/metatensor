@@ -134,7 +134,8 @@ def model():
 
     capabilities = ModelCapabilities(
         length_unit="Angstrom",
-        types=[28],
+        interaction_range=CUTOFF,
+        atomic_types=[28],
         outputs={
             "energy": ModelOutput(
                 quantity="energy",
@@ -143,6 +144,7 @@ def model():
                 explicit_gradients=[],
             ),
         },
+        supported_devices=["cpu"],
     )
 
     return MetatensorAtomisticModel(model, capabilities)
@@ -163,7 +165,8 @@ def model_different_units():
 
     capabilities = ModelCapabilities(
         length_unit="Bohr",
-        types=[28],
+        interaction_range=CUTOFF,
+        atomic_types=[28],
         outputs={
             "energy": ModelOutput(
                 quantity="energy",
@@ -172,6 +175,7 @@ def model_different_units():
                 explicit_gradients=[],
             ),
         },
+        supported_devices=["cpu"],
     )
 
     return MetatensorAtomisticModel(model, capabilities)

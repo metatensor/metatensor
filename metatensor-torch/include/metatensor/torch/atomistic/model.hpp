@@ -75,30 +75,71 @@ public:
 
     /// Initialize `ModelCapabilities` with the given data
     ModelCapabilitiesHolder(
+        torch::Dict<std::string, ModelOutput> outputs_,
+        std::vector<int64_t> atomic_types_,
+        double interaction_range_,
         std::string length_unit_,
-        std::vector<int64_t> types_,
-        torch::Dict<std::string, ModelOutput> outputs_
+        std::vector<std::string> supported_devices_
     ):
+        outputs(outputs_),
+        atomic_types(std::move(atomic_types_)),
+        interaction_range(interaction_range_),
         length_unit(std::move(length_unit_)),
-        types(std::move(types_)),
-        outputs(outputs_)
+        supported_devices(std::move(supported_devices_))
     {}
 
     ~ModelCapabilitiesHolder() override = default;
 
+    /// all possible outputs from this model and corresponding settings
+    torch::Dict<std::string, ModelOutput> outputs;
+
+    /// which types the model can handle
+    std::vector<int64_t> atomic_types;
+
+    /// How far a given atom needs to know about other atoms, in the length unit
+    /// of the model.
+    ///
+    /// This is used to properly implement domain decomposition with this model.
+    ///
+    /// For a short range model, this is the same as the largest neighbor list
+    /// cutoff. For a message passing model, this is the cutoff of one
+    /// environment times the number of message passing steps. For an explicit
+    /// long range model, this should be set to infinity.
+    ///
+    /// This will default to -1 if not explicitly set by the user.
+    double interaction_range = -1;
+
     /// unit of lengths the model expects as input
     std::string length_unit;
 
-    /// which particle types the model can handle
-    std::vector<int64_t> types;
+    /// Same as `interaction_range`, but in the length unit of the engine
+    double engine_interaction_range() const {
+        return interaction_range * model_to_engine_;
+    }
 
-    /// all possible outputs from this model and corresponding settings
-    torch::Dict<std::string, ModelOutput> outputs;
+    /// Set the conversion factor from the model length units to the engine
+    /// units.
+    ///
+    /// This should be called before `engine_interaction_range()`.
+    void set_engine_unit(double conversion) {
+        model_to_engine_ = conversion;
+    }
+
+    /// What devices can this model run on? This should only contain the
+    /// `device_type` part of the device, and not the device number (i.e. this
+    /// should be `"cuda"`, not `"cuda:0"`).
+    ///
+    /// Devices should be ordered in order of preference: first one should be
+    /// the best device for this model, and so on.
+    std::vector<std::string> supported_devices;
 
     /// Serialize a `ModelCapabilities` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelCapabilities` from a JSON string.
     static ModelCapabilities from_json(const std::string& json);
+
+private:
+    double model_to_engine_ = 1.0;
 };
 
 

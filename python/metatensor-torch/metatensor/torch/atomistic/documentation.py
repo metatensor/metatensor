@@ -251,17 +251,13 @@ class ModelCapabilities:
 
     def __init__(
         self,
-        length_unit: str = "",
-        types: List[int] = [],  # noqa B006
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
+        atomic_types: List[int] = [],  # noqa B006
+        interaction_range: float = float("inf"),
+        length_unit: str = "",
+        supported_devices: List[str] = [],  # noqa B006
     ):
         pass
-
-    length_unit: str
-    """unit of lengths the model expects as input"""
-
-    types: List[int]
-    """which atomic types the model can handle"""
 
     outputs: Dict[str, ModelOutput]
     """
@@ -270,6 +266,50 @@ class ModelCapabilities:
     During a specific run, a model might be asked to only compute a subset of these
     outputs.
     """
+
+    atomic_types: List[int]
+    """which atomic types the model can handle"""
+
+    interaction_range: float
+    """
+    How far a given atom needs to know about other atoms, in the length unit of the
+    model.
+
+    For a short range model, this is the same as the largest neighbors list cutoff. For
+    a message passing model, this is the cutoff of one environment times the number of
+    message passing steps. For an explicit long range model, this should be set to
+    infinity.
+    """
+
+    length_unit: str
+    """
+    Unit used by the model for its inputs.
+
+    This applies to the ``interaction_range``, any cutoff in neighbors lists, the atoms
+    positions and the system cell.
+    """
+
+    supported_devices: List[str]
+    """
+    What devices can this model run on? This should only contain the ``device_type``
+    part of the device, and not the device number (i.e. this should be ``"cuda"``, not
+    ``"cuda:0"``).
+
+    Devices should be ordered in order of preference: the first entry in this list
+    should be the best device for this model, and so on.
+    """
+
+    @property
+    def engine_interaction_range(self) -> float:
+        """
+        Same as ``interaction_range``, but in the engine units.
+
+        This defaults to the same value as ``interaction_range`` until
+        :py:meth:`set_engine_unit()` is called.
+        """
+
+    def set_engine_unit(self, conversion):
+        """Set the conversion factor from the model units to the engine units"""
 
 
 class ModelEvaluationOptions:

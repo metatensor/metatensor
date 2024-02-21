@@ -93,14 +93,23 @@ std::string ModelCapabilitiesHolder::to_json() const {
     nlohmann::json result;
 
     result["class"] = "ModelCapabilities";
-    result["length_unit"] = this->length_unit;
-    result["types"] = this->types;
 
     auto outputs = nlohmann::json::object();
     for (const auto& it: this->outputs) {
         outputs[it.key()] = model_output_to_json(*it.value());
     }
     result["outputs"] = outputs;
+    result["atomic_types"] = this->atomic_types;
+
+    // Store interaction_range using it's binary representation to ensure
+    // perfect round-tripping of the data
+    static_assert(sizeof(double) == sizeof(int64_t));
+    int64_t int_interaction_range = 0;
+    std::memcpy(&int_interaction_range, &this->interaction_range, sizeof(double));
+    result["interaction_range"] = int_interaction_range;
+
+    result["length_unit"] = this->length_unit;
+    result["supported_devices"] = this->supported_devices;
 
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
@@ -121,26 +130,6 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
     }
 
     auto result = torch::make_intrusive<ModelCapabilitiesHolder>();
-    if (data.contains("length_unit")) {
-        if (!data["length_unit"].is_string()) {
-            throw std::runtime_error("'length_unit' in JSON for ModelCapabilities must be a string");
-        }
-        result->length_unit = data["length_unit"];
-    }
-
-    if (data.contains("types")) {
-        if (!data["types"].is_array()) {
-            throw std::runtime_error("'types' in JSON for ModelCapabilities must be an array");
-        }
-
-        for (const auto& type: data["types"]) {
-            if (!type.is_number_integer()) {
-                throw std::runtime_error("'types' in JSON for ModelCapabilities must be an array of integers");
-            }
-            result->types.emplace_back(type);
-        }
-    }
-
     if (data.contains("outputs")) {
         if (!data["outputs"].is_object()) {
             throw std::runtime_error("'outputs' in JSON for ModelCapabilities must be an object");
@@ -148,6 +137,51 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
 
         for (const auto& output: data["outputs"].items()) {
             result->outputs.insert(output.key(), model_output_from_json(output.value()));
+        }
+    }
+
+    if (data.contains("atomic_types")) {
+        if (!data["atomic_types"].is_array()) {
+            throw std::runtime_error("'atomic_types' in JSON for ModelCapabilities must be an array");
+        }
+
+        for (const auto& type: data["atomic_types"]) {
+            if (!type.is_number_integer()) {
+                throw std::runtime_error("'atomic_types' in JSON for ModelCapabilities must be an array of integers");
+            }
+            result->atomic_types.emplace_back(type);
+        }
+    }
+
+    if (data.contains("interaction_range")) {
+        if (!data["interaction_range"].is_number_integer()) {
+            throw std::runtime_error("'interaction_range' in JSON for ModelCapabilities must be a number");
+        }
+
+        auto int_interaction_range = data["interaction_range"].get<int64_t>();
+        double interaction_range = 0;
+        std::memcpy(&interaction_range, &int_interaction_range, sizeof(double));
+
+        result->interaction_range = interaction_range;
+    }
+
+    if (data.contains("length_unit")) {
+        if (!data["length_unit"].is_string()) {
+            throw std::runtime_error("'length_unit' in JSON for ModelCapabilities must be a string");
+        }
+        result->length_unit = data["length_unit"];
+    }
+
+    if (data.contains("supported_devices")) {
+        if (!data["supported_devices"].is_array()) {
+            throw std::runtime_error("'supported_devices' in JSON for ModelCapabilities must be an array");
+        }
+
+        for (const auto& device: data["supported_devices"]) {
+            if (!device.is_string()) {
+                throw std::runtime_error("'supported_devices' in JSON for ModelCapabilities must be an array of string");
+            }
+            result->supported_devices.emplace_back(device);
         }
     }
 

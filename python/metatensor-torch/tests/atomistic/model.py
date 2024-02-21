@@ -62,7 +62,8 @@ def model():
 
     capabilities = ModelCapabilities(
         length_unit="angstrom",
-        types=[1, 2, 3],
+        atomic_types=[1, 2, 3],
+        interaction_range=4.3,
         outputs={
             "dummy": ModelOutput(
                 quantity="",
@@ -71,6 +72,7 @@ def model():
                 explicit_gradients=[],
             ),
         },
+        supported_devices=["cpu"],
     )
 
     return MetatensorAtomisticModel(model, capabilities)
@@ -144,7 +146,11 @@ def test_requested_neighbors_lists():
     model = FullModel()
     model.train(False)
 
-    atomistic = MetatensorAtomisticModel(model, ModelCapabilities())
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+    )
+    atomistic = MetatensorAtomisticModel(model, capabilities)
     requests = atomistic.requested_neighbors_lists()
 
     assert len(requests) == 2

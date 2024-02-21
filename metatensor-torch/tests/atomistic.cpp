@@ -160,7 +160,9 @@ TEST_CASE("Models metadata") {
         // save to JSON
         auto capabilities = torch::make_intrusive<ModelCapabilitiesHolder>();
         capabilities->length_unit = "µm";
-        capabilities->types = {1, 2, -43};
+        capabilities->interaction_range = 1.4;
+        capabilities->atomic_types = {1, 2, -43};
+        capabilities->supported_devices = {"cuda", "xla", "cpu"};
 
         auto output = torch::make_intrusive<ModelOutputHolder>();
         output->per_atom = true;
@@ -168,7 +170,13 @@ TEST_CASE("Models metadata") {
         capabilities->outputs.insert("bar", output);
 
         const auto* expected = R"({
+    "atomic_types": [
+        1,
+        2,
+        -43
+    ],
     "class": "ModelCapabilities",
+    "interaction_range": 4608983858650965606,
     "length_unit": "\u00b5m",
     "outputs": {
         "bar": {
@@ -179,10 +187,10 @@ TEST_CASE("Models metadata") {
             "unit": ""
         }
     },
-    "types": [
-        1,
-        2,
-        -43
+    "supported_devices": [
+        "cuda",
+        "xla",
+        "cpu"
     ]
 })";
         CHECK(capabilities->to_json() == expected);
@@ -197,7 +205,7 @@ TEST_CASE("Models metadata") {
             "class": "ModelOutput"
         }
     },
-    "types": [
+    "atomic_types": [
         1,
         -2
     ],
@@ -206,7 +214,7 @@ TEST_CASE("Models metadata") {
 
         capabilities = ModelCapabilitiesHolder::from_json(json);
         CHECK(capabilities->length_unit == "µm");
-        CHECK(capabilities->types == std::vector<int64_t>{1, -2});
+        CHECK(capabilities->atomic_types == std::vector<int64_t>{1, -2});
 
         output = capabilities->outputs.at("foo");
         CHECK(output->quantity.empty());
