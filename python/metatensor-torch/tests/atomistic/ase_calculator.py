@@ -226,7 +226,7 @@ def test_exported_model(tmpdir, model, model_different_units, atoms):
 
 
 def test_get_properties(model, atoms):
-    atoms.calc = MetatensorCalculator(model)
+    atoms.calc = MetatensorCalculator(model, check_consistency=True)
 
     properties = atoms.get_properties(["energy", "forces", "stress"])
 
