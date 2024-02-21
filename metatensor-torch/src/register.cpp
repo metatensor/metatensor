@@ -382,16 +382,28 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<ModelCapabilitiesHolder>("ModelCapabilities")
         .def(
-            torch::init<std::string, std::vector<int64_t>, torch::Dict<std::string, ModelOutput>>(),
+            torch::init<
+                torch::Dict<std::string, ModelOutput>,
+                std::vector<int64_t>,
+                double,
+                std::string,
+                std::vector<std::string>
+            >(),
             DOCSTRING, {
-                torch::arg("length_unit") = "",
-                torch::arg("types") = std::vector<int64_t>(),
                 torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
+                torch::arg("atomic_types") = std::vector<int64_t>(),
+                torch::arg("interaction_range") = HUGE_VAL,
+                torch::arg("length_unit") = "",
+                torch::arg("supported_devices") = std::vector<std::string>{},
             }
         )
-        .def_readwrite("length_unit", &ModelCapabilitiesHolder::length_unit)
-        .def_readwrite("types", &ModelCapabilitiesHolder::types)
         .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
+        .def_readwrite("atomic_types", &ModelCapabilitiesHolder::atomic_types)
+        .def_readwrite("interaction_range", &ModelCapabilitiesHolder::interaction_range)
+        .def_property("engine_interaction_range", &ModelCapabilitiesHolder::engine_interaction_range)
+        .def("set_engine_unit", &ModelCapabilitiesHolder::set_engine_unit)
+        .def_readwrite("length_unit", &ModelCapabilitiesHolder::length_unit)
+        .def_readwrite("supported_devices", &ModelCapabilitiesHolder::supported_devices)
         .def_pickle(
             [](const ModelCapabilities& self) -> std::string {
                 return self->to_json();

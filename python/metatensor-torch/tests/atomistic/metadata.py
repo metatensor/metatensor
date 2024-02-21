@@ -52,18 +52,6 @@ class ModelCapabilitiesWrap:
     def __init__(self):
         self._c = ModelCapabilities()
 
-    def get_length_unit(self) -> str:
-        return self._c.length_unit
-
-    def set_length_unit(self, unit: str):
-        self._c.length_unit = unit
-
-    def get_types(self) -> List[int]:
-        return self._c.types
-
-    def set_types(self, types: List[int]):
-        self._c.types = types
-
     def get_outputs(self) -> Dict[str, ModelOutput]:
         return self._c.outputs
 
@@ -72,6 +60,30 @@ class ModelCapabilitiesWrap:
 
     def set_output(self, name: str, output: ModelOutput):
         self._c.outputs[name] = output
+
+    def get_atomic_types(self) -> List[int]:
+        return self._c.atomic_types
+
+    def set_atomic_types(self, atomic_types: List[int]):
+        self._c.atomic_types = atomic_types
+
+    def get_interaction_range(self) -> float:
+        return self._c.interaction_range
+
+    def set_interaction_range(self, interaction_range: float):
+        self._c.interaction_range = interaction_range
+
+    def get_length_unit(self) -> str:
+        return self._c.length_unit
+
+    def set_length_unit(self, unit: str):
+        self._c.length_unit = unit
+
+    def get_supported_devices(self) -> List[str]:
+        return self._c.supported_devices
+
+    def set_supported_devices(self, devices: List[str]):
+        self._c.supported_devices = devices
 
 
 def test_capabilities():

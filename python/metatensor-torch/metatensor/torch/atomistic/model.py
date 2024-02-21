@@ -129,8 +129,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
     >>> model = model.eval()
     >>> # Define the model capabilities
     >>> capabilities = ModelCapabilities(
-    ...     length_unit="angstrom",
-    ...     types=[1, 2, 6, 8, 12],
     ...     outputs={
     ...         "energy": ModelOutput(
     ...             quantity="energy",
@@ -139,6 +137,10 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...             explicit_gradients=[],
     ...         ),
     ...     },
+    ...     atomic_types=[1, 2, 6, 8, 12],
+    ...     interaction_range=0.0,
+    ...     length_unit="angstrom",
+    ...     supported_devices=["cpu"],
     ... )
     >>> # wrap the model
     >>> wrapped = MetatensorAtomisticModel(model, capabilities)
@@ -202,13 +204,43 @@ class MetatensorAtomisticModel(torch.nn.Module):
             quantity = self._known_quantities[output.quantity]
             quantity.check_unit(output.unit)
 
+        # check that some required capabilities are set
+        if capabilities.interaction_range < 0:
+            raise ValueError(
+                "`capabilities.interaction_range` was not set, "
+                "but it is required to run simulations"
+            )
+
+        if len(capabilities.supported_devices) == 0:
+            raise ValueError(
+                "`capabilities.supported_devices` was not set, "
+                "but it is required to run simulations."
+            )
+
     def wrapped_module(self) -> torch.nn.Module:
         """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
         return self._module
 
     @torch.jit.export
-    def capabilities(self) -> ModelCapabilities:
-        """Get the capabilities of the wrapped model"""
+    def capabilities(
+        self,
+        length_unit: Optional[str] = None,
+    ) -> ModelCapabilities:
+        """
+        Get the capabilities of the wrapped model.
+
+        :param length_unit: If not ``None``, this should contain a known unit of length.
+            The returned capabilities will use this to set the
+            ``engine_interaction_range`` field.
+        """
+        if length_unit is not None:
+            length = self._known_quantities["length"]
+            conversion = length.conversion(self._capabilities.length_unit, length_unit)
+        else:
+            conversion = 1.0
+
+        self._capabilities.set_engine_unit(conversion)
+
         return self._capabilities
 
     @torch.jit.export
@@ -268,7 +300,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
             for system in systems:
                 all_types = torch.unique(system.types)
                 for atom_type in all_types:
-                    if atom_type not in self._capabilities.types:
+                    if atom_type not in self._capabilities.atomic_types:
                         raise ValueError(
                             f"this model can not run for the atomic type '{atom_type}'"
                         )

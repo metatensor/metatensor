@@ -178,11 +178,13 @@ model = HarmonicModel(
 )
 
 capabilities = ModelCapabilities(
-    length_unit="Angstrom",
-    types=[6],
     outputs={
         "energy": ModelOutput(quantity="energy", unit="eV", per_atom=False),
     },
+    atomic_types=[6],
+    interaction_range=0.0,
+    length_unit="Angstrom",
+    supported_devices=["cpu"],
 )
 wrapper = MetatensorAtomisticModel(model.eval(), capabilities)
 

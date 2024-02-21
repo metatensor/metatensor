@@ -83,6 +83,16 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         else:
             raise TypeError(f"unknown type for model: {type(model)}")
 
+        if check_consistency:
+            capabilities = self._model.capabilities(length_unit="angstrom")
+            if "cpu" not in capabilities.supported_devices:
+                raise ValueError(
+                    "ASE calculator only supports CPU device for now, "
+                    "but the model does not"
+                )
+
+            self._model = self._model.to(device="cpu")
+
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
         self.implemented_properties = ALL_ASE_PROPERTIES
@@ -163,6 +173,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
 
         outputs = _ase_properties_to_metatensor_outputs(properties)
+        capabilities = self._model.capabilities(length_unit="angstrom")
+        for name in outputs.keys():
+            if name not in capabilities.outputs:
+                raise ValueError(
+                    f"you asked for the calculation of {name}, but this model does not "
+                    "support it"
+                )
+
         types, positions, cell = _ase_to_torch_data(atoms)
 
         do_backward = False
