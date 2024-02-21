@@ -19,6 +19,7 @@ from . import (
     NeighborsListOptions,
     System,
 )
+from .outputs import check_outputs
 from .units import KNOWN_QUANTITIES, Quantity
 
 
@@ -308,6 +309,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
             outputs=options.outputs,
             selected_atoms=options.selected_atoms,
         )
+
+        if check_consistency:
+            check_outputs(
+                systems=systems,
+                requested=options.outputs,
+                selected_atoms=options.selected_atoms,
+                outputs=outputs,
+            )
 
         # convert outputs from model to engine units
         for name, output in outputs.items():
