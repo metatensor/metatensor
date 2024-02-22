@@ -33,6 +33,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
+    ModelMetadata,
     ModelOutput,
     System,
 )
@@ -186,7 +187,10 @@ capabilities = ModelCapabilities(
     length_unit="Angstrom",
     supported_devices=["cpu"],
 )
-wrapper = MetatensorAtomisticModel(model.eval(), capabilities)
+
+# we don't want to bother with model metadata, so we define it as empty
+metadata = ModelMetadata()
+wrapper = MetatensorAtomisticModel(model.eval(), metadata, capabilities)
 
 # Use the wrapped model as the calculator for these atoms
 atoms.calc = MetatensorCalculator(wrapper)

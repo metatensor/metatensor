@@ -19,3 +19,8 @@ Models
 
 .. doxygenclass:: metatensor_torch::ModelEvaluationOptionsHolder
     :members:
+
+.. doxygentypedef:: metatensor_torch::ModelMetadata
+
+.. doxygenclass:: metatensor_torch::ModelMetadataHolder
+    :members:

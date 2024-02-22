@@ -7,8 +7,11 @@ Models
 .. autofunction:: metatensor.torch.atomistic.check_atomistic_model
 
 
-Model-related metadata
-----------------------
+Model-related information
+-------------------------
+
+.. autoclass:: metatensor.torch.atomistic.ModelMetadata
+    :members:
 
 .. autoclass:: metatensor.torch.atomistic.ModelOutput
     :members:

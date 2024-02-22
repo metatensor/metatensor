@@ -15,6 +15,7 @@ from .. import __version__ as metatensor_version
 from . import (
     ModelCapabilities,
     ModelEvaluationOptions,
+    ModelMetadata,
     ModelOutput,
     NeighborsListOptions,
     System,
@@ -123,7 +124,11 @@ class MetatensorAtomisticModel(torch.nn.Module):
     >>> import os
     >>> import tempfile
     >>> from metatensor.torch.atomistic import MetatensorAtomisticModel
-    >>> from metatensor.torch.atomistic import ModelCapabilities, ModelOutput
+    >>> from metatensor.torch.atomistic import (
+    ...     ModelCapabilities,
+    ...     ModelOutput,
+    ...     ModelMetadata,
+    ... )
     >>> model = ConstantEnergy(constant=3.141592)
     >>> # put the model in inference mode
     >>> model = model.eval()
@@ -142,8 +147,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...     length_unit="angstrom",
     ...     supported_devices=["cpu"],
     ... )
+    >>> # define metadata about this model
+    >>> metadata = ModelMetadata(
+    ...     name="model-name",
+    ...     authors=["Some Author", "Another One"],
+    ...     # references and long description can also be added
+    ... )
     >>> # wrap the model
-    >>> wrapped = MetatensorAtomisticModel(model, capabilities)
+    >>> wrapped = MetatensorAtomisticModel(model, metadata, capabilities)
     >>> # export the model
     >>> with tempfile.TemporaryDirectory() as directory:
     ...     wrapped.export(os.path.join(directory, "constant-energy-model.pt"))
@@ -154,7 +165,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
     _requested_neighbors_lists: List[NeighborsListOptions]
     _known_quantities: Dict[str, Quantity]
 
-    def __init__(self, module: torch.nn.Module, capabilities: ModelCapabilities):
+    def __init__(
+        self,
+        module: torch.nn.Module,
+        metadata: ModelMetadata,
+        capabilities: ModelCapabilities,
+    ):
         """
         :param module: The torch module to wrap and export.
         :param capabilities: Description of the model capabilities.
@@ -184,6 +200,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         )
         # ============================================================================ #
 
+        self._metadata = metadata
         self._capabilities = capabilities
         self._known_quantities = KNOWN_QUANTITIES
 
@@ -242,6 +259,11 @@ class MetatensorAtomisticModel(torch.nn.Module):
         self._capabilities.set_engine_unit(conversion)
 
         return self._capabilities
+
+    @torch.jit.export
+    def metadata(self) -> ModelMetadata:
+        """Get the metadata of the wrapped model"""
+        return self._metadata
 
     @torch.jit.export
     def requested_neighbors_lists(

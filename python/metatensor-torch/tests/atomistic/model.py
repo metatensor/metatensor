@@ -8,6 +8,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
+    ModelMetadata,
     ModelOutput,
     NeighborsListOptions,
     System,
@@ -75,7 +76,8 @@ def model():
         supported_devices=["cpu"],
     )
 
-    return MetatensorAtomisticModel(model, capabilities)
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
 def test_export(model, tmpdir):
@@ -150,7 +152,7 @@ def test_requested_neighbors_lists():
         interaction_range=0.0,
         supported_devices=["cpu"],
     )
-    atomistic = MetatensorAtomisticModel(model, capabilities)
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
     requests = atomistic.requested_neighbors_lists()
 
     assert len(requests) == 2

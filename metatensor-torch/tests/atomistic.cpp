@@ -231,4 +231,103 @@ TEST_CASE("Models metadata") {
             StartsWith("'class' in JSON for ModelCapabilities must be 'ModelCapabilities'")
         );
     }
+
+    SECTION("ModelMetadata") {
+        // save to JSON
+        auto metadata = torch::make_intrusive<ModelMetadataHolder>();
+        metadata->name = "some name";
+        metadata->description = "describing it";
+        metadata->authors = {"John Doe", "Napoleon"};
+        metadata->references.insert("model", std::vector<std::string>{"some-ref"});
+        metadata->references.insert("architecture", std::vector<std::string>{"ref-2", "ref-3"});
+
+        const auto* expected = R"({
+    "authors": [
+        "John Doe",
+        "Napoleon"
+    ],
+    "class": "ModelMetadata",
+    "description": "describing it",
+    "name": "some name",
+    "references": {
+        "architecture": [
+            "ref-2",
+            "ref-3"
+        ],
+        "model": [
+            "some-ref"
+        ]
+    }
+})";
+        CHECK(metadata->to_json() == expected);
+
+
+// Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+        // load from JSON
+        std::string json =R"({
+    "class": "ModelMetadata",
+    "name": "foo",
+    "authors": ["me", "myself"],
+    "references": {
+        "implementation": ["torch-power!"],
+        "model": ["took a while to train"]
+    }
+})";
+
+        metadata = ModelMetadataHolder::from_json(json);
+        CHECK(metadata->name == "foo");
+        CHECK(metadata->authors == std::vector<std::string>{"me", "myself"});
+        CHECK(metadata->references.at("implementation") == std::vector<std::string>{"torch-power!"});
+        CHECK(metadata->references.at("model") == std::vector<std::string>{"took a while to train"});
+
+        CHECK_THROWS_WITH(
+            ModelMetadataHolder::from_json("{}"),
+            StartsWith("expected 'class' in JSON for ModelMetadata, did not find it")
+        );
+        CHECK_THROWS_WITH(
+            ModelMetadataHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for ModelMetadata must be 'ModelMetadata'")
+        );
+
+        // printing
+        metadata = torch::make_intrusive<ModelMetadataHolder>();
+        metadata->name = "name";
+        metadata->description = R"(Lorem ipsum dolor sit amet, consectetur
+adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+aliqua. Ut enim ad minim veniam, quis nostrud exercitation.)";
+        metadata->authors = {"Short author", "Some extremely long author that will take more than one line in the printed output"};
+        metadata->references.insert("model", std::vector<std::string>{
+            "a very long reference that will take more than one line in the printed output"
+        });
+        metadata->references.insert("architecture", std::vector<std::string>{"ref-2", "ref-3"});
+
+        expected = R"(This is the name model
+======================
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation.
+
+Model authors
+-------------
+
+- Short author
+- Some extremely long author that will take more than one line in the printed
+  output
+
+Model references
+----------------
+
+Please cite the following references when using this model:
+- about this specific model:
+  * a very long reference that will take more than one line in the printed
+    output
+- about the architecture of this model:
+  * ref-2
+  * ref-3
+)";
+
+        CHECK(metadata->print() == expected);
+    }
 }
