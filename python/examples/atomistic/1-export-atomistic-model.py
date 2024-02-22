@@ -31,6 +31,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
+    ModelMetadata,
     ModelOutput,
     System,
 )
@@ -155,12 +156,28 @@ model = SingleAtomEnergy(
 # :py:class:`MetatensorAtomisticModel` class, which takes your model and make sure it
 # follows the required interface.
 #
-# A big part of model exporting is the definition of your model capabilities, i.e. what
-# can your model do? First we'll need to define which outputs our model can handle:
-# there is only one, called ``"energy"``, which has the dimensionality of an energy
-# (``quantity="energy"``). This energy is returned in electronvolt (``units="eV"``); and
-# with the code above it can not be computed per-atom, only for the full structure
-# (``per_atom=False``).
+# When exporting the model, we can define some metadata about this model, so when the
+# model is shared with others, they still know what this model is and where it comes
+# from.
+
+metadata = ModelMetadata(
+    name="single-atom-energy",
+    description="a long form description of this specific model",
+    authors=["You the Reader <reader@example.com>"],
+    references={
+        # you can add references that should be cited when using this model here,
+        # check the documentation for more information
+    },
+)
+
+# %%
+#
+# A big part of exporting a model is the definition of the model capabilities, i.e. what
+# are the things that this model can do? First we'll need to define which outputs our
+# model can handle: there is only one, called ``"energy"``, which correspond to the
+# physical quantity of energies (``quantity="energy"``). This energy is returned in
+# electronvolt (``units="eV"``); and with the code above it can not be computed
+# per-atom, only for the full structure (``per_atom=False``).
 
 
 outputs = {
@@ -192,10 +209,10 @@ capabilities = ModelCapabilities(
 
 # %%
 #
-# With the model capabilities defined, we can now create a wrapper around the model, and
-# export it to a file:
+# With the model metadata and capabilities defined, we can now create a wrapper around
+# the model, and export it to a file:
 
-wrapper = MetatensorAtomisticModel(model.eval(), capabilities)
+wrapper = MetatensorAtomisticModel(model.eval(), metadata, capabilities)
 wrapper.export("exported-model.pt")
 
 # the file was created in the current directory

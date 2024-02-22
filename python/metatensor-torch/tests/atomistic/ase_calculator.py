@@ -9,6 +9,7 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
+    ModelMetadata,
     ModelOutput,
     NeighborsListOptions,
     System,
@@ -147,7 +148,8 @@ def model():
         supported_devices=["cpu"],
     )
 
-    return MetatensorAtomisticModel(model, capabilities)
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
 @pytest.fixture
@@ -178,7 +180,8 @@ def model_different_units():
         supported_devices=["cpu"],
     )
 
-    return MetatensorAtomisticModel(model, capabilities)
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
 def check_against_ase_lj(atoms, calculator):

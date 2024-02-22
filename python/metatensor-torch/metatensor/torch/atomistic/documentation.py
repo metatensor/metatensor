@@ -343,6 +343,45 @@ class ModelEvaluationOptions:
     """
 
 
+class ModelMetadata:
+    """Metadata about a specific exported model"""
+
+    def __init__(
+        self,
+        name: str = "",
+        description: str = "",
+        authors: List[str] = [],  # noqa: B006
+        references: Dict[str, List[str]] = {},  # noqa: B006
+    ):
+        pass
+
+    name: str
+    """Name of this model"""
+
+    description: str
+    """Description of this model"""
+
+    authors: List[str]
+    """List of authors for this model"""
+
+    references: Dict[str, List[str]]
+    """
+    Academic references for this model. The top level dict can have three keys:
+
+    - "implementation": for reference to software used in the implementation
+      of the model
+    - "architecture": for reference that introduced the general architecture
+      used by this model
+    - "model": for reference specific to this exact model
+    """
+
+    def print(self) -> str:
+        """
+        Format the model metadata into a string. This is the same format used for
+        ``__str__`` and ``__repr__``.
+        """
+
+
 def check_atomistic_model(path: str):
     """
     Check that the file at ``path`` contains an exported metatensor atomistic model, and

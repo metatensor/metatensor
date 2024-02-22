@@ -16,6 +16,39 @@
 
 using namespace metatensor_torch;
 
+static void read_vector_string_json(
+    std::vector<std::string>& output,
+    const nlohmann::json& array,
+    const std::string& context
+) {
+    if (!array.is_array()) {
+        throw std::runtime_error(context + " must be an array");
+    }
+    for (const auto& value: array) {
+        if (!value.is_string()) {
+            throw std::runtime_error(context + " must be an array of string");
+        }
+        output.emplace_back(value);
+    }
+}
+
+template<typename T>
+static void read_vector_int_json(
+    std::vector<T>& output,
+    const nlohmann::json& array,
+    const std::string& context
+) {
+    if (!array.is_array()) {
+        throw std::runtime_error(context + " must be an array");
+    }
+    for (const auto& value: array) {
+        if (!value.is_number_integer()) {
+            throw std::runtime_error(context + " must be an array of integers");
+        }
+        output.emplace_back(value);
+    }
+}
+
 static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
     nlohmann::json result;
 
@@ -68,22 +101,17 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
     }
 
     if (data.contains("explicit_gradients")) {
-        if (!data["explicit_gradients"].is_array()) {
-            throw std::runtime_error("'explicit_gradients' in JSON for ModelOutput must be an array");
-        }
-
-        for (const auto& gradient: data["explicit_gradients"]) {
-            if (!gradient.is_string()) {
-                throw std::runtime_error("'explicit_gradients' in JSON for ModelOutput must be an array of strings");
-            }
-            result->explicit_gradients.emplace_back(gradient);
-        }
+        read_vector_string_json(
+            result->explicit_gradients,
+            data["explicit_gradients"],
+            "'explicit_gradients' in JSON for ModelOutput"
+        );
     }
 
     return result;
 }
 
-ModelOutput ModelOutputHolder::from_json(const std::string& json) {
+ModelOutput ModelOutputHolder::from_json(std::string_view json) {
     auto data = nlohmann::json::parse(json);
     return model_output_from_json(data);
 }
@@ -101,8 +129,8 @@ std::string ModelCapabilitiesHolder::to_json() const {
     result["outputs"] = outputs;
     result["atomic_types"] = this->atomic_types;
 
-    // Store interaction_range using it's binary representation to ensure
-    // perfect round-tripping of the data
+    // Store reach using it's binary representation to ensure perfect
+    // round-tripping of the data
     static_assert(sizeof(double) == sizeof(int64_t));
     int64_t int_interaction_range = 0;
     std::memcpy(&int_interaction_range, &this->interaction_range, sizeof(double));
@@ -114,7 +142,7 @@ std::string ModelCapabilitiesHolder::to_json() const {
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
-ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
+ModelCapabilities ModelCapabilitiesHolder::from_json(std::string_view json) {
     auto data = nlohmann::json::parse(json);
 
     if (!data.is_object()) {
@@ -141,16 +169,11 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
     }
 
     if (data.contains("atomic_types")) {
-        if (!data["atomic_types"].is_array()) {
-            throw std::runtime_error("'atomic_types' in JSON for ModelCapabilities must be an array");
-        }
-
-        for (const auto& type: data["atomic_types"]) {
-            if (!type.is_number_integer()) {
-                throw std::runtime_error("'atomic_types' in JSON for ModelCapabilities must be an array of integers");
-            }
-            result->atomic_types.emplace_back(type);
-        }
+        read_vector_int_json(
+            result->atomic_types,
+            data["atomic_types"],
+            "'atomic_types' in JSON for ModelCapabilities"
+        );
     }
 
     if (data.contains("interaction_range")) {
@@ -173,16 +196,11 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(const std::string& json) {
     }
 
     if (data.contains("supported_devices")) {
-        if (!data["supported_devices"].is_array()) {
-            throw std::runtime_error("'supported_devices' in JSON for ModelCapabilities must be an array");
-        }
-
-        for (const auto& device: data["supported_devices"]) {
-            if (!device.is_string()) {
-                throw std::runtime_error("'supported_devices' in JSON for ModelCapabilities must be an array of string");
-            }
-            result->supported_devices.emplace_back(device);
-        }
+        read_vector_string_json(
+            result->supported_devices,
+            data["supported_devices"],
+            "'supported_devices' in JSON for ModelCapabilities"
+        );
     }
 
     return result;
@@ -258,7 +276,7 @@ std::string ModelEvaluationOptionsHolder::to_json() const {
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
-ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string& json) {
+ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(std::string_view json) {
     auto data = nlohmann::json::parse(json);
 
     if (!data.is_object()) {
@@ -289,34 +307,27 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string
                 throw std::runtime_error("'selected_atoms' in JSON for ModelEvaluationOptions must be an object");
             }
 
-            if (!data["selected_atoms"].contains("names") || !data["selected_atoms"]["names"].is_array()) {
+            if (!data["selected_atoms"].contains("names")) {
                 throw std::runtime_error("'selected_atoms.names' in JSON for ModelEvaluationOptions must be an array");
             }
 
             auto names = std::vector<std::string>();
-            for (const auto& name: data["selected_atoms"]["names"]) {
-                if (!name.is_string()) {
-                    throw std::runtime_error(
-                        "'selected_atoms.names' in JSON for ModelEvaluationOptions must be an array of strings"
-                    );
-                }
-                names.emplace_back(name.get<std::string>());
-            }
+            read_vector_string_json(
+                names,
+                data["selected_atoms"]["names"],
+                "'selected_atoms.names' in JSON for ModelEvaluationOptions"
+            );
 
-
-            if (!data["selected_atoms"].contains("values") || !data["selected_atoms"]["values"].is_array()) {
+            if (!data["selected_atoms"].contains("values")) {
                 throw std::runtime_error("'selected_atoms.values' in JSON for ModelEvaluationOptions must be an array");
             }
 
             auto values = std::vector<int32_t>();
-            for (const auto& value: data["selected_atoms"]["values"]) {
-                if (!value.is_number_integer()) {
-                    throw std::runtime_error(
-                        "'selected_atoms.values' in JSON for ModelEvaluationOptions must be an array of integers"
-                    );
-                }
-                values.emplace_back(value.get<int32_t>());
-            }
+            read_vector_int_json(
+                values,
+                data["selected_atoms"]["values"],
+                "'selected_atoms.values' in JSON for ModelEvaluationOptions"
+            );
             assert(values.size() % 2 == 0);
 
             result->set_selected_atoms(torch::make_intrusive<LabelsHolder>(
@@ -339,12 +350,252 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(const std::string
     return result;
 }
 
-static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
-    return std::string(
-        static_cast<char*>(std::get<0>(data).get()),
-        std::get<1>(data)
-    );
+
+void ModelMetadataHolder::validate() const {
+    for (const auto& author: this->authors) {
+        if (author.empty()) {
+            C10_THROW_ERROR(ValueError, "author can not be empty string in ModelMetadata");
+        }
+    }
+
+    for (const auto& item: this->references) {
+        if (item.key() != "implementation" && item.key() != "architecture" && item.key() != "model") {
+            C10_THROW_ERROR(ValueError, "unknown key in references: " + item.key());
+        }
+
+        for (const auto& ref: item.value()) {
+            if (ref.empty()) {
+                C10_THROW_ERROR(ValueError,
+                    "reference can not be empty string (in '" + item.key() + "' section)"
+                );
+            }
+        }
+    }
 }
+
+std::string ModelMetadataHolder::to_json() const {
+    nlohmann::json result;
+
+    result["class"] = "ModelMetadata";
+    result["name"] = this->name;
+    result["description"] = this->description;
+    result["authors"] = this->authors;
+
+    auto references = nlohmann::json::object();
+    for (const auto& it: this->references) {
+        references[it.key()] = it.value();
+    }
+    result["references"] = references;
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+
+ModelMetadata ModelMetadataHolder::from_json(std::string_view json) {
+    auto data = nlohmann::json::parse(json);
+
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for ModelMetadata, expected an object");
+    }
+
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for ModelMetadata, did not find it");
+    }
+
+    if (data["class"] != "ModelMetadata") {
+        throw std::runtime_error("'class' in JSON for ModelMetadata must be 'ModelMetadata'");
+    }
+
+    auto result = torch::make_intrusive<ModelMetadataHolder>();
+    if (data.contains("name")) {
+        if (!data["name"].is_string()) {
+            throw std::runtime_error("'name' in JSON for ModelMetadata must be a string");
+        }
+        result->name = data["name"];
+    }
+
+    if (data.contains("description")) {
+        if (!data["description"].is_string()) {
+            throw std::runtime_error("'description' in JSON for ModelMetadata must be a string");
+        }
+        result->name = data["description"];
+    }
+
+    if (data.contains("authors")) {
+        read_vector_string_json(
+            result->authors,
+            data["authors"],
+            "'authors' in JSON for ModelMetadata"
+        );
+    }
+
+    if (data.contains("references")) {
+        if (!data["references"].is_object()) {
+            throw std::runtime_error("'references' in JSON for ModelMetadata must be an object");
+        }
+
+        const auto& references = data["references"];
+        if (references.contains("implementation")) {
+            auto implementation = std::vector<std::string>();
+            read_vector_string_json(
+                implementation,
+                data["references"]["implementation"],
+                "'references.implementation' in JSON for ModelMetadata"
+            );
+            result->references.insert("implementation", std::move(implementation));
+        }
+
+        if (references.contains("architecture")) {
+            auto architecture = std::vector<std::string>();
+            read_vector_string_json(
+                architecture,
+                data["references"]["architecture"],
+                "'references.architecture' in JSON for ModelMetadata"
+            );
+            result->references.insert("architecture", std::move(architecture));
+        }
+
+        if (references.contains("model")) {
+            auto model = std::vector<std::string>();
+            read_vector_string_json(
+                model,
+                data["references"]["model"],
+                "'references.model' in JSON for ModelMetadata"
+            );
+            result->references.insert("model", std::move(model));
+        }
+    }
+
+    result->validate();
+
+    return result;
+}
+
+
+// replace end of line characters and tabs with a single space
+static std::string normalize_whitespace(std::string_view data) {
+    auto string = std::string(data);
+    for (auto& c : string) {
+        if (c == '\n' || c == '\r' || c == '\t') {
+            c = ' ';
+        }
+    }
+    return string;
+}
+
+static void wrap_80_chars(std::ostringstream& oss, std::string_view data, std::string_view indent) {
+    auto string = normalize_whitespace(data);
+    auto view = std::string_view(string);
+
+    auto line_length = 80 - indent.length();
+    assert(line_length > 50);
+    auto first_line = true;
+    while (true) {
+        if (view.length() <= line_length) {
+            // last line
+            if (!first_line) {
+                oss << indent;
+            }
+            oss << view;
+            break;
+        } else {
+            // backtrack to find the end of a word
+            bool word_found = false;
+            for (size_t i=(line_length - 1); i>0; i--) {
+                if (view[i] == ' ') {
+                    word_found = true;
+                    // print the current line
+                    if (!first_line) {
+                        oss << indent;
+                    }
+                    oss << view.substr(0, i) << '\n';
+                    // Update the view and start with the next line. We can
+                    // start the substr at i + 1 since we started the loop at
+                    // line_length - 1
+                    view = view.substr(i + 1);
+                    first_line = false;
+                    break;
+                }
+            }
+
+            if (!word_found) {
+                // this is only hit if a single word takes a full line.
+                throw std::runtime_error("some words are too long to be wrapped, make them shorter");
+            }
+        }
+    }
+}
+
+
+std::string ModelMetadataHolder::print() const {
+    this->validate();
+    std::ostringstream oss;
+
+    if (this->name.empty()) {
+        oss << "This is an unamed model\n";
+        oss << "=======================\n";
+    } else {
+        oss << "This is the " << this->name << " model\n";
+        oss << "============" << std::string(this->name.length(), '=') << "======\n";
+    }
+
+    if (!this->description.empty()) {
+        oss << "\n";
+        wrap_80_chars(oss, this->description, "");
+        oss << "\n";
+    }
+
+    if (!this->authors.empty()) {
+        oss << "\nModel authors\n-------------\n\n";
+        for (const auto& author: authors) {
+            oss << "- ";
+            wrap_80_chars(oss, author, "  ");
+            oss << "\n";
+        }
+    }
+
+    std::ostringstream references_oss;
+    if (this->references.contains("model")) {
+        references_oss << "- about this specific model:\n";
+        for (const auto& reference: this->references.at("model")) {
+            references_oss << "  * ";
+            wrap_80_chars(references_oss, reference, "    ");
+            references_oss << "\n";
+        }
+    }
+
+    if (this->references.contains("architecture")) {
+        references_oss << "- about the architecture of this model:\n";
+        for (const auto& reference: this->references.at("architecture")) {
+            references_oss << "  * ";
+            wrap_80_chars(references_oss, reference, "    ");
+            references_oss << "\n";
+        }
+    }
+
+    if (this->references.contains("implementation") && !this->references.at("implementation").empty()) {
+        references_oss << "- about the implementation of this model:\n";
+        for (const auto& reference: this->references.at("implementation")) {
+            references_oss << "    * ";
+            wrap_80_chars(references_oss, reference, "      ");
+            references_oss << "\n";
+        }
+    }
+
+    auto references = references_oss.str();
+    if (!references.empty()) {
+        oss << "\nModel references\n----------------\n\n";
+        oss << "Please cite the following references when using this model:\n";
+        oss << references;
+    }
+
+    return oss.str();
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+
 
 struct Version {
     Version(std::string version): string(std::move(version)) {
@@ -399,6 +650,15 @@ struct Extension {
 void from_json(const nlohmann::json& json, Extension& extension) {
     json.at("name").get_to(extension.name);
     json.at("path").get_to(extension.path);
+}
+
+
+/// Convert (ptr, len) tuple to a string
+static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
+    return std::string(
+        static_cast<char*>(std::get<0>(data).get()),
+        std::get<1>(data)
+    );
 }
 
 void metatensor_torch::check_atomistic_model(std::string path) {

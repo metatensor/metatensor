@@ -3,7 +3,12 @@ import os
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     from .documentation import System, NeighborsListOptions
-    from .documentation import ModelOutput, ModelEvaluationOptions, ModelCapabilities
+    from .documentation import (
+        ModelOutput,
+        ModelEvaluationOptions,
+        ModelCapabilities,
+        ModelMetadata,
+    )
 
     from .documentation import check_atomistic_model, register_autograd_neighbors
 
@@ -14,6 +19,7 @@ else:
     ModelOutput = torch.classes.metatensor.ModelOutput
     ModelEvaluationOptions = torch.classes.metatensor.ModelEvaluationOptions
     ModelCapabilities = torch.classes.metatensor.ModelCapabilities
+    ModelMetadata = torch.classes.metatensor.ModelMetadata
 
     check_atomistic_model = torch.ops.metatensor.check_atomistic_model
     register_autograd_neighbors = torch.ops.metatensor.register_autograd_neighbors

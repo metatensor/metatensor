@@ -25,6 +25,11 @@ class ModelEvaluationOptionsHolder;
 /// TorchScript will always manipulate `ModelEvaluationOptionsHolder` through a `torch::intrusive_ptr`
 using ModelEvaluationOptions = torch::intrusive_ptr<ModelEvaluationOptionsHolder>;
 
+class ModelMetadataHolder;
+/// TorchScript will always manipulate `ModelMetadataHolder` through a `torch::intrusive_ptr`
+using ModelMetadata = torch::intrusive_ptr<ModelMetadataHolder>;
+
+
 
 /// Description of one of the quantity a model can compute
 class METATENSOR_TORCH_EXPORT ModelOutputHolder: public torch::CustomClassHolder {
@@ -64,7 +69,7 @@ public:
     /// Serialize a `ModelOutput` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelOutput` from a JSON string.
-    static ModelOutput from_json(const std::string& json);
+    static ModelOutput from_json(std::string_view json);
 };
 
 
@@ -136,7 +141,7 @@ public:
     /// Serialize a `ModelCapabilities` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelCapabilities` from a JSON string.
-    static ModelCapabilities from_json(const std::string& json);
+    static ModelCapabilities from_json(std::string_view json);
 
 private:
     double model_to_engine_ = 1.0;
@@ -177,11 +182,68 @@ public:
     /// Serialize a `ModelEvaluationOptions` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelEvaluationOptions` from a JSON string.
-    static ModelEvaluationOptions from_json(const std::string& json);
+    static ModelEvaluationOptions from_json(std::string_view json);
 
 private:
     torch::optional<TorchLabels> selected_atoms_ = torch::nullopt;
 };
+
+
+/// Metadata about a specific exported model
+class METATENSOR_TORCH_EXPORT ModelMetadataHolder: public torch::CustomClassHolder {
+public:
+    ModelMetadataHolder() = default;
+
+    /// Initialize `ModelMetadata` with the given information
+    ModelMetadataHolder(
+        std::string name_,
+        std::string description_,
+        std::vector<std::string> authors_,
+        torch::Dict<std::string, std::vector<std::string>> references_
+    ):
+        name(std::move(name_)),
+        description(std::move(description_)),
+        authors(std::move(authors_)),
+        references(references_)
+    {
+        this->validate();
+    }
+
+    ~ModelMetadataHolder() override = default;
+
+    /// Name of this model
+    std::string name;
+
+    /// Description of this model
+    std::string description;
+
+    /// List of authors for this model
+    std::vector<std::string> authors;
+
+    /// References for this model. The top level dict can have three keys:
+    ///
+    /// - "implementation": for reference to software and libraries used in the
+    ///   implementation of the model (i.e. for PyTorch
+    ///   https://dl.acm.org/doi/10.5555/3454287.3455008)
+    /// - "architecture": for reference that introduced the general architecture
+    ///   used by this model
+    /// - "model": for reference specific to this exact model
+    torch::Dict<std::string, std::vector<std::string>> references;
+
+    /// Implementation of Python's `__repr__` and `__str__`, printing all
+    /// metadata about this model.
+    std::string print() const;
+
+    /// Serialize `ModelMetadata` to a JSON string.
+    std::string to_json() const;
+    /// Load a serialized `ModelMetadata` from a JSON string.
+    static ModelMetadata from_json(std::string_view json);
+
+private:
+    /// validate the metadata before using it
+    void validate() const;
+};
+
 
 /// Check the exported metatensor atomistic model at the given `path`, and
 /// warn/error as required.

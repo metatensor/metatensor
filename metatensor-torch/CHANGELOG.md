@@ -19,11 +19,23 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-torch C++
 
+#### Added
+
+- `ModelMetadata` to record metadata about a specific model such as it's name,
+  authors, etc.
+- Added `interaction_range` and `supported_devices` to `ModelCapabilities`
+
 #### Changed
 
 - `System::species` has been renamed to `System::types`.
 
 ### metatensor-torch Python
+
+#### Added
+
+- `ModelMetadata` to record metadata about a specific model such as it's name,
+  authors, etc.
+- Added `interaction_range` and `supported_devices` to `ModelCapabilities`
 
 #### Changed
 
