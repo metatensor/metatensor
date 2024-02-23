@@ -178,7 +178,8 @@ class NeighborsListOptions:
         """
         Spherical cutoff radius for this neighbors list in engine units. This defaults
         to the same value as ``model_cutoff`` until :py:meth:`set_engine_unit()` is
-        called.
+        called (typically by
+        :py:meth:`MetatensorAtomisticModel.requested_neighbors_lists`).
         """
 
     def set_engine_unit(self, conversion):
@@ -305,7 +306,8 @@ class ModelCapabilities:
         Same as ``interaction_range``, but in the engine units.
 
         This defaults to the same value as ``interaction_range`` until
-        :py:meth:`set_engine_unit()` is called.
+        :py:meth:`set_engine_unit()` is called (typically by
+        :py:meth:`MetatensorAtomisticModel.capabilities`).
         """
 
     def set_engine_unit(self, conversion):
@@ -389,6 +391,8 @@ def check_atomistic_model(path: str):
 
     This function should be called before :py:func:`torch.jit.load()` when loading an
     existing model.
+
+    :param path: path to the exported model file
     """
 
 
