@@ -4,6 +4,10 @@ Models
 .. autoclass:: metatensor.torch.atomistic.MetatensorAtomisticModel
     :members:
 
+.. autoclass:: metatensor.torch.atomistic.ModelInterface
+    :members:
+    :show-inheritance:
+
 .. autofunction:: metatensor.torch.atomistic.check_atomistic_model
 
 

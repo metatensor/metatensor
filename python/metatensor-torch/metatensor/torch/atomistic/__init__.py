@@ -24,4 +24,4 @@ else:
     check_atomistic_model = torch.ops.metatensor.check_atomistic_model
     register_autograd_neighbors = torch.ops.metatensor.register_autograd_neighbors
 
-from .model import MetatensorAtomisticModel  # noqa
+from .model import MetatensorAtomisticModel, ModelInterface  # noqa: F401

@@ -24,6 +24,82 @@ from .outputs import check_outputs
 from .units import KNOWN_QUANTITIES, Quantity
 
 
+class ModelInterface(torch.nn.Module):
+    """
+    Interface for models that can be used with :py:class:`MetatensorAtomisticModel`.
+
+    There are several requirements that models must satisfy to be usable with
+    :py:class:`MetatensorAtomisticModel`. The main one is concerns the
+    :py:meth:`forward` function, which must have the signature defined in this
+    interface.
+
+    Additionally, the model can request neighbor lists to be computed by the simulation
+    engine, and stored inside the input :py:class:`System`. This is done by defining the
+    optional :py:meth:`requested_neighbors_lists` method for the model or any of it's
+    sub-module.
+
+    :py:class:`MetatensorAtomisticModel` will check if ``requested_neighbors_lists`` is
+    defined for all the sub-modules of the model, then collect and unify identical
+    requests for the simulation engine.
+    """
+
+    def __init__():
+        """"""
+        pass
+
+    def forward(
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[Labels],
+    ) -> Dict[str, TensorMap]:
+        """
+        This function should run the model for the given ``systems``, returning the
+        requested ``outputs``. If ``selected_atoms`` is a set of :py:class:`Labels`,
+        only the corresponding atoms should be included as "main" atoms in the
+        calculation and the output.
+
+        ``outputs`` will be a subset of the capabilities that where declared when
+        exporting the model. For example if a model can compute both an ``"energy"`` and
+        a ``"charge"`` output, the simulation engine might only request one them.
+
+        The returned dictionary should have the same keys as ``outputs``, and the values
+        should contains the corresponding properties of the ``systems``, as computed for
+        the subset of atoms defined in ``selected_atoms``. For some specific outputs,
+        there are additional constrains on how the associated metadata should look like,
+        documented in the :ref:`atomistic-models-outputs` section.
+
+        The main use case for ``selected_atoms`` is domain decomposition, where the
+        :py:class:`System` given to a model might contain both atoms in the current
+        domain and some atoms from other domains; and the calculation should produce
+        per-atom output only for the atoms in the domain (but still accounting for atoms
+        from the other domains as potential neighbors).
+
+        :param systems: atomistic systems on which to run the calculation
+        :param outputs: set of outputs requested by the simulation engine
+        :param selected_atoms: subset of atoms that should be included in the output,
+            defaults to None
+        :return: properties of the systems, as predicted by the machine learning model
+        """
+
+    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
+        """
+        Optional function declaring which neighbors list this model requires.
+
+        This function can be defined on either the root model or any of it's
+        sub-modules. A single module can request multiple neighbors list simultaneously
+        if it needs them.
+
+        It is then the responsibility of the code calling the model to:
+
+        1. call this function (or more generally
+           :py:meth:`MetatensorAtomisticModel.requested_neighbors_lists`) to get the
+           list of requests;
+        2. compute all neighbor lists corresponding to these requests and add them to
+           the systems before calling the model.
+        """
+
+
 class MetatensorAtomisticModel(torch.nn.Module):
     """
     :py:class:`MetatensorAtomisticModel` is the main entry point for atomistic machine
@@ -37,45 +113,15 @@ class MetatensorAtomisticModel(torch.nn.Module):
     :py:class:`ModelCapabilities`). This includes what units the model expects as input
     and what properties the model can compute (using :py:class:`ModelOutput`). The
     simulation engine will then ask the model to compute some subset of these properties
-    (through a :py:class:`metatensor.torch.atomistic.ModelEvaluationOptions`), on all or
-    a subset of atoms of an atomistic system.
+    (through a :py:class:`ModelEvaluationOptions`), on all or a subset of atoms of an
+    atomistic system.
 
-    Additionally, the wrapped ``module`` can request neighbors list to be computed by
-    the simulation engine, and stored inside the input :py:class:`System`. This is done
-    by defining ``requested_neighbors_lists(self) -> List[NeighborsListOptions]`` on the
-    wrapped model or any of it's sub-module. :py:class:`MetatensorAtomisticModel` will
-    unify identical requests before storing them and exposing it's own
-    :py:meth:`requested_neighbors_lists()` that should be used by the engine to know
-    what it needs to compute.
+    The wrapped module must follow the interface defined by :py:class:`ModelInterface`,
+    should not already be compiled by TorchScript, and should be in "eval" mode (i.e.
+    ``module.training`` should be ``False``).
 
-    There are several requirements on the wrapped ``module`` must satisfy. The main one
-    is concerns the ``forward()`` function, which must have the following signature:
-
-
-    >>> import torch
-    >>> from typing import List, Dict, Optional
-    >>> from metatensor.torch import Labels, TensorBlock
-    >>> from metatensor.torch.atomistic import ModelOutput, System
-    >>> class CustomModel(torch.nn.Module):
-    ...     def forward(
-    ...         self,
-    ...         systems: List[System],
-    ...         outputs: Dict[str, ModelOutput],
-    ...         selected_atoms: Optional[Labels] = None,
-    ...     ) -> Dict[str, TensorMap]: ...
-    ...
-
-    The returned dictionary should have the same keys as ``outputs``, and the values
-    should contains the corresponding properties of the ``systems``, as computed for the
-    subset of atoms defined in ``selected_atoms``. For some specific outputs, there are
-    additional constrains on how the associated metadata should look like, documented in
-    the :ref:`atomistic-models-outputs` section.
-
-    Additionally, the wrapped ``module`` should not already be compiled by TorchScript,
-    and should be in "eval" mode (i.e. ``module.training`` should be ``False``).
-
-    For example, a custom module predicting the energy as a constant time the number of
-    atoms could look like this
+    For example, a custom module predicting the energy as a constant value times the
+    number of atoms could look like this
 
     >>> class ConstantEnergy(torch.nn.Module):
     ...     def __init__(self, constant: float):
@@ -167,7 +213,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
     def __init__(
         self,
-        module: torch.nn.Module,
+        module: ModelInterface,
         metadata: ModelMetadata,
         capabilities: ModelCapabilities,
     ):
@@ -297,14 +343,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ) -> Dict[str, TensorMap]:
         """Run the wrapped model and return the corresponding outputs.
 
-        Before running the model, this will convert the ``system`` data from the engine
+        Before running the model, this will convert the ``systems`` data from the engine
         unit to the model unit, including all neighbors lists distances.
 
         After running the model, this will convert all the outputs from the model units
         to the engine units.
 
-        :param system: input system on which we should run the model. The system should
-            already contain all neighbors lists corresponding to the options in
+        :param systems: input systems on which we should run the model. The systems
+            should already contain all neighbors lists corresponding to the options in
             :py:meth:`requested_neighbors_lists()`.
         :param options: options for this run of the model
         :param check_consistency: Should we run additional check that everything is
