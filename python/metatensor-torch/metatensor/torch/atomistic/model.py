@@ -20,7 +20,7 @@ from . import (
     NeighborsListOptions,
     System,
 )
-from .outputs import check_outputs
+from .outputs import _check_outputs
 from .units import KNOWN_QUANTITIES, Quantity
 
 
@@ -361,32 +361,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
         """
 
         if check_consistency:
-            # check that the requested outputs match what the model can do
-            _check_outputs(self._capabilities, options.outputs)
-
-            # check that the types of the system match the one the model supports
-            for system in systems:
-                all_types = torch.unique(system.types)
-                for atom_type in all_types:
-                    if atom_type not in self._capabilities.atomic_types:
-                        raise ValueError(
-                            f"this model can not run for the atomic type '{atom_type}'"
-                        )
-
-                # Check neighbors lists
-                known_neighbors_lists = system.known_neighbors_lists()
-                for request in self._requested_neighbors_lists:
-                    found = False
-                    for known in known_neighbors_lists:
-                        if request == known:
-                            found = True
-
-                    if not found:
-                        raise ValueError(
-                            "missing neighbors list in the system: the model requested "
-                            f"a list for {request}, but it was not computed and stored "
-                            "in the system"
-                        )
+            _check_inputs(
+                self._capabilities,
+                self._requested_neighbors_lists,
+                systems,
+                options,
+            )
 
         # convert systems from engine to model units
         if self._capabilities.length_unit != options.length_unit:
@@ -411,7 +391,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         )
 
         if check_consistency:
-            check_outputs(
+            _check_outputs(
                 systems=systems,
                 requested=options.outputs,
                 selected_atoms=options.selected_atoms,
@@ -612,8 +592,14 @@ def _check_annotation(module: torch.nn.Module):
         )
 
 
-def _check_outputs(capabilities: ModelCapabilities, outputs: Dict[str, ModelOutput]):
-    for name, requested in outputs.items():
+def _check_inputs(
+    capabilities: ModelCapabilities,
+    requested_neighbors_lists: List[NeighborsListOptions],
+    systems: List[System],
+    options: ModelEvaluationOptions,
+):
+    # check that the requested outputs match what the model can do
+    for name, requested in options.outputs.items():
         if name not in capabilities.outputs:
             raise ValueError(
                 f"this model can not compute '{name}', the implemented "
@@ -633,6 +619,55 @@ def _check_outputs(capabilities: ModelCapabilities, outputs: Dict[str, ModelOutp
             raise ValueError(
                 f"this model can not compute '{name}' per atom, only globally"
             )
+
+    selected_atoms = options.selected_atoms
+    if selected_atoms is not None:
+        if selected_atoms.names != ["system", "atom"]:
+            raise ValueError(
+                "invalid names for selected_atoms: expected "
+                f"['system', 'atom'], got {selected_atoms.names}"
+            )
+
+        possible_atoms_values: List[List[int]] = []
+        for s, system in enumerate(systems):
+            for a in range(len(system)):
+                possible_atoms_values.append([s, a])
+
+        possible_atoms = Labels(
+            ["system", "atom"],
+            torch.tensor(possible_atoms_values),
+        )
+
+        intersection = selected_atoms.intersection(possible_atoms)
+        if len(intersection) != len(selected_atoms):
+            raise ValueError(
+                "invalid selected_atoms: there are entries that are not "
+                "possible for the current systems"
+            )
+
+    # check that the types of the system match the one the model supports
+    for system in systems:
+        all_types = torch.unique(system.types)
+        for atom_type in all_types:
+            if atom_type not in capabilities.atomic_types:
+                raise ValueError(
+                    f"this model can not run for the atomic type '{atom_type}'"
+                )
+
+        # Check neighbors lists
+        known_neighbors_lists = system.known_neighbors_lists()
+        for request in requested_neighbors_lists:
+            found = False
+            for known in known_neighbors_lists:
+                if request == known:
+                    found = True
+
+            if not found:
+                raise ValueError(
+                    "missing neighbors list in the system: the model requested "
+                    f"a list for {request}, but it was not computed and stored "
+                    "in the system"
+                )
 
 
 def _convert_systems_units(
