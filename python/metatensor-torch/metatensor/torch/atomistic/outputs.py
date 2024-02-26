@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import torch
 
@@ -6,7 +6,7 @@ from .. import Labels, TensorMap
 from . import ModelOutput, System
 
 
-def check_outputs(
+def _check_outputs(
     systems: List[System],
     requested: Dict[str, ModelOutput],
     selected_atoms: Optional[Labels],
@@ -66,10 +66,10 @@ def _check_energy(
 
     # check samples values from systems & selected_atoms
     if request.per_atom:
-        expected_values: List[Tuple[int, int]] = []
+        expected_values: List[List[int]] = []
         for s, system in enumerate(systems):
             for a in range(len(system)):
-                expected_values.append((s, a))
+                expected_values.append([s, a])
 
         expected_samples = Labels(["system", "atom"], torch.tensor(expected_values))
         if selected_atoms is not None:
