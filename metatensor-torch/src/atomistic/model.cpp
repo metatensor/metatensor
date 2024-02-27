@@ -418,7 +418,7 @@ ModelMetadata ModelMetadataHolder::from_json(std::string_view json) {
         if (!data["description"].is_string()) {
             throw std::runtime_error("'description' in JSON for ModelMetadata must be a string");
         }
-        result->name = data["description"];
+        result->description = data["description"];
     }
 
     if (data.contains("authors")) {
@@ -576,8 +576,8 @@ std::string ModelMetadataHolder::print() const {
     if (this->references.contains("implementation") && !this->references.at("implementation").empty()) {
         references_oss << "- about the implementation of this model:\n";
         for (const auto& reference: this->references.at("implementation")) {
-            references_oss << "    * ";
-            wrap_80_chars(references_oss, reference, "      ");
+            references_oss << "  * ";
+            wrap_80_chars(references_oss, reference, "    ");
             references_oss << "\n";
         }
     }

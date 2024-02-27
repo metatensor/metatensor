@@ -268,6 +268,7 @@ TEST_CASE("Models metadata") {
         std::string json =R"({
     "class": "ModelMetadata",
     "name": "foo",
+    "description": "test",
     "authors": ["me", "myself"],
     "references": {
         "implementation": ["torch-power!"],
@@ -277,6 +278,7 @@ TEST_CASE("Models metadata") {
 
         metadata = ModelMetadataHolder::from_json(json);
         CHECK(metadata->name == "foo");
+        CHECK(metadata->description == "test");
         CHECK(metadata->authors == std::vector<std::string>{"me", "myself"});
         CHECK(metadata->references.at("implementation") == std::vector<std::string>{"torch-power!"});
         CHECK(metadata->references.at("model") == std::vector<std::string>{"took a while to train"});
