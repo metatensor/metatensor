@@ -368,8 +368,8 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("references") = torch::Dict<std::string, std::vector<std::string>>(),
             }
         )
-        .def("__repr__", &LabelsHolder::print)
-        .def("__len__", &LabelsHolder::print)
+        .def("__repr__", &ModelMetadataHolder::print)
+        .def("__str__", &ModelMetadataHolder::print)
         .def_readwrite("name", &ModelMetadataHolder::name)
         .def_readwrite("description", &ModelMetadataHolder::description)
         .def_readwrite("authors", &ModelMetadataHolder::authors)
