@@ -598,6 +598,12 @@ def _check_inputs(
     systems: List[System],
     options: ModelEvaluationOptions,
 ):
+    if len(systems) == 0:
+        return
+
+    global_device = systems[0].device
+    global_dtype = systems[0].positions.dtype
+
     # check that the requested outputs match what the model can do
     for name, requested in options.outputs.items():
         if name not in capabilities.outputs:
@@ -622,6 +628,12 @@ def _check_inputs(
 
     selected_atoms = options.selected_atoms
     if selected_atoms is not None:
+        if selected_atoms.device != global_device:
+            raise ValueError(
+                "expected all selected_atoms to be on the same device as the systems, "
+                f"got {selected_atoms.device} and {global_device}"
+            )
+
         if selected_atoms.names != ["system", "atom"]:
             raise ValueError(
                 "invalid names for selected_atoms: expected "
@@ -645,8 +657,20 @@ def _check_inputs(
                 "possible for the current systems"
             )
 
-    # check that the types of the system match the one the model supports
     for system in systems:
+        if system.device != global_device:
+            raise ValueError(
+                "expected all systems to be on the same device, "
+                f"got {global_device} and {system.device}"
+            )
+
+        if not system.positions.dtype == global_dtype:
+            raise ValueError(
+                "expected all systems to have the same dtype, "
+                f"got {global_dtype} and {system.positions.dtype}"
+            )
+
+        # check that the atomic types of the system match the one the model supports
         all_types = torch.unique(system.types)
         for atom_type in all_types:
             if atom_type not in capabilities.atomic_types:
