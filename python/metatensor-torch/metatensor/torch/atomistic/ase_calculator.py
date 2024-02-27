@@ -9,6 +9,7 @@ from .. import Labels, TensorBlock
 from . import (
     MetatensorAtomisticModel,
     ModelEvaluationOptions,
+    ModelMetadata,
     ModelOutput,
     System,
     check_atomistic_model,
@@ -110,6 +111,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
     @classmethod
     def fromdict(cls, data):
         return MetatensorCalculator(data["model_path"], data["check_consistency"])
+
+    def metadata(self) -> ModelMetadata:
+        """Get the metadata of the underlying model"""
+        return self._model.metadata()
 
     def run_model(
         self,
