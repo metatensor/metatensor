@@ -9,8 +9,6 @@ set -eux
 
 cd "$ROOT_DIR"
 
-./scripts/package-core.sh
-
 # Regenerate Rust bindings to the C API
 bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_api.rs \
     --disable-header-comment \

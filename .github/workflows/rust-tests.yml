@@ -104,7 +104,7 @@ jobs:
       - name: check the code can be compiled as a standalone crate
         if: matrix.os != 'windows-2019'
         run: |
-          ./scripts/package-core.sh
+          ./scripts/package-core.sh rust/metatensor-sys/
           cd rust/metatensor-sys
           cargo package --allow-dirty
 
