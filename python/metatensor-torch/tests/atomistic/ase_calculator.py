@@ -71,11 +71,9 @@ class LennardJones(torch.nn.Module):
             energy = energy.index_add(0, all_j, e, alpha=0.5)
 
             if selected_atoms is not None:
-                current_system = torch.where(
-                    selected_atoms.column("system") == system_i
-                )
+                current_system_mask = selected_atoms.column("system") == system_i
                 current_atoms = selected_atoms.column("atom")
-                current_atoms = current_atoms[current_system].to(torch.long)
+                current_atoms = current_atoms[current_system_mask].to(torch.long)
                 energy = energy[current_atoms]
 
             if per_atoms:
@@ -230,13 +228,15 @@ def test_get_properties(model, atoms):
     assert np.all(properties["stress"] == atoms.get_stress())
 
 
-def test_selected_atoms(model, atoms):
+def test_selected_atoms(tmpdir, model, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
         sigma=SIGMA, epsilon=EPSILON, rc=CUTOFF, ro=CUTOFF, smooth=False
     )
 
-    calculator = MetatensorCalculator(model, check_consistency=True)
+    path = os.path.join(tmpdir, "exported-model.pt")
+    model.export(path)
+    calculator = MetatensorCalculator(path, check_consistency=True)
 
     first_mask = [a % 2 == 0 for a in range(len(atoms))]
     first_half = Labels(
