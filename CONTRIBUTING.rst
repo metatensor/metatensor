@@ -187,17 +187,14 @@ behavior of tests:
 Inspecting Python code coverage
 -------------------------------
 
-The code coverage is reported at `codecov`_. You can also inspect the coverage locally.
-To get the full coverage first combine all reports and open produced html file in a
-browser
+The code coverage is reported at `codecov`_. You can also inspect the coverage
+locally. To get the full coverage first combine all reports and open produced
+html file in a browser
 
 .. code-block:: bash
 
     tox
-    coverage combine \
-        ./python/metatensor-core/.coverage \
-        ./python/metatensor-torch/.coverage \
-        ./python/metatensor-operations/.coverage
+    coverage combine .tox/*/.coverage
     coverage html
     firefox htmlcov/index.html
 
