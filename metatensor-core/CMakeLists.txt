@@ -218,10 +218,17 @@ if (CARGO_VERSION_CHANGED)
             string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
             list(APPEND stripped_lib_list "${stripped_lib}")
         endforeach()
+
         # Special case `msvcrt` to link with the debug version in Debug mode.
         list(TRANSFORM stripped_lib_list REPLACE "^msvcrt$" "\$<\$<CONFIG:Debug>:msvcrtd>")
-        list(REMOVE_DUPLICATES stripped_lib_list)
 
+        if (APPLE)
+            # Prevent warnings about duplicated `System` in linked libraries
+            # from Apple's `ld`
+            list(REMOVE_ITEM stripped_lib_list "System")
+        endif()
+
+        list(REMOVE_DUPLICATES stripped_lib_list)
         set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
 
         if (${METATENSOR_MAIN_PROJECT})

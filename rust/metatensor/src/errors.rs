@@ -12,26 +12,7 @@ thread_local! {
     pub static LAST_RUST_ERROR: RefCell<Error> = RefCell::new(Error {code: None, message: String::new()});
 }
 
-/// Error type used in metatensor
-#[derive(Debug, Clone)]
-pub struct Error {
-    /// Error code from the metatensor-core C API
-    pub code: Option<mts_status_t>,
-    /// Error message associated with the code
-    pub message: String
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.message)?;
-        if let Some(code) = self.code {
-            write!(f, " (code {})", code)?;
-        }
-        Ok(())
-    }
-}
-
-impl std::error::Error for Error {}
+pub use metatensor_sys::Error;
 
 /// Check an `mts_status_t`, returning an error if is it not `MTS_SUCCESS`
 pub fn check_status(status: mts_status_t) -> Result<(), Error> {
@@ -62,24 +43,6 @@ pub fn check_ptr<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
         let message = message.to_str().expect("invalid UTF8");
 
         return Err(Error { code: None, message: message.to_owned() });
-    }
-}
-
-
-// Box<dyn Any + Send + 'static> is the error type in std::panic::catch_unwind
-impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
-    fn from(error: Box<dyn std::any::Any + Send + 'static>) -> Error {
-        let message = if let Some(message) = error.downcast_ref::<String>() {
-            message.clone()
-        } else if let Some(message) = error.downcast_ref::<&str>() {
-            (*message).to_owned()
-        } else {
-            panic!("panic message is not a string, something is very wrong")
-        };
-
-        return Error {
-            code: None, message,
-        }
     }
 }
 

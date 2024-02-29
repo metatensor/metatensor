@@ -38,7 +38,7 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
         "..",
         "..",
         "..",
-        "metatensor",
+        "metatensor-core",
         "tests",
         "data.npz",
     )
@@ -307,7 +307,7 @@ def test_load_labels(memory_buffer, standalone_fn):
         "..",
         "..",
         "..",
-        "metatensor",
+        "metatensor-core",
         "tests",
         "keys.npy",
     )
@@ -385,7 +385,7 @@ def test_pickle_labels(protocol, tmpdir, labels):
 
 def test_wrong_load_error():
     data_root = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "metatensor", "tests"
+        os.path.dirname(__file__), "..", "..", "..", "metatensor-core", "tests"
     )
 
     message = (

@@ -5,16 +5,16 @@ mod tensor {
 
     #[test]
     fn load_file() {
-        let tensor = metatensor::io::load("./tests/data.npz").unwrap();
+        let tensor = metatensor::io::load("../../metatensor-core/tests/data.npz").unwrap();
         check_tensor(&tensor);
 
-        let tensor = TensorMap::load("./tests/data.npz").unwrap();
+        let tensor = TensorMap::load("../../metatensor-core/tests/data.npz").unwrap();
         check_tensor(&tensor);
     }
 
     #[test]
     fn load_buffer() {
-        let mut file = std::fs::File::open("./tests/data.npz").unwrap();
+        let mut file = std::fs::File::open("../../metatensor-core/tests/data.npz").unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
@@ -27,7 +27,7 @@ mod tensor {
 
     #[test]
     fn save_buffer() {
-        let mut file = std::fs::File::open("./tests/data.npz").unwrap();
+        let mut file = std::fs::File::open("../../metatensor-core/tests/data.npz").unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
@@ -72,16 +72,16 @@ mod labels {
 
     #[test]
     fn load_file() {
-        let labels = metatensor::io::load_labels("./tests/keys.npy").unwrap();
+        let labels = metatensor::io::load_labels("../../metatensor-core/tests/keys.npy").unwrap();
         check_labels(&labels);
 
-        let labels = Labels::load("./tests/keys.npy").unwrap();
+        let labels = Labels::load("../../metatensor-core/tests/keys.npy").unwrap();
         check_labels(&labels);
     }
 
     #[test]
     fn load_buffer() {
-        let mut file = std::fs::File::open("./tests/keys.npy").unwrap();
+        let mut file = std::fs::File::open("../../metatensor-core/tests/keys.npy").unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
@@ -94,7 +94,7 @@ mod labels {
 
     #[test]
     fn save_buffer() {
-        let mut file = std::fs::File::open("./tests/keys.npy").unwrap();
+        let mut file = std::fs::File::open("../../metatensor-core/tests/keys.npy").unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
