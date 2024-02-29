@@ -132,6 +132,13 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         This is intended as an easy way to run metatensor models on
         :py:class:`ase.Atoms` when the model can predict properties not supported by the
         usual ASE's calculator interface.
+
+        All the parameters have the same meaning as the corresponding ones in
+        :py:meth:`metatensor.torch.atomistic.ModelInterface.forward`.
+
+        :param atoms: system on which to run the model
+        :param outputs: outputs of the model that should be predicted
+        :param selected_atoms: subset of atoms on which to run the calculation
         """
         types, positions, cell = _ase_to_torch_data(atoms)
         system = System(types, positions, cell)
