@@ -23,9 +23,8 @@ class System:
 
         .. admonition:: Converting data to metatensor `System`
 
-            ``metatensor.torch.atomistic`` provides a way to convert ``ase.Atoms``
-            instances to :py:class:`System` using the :py:func:`systems_to_torch()`
-            function.
+            We provide a way to convert :py:class:`ase.Atoms` instances to
+            :py:class:`System` using the :py:func:`systems_to_torch()` function.
 
             In addition, some external packages provide ways to create
             :py:class:`System` using data from other libraries:

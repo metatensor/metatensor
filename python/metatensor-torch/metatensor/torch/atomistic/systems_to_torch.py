@@ -1,3 +1,4 @@
+import warnings
 from typing import List, Optional, Union
 
 import numpy as np
@@ -15,7 +16,8 @@ except ImportError:
 
 
 class IntoSystem:
-    """A type that can be converted into a :py:class:`metatensor.torch.atomistic.System`.
+    """A type that can be converted into a
+    :py:class:`metatensor.torch.atomistic.System`.
 
     This is an abstract class that is used to indicate a class whose objects
     can be converted into a :py:class:`System`. For the moment,
@@ -86,9 +88,15 @@ def _system_to_torch(
 
     if not isinstance(system, ase.Atoms):
         raise ValueError(
-            "Only `ase.Atoms` objects can be converted to `System`s. "
+            "Only `ase.Atoms` objects can be converted to `System`s "
             f"for now; got {type(system)}."
         )
+
+    if dtype is None:
+        # this is necessary because creating torch tensors from numpy arrays
+        # takes the dtype from the numpy array, which is not always the default
+        # dtype
+        dtype = torch.get_default_dtype()
 
     positions = torch.tensor(
         system.positions,
@@ -105,7 +113,16 @@ def _system_to_torch(
             device=device,
         )
     elif not np.any(system.pbc):
-        cell = np.zeros((3, 3))
+        if system.cell is not None and not np.all(system.cell == 0):
+            warnings.warn(
+                "A conversion to `System` was requested for an `ase.Atoms` object "
+                "with non-zero cell vectors but no periodic boundary conditions. "
+                "The cell vectors will be set to zero.",
+                stacklevel=2,
+            )
+        cell = torch.zeros(
+            (3, 3), requires_grad=cell_requires_grad, dtype=dtype, device=device
+        )
     else:
         raise ValueError(
             "The `metatensor.torch.atomistic.System` class does not support "
