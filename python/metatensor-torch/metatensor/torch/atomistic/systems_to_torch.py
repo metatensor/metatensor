@@ -84,6 +84,12 @@ def _system_to_torch(
     if not HAS_ASE:
         raise RuntimeError("The `ase` package is required to convert systems to torch.")
 
+    if not isinstance(system, ase.Atoms):
+        raise ValueError(
+            "Only `ase.Atoms` objects can be converted to `System`s. "
+            f"for now; got {type(system)}."
+        )
+
     positions = torch.tensor(
         system.positions,
         requires_grad=positions_requires_grad,
@@ -106,14 +112,6 @@ def _system_to_torch(
             "systems with mixed periodic and non-periodic dimensions."
         )
 
-    if isinstance(system, ase.Atoms):
-        return System(
-            positions=positions,
-            cell=cell,
-            types=torch.tensor(system.numbers, device=device),
-        )
-    else:
-        raise ValueError(
-            "Only `ase.Atoms` objects can be converted to `System`s. "
-            f"for now; got {type(system)}."
-        )
+    types = torch.tensor(system.numbers, device=device, dtype=torch.int32)
+
+    return System(positions=positions, cell=cell, types=types)

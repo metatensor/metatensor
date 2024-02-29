@@ -27,8 +27,8 @@ class System:
             instances to :py:class:`System` using the :py:func:`systems_to_torch()`
             function.
 
-            In addition, some external packages provide ways to create :py:class:`System`
-            using data from other libraries:
+            In addition, some external packages provide ways to create
+            :py:class:`System` using data from other libraries:
 
             - `rascaline`_ has the :py:func:`rascaline.torch.systems_to_torch()`
               function that can convert from ASE, chemfiles and PySCF.
