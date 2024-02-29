@@ -32,7 +32,7 @@ documented below, and is part of the ``metatensor.torch.atomistic`` module.
     :maxdepth: 1
 
     systems
-    models
+    models/index
     ase
 
 

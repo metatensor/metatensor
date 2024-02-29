@@ -88,6 +88,8 @@ TEST_CASE("Models metadata") {
             StartsWith("unknown unit 'unknown' for length")
         );
 
+    #if TORCH_VERSION_MAJOR >= 2 && TORCH_VERSION_MINOR >= 0
+
         struct WarningHandler: public torch::WarningHandler {
             virtual ~WarningHandler() override = default;
             void process(const torch::Warning& warning) override {
@@ -102,6 +104,7 @@ TEST_CASE("Models metadata") {
         output->set_quantity("unknown"),
 
         torch::WarningUtils::set_warning_handler(old_handler);
+    #endif
     }
 
     SECTION("ModelEvaluationOptions") {

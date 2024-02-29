@@ -183,6 +183,8 @@ class NeighborsListOptions:
 
         This is typically set by :py:class:`MetatensorAtomisticModel` when collecting
         all neighbors list requests.
+
+        The list of possible units is available :ref:`here <known-quantities-units>`.
         """
 
     def engine_cutoff(self, engine_length_unit: str) -> float:
@@ -238,6 +240,9 @@ class ModelOutput:
         """
         Quantity of the output (e.g. energy, dipole, …).  If this is an empty string, no
         unit conversion will be performed.
+
+        The list of possible quantities is available :ref:`here
+        <known-quantities-units>`.
         """
 
     @property
@@ -245,6 +250,8 @@ class ModelOutput:
         """
         Unit of the output. If this is an empty string, no unit conversion will be
         performed.
+
+        The list of possible units is available :ref:`here <known-quantities-units>`.
         """
 
     per_atom: bool
@@ -289,7 +296,7 @@ class ModelCapabilities:
     For a short range model, this is the same as the largest neighbors list cutoff. For
     a message passing model, this is the cutoff of one environment times the number of
     message passing steps. For an explicit long range model, this should be set to
-    infinity.
+    infinity (``float("inf")``/``math.inf``/``torch.inf`` in Python).
     """
 
     @property
@@ -299,6 +306,8 @@ class ModelCapabilities:
 
         This applies to the ``interaction_range``, any cutoff in neighbors lists, the
         atoms positions and the system cell.
+
+        The list of possible units is available :ref:`here <known-quantities-units>`.
         """
 
     def engine_interaction_range(self, engine_length_unit: str) -> float:
@@ -334,7 +343,11 @@ class ModelEvaluationOptions:
 
     @property
     def length_unit(self) -> str:
-        """unit of lengths the engine uses for the model input"""
+        """
+        Unit of lengths the engine uses for the model input.
+
+        The list of possible units is available :ref:`here <known-quantities-units>`.
+        """
 
     outputs: Dict[str, ModelOutput]
     """requested outputs for this run and corresponding settings"""
@@ -426,13 +439,8 @@ def register_autograd_neighbors(
 def unit_conversion_factor(quantity: str, from_unit: str, to_unit: str):
     """
     Get the multiplicative conversion factor from ``from_unit`` to ``to_unit``. Both
-    units must be valid and known for the given physical ``quantity``.
-
-    The following quantity and units are known by metatensor, please contact us if you
-    want to add new ones!
-
-    - **length**: angstrom, bohr, nanometer, nm
-    - **energy**: eV, meV, Hartree, kcal/mol, kJ/mol
+    units must be valid and known for the given physical ``quantity``. The set of valid
+    quantities and units is available :ref:`here <known-quantities-units>`.
 
     :param quantity: name of the physical quantity
     :param from_unit: current unit of the data
