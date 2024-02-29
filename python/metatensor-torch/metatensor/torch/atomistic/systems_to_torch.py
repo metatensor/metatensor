@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
 
+import numpy as np
 import torch
 
 from . import System
@@ -14,7 +15,12 @@ except ImportError:
 
 
 class IntoSystem:
-    # TODO. Just here for documentation purposes.
+    """A type that can be converted into a ``metatensor.torch.atomistic.System``.
+
+    This is an abstract class that is used to indicate a class whose objects
+    can be converted into a ``metatensor.torch.atomistic.System``. For the moment,
+    the only supported type is ``ase.Atoms``."""
+
     pass
 
 
@@ -78,20 +84,32 @@ def _system_to_torch(
     if not HAS_ASE:
         raise RuntimeError("The `ase` package is required to convert systems to torch.")
 
+    positions = torch.tensor(
+        system.positions,
+        requires_grad=positions_requires_grad,
+        dtype=dtype,
+        device=device,
+    )
+
+    if np.all(system.pbc):
+        cell = torch.tensor(
+            system.cell[:],
+            requires_grad=cell_requires_grad,
+            dtype=dtype,
+            device=device,
+        )
+    elif not np.any(system.pbc):
+        cell = np.zeros((3, 3))
+    else:
+        raise ValueError(
+            "The `metatensor.torch.atomistic.System` class does not support "
+            "systems with mixed periodic and non-periodic dimensions."
+        )
+
     if isinstance(system, ase.Atoms):
         return System(
-            positions=torch.tensor(
-                system.positions,
-                requires_grad=positions_requires_grad,
-                dtype=dtype,
-                device=device,
-            ),
-            cell=torch.tensor(
-                system.cell[:],
-                requires_grad=cell_requires_grad,
-                dtype=dtype,
-                device=device,
-            ),
+            positions=positions,
+            cell=cell,
             types=torch.tensor(system.numbers, device=device),
         )
     else:
