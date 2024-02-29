@@ -29,6 +29,15 @@ class ModelMetadataHolder;
 /// TorchScript will always manipulate `ModelMetadataHolder` through a `torch::intrusive_ptr`
 using ModelMetadata = torch::intrusive_ptr<ModelMetadataHolder>;
 
+/// Check that a given physical quantity is valid and known. This is
+/// intentionally not exported with `METATENSOR_TORCH_EXPORT`, and is only
+/// intended for internal use.
+bool valid_quantity(const std::string& quantity);
+
+/// Check that a given unit is valid and known for some physical quantity. This
+/// is intentionally not exported with `METATENSOR_TORCH_EXPORT`, and is only
+/// intended for internal use.
+void validate_unit(const std::string& quantity, const std::string& unit);
 
 
 /// Description of one of the quantity a model can compute
@@ -38,26 +47,36 @@ public:
 
     /// Initialize `ModelOutput` with the given data
     ModelOutputHolder(
-        std::string quantity_,
-        std::string unit_,
+        std::string quantity,
+        std::string unit,
         bool per_atom_,
         std::vector<std::string> explicit_gradients_
     ):
-        quantity(std::move(quantity_)),
-        unit(std::move(unit_)),
         per_atom(per_atom_),
         explicit_gradients(std::move(explicit_gradients_))
-    {}
+    {
+        this->set_quantity(std::move(quantity));
+        this->set_unit(std::move(unit));
+    }
 
     ~ModelOutputHolder() override = default;
 
     /// quantity of the output (e.g. energy, dipole, …).  If this is an empty
     /// string, no unit conversion will be performed.
-    std::string quantity;
+    const std::string& quantity() const {
+        return quantity_;
+    }
+
+    /// set the quantity of the output
+    void set_quantity(std::string quantity);
 
     /// unit of the output. If this is an empty string, no unit conversion will
     /// be performed.
-    std::string unit;
+    const std::string& unit() const {
+        return unit_;
+    }
+    /// set the unit of the output
+    void set_unit(std::string unit);
 
     /// is the output defined per-atom or for the overall structure
     bool per_atom = false;
@@ -70,6 +89,10 @@ public:
     std::string to_json() const;
     /// Load a serialized `ModelOutput` from a JSON string.
     static ModelOutput from_json(std::string_view json);
+
+private:
+    std::string quantity_;
+    std::string unit_;
 };
 
 
@@ -83,15 +106,16 @@ public:
         torch::Dict<std::string, ModelOutput> outputs_,
         std::vector<int64_t> atomic_types_,
         double interaction_range_,
-        std::string length_unit_,
+        std::string length_unit,
         std::vector<std::string> supported_devices_
     ):
         outputs(outputs_),
         atomic_types(std::move(atomic_types_)),
         interaction_range(interaction_range_),
-        length_unit(std::move(length_unit_)),
         supported_devices(std::move(supported_devices_))
-    {}
+    {
+        this->set_length_unit(std::move(length_unit));
+    }
 
     ~ModelCapabilitiesHolder() override = default;
 
@@ -115,20 +139,14 @@ public:
     double interaction_range = -1;
 
     /// unit of lengths the model expects as input
-    std::string length_unit;
-
-    /// Same as `interaction_range`, but in the length unit of the engine
-    double engine_interaction_range() const {
-        return interaction_range * model_to_engine_;
+    const std::string& length_unit() const {
+        return length_unit_;
     }
+    /// set the unit of length for this model
+    void set_length_unit(std::string unit);
 
-    /// Set the conversion factor from the model length units to the engine
-    /// units.
-    ///
-    /// This should be called before `engine_interaction_range()`.
-    void set_engine_unit(double conversion) {
-        model_to_engine_ = conversion;
-    }
+    /// Get the `interaction_range` in the length unit of the engine
+    double engine_interaction_range(const std::string& engine_length_unit) const;
 
     /// What devices can this model run on? This should only contain the
     /// `device_type` part of the device, and not the device number (i.e. this
@@ -144,7 +162,7 @@ public:
     static ModelCapabilities from_json(std::string_view json);
 
 private:
-    double model_to_engine_ = 1.0;
+    std::string length_unit_;
 };
 
 
@@ -162,8 +180,12 @@ public:
 
     ~ModelEvaluationOptionsHolder() override = default;
 
-    /// unit of lengths the engine uses for the model input
-    std::string length_unit;
+    /// unit of lengths the engine uses in the data it calls the model with
+    const std::string& length_unit() const {
+        return length_unit_;
+    }
+    /// set the unit of length used by the engine
+    void set_length_unit(std::string unit);
 
     /// requested outputs for this run and corresponding settings
     torch::Dict<std::string, ModelOutput> outputs;
@@ -185,6 +207,7 @@ public:
     static ModelEvaluationOptions from_json(std::string_view json);
 
 private:
+    std::string length_unit_;
     torch::optional<TorchLabels> selected_atoms_ = torch::nullopt;
 };
 
@@ -244,7 +267,6 @@ private:
     void validate() const;
 };
 
-
 /// Check the exported metatensor atomistic model at the given `path`, and
 /// warn/error as required.
 METATENSOR_TORCH_EXPORT void check_atomistic_model(std::string path);
@@ -253,6 +275,14 @@ METATENSOR_TORCH_EXPORT void check_atomistic_model(std::string path);
 METATENSOR_TORCH_EXPORT torch::jit::Module load_atomistic_model(
     std::string path,
     c10::optional<c10::Device> device = c10::nullopt
+);
+
+/// Get the multiplicative conversion factor to use to convert from unit `from`
+/// to unit `to`. Both should be units for the given physical `quantity`.
+METATENSOR_TORCH_EXPORT double unit_conversion_factor(
+    const std::string& quantity,
+    const std::string& from_unit,
+    const std::string& to_unit
 );
 
 }

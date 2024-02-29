@@ -28,25 +28,27 @@ public:
     ///
     /// `requestor` can be used to store information about who requested the
     /// neighbors list.
-    NeighborsListOptionsHolder(double model_cutoff, bool full_list, std::string requestor = "");
+    NeighborsListOptionsHolder(double cutoff, bool full_list, std::string requestor = "");
     ~NeighborsListOptionsHolder() override = default;
 
     /// Spherical cutoff radius for this neighbors list, in the units of the model
-    double model_cutoff() const {
-        return model_cutoff_;
+    double cutoff() const {
+        return cutoff_;
     }
+
+    /// Get the length unit of the model, this will be used in `engine_cutoff`.
+    const std::string& length_unit() const {
+        return length_unit_;
+    }
+
+    /// Set the length unit to a new value.
+    ///
+    /// This is typically called by `MetatensorAtomisticModel`, and should not
+    /// need to be set by users directly.
+    void set_length_unit(std::string length_unit);
 
     /// Spherical cutoff radius for this neighbors list, in the units of the engine
-    double engine_cutoff() const {
-        return engine_cutoff_;
-    }
-
-    /// Set the conversion factor from the model units to the engine units.
-    ///
-    /// This should be called before `engine_cutoff()`.
-    void set_engine_unit(double conversion) {
-        engine_cutoff_ = model_cutoff_ * conversion;
-    }
+    double engine_cutoff(const std::string& engine_length_unit) const;
 
     /// Should the list be a full neighbors list (contains both the pair i->j
     /// and j->i) or a half neighbors list (contains only the pair i->j)
@@ -74,9 +76,8 @@ public:
 
 private:
     // cutoff in the model units
-    double model_cutoff_;
-    // cutoff in the engine units
-    double engine_cutoff_;
+    double cutoff_;
+    std::string length_unit_;
     bool full_list_;
     std::vector<std::string> requestors_;
 };
@@ -84,7 +85,7 @@ private:
 /// Check `NeighborsListOptions` for equality. The `requestors` list is ignored
 /// when checking for equality
 inline bool operator==(const NeighborsListOptions& lhs, const NeighborsListOptions& rhs) {
-    return lhs->model_cutoff() == rhs->model_cutoff() && lhs->full_list() == rhs->full_list();
+    return lhs->cutoff() == rhs->cutoff() && lhs->full_list() == rhs->full_list();
 }
 
 /// Check `NeighborsListOptions` for inequality.
@@ -245,8 +246,9 @@ public:
 private:
     struct nl_options_compare {
         bool operator()(const NeighborsListOptions& a, const NeighborsListOptions& b) const {
+            assert(a->length_unit() == b->length_unit());
             if (a->full_list() == b->full_list()) {
-                return a->model_cutoff() < b->model_cutoff();
+                return a->cutoff() < b->cutoff();
             } else {
                 return static_cast<int>(a->full_list()) < static_cast<int>(b->full_list());
             }

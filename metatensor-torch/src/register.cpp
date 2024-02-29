@@ -295,11 +295,13 @@ TORCH_LIBRARY(metatensor, m) {
     m.class_<NeighborsListOptionsHolder>("NeighborsListOptions")
         .def(
             torch::init<double, bool, std::string>(), DOCSTRING,
-            {torch::arg("model_cutoff"), torch::arg("full_list"), torch::arg("requestor") = ""}
+            {torch::arg("cutoff"), torch::arg("full_list"), torch::arg("requestor") = ""}
         )
-        .def_property("model_cutoff", &NeighborsListOptionsHolder::model_cutoff)
-        .def_property("engine_cutoff", &NeighborsListOptionsHolder::engine_cutoff)
-        .def("set_engine_unit", &NeighborsListOptionsHolder::set_engine_unit)
+        .def_property("cutoff", &NeighborsListOptionsHolder::cutoff)
+        .def_property("length_unit", &NeighborsListOptionsHolder::length_unit, &NeighborsListOptionsHolder::set_length_unit)
+        .def("engine_cutoff", &NeighborsListOptionsHolder::engine_cutoff,
+            DOCSTRING, {torch::arg("engine_length_unit")}
+        )
         .def_property("full_list", &NeighborsListOptionsHolder::full_list)
         .def("requestors", &NeighborsListOptionsHolder::requestors)
         .def("add_requestor", &NeighborsListOptionsHolder::add_requestor, DOCSTRING,
@@ -394,8 +396,8 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("explicit_gradients") = std::vector<std::string>()
             }
         )
-        .def_readwrite("quantity", &ModelOutputHolder::quantity)
-        .def_readwrite("unit", &ModelOutputHolder::unit)
+        .def_property("quantity", &ModelOutputHolder::quantity, &ModelOutputHolder::set_quantity)
+        .def_property("unit", &ModelOutputHolder::unit, &ModelOutputHolder::set_unit)
         .def_readwrite("per_atom", &ModelOutputHolder::per_atom)
         .def_readwrite("explicit_gradients", &ModelOutputHolder::explicit_gradients)
         .def_pickle(
@@ -428,9 +430,8 @@ TORCH_LIBRARY(metatensor, m) {
         .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
         .def_readwrite("atomic_types", &ModelCapabilitiesHolder::atomic_types)
         .def_readwrite("interaction_range", &ModelCapabilitiesHolder::interaction_range)
-        .def_property("engine_interaction_range", &ModelCapabilitiesHolder::engine_interaction_range)
-        .def("set_engine_unit", &ModelCapabilitiesHolder::set_engine_unit)
-        .def_readwrite("length_unit", &ModelCapabilitiesHolder::length_unit)
+        .def("engine_interaction_range", &ModelCapabilitiesHolder::engine_interaction_range)
+        .def_property("length_unit", &ModelCapabilitiesHolder::length_unit, &ModelCapabilitiesHolder::set_length_unit)
         .def_readwrite("supported_devices", &ModelCapabilitiesHolder::supported_devices)
         .def_pickle(
             [](const ModelCapabilities& self) -> std::string {
@@ -455,7 +456,7 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("selected_atoms") = torch::nullopt,
             }
         )
-        .def_readwrite("length_unit", &ModelEvaluationOptionsHolder::length_unit)
+        .def_property("length_unit", &ModelEvaluationOptionsHolder::length_unit, &ModelEvaluationOptionsHolder::set_length_unit)
         .def_readwrite("outputs", &ModelEvaluationOptionsHolder::outputs)
         .def_property("selected_atoms",
             &ModelEvaluationOptionsHolder::get_selected_atoms,
@@ -471,6 +472,7 @@ TORCH_LIBRARY(metatensor, m) {
         );
 
 
+    m.def("unit_conversion_factor(str quantity, str from_unit, str to_unit) -> float", unit_conversion_factor);
     m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
     m.def(
         "register_autograd_neighbors("

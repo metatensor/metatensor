@@ -71,7 +71,7 @@ def test_system(types, positions, cell, neighbors):
         # custom __repr__ definitions are only available since torch 2.1
         assert repr(system) == expected
 
-    options = NeighborsListOptions(model_cutoff=3.5, full_list=False)
+    options = NeighborsListOptions(cutoff=3.5, full_list=False)
     system.add_neighbors_list(options, neighbors)
 
     assert metatensor.torch.equal_block(system.get_neighbors_list(options), neighbors)
@@ -82,9 +82,7 @@ def test_system(types, positions, cell, neighbors):
         "Is it part of the `requested_neighbors_lists` for this model?"
     )
     with pytest.raises(ValueError, match=message):
-        system.get_neighbors_list(
-            NeighborsListOptions(model_cutoff=3.5, full_list=True)
-        )
+        system.get_neighbors_list(NeighborsListOptions(cutoff=3.5, full_list=True))
 
     message = (
         "the neighbors list for NeighborsListOptions\\(cutoff=3.500000, "
@@ -94,7 +92,7 @@ def test_system(types, positions, cell, neighbors):
         system.add_neighbors_list(options, neighbors)
 
     assert system.known_neighbors_lists() == [
-        NeighborsListOptions(model_cutoff=3.5, full_list=False)
+        NeighborsListOptions(cutoff=3.5, full_list=False)
     ]
 
 
@@ -272,7 +270,7 @@ def test_data_validation(types, positions, cell):
 
 
 def test_neighbors_validation(system):
-    options = NeighborsListOptions(model_cutoff=3.5, full_list=False)
+    options = NeighborsListOptions(cutoff=3.5, full_list=False)
 
     message = (
         "invalid samples for `neighbors`: the samples names must be 'first_atom', "
@@ -443,7 +441,7 @@ def test_neighbors_validation(system):
 
 
 def test_to(system, neighbors):
-    options = NeighborsListOptions(model_cutoff=3.5, full_list=False)
+    options = NeighborsListOptions(cutoff=3.5, full_list=False)
     system.add_neighbors_list(options, neighbors)
     system.add_data("test-data", neighbors)
 

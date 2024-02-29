@@ -1,6 +1,8 @@
 #include <cstring>
+#include <cctype>
 
 #include <array>
+#include <algorithm>
 #include <sstream>
 
 #include <torch/torch.h>
@@ -49,12 +51,25 @@ static void read_vector_int_json(
     }
 }
 
+void ModelOutputHolder::set_quantity(std::string quantity) {
+    if (valid_quantity(quantity)) {
+        validate_unit(quantity, unit_);
+    }
+
+    this->quantity_ = std::move(quantity);
+}
+
+void ModelOutputHolder::set_unit(std::string unit) {
+    validate_unit(quantity_, unit);
+    this->unit_ = std::move(unit);
+}
+
 static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
     nlohmann::json result;
 
     result["class"] = "ModelOutput";
-    result["quantity"] = self.quantity;
-    result["unit"] = self.unit;
+    result["quantity"] = self.quantity();
+    result["unit"] = self.unit();
     result["per_atom"] = self.per_atom;
     result["explicit_gradients"] = self.explicit_gradients;
 
@@ -83,14 +98,14 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
         if (!data["quantity"].is_string()) {
             throw std::runtime_error("'quantity' in JSON for ModelOutput must be a string");
         }
-        result->quantity = data["quantity"];
+        result->set_quantity(data["quantity"]);
     }
 
     if (data.contains("unit")) {
         if (!data["unit"].is_string()) {
             throw std::runtime_error("'unit' in JSON for ModelOutput must be a string");
         }
-        result->unit = data["unit"];
+        result->set_unit(data["unit"]);
     }
 
     if (data.contains("per_atom")) {
@@ -109,6 +124,16 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
     }
 
     return result;
+}
+
+
+void ModelCapabilitiesHolder::set_length_unit(std::string unit) {
+    validate_unit("length", unit);
+    this->length_unit_ = std::move(unit);
+}
+
+double ModelCapabilitiesHolder::engine_interaction_range(const std::string& engine_length_unit) const {
+    return interaction_range * unit_conversion_factor("length", length_unit_, engine_length_unit);
 }
 
 ModelOutput ModelOutputHolder::from_json(std::string_view json) {
@@ -136,7 +161,7 @@ std::string ModelCapabilitiesHolder::to_json() const {
     std::memcpy(&int_interaction_range, &this->interaction_range, sizeof(double));
     result["interaction_range"] = int_interaction_range;
 
-    result["length_unit"] = this->length_unit;
+    result["length_unit"] = this->length_unit();
     result["supported_devices"] = this->supported_devices;
 
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
@@ -192,7 +217,7 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(std::string_view json) {
         if (!data["length_unit"].is_string()) {
             throw std::runtime_error("'length_unit' in JSON for ModelCapabilities must be a string");
         }
-        result->length_unit = data["length_unit"];
+        result->set_length_unit(data["length_unit"]);
     }
 
     if (data.contains("supported_devices")) {
@@ -225,15 +250,20 @@ static void check_selected_atoms(const torch::optional<TorchLabels>& selected_at
     }
 }
 
+void ModelEvaluationOptionsHolder::set_length_unit(std::string unit) {
+    validate_unit("length", unit);
+    this->length_unit_ = std::move(unit);
+}
+
 ModelEvaluationOptionsHolder::ModelEvaluationOptionsHolder(
     std::string length_unit_,
     torch::Dict<std::string, ModelOutput> outputs_,
     torch::optional<TorchLabels> selected_atoms
 ):
-    length_unit(std::move(length_unit_)),
     outputs(outputs_),
     selected_atoms_(std::move(selected_atoms))
 {
+    this->set_length_unit(std::move(length_unit_));
     check_selected_atoms(selected_atoms_);
 }
 
@@ -248,7 +278,7 @@ std::string ModelEvaluationOptionsHolder::to_json() const {
     nlohmann::json result;
 
     result["class"] = "ModelEvaluationOptions";
-    result["length_unit"] = this->length_unit;
+    result["length_unit"] = this->length_unit();
 
     if (this->selected_atoms_) {
         const auto& selected_atoms = this->selected_atoms_.value();
@@ -296,7 +326,7 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(std::string_view 
         if (!data["length_unit"].is_string()) {
             throw std::runtime_error("'length_unit' in JSON for ModelEvaluationOptions must be a string");
         }
-        result->length_unit = data["length_unit"];
+        result->set_length_unit(data["length_unit"]);
     }
 
     if (data.contains("selected_atoms")) {
@@ -730,4 +760,124 @@ torch::jit::Module metatensor_torch::load_atomistic_model(
 ) {
     check_atomistic_model(path);
     return torch::jit::load(path, device);
+}
+
+/******************************************************************************/
+/******************************************************************************/
+
+/// normalize a string to lower case without any spaces
+static std::string normalize_string(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+        [](unsigned char c){ return std::tolower(c); }
+    );
+
+    // remove all spaces in e.g. `kcal /   mol`.
+    auto new_end = std::remove_if(value.begin(), value.end(),
+        [](unsigned char c){ return std::isspace(c); }
+    );
+    value.erase(new_end, value.end());
+    return value;
+}
+
+/// Information for unit conversion for this physical quantity
+struct Quantity {
+    /// the quantity name
+    std::string name;
+
+    /// baseline unit for this quantity
+    std::string baseline;
+    /// set of conversion from the key to the baseline unit
+    std::unordered_map<std::string, double> conversions;
+
+    std::string normalize_unit(const std::string& original_unit) {
+        if (original_unit.empty()) {
+            return original_unit;
+        }
+
+        std::string unit = normalize_string(original_unit);
+        if (this->conversions.find(unit) == this->conversions.end()) {
+            auto valid_units = std::vector<std::string>();
+            for (const auto& it: this->conversions) {
+                valid_units.emplace_back(it.first);
+            }
+
+            C10_THROW_ERROR(ValueError,
+                "unknown unit '" + original_unit + "' for " + name + ", "
+                "only [" + torch::str(valid_units) + "] are supported"
+            );
+        }
+
+        return unit;
+    }
+
+    double conversion(const std::string& from_unit, const std::string& to_unit) {
+        auto from = this->normalize_unit(from_unit);
+        auto to = this->normalize_unit(to_unit);
+
+        if (from.empty() || to.empty()) {
+            return 1.0;
+        }
+
+        return this->conversions.at(to) / this->conversions.at(from);
+    }
+};
+
+static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
+    {"length", Quantity{/* name */ "length", /* baseline */ "angstrom", {
+        {"angstrom", 1.0},
+        {"bohr", 1.8897261258369282},
+        {"nanometer", 0.1},
+        {"nm", 0.1},
+    }}},
+    {"energy", Quantity{/* name */ "energy", /* baseline */ "ev", {
+        {"ev", 1.0},
+        {"mev", 1000.0},
+        {"hartree", 0.03674932247495664},
+        {"kcal/mol", 23.060548012069496},
+        {"kj/mol", 96.48533288249877},
+    }}},
+};
+
+bool metatensor_torch::valid_quantity(const std::string& quantity) {
+    if (quantity.empty()) {
+        return false;
+    }
+
+    if (KNOWN_QUANTITIES.find(quantity) == KNOWN_QUANTITIES.end()) {
+        auto valid_quantities = std::vector<std::string>();
+        for (const auto& it: KNOWN_QUANTITIES) {
+            valid_quantities.emplace_back(it.first);
+        }
+
+        TORCH_WARN(
+            "unknown quantity '", quantity, "', only [",
+            torch::str(valid_quantities), "] are supported"
+        );
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+void metatensor_torch::validate_unit(const std::string& quantity, const std::string& unit) {
+    if (quantity.empty() || unit.empty()) {
+        return;
+    }
+
+    if (valid_quantity(quantity)) {
+        KNOWN_QUANTITIES.at(quantity).normalize_unit(unit);
+    }
+}
+
+double metatensor_torch::unit_conversion_factor(
+    const std::string& quantity,
+    const std::string& from_unit,
+    const std::string& to_unit
+) {
+    if (valid_quantity(quantity)) {
+        return KNOWN_QUANTITIES.at(quantity).conversion(from_unit, to_unit);
+    } else {
+        return 1.0;
+    }
 }
