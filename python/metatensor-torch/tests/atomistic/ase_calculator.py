@@ -1,6 +1,10 @@
 import os
 from typing import Dict, List, Optional
 
+import ase.build
+import ase.calculators.lj
+import ase.md
+import ase.units
 import numpy as np
 import pytest
 import torch
@@ -17,13 +21,6 @@ from metatensor.torch.atomistic import (
 from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
 
 
-ase = pytest.importorskip("ase")
-import ase.build  # noqa  isort: skip
-import ase.units  # noqa  isort: skip
-import ase.md  # noqa  isort: skip
-import ase.calculators.lj  # noqa isort: skip
-
-
 class LennardJones(torch.nn.Module):
     """
     Implementation of Lennard-Jones potential using the ``MetatensorAtomisticModule``
@@ -32,7 +29,7 @@ class LennardJones(torch.nn.Module):
 
     def __init__(self, cutoff, epsilon, sigma):
         super().__init__()
-        self._nl_options = NeighborsListOptions(model_cutoff=cutoff, full_list=False)
+        self._nl_options = NeighborsListOptions(cutoff=cutoff, full_list=False)
 
         self._epsilon = epsilon
         self._sigma = sigma

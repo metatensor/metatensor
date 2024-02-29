@@ -13,19 +13,20 @@ TEST_CASE("Models metadata") {
         auto options = torch::make_intrusive<NeighborsListOptionsHolder>(3.5426, true);
         const auto* expected = R"({
     "class": "NeighborsListOptions",
+    "cutoff": 4615159644819978768,
     "full_list": true,
-    "model_cutoff": 4615159644819978768
+    "length_unit": ""
 })";
         CHECK(options->to_json() == expected);
 
         // load from JSON
         std::string json = R"({
-    "model_cutoff": 4615159644819978768,
+    "cutoff": 4615159644819978768,
     "full_list": false,
     "class": "NeighborsListOptions"
 })";
         options = NeighborsListOptionsHolder::from_json(json);
-        CHECK(options->model_cutoff() == 3.5426);
+        CHECK(options->cutoff() == 3.5426);
         CHECK(options->full_list() == false);
 
         CHECK_THROWS_WITH(
@@ -36,13 +37,17 @@ TEST_CASE("Models metadata") {
             NeighborsListOptionsHolder::from_json("{\"class\": \"nope\"}"),
             StartsWith("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'")
         );
+
+        CHECK_THROWS_WITH(options->set_length_unit("unknown"),
+            StartsWith("unknown unit 'unknown' for length")
+        );
     }
 
     SECTION("ModelOutput") {
         // save to JSON
         auto output = torch::make_intrusive<ModelOutputHolder>();
-        output->quantity = "foo";
-        output->unit = "bar";
+        output->set_quantity("energy");
+        output->set_unit("kJ / mol");
         output->per_atom = false;
         output->explicit_gradients = {"baz", "not.this-one_"};
 
@@ -53,20 +58,20 @@ TEST_CASE("Models metadata") {
         "not.this-one_"
     ],
     "per_atom": false,
-    "quantity": "foo",
-    "unit": "bar"
+    "quantity": "energy",
+    "unit": "kJ / mol"
 })";
         CHECK(output->to_json() == expected);
 
         // load from JSON
         std::string json = R"({
     "class": "ModelOutput",
-    "quantity": "quantity",
+    "quantity": "length",
     "explicit_gradients": []
 })";
         output = ModelOutputHolder::from_json(json);
-        CHECK(output->quantity == "quantity");
-        CHECK(output->unit.empty());
+        CHECK(output->quantity() == "length");
+        CHECK(output->unit().empty());
         CHECK(output->per_atom == false);
         CHECK(output->explicit_gradients.empty());
 
@@ -78,23 +83,43 @@ TEST_CASE("Models metadata") {
             ModelOutputHolder::from_json("{\"class\": \"nope\"}"),
             StartsWith("'class' in JSON for ModelOutput must be 'ModelOutput'")
         );
+
+        CHECK_THROWS_WITH(output->set_unit("unknown"),
+            StartsWith("unknown unit 'unknown' for length")
+        );
+
+        struct WarningHandler: public torch::WarningHandler {
+            virtual ~WarningHandler() override = default;
+            void process(const torch::Warning& warning) override {
+                CHECK(warning.msg() == "unknown quantity 'unknown', only [energy length] are supported");
+            }
+        };
+
+        auto* old_handler = torch::WarningUtils::get_warning_handler();
+        auto check_expected_warning = WarningHandler();
+        torch::WarningUtils::set_warning_handler(&check_expected_warning);
+
+        output->set_quantity("unknown"),
+
+        torch::WarningUtils::set_warning_handler(old_handler);
     }
 
     SECTION("ModelEvaluationOptions") {
         // save to JSON
         auto options = torch::make_intrusive<ModelEvaluationOptionsHolder>();
-        options->length_unit = "mm";
+        options->set_length_unit("nm");
 
         options->outputs.insert("output_1", torch::make_intrusive<ModelOutputHolder>());
 
         auto output = torch::make_intrusive<ModelOutputHolder>();
         output->per_atom = true;
-        output->unit = "something";
+        output->set_quantity("something");
+        output->set_unit("something");
         options->outputs.insert("output_2", output);
 
         const auto* expected = R"({
     "class": "ModelEvaluationOptions",
-    "length_unit": "mm",
+    "length_unit": "nm",
     "outputs": {
         "output_1": {
             "class": "ModelOutput",
@@ -107,7 +132,7 @@ TEST_CASE("Models metadata") {
             "class": "ModelOutput",
             "explicit_gradients": [],
             "per_atom": true,
-            "quantity": "",
+            "quantity": "something",
             "unit": "something"
         }
     },
@@ -118,7 +143,7 @@ TEST_CASE("Models metadata") {
 
         // load from JSON
         std::string json =R"({
-    "length_unit": "very large",
+    "length_unit": "Angstrom",
     "outputs": {
         "foo": {
             "explicit_gradients": ["test"],
@@ -133,7 +158,7 @@ TEST_CASE("Models metadata") {
 })";
 
         options = ModelEvaluationOptionsHolder::from_json(json);
-        CHECK(options->length_unit == "very large");
+        CHECK(options->length_unit() == "Angstrom");
         auto expected_selection = LabelsHolder::create(
             {"system", "atom"},
             {{0, 1}, {4, 5}}
@@ -141,8 +166,8 @@ TEST_CASE("Models metadata") {
         CHECK(*options->get_selected_atoms().value() == *expected_selection);
 
         output = options->outputs.at("foo");
-        CHECK(output->quantity.empty());
-        CHECK(output->unit.empty());
+        CHECK(output->quantity().empty());
+        CHECK(output->unit().empty());
         CHECK(output->per_atom == false);
         CHECK(output->explicit_gradients == std::vector<std::string>{"test"});
 
@@ -154,19 +179,24 @@ TEST_CASE("Models metadata") {
             ModelEvaluationOptionsHolder::from_json("{\"class\": \"nope\"}"),
             StartsWith("'class' in JSON for ModelEvaluationOptions must be 'ModelEvaluationOptions'")
         );
+
+        CHECK_THROWS_WITH(options->set_length_unit("unknown"),
+            StartsWith("unknown unit 'unknown' for length")
+        );
     }
 
     SECTION("ModelCapabilities") {
         // save to JSON
         auto capabilities = torch::make_intrusive<ModelCapabilitiesHolder>();
-        capabilities->length_unit = "µm";
+        capabilities->set_length_unit("nm");
         capabilities->interaction_range = 1.4;
         capabilities->atomic_types = {1, 2, -43};
         capabilities->supported_devices = {"cuda", "xla", "cpu"};
 
         auto output = torch::make_intrusive<ModelOutputHolder>();
         output->per_atom = true;
-        output->quantity = "something";
+        output->set_quantity("length");
+        output->explicit_gradients.emplace_back("µ-λ");
         capabilities->outputs.insert("bar", output);
 
         const auto* expected = R"({
@@ -177,13 +207,15 @@ TEST_CASE("Models metadata") {
     ],
     "class": "ModelCapabilities",
     "interaction_range": 4608983858650965606,
-    "length_unit": "\u00b5m",
+    "length_unit": "nm",
     "outputs": {
         "bar": {
             "class": "ModelOutput",
-            "explicit_gradients": [],
+            "explicit_gradients": [
+                "\u00b5-\u03bb"
+            ],
             "per_atom": true,
-            "quantity": "something",
+            "quantity": "length",
             "unit": ""
         }
     },
@@ -198,10 +230,10 @@ TEST_CASE("Models metadata") {
 
         // load from JSON
         std::string json =R"({
-    "length_unit": "\u00b5m",
+    "length_unit": "nm",
     "outputs": {
         "foo": {
-            "explicit_gradients": ["test"],
+            "explicit_gradients": ["\u00b5-test"],
             "class": "ModelOutput"
         }
     },
@@ -213,14 +245,14 @@ TEST_CASE("Models metadata") {
 })";
 
         capabilities = ModelCapabilitiesHolder::from_json(json);
-        CHECK(capabilities->length_unit == "µm");
+        CHECK(capabilities->length_unit() == "nm");
         CHECK(capabilities->atomic_types == std::vector<int64_t>{1, -2});
 
         output = capabilities->outputs.at("foo");
-        CHECK(output->quantity.empty());
-        CHECK(output->unit.empty());
+        CHECK(output->quantity().empty());
+        CHECK(output->unit().empty());
         CHECK(output->per_atom == false);
-        CHECK(output->explicit_gradients == std::vector<std::string>{"test"});
+        CHECK(output->explicit_gradients == std::vector<std::string>{"µ-test"});
 
         CHECK_THROWS_WITH(
             ModelCapabilitiesHolder::from_json("{}"),
@@ -229,6 +261,10 @@ TEST_CASE("Models metadata") {
         CHECK_THROWS_WITH(
             ModelCapabilitiesHolder::from_json("{\"class\": \"nope\"}"),
             StartsWith("'class' in JSON for ModelCapabilities must be 'ModelCapabilities'")
+        );
+
+        CHECK_THROWS_WITH(capabilities->set_length_unit("unknown"),
+            StartsWith("unknown unit 'unknown' for length")
         );
     }
 
@@ -261,8 +297,6 @@ TEST_CASE("Models metadata") {
 })";
         CHECK(metadata->to_json() == expected);
 
-
-// Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
         // load from JSON
         std::string json =R"({

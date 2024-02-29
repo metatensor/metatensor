@@ -19,9 +19,9 @@ from . import (
     ModelOutput,
     NeighborsListOptions,
     System,
+    unit_conversion_factor,
 )
 from .outputs import _check_outputs
-from .units import KNOWN_QUANTITIES, Quantity
 
 
 class ModelInterface(torch.nn.Module):
@@ -209,7 +209,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
     # Some annotation to make the TorchScript compiler happy
     _requested_neighbors_lists: List[NeighborsListOptions]
-    _known_quantities: Dict[str, Quantity]
 
     def __init__(
         self,
@@ -243,29 +242,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
             self._module,
             self._module.__class__.__name__,
             self._requested_neighbors_lists,
+            capabilities.length_unit,
         )
         # ============================================================================ #
 
         self._metadata = metadata
         self._capabilities = capabilities
-        self._known_quantities = KNOWN_QUANTITIES
-
-        length = self._known_quantities["length"]
-        length.check_unit(self._capabilities.length_unit)
-
-        # Check the units of the outputs
-        for name, output in self._capabilities.outputs.items():
-            if output.quantity == "":
-                continue
-
-            if output.quantity not in self._known_quantities:
-                raise ValueError(
-                    f"unknown output quantity '{output.quantity}' for '{name}' output, "
-                    f"only {list(self._known_quantities.keys())} are supported"
-                )
-
-            quantity = self._known_quantities[output.quantity]
-            quantity.check_unit(output.unit)
 
         # check that some required capabilities are set
         if capabilities.interaction_range < 0:
@@ -285,25 +267,8 @@ class MetatensorAtomisticModel(torch.nn.Module):
         return self._module
 
     @torch.jit.export
-    def capabilities(
-        self,
-        length_unit: Optional[str] = None,
-    ) -> ModelCapabilities:
-        """
-        Get the capabilities of the wrapped model.
-
-        :param length_unit: If not ``None``, this should contain a known unit of length.
-            The returned capabilities will use this to set the
-            ``engine_interaction_range`` field.
-        """
-        if length_unit is not None:
-            length = self._known_quantities["length"]
-            conversion = length.conversion(self._capabilities.length_unit, length_unit)
-        else:
-            conversion = 1.0
-
-        self._capabilities.set_engine_unit(conversion)
-
+    def capabilities(self) -> ModelCapabilities:
+        """Get the capabilities of the wrapped model"""
         return self._capabilities
 
     @torch.jit.export
@@ -312,27 +277,11 @@ class MetatensorAtomisticModel(torch.nn.Module):
         return self._metadata
 
     @torch.jit.export
-    def requested_neighbors_lists(
-        self,
-        length_unit: Optional[str] = None,
-    ) -> List[NeighborsListOptions]:
+    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
         """
         Get the neighbors lists required by the wrapped model or any of the child
         module.
-
-        :param length_unit: If not ``None``, this should contain a known unit of length.
-            The returned neighbors lists will use this to set the ``engine_cutoff``
-            field.
         """
-        if length_unit is not None:
-            length = self._known_quantities["length"]
-            conversion = length.conversion(self._capabilities.length_unit, length_unit)
-        else:
-            conversion = 1.0
-
-        for request in self._requested_neighbors_lists:
-            request.set_engine_unit(conversion)
-
         return self._requested_neighbors_lists
 
     def forward(
@@ -370,8 +319,8 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         # convert systems from engine to model units
         if self._capabilities.length_unit != options.length_unit:
-            length = self._known_quantities["length"]
-            conversion = length.conversion(
+            conversion = unit_conversion_factor(
+                quantity="length",
                 from_unit=options.length_unit,
                 to_unit=self._capabilities.length_unit,
             )
@@ -411,9 +360,10 @@ class MetatensorAtomisticModel(torch.nn.Module):
                     f"output, but the engine requested '{requested.quantity}'"
                 )
 
-            quantity = self._known_quantities[declared.quantity]
-            conversion = quantity.conversion(
-                from_unit=declared.unit, to_unit=requested.unit
+            conversion = unit_conversion_factor(
+                quantity=declared.quantity,
+                from_unit=declared.unit,
+                to_unit=requested.unit,
             )
 
             if conversion != 1.0:
@@ -522,12 +472,13 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
 def _get_requested_neighbors_lists(
     module: torch.nn.Module,
-    name: str,
+    module_name: str,
     requested: List[NeighborsListOptions],
+    length_unit: str,
 ):
     if hasattr(module, "requested_neighbors_lists"):
         for new_options in module.requested_neighbors_lists():
-            new_options.add_requestor(name)
+            new_options.add_requestor(module_name)
 
             already_requested = False
             for existing in requested:
@@ -537,10 +488,23 @@ def _get_requested_neighbors_lists(
                         existing.add_requestor(requestor)
 
             if not already_requested:
+                if new_options.length_unit not in ["", length_unit]:
+                    raise ValueError(
+                        f"NeighborsListOptions from {module_name} already have a "
+                        f"length unit ('{new_options.length_unit}') which does not "
+                        f"match the model length units ('{length_unit}')"
+                    )
+
+                new_options.length_unit = length_unit
                 requested.append(new_options)
 
     for child_name, child in module.named_children():
-        _get_requested_neighbors_lists(child, name + "." + child_name, requested)
+        _get_requested_neighbors_lists(
+            module=child,
+            module_name=module_name + "." + child_name,
+            requested=requested,
+            length_unit=length_unit,
+        )
 
 
 def _check_annotation(module: torch.nn.Module):

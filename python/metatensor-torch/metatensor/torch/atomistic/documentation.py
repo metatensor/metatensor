@@ -163,9 +163,9 @@ class System:
 class NeighborsListOptions:
     """Options for the calculation of a neighbors list"""
 
-    def __init__(self, model_cutoff: float, full_list: bool, requestor: str = ""):
+    def __init__(self, cutoff: float, full_list: bool, requestor: str = ""):
         """
-        :param model_cutoff: spherical cutoff radius for the neighbors list, in the
+        :param cutoff: spherical cutoff radius for the neighbors list, in the
             model units
         :param full_list: should the list be a full or half neighbors list
         :param requestor: who requested this neighbors list, you can add additional
@@ -173,20 +173,25 @@ class NeighborsListOptions:
         """
 
     @property
-    def model_cutoff(self) -> float:
+    def cutoff(self) -> float:
         """Spherical cutoff radius for this neighbors list in model units"""
 
     @property
-    def engine_cutoff(self) -> float:
+    def length_unit(self) -> str:
         """
-        Spherical cutoff radius for this neighbors list in engine units. This defaults
-        to the same value as ``model_cutoff`` until :py:meth:`set_engine_unit()` is
-        called (typically by
-        :py:meth:`MetatensorAtomisticModel.requested_neighbors_lists`).
+        The unit of length used for the cutoff.
+
+        This is typically set by :py:class:`MetatensorAtomisticModel` when collecting
+        all neighbors list requests.
         """
 
-    def set_engine_unit(self, conversion):
-        """Set the conversion factor from the model units to the engine units"""
+    def engine_cutoff(self, engine_length_unit: str) -> float:
+        """
+        Spherical cutoff radius for this neighbors list in engine units.
+
+        The engine must provide the unit it uses for lengths, and the cutoff will
+        automatically be converted.
+        """
 
     @property
     def full_list(self) -> bool:
@@ -228,17 +233,19 @@ class ModelOutput:
     ):
         pass
 
-    quantity: str
-    """
-    Quantity of the output (e.g. energy, dipole, …).  If this is an empty
-    string, no unit conversion will be performed.
-    """
+    @property
+    def quantity(self) -> str:
+        """
+        Quantity of the output (e.g. energy, dipole, …).  If this is an empty string, no
+        unit conversion will be performed.
+        """
 
-    unit: str
-    """
-    Unit of the output. If this is an empty string, no unit conversion will
-    be performed.
-    """
+    @property
+    def unit(self) -> str:
+        """
+        Unit of the output. If this is an empty string, no unit conversion will be
+        performed.
+        """
 
     per_atom: bool
     """Is the output defined per-atom or for the overall structure"""
@@ -285,13 +292,20 @@ class ModelCapabilities:
     infinity.
     """
 
-    length_unit: str
-    """
-    Unit used by the model for its inputs.
+    @property
+    def length_unit() -> str:
+        """
+        Unit used by the model for its inputs.
 
-    This applies to the ``interaction_range``, any cutoff in neighbors lists, the atoms
-    positions and the system cell.
-    """
+        This applies to the ``interaction_range``, any cutoff in neighbors lists, the
+        atoms positions and the system cell.
+        """
+
+    def engine_interaction_range(self, engine_length_unit: str) -> float:
+        """
+        Same as :py:attr:`interaction_range`, but in the unit of length used by the
+        engine.
+        """
 
     supported_devices: List[str]
     """
@@ -302,19 +316,6 @@ class ModelCapabilities:
     Devices should be ordered in order of preference: the first entry in this list
     should be the best device for this model, and so on.
     """
-
-    @property
-    def engine_interaction_range(self) -> float:
-        """
-        Same as ``interaction_range``, but in the engine units.
-
-        This defaults to the same value as ``interaction_range`` until
-        :py:meth:`set_engine_unit()` is called (typically by
-        :py:meth:`MetatensorAtomisticModel.capabilities`).
-        """
-
-    def set_engine_unit(self, conversion):
-        """Set the conversion factor from the model units to the engine units"""
 
 
 class ModelEvaluationOptions:
@@ -331,21 +332,23 @@ class ModelEvaluationOptions:
     ):
         pass
 
-    length_unit: str
-    """unit of lengths the engine uses for the model input"""
+    @property
+    def length_unit(self) -> str:
+        """unit of lengths the engine uses for the model input"""
 
     outputs: Dict[str, ModelOutput]
     """requested outputs for this run and corresponding settings"""
 
-    selected_atoms: Optional[Labels]
-    """
-    Only run the calculation for a selected subset of atoms.
+    @property
+    def selected_atoms() -> Optional[Labels]:
+        """
+        Only run the calculation for a selected subset of atoms.
 
-    If this is set to ``None``, run the calculation on all atoms. If this is a set of
-    :py:class:`metatensor.torch.Labels`, it will have two dimensions named ``"system"``
-    and ``"atom"``, containing the 0-based indices of all the atoms in the selected
-    subset.
-    """
+        If this is set to ``None``, run the calculation on all atoms. If this is a set
+        of :py:class:`metatensor.torch.Labels`, it will have two dimensions named
+        ``"system"`` and ``"atom"``, containing the 0-based indices of all the atoms in
+        the selected subset.
+        """
 
 
 class ModelMetadata:
@@ -417,4 +420,21 @@ def register_autograd_neighbors(
         :py:meth:`System.add_neighbors_list`
     :param check_consistency: can be set to ``True`` to run a handful of additional
         checks in case the data in neighbors does not follow what's expected.
+    """
+
+
+def unit_conversion_factor(quantity: str, from_unit: str, to_unit: str):
+    """
+    Get the multiplicative conversion factor from ``from_unit`` to ``to_unit``. Both
+    units must be valid and known for the given physical ``quantity``.
+
+    The following quantity and units are known by metatensor, please contact us if you
+    want to add new ones!
+
+    - **length**: angstrom, bohr, nanometer, nm
+    - **energy**: eV, meV, Hartree, kcal/mol, kJ/mol
+
+    :param quantity: name of the physical quantity
+    :param from_unit: current unit of the data
+    :param to_unit: target unit of the data
     """

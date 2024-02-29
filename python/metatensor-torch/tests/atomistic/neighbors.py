@@ -22,7 +22,7 @@ except ImportError:
 def test_neighbors_lists_options():
     options = NeighborsListOptions(3.4, True, "hello")
 
-    assert options.model_cutoff == 3.4
+    assert options.cutoff == 3.4
     assert options.full_list
     assert options.requestors() == ["hello"]
 
@@ -42,7 +42,7 @@ def test_neighbors_lists_options():
     assert str(options) == expected
 
     expected = """NeighborsListOptions
-    model_cutoff: 3.400000
+    cutoff: 3.400000
     full_list: True
     requested by:
         - hello
@@ -78,14 +78,14 @@ def test_neighbors_autograd():
 
         return neighbors.values
 
-    options = NeighborsListOptions(model_cutoff=2.0, full_list=False)
+    options = NeighborsListOptions(cutoff=2.0, full_list=False)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
         fast_mode=True,
     )
 
-    options = NeighborsListOptions(model_cutoff=2.0, full_list=True)
+    options = NeighborsListOptions(cutoff=2.0, full_list=True)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
@@ -108,7 +108,7 @@ def test_neighbors_autograd_errors():
         cell=cell.detach().numpy(),
         pbc=True,
     )
-    options = NeighborsListOptions(model_cutoff=2.0, full_list=False)
+    options = NeighborsListOptions(cutoff=2.0, full_list=False)
     neighbors = _compute_ase_neighbors(atoms, options)
     system = System(torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell)
     register_autograd_neighbors(system, neighbors)

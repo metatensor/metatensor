@@ -10,6 +10,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/atomistic/system.hpp"
+#include "metatensor/torch/atomistic/model.hpp"
 
 #include "../internal/scalar_type_name.hpp"
 
@@ -17,12 +18,11 @@
 using namespace metatensor_torch;
 
 NeighborsListOptionsHolder::NeighborsListOptionsHolder(
-    double model_cutoff,
+    double cutoff,
     bool full_list,
     std::string requestor
 ):
-    model_cutoff_(model_cutoff),
-    engine_cutoff_(model_cutoff),
+    cutoff_(cutoff),
     full_list_(full_list)
 {
     this->add_requestor(std::move(requestor));
@@ -43,12 +43,24 @@ void NeighborsListOptionsHolder::add_requestor(std::string requestor) {
     requestors_.emplace_back(requestor);
 }
 
+void NeighborsListOptionsHolder::set_length_unit(std::string length_unit) {
+    validate_unit("length", length_unit);
+    this->length_unit_ = std::move(length_unit);
+}
+
+double NeighborsListOptionsHolder::engine_cutoff(const std::string& engine_length_unit) const {
+    return cutoff_ * unit_conversion_factor("length", length_unit_, engine_length_unit);
+}
+
 std::string NeighborsListOptionsHolder::repr() const {
     auto ss = std::ostringstream();
 
     ss << "NeighborsListOptions\n";
-    ss << "    model_cutoff: " << std::to_string(model_cutoff_) << "\n";
-    ss << "    full_list: " << (full_list_ ? "True" : "False") << "\n";
+    ss << "    cutoff: " << std::to_string(cutoff_);
+    if (!length_unit_.empty()) {
+        ss << " " << length_unit_;
+    }
+    ss << "\n    full_list: " << (full_list_ ? "True" : "False") << "\n";
 
     if (!requestors_.empty()) {
         ss << "    requested by:\n";
@@ -61,7 +73,7 @@ std::string NeighborsListOptionsHolder::repr() const {
 }
 
 std::string NeighborsListOptionsHolder::str() const {
-    return "NeighborsListOptions(cutoff=" + std::to_string(model_cutoff_) + \
+    return "NeighborsListOptions(cutoff=" + std::to_string(cutoff_) + \
         ", full_list=" + (full_list_ ? "True" : "False") + ")";
 }
 
@@ -74,10 +86,10 @@ std::string NeighborsListOptionsHolder::to_json() const {
     // round-tripping of the data
     static_assert(sizeof(double) == sizeof(int64_t));
     int64_t int_cutoff = 0;
-    std::memcpy(&int_cutoff, &this->model_cutoff_, sizeof(double));
-    result["model_cutoff"] = int_cutoff;
-
+    std::memcpy(&int_cutoff, &this->cutoff_, sizeof(double));
+    result["cutoff"] = int_cutoff;
     result["full_list"] = this->full_list_;
+    result["length_unit"] = this->length_unit_;
 
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
@@ -97,19 +109,28 @@ NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& js
         throw std::runtime_error("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
     }
 
-    if (!data.contains("model_cutoff") || !data["model_cutoff"].is_number_integer()) {
-        throw std::runtime_error("'model_cutoff' in JSON for NeighborsListOptions must be a number");
+    if (!data.contains("cutoff") || !data["cutoff"].is_number_integer()) {
+        throw std::runtime_error("'cutoff' in JSON for NeighborsListOptions must be a number");
     }
-    auto int_cutoff = data["model_cutoff"].get<int64_t>();
-    double model_cutoff = 0;
-    std::memcpy(&model_cutoff, &int_cutoff, sizeof(double));
+    auto int_cutoff = data["cutoff"].get<int64_t>();
+    double cutoff = 0;
+    std::memcpy(&cutoff, &int_cutoff, sizeof(double));
 
     if (!data.contains("full_list") || !data["full_list"].is_boolean()) {
         throw std::runtime_error("'full_list' in JSON for NeighborsListOptions must be a boolean");
     }
     auto full_list = data["full_list"].get<bool>();
 
-    return torch::make_intrusive<NeighborsListOptionsHolder>(model_cutoff, full_list);
+    auto options = torch::make_intrusive<NeighborsListOptionsHolder>(cutoff, full_list);
+
+    if (data.contains("length_unit")) {
+        if (!data["length_unit"].is_string()) {
+            throw std::runtime_error("'length_unit' in JSON for NeighborsListOptions must be a string");
+        }
+        options->set_length_unit(data["length_unit"]);
+    }
+
+    return options;
 }
 
 // ========================================================================== //

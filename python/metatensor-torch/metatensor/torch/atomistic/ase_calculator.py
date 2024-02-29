@@ -85,7 +85,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             raise TypeError(f"unknown type for model: {type(model)}")
 
         if check_consistency:
-            capabilities = self._model.capabilities(length_unit="angstrom")
+            capabilities = self._model.capabilities()
             if "cpu" not in capabilities.supported_devices:
                 raise ValueError(
                     "ASE calculator only supports CPU device for now, "
@@ -137,7 +137,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         system = System(types, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
-        for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
+        for options in self._model.requested_neighbors_lists():
             neighbors = _compute_ase_neighbors(atoms, options)
             register_autograd_neighbors(
                 system,
@@ -178,7 +178,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
 
         outputs = _ase_properties_to_metatensor_outputs(properties)
-        capabilities = self._model.capabilities(length_unit="angstrom")
+        capabilities = self._model.capabilities()
         for name in outputs.keys():
             if name not in capabilities.outputs:
                 raise ValueError(
@@ -208,7 +208,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         # convert from ase.Atoms to metatensor.torch.atomistic.System
         system = System(types, positions, cell)
-        for options in self._model.requested_neighbors_lists(length_unit="angstrom"):
+        for options in self._model.requested_neighbors_lists():
             neighbors = _compute_ase_neighbors(atoms, options)
             register_autograd_neighbors(
                 system,
@@ -298,8 +298,9 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options):
+    engine_cutoff = options.engine_cutoff(engine_length_unit="angstrom")
     nl = ase.neighborlist.NeighborList(
-        cutoffs=[options.engine_cutoff] * len(atoms),
+        cutoffs=[engine_cutoff] * len(atoms),
         skin=0.0,
         sorted=False,
         self_interaction=False,
@@ -313,7 +314,7 @@ def _compute_ase_neighbors(atoms, options):
 
     samples = []
     distances = []
-    cutoff2 = options.engine_cutoff * options.engine_cutoff
+    cutoff2 = engine_cutoff * engine_cutoff
     for i in range(len(atoms)):
         indices, offsets = nl.get_neighbors(i)
         for j, offset in zip(indices, offsets):

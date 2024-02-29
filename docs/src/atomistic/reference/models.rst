@@ -11,6 +11,9 @@ Models
 .. autofunction:: metatensor.torch.atomistic.check_atomistic_model
 
 
+.. autofunction:: metatensor.torch.atomistic.unit_conversion_factor
+
+
 Model-related information
 -------------------------
 
