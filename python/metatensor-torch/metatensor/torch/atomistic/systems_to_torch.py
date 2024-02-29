@@ -87,7 +87,7 @@ def _system_to_torch(
                 device=device,
             ),
             cell=torch.tensor(
-                system.cell,
+                system.cell[:],
                 requires_grad=cell_requires_grad,
                 dtype=dtype,
                 device=device,
