@@ -8,19 +8,6 @@ use smallvec::SmallVec;
 use crate::c_api::mts_labels_t;
 use crate::errors::{Error, check_status};
 
-impl mts_labels_t {
-    /// Create an `mts_labels_t` with all members set to null pointers/zero
-    pub(crate) fn null() -> mts_labels_t {
-        mts_labels_t {
-            internal_ptr_: std::ptr::null_mut(),
-            names: std::ptr::null(),
-            values: std::ptr::null(),
-            size: 0,
-            count: 0,
-        }
-    }
-}
-
 /// A single value inside a label.
 ///
 /// This is represented as a 32-bit signed integer, with a couple of helper

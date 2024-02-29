@@ -218,7 +218,8 @@ TEST_CASE("TensorMap") {
 
 TEST_CASE("TensorMap serialization") {
     SECTION("loading file") {
-        // DATA_NPZ is defined by cmake and expand to the path of tests/data.npz
+        // DATA_NPZ is defined by cmake and expand to the path of
+        // `tests/data.npz`
         auto tensor = TensorMap::load(TEST_DATA_NPZ_PATH);
         check_loaded_tensor(tensor);
 

@@ -29,7 +29,7 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 #![allow(clippy::similar_names, clippy::borrow_as_ptr, clippy::uninlined_format_args)]
 
-pub mod c_api;
+use metatensor_sys as c_api;
 
 pub mod errors;
 pub use self::errors::Error;
@@ -58,9 +58,3 @@ pub use self::tensor::{TensorMapIter, TensorMapIterMut};
 pub use self::tensor::{TensorMapParIter, TensorMapParIterMut};
 
 pub mod io;
-
-
-/// Path where the metatensor shared library has been built
-pub fn c_api_install_dir() -> &'static str {
-    return env!("OUT_DIR");
-}

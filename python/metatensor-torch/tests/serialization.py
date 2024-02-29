@@ -18,7 +18,7 @@ def tensor_path():
         "..",
         "..",
         "..",
-        "metatensor",
+        "metatensor-core",
         "tests",
         "data.npz",
     )
@@ -31,7 +31,7 @@ def labels_path():
         "..",
         "..",
         "..",
-        "metatensor",
+        "metatensor-core",
         "tests",
         "keys.npy",
     )

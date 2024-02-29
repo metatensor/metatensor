@@ -45,7 +45,7 @@ tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 
 rm -f "$ROOT_DIR"/metatensor/metatensor-core-cxx-*.tar.gz
-cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/metatensor/"
+cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/rust/metatensor-sys/"
 
 rm -f "$ROOT_DIR"/python/metatensor-core/metatensor-core-cxx-*.tar.gz
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$ROOT_DIR/python/metatensor-core/"
