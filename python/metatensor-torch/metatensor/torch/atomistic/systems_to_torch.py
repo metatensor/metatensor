@@ -19,7 +19,7 @@ class IntoSystem:
 
     This is an abstract class that is used to indicate a class whose objects
     can be converted into a ``metatensor.torch.atomistic.System``. For the moment,
-    the only supported type is ``ase.Atoms``."""
+    the only supported type is :py:class:`ase.Atoms`."""
 
     pass
 
