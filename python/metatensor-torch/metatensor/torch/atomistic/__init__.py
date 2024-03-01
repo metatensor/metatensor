@@ -25,3 +25,4 @@ else:
     register_autograd_neighbors = torch.ops.metatensor.register_autograd_neighbors
 
 from .model import MetatensorAtomisticModel, ModelInterface  # noqa: F401
+from .systems_to_torch import systems_to_torch  # noqa: F401
