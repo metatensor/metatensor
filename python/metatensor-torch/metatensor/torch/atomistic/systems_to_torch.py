@@ -15,7 +15,7 @@ except ImportError:
 
 
 class IntoSystem:
-    """A type that can be converted into a ``metatensor.torch.atomistic.System``.
+    """A type that can be converted into a :py:class:`metatensor.torch.atomistic.System`.
 
     This is an abstract class that is used to indicate a class whose objects
     can be converted into a :py:class:`System`. For the moment,
