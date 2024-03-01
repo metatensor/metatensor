@@ -92,7 +92,7 @@ def _system_to_torch(
                 dtype=dtype,
                 device=device,
             ),
-            types=torch.tensor(system.numbers, device=device),
+            types=torch.tensor(system.numbers, device=device, dtype=torch.int32),
         )
     else:
         raise ValueError(
