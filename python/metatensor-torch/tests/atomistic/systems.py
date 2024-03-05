@@ -196,14 +196,14 @@ def test_data_validation(types, positions, cell):
         system.positions = positions.reshape(1, -1, 3)
 
     message = (
-        "`positions` must be a \\(n_atoms x 3\\) tensor, "
+        "`positions` must be a \\(len\\(types\\) x 3\\) tensor, "
         "got a tensor with shape \\[8, 3\\]"
     )
     with pytest.raises(ValueError, match=message):
         System(torch.hstack([types, types]), positions, cell)
 
     message = (
-        "`positions` must be a \\(n_atoms x 3\\) tensor, "
+        "`positions` must be a \\(len\\(types\\) x 3\\) tensor, "
         "got a tensor with shape \\[16, 3\\]"
     )
     with pytest.raises(ValueError, match=message):

@@ -352,7 +352,7 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
 
     if (positions_.size(0) != n_atoms || positions_.size(1) != 3) {
         C10_THROW_ERROR(ValueError,
-            "`positions` must be a (n_atoms x 3) tensor, got a tensor with shape [" +
+            "`positions` must be a (len(types) x 3) tensor, got a tensor with shape [" +
             std::to_string(positions_.size(0)) + ", " + std::to_string(positions_.size(1)) + "]"
         );
     }
@@ -447,7 +447,7 @@ void SystemHolder::set_positions(torch::Tensor positions) {
 
     if (positions.size(0) != this->size() || positions.size(1) != 3) {
         C10_THROW_ERROR(ValueError,
-            "new `positions` must be a (n_atoms x 3) tensor, got a tensor with shape [" +
+            "new `positions` must be a (len(types) x 3) tensor, got a tensor with shape [" +
             std::to_string(positions.size(0)) + ", " + std::to_string(positions.size(1)) + "]"
         );
     }
