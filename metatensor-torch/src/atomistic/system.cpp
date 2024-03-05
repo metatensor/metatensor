@@ -342,7 +342,7 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
         );
     }
 
-    auto n_types = types_.size(0);
+    auto n_atoms = types_.size(0);
     if (positions_.sizes().size() != 2) {
         C10_THROW_ERROR(ValueError,
             "`positions` must be a 2 dimensional tensor, got a tensor with " +
@@ -350,7 +350,7 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
         );
     }
 
-    if (positions_.size(0) != n_types || positions_.size(1) != 3) {
+    if (positions_.size(0) != n_atoms || positions_.size(1) != 3) {
         C10_THROW_ERROR(ValueError,
             "`positions` must be a (len(types) x 3) tensor, got a tensor with shape [" +
             std::to_string(positions_.size(0)) + ", " + std::to_string(positions_.size(1)) + "]"
