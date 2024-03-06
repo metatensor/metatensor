@@ -1,32 +1,3 @@
-"""
-Metatensor performs `shape` as well as `consistency` checks for the metadata during each
-operation. The check status can be verified with :py:func:`metatensor.checks_enabled()`
-and controlled by :py:class:`metatensor.unsafe_enable_checks()` and
-:py:class:`metatensor.unsafe_disable_checks()`.
-
-.. warning::
-    Using metatensor without checks is unsafe, can lead to unwanted results, and may
-    produce cryptic error messages. Therefore, disabling checks is not recommended and
-    should only be used by advanced users! If you see strange results after disabling
-    checks, try running the code again with checks enabled.
-
-Checks can either be disabled temporarily
-via a compound statements or globally and permanently by calling the speicific function
-directly.
-
-The checks can also controlled wit the environment variable
-``METATENSOR_UNSAFE_DISABLE_CHECKS``. To disable checks set
-
-.. code-block:: bash
-
-    export METATENSOR_UNSAFE_DISABLE_CHECKS=1
-
-
-Note that :py:class:`metatensor.unsafe_enable_checks()` or
-:py:class:`metatensor.unsafe_disable_checks()` overwrite the defintion of the enviroment
-variable.
-"""
-
 import os
 
 
@@ -48,7 +19,7 @@ def checks_enabled() -> bool:
 class _SetChecks:
     """Private parent class for setting metatensor check control to a certain state.
 
-    Refer to the docstring of ``disble_checks`` for more details."""
+    Refer to the docstring of ``disable_checks`` for more details."""
 
     def __init__(self, state):
         global _CHECKS_ENABLED
@@ -74,7 +45,7 @@ class _SetChecks:
 class unsafe_enable_checks(_SetChecks):
     """Enable metatensor checks.
 
-    Checks are default enabled. Calling this function permanatly enables all metatensor
+    Checks are default enabled. Calling this function permanently enables all metatensor
     operations checks.
 
     >>> import metatensor
@@ -109,7 +80,7 @@ class unsafe_enable_checks(_SetChecks):
 class unsafe_disable_checks(_SetChecks):
     """Disable metatensor checks.
 
-    Calling this function permanatly disables all metatensor operations checks.
+    Calling this function permanently disables all metatensor operations checks.
 
     >>> import metatensor
     >>> metatensor.unsafe_disable_checks()
