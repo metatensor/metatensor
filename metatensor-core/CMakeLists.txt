@@ -268,9 +268,15 @@ if (UNIX)
     if (APPLE)
         # set the install name to `@rpath/libmetatensor.dylib`
         set(CARGO_RUSTC_ARGS "-Clink-arg=-Wl,-install_name,@rpath/${METATENSOR_SHARED_LIB_NAME}")
+        set_target_properties(metatensor::shared PROPERTIES
+            IMPORTED_SONAME @rpath/${METATENSOR_SHARED_LIB_NAME}
+        )
     else() # LINUX
         # set the SONAME to libmetatensor.so
         set(CARGO_RUSTC_ARGS "-Clink-arg=-Wl,-soname,${METATENSOR_SHARED_LIB_NAME}")
+        set_target_properties(metatensor::shared PROPERTIES
+            IMPORTED_SONAME ${METATENSOR_SHARED_LIB_NAME}
+        )
     endif()
 else()
     set(CARGO_RUSTC_ARGS "")
