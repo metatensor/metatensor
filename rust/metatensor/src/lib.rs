@@ -29,7 +29,7 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 #![allow(clippy::similar_names, clippy::borrow_as_ptr, clippy::uninlined_format_args)]
 
-use metatensor_sys as c_api;
+pub use metatensor_sys as c_api;
 
 pub mod errors;
 pub use self::errors::Error;
