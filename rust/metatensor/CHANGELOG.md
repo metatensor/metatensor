@@ -15,6 +15,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.1.4](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.4) - 2024-03-12
+
+### Changed
+
+- Bindings to the raw C API are now part of the `metatensor-sys` crate (#535)
+
 ## [Version 0.1.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.3) - 2024-02-12
 
 ### Fixed
