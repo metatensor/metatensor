@@ -194,6 +194,7 @@ TEST_CASE("Models metadata") {
         capabilities->set_length_unit("nm");
         capabilities->interaction_range = 1.4;
         capabilities->atomic_types = {1, 2, -43};
+        capabilities->set_dtype("float32");
         capabilities->supported_devices = {"cuda", "xla", "cpu"};
 
         auto output = torch::make_intrusive<ModelOutputHolder>();
@@ -209,6 +210,7 @@ TEST_CASE("Models metadata") {
         -43
     ],
     "class": "ModelCapabilities",
+    "dtype": "float32",
     "interaction_range": 4608983858650965606,
     "length_unit": "nm",
     "outputs": {
@@ -249,6 +251,7 @@ TEST_CASE("Models metadata") {
 
         capabilities = ModelCapabilitiesHolder::from_json(json);
         CHECK(capabilities->length_unit() == "nm");
+        CHECK(capabilities->dtype().empty());
         CHECK(capabilities->atomic_types == std::vector<int64_t>{1, -2});
 
         output = capabilities->outputs.at("foo");

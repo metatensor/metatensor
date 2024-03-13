@@ -417,7 +417,8 @@ TORCH_LIBRARY(metatensor, m) {
                 std::vector<int64_t>,
                 double,
                 std::string,
-                std::vector<std::string>
+                std::vector<std::string>,
+                std::string
             >(),
             DOCSTRING, {
                 torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
@@ -425,6 +426,7 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("interaction_range") = -1.0,
                 torch::arg("length_unit") = "",
                 torch::arg("supported_devices") = std::vector<std::string>{},
+                torch::arg("dtype") = "",
             }
         )
         .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
@@ -433,6 +435,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("engine_interaction_range", &ModelCapabilitiesHolder::engine_interaction_range)
         .def_property("length_unit", &ModelCapabilitiesHolder::length_unit, &ModelCapabilitiesHolder::set_length_unit)
         .def_readwrite("supported_devices", &ModelCapabilitiesHolder::supported_devices)
+        .def_property("dtype", &ModelCapabilitiesHolder::dtype, &ModelCapabilitiesHolder::set_dtype)
         .def_pickle(
             [](const ModelCapabilities& self) -> std::string {
                 return self->to_json();

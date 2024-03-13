@@ -274,6 +274,7 @@ class ModelCapabilities:
         interaction_range: float = -1,
         length_unit: str = "",
         supported_devices: List[str] = [],  # noqa B006
+        dtype: str = "",
     ):
         pass
 
@@ -308,6 +309,15 @@ class ModelCapabilities:
         atoms positions and the system cell.
 
         The list of possible units is available :ref:`here <known-quantities-units>`.
+        """
+
+    @property
+    def dtype() -> str:
+        """
+        The dtype of this model
+
+        This can be ``"float32"`` or ``"float64"``, and must be used by the engine as
+        the dtype of all inputs and outputs for this model.
         """
 
     def engine_interaction_range(self, engine_length_unit: str) -> float:

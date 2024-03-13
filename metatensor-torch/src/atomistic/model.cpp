@@ -51,6 +51,8 @@ static void read_vector_int_json(
     }
 }
 
+/******************************************************************************/
+
 void ModelOutputHolder::set_quantity(std::string quantity) {
     if (valid_quantity(quantity)) {
         validate_unit(quantity, unit_);
@@ -126,21 +128,31 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
     return result;
 }
 
+ModelOutput ModelOutputHolder::from_json(std::string_view json) {
+    auto data = nlohmann::json::parse(json);
+    return model_output_from_json(data);
+}
+
+/******************************************************************************/
 
 void ModelCapabilitiesHolder::set_length_unit(std::string unit) {
     validate_unit("length", unit);
     this->length_unit_ = std::move(unit);
 }
 
+void ModelCapabilitiesHolder::set_dtype(std::string dtype) {
+    if (dtype == "float32" || dtype == "float64") {
+        dtype_ = std::move(dtype);
+    } else {
+        C10_THROW_ERROR(ValueError,
+            "`dtype` can be one of ['float32', 'float64'], got '" + dtype + "'"
+        );
+    }
+}
+
 double ModelCapabilitiesHolder::engine_interaction_range(const std::string& engine_length_unit) const {
     return interaction_range * unit_conversion_factor("length", length_unit_, engine_length_unit);
 }
-
-ModelOutput ModelOutputHolder::from_json(std::string_view json) {
-    auto data = nlohmann::json::parse(json);
-    return model_output_from_json(data);
-}
-
 
 std::string ModelCapabilitiesHolder::to_json() const {
     nlohmann::json result;
@@ -154,8 +166,8 @@ std::string ModelCapabilitiesHolder::to_json() const {
     result["outputs"] = outputs;
     result["atomic_types"] = this->atomic_types;
 
-    // Store reach using it's binary representation to ensure perfect
-    // round-tripping of the data
+    // Store interaction_range using it's binary representation to ensure
+    // perfect round-tripping of the data
     static_assert(sizeof(double) == sizeof(int64_t));
     int64_t int_interaction_range = 0;
     std::memcpy(&int_interaction_range, &this->interaction_range, sizeof(double));
@@ -163,6 +175,7 @@ std::string ModelCapabilitiesHolder::to_json() const {
 
     result["length_unit"] = this->length_unit();
     result["supported_devices"] = this->supported_devices;
+    result["dtype"] = this->dtype();
 
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
@@ -228,9 +241,17 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(std::string_view json) {
         );
     }
 
+    if (data.contains("dtype")) {
+        if (!data["dtype"].is_string()) {
+            throw std::runtime_error("'dtype' in JSON for ModelCapabilities must be a string");
+        }
+        result->set_dtype(data["dtype"]);
+    }
+
     return result;
 }
 
+/******************************************************************************/
 
 static void check_selected_atoms(const torch::optional<TorchLabels>& selected_atoms) {
     if (selected_atoms) {
@@ -380,6 +401,7 @@ ModelEvaluationOptions ModelEvaluationOptionsHolder::from_json(std::string_view 
     return result;
 }
 
+/******************************************************************************/
 
 void ModelMetadataHolder::validate() const {
     for (const auto& author: this->authors) {
@@ -622,10 +644,7 @@ std::string ModelMetadataHolder::print() const {
     return oss.str();
 }
 
-
 /******************************************************************************/
-/******************************************************************************/
-
 
 struct Version {
     Version(std::string version): string(std::move(version)) {

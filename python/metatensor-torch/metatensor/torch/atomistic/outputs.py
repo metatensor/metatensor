@@ -11,6 +11,7 @@ def _check_outputs(
     requested: Dict[str, ModelOutput],
     selected_atoms: Optional[Labels],
     outputs: Dict[str, TensorMap],
+    expected_dtype: torch.dtype,
 ):
     """
     Check that the outputs of a model conform to the expected structure for metatensor
@@ -20,11 +21,19 @@ def _check_outputs(
     https://lab-cosmo.github.io/metatensor/latest/atomistic/outputs.html
     """
 
-    for name in outputs.keys():
+    for name, output in outputs.items():
         if requested.get(name) is None:
             raise ValueError(
                 f"the model produced an output named '{name}', which was not requested"
             )
+
+        if len(output) != 0:
+            output_dtype = output.block_by_id(0).values.dtype
+            if output_dtype != expected_dtype:
+                raise ValueError(
+                    f"wrong dtype for the {name} output: "
+                    f"the model promised {expected_dtype}, we got {output_dtype}"
+                )
 
     for name, request in requested.items():
         value = outputs.get(name)
