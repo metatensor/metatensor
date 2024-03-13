@@ -237,7 +237,7 @@ explained below.
    model's capabilities and user input;
 
 4. the engine creates a list of :py:class:`System` (typically the list only
-   contains one system) matching it's own internal data representation;
+   contains one system) matching its own internal data representation;
 
    .. tip::
         The ``positions`` and ``cell`` should have their respective

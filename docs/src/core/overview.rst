@@ -3,6 +3,11 @@
 Overview
 ========
 
+This page presents the core classes of metatensor from the ground-up in a
+somewhat abstract way, without being tied to any programming language API
+specifics. If you prefer to read concrete examples and tutorials, you should
+start with our :ref:`first steps <core-tutorial-first-steps>` tutorial instead!
+
 .. py:currentmodule:: metatensor
 
 .. _concept-TensorMap:
@@ -84,7 +89,7 @@ Labels on the left has two dimensions (``structure`` and ``center``), and 10
 entries (10 rows); while the Labels on the right has four dimensions and 8
 entries. Depending on the language you use, :py:class:`Labels` entries and
 dimensions' names can be accessed and manipulated in different ways, please
-refer to the corresponding :ref:`API documentation <python-api-reference>` for
+refer to the corresponding :ref:`API documentation <python-api-core>` for
 more information.
 
 .. _concept-TensorBlock:
@@ -102,9 +107,9 @@ The simplest possible TensorBlock is represented below, and contains three thing
 - metadata describing the columns of this array, called **properties**, also
   stored as a set of :py:class:`Labels`.
 
-The samples store information about **what objects** does the data represent,
-while properties store information about **how** these objects are represented.
-Taking a couple of examples for clarity:
+The samples store information about **what objects** the data represents, while
+properties store information about **how** these objects are represented. Taking
+a couple of examples for clarity:
 
 - if we are storing the energy of a list of systems in a TensorBlock, the
   samples would contain only a single ``"system"`` dimension, and multiple
