@@ -136,7 +136,7 @@ public:
     /// long range model, this should be set to infinity.
     ///
     /// This will default to -1 if not explicitly set by the user.
-    double interaction_range = -1;
+    double interaction_range = -1.0;
 
     /// unit of lengths the model expects as input
     const std::string& length_unit() const {

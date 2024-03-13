@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -254,6 +255,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
             raise ValueError(
                 "`capabilities.interaction_range` was not set, "
                 "but it is required to run simulations"
+            )
+
+        if math.isnan(capabilities.interaction_range):
+            raise ValueError(
+                "`capabilities.interaction_range` should be a "
+                "float between 0 and infinity"
             )
 
         if len(capabilities.supported_devices) == 0:

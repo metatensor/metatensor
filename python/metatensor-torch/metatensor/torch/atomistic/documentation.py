@@ -271,7 +271,7 @@ class ModelCapabilities:
         self,
         outputs: Dict[str, ModelOutput] = {},  # noqa B006
         atomic_types: List[int] = [],  # noqa B006
-        interaction_range: float = float("inf"),
+        interaction_range: float = -1,
         length_unit: str = "",
         supported_devices: List[str] = [],  # noqa B006
     ):

@@ -163,3 +163,38 @@ def test_requested_neighbors_lists():
         "other module",
         "FullModel.other",
     ]
+
+
+def test_bad_capabilities():
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        supported_devices=["cpu"],
+    )
+    message = (
+        "`capabilities.interaction_range` was not set, "
+        "but it is required to run simulations"
+    )
+    with pytest.raises(ValueError, match=message):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    capabilities = ModelCapabilities(
+        interaction_range=12,
+    )
+    message = (
+        "`capabilities.supported_devices` was not set, "
+        "but it is required to run simulations"
+    )
+    with pytest.raises(ValueError, match=message):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    capabilities = ModelCapabilities(
+        interaction_range=float("nan"),
+        supported_devices=["cpu"],
+    )
+    message = (
+        "`capabilities.interaction_range` should be a float between 0 and infinity"
+    )
+    with pytest.raises(ValueError, match=message):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)

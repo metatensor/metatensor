@@ -422,7 +422,7 @@ TORCH_LIBRARY(metatensor, m) {
             DOCSTRING, {
                 torch::arg("outputs") = torch::Dict<std::string, ModelOutput>(),
                 torch::arg("atomic_types") = std::vector<int64_t>(),
-                torch::arg("interaction_range") = HUGE_VAL,
+                torch::arg("interaction_range") = -1.0,
                 torch::arg("length_unit") = "",
                 torch::arg("supported_devices") = std::vector<std::string>{},
             }
