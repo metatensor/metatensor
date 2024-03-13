@@ -198,6 +198,7 @@ outputs = {
 #   will handle the necessary unit conversions for you;
 # - the set of ``supported_devices`` on which the model can run. These should be ordered
 #   according to the model preference.
+# - the dtype ("float32" or "float64") that the model uses for its inputs and outputs
 
 capabilities = ModelCapabilities(
     outputs=outputs,
@@ -205,6 +206,7 @@ capabilities = ModelCapabilities(
     interaction_range=0.0,
     length_unit="Angstrom",
     supported_devices=["cpu"],
+    dtype="float64",
 )
 
 # %%

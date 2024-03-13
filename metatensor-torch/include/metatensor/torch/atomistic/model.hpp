@@ -107,7 +107,8 @@ public:
         std::vector<int64_t> atomic_types_,
         double interaction_range_,
         std::string length_unit,
-        std::vector<std::string> supported_devices_
+        std::vector<std::string> supported_devices_,
+        std::string dtype
     ):
         outputs(outputs_),
         atomic_types(std::move(atomic_types_)),
@@ -115,6 +116,10 @@ public:
         supported_devices(std::move(supported_devices_))
     {
         this->set_length_unit(std::move(length_unit));
+
+        if (!dtype.empty()) {
+            this->set_dtype(std::move(dtype));
+        }
     }
 
     ~ModelCapabilitiesHolder() override = default;
@@ -156,6 +161,16 @@ public:
     /// the best device for this model, and so on.
     std::vector<std::string> supported_devices;
 
+    /// Get the dtype of this model. This can be "float32" or "float64", and
+    /// must be used by the engine as the dtype of all inputs and outputs for
+    /// this model.
+    const std::string& dtype() const {
+        return dtype_;
+    }
+
+    /// Set the dtype of this model.
+    void set_dtype(std::string dtype);
+
     /// Serialize a `ModelCapabilities` to a JSON string.
     std::string to_json() const;
     /// Load a serialized `ModelCapabilities` from a JSON string.
@@ -163,6 +178,7 @@ public:
 
 private:
     std::string length_unit_;
+    std::string dtype_;
 };
 
 

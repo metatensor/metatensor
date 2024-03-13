@@ -86,6 +86,12 @@ class ModelCapabilitiesWrap:
     def set_supported_devices(self, devices: List[str]):
         self._c.supported_devices = devices
 
+    def get_dtype(self) -> str:
+        return self._c.dtype
+
+    def set_dtype(self, dtype: str):
+        self._c.dtype = dtype
+
 
 def test_capabilities():
     class TestModule(torch.nn.Module):

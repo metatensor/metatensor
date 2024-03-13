@@ -128,6 +128,7 @@ def model():
             ),
         },
         supported_devices=["cpu"],
+        dtype="float64",
     )
 
     metadata = ModelMetadata()
@@ -156,6 +157,7 @@ def model_different_units():
             ),
         },
         supported_devices=["cpu"],
+        dtype="float64",
     )
 
     metadata = ModelMetadata()
@@ -272,6 +274,9 @@ def test_selected_atoms(tmpdir, model, atoms):
 
 
 def test_serialize_ase(tmpdir, model, atoms):
+    # Run some tests with a different dtype
+    model._capabilities.dtype = "float32"
+
     calculator = MetatensorCalculator(model)
 
     message = (

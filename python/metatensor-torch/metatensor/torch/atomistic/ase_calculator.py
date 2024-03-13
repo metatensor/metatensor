@@ -84,15 +84,22 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         else:
             raise TypeError(f"unknown type for model: {type(model)}")
 
+        capabilities = self._model.capabilities()
         if check_consistency:
-            capabilities = self._model.capabilities()
             if "cpu" not in capabilities.supported_devices:
                 raise ValueError(
                     "ASE calculator only supports CPU device for now, "
                     "but the model does not"
                 )
 
-            self._model = self._model.to(device="cpu")
+        if capabilities.dtype == "float32":
+            self._dtype = torch.float32
+        elif capabilities.dtype == "float64":
+            self._dtype = torch.float64
+        else:
+            raise ValueError(f"unknown dtype: {capabilities.dtype}")
+
+        self._model = self._model.to(device="cpu", dtype=self._dtype)
 
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
@@ -140,12 +147,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :param outputs: outputs of the model that should be predicted
         :param selected_atoms: subset of atoms on which to run the calculation
         """
-        types, positions, cell = _ase_to_torch_data(atoms)
+        types, positions, cell = _ase_to_torch_data(atoms, dtype=self._dtype)
         system = System(types, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
         for options in self._model.requested_neighbors_lists():
-            neighbors = _compute_ase_neighbors(atoms, options)
+            neighbors = _compute_ase_neighbors(atoms, options, dtype=self._dtype)
             register_autograd_neighbors(
                 system,
                 neighbors,
@@ -193,7 +200,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     "support it"
                 )
 
-        types, positions, cell = _ase_to_torch_data(atoms)
+        types, positions, cell = _ase_to_torch_data(atoms, dtype=self._dtype)
 
         do_backward = False
         if "forces" in properties:
@@ -216,7 +223,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         # convert from ase.Atoms to metatensor.torch.atomistic.System
         system = System(types, positions, cell)
         for options in self._model.requested_neighbors_lists():
-            neighbors = _compute_ase_neighbors(atoms, options)
+            neighbors = _compute_ase_neighbors(atoms, options, dtype=self._dtype)
             register_autograd_neighbors(
                 system,
                 neighbors,
@@ -256,25 +263,27 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         self.results = {}
 
         if "energies" in properties:
-            self.results["energies"] = (
-                energies.detach().to(device="cpu").numpy().reshape(-1)
-            )
+            energies_values = energies.detach().reshape(-1)
+            energies_values = energies_values.to(device="cpu").to(dtype=torch.float64)
+            self.results["energies"] = energies_values.numpy()
 
         if "energy" in properties:
-            self.results["energy"] = energy.detach().to(device="cpu").numpy()[0, 0]
+            energy_values = energy.detach()
+            energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
+            self.results["energy"] = energy_values.numpy()[0, 0]
 
         if do_backward:
             energy.backward(-torch.ones_like(energy))
 
         if "forces" in properties:
-            self.results["forces"] = (
-                system.positions.grad.to(device="cpu").numpy().reshape(-1, 3)
-            )
+            forces_values = system.positions.grad.reshape(-1, 3)
+            forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
+            self.results["forces"] = forces_values.numpy()
 
         if "stress" in properties:
-            volume = atoms.cell.volume
-            scaling_grad = -scaling.grad.to(device="cpu").numpy().reshape(3, 3)
-            self.results["stress"] = _full_3x3_to_voigt_6_stress(scaling_grad / volume)
+            stress_values = -scaling.grad.reshape(3, 3) / atoms.cell.volume
+            stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
+            self.results["stress"] = _full_3x3_to_voigt_6_stress(stress_values.numpy())
 
 
 def _ase_properties_to_metatensor_outputs(properties):
@@ -304,7 +313,7 @@ def _ase_properties_to_metatensor_outputs(properties):
     return {"energy": output}
 
 
-def _compute_ase_neighbors(atoms, options):
+def _compute_ase_neighbors(atoms, options, dtype):
     engine_cutoff = options.engine_cutoff(engine_length_unit="angstrom")
     nl = ase.neighborlist.NeighborList(
         cutoffs=[engine_cutoff] * len(atoms),
@@ -333,10 +342,10 @@ def _compute_ase_neighbors(atoms, options):
                 continue
 
             samples.append((i, j, offset[0], offset[1], offset[2]))
-            distances.append(distance.to(dtype=torch.float64))
+            distances.append(distance.to(dtype=dtype))
 
     if len(distances) == 0:
-        distances = torch.zeros((0, 3), dtype=positions.dtype)
+        distances = torch.zeros((0, 3), dtype=dtype)
         samples = torch.zeros((0, 5))
     else:
         samples = torch.tensor(samples)
@@ -359,21 +368,21 @@ def _compute_ase_neighbors(atoms, options):
     )
 
 
-def _ase_to_torch_data(atoms):
+def _ase_to_torch_data(atoms, dtype):
     """Get the positions and cell from ASE atoms as torch tensors"""
 
     types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
-    positions = torch.from_numpy(atoms.positions)
+    positions = torch.from_numpy(atoms.positions).to(dtype=dtype)
 
     if np.all(atoms.pbc):
-        cell = torch.from_numpy(atoms.cell[:])
+        cell = torch.from_numpy(atoms.cell[:]).to(dtype=dtype)
     elif np.any(atoms.pbc):
         raise ValueError(
             f"partial PBC ({atoms.pbc}) are not currently supported in "
             "metatensor atomistic models"
         )
     else:
-        cell = torch.zeros((3, 3), dtype=torch.float64)
+        cell = torch.zeros((3, 3), dtype=dtype)
 
     return types, positions, cell
 

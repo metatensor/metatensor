@@ -193,6 +193,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...     interaction_range=0.0,
     ...     length_unit="angstrom",
     ...     supported_devices=["cpu"],
+    ...     dtype="float64",
     ... )
     >>> # define metadata about this model
     >>> metadata = ModelMetadata(
@@ -269,6 +270,19 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 "but it is required to run simulations."
             )
 
+        if capabilities.dtype == "":
+            raise ValueError(
+                "`capabilities.dtype` was not set, "
+                "but it is required to run simulations."
+            )
+
+        if capabilities.dtype == "float32":
+            self._model_dtype = torch.float32
+        elif capabilities.dtype == "float64":
+            self._model_dtype = torch.float64
+        else:
+            raise ValueError(f"unknown dtype: {capabilities.dtype}")
+
     def wrapped_module(self) -> torch.nn.Module:
         """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
         return self._module
@@ -318,10 +332,11 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         if check_consistency:
             _check_inputs(
-                self._capabilities,
-                self._requested_neighbors_lists,
-                systems,
-                options,
+                capabilities=self._capabilities,
+                requested_neighbors_lists=self._requested_neighbors_lists,
+                systems=systems,
+                options=options,
+                expected_dtype=self._model_dtype,
             )
 
         # convert systems from engine to model units
@@ -352,6 +367,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 requested=options.outputs,
                 selected_atoms=options.selected_atoms,
                 outputs=outputs,
+                expected_dtype=self._model_dtype,
             )
 
         # convert outputs from model to engine units
@@ -568,12 +584,19 @@ def _check_inputs(
     requested_neighbors_lists: List[NeighborsListOptions],
     systems: List[System],
     options: ModelEvaluationOptions,
+    expected_dtype: torch.dtype,
 ):
     if len(systems) == 0:
         return
 
     global_device = systems[0].device
     global_dtype = systems[0].positions.dtype
+
+    if global_dtype != expected_dtype:
+        raise ValueError(
+            "wrong dtype for the data: "
+            f"the model wants {expected_dtype}, we got {global_dtype}"
+        )
 
     # check that the requested outputs match what the model can do
     for name, requested in options.outputs.items():

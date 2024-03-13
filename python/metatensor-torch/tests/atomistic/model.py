@@ -65,6 +65,7 @@ def model():
             ),
         },
         supported_devices=["cpu"],
+        dtype="float64",
     )
 
     metadata = ModelMetadata()
@@ -142,6 +143,7 @@ def test_requested_neighbors_lists():
     capabilities = ModelCapabilities(
         interaction_range=0.0,
         supported_devices=["cpu"],
+        dtype="float64",
     )
     atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
     requests = atomistic.requested_neighbors_lists()
@@ -171,6 +173,7 @@ def test_bad_capabilities():
 
     capabilities = ModelCapabilities(
         supported_devices=["cpu"],
+        dtype="float64",
     )
     message = (
         "`capabilities.interaction_range` was not set, "
@@ -181,6 +184,7 @@ def test_bad_capabilities():
 
     capabilities = ModelCapabilities(
         interaction_range=12,
+        dtype="float64",
     )
     message = (
         "`capabilities.supported_devices` was not set, "
@@ -192,9 +196,18 @@ def test_bad_capabilities():
     capabilities = ModelCapabilities(
         interaction_range=float("nan"),
         supported_devices=["cpu"],
+        dtype="float64",
     )
     message = (
         "`capabilities.interaction_range` should be a float between 0 and infinity"
     )
+    with pytest.raises(ValueError, match=message):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    capabilities = ModelCapabilities(
+        interaction_range=12.0,
+        supported_devices=["cpu"],
+    )
+    message = "`capabilities.dtype` was not set, but it is required to run simulations"
     with pytest.raises(ValueError, match=message):
         MetatensorAtomisticModel(model, ModelMetadata(), capabilities)

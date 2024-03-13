@@ -186,6 +186,7 @@ capabilities = ModelCapabilities(
     interaction_range=0.0,
     length_unit="Angstrom",
     supported_devices=["cpu"],
+    dtype="float32",
 )
 
 # we don't want to bother with model metadata, so we define it as empty

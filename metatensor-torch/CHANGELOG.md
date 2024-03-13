@@ -17,6 +17,21 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-torch C++
+
+#### Added
+
+- `ModelCapabilities::dtype`, used by the model to communicate the dtype it
+  wants to use for inputs and outputs.
+
+### metatensor-torch Python
+
+#### Added
+
+- `ModelCapabilities.dtype`, used by the model to communicate the dtype it
+  wants to use for inputs and outputs.
+
+
 ## [Version 0.3.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.3.0) - 2024-03-01
 
 ### metatensor-torch C++
