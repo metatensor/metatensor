@@ -153,6 +153,7 @@ def _reduce_over_samples_block(
         new_samples, index = _dispatch.unique_with_inverse(
             block_samples.values[:, sample_selected], axis=0
         )
+        index = index.reshape(-1)
 
     block_values = block.values
     other_shape = block_values.shape[1:]
@@ -246,6 +247,7 @@ def _reduce_over_samples_block(
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
             samples[:, :], axis=0
         )
+        index_gradient = index_gradient.reshape(-1)
 
         gradient_values = gradient.values
         other_shape = gradient_values.shape[1:]

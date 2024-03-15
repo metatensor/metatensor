@@ -732,12 +732,19 @@ def _list_or_str_to_array_c_char(strings: Union[str, Sequence[str]]):
     return c_strings
 
 
+def _can_cast_to_numpy_int(value):
+    return np.can_cast(value, np.int32, casting="same_kind")
+
+
 def _normalize_selection(
     selection: Union[Labels, LabelsEntry, Dict[str, int]]
 ) -> Labels:
     if isinstance(selection, dict):
         for key, value in selection.items():
-            if not np.can_cast(value, np.int32, casting="same_kind"):
+            if isinstance(value, int):
+                # all good
+                pass
+            elif isinstance(value, float) or not _can_cast_to_numpy_int(value):
                 raise TypeError(
                     f"expected integer values in selection, got {key}={value} of "
                     f"type {type(value)}"
