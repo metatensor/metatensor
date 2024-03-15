@@ -71,13 +71,14 @@ def _check_energy(
             for a in range(len(system)):
                 expected_values.append([s, a])
 
-        expected_samples = Labels(["system", "atom"], torch.tensor(expected_values))
+        expected_samples = Labels(
+            ["system", "atom"],
+            torch.tensor(expected_values, device=energy_block.samples.values.device),
+        )
         if selected_atoms is not None:
             expected_samples = expected_samples.intersection(selected_atoms)
 
-        if len(expected_samples.union(energy_block.samples.to(device="cpu"))) != len(
-            expected_samples
-        ):
+        if len(expected_samples.union(energy_block.samples)) != len(expected_samples):
             raise ValueError(
                 "invalid samples entries for 'energy' output, they do not match the "
                 f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
@@ -91,9 +92,7 @@ def _check_energy(
             )
             expected_samples = expected_samples.intersection(selected_systems)
 
-        if len(expected_samples.union(energy_block.samples.to(device="cpu"))) != len(
-            expected_samples
-        ):
+        if len(expected_samples.union(energy_block.samples)) != len(expected_samples):
             raise ValueError(
                 "invalid samples entries for 'energy' output, they do not match the "
                 f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
