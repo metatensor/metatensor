@@ -518,12 +518,15 @@ def sign(array):
     """
     Returns an indication of the sign of the elements in the array.
 
-    It is equivalent of np.sign(array) and torch.sign(tensor)
+    It is equivalent of np.sign(array) (as defined in v2.0) and torch.sgn(tensor)
     """
     if isinstance(array, TorchTensor):
-        return torch.sign(array)
+        return torch.sgn(array)
     elif isinstance(array, np.ndarray):
-        return np.sign(array)
+        if np.issubdtype(array.dtype, np.complexfloating):
+            return array / np.abs(array)
+        else:
+            return np.sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
