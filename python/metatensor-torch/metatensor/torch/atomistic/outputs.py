@@ -71,7 +71,10 @@ def _check_energy(
             for a in range(len(system)):
                 expected_values.append([s, a])
 
-        expected_samples = Labels(["system", "atom"], torch.tensor(expected_values))
+        expected_samples = Labels(
+            ["system", "atom"],
+            torch.tensor(expected_values, device=energy_block.values.device),
+        )
         if selected_atoms is not None:
             expected_samples = expected_samples.intersection(selected_atoms)
 
