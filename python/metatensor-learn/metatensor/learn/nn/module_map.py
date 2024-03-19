@@ -1,3 +1,4 @@
+import warnings
 from copy import deepcopy
 from typing import List, Optional, Union
 
@@ -342,31 +343,50 @@ class ModuleMap(ModuleList):
         representation += ")"
         return representation
 
-    # def to(
-    #    self,
-    #    device: torch.device = None,
-    #    dtype: torch.dtype = None,
-    #    non_blocking: bool = None,
-    #    copy: bool = None,
-    #    memory_format: torch.memory_format = None,
-    # ):
-    #    # (Pdb) tensor_module_script.to(torch.float32, "cpu")
-    #    # *** TypeError: to() received an invalid combination of arguments - got (torch.dtype, str), but expected one of: # noqa
-    #    # * (torch.device device, torch.dtype dtype, bool non_blocking, bool copy, *, torch.memory_format memory_format) # noqa
-    #    # * (torch.dtype dtype, bool non_blocking, bool copy, *, torch.memory_format memory_format)  # noqa
-    #    # * (Tensor tensor, bool non_blocking, bool copy, *, torch.memory_format memory_format)  # noqa
-    #    if copy is None or copy:
-    #        return self.copy() # TODO
-    #    else:
-    #        for _, parameter in self._modules.items():
-    #            parameter.to(device, dtype)  # non_block, copy, memory=
-    #        if self._out_properties is not None:
-    #            self._out_properties = self._out_properties.to(
-    #                    device=device,
-    #                    dtype=dtype,
-    #                    non_blocking=non_blocking,
-    #                    memory_format=memory_format)
-    #        if copy is None or copy:
-    #            return self.copy() # TODO
-    #        else:
-    #        return self
+    def to(self, *args, **kwargs):
+        # mirrors the behavior of torch.nn.Module.to
+        # https://pytorch.org/docs/stable/_modules/torch/nn/modules/module.html
+
+        device, dtype, non_blocking, convert_to_format = torch._C._nn._parse_to(
+            *args, **kwargs
+        )
+
+        if dtype is not None:
+            if not (dtype.is_floating_point or dtype.is_complex):
+                raise TypeError(
+                    "nn.Module.to only accepts floating point or complex "
+                    f"dtypes, but got desired dtype={dtype}"
+                )
+            if dtype.is_complex:
+                warnings.warn(
+                    "Complex modules are a new feature under active development "
+                    "whose design may change, and some modules might not work as "
+                    "expected when using complex tensors as parameters or buffers. "
+                    "Please file an issue at https://github.com/pytorch/pytorch/"
+                    "issues/new?template=bug-report.yml if a complex module does "
+                    "not work as expected.",
+                    stacklevel=2,
+                )
+
+        self._in_keys = self._in_keys.to(device)
+        self._out_properties = (
+            None
+            if self._out_properties is None
+            else [p.to(device) for p in self._out_properties]
+        )
+
+        def convert(t):
+            if convert_to_format is not None and t.dim() in (4, 5):
+                return t.to(
+                    device,
+                    dtype if t.is_floating_point() or t.is_complex() else None,
+                    non_blocking,
+                    memory_format=convert_to_format,
+                )
+            return t.to(
+                device,
+                dtype if t.is_floating_point() or t.is_complex() else None,
+                non_blocking,
+            )
+
+        return self._apply(convert)

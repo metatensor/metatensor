@@ -49,12 +49,6 @@ def set_random_generator():
     torch.random.manual_seed(122578741812)
 
 
-@pytest.fixture(scope="function", autouse=True)
-def set_default_torch_resources():
-    torch.set_default_device(TORCH_KWARGS["device"])
-    torch.set_default_dtype(TORCH_KWARGS["dtype"])
-
-
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )

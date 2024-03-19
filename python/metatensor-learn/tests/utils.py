@@ -18,36 +18,6 @@ from metatensor.learn.data import Dataset, IndexedDataset  # noqa E402
 TORCH_KWARGS = {"device": "cpu", "dtype": torch.float32}
 
 
-def random_single_block_no_components_tensor_map(
-    use_torch, use_metatensor_torch, device=None
-):
-    """
-    Create a dummy tensor map to be used in tests. This is the same one as the
-    tensor map used in `tensor.rs` tests.
-    """
-    if not use_torch and use_metatensor_torch:
-        raise ValueError(
-            "torch.TensorMap cannot be created without torch.Tensor block values."
-        )
-    if use_metatensor_torch:
-        import torch
-
-        from metatensor.torch import Labels, TensorBlock, TensorMap
-
-        create_int32_array = partial(torch.tensor, dtype=torch.int32, device=device)
-    else:
-        import numpy as np
-
-        from metatensor import Labels, TensorBlock, TensorMap
-
-        create_int32_array = partial(np.array, dtype=np.int32)
-
-    if use_torch:
-        import torch
-
-        create_random_array = partial(torch.rand, dtype=torch.float32, device=device)
-
-
 def random_single_block_no_components_tensor_map(use_torch):
     """Create a dummy tensor map to be used in tests."""
 
