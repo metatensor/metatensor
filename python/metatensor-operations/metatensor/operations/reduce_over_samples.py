@@ -40,34 +40,24 @@ TensorBlock operations
 .. autofunction:: metatensor.std_over_samples_block
 """
 
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
-
-
-class NpErrstateTorchScriptContext:
-    def __init__(self) -> None:
-        pass
-
-    def __enter__(self) -> None:
-        pass
-
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
-        pass
-
-
-def np_errstate_torch_script(divide: str, invalid: str) -> NpErrstateTorchScriptContext:
-    # Placeholder for np.errstate while torch-scripting
-    return NpErrstateTorchScriptContext()
+from ._backend import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
 
 
 def _reduce_over_samples_block(
     block: TensorBlock,
-    sample_names: Optional[List[str]] = None,
-    reduction: str = "sum",
+    sample_names: Union[List[str], str],
+    reduction: str,
     remaining_samples: Optional[List[str]] = None,
 ) -> TensorBlock:
     """
@@ -87,14 +77,17 @@ def _reduce_over_samples_block(
     :param reduction:
         how to reduce, only available values are "mean", "sum", "std" or "var"
     """
+    if isinstance(sample_names, str):
+        sample_names_list = [sample_names]
+    else:
+        sample_names_list = sample_names
 
     block_samples = block.samples
 
     if remaining_samples is None:
-        assert sample_names is not None
         remaining_sample_names: List[str] = []
         for s_name in block_samples.names:
-            if s_name in sample_names:
+            if s_name in sample_names_list:
                 continue
             remaining_sample_names.append(s_name)
     else:
@@ -160,6 +153,7 @@ def _reduce_over_samples_block(
         new_samples, index = _dispatch.unique_with_inverse(
             block_samples.values[:, sample_selected], axis=0
         )
+        index = index.reshape(-1)
 
     block_values = block.values
     other_shape = block_values.shape[1:]
@@ -253,6 +247,7 @@ def _reduce_over_samples_block(
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
             samples[:, :], axis=0
         )
+        index_gradient = index_gradient.reshape(-1)
 
         gradient_values = gradient.values
         other_shape = gradient_values.shape[1:]
@@ -298,20 +293,20 @@ def _reduce_over_samples_block(
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
-                    if torch_jit_is_scripting():
-                        np_errstate = np_errstate_torch_script
-                    else:
-                        np_errstate = np.errstate
                     for i, s in enumerate(new_gradient_samples):
-                        # only numpy raise a warning for division by zero
-                        # so the statement catch that
-                        # for torch there is nothing to catch
-                        # both numpy and torch give inf for the division by zero
-                        with np_errstate(divide="ignore", invalid="ignore"):
+                        sample = int(s[0])
+                        if torch_jit_is_scripting():
                             gradient_values_result[i] = (
                                 values_grad_result[i]
-                                - (gradient_values_result[i] * values_mean[int(s[0])])
-                            ) / values_result[int(s[0])]
+                                - (gradient_values_result[i] * values_mean[sample])
+                            ) / values_result[sample]
+                        else:
+                            # only numpy raise a warning for division by zero
+                            with np.errstate(divide="ignore", invalid="ignore"):
+                                gradient_values_result[i] = (
+                                    values_grad_result[i]
+                                    - (gradient_values_result[i] * values_mean[sample])
+                                ) / values_result[sample]
 
                         gradient_values_result[i] = _dispatch.nan_to_num(
                             gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
@@ -371,13 +366,15 @@ def _reduce_over_samples(
         blocks.append(
             _reduce_over_samples_block(
                 block=block,
-                remaining_samples=remaining_samples,
+                sample_names=sample_names_list,
                 reduction=reduction,
+                remaining_samples=remaining_samples,
             )
         )
     return TensorMap(tensor.keys, blocks)
 
 
+@torch_jit_script
 def sum_over_samples_block(
     block: TensorBlock, sample_names: Union[List[str], str]
 ) -> TensorBlock:
@@ -392,7 +389,7 @@ def sum_over_samples_block(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     :param block:
         input :py:class:`TensorBlock`
@@ -413,7 +410,7 @@ def sum_over_samples_block(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -426,12 +423,12 @@ def sum_over_samples_block(
     ...     components=[],
     ...     properties=Labels.range("properties", 3),
     ... )
-    >>> block_sum = sum_over_samples_block(block, sample_names="center")
+    >>> block_sum = sum_over_samples_block(block, sample_names="atom")
     >>> print(block_sum.samples)
     Labels(
-        structure
-            0
-            1
+        system
+          0
+          1
     )
     >>> print(block_sum.values)
     [[ 4  7 10]
@@ -443,6 +440,7 @@ def sum_over_samples_block(
     )
 
 
+@torch_jit_script
 def sum_over_samples(
     tensor: TensorMap, sample_names: Union[List[str], str]
 ) -> TensorMap:
@@ -459,7 +457,7 @@ def sum_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the sum is
     performed. A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     :param tensor:
         input :py:class:`TensorMap`
@@ -480,7 +478,7 @@ def sum_over_samples(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -495,19 +493,19 @@ def sum_over_samples(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
-    >>> tensor_sum = sum_over_samples(tensor, sample_names="center")
-    >>> # only 'structure' is left as a sample
+    >>> tensor_sum = sum_over_samples(tensor, sample_names="atom")
+    >>> # only 'system' is left as a sample
     >>> print(tensor_sum.block(0))
     TensorBlock
-        samples (2): ['structure']
+        samples (2): ['system']
         components (): []
         properties (3): ['properties']
         gradients: None
     >>> print(tensor_sum.block(0).samples)
     Labels(
-        structure
-            0
-            1
+        system
+          0
+          1
     )
     >>> print(tensor_sum.block(0).values)
     [[ 4  7 10]
@@ -519,6 +517,7 @@ def sum_over_samples(
     )
 
 
+@torch_jit_script
 def mean_over_samples_block(
     block: TensorBlock, sample_names: Union[List[str], str]
 ) -> TensorBlock:
@@ -541,6 +540,7 @@ def mean_over_samples_block(
     )
 
 
+@torch_jit_script
 def mean_over_samples(
     tensor: TensorMap, sample_names: Union[str, List[str]]
 ) -> TensorMap:
@@ -556,7 +556,7 @@ def mean_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.
@@ -564,11 +564,13 @@ def mean_over_samples(
     :param tensor: input :py:class:`TensorMap`
     :param sample_names: names of samples to average over
     """
+
     return _reduce_over_samples(
         tensor=tensor, sample_names=sample_names, reduction="mean"
     )
 
 
+@torch_jit_script
 def std_over_samples_block(
     block: TensorBlock, sample_names: Union[List[str], str]
 ) -> TensorBlock:
@@ -591,6 +593,7 @@ def std_over_samples_block(
     )
 
 
+@torch_jit_script
 def std_over_samples(
     tensor: TensorMap, sample_names: Union[str, List[str]]
 ) -> TensorMap:
@@ -606,7 +609,7 @@ def std_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples()`.
@@ -621,11 +624,13 @@ def std_over_samples(
     :param tensor: input :py:class:`TensorMap`
     :param sample_names: names of samples to perform the standart deviation over
     """
+
     return _reduce_over_samples(
         tensor=tensor, sample_names=sample_names, reduction="std"
     )
 
 
+@torch_jit_script
 def var_over_samples_block(
     block: TensorBlock, sample_names: Union[List[str], str]
 ) -> TensorBlock:
@@ -648,6 +653,7 @@ def var_over_samples_block(
     )
 
 
+@torch_jit_script
 def var_over_samples(
     tensor: TensorMap, sample_names: Union[str, List[str]]
 ) -> TensorMap:
@@ -663,7 +669,7 @@ def var_over_samples(
     performed. It accept either a single string or a list of the string with the
     sample names corresponding to the directions along which the mean is performed.
     A single string is equivalent to a list with a single element:
-    ``sample_names = "center"`` is the same as ``sample_names = ["center"]``.
+    ``sample_names = "atom"`` is the same as ``sample_names = ["atom"]``.
 
     For a general discussion of reduction operations and a usage example see the
     doc for :py:func:`sum_over_samples`.
@@ -677,6 +683,7 @@ def var_over_samples(
     :param tensor: input :py:class:`TensorMap`
     :param sample_names: names of samples to perform the variance over
     """
+
     return _reduce_over_samples(
         tensor=tensor, sample_names=sample_names, reduction="var"
     )

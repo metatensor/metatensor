@@ -1,7 +1,94 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import Labels, TensorBlock, TensorMap, torch_jit_is_scripting
+from ._backend import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+    torch_jit_annotate,
+    torch_jit_is_scripting,
+    torch_jit_script,
+)
+
+
+def _sort_single_gradient_block(
+    block: TensorBlock,
+    gradient_block: TensorBlock,
+    axes: List[str],
+    descending: bool,
+) -> TensorBlock:
+    """
+    Sorts a single gradient tensor block given the tensor block which the gradients are
+    attached to. This function does not check the user input.  This is different from
+    `_sort_single_block` because we need to update the sample differently (since
+    gradient samples are pointers into the values samples).
+    """
+
+    sample_names = gradient_block.samples.names
+    sample_values = gradient_block.samples.values
+
+    component_names: List[List[str]] = []
+    components_values = []
+    for component in gradient_block.components:
+        component_names.append(component.names)
+        components_values.append(component.values)
+
+    property_names = gradient_block.properties.names
+    properties_values = gradient_block.properties.values
+
+    values = gradient_block.values
+    if "samples" in axes:
+        # we first need to get the mapping induced by the sorting in its parent block
+        # so we can change the sample column label entries so it matches the ones of
+        # the parent block
+        block_sample_values = block.samples.values
+        # sample index -> sample labels
+        sorted_idx = _dispatch.argsort_labels_values(
+            block_sample_values, reverse=descending
+        )
+        # obtain inverse mapping sample labels -> sample index
+        sorted_idx_inverse = _dispatch.empty_like(sorted_idx, shape=(len(sorted_idx),))
+        sorted_idx_inverse[sorted_idx] = _dispatch.int_array_like(
+            list(range(len(sorted_idx))), sorted_idx
+        )
+        # adapt sample column in gradient samples to the one of the sorted values of
+        # the gradient_block the gradient is attached to
+        sample_values = _dispatch.copy(sample_values)
+        sample_values[:, 0] = sorted_idx_inverse[
+            _dispatch.to_index_array(sample_values[:, 0])
+        ]
+
+        # sort the samples in gradient regularly moving the rows considering all columns
+        sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        sample_values = sample_values[sorted_idx]
+        values = values[sorted_idx]
+    if "components" in axes:
+        for i, _ in enumerate(gradient_block.components):
+            sorted_idx = _dispatch.argsort_labels_values(
+                components_values[i], reverse=descending
+            )
+            components_values[i] = components_values[i][sorted_idx]
+            values = _dispatch.take(values, sorted_idx, axis=i + 1)
+    if "properties" in axes:
+        sorted_idx = _dispatch.argsort_labels_values(
+            properties_values, reverse=descending
+        )
+        properties_values = properties_values[sorted_idx]
+        values = _dispatch.take(values, sorted_idx, axis=-1)
+
+    samples_labels = Labels(names=sample_names, values=sample_values)
+    properties_labels = Labels(names=property_names, values=properties_values)
+    components_labels = [
+        Labels(names=component_names[i], values=components_values[i])
+        for i in range(len(component_names))
+    ]
+
+    return TensorBlock(
+        values=values,
+        samples=samples_labels,
+        components=components_labels,
+        properties=properties_labels,
+    )
 
 
 def _sort_single_block(
@@ -59,6 +146,7 @@ def _sort_single_block(
     )
 
 
+@torch_jit_script
 def sort_block(
     block: TensorBlock,
     axes: Union[str, List[str]] = "all",
@@ -84,15 +172,13 @@ def sort_block(
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
-    ...     samples=Labels(
-    ...         ["structures", "centers"], np.array([[0, 3], [0, 1], [0, 2]])
-    ...     ),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 3], [0, 1], [0, 2]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
     ... )
     >>> print(block)
     TensorBlock
-        samples (3): ['structures', 'centers']
+        samples (3): ['system', 'atom']
         components (): []
         properties (3): ['n', 'l']
         gradients: None
@@ -172,12 +258,15 @@ def sort_block(
 
         result_block.add_gradient(
             parameter=parameter,
-            gradient=_sort_single_block(gradient, axes_list, descending),
+            gradient=_sort_single_gradient_block(
+                block, gradient, axes_list, descending
+            ),
         )
 
     return result_block
 
 
+@torch_jit_script
 def sort(
     tensor: TensorMap,
     axes: Union[str, List[str]] = "all",
@@ -203,26 +292,24 @@ def sort(
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block_1 = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
-    ...     samples=Labels(
-    ...         ["structures", "centers"], np.array([[0, 3], [0, 1], [0, 2]])
-    ...     ),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 3], [0, 1], [0, 2]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[1, 0], [2, 0], [0, 0]])),
     ... )
     >>> block_2 = TensorBlock(
     ...     values=np.arange(3).reshape(1, 3),
-    ...     samples=Labels(["structures", "centers"], np.array([[0, 0]])),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0]])),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[1, 0], [2, 0], [0, 0]])),
     ... )
-    >>> tm = TensorMap(
-    ...     keys=Labels(["species"], np.array([[1], [0]])), blocks=[block_2, block_1]
+    >>> tensor = TensorMap(
+    ...     keys=Labels(["types"], np.array([[1], [0]])), blocks=[block_2, block_1]
     ... )
-    >>> metatensor.sort(tm, axes="keys")
+    >>> metatensor.sort(tensor, axes="keys")
     TensorMap with 2 blocks
-    keys: species
-             0
-             1
+    keys: types
+            0
+            1
     """
     if isinstance(axes, str):
         axes_list: List[str] = []
@@ -230,7 +317,7 @@ def sort(
             axes_list = ["samples", "components", "properties"]
             sort_keys = True
         elif axes == "keys":
-            axes_list = []
+            axes_list = torch_jit_annotate(List[str], [])
             sort_keys = True
         else:
             axes_list = [axes]

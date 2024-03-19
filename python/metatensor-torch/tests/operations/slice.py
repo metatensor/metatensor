@@ -7,30 +7,20 @@ import metatensor.torch
 from metatensor.torch import Labels, TensorMap
 
 
-def check_operation(slice):
+def test_slice():
     tensor = TensorMap(
         keys=Labels.single(),
         blocks=[
             metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
         ],
     )
-    samples = Labels(
-        names=["sample"],
-        values=torch.tensor([[1]]),
+    samples = Labels(names=["sample"], values=torch.tensor([[1]]))
+    properties = Labels(names=["property"], values=torch.tensor([[1]]))
+    sliced_tensor_samples = metatensor.torch.slice(
+        tensor, axis="samples", labels=samples
     )
-    properties = Labels(
-        names=["property"],
-        values=torch.tensor([[1]]),
-    )
-    sliced_tensor_samples = slice(
-        tensor,
-        axis="samples",
-        labels=samples,
-    )
-    sliced_tensor_properties = slice(
-        tensor,
-        axis="properties",
-        labels=properties,
+    sliced_tensor_properties = metatensor.torch.slice(
+        tensor, axis="properties", labels=properties
     )
 
     # check type
@@ -48,25 +38,15 @@ def check_operation(slice):
     )
 
 
-def check_operation_block(slice_block):
+def test_slice_block():
     block = metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
-    samples = Labels(
-        names=["sample"],
-        values=torch.tensor([[1]]),
+    samples = Labels(names=["sample"], values=torch.tensor([[1]]))
+    properties = Labels(names=["property"], values=torch.tensor([[1]]))
+    sliced_block_samples = metatensor.torch.slice_block(
+        block, axis="samples", labels=samples
     )
-    properties = Labels(
-        names=["property"],
-        values=torch.tensor([[1]]),
-    )
-    sliced_block_samples = slice_block(
-        block,
-        axis="samples",
-        labels=samples,
-    )
-    sliced_block_properties = slice_block(
-        block,
-        axis="properties",
-        labels=properties,
+    sliced_block_properties = metatensor.torch.slice_block(
+        block, axis="properties", labels=properties
     )
 
     # check type
@@ -82,26 +62,13 @@ def check_operation_block(slice_block):
     assert torch.equal(sliced_block_properties.values, torch.tensor([[1], [4]]))
 
 
-def test_operations_as_python():
-    check_operation(metatensor.torch.slice)
-    check_operation_block(metatensor.torch.slice_block)
-
-
-def test_operations_as_torch_script():
-    check_operation(torch.jit.script(metatensor.torch.slice))
-    check_operation_block(torch.jit.script(metatensor.torch.slice_block))
-
-
 def test_save_load():
-    scripted = torch.jit.script(metatensor.torch.slice)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
-    scripted = torch.jit.script(metatensor.torch.slice_block)
-    buffer = io.BytesIO()
-    torch.jit.save(scripted, buffer)
-    buffer.seek(0)
-    torch.jit.load(buffer)
-    buffer.close()
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.slice, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)
+
+    with io.BytesIO() as buffer:
+        torch.jit.save(metatensor.torch.slice_block, buffer)
+        buffer.seek(0)
+        torch.jit.load(buffer)

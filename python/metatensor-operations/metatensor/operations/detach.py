@@ -1,30 +1,10 @@
 from typing import List
 
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 
 
-def detach(tensor: TensorMap) -> TensorMap:
-    """
-    Detach all the arrays in this ``tensor`` from any computational graph.
-
-    This is useful for example when handling torch arrays, to be able to save them with
-    :py:func:`metatensor.save` or :py:func:`metatensor.torch.save`.
-
-    This function is related but different to :py:func:`metatensor.remove_gradients`.
-    :py:func:`metatensor.remove_gradients` can be used to remove the explicit forward
-    mode gradients stored inside the blocks, and this function detach the values (as
-    well as any potential gradients) from the computational graph PyTorch uses for
-    backward differentiation.
-    """
-
-    blocks: List[TensorBlock] = []
-    for block in tensor.blocks():
-        blocks.append(detach_block(block))
-
-    return TensorMap(tensor.keys, blocks)
-
-
+@torch_jit_script
 def detach_block(block: TensorBlock) -> TensorBlock:
     """
     Detach all the values in this ``block`` and all of its gradient from any
@@ -60,3 +40,25 @@ def detach_block(block: TensorBlock) -> TensorBlock:
         )
 
     return new_block
+
+
+@torch_jit_script
+def detach(tensor: TensorMap) -> TensorMap:
+    """
+    Detach all the arrays in this ``tensor`` from any computational graph.
+
+    This is useful for example when handling torch arrays, to be able to save them with
+    :py:func:`metatensor.save` or :py:func:`metatensor.torch.save`.
+
+    This function is related but different to :py:func:`metatensor.remove_gradients`.
+    :py:func:`metatensor.remove_gradients` can be used to remove the explicit forward
+    mode gradients stored inside the blocks, and this function detach the values (as
+    well as any potential gradients) from the computational graph PyTorch uses for
+    backward differentiation.
+    """
+
+    blocks: List[TensorBlock] = []
+    for block in tensor.blocks():
+        blocks.append(detach_block(block))
+
+    return TensorMap(tensor.keys, blocks)

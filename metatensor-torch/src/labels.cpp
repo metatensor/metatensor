@@ -290,6 +290,14 @@ TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor 
         );
     }
 
+    if (values.size(0) != this->count()) {
+        C10_THROW_ERROR(
+            ValueError,
+            "the new `values` contains " + std::to_string(values.size(0)) + " entries, "
+            "but the Labels contains " + std::to_string(this->count())
+        );
+    }
+
     auto old_values = this->values();
     auto first = old_values.index({torch::indexing::Slice(), torch::indexing::Slice(0, index)});
     auto second = old_values.index({torch::indexing::Slice(), torch::indexing::Slice(index)});

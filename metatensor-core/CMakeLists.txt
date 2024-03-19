@@ -127,16 +127,21 @@ endif()
 # ============================================================================ #
 # determine Cargo flags
 
+set(CARGO_BUILD_ARG "")
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.lock)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--locked")
+endif()
+
 # TODO: support multiple configuration generators (MSVC, ...)
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
 if ("${BUILD_TYPE}" STREQUAL "debug")
-    set(CARGO_BUILD_ARG "")
     set(CARGO_BUILD_TYPE "debug")
 elseif("${BUILD_TYPE}" STREQUAL "release")
-    set(CARGO_BUILD_ARG "--release")
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--release")
     set(CARGO_BUILD_TYPE "release")
 elseif("${BUILD_TYPE}" STREQUAL "relwithdebinfo")
-    set(CARGO_BUILD_ARG "--release")
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--release")
     set(CARGO_BUILD_TYPE "release")
 else()
     message(FATAL_ERROR "unsuported build type: ${CMAKE_BUILD_TYPE}")
@@ -190,7 +195,7 @@ if (CARGO_VERSION_CHANGED)
     file(APPEND "${TMPDIR}/_cargo_required_libs/Cargo.toml" "[lib]\ncrate-type=[\"staticlib\"]")
 
     execute_process(
-        COMMAND ${CARGO_EXE} rustc --verbose --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
+        COMMAND ${CARGO_EXE} rustc --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
         WORKING_DIRECTORY "${TMPDIR}/_cargo_required_libs"
         RESULT_VARIABLE cargo_build_result
         ERROR_VARIABLE cargo_build_error_message
@@ -213,10 +218,17 @@ if (CARGO_VERSION_CHANGED)
             string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
             list(APPEND stripped_lib_list "${stripped_lib}")
         endforeach()
+
         # Special case `msvcrt` to link with the debug version in Debug mode.
         list(TRANSFORM stripped_lib_list REPLACE "^msvcrt$" "\$<\$<CONFIG:Debug>:msvcrtd>")
-        list(REMOVE_DUPLICATES stripped_lib_list)
 
+        if (APPLE)
+            # Prevent warnings about duplicated `System` in linked libraries
+            # from Apple's `ld`
+            list(REMOVE_ITEM stripped_lib_list "System")
+        endif()
+
+        list(REMOVE_DUPLICATES stripped_lib_list)
         set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
 
         if (${METATENSOR_MAIN_PROJECT})
@@ -226,8 +238,6 @@ if (CARGO_VERSION_CHANGED)
         message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_build_error_message}`")
     endif()
 endif()
-
-# ============================================================================ #
 
 file(GLOB_RECURSE ALL_RUST_SOURCES
     ${PROJECT_SOURCE_DIR}/Cargo.toml
@@ -258,9 +268,15 @@ if (UNIX)
     if (APPLE)
         # set the install name to `@rpath/libmetatensor.dylib`
         set(CARGO_RUSTC_ARGS "-Clink-arg=-Wl,-install_name,@rpath/${METATENSOR_SHARED_LIB_NAME}")
+        set_target_properties(metatensor::shared PROPERTIES
+            IMPORTED_SONAME @rpath/${METATENSOR_SHARED_LIB_NAME}
+        )
     else() # LINUX
         # set the SONAME to libmetatensor.so
         set(CARGO_RUSTC_ARGS "-Clink-arg=-Wl,-soname,${METATENSOR_SHARED_LIB_NAME}")
+        set_target_properties(metatensor::shared PROPERTIES
+            IMPORTED_SONAME ${METATENSOR_SHARED_LIB_NAME}
+        )
     endif()
 else()
     set(CARGO_RUSTC_ARGS "")
@@ -270,16 +286,34 @@ if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
+if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
+    set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
+else()
+    if (BUILD_SHARED_LIBS)
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
+        set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME}")
+    else()
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
+        set(FILES_CREATED_BY_CARGO "${METATENSOR_STATIC_LIB_NAME}")
+    endif()
+endif()
+
+# Set environement variables for cargo build
+set(CARGO_ENV "METATENSOR_FULL_VERSION=${METATENSOR_FULL_VERSION}")
+if (NOT "${CMAKE_OSX_DEPLOYMENT_TARGET}" STREQUAL "")
+    list(APPEND CARGO_ENV "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif()
+if (NOT "$ENV{RUSTC_WRAPPER}" STREQUAL "")
+    list(APPEND CARGO_ENV "RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}")
+endif()
+
 add_custom_target(cargo-build-metatensor ALL
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        METATENSOR_FULL_VERSION="${METATENSOR_FULL_VERSION}"
-        MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
-        RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}
+    COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
-    COMMENT "Building ${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME} with cargo"
+    COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
     BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
 )
 

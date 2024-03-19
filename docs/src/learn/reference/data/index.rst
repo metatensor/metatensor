@@ -5,25 +5,25 @@ Data utilites
 * :ref:`learn-data-dataloader`
 * :ref:`learn-data-collate`
 
-.. automodule:: metatensor.learn.data
-
 .. _learn-data-dataset:
 
 Dataset
 -------
 
-.. autoclass:: metatensor.learn.data.Dataset
+.. autoclass:: metatensor.learn.Dataset
    :members:
+   :special-members: __getitem__
 
-.. autoclass:: metatensor.learn.data.IndexedDataset
+.. autoclass:: metatensor.learn.IndexedDataset
    :members:
+   :special-members: __getitem__
 
 .. _learn-data-dataloader:
 
 Dataloader
 ----------
 
-.. autoclass:: metatensor.learn.data.DataLoader
+.. autoclass:: metatensor.learn.DataLoader
    :members:
 
 .. _learn-data-collate:

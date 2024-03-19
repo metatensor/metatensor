@@ -7,7 +7,12 @@ from torch.nn import Module, Sigmoid
 from metatensor.torch import Labels, allclose_raise
 from metatensor.torch.learn.nn import ModuleMap
 
-from .utils import TORCH_KWARGS, single_block_tensor  # noqa F401
+from .utils import random_single_block_no_components_tensor_map
+
+
+@pytest.fixture
+def single_block_tensor():
+    return random_single_block_no_components_tensor_map()
 
 
 try:
@@ -33,7 +38,7 @@ class MockModule(Module):
 @pytest.fixture(scope="function", autouse=True)
 def set_random_generator():
     """Set the random generator to same seed before each test is run.
-    Otherwise test behaviour is dependend on the order of the tests
+    Otherwise test behaviour is dependent on the order of the tests
     in this file and the number of parameters of the test.
     """
     torch.random.manual_seed(122578741812)
@@ -48,9 +53,7 @@ def set_default_torch_resources():
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], torch.tensor([[1, 1]]))]]
 )
-def test_module_map_single_block_tensor(
-    single_block_tensor, out_properties  # noqa F811
-):
+def test_module_map_single_block_tensor(single_block_tensor, out_properties):
     modules = []
     for key in single_block_tensor.keys:
         modules.append(
@@ -160,7 +163,7 @@ def test_cuda_module_map_to(single_block_tensor, out_properties):  # noqa F811
     assert out_tensor.device.type == "cuda"
 
 
-def test_torchscript_module_map(single_block_tensor):  # noqa F811
+def test_torchscript_module_map(single_block_tensor):
     modules = []
     for key in single_block_tensor.keys:
         modules.append(

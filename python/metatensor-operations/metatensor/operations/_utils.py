@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap
 
 
 class NotEqualError(Exception):
@@ -167,7 +167,7 @@ def _check_blocks_impl(
                     )
         else:
             raise ValueError(
-                f"{metadata} is not a valid property to check, "
+                f"'{metadata}' does not refer to metadata to check, "
                 "choose from 'samples', 'properties' and 'components'"
             )
     return ""

@@ -1,12 +1,13 @@
 from typing import List, Union
 
 from . import _dispatch
-from ._classes import (
+from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
     check_isinstance,
     torch_jit_is_scripting,
+    torch_jit_script,
 )
 from ._utils import _check_same_keys_raise
 from .manipulate_dimension import remove_dimension
@@ -48,6 +49,143 @@ def _unique_str(str_list: List[str]):
     return unique_strings
 
 
+def _tensors_intersection(tensors: List[TensorMap]) -> List[TensorMap]:
+    """Create a new tensors list where keys are based on the intersection from all
+    tensors.
+
+    Blocks corresponding to keys that are not present in all tensor will be discarded.
+    """
+    # Construct a Labels object with intersected keys
+    all_keys = tensors[0].keys
+    for tensor in tensors[1:]:
+        all_keys = all_keys.intersection(tensor.keys)
+
+    # Create new blocks and discard bocks not present in all_keys
+    new_tensors: List[TensorMap] = []
+    for tensor in tensors:
+        new_blocks: List[TensorBlock] = []
+        for i_key in range(all_keys.values.shape[0]):
+            new_blocks.append(tensor.block(all_keys.entry(i_key)).copy())
+        new_tensors.append(TensorMap(keys=all_keys, blocks=new_blocks))
+
+    return new_tensors
+
+
+def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
+    """Create a new tensors list where keys are based on the union from all tensors.
+
+    Missing keys will be filled by empty blocks having containing no labels in the
+    ``axis`` dimension.
+    """
+    # Construct a Labels object with all keys
+
+    all_keys = tensors[0].keys
+    for tensor in tensors[1:]:
+        all_keys = all_keys.union(tensor.keys)
+
+    # Create empty blocks for missing keys for each TensorMap
+    new_tensors: List[TensorMap] = []
+    for tensor in tensors:
+        _, map, _ = all_keys.intersection_and_mapping(tensor.keys)
+
+        missing_keys = Labels(
+            names=tensor.keys.names, values=all_keys.values[map == -1]
+        )
+
+        new_keys = tensor.keys.union(missing_keys)
+        new_blocks = [block.copy() for block in tensor.blocks()]
+
+        for i_key in range(missing_keys.values.shape[0]):
+            key = missing_keys.entry(i_key)
+            # Find corresponding block with the missing key
+            reference_block: Union[None, TensorBlock] = None
+            for reference_tensor in tensors:
+                if key in reference_tensor.keys:
+                    reference_block = reference_tensor.block(key)
+                    break
+
+            # There should be a block with the key otherwise we did something wrong
+            assert reference_block is not None
+
+            # Construct new block with zero samples based on the metadata of
+            # reference_block
+            if axis == "samples":
+                values = _dispatch.empty_like(
+                    array=reference_block.values,
+                    shape=(0,) + reference_block.values.shape[1:],
+                )
+                samples = Labels(
+                    names=reference_block.samples.names,
+                    values=_dispatch.empty_like(
+                        reference_block.samples.values,
+                        (0, len(reference_block.samples.names)),
+                    ),
+                )
+                properties = reference_block.properties
+            else:
+                assert axis == "properties"
+                values = _dispatch.empty_like(
+                    array=reference_block.values,
+                    shape=reference_block.values.shape[:-1] + (0,),
+                )
+                samples = reference_block.samples
+                properties = Labels(
+                    names=reference_block.properties.names,
+                    values=_dispatch.empty_like(
+                        reference_block.properties.values,
+                        (0, len(reference_block.properties.names)),
+                    ),
+                )
+
+            new_block = TensorBlock(
+                values=values,
+                samples=samples,
+                components=reference_block.components,
+                properties=properties,
+            )
+
+            for parameter, gradient in reference_block.gradients():
+                if len(gradient.gradients_list()) != 0:
+                    raise NotImplementedError(
+                        "gradients of gradients are not supported"
+                    )
+
+                if axis == "samples":
+                    values = _dispatch.empty_like(
+                        array=gradient.values,
+                        shape=(0,) + gradient.values.shape[1:],
+                    )
+                    gradient_samples = Labels(
+                        names=gradient.samples.names,
+                        values=_dispatch.empty_like(
+                            gradient.samples.values, (0, len(gradient.samples.names))
+                        ),
+                    )
+                else:
+                    values = _dispatch.empty_like(
+                        array=gradient.values,
+                        shape=gradient.values.shape[:-1] + (0,),
+                    )
+                    gradient_samples = gradient.samples
+
+                new_block.add_gradient(
+                    parameter=parameter,
+                    gradient=TensorBlock(
+                        values=values,
+                        samples=gradient_samples,
+                        components=gradient.components,
+                        properties=properties,
+                    ),
+                )
+
+            new_blocks.append(new_block)
+
+        new_tensors.append(TensorMap(keys=new_keys, blocks=new_blocks))
+
+    return new_tensors
+
+
+@torch_jit_script
 def join(
     tensors: List[TensorMap],
     axis: str,
@@ -337,139 +475,3 @@ def join(
         return remove_dimension(tensor_joined, name="tensor", axis=axis)
     else:
         return tensor_joined
-
-
-def _tensors_intersection(tensors: List[TensorMap]) -> List[TensorMap]:
-    """Create a new tensors list where keys are based on the intersection from all
-    tensors.
-
-    Blocks corresponding to keys that are not present in all tensor will be discarded.
-    """
-    # Construct a Labels object with intersected keys
-    all_keys = tensors[0].keys
-    for tensor in tensors[1:]:
-        all_keys = all_keys.intersection(tensor.keys)
-
-    # Create new blocks and discard bocks not present in all_keys
-    new_tensors: List[TensorMap] = []
-    for tensor in tensors:
-        new_blocks: List[TensorBlock] = []
-        for i_key in range(all_keys.values.shape[0]):
-            new_blocks.append(tensor.block(all_keys.entry(i_key)).copy())
-        new_tensors.append(TensorMap(keys=all_keys, blocks=new_blocks))
-
-    return new_tensors
-
-
-def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
-    """Create a new tensors list where keys are based on the union from all tensors.
-
-    Missing keys will be filled by empty blocks having containing no labels in the
-    ``axis`` dimension.
-    """
-    # Construct a Labels object with all keys
-
-    all_keys = tensors[0].keys
-    for tensor in tensors[1:]:
-        all_keys = all_keys.union(tensor.keys)
-
-    # Create empty blocks for missing keys for each TensorMap
-    new_tensors: List[TensorMap] = []
-    for tensor in tensors:
-        _, map, _ = all_keys.intersection_and_mapping(tensor.keys)
-
-        missing_keys = Labels(
-            names=tensor.keys.names, values=all_keys.values[map == -1]
-        )
-
-        new_keys = tensor.keys.union(missing_keys)
-        new_blocks = [block.copy() for block in tensor.blocks()]
-
-        for i_key in range(missing_keys.values.shape[0]):
-            key = missing_keys.entry(i_key)
-            # Find corresponding block with the missing key
-            reference_block: Union[None, TensorBlock] = None
-            for reference_tensor in tensors:
-                if key in reference_tensor.keys:
-                    reference_block = reference_tensor.block(key)
-                    break
-
-            # There should be a block with the key otherwise we did something wrong
-            assert reference_block is not None
-
-            # Construct new block with zero samples based on the metadata of
-            # reference_block
-            if axis == "samples":
-                values = _dispatch.empty_like(
-                    array=reference_block.values,
-                    shape=(0,) + reference_block.values.shape[1:],
-                )
-                samples = Labels(
-                    names=reference_block.samples.names,
-                    values=_dispatch.empty_like(
-                        reference_block.samples.values,
-                        (0, len(reference_block.samples.names)),
-                    ),
-                )
-                properties = reference_block.properties
-            else:
-                assert axis == "properties"
-                values = _dispatch.empty_like(
-                    array=reference_block.values,
-                    shape=reference_block.values.shape[:-1] + (0,),
-                )
-                samples = reference_block.samples
-                properties = Labels(
-                    names=reference_block.properties.names,
-                    values=_dispatch.empty_like(
-                        reference_block.properties.values,
-                        (0, len(reference_block.properties.names)),
-                    ),
-                )
-
-            new_block = TensorBlock(
-                values=values,
-                samples=samples,
-                components=reference_block.components,
-                properties=properties,
-            )
-
-            for parameter, gradient in reference_block.gradients():
-                if len(gradient.gradients_list()) != 0:
-                    raise NotImplementedError(
-                        "gradients of gradients are not supported"
-                    )
-
-                if axis == "samples":
-                    values = _dispatch.empty_like(
-                        array=gradient.values,
-                        shape=(0,) + gradient.values.shape[1:],
-                    )
-                    gradient_samples = Labels(
-                        names=gradient.samples.names,
-                        values=_dispatch.empty_like(
-                            gradient.samples.values, (0, len(gradient.samples.names))
-                        ),
-                    )
-                else:
-                    values = _dispatch.empty_like(
-                        array=gradient.values,
-                        shape=gradient.values.shape[:-1] + (0,),
-                    )
-                    gradient_samples = gradient.samples
-
-                new_block.add_gradient(
-                    parameter=parameter,
-                    gradient=TensorBlock(
-                        values=values,
-                        samples=gradient_samples,
-                        components=gradient.components,
-                        properties=properties,
-                    ),
-                )
-
-            new_blocks.append(new_block)
-
-        new_tensors.append(TensorMap(keys=new_keys, blocks=new_blocks))
-
-    return new_tensors

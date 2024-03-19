@@ -8,14 +8,28 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- Possible sections
 
-#### Added
+### Added
 
-#### Fixed
+### Fixed
 
-#### Changed
+### Changed
 
-#### Removed
+### Removed
 -->
+
+## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.1) - 2024-03-01
+
+### Changed
+
+- `metatensor-learn` is no longer re-exported from `metatensor` and
+  `metatensor.torch`, all functions are still available inside
+  `metatensor.learn` and `metatensor.torch.learn`.
+
+### Fixed
+
+- Make sure the `Dataset` class is iterable (#500)
+
+## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.0) - 2024-02-07
 
 ### Changed
 
@@ -23,10 +37,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sample_id`, and provided collate functions `group` and `group_and_join`
   updated accordingly.
 
-#### Fixed
+### Fixed
 
-- Removal of usage of Labels.range in nn modules to support torch.jit.save see metatensor issue #410
-- Set correct device for output of when torch default device is different than input device
+- Removal of usage of Labels.range in nn modules to support torch.jit.save (#410)
+- Set correct device for output of when torch default device is different than input device (#496)
 
 ## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.1.0) - 2024-01-26
 

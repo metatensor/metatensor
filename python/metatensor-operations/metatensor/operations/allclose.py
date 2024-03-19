@@ -1,5 +1,5 @@
 from . import _dispatch
-from ._classes import TensorBlock, TensorMap
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import (
     NotEqualError,
     _check_blocks_impl,
@@ -76,6 +76,7 @@ def _allclose_block_impl(
     return ""
 
 
+@torch_jit_script
 def allclose(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
@@ -120,7 +121,7 @@ def allclose(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -142,7 +143,7 @@ def allclose(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -178,7 +179,7 @@ def allclose(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -220,6 +221,7 @@ def allclose(
     )
 
 
+@torch_jit_script
 def allclose_raise(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
@@ -259,7 +261,7 @@ def allclose_raise(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -281,7 +283,7 @@ def allclose_raise(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -329,6 +331,7 @@ values are not allclose
         raise NotEqualError(message)
 
 
+@torch_jit_script
 def allclose_block(
     block_1: TensorBlock,
     block_2: TensorBlock,
@@ -373,7 +376,7 @@ def allclose_block(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -395,7 +398,7 @@ def allclose_block(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -428,6 +431,7 @@ def allclose_block(
     )
 
 
+@torch_jit_script
 def allclose_block_raise(
     block_1: TensorBlock,
     block_2: TensorBlock,
@@ -467,7 +471,7 @@ def allclose_block_raise(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],
@@ -490,7 +494,7 @@ def allclose_block_raise(
     ...         ]
     ...     ),
     ...     samples=Labels(
-    ...         ["structure", "center"],
+    ...         ["system", "atom"],
     ...         np.array(
     ...             [
     ...                 [0, 0],

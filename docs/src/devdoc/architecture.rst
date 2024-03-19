@@ -14,15 +14,19 @@ The code is organized in multiple modules, each in a separate directory:
 - ``metatensor/`` contains the Rust interface to metatensor, using the C API
   defined in ``metatensor-core``, as well as the corresponding tests and
   examples.
-- ``python/metatensor-core`` contains the Python interface to the core
+- ``python/metatensor-core/`` contains the Python interface to the core
   metatensor types, and the corresponding tests;
-- ``python/metatensor-operations`` contains a set of pure Python functions to
+- ``python/metatensor-operations/`` contains a set of pure Python functions to
   manipulate data in metatensor format, and the corresponding tests;
-- ``python/metatensor-torch`` contains the Python interface for the TorchScript
+- ``python/metatensor-learn/`` contains pure Python helpers to define machine
+  learning models, with API inspired by scikit-learn and PyTorch;
+- ``python/metatensor-torch/`` contains the Python interface for the TorchScript
   version of metatensor, and the corresponding tests;
-- ``python/metatensor`` contains a small Python package re-exporting everything
+- ``python/metatensor/`` contains a small Python package re-exporting everything
   from ``metatensor-core`` and ``metatensor-operations``. This is the main
   package users should interact with.
+- ``julia/`` contains the Julia bindings to metatensor, which are currently in
+  very early alpha stage;
 
 Finally, ``docs/`` contains the documentation for everything related to
 metatensor.
@@ -90,8 +94,12 @@ when installed will correspond to different sub-module of ``metatensor``:
 - the ``metatensor-core`` distribution contains the ``metatensor`` module;
 - the ``metatensor-operations`` distribution contains the
   ``metatensor.operations`` module; which depends on ``metatensor-core``;
+- the ``metatensor-learn`` distribution contains the ``metatensor.learn``
+  module; which depends on ``metatensor-operations``;
 - the ``metatensor-torch`` distribution contains the ``metatensor.torch``
-  module;
+  module. This module re-exports ``metatensor-operations`` and
+  ``metatensor-learn`` as ``metatensor.torch.operations`` and
+  ``metatensor.torch.learn`` respectively;
 
 All the Python sub-projects are built by setuptools, and fully compatible with
 pip and other standard Python tools.
@@ -109,7 +117,7 @@ are generated from the ``metatensor.h`` header when running
 -------------------------
 
 This Python package contains the code for the :ref:`operations
-<python-api-operations>` acting on :py:class:`TensorMap`, and provides building
+<metatensor-operations>` acting on :py:class:`TensorMap`, and provides building
 blocks for machine learning models on top of the metatensor data structures.
 
 By default, the operations uses the types from ``metatensor-core``, and can act
@@ -122,6 +130,17 @@ is achieved by re-importing the code from ``metatensor-operations`` in a new
 module ``metatensor.torch.operations``. See the comments in
 ``python/metatensor-torch/metatensor/torch/operations.py`` for more information.
 
+``metatensor-learn``
+-------------------------
+
+This Python package contains the code for the machine learning :ref:`helpers
+tools <metatensor-learn>` and other facilities to define new models based on
+metatensor data format.
+
+Similarly to ``metatensor-operations``, it uses types and functionalities from
+``metatensor-core`` by default, and is re-exported in ``metatensor-torch`` using
+types and functions from there instead.
+
 ``metatensor-torch``
 --------------------
 
@@ -130,7 +149,12 @@ This Python package exposes to Python the types defined in the C++
 then exported using TorchScript and run without a Python interpreter.
 
 As mentioned above, this package also re-export the code from
-``metatensor-operations`` in a way compatible with TorchScript.
+``metatensor-operations`` and ``metatensor-learn`` in a way compatible with
+TorchScript.
+
+Finally this package also contains facilities to define atomistic machine
+learning models. Refer to the :ref:`corresponding documentation
+<atomistic-models>` for more information.
 
 
 ``metatensor``

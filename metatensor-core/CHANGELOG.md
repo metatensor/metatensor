@@ -29,6 +29,21 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
 
+## [Version 0.1.4](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.4) - 2024-03-01
+
+### Fixed
+
+- fixed compilation on macOS (#525)
+- added checks for the size of the new values in `Labels.insert` (#519)
+
+## [Version 0.1.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.3) - 2024-02-12
+
+### Fixed
+
+- Fixed the build with Cargo 1.65 (#505)
+- Pin dependencies for metatensor-core, ensuring reproducibility of the build as
+  new dependencies versions are published (#506)
+
 ## [Version 0.1.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.2) - 2024-01-26
 
 ### metatensor-core C++

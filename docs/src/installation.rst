@@ -102,7 +102,9 @@ and use it will depend on the programming language you are using.
         |                                           | library instead of a static one               |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
         | ``METATENSOR_INSTALL_BOTH_STATIC_SHARED`` | Install both the shared and static version    | ON             |
-        |                                           | of the library                                |                |
+        |                                           | of the library. If ``OFF`` only the library   |                |
+        |                                           | selected by ``BUILD_SHARED_LIBS`` will be     |                |
+        |                                           | built.                                        |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
 
 

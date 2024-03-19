@@ -54,6 +54,13 @@ print(in_memory_dataset[0])
 
 # %%
 #
+# One can also iterate over the samples in the dataset as follows:
+
+for sample in in_memory_dataset:
+    print(sample)
+
+# %%
+#
 # Any number of named data fields can be passed to the Dataset constructor, as long as
 # they are all uniquely named, and are all lists of the same length. The elements of
 # each list can be any type of object (integer, string, torch Tensor, etc.), as long as
