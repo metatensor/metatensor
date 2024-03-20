@@ -65,8 +65,7 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
     tensor_module = ModuleMap(
         single_block_tensor_torch.keys, modules, out_properties=out_properties
     )
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
+    out_tensor = tensor_module(single_block_tensor_torch)
 
     for i, item in enumerate(single_block_tensor_torch.items()):
         key, block = item
@@ -75,8 +74,7 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
             tensor_module.get_module(key) is module
         ), "modules should be initialized in the same order as keys"
 
-        with torch.no_grad():
-            ref_values = module(block.values)
+        ref_values = module(block.values)
         out_block = out_tensor.block(key)
         assert torch.allclose(ref_values, out_block.values)
         if out_properties is None:
@@ -85,8 +83,7 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
             assert out_block.properties == out_properties[0]
 
         for parameter, gradient in block.gradients():
-            with torch.no_grad():
-                ref_gradient_values = module(gradient.values)
+            ref_gradient_values = module(gradient.values)
             assert torch.allclose(
                 ref_gradient_values, out_block.gradient(parameter).values
             )
@@ -101,9 +98,10 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
-def test_module_map_to(single_block_tensor_torch, out_properties):  # noqa F811
+def test_module_map_to_meta(single_block_tensor_torch, out_properties):  # noqa F811
     """
-    Checks the `to` function of module map
+    Checks the `to` function of module map by moving the module to meta and checking
+    that the output tensor is on meta device.
     """
     modules = []
     for key in single_block_tensor_torch.keys:
@@ -116,26 +114,28 @@ def test_module_map_to(single_block_tensor_torch, out_properties):  # noqa F811
     tensor_module = ModuleMap(
         single_block_tensor_torch.keys, modules, out_properties=out_properties
     )
-    tensor_module.to("cpu")
-    single_block_tensor_torch = single_block_tensor_torch.to(device="cpu")
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
-    assert out_tensor.device.type == "cpu"
+
+    # cpu -> meta
+    tensor_module.to("meta")
+    for parameter in tensor_module.parameters():
+        assert parameter.device.type == "meta"
+    single_block_tensor_torch = single_block_tensor_torch.to(device="meta")
+    out_tensor = tensor_module(single_block_tensor_torch)
+    assert out_tensor.device.type == "meta"
 
 
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
-def test_cuda_module_map_to(single_block_tensor_torch, out_properties):  # noqa F811
+def test_module_map_to_cuda(single_block_tensor_torch, out_properties):  # noqa F811
     """
     We set the correct default device for initialization and check if the module this
     works once the default device has been changed. This catches cases where the default
     device or a hard coded device is used for tensor created within the forward
     function.
     """
-    # cuda -> cpu
-    torch.set_default_device("cuda")
+
     modules = []
     for key in single_block_tensor_torch.keys:
         modules.append(
@@ -145,35 +145,22 @@ def test_cuda_module_map_to(single_block_tensor_torch, out_properties):  # noqa 
             )
         )
 
-    # labels are always on cpu in metatensor-core so we don't need to move them to
-    # default device
     tensor_module = ModuleMap(
         single_block_tensor_torch.keys, modules, out_properties=out_properties
     )
-    tensor_module.to("cpu")
-    single_block_tensor_torch = single_block_tensor_torch.to(device="cpu")
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
-    assert out_tensor.device.type == "cpu"
 
     # cpu -> cuda
-    torch.set_default_device("cpu")
-    modules = []
-    for key in single_block_tensor_torch.keys:
-        modules.append(
-            MockModule(
-                in_features=len(single_block_tensor_torch.block(key).properties),
-                out_features=5,
-            )
-        )
-    # labels are always on cpu in metatensor-core so we don't need to move them to
-    # default device
-    tensor_module = ModuleMap(
-        single_block_tensor_torch.keys, modules, out_properties=out_properties
-    )
     tensor_module.to("cuda")
+    for parameter in tensor_module.parameters():
+        assert parameter.device.type == "cuda"
     single_block_tensor_torch = single_block_tensor_torch.to(device="cuda")
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
-
+    out_tensor = tensor_module(single_block_tensor_torch)
     assert out_tensor.device.type == "cuda"
+
+    # cuda -> cpu
+    tensor_module.to("cpu")
+    for parameter in tensor_module.parameters():
+        assert parameter.device.type == "cpu"
+    single_block_tensor_torch = single_block_tensor_torch.to(device="cpu")
+    out_tensor = tensor_module(single_block_tensor_torch)
+    assert out_tensor.device.type == "cpu"

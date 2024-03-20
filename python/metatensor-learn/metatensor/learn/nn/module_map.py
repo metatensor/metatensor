@@ -342,11 +342,8 @@ class ModuleMap(ModuleList):
         representation += ")"
         return representation
 
-    def to(self, *args, **kwargs):
-
-        # extract device, as in
-        # https://pytorch.org/docs/stable/_modules/torch/nn/modules/module.html
-        device, _, _, _ = torch._C._nn._parse_to(*args, **kwargs)
+    @torch.jit.export
+    def to(self, device: Optional[torch.device]=None, dtype: Optional[torch.dtype]=None):
 
         self._in_keys = self._in_keys.to(device)
         self._out_properties = (
@@ -355,4 +352,4 @@ class ModuleMap(ModuleList):
             else [p.to(device) for p in self._out_properties]
         )
 
-        super().to(*args, **kwargs)
+        super(ModuleMap, self).to(device, dtype)
