@@ -12,7 +12,7 @@
 #include "metatensor/torch/atomistic/system.hpp"
 #include "metatensor/torch/atomistic/model.hpp"
 
-#include "../internal/scalar_type_name.hpp"
+#include "../internal/utils.hpp"
 
 
 using namespace metatensor_torch;
@@ -531,6 +531,24 @@ System SystemHolder::to(
     }
 
     return system;
+}
+
+
+System SystemHolder::to_positional(
+    torch::IValue positional_1,
+    torch::IValue positional_2,
+    torch::optional<torch::Dtype> dtype,
+    torch::optional<torch::Device> device
+) const {
+    auto [parsed_dtype, parsed_device] = to_arguments_parse(
+        positional_1,
+        positional_2,
+        dtype,
+        device,
+        "`System.to`"
+    );
+
+    return this->to(parsed_dtype, parsed_device);
 }
 
 

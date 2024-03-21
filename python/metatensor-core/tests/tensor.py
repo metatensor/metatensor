@@ -496,6 +496,30 @@ def test_to():
     converted = tensor.to(dtype=np.float32)
     assert converted.dtype == np.float32
 
+    # check that the code handles both positional and keyword arguments
+    device = "cpu"
+    moved = tensor.to(device, dtype=np.float32)
+    moved = tensor.to(np.float32, device)
+    moved = tensor.to(np.float32, device=device)
+    moved = tensor.to(device, np.float32)
+
+    message = "can not give a device twice in `TensorMap.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = tensor.to("cpu", device="cpu")
+
+    message = "can not give a dtype twice in `TensorMap.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = tensor.to(np.float32, dtype=np.float32)
+
+    # string positional arguments are assumed to be devices
+    message = "can not move numpy array to non-cpu device: test"
+    with pytest.raises(ValueError, match=message):
+        moved = tensor.to("test")
+
+    message = "unexpected type in `TensorMap.to`: <class 'numpy.ndarray'>"
+    with pytest.raises(TypeError, match=message):
+        moved = tensor.to(np.array([0]))
+
     if HAS_TORCH:
         tensor = converted.to(arrays="torch")
         assert isinstance(tensor.block(0).values, torch.Tensor)

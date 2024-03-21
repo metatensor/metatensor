@@ -195,7 +195,9 @@ TORCH_LIBRARY(metatensor, m) {
         .def("gradients", &TensorBlockHolder::gradients)
         .def_property("device", &TensorBlockHolder::device)
         .def_property("dtype", &TensorBlockHolder::scalar_type)
-        .def("to", &TensorBlockHolder::to, DOCSTRING, {
+        .def("to", &TensorBlockHolder::to_positional, DOCSTRING, {
+            torch::arg("_0") = torch::IValue(),
+            torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
             torch::arg("arrays") = torch::nullopt
@@ -249,7 +251,9 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("property_names", &TensorMapHolder::property_names)
         .def_property("device", &TensorMapHolder::device)
         .def_property("dtype", &TensorMapHolder::scalar_type)
-        .def("to", &TensorMapHolder::to, DOCSTRING, {
+        .def("to", &TensorMapHolder::to_positional, DOCSTRING, {
+            torch::arg("_0") = torch::IValue(),
+            torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
             torch::arg("arrays") = torch::nullopt
@@ -334,9 +338,11 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__repr__", &SystemHolder::str)
         .def_property("device", &SystemHolder::device)
         .def_property("dtype", &SystemHolder::scalar_type)
-        .def("to", &SystemHolder::to, DOCSTRING, {
+        .def("to", &SystemHolder::to_positional, DOCSTRING, {
+            torch::arg("_0") = torch::IValue(),
+            torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
-            torch::arg("device") = torch::nullopt,
+            torch::arg("device") = torch::nullopt
         })
         .def("add_neighbors_list", &SystemHolder::add_neighbors_list, DOCSTRING,
             {torch::arg("options"), torch::arg("neighbors")}

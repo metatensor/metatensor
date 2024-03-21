@@ -5,7 +5,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/labels.hpp"
-#include "internal/scalar_type_name.hpp"
+#include "internal/utils.hpp"
 
 using namespace metatensor_torch;
 
