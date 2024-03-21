@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
-from .. import Labels, TensorMap
+from .. import Labels, TensorMap, dtype_name
 from . import ModelOutput, System
 
 
@@ -32,7 +32,8 @@ def _check_outputs(
             if output_dtype != expected_dtype:
                 raise ValueError(
                     f"wrong dtype for the {name} output: "
-                    f"the model promised {expected_dtype}, we got {output_dtype}"
+                    f"the model promised {dtype_name(expected_dtype)}, "
+                    f"we got {dtype_name(output_dtype)}"
                 )
 
     for name, request in requested.items():
