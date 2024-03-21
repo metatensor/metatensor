@@ -196,6 +196,17 @@ public:
         torch::optional<torch::Device> device = torch::nullopt
     ) const;
 
+    /// Wrapper of the `to` function to enable using it with positional
+    /// parameters from Python; for example `to(dtype)`, `to(device)`,
+    /// `to(dtype, device=device)`, `to(dtype, device)`, `to(device, dtype)`,
+    /// etc.
+    System to_positional(
+        torch::IValue positional_1,
+        torch::IValue positional_2,
+        torch::optional<torch::Dtype> dtype,
+        torch::optional<torch::Device> device
+    ) const;
+
     /// Get the number of particles in this system
     int64_t size() const {
         return this->types_.size(0);

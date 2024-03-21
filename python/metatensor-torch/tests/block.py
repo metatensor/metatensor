@@ -297,6 +297,25 @@ def test_to():
     with pytest.raises(ValueError, match=message):
         moved = block.to(arrays="numpy")
 
+    # check that the code handles both positional and keyword arguments
+    device = "meta"
+    moved = block.to(device, dtype=torch.float32)
+    moved = block.to(torch.float32, device)
+    moved = block.to(torch.float32, device=device)
+    moved = block.to(device, torch.float32)
+
+    message = "can not give a device twice in `TensorBlock.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = block.to("meta", device="meta")
+
+    message = "can not give a dtype twice in `TensorBlock.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = block.to(torch.float32, dtype=torch.float32)
+
+    message = "unexpected type in `TensorBlock.to`: Tensor"
+    with pytest.raises(TypeError, match=message):
+        moved = block.to(torch.tensor([0]))
+
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
