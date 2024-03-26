@@ -40,7 +40,7 @@ build_sdist = build_meta.build_sdist
 
 def get_requires_for_build_wheel(config_settings=None):
     defaults = build_meta.get_requires_for_build_wheel(config_settings)
-    return defaults + ["cmake", "torch >=1.11", METATENSOR_CORE_DEP]
+    return defaults + ["cmake ==3.28.4", "torch >=1.11", METATENSOR_CORE_DEP]
 
 
 get_requires_for_build_sdist = build_meta.get_requires_for_build_sdist
