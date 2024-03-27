@@ -471,6 +471,25 @@ def test_to(system, neighbors):
         moved = system.to(device=device)
         assert moved.device.type == torch.device(device).type
 
+    # check that the code handles both positional and keyword arguments
+    device = "meta"
+    moved = system.to(device, dtype=torch.float32)
+    moved = system.to(torch.float32, device)
+    moved = system.to(torch.float32, device=device)
+    moved = system.to(device, torch.float32)
+
+    message = "can not give a device twice in `System.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = system.to("meta", device="meta")
+
+    message = "can not give a dtype twice in `System.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = system.to(torch.float32, dtype=torch.float32)
+
+    message = "unexpected type in `System.to`: Tensor"
+    with pytest.raises(TypeError, match=message):
+        moved = system.to(torch.tensor([0]))
+
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.

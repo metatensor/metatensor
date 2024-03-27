@@ -213,6 +213,6 @@ def test_module_map_dtype(single_block_tensor_torch):
     tensor_module = ModuleMap(single_block_tensor_torch.keys, modules)
     tensor_module(single_block_tensor_torch)
 
-    tensor_module = tensor_module.to(torch.float16)
-    single_block_tensor_torch = single_block_tensor_torch.to(dtype=torch.float16)
+    tensor_module = tensor_module.to(torch.float64)
+    single_block_tensor_torch = single_block_tensor_torch.to(dtype=torch.float64)
     tensor_module(single_block_tensor_torch)

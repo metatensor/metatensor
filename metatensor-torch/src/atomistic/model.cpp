@@ -13,7 +13,6 @@
 #include "metatensor/torch/atomistic/model.hpp"
 #include "metatensor/torch/misc.hpp"
 
-#include "../internal/scalar_type_name.hpp"
 #include "../internal/shared_libraries.hpp"
 
 using namespace metatensor_torch;

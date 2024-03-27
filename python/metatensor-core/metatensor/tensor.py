@@ -3,7 +3,7 @@ import ctypes
 import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import BinaryIO, Dict, List, Optional, Sequence, Union
+from typing import BinaryIO, Dict, List, Sequence, Union
 
 import numpy as np
 
@@ -14,6 +14,7 @@ from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
 from .labels import Labels, LabelsEntry
 from .status import _check_pointer
+from .utils import _to_arguments_parse
 
 
 class TensorMap:
@@ -673,29 +674,29 @@ class TensorMap:
 
         return self.block_by_id(0).dtype
 
-    def to(
-        self,
-        *,
-        dtype: Optional[DType] = None,
-        device: Optional[Device] = None,
-        arrays: Optional[str] = None,
-    ) -> "TensorMap":
+    def to(self, *args, **kwargs) -> "TensorMap":
         """
-        Move all the arrays in this block (values and gradients) to the given ``dtype``,
-        ``device`` and ``arrays`` backend.
+        Move the keys and all the blocks in this :py:class:`TensorMap` to the given
+        ``dtype``, ``device`` and ``arrays`` backend.
+
+        The arguments to this function can be given as positional or keyword arguments.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
         :param arrays: new backend to use for the arrays. This can be either
-            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend)
+            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend); and must
+            be given as a keyword argument (``arrays="numpy"``).
         """
+        arrays = kwargs.pop("arrays", None)
+        dtype, device = _to_arguments_parse("`TensorMap.to`", *args, **kwargs)
+
         blocks = []
 
         with warnings.catch_warnings():
-            # do not warn on device mismatch here, there will be a warning when
-            # constructing the TensorMap
+            # do not warn on device mismatch between values/labels here,
+            # there will be a warning when constructing the TensorMap
             warnings.simplefilter("ignore", DeviceWarning)
 
             for block in self.blocks():
