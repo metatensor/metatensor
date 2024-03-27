@@ -157,8 +157,8 @@ def test_module_map_dtype(single_block_tensor):
     tensor_module = ModuleMap(single_block_tensor.keys, modules)
     tensor_module(single_block_tensor)
 
-    tensor_module = tensor_module.to(torch.float16)
-    single_block_tensor = single_block_tensor.to(torch.float16)
+    tensor_module = tensor_module.to(torch.float64)
+    single_block_tensor = single_block_tensor.to(torch.float64)
     tensor_module(single_block_tensor)
 
 

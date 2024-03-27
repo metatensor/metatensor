@@ -98,6 +98,9 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*If you are using Pytorch and need the labels to also be on meta.*"
+)
 def test_module_map_meta(single_block_tensor_torch, out_properties):  # noqa F811
     """
     Checks the `to` function of module map by moving the module to cuda and checking
@@ -148,6 +151,9 @@ def test_module_map_meta(single_block_tensor_torch, out_properties):  # noqa F81
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
+@pytest.mark.filterwarnings(
+    "ignore:.*If you are using Pytorch and need the labels to also be on cuda.*"
+)
 def test_module_map_cuda(single_block_tensor_torch, out_properties):  # noqa F811
     """
     Checks the `to` function of module map by moving the module to cuda and checking
