@@ -256,6 +256,12 @@ class ModuleMap(ModuleList):
         :param tensor:
             input tensor map
         """
+        self._in_keys = self._in_keys.to(tensor.device)
+        if self._out_properties is not None:
+            self._out_properties = [
+                label.to(tensor.device) for label in self._out_properties
+            ]
+
         out_blocks: List[TensorBlock] = []
         for key, block in tensor.items():
             out_block = self.forward_block(key, block)
@@ -341,15 +347,3 @@ class ModuleMap(ModuleList):
             representation += f"  ({key!r}): {self[i]!r}\n"
         representation += ")"
         return representation
-
-    @torch.jit.export
-    def to(self, device: Optional[torch.device]=None, dtype: Optional[torch.dtype]=None):
-
-        self._in_keys = self._in_keys.to(device)
-        self._out_properties = (
-            None
-            if self._out_properties is None
-            else [p.to(device) for p in self._out_properties]
-        )
-
-        super(ModuleMap, self).to(device, dtype)

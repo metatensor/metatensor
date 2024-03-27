@@ -98,10 +98,10 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
-def test_module_map_to_meta(single_block_tensor_torch, out_properties):  # noqa F811
+def test_module_map_meta(single_block_tensor_torch, out_properties):  # noqa F811
     """
-    Checks the `to` function of module map by moving the module to meta and checking
-    that the output tensor is on meta device.
+    Checks the `to` function of module map by moving the module to cuda and checking
+    that the output tensor is on cuda device.
     """
     modules = []
     for key in single_block_tensor_torch.keys:
@@ -115,27 +115,86 @@ def test_module_map_to_meta(single_block_tensor_torch, out_properties):  # noqa 
         single_block_tensor_torch.keys, modules, out_properties=out_properties
     )
 
-    # cpu -> meta
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
+
     tensor_module.to("meta")
+
+    # at this point, the parameters should have been moved,
+    # but the input keys and output properties should still be on cpu
     for parameter in tensor_module.parameters():
         assert parameter.device.type == "meta"
+
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
+
     single_block_tensor_torch = single_block_tensor_torch.to(device="meta")
     out_tensor = tensor_module(single_block_tensor_torch)
     assert out_tensor.device.type == "meta"
+
+    # the input keys and output properties are still on cpu, because
+    # metatensor.Labels are never moved to a different device
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
 
 
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
-def test_module_map_to_cuda(single_block_tensor_torch, out_properties):  # noqa F811
+def test_module_map_cuda(single_block_tensor_torch, out_properties):  # noqa F811
     """
-    We set the correct default device for initialization and check if the module this
-    works once the default device has been changed. This catches cases where the default
-    device or a hard coded device is used for tensor created within the forward
-    function.
+    Checks the `to` function of module map by moving the module to cuda and checking
+    that the output tensor is on cuda device.
     """
+    modules = []
+    for key in single_block_tensor_torch.keys:
+        modules.append(
+            MockModule(
+                in_features=len(single_block_tensor_torch.block(key).properties),
+                out_features=5,
+            )
+        )
+    tensor_module = ModuleMap(
+        single_block_tensor_torch.keys, modules, out_properties=out_properties
+    )
 
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
+
+    tensor_module.to("cuda")
+
+    # at this point, the parameters should have been moved,
+    # but the input keys and output properties should still be on cpu
+    for parameter in tensor_module.parameters():
+        assert parameter.device.type == "cuda"
+
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
+
+    single_block_tensor_torch = single_block_tensor_torch.to(device="cuda")
+    out_tensor = tensor_module(single_block_tensor_torch)
+    assert out_tensor.device.type == "cuda"
+
+    # the input keys and output properties are still on cpu, because
+    # metatensor.Labels are never moved to a different device
+    assert tensor_module._in_keys.device == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device == "cpu"
+
+
+def test_module_map_dtype(single_block_tensor_torch):
     modules = []
     for key in single_block_tensor_torch.keys:
         modules.append(
@@ -145,22 +204,9 @@ def test_module_map_to_cuda(single_block_tensor_torch, out_properties):  # noqa 
             )
         )
 
-    tensor_module = ModuleMap(
-        single_block_tensor_torch.keys, modules, out_properties=out_properties
-    )
+    tensor_module = ModuleMap(single_block_tensor_torch.keys, modules)
+    tensor_module(single_block_tensor_torch)
 
-    # cpu -> cuda
-    tensor_module.to("cuda")
-    for parameter in tensor_module.parameters():
-        assert parameter.device.type == "cuda"
-    single_block_tensor_torch = single_block_tensor_torch.to(device="cuda")
-    out_tensor = tensor_module(single_block_tensor_torch)
-    assert out_tensor.device.type == "cuda"
-
-    # cuda -> cpu
-    tensor_module.to("cpu")
-    for parameter in tensor_module.parameters():
-        assert parameter.device.type == "cpu"
-    single_block_tensor_torch = single_block_tensor_torch.to(device="cpu")
-    out_tensor = tensor_module(single_block_tensor_torch)
-    assert out_tensor.device.type == "cpu"
+    tensor_module = tensor_module.to(torch.float16)
+    single_block_tensor_torch = single_block_tensor_torch.to(dtype=torch.float16)
+    tensor_module(single_block_tensor_torch)

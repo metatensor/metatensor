@@ -4,7 +4,6 @@ import pytest
 import torch
 from torch.nn import Module, Sigmoid
 
-import metatensor.torch
 from metatensor.torch import Labels, allclose_raise
 from metatensor.torch.learn.nn import ModuleMap
 
@@ -98,7 +97,7 @@ def test_module_map_single_block_tensor(single_block_tensor, out_properties):
     "out_properties", [None, [Labels(["a", "b"], torch.tensor([[1, 1]]))]]
 )
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
-def test_module_map_to_cuda(single_block_tensor, out_properties):  # noqa F811
+def test_module_map_cuda(single_block_tensor, out_properties):  # noqa F811
     """
     We set the correct default device for initialization and check if the module this
     works once the default device has been changed. This catches cases where the default
@@ -117,21 +116,50 @@ def test_module_map_to_cuda(single_block_tensor, out_properties):  # noqa F811
         single_block_tensor.keys, modules, out_properties=out_properties
     )
 
-    # cpu -> cuda
+    assert tensor_module._in_keys.device.type == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cpu"
+
     tensor_module.to("cuda")
+
+    # at this point, the parameters should have been moved,
+    # but the input keys and output properties should still be on cpu
     for parameter in tensor_module.parameters():
         assert parameter.device.type == "cuda"
+
+    assert tensor_module._in_keys.device.type == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cpu"
+
     single_block_tensor = single_block_tensor.to(device="cuda")
     out_tensor = tensor_module(single_block_tensor)
     assert out_tensor.device.type == "cuda"
 
-    # cuda -> cpu
-    tensor_module.to("cpu")
-    for parameter in tensor_module.parameters():
-        assert parameter.device.type == "cpu"
-    single_block_tensor = single_block_tensor.to(device="cpu")
-    out_tensor = tensor_module(single_block_tensor)
-    assert out_tensor.device.type == "cpu"
+    # the input keys and output properties should be on cuda
+    assert tensor_module._in_keys.device.type == "cuda"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cuda"
+
+
+def test_module_map_dtype(single_block_tensor):
+    modules = []
+    for key in single_block_tensor.keys:
+        modules.append(
+            MockModule(
+                in_features=len(single_block_tensor.block(key).properties),
+                out_features=5,
+            )
+        )
+
+    tensor_module = ModuleMap(single_block_tensor.keys, modules)
+    tensor_module(single_block_tensor)
+
+    tensor_module = tensor_module.to(torch.float16)
+    single_block_tensor = single_block_tensor.to(torch.float16)
+    tensor_module(single_block_tensor)
 
 
 def test_torchscript_module_map(single_block_tensor):
@@ -167,7 +195,7 @@ def test_torchscript_module_map(single_block_tensor):
     "out_properties", [None, [Labels(["a", "b"], torch.tensor([[1, 1]]))]]
 )
 @pytest.mark.skipif(not HAS_CUDA, reason="requires cuda")
-def test_torchscript_module_map_to(out_properties, single_block_tensor):
+def test_torchscript_module_map_cuda(out_properties, single_block_tensor):
     modules = []
     for key in single_block_tensor.keys:
         modules.append(
@@ -176,17 +204,34 @@ def test_torchscript_module_map_to(out_properties, single_block_tensor):
                 out_features=5,
             )
         )
-    tensor_module = ModuleMap(single_block_tensor.keys, modules, out_properties=out_properties)
-    tensor_module_script = torch.jit.script(tensor_module)
-    out_tensor = tensor_module_script(single_block_tensor)
+    tensor_module = ModuleMap(
+        single_block_tensor.keys, modules, out_properties=out_properties
+    )
+    tensor_module = torch.jit.script(tensor_module)
 
-    # cpu -> cuda
-    tensor_module_script.to("cuda")
-    assert tensor_module_script._in_keys.device.type == "cuda"
+    assert tensor_module._in_keys.device.type == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cpu"
+
+    tensor_module.to("cuda")
+
+    # at this point, the parameters should have been moved,
+    # but the input keys and output properties should still be on cpu
+    for parameter in tensor_module.parameters():
+        assert parameter.device.type == "cuda"
+
+    assert tensor_module._in_keys.device.type == "cpu"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cpu"
+
     single_block_tensor = single_block_tensor.to(device="cuda")
-    out_tensor_cuda = tensor_module_script(single_block_tensor)
-    assert out_tensor_cuda.device.type == "cuda"
+    out_tensor = tensor_module(single_block_tensor)
+    assert out_tensor.device.type == "cuda"
 
-    assert metatensor.torch.allclose(out_tensor, out_tensor_cuda.to(device="cpu"))
-
-    
+    # the input keys and output properties should be on cuda
+    assert tensor_module._in_keys.device.type == "cuda"
+    if out_properties is not None:
+        for label in tensor_module._out_properties:
+            assert label.device.type == "cuda"
