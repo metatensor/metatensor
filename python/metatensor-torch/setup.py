@@ -9,12 +9,26 @@ from setuptools import Extension, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
+from wheel.bdist_wheel import bdist_wheel
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
 
 METATENSOR_TORCH = os.path.join(ROOT, "..", "..", "metatensor-torch")
+
+
+class universal_wheel(bdist_wheel):
+    # When building the wheel, the `wheel` package assumes that if we have a
+    # binary extension then we are linking to `libpython.so`; and thus the wheel
+    # is only usable with a single python version. This is not the case for
+    # here, and the wheel will be compatible with any Python >=3. This is
+    # tracked in https://github.com/pypa/wheel/issues/185, but until then we
+    # manually override the wheel tag.
+    def get_tag(self):
+        tag = bdist_wheel.get_tag(self)
+        # tag[2:] contains the os/arch tags, we want to keep them
+        return ("py3", "none") + tag[2:]
 
 
 class cmake_ext(build_ext):
@@ -301,6 +315,7 @@ if __name__ == "__main__":
         cmdclass={
             "build_ext": cmake_ext,
             "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
+            "bdist_wheel": universal_wheel,
             "sdist": sdist_generate_data,
         },
         package_data={
