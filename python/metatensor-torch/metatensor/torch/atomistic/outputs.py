@@ -46,6 +46,7 @@ def _check_outputs(
         if name == "energy":
             _check_energy(systems, request, selected_atoms, energy=value)
         else:
+            # this is a non-standard output, there is nothing to check
             continue
 
 

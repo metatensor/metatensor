@@ -278,13 +278,21 @@ class ModelCapabilities:
     ):
         pass
 
-    outputs: Dict[str, ModelOutput]
-    """
-    All possible outputs from this model and corresponding settings.
+    @property
+    def outputs(self) -> Dict[str, ModelOutput]:
+        """
+        All possible outputs from this model and corresponding settings.
 
-    During a specific run, a model might be asked to only compute a subset of these
-    outputs.
-    """
+        During a specific run, a model might be asked to only compute a subset of these
+        outputs. Some outputs are standardized, and have additional constrains on how
+        the associated metadata should look like, documented in the
+        :ref:`atomistic-models-outputs` section.
+
+        If you want to define a new output for your own usage, it name should looks like
+        ``"<domain>::<output>"``, where ``<domain>`` indicates who defines this new
+        output and ``<output>`` describes the output itself. For example,
+        ``"my-package::foobar"`` for a ``foobar`` output defined in ``my-package``.
+        """
 
     atomic_types: List[int]
     """which atomic types the model can handle"""

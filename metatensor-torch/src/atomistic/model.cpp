@@ -134,6 +134,31 @@ ModelOutput ModelOutputHolder::from_json(std::string_view json) {
 
 /******************************************************************************/
 
+std::unordered_set<std::string> KNOWN_OUTPUTS = {
+    "energy"
+};
+
+void ModelCapabilitiesHolder::set_outputs(torch::Dict<std::string, ModelOutput> outputs) {
+    for (const auto& it: outputs) {
+        const auto& name = it.key();
+        if (KNOWN_OUTPUTS.find(name) != KNOWN_OUTPUTS.end()) {
+            // known output, nothing to do
+        } else {
+            auto double_colon = name.find("::");
+            if (double_colon != std::string::npos && double_colon != 0 && double_colon != (name.length() - 2)) {
+                // experimental output, nothing to do
+            } else {
+                C10_THROW_ERROR(ValueError,
+                    "Invalid name for model output: '" + name + "'. "
+                    "Non-standard names should have the form '<domain>::<output>'."
+                );
+            }
+        }
+    }
+
+    outputs_ = outputs;
+}
+
 void ModelCapabilitiesHolder::set_length_unit(std::string unit) {
     validate_unit("length", unit);
     this->length_unit_ = std::move(unit);
@@ -159,7 +184,7 @@ std::string ModelCapabilitiesHolder::to_json() const {
     result["class"] = "ModelCapabilities";
 
     auto outputs = nlohmann::json::object();
-    for (const auto& it: this->outputs) {
+    for (const auto& it: this->outputs()) {
         outputs[it.key()] = model_output_to_json(*it.value());
     }
     result["outputs"] = outputs;
@@ -196,13 +221,16 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(std::string_view json) {
 
     auto result = torch::make_intrusive<ModelCapabilitiesHolder>();
     if (data.contains("outputs")) {
+        auto outputs = torch::Dict<std::string, ModelOutput>();
         if (!data["outputs"].is_object()) {
             throw std::runtime_error("'outputs' in JSON for ModelCapabilities must be an object");
         }
 
         for (const auto& output: data["outputs"].items()) {
-            result->outputs.insert(output.key(), model_output_from_json(output.value()));
+            outputs.insert(output.key(), model_output_from_json(output.value()));
         }
+
+        result->set_outputs(outputs);
     }
 
     if (data.contains("atomic_types")) {

@@ -57,7 +57,7 @@ def model():
         atomic_types=[1, 2, 3],
         interaction_range=4.3,
         outputs={
-            "dummy": ModelOutput(
+            "tests::dummy::long": ModelOutput(
                 quantity="",
                 unit="",
                 per_atom=False,
@@ -211,3 +211,24 @@ def test_bad_capabilities():
     message = "`capabilities.dtype` was not set, but it is required to run simulations"
     with pytest.raises(ValueError, match=message):
         MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    message = (
+        "Invalid name for model output: 'not-a-standard'. "
+        "Non-standard names should have the form '<domain>::<output>'."
+    )
+    with pytest.raises(ValueError, match=message):
+        ModelCapabilities(outputs={"not-a-standard": ModelOutput()})
+
+    message = (
+        "Invalid name for model output: '::not-a-standard'. "
+        "Non-standard names should have the form '<domain>::<output>'."
+    )
+    with pytest.raises(ValueError, match=message):
+        ModelCapabilities(outputs={"::not-a-standard": ModelOutput()})
+
+    message = (
+        "Invalid name for model output: 'not-a-standard::'. "
+        "Non-standard names should have the form '<domain>::<output>'."
+    )
+    with pytest.raises(ValueError, match=message):
+        ModelCapabilities(outputs={"not-a-standard::": ModelOutput()})
