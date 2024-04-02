@@ -30,7 +30,7 @@ jobs:
             rust-target: x86_64-apple-darwin
             cibw_arch: x86_64
           - name: M1 macOS
-            os: macos-11
+            os: macos-14
             rust-target: aarch64-apple-darwin
             cibw_arch: arm64
           - name: x86_64 Windows
