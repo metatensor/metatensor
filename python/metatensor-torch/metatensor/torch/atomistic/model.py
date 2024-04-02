@@ -1,11 +1,8 @@
 import datetime
-import hashlib
 import json
 import math
 import os
 import platform
-import shutil
-import site
 import warnings
 from typing import Dict, List, Optional
 
@@ -23,6 +20,7 @@ from . import (
     System,
     unit_conversion_factor,
 )
+from ._extensions import _collect_extensions
 from .outputs import _check_outputs
 
 
@@ -425,57 +423,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
         # TODO: can we freeze these?
         # module = torch.jit.freeze(module)
 
-        # record the list of loaded extensions, to check that they are also loaded when
-        # executing the model.
-        if collect_extensions is not None:
-            if os.path.exists(collect_extensions):
-                shutil.rmtree(collect_extensions)
-            os.makedirs(collect_extensions)
-            # TODO: the extensions are currently collected in a separate directory,
-            # should we store the files directly inside the model file? This would makes
-            # the model platform-specific but much more convenient (since the end user
-            # does not have to move a model around)
-
-        extensions = []
-        for library in torch.ops.loaded_libraries:
-            # Remove any site-package prefix
-            path = library
-            for site_packages in site.getsitepackages():
-                if path.startswith(site_packages):
-                    path = os.path.relpath(path, site_packages)
-                    break
-
-            if collect_extensions is not None:
-                collect_path = os.path.join(collect_extensions, path)
-                if os.path.exists(collect_path):
-                    raise RuntimeError(
-                        f"more than one extension would be collected at {collect_path}"
-                    )
-
-                os.makedirs(os.path.dirname(collect_path), exist_ok=True)
-                shutil.copyfile(library, collect_path)
-
-            # get the name of the library, excluding any shared object prefix/suffix
-            name = os.path.basename(library)
-            if name.startswith("lib"):
-                name = name[3:]
-
-            if name.endswith(".so"):
-                name = name[:-3]
-
-            if name.endswith(".dll"):
-                name = name[:-4]
-
-            if name.endswith(".dylib"):
-                name = name[:-6]
-
-            # Collect the hash of the extension shared library. We don't currently use
-            # this, but it would allow for binary-level reproducibility later.
-            with open(library, "rb") as fd:
-                sha256 = hashlib.sha256(fd.read()).hexdigest()
-
-            extensions.append({"path": path, "name": name, "sha256": sha256})
-
         # Metadata about where and when the model was exported
         export_metadata = {
             "date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -486,6 +433,8 @@ class MetatensorAtomisticModel(torch.nn.Module):
         if collect_extensions is not None:
             export_metadata["extensions_directory"] = str(collect_extensions)
 
+        extensions, deps = _collect_extensions(extensions_path=collect_extensions)
+
         torch.jit.save(
             module,
             file,
@@ -493,6 +442,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 "torch-version": torch.__version__,
                 "metatensor-version": metatensor_version,
                 "extensions": json.dumps(extensions),
+                "extensions-deps": json.dumps(deps),
                 "metadata": json.dumps(export_metadata),
             },
         )
