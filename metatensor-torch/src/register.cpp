@@ -437,7 +437,7 @@ TORCH_LIBRARY(metatensor, m) {
                 torch::arg("dtype") = "",
             }
         )
-        .def_readwrite("outputs", &ModelCapabilitiesHolder::outputs)
+        .def_property("outputs", &ModelCapabilitiesHolder::outputs, &ModelCapabilitiesHolder::set_outputs)
         .def_readwrite("atomic_types", &ModelCapabilitiesHolder::atomic_types)
         .def_readwrite("interaction_range", &ModelCapabilitiesHolder::interaction_range)
         .def("engine_interaction_range", &ModelCapabilitiesHolder::engine_interaction_range)

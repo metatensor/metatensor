@@ -103,18 +103,18 @@ public:
 
     /// Initialize `ModelCapabilities` with the given data
     ModelCapabilitiesHolder(
-        torch::Dict<std::string, ModelOutput> outputs_,
+        torch::Dict<std::string, ModelOutput> outputs,
         std::vector<int64_t> atomic_types_,
         double interaction_range_,
         std::string length_unit,
         std::vector<std::string> supported_devices_,
         std::string dtype
     ):
-        outputs(outputs_),
         atomic_types(std::move(atomic_types_)),
         interaction_range(interaction_range_),
         supported_devices(std::move(supported_devices_))
     {
+        this->set_outputs(outputs);
         this->set_length_unit(std::move(length_unit));
 
         if (!dtype.empty()) {
@@ -125,7 +125,11 @@ public:
     ~ModelCapabilitiesHolder() override = default;
 
     /// all possible outputs from this model and corresponding settings
-    torch::Dict<std::string, ModelOutput> outputs;
+    torch::Dict<std::string, ModelOutput> outputs() const {
+        return outputs_;
+    }
+    /// set the outputs for this model
+    void set_outputs(torch::Dict<std::string, ModelOutput> outputs);
 
     /// which types the model can handle
     std::vector<int64_t> atomic_types;
@@ -177,6 +181,7 @@ public:
     static ModelCapabilities from_json(std::string_view json);
 
 private:
+    torch::Dict<std::string, ModelOutput> outputs_;
     std::string length_unit_;
     std::string dtype_;
 };

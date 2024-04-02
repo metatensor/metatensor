@@ -67,9 +67,13 @@ class ModelInterface(torch.nn.Module):
 
         The returned dictionary should have the same keys as ``outputs``, and the values
         should contains the corresponding properties of the ``systems``, as computed for
-        the subset of atoms defined in ``selected_atoms``. For some specific outputs,
-        there are additional constrains on how the associated metadata should look like,
-        documented in the :ref:`atomistic-models-outputs` section.
+        the subset of atoms defined in ``selected_atoms``. Some outputs are
+        standardized, and have additional constrains on how the associated metadata
+        should look like, documented in the :ref:`atomistic-models-outputs` section. If
+        you want to define a new output for your own usage, it name should looks like
+        ``"<domain>::<output>"``, where ``<domain>`` indicates who defines this new
+        output and ``<output>`` describes the output itself. For example,
+        ``"my-package::foobar"`` for a ``foobar`` output defined in ``my-package``.
 
         The main use case for ``selected_atoms`` is domain decomposition, where the
         :py:class:`System` given to a model might contain both atoms in the current

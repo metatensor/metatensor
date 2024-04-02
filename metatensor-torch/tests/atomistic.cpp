@@ -201,7 +201,10 @@ TEST_CASE("Models metadata") {
         output->per_atom = true;
         output->set_quantity("length");
         output->explicit_gradients.emplace_back("µ-λ");
-        capabilities->outputs.insert("bar", output);
+
+        auto outputs = torch::Dict<std::string, ModelOutput>();
+        outputs.insert("tests::bar", output);
+        capabilities->set_outputs(outputs);
 
         const auto* expected = R"({
     "atomic_types": [
@@ -214,7 +217,7 @@ TEST_CASE("Models metadata") {
     "interaction_range": 4608983858650965606,
     "length_unit": "nm",
     "outputs": {
-        "bar": {
+        "tests::bar": {
             "class": "ModelOutput",
             "explicit_gradients": [
                 "\u00b5-\u03bb"
@@ -237,7 +240,7 @@ TEST_CASE("Models metadata") {
         std::string json =R"({
     "length_unit": "nm",
     "outputs": {
-        "foo": {
+        "tests::foo": {
             "explicit_gradients": ["\u00b5-test"],
             "class": "ModelOutput"
         }
@@ -254,7 +257,7 @@ TEST_CASE("Models metadata") {
         CHECK(capabilities->dtype().empty());
         CHECK(capabilities->atomic_types == std::vector<int64_t>{1, -2});
 
-        output = capabilities->outputs.at("foo");
+        output = capabilities->outputs().at("tests::foo");
         CHECK(output->quantity().empty());
         CHECK(output->unit().empty());
         CHECK(output->per_atom == false);
