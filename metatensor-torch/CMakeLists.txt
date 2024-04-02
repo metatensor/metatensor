@@ -142,6 +142,7 @@ target_include_directories(metatensor_torch PUBLIC
 set_target_properties(metatensor_torch PROPERTIES
     # hide non-exported symbols by default, this mimics Windows behavior on Unix
     CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
 )
 
 include(GenerateExportHeader)
