@@ -519,6 +519,10 @@ class Labels:
     def to(self, device: Union[str, torch.device]) -> "Labels":
         """move the values for these Labels to the given ``device``"""
 
+    @property
+    def device(self) -> torch.device:
+        """get the current device used for the values of these Labels"""
+
     def position(
         self, entry: Union[LabelsEntry, torch.Tensor, List[int], Tuple[int, ...]]
     ) -> Optional[int]:
