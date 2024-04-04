@@ -129,7 +129,7 @@ target_compile_definitions(metatensor_torch PRIVATE
     METATENSOR_TORCH_VERSION="${METATENSOR_TORCH_FULL_VERSION}"
 )
 
-target_link_libraries(metatensor_torch PUBLIC torch metatensor::shared)
+target_link_libraries(metatensor_torch PUBLIC torch metatensor::shared ${CMAKE_DL_LIBS})
 target_compile_features(metatensor_torch PUBLIC cxx_std_17)
 target_include_directories(metatensor_torch PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

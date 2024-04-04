@@ -433,6 +433,25 @@ def check_atomistic_model(path: str):
     """
 
 
+def load_model_extensions(path: str, extensions_directory: Optional[str] = None):
+    """
+    Load the TorchScript extensions (and their dependencies) that the model at ``path``
+    uses.
+
+    If ``extensions_directory`` is provided, we look for the extensions and their
+    dependencies in there first. If this function fails to load some library, it will
+    produce a warning using Torch's warnings infrastructure. Users can set the
+    ``METATENSOR_DEBUG_EXTENSIONS_LOADING`` environment variable to get more
+    informations about a failure in the standard error output.
+
+    :param path: path to the exported model file
+    :param extensions_directory: path to a directory containing the extensions. This
+        directory will typically be created by calling
+        :py:meth:`MetatensorAtomisticModel.export` with
+        ``collect_extensions=extensions_directory``.
+    """
+
+
 def register_autograd_neighbors(
     system: System, neighbors: TensorBlock, check_consistency: bool
 ):

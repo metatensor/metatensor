@@ -2,8 +2,8 @@
 #include <cctype>
 
 #include <array>
-#include <algorithm>
 #include <sstream>
+#include <algorithm>
 
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
@@ -737,6 +737,72 @@ static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
     );
 }
 
+static void load_extension(
+    const std::string& context,
+    const nlohmann::json data,
+    c10::optional<std::string> extensions_directory
+) {
+    auto path = data["path"].get<std::string>();
+    auto candidates = std::vector<std::string>();
+    if (path[0] == '/') {
+        candidates.push_back(path);
+    }
+    if (extensions_directory) {
+        candidates.push_back(extensions_directory.value() + "/" + path);
+    }
+
+    auto loaded = details::load_library(data["name"], candidates);
+
+    if (!loaded) {
+        std::ostringstream oss;
+        oss << "failed to load " << context << " " << data["name"] << ". ";
+        oss << "We tried the following:\n";
+        for (const auto& candidate: candidates) {
+            oss << " - " << candidate << "\n";
+        }
+        oss << " - loading " << data["name"].get<std::string>() << " directly by name\n";
+
+        if (getenv("METATENSOR_DEBUG_EXTENSIONS_LOADING") == nullptr) {
+            oss << "You can set `METATENSOR_DEBUG_EXTENSIONS_LOADING=1` ";
+            oss << "in your environemnt for more information\n";
+        }
+
+        TORCH_WARN(oss.str());
+    }
+}
+
+void metatensor_torch::load_model_extensions(
+    std::string path,
+    c10::optional<std::string> extensions_directory
+) {
+    auto reader = caffe2::serialize::PyTorchStreamReader(path);
+
+    if (!reader.hasRecord("extra/metatensor-version")) {
+        C10_THROW_ERROR(ValueError,
+            "file at '" + path + "' does not contain a metatensor atomistic model"
+        );
+    }
+
+    auto dependencies = nlohmann::json::parse(record_to_string(
+        reader.getRecord("extra/extensions-deps")
+    ));
+    for (const auto& dep: dependencies) {
+        load_extension("extension dependency", dep, extensions_directory);
+    }
+
+    auto extensions = nlohmann::json::parse(record_to_string(
+        reader.getRecord("extra/extensions")
+    ));
+
+    for (const auto& ext: extensions) {
+        if (ext["name"] == "metatensor_torch") {
+            continue;
+        }
+
+        load_extension("TorchScript extension", ext, extensions_directory);
+    }
+}
+
 void metatensor_torch::check_atomistic_model(std::string path) {
     auto reader = caffe2::serialize::PyTorchStreamReader(path);
 
@@ -802,9 +868,11 @@ void metatensor_torch::check_atomistic_model(std::string path) {
 
 torch::jit::Module metatensor_torch::load_atomistic_model(
     std::string path,
+    c10::optional<std::string> extensions_directory,
     c10::optional<c10::Device> device
 ) {
     check_atomistic_model(path);
+    load_model_extensions(path, extensions_directory);
     return torch::jit::load(path, device);
 }
 
