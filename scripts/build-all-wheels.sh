@@ -42,7 +42,7 @@ PYPI_SERVER_PID=$!
 # add the python server to the set of extra pip index URL
 export PIP_EXTRA_INDEX_URL="http://localhost:$PORT/simple/ ${PIP_EXTRA_INDEX_URL=}"
 # force metatensor-torch to use a specific metatensor-core version when building
-export METATENSOR_TORCH_BUILD_WITH_METATENSOR_TORCH_VERSION="$METATENSOR_CORE_VERSION"
+export METATENSOR_TORCH_BUILD_WITH_METATENSOR_CORE_VERSION="$METATENSOR_CORE_VERSION"
 
 # build metatensor-torch, using metatensor-core from `PIP_EXTRA_INDEX_URL`
 # for the sdist => wheel build.

@@ -13,7 +13,7 @@ from setuptools import build_meta
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "..", "metatensor-core"))
 FORCED_METATENSOR_CORE_VERSION = os.environ.get(
-    "METATENSOR_TORCH_BUILD_WITH_METATENSOR_TORCH_VERSION"
+    "METATENSOR_TORCH_BUILD_WITH_METATENSOR_CORE_VERSION"
 )
 
 if FORCED_METATENSOR_CORE_VERSION is not None:
@@ -33,14 +33,24 @@ else:
     METATENSOR_CORE_DEP = "metatensor-core >=0.1.0,<0.2.0"
 
 
+FORCED_TORCH_VERSION = os.environ.get("METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION")
+if FORCED_TORCH_VERSION is not None:
+    TORCH_DEP = f"torch =={FORCED_TORCH_VERSION}"
+else:
+    TORCH_DEP = "torch >=1.11"
+
+# ==================================================================================== #
+#                   Build backend functions definition                                 #
+# ==================================================================================== #
+
+# Use the default version of these
 prepare_metadata_for_build_wheel = build_meta.prepare_metadata_for_build_wheel
+get_requires_for_build_sdist = build_meta.get_requires_for_build_sdist
 build_wheel = build_meta.build_wheel
 build_sdist = build_meta.build_sdist
 
 
+# Special dependencies to build the wheels
 def get_requires_for_build_wheel(config_settings=None):
     defaults = build_meta.get_requires_for_build_wheel(config_settings)
-    return defaults + ["cmake", "torch >=1.11", METATENSOR_CORE_DEP]
-
-
-get_requires_for_build_sdist = build_meta.get_requires_for_build_sdist
+    return defaults + ["cmake", TORCH_DEP, METATENSOR_CORE_DEP]
