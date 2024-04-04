@@ -24,24 +24,24 @@ jobs:
           - name: x86_64 Linux
             os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
-            cibw_arch: x86_64
-          - name: Aarch64 Linux
+            cibw-arch: x86_64
+          - name: arm64 Linux
             os: ubuntu-22.04
             rust-target: aarch64-unknown-linux-gnu
-            cibw_arch: aarch64
+            cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-11
+            os: macos-12
             rust-target: x86_64-apple-darwin
-            cibw_arch: x86_64
-          - name: M1 macOS
+            cibw-arch: x86_64
+          - name: arm64 macOS
             os: macos-14
             rust-target: aarch64-apple-darwin
-            cibw_arch: arm64
+            cibw-arch: arm64
           - name: x86_64 Windows
             os: windows-2019
             # TODO: add a 32-bit windows builder?
             rust-target: x86_64-pc-windows-msvc
-            cibw_arch: AMD64
+            cibw-arch: AMD64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,24 +67,188 @@ jobs:
 
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-22.04'
-        run: docker build -t rustc-manylinux2014_${{ matrix.cibw_arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw_arch }}
+        run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-core wheel
         run: python -m cibuildwheel python/metatensor-core
         env:
           CIBW_BUILD: cp311-*
           CIBW_SKIP: "*musllinux*"
-          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_ARCHS: ${{ matrix.cibw-arch }}
           CIBW_BUILD_VERBOSITY: 2
           CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2014_x86_64
           CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux2014_aarch64
+          CIBW_ENVIRONMENT: >
+            METATENSOR_NO_LOCAL_DEPS=1
+            MACOSX_DEPLOYMENT_TARGET=11
 
       - name: check wheels with twine
         run: twine check wheelhouse/*
 
       - uses: actions/upload-artifact@v4
         with:
-          name: core-wheel-${{ matrix.os }}-${{ matrix.cibw_arch }}
+          name: core-wheel-${{ matrix.os }}-${{ matrix.cibw-arch }}
+          path: ./wheelhouse/*.whl
+
+  build-torch-wheels:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
+    strategy:
+      matrix:
+        torch-version: ['1.11', '1.12', '1.13', '2.0', '2.1', '2.2']
+        arch: ['arm64', 'x86_64']
+        os: ['ubuntu-22.04', 'macos-11', 'macos-14', 'windows-2019']
+        exclude:
+          # remove mismatched arch for macOS
+          - {os: macos-14, arch: x86_64}
+          - {os: macos-11, arch: arm64}
+          # no arm64-windows build
+          - {os: windows-2019, arch: arm64}
+          # arm64-macos is only supported for torch >= 2.0
+          - {os: macos-14, arch: arm64, torch-version: '1.11'}
+          - {os: macos-14, arch: arm64, torch-version: '1.12'}
+          - {os: macos-14, arch: arm64, torch-version: '1.13'}
+        include:
+          # add `cibw-arch` and `rust-target` to the different configurations
+          - name: x86_64 Linux
+            os: ubuntu-22.04
+            arch: x86_64
+            rust-target: x86_64-unknown-linux-gnu
+            cibw-arch: x86_64
+          - name: arm64 Linux
+            os: ubuntu-22.04
+            arch: arm64
+            rust-target: aarch64-unknown-linux-gnu
+            cibw-arch: aarch64
+          - name: x86_64 macOS
+            os: macos-11
+            arch: x86_64
+            rust-target: x86_64-apple-darwin
+            cibw-arch: x86_64
+          - name: arm64 macOS
+            os: macos-14
+            arch: arm64
+            rust-target: aarch64-apple-darwin
+            cibw-arch: arm64
+          - name: x86_64 Windows
+            os: windows-2019
+            arch: x86_64
+            rust-target: x86_64-pc-windows-msvc
+            cibw-arch: AMD64
+          # add the right python version for each torch version
+          - {torch-version: '1.11', python-version: '3.10', cibw-python: 'cp310-*'}
+          - {torch-version: '1.12', python-version: '3.10', cibw-python: 'cp310-*'}
+          - {torch-version: '1.13', python-version: '3.10', cibw-python: 'cp310-*'}
+          - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}
+          - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
+          - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: ${{ matrix.rust-target }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install dependencies
+        run: python -m pip install cibuildwheel
+
+      - name: Set up QEMU for docker
+        if: matrix.os == 'ubuntu-22.04'
+        uses: docker/setup-qemu-action@v3
+
+      - name: build manylinux with rust docker image
+        if: matrix.os == 'ubuntu-22.04'
+        run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
+
+      # TODO?: use metatensor_core wheel from above for the build
+      - name: build metatensor-torch wheel
+        run: python -m cibuildwheel python/metatensor-torch
+        env:
+          CIBW_BUILD: ${{ matrix.cibw-python}}
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw-arch }}
+          CIBW_BUILD_VERBOSITY: 2
+          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2014_x86_64
+          CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux2014_aarch64
+          CIBW_ENVIRONMENT: >
+            METATENSOR_NO_LOCAL_DEPS=1
+            METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION=${{ matrix.torch-version }}.*
+            PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+            MACOSX_DEPLOYMENT_TARGET=11
+          # do not complain for missing libtorch.so or libmetatensor.so
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
+            delocate-wheel --ignore-missing-dependencies --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            auditwheel repair --exclude libmetatensor.so --exclude libtorch.so --exclude libtorch_cpu.so --exclude libc10.so -w {dest_dir} {wheel}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: torch-single-version-wheel-${{ matrix.torch-version }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: ./wheelhouse/*.whl
+
+  merge-torch-wheels:
+    needs: build-torch-wheels
+    runs-on: ubuntu-22.04
+    name: merge metatensor-torch ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+          - name: x86_64 Linux
+            os: ubuntu-22.04
+            arch: x86_64
+          - name: arm64 Linux
+            os: ubuntu-22.04
+            arch: arm64
+          - name: x86_64 macOS
+            os: macos-11
+            arch: x86_64
+          - name: arm64 macOS
+            os: macos-14
+            arch: arm64
+          - name: x86_64 Windows
+            os: windows-2019
+            arch: x86_64
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: torch-single-version-wheel-*-${{ matrix.os }}-${{ matrix.arch }}
+          merge-multiple: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install dependencies
+        run: python -m pip install twine wheel
+
+      - name: merge wheels
+        run: |
+          # unpack all single torch versions wheels in the same directory,
+          # and repack the directory as a new wheel
+
+          mkdir unpacked
+          find . -name "*.whl" -print -exec python -m wheel unpack --dest unpacked/ {} ';'
+
+          mkdir wheelhouse
+          python -m wheel pack --dest wheelhouse/ unpacked/*
+
+      - name: check wheels with twine
+        run: twine check wheelhouse/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: torch-wheel-${{ matrix.os }}-${{ matrix.arch }}
           path: ./wheelhouse/*.whl
 
   build-others:
@@ -136,7 +300,7 @@ jobs:
 
   merge-and-release:
     name: Merge and release wheels/sdists
-    needs: [build-core-wheels, build-others]
+    needs: [build-core-wheels, merge-torch-wheels, build-others]
     runs-on: ubuntu-22.04
     steps:
       - name: Download metatensor-core wheels
@@ -144,6 +308,13 @@ jobs:
         with:
           path: wheels
           pattern: core-wheel-*
+          merge-multiple: true
+
+      - name: Download metatensor-torch wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          pattern: torch-wheel-*
           merge-multiple: true
 
       - name: Download other wheels and sdists
