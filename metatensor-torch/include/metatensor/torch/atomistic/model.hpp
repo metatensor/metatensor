@@ -289,12 +289,28 @@ private:
 };
 
 /// Check the exported metatensor atomistic model at the given `path`, and
-/// warn/error as required.
+/// warn/error as required. This should be called after `load_model_extensions`
 METATENSOR_TORCH_EXPORT void check_atomistic_model(std::string path);
 
+/// Load all extensions and extensions dependencies for the model at the given
+/// `path`, trying to find extensions and dependencies in the given
+/// `extensions`. Users can set the `METATENSOR_DEBUG_EXTENSIONS_LOADING`
+/// environment variable to get more information when loading fails.
+METATENSOR_TORCH_EXPORT void load_model_extensions(
+    std::string path,
+    c10::optional<std::string> extensions_directory
+);
+
 /// Check and then load the metatensor atomistic model at the given `path`.
+///
+/// The model is returned on the given `device`.
+///
+/// This function calls `check_atomistic_model(path)` and
+/// `load_model_extensions(path, extension_directory)` before attempting to load
+/// the model.
 METATENSOR_TORCH_EXPORT torch::jit::Module load_atomistic_model(
     std::string path,
+    c10::optional<std::string> extensions_directory,
     c10::optional<c10::Device> device = c10::nullopt
 );
 

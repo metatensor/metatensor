@@ -482,9 +482,10 @@ TORCH_LIBRARY(metatensor, m) {
             }
         );
 
+    m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
+    m.def("load_model_extensions(str path, str? extensions_directory) -> ()", load_model_extensions);
 
     m.def("unit_conversion_factor(str quantity, str from_unit, str to_unit) -> float", unit_conversion_factor);
-    m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
     m.def(
         "register_autograd_neighbors("
             "__torch__.torch.classes.metatensor.System system, "

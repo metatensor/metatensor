@@ -15,6 +15,8 @@ We also provide a couple of functions to work with the models:
 
 .. autofunction:: metatensor.torch.atomistic.check_atomistic_model
 
+.. autofunction:: metatensor.torch.atomistic.load_model_extensions
+
 .. autofunction:: metatensor.torch.atomistic.unit_conversion_factor
 
 .. _known-quantities-units:

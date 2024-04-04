@@ -5,6 +5,8 @@ Models
 
 .. doxygenfunction:: metatensor_torch::check_atomistic_model
 
+.. doxygenfunction:: metatensor_torch::load_model_extensions
+
 .. doxygenfunction:: metatensor_torch::unit_conversion_factor
 
 .. doxygentypedef:: metatensor_torch::ModelOutput
