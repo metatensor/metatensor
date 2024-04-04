@@ -82,21 +82,13 @@ jobs:
       - name: check wheels with twine
         run: twine check wheelhouse/*
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: core-wheel-${{ matrix.os }}-${{ matrix.cibw_arch }}
           path: ./wheelhouse/*.whl
 
-      - name: upload wheel to GitHub release
-        if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./wheelhouse/*.whl
-          prerelease: ${{ contains(github.ref, '-rc') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-others:
+    name: Build other wheels/sdists
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -134,22 +126,48 @@ jobs:
           ./scripts/package-core.sh dist/cxx/
           ./scripts/package-torch.sh dist/cxx/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: others
           path: |
             dist/*.tar.gz
             dist/cxx/*.tar.gz
             dist/*.whl
+
+  merge-and-release:
+    name: Merge and release wheels/sdists
+    needs: [build-core-wheels, build-others]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download metatensor-core wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          pattern: core-wheel-*
+          merge-multiple: true
+
+      - name: Download other wheels and sdists
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          name: others
+
+      - name: Re-upload a single wheels artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: |
+            wheels/*
+            wheels/cxx/*
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/metatensor-core-*.tar.gz
-            dist/cxx/metatensor-core-cxx-*.tar.gz
-            dist/metatensor_core-*.whl
+            wheels/metatensor-core-*.tar.gz
+            wheels/cxx/metatensor-core-cxx-*.tar.gz
+            wheels/metatensor_core-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -159,9 +177,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/metatensor-torch-*.tar.gz
-            dist/cxx/metatensor-torch-cxx-*.tar.gz
-            dist/metatensor_torch-*.whl
+            wheels/metatensor-torch-*.tar.gz
+            wheels/cxx/metatensor-torch-cxx-*.tar.gz
+            wheels/metatensor_torch-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -171,8 +189,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/metatensor-operations-*.tar.gz
-            dist/metatensor_operations-*.whl
+            wheels/metatensor-operations-*.tar.gz
+            wheels/metatensor_operations-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -182,26 +200,26 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/metatensor-learn-*.tar.gz
-            dist/metatensor_learn-*.whl
+            wheels/metatensor-learn-*.tar.gz
+            wheels/metatensor_learn-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: remove all sdist except metatensor
         run: |
-          rm dist/metatensor-core-*.tar.gz
-          rm dist/metatensor-torch-*.tar.gz
-          rm dist/metatensor-learn-*.tar.gz
-          rm dist/metatensor-operations-*.tar.gz
+          rm wheels/metatensor-core-*.tar.gz
+          rm wheels/metatensor-torch-*.tar.gz
+          rm wheels/metatensor-learn-*.tar.gz
+          rm wheels/metatensor-operations-*.tar.gz
 
       - name: upload to GitHub release (metatensor-python)
         if: startsWith(github.ref, 'refs/tags/metatensor-python-v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/metatensor-*.tar.gz
-            dist/metatensor-*.whl
+            wheels/metatensor-*.tar.gz
+            wheels/metatensor-*.whl
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
