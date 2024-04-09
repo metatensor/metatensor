@@ -1,23 +1,18 @@
 import os
-from typing import Dict, List, Optional
+import subprocess
+import sys
 
 import ase.build
 import ase.calculators.lj
 import ase.md
 import ase.units
+import metatensor_lj_test
 import numpy as np
 import pytest
 import torch
 
-from metatensor.torch import Labels, TensorBlock, TensorMap
-from metatensor.torch.atomistic import (
-    MetatensorAtomisticModel,
-    ModelCapabilities,
-    ModelMetadata,
-    ModelOutput,
-    NeighborsListOptions,
-    System,
-)
+from metatensor.torch import Labels
+from metatensor.torch.atomistic import MetatensorAtomisticModel, ModelOutput
 from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
 
 
@@ -27,104 +22,6 @@ STR_TO_DTYPE = {
 }
 
 
-class LennardJones(torch.nn.Module):
-    """
-    Implementation of Lennard-Jones potential using the ``MetatensorAtomisticModule``
-    API. This is then compared against the implementation inside ASE.
-    """
-
-    def __init__(self, cutoff, epsilon, sigma):
-        super().__init__()
-        self._nl_options = NeighborsListOptions(cutoff=cutoff, full_list=False)
-
-        self.register_buffer("_epsilon", torch.tensor([epsilon]))
-        self.register_buffer("_sigma", torch.tensor([sigma]))
-
-        # shift the energy to 0 at the cutoff
-        shift = 4 * epsilon * ((sigma / cutoff) ** 12 - (sigma / cutoff) ** 6)
-        self.register_buffer("_shift", torch.tensor([shift]))
-
-    def forward(
-        self,
-        systems: List[System],
-        outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels],
-    ) -> Dict[str, TensorMap]:
-        if "energy" not in outputs:
-            return {}
-
-        per_atoms = outputs["energy"].per_atom
-
-        all_energies = []
-
-        dtype = torch.float64
-        device = torch.device("cpu")
-        for system_i, system in enumerate(systems):
-            device = system.device
-            dtype = system.positions.dtype
-
-            neighbors = system.get_neighbors_list(self._nl_options)
-            all_i = neighbors.samples.column("first_atom").to(torch.long)
-            all_j = neighbors.samples.column("second_atom").to(torch.long)
-
-            energy = torch.zeros(len(system), dtype=dtype, device=device)
-
-            distances = neighbors.values.reshape(-1, 3)
-
-            sigma_r_6 = (self._sigma / torch.linalg.vector_norm(distances, dim=1)) ** 6
-            sigma_r_12 = sigma_r_6 * sigma_r_6
-            e = 4.0 * self._epsilon * (sigma_r_12 - sigma_r_6) - self._shift
-
-            # We only compute each pair once (full_list=False in self._nl_options),
-            # and assign half of the energy to each atom
-            energy = energy.index_add(0, all_i, e, alpha=0.5)
-            energy = energy.index_add(0, all_j, e, alpha=0.5)
-
-            if selected_atoms is not None:
-                current_system_mask = selected_atoms.column("system") == system_i
-                current_atoms = selected_atoms.column("atom")
-                current_atoms = current_atoms[current_system_mask].to(torch.long)
-                energy = energy[current_atoms]
-
-            if per_atoms:
-                all_energies.append(energy)
-            else:
-                all_energies.append(energy.sum(0, keepdim=True))
-
-        if per_atoms:
-            if selected_atoms is None:
-                samples_list: List[List[int]] = []
-                for s, system in enumerate(systems):
-                    for a in range(len(system)):
-                        samples_list.append([s, a])
-
-                samples = Labels(
-                    ["system", "atom"], torch.tensor(samples_list, device=device)
-                )
-            else:
-                samples = selected_atoms
-        else:
-            samples = Labels(
-                ["system"], torch.arange(len(systems), device=device).reshape(-1, 1)
-            )
-
-        block = TensorBlock(
-            values=torch.vstack(all_energies).reshape(-1, 1),
-            samples=samples,
-            components=torch.jit.annotate(List[Labels], []),
-            properties=Labels(["energy"], torch.tensor([[0]], device=device)),
-        )
-        return {
-            "energy": TensorMap(
-                keys=Labels("_", torch.tensor([[0]], device=device)),
-                blocks=[block],
-            ),
-        }
-
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
-        return [self._nl_options]
-
-
 CUTOFF = 5.0
 SIGMA = 1.5808
 EPSILON = 0.1729
@@ -132,56 +29,28 @@ EPSILON = 0.1729
 
 @pytest.fixture
 def model():
-    model = LennardJones(cutoff=CUTOFF, sigma=SIGMA, epsilon=EPSILON)
-    model.train(False)
-
-    capabilities = ModelCapabilities(
+    return metatensor_lj_test.lennard_jones_model(
+        atomic_type=28,
+        cutoff=CUTOFF,
+        sigma=SIGMA,
+        epsilon=EPSILON,
         length_unit="Angstrom",
-        interaction_range=CUTOFF,
-        atomic_types=[28],
-        outputs={
-            "energy": ModelOutput(
-                quantity="energy",
-                unit="eV",
-                per_atom=True,
-                explicit_gradients=[],
-            ),
-        },
-        supported_devices=["cpu", "mps", "cuda"],
-        dtype="float64",
+        energy_unit="eV",
+        with_extension=False,
     )
-
-    metadata = ModelMetadata()
-    return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
 @pytest.fixture
 def model_different_units():
-    model = LennardJones(
+    return metatensor_lj_test.lennard_jones_model(
+        atomic_type=28,
         cutoff=CUTOFF / ase.units.Bohr,
         sigma=SIGMA / ase.units.Bohr,
         epsilon=EPSILON / ase.units.kJ * ase.units.mol,
-    )
-    model.train(False)
-
-    capabilities = ModelCapabilities(
         length_unit="Bohr",
-        interaction_range=CUTOFF,
-        atomic_types=[28],
-        outputs={
-            "energy": ModelOutput(
-                quantity="energy",
-                unit="kJ/mol",
-                per_atom=True,
-                explicit_gradients=[],
-            ),
-        },
-        supported_devices=["cpu"],
-        dtype="float64",
+        energy_unit="kJ/mol",
+        with_extension=False,
     )
-
-    metadata = ModelMetadata()
-    return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
 @pytest.fixture
@@ -368,3 +237,51 @@ def test_dtype_device(tmpdir, model, atoms):
         dtype_model.export(path)
         atoms.calc = MetatensorCalculator(path, check_consistency=True, device=device)
         assert np.allclose(atoms.get_potential_energy(), expected)
+
+
+def test_model_with_extensions(tmpdir, atoms):
+    ref = atoms.copy()
+    ref.calc = ase.calculators.lj.LennardJones(
+        sigma=SIGMA, epsilon=EPSILON, rc=CUTOFF, ro=CUTOFF, smooth=False
+    )
+
+    model_path = os.path.join(tmpdir, "model.pt")
+    extensions_directory = os.path.join(tmpdir, "extensions")
+
+    # use forward slash as path separator even on windows. This removes the need to
+    # escape the path below
+    model_path = model_path.replace("\\", "/")
+    extensions_directory = extensions_directory.replace("\\", "/")
+
+    # export the model in a sub-process, to prevent loading of the extension in the
+    # current interpreter (until we try to execute the code)
+    script = f"""
+import metatensor_lj_test
+
+model = metatensor_lj_test.lennard_jones_model(
+    atomic_type=28,
+    cutoff={CUTOFF},
+    sigma={SIGMA},
+    epsilon={EPSILON},
+    length_unit="Angstrom",
+    energy_unit="eV",
+    with_extension=True,
+)
+
+model.export("{model_path}", collect_extensions="{extensions_directory}")
+    """
+
+    subprocess.run([sys.executable, "-c", script], check=True)
+
+    message = "Unknown builtin op: metatensor_lj_test::lennard_jones"
+    with pytest.raises(RuntimeError, match=message):
+        MetatensorCalculator(model_path, check_consistency=True)
+
+    # Now actually loading the extensions
+    atoms.calc = MetatensorCalculator(
+        model_path,
+        extensions_directory=extensions_directory,
+        check_consistency=True,
+    )
+
+    assert np.allclose(ref.get_potential_energy(), atoms.get_potential_energy())

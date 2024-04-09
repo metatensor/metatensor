@@ -14,7 +14,7 @@ from . import (
     ModelMetadata,
     ModelOutput,
     System,
-    check_atomistic_model,
+    load_atomistic_model,
     register_autograd_neighbors,
 )
 
@@ -57,6 +57,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
     def __init__(
         self,
         model: Union[FilePath, MetatensorAtomisticModel],
+        *,
+        extensions_directory=None,
         check_consistency=False,
         device=None,
     ):
@@ -64,6 +66,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :param model: model to use for the calculation. This can be a file path, a
             Python instance of :py:class:`MetatensorAtomisticModel`, or the output of
             :py:func:`torch.jit.script` on :py:class:`MetatensorAtomisticModel`.
+        :param extensions_directory: if the model uses extensions, we will try to load
+            them from this directory
         :param check_consistency: should we check the model for consistency when
             running, defaults to False.
         :param device: torch device to use for the calculation. If ``None``, we will try
@@ -81,8 +85,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 raise InputError(f"given model path '{model}' does not exist")
 
             self.parameters["model_path"] = str(model)
-            check_atomistic_model(model)
-            model = torch.jit.load(model)
+
+            model = load_atomistic_model(
+                model, extensions_directory=extensions_directory
+            )
 
         elif isinstance(model, torch.jit.RecursiveScriptModule):
             if model.original_name != "MetatensorAtomisticModel":
