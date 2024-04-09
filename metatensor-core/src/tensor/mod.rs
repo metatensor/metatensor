@@ -66,7 +66,7 @@ fn check_labels_names(
     Ok(())
 }
 
-fn check_origin(blocks: &Vec<TensorBlock>) -> Result<(), Error> {
+fn check_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
     if blocks.is_empty() {
         return Ok(());
     }
