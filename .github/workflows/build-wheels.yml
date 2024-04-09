@@ -2,10 +2,15 @@ name: Build Python wheels
 
 on:
   push:
-    branches: [master]
     tags: ["*"]
   pull_request:
-    # Check all PR
+    paths:
+      # run the build if this file was changed
+      - '.github/workflows/build-wheels.yml'
+  schedule:
+    # check the build once a week on mondays
+    - cron: '0 10 * * 1'
+
 
 concurrency:
   group: python-wheels-${{ github.ref }}
