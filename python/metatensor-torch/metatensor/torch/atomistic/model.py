@@ -18,10 +18,29 @@ from . import (
     ModelOutput,
     NeighborsListOptions,
     System,
+    check_atomistic_model,
+    load_model_extensions,
     unit_conversion_factor,
 )
 from ._extensions import _collect_extensions
 from .outputs import _check_outputs
+
+
+def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisticModel":
+    """
+    Check and then load the metatensor atomistic model at the given `path`.
+
+    This function calls :py:func:`metatensor.torch.atomistic.check_atomistic_model()`
+    and :py:func:`metatensor.torch.atomistic.load_model_extensions()` before attempting
+    to load the model.
+
+    :param path: path to an exported metatensor model
+    :param extensions_directory: path to a directory containing all extensions required
+        by the exported model
+    """
+    check_atomistic_model(path)
+    load_model_extensions(path, extensions_directory)
+    return torch.jit.load(path)
 
 
 class ModelInterface(torch.nn.Module):

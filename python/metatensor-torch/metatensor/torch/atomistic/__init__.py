@@ -33,4 +33,5 @@ else:
     unit_conversion_factor = torch.ops.metatensor.unit_conversion_factor
 
 from .model import MetatensorAtomisticModel, ModelInterface  # noqa: F401
+from .model import load_atomistic_model  # noqa: F401
 from .systems_to_torch import systems_to_torch  # noqa: F401
