@@ -37,7 +37,7 @@ FORCED_TORCH_VERSION = os.environ.get("METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION
 if FORCED_TORCH_VERSION is not None:
     TORCH_DEP = f"torch =={FORCED_TORCH_VERSION}"
 else:
-    TORCH_DEP = "torch >=1.11"
+    TORCH_DEP = "torch >=1.12"
 
 # ==================================================================================== #
 #                   Build backend functions definition                                 #

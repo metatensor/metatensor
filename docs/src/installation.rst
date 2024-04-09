@@ -152,11 +152,20 @@ and use it will depend on the programming language you are using.
 
             pip install metatensor-torch
 
-        Due to the way PyTorch itself is structured and distributed, we can not
-        provide pre-compiled versions of metatensor-torch on `PyPI
-        <https://pypi.org/>`_, but only a source distribution that will be
-        compiled on your machine. This local compilation will require a couple
-        of additional dependencies.
+        We provide pre-compiled wheels on PyPI that are compatible with all the
+        supported torch versions at the time of metatensor-torch release.
+        Currently PyTorch version 1.12 and above is supported.
+
+        If you want to use the code with an unsupported PyTorch version, or a
+        new release of PyTorch which did not exist yet when we released
+        metatensor-torch; you'll need to compile the code on your local machine
+        with
+
+        .. code-block:: bash
+
+            pip install metatensor-torch --no-binary=metatensor-torch
+
+        This local compilation will require a couple of additional dependencies:
 
         - a modern C++ compiler, able to handle C++17, such as:
             - gcc version 7 or above;
@@ -174,7 +183,7 @@ and use it will depend on the programming language you are using.
 
         .. code-block:: bash
 
-            pip install --extra-index-url https://download.pytorch.org/whl/cpu metatensor[torch]
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu metatensor-torch  --no-binary=metatensor-torch
 
         A similar index URL can be used to install the ROCm (AMD GPU) version of
         PyTorch, please refer to the `corresponding documentation
@@ -220,9 +229,10 @@ and use it will depend on the programming language you are using.
 
         - :ref:`the C++ interface <install-c>` of metatensor.
         - the C++ part of PyTorch, which you can install `on it's own
-          <https://pytorch.org/get-started/locally/>`_. You can also use the
-          same library as the Python version of torch by adding the output of
-          the command below to ``CMAKE_PREFIX_PATH``:
+          <https://pytorch.org/get-started/locally/>`_. We are compatible with
+          libtorch version 1.12 or above. You can also use the same library as
+          the Python version of torch by adding the output of the command below
+          to ``CMAKE_PREFIX_PATH``:
 
           .. code-block:: bash
 

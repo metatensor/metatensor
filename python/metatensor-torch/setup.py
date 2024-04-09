@@ -291,7 +291,7 @@ if __name__ == "__main__":
         with open(os.path.join(ROOT, authors[0])) as fd:
             authors = fd.read().splitlines()
 
-    install_requires = ["torch >= 1.11"]
+    install_requires = ["torch >= 1.12"]
 
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"

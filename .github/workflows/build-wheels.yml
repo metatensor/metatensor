@@ -100,7 +100,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['1.11', '1.12', '1.13', '2.0', '2.1', '2.2']
+        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-22.04', 'macos-11', 'macos-14', 'windows-2019']
         exclude:
@@ -110,7 +110,6 @@ jobs:
           # no arm64-windows build
           - {os: windows-2019, arch: arm64}
           # arm64-macos is only supported for torch >= 2.0
-          - {os: macos-14, arch: arm64, torch-version: '1.11'}
           - {os: macos-14, arch: arm64, torch-version: '1.12'}
           - {os: macos-14, arch: arm64, torch-version: '1.13'}
         include:
@@ -141,7 +140,6 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
           # add the right python version for each torch version
-          - {torch-version: '1.11', python-version: '3.10', cibw-python: 'cp310-*'}
           - {torch-version: '1.12', python-version: '3.10', cibw-python: 'cp310-*'}
           - {torch-version: '1.13', python-version: '3.10', cibw-python: 'cp310-*'}
           - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}

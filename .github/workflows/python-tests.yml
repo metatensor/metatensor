@@ -19,7 +19,7 @@ jobs:
         include:
           - os: ubuntu-20.04
             python-version: "3.8"
-            torch-version: "1.11.*"
+            torch-version: "1.12.*"
           - os: ubuntu-20.04
             python-version: "3.8"
             torch-version: "2.2.*"
