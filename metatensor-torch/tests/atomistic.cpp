@@ -110,7 +110,7 @@ TEST_CASE("Models metadata") {
     SECTION("ModelEvaluationOptions") {
         // save to JSON
         auto options = torch::make_intrusive<ModelEvaluationOptionsHolder>();
-        options->set_length_unit("nm");
+        options->set_length_unit("nanometer");
 
         options->outputs.insert("output_1", torch::make_intrusive<ModelOutputHolder>());
 
@@ -122,7 +122,7 @@ TEST_CASE("Models metadata") {
 
         const auto* expected = R"({
     "class": "ModelEvaluationOptions",
-    "length_unit": "nm",
+    "length_unit": "nanometer",
     "outputs": {
         "output_1": {
             "class": "ModelOutput",
@@ -191,7 +191,7 @@ TEST_CASE("Models metadata") {
     SECTION("ModelCapabilities") {
         // save to JSON
         auto capabilities = torch::make_intrusive<ModelCapabilitiesHolder>();
-        capabilities->set_length_unit("nm");
+        capabilities->set_length_unit("nanometer");
         capabilities->interaction_range = 1.4;
         capabilities->atomic_types = {1, 2, -43};
         capabilities->set_dtype("float32");
@@ -212,7 +212,7 @@ TEST_CASE("Models metadata") {
     "class": "ModelCapabilities",
     "dtype": "float32",
     "interaction_range": 4608983858650965606,
-    "length_unit": "nm",
+    "length_unit": "nanometer",
     "outputs": {
         "bar": {
             "class": "ModelOutput",
@@ -235,7 +235,7 @@ TEST_CASE("Models metadata") {
 
         // load from JSON
         std::string json =R"({
-    "length_unit": "nm",
+    "length_unit": "µm",
     "outputs": {
         "foo": {
             "explicit_gradients": ["\u00b5-test"],
@@ -250,7 +250,7 @@ TEST_CASE("Models metadata") {
 })";
 
         capabilities = ModelCapabilitiesHolder::from_json(json);
-        CHECK(capabilities->length_unit() == "nm");
+        CHECK(capabilities->length_unit() == "µm");
         CHECK(capabilities->dtype().empty());
         CHECK(capabilities->atomic_types == std::vector<int64_t>{1, -2});
 
