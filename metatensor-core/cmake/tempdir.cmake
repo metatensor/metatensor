@@ -22,6 +22,7 @@ function(get_tempdir _outvar_)
         )
 
         if(_status_ EQUAL 0)
+            file(MAKE_DIRECTORY ${_output_})
             set(${_outvar_} ${_output_} PARENT_SCOPE)
             return()
         endif()
