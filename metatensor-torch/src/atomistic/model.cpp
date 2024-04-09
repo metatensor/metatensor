@@ -811,19 +811,52 @@ torch::jit::Module metatensor_torch::load_atomistic_model(
 /******************************************************************************/
 /******************************************************************************/
 
-/// normalize a string to lower case without any spaces
-static std::string normalize_string(std::string value) {
-    std::transform(value.begin(), value.end(), value.begin(),
-        [](unsigned char c){ return std::tolower(c); }
-    );
-
-    // remove all spaces in e.g. `kcal /   mol`.
+/// remove all whitespace in a string (i.e. `kcal /   mol` => `kcal/mol`)
+static std::string remove_spaces(std::string value) {
     auto new_end = std::remove_if(value.begin(), value.end(),
         [](unsigned char c){ return std::isspace(c); }
     );
     value.erase(new_end, value.end());
     return value;
 }
+
+
+/// Lower case string, to be used as a key in Quantity.conversion (we want
+/// "Angstrom" and "angstrom" to be equivalent).
+class LowercaseString {
+public:
+    LowercaseString(std::string init): original_(std::move(init)) {
+        std::transform(original_.begin(), original_.end(), std::back_inserter(lowercase_), &::tolower);
+    }
+
+    LowercaseString(const char* init): LowercaseString(std::string(init)) {}
+
+    operator std::string&() {
+        return lowercase_;
+    }
+    operator std::string const&() const {
+        return lowercase_;
+    }
+
+    const std::string& original() const {
+        return original_;
+    }
+
+    bool operator==(const LowercaseString& other) const {
+        return this->lowercase_ == other.lowercase_;
+    }
+
+private:
+    std::string original_;
+    std::string lowercase_;
+};
+
+template <>
+struct std::hash<LowercaseString> {
+    size_t operator()(const LowercaseString& k) const {
+        return std::hash<std::string>()(k);
+    }
+};
 
 /// Information for unit conversion for this physical quantity
 struct Quantity {
@@ -833,18 +866,24 @@ struct Quantity {
     /// baseline unit for this quantity
     std::string baseline;
     /// set of conversion from the key to the baseline unit
-    std::unordered_map<std::string, double> conversions;
+    std::unordered_map<LowercaseString, double> conversions;
+    std::unordered_map<LowercaseString, std::string> alternatives;
 
     std::string normalize_unit(const std::string& original_unit) {
         if (original_unit.empty()) {
             return original_unit;
         }
 
-        std::string unit = normalize_string(original_unit);
+        std::string unit = remove_spaces(original_unit);
+        auto alternative = this->alternatives.find(unit);
+        if (alternative != this->alternatives.end()) {
+            unit = alternative->second;
+        }
+
         if (this->conversions.find(unit) == this->conversions.end()) {
             auto valid_units = std::vector<std::string>();
             for (const auto& it: this->conversions) {
-                valid_units.emplace_back(it.first);
+                valid_units.emplace_back(it.first.original());
             }
 
             C10_THROW_ERROR(ValueError,
@@ -869,18 +908,35 @@ struct Quantity {
 };
 
 static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
-    {"length", Quantity{/* name */ "length", /* baseline */ "angstrom", {
-        {"angstrom", 1.0},
-        {"bohr", 1.8897261258369282},
+    {"length", Quantity{/* name */ "length", /* baseline */ "Angstrom", {
+        {"Angstrom", 1.0},
+        {"Bohr", 1.8897261258369282},
+        {"meter", 1e-10},
+        {"centimeter", 1e-8},
+        {"millimeter", 1e-7},
+        {"micrometer", 0.0001},
         {"nanometer", 0.1},
-        {"nm", 0.1},
+    }, {
+        // alternative names
+        {"A", "Angstrom"},
+        {"cm", "centimeter"},
+        {"mm", "millimeter"},
+        {"um", "micrometer"},
+        {"µm", "micrometer"},
+        {"nm", "nanometer"},
     }}},
-    {"energy", Quantity{/* name */ "energy", /* baseline */ "ev", {
-        {"ev", 1.0},
-        {"mev", 1000.0},
-        {"hartree", 0.03674932247495664},
+    {"energy", Quantity{/* name */ "energy", /* baseline */ "eV", {
+        {"eV", 1.0},
+        {"meV", 1000.0},
+        {"Hartree", 0.03674932247495664},
         {"kcal/mol", 23.060548012069496},
-        {"kj/mol", 96.48533288249877},
+        {"kJ/mol", 96.48533288249877},
+        {"Joule", 1.60218e-19},
+        {"Rydberg", 0.07349864435130857},
+    }, {
+        // alternative names
+        {"J", "Joule"},
+        {"Ry", "Rydberg"},
     }}},
 };
 
