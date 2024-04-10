@@ -197,19 +197,21 @@ if (CARGO_VERSION_CHANGED)
     execute_process(
         COMMAND ${CARGO_EXE} rustc --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
         WORKING_DIRECTORY "${TMPDIR}/_cargo_required_libs"
-        RESULT_VARIABLE cargo_build_result
-        ERROR_VARIABLE cargo_build_error_message
+        RESULT_VARIABLE cargo_static_libs_result
+        ERROR_VARIABLE cargo_static_libs_stderr
     )
 
     # clean up the files
     file(REMOVE_RECURSE "${TMPDIR}")
 
-    if(cargo_build_result)
-        message(FATAL_ERROR "could extract default static libs: ${cargo_build_result}")
+    if (cargo_static_libs_result)
+        message(FATAL_ERROR
+            "could not extract default static libs (status ${cargo_static_libs_result}), stderr:\n${cargo_static_libs_stderr}"
+        )
     endif()
 
     # The pattern starts with `native-static-libs:` and goes to the end of the line.
-    if(cargo_build_error_message MATCHES "native-static-libs: ([^\r\n]+)\r?\n")
+    if (cargo_static_libs_stderr MATCHES "native-static-libs: ([^\r\n]+)\r?\n")
         string(REPLACE " " ";" "libs_list" "${CMAKE_MATCH_1}")
         set(stripped_lib_list "")
         foreach(lib ${libs_list})
@@ -235,7 +237,7 @@ if (CARGO_VERSION_CHANGED)
             message(STATUS "Cargo default link libraries are: ${CARGO_DEFAULT_LIBRARIES}")
         endif()
     else()
-        message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_build_error_message}`")
+        message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_static_libs_stderr}`")
     endif()
 endif()
 
