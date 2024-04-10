@@ -243,7 +243,9 @@ public:
     ///
     /// @param name name of the data
     /// @param values values of the data
-    void add_data(std::string name, TorchTensorBlock values);
+    /// @param override if true, allow this function to override existing data
+    ///                 with the same name
+    void add_data(std::string name, TorchTensorBlock values, bool override=false);
 
     /// Retrieve custom data stored in this System, or throw an error.
     TorchTensorBlock get_data(std::string name) const;
