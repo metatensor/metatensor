@@ -24,7 +24,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `ModelCapabilities::dtype`, used by the model to communicate the dtype it
   wants to use for inputs and outputs.
 - The `load_model_extensions()` function to facilitate loading a model using
-  TorchScript extensions
+  TorchScript extensions.
+
+#### Changed
+
+- `System::add_data` now has an `override` parameter to replace custom data with
+  a new value.
 
 ### metatensor-torch Python
 

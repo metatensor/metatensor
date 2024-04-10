@@ -676,7 +676,7 @@ static auto INVALID_DATA_NAMES = std::unordered_set<std::string>{
     "neighbors", "neighbor"
 };
 
-void SystemHolder::add_data(std::string name, TorchTensorBlock values) {
+void SystemHolder::add_data(std::string name, TorchTensorBlock values, bool override) {
     if (!valid_ident(name)) {
         C10_THROW_ERROR(ValueError,
             "custom data name '" + name + "' is invalid: only [a-z A-Z 0-9 _-] are accepted"
@@ -689,7 +689,7 @@ void SystemHolder::add_data(std::string name, TorchTensorBlock values) {
         );
     }
 
-    if (data_.find(name) != data_.end()) {
+    if (!override && data_.find(name) != data_.end()) {
         C10_THROW_ERROR(ValueError,
             "custom data '" + name + "' is already present in this system"
         );
@@ -711,7 +711,7 @@ void SystemHolder::add_data(std::string name, TorchTensorBlock values) {
         );
     }
 
-    data_.emplace(std::move(name), std::move(values));
+    data_.insert_or_assign(std::move(name), std::move(values));
 }
 
 TorchTensorBlock SystemHolder::get_data(std::string name) const {

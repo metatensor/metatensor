@@ -132,6 +132,13 @@ def test_custom_data(system):
     with pytest.raises(ValueError, match=message):
         system.add_data("data-name", data)
 
+    new_data = data.copy()
+    new_data.values[:] = 12
+    # this should work
+    system.add_data("data-name", new_data, override=True)
+
+    assert metatensor.torch.equal_block(system.get_data("data-name"), new_data)
+
 
 def test_data_validation(types, positions, cell):
     # this should run without error:

@@ -135,7 +135,7 @@ class System:
         Get all the neighbors lists options registered with this :py:class:`System`
         """
 
-    def add_data(self, name: str, data: TensorBlock):
+    def add_data(self, name: str, data: TensorBlock, override: bool = False):
         """
         Add custom data to this system, stored as :py:class:`TensorBlock`.
 
@@ -144,6 +144,8 @@ class System:
 
         :param name: name of the custom data
         :param data: values of the custom data
+        :param override: if ``True``, allow this function to override existing data with
+            the same name
         """
 
     def get_data(self, name: str) -> TensorBlock:
