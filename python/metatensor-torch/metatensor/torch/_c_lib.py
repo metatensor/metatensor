@@ -1,38 +1,14 @@
 import glob
 import os
-import re
 import sys
-from collections import namedtuple
 
 import torch
 
 import metatensor
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION
+from .utils import parse_version, version_compatible
 from .version import __version__
-
-
-Version = namedtuple("Version", ["major", "minor", "patch"])
-
-
-def parse_version(version):
-    match = re.match(r"(\d+)\.(\d+)\.(\d+).*", version)
-    if match:
-        return Version(*map(int, match.groups()))
-    else:
-        raise ValueError("Invalid version string format")
-
-
-def version_compatible(actual, required):
-    actual = parse_version(actual)
-    required = parse_version(required)
-
-    if actual.major != required.major:
-        return False
-    elif actual.minor != required.minor:
-        return False
-    else:
-        return True
 
 
 if not version_compatible(metatensor.__version__, BUILD_METATENSOR_CORE_VERSION):
