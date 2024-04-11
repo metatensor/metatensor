@@ -4,7 +4,7 @@ import pytest
 import metatensor
 from metatensor import Labels, TensorBlock
 
-from . import utils
+from . import _tests_utils
 
 
 @pytest.fixture
@@ -32,12 +32,12 @@ def block_components():
 
 @pytest.fixture
 def tensor():
-    return utils.tensor()
+    return _tests_utils.tensor()
 
 
 @pytest.fixture
 def large_tensor():
-    return utils.large_tensor()
+    return _tests_utils.large_tensor()
 
 
 def test_block_eq(block):

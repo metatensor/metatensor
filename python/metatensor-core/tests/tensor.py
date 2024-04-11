@@ -8,7 +8,7 @@ from numpy.testing import assert_equal
 
 from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock, TensorMap
 
-from . import utils
+from . import _tests_utils
 
 
 try:
@@ -21,12 +21,12 @@ except ImportError:
 
 @pytest.fixture
 def tensor():
-    return utils.tensor()
+    return _tests_utils.tensor()
 
 
 @pytest.fixture
 def large_tensor():
-    return utils.large_tensor()
+    return _tests_utils.large_tensor()
 
 
 def test_constructor_errors():
@@ -52,7 +52,7 @@ def test_constructor_errors():
 
 def test_copy():
     # Do not use a fixture here because we want exactly on reference in the copy test.
-    tensor = utils.tensor()
+    tensor = _tests_utils.tensor()
     # Using TensorMap.copy
     clone = tensor.copy()
     block_1_values_id = id(tensor.block(0).values)

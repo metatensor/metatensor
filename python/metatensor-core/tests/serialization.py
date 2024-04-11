@@ -8,7 +8,7 @@ import pytest
 import metatensor
 from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
-from . import utils
+from . import _tests_utils
 
 
 PICKLE_PROTOCOLS = (4, 5)
@@ -16,17 +16,17 @@ PICKLE_PROTOCOLS = (4, 5)
 
 @pytest.fixture
 def tensor():
-    return utils.tensor()
+    return _tests_utils.tensor()
 
 
 @pytest.fixture
 def labels():
-    return utils.tensor().keys
+    return _tests_utils.tensor().keys
 
 
 @pytest.fixture
 def tensor_zero_len_block():
-    return utils.tensor_zero_len_block()
+    return _tests_utils.tensor_zero_len_block()
 
 
 @pytest.mark.parametrize("use_numpy", (True, False))

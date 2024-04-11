@@ -9,7 +9,7 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn import Linear  # noqa: E402
 
-from .utils import random_single_block_no_components_tensor_map  # noqa: E402
+from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
 
 
 @pytest.fixture()

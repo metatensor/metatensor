@@ -6,13 +6,13 @@ import pytest
 import metatensor
 from metatensor import TensorBlock, TensorMap
 
-from . import utils
+from . import _tests_utils
 
 
 def tensor_complex():
     """Manipulate tensor to be a suitable test for the `abs` function."""
 
-    tensor = utils.tensor()
+    tensor = _tests_utils.tensor()
 
     blocks = []
     for block in tensor:
