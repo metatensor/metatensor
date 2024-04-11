@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.4.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.4.0) - 2024-04-11
+
 ### metatensor-torch C++
 
 #### Added
@@ -32,6 +34,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   a new value.
 
 ### metatensor-torch Python
+
+#### Changed
+
+- We now release wheels compatible with multiple torch versions on PyPI,
+  removing the need to compile C++ code when installing this package.
 
 #### Added
 
