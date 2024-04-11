@@ -15,7 +15,7 @@ import metatensor  # noqa: E402
 from metatensor import TensorMap  # noqa: E402
 from metatensor.learn.data import Dataset, IndexedDataset  # noqa: E402
 
-from . import utils  # noqa: E402
+from . import _tests_utils  # noqa: E402
 
 
 SAMPLE_INDICES = [i * 7 for i in range(6)]  # non-continuous sample index range
@@ -26,9 +26,9 @@ def test_dataset_all_in_memory(indexed, tmpdir):
     """Tests dataset that all data is in memory"""
     with tmpdir.as_cwd():
         if indexed:
-            dset = utils.indexed_dataset_in_mem(SAMPLE_INDICES)
+            dset = _tests_utils.indexed_dataset_in_mem(SAMPLE_INDICES)
         else:
-            dset = utils.dataset_in_mem(SAMPLE_INDICES)
+            dset = _tests_utils.dataset_in_mem(SAMPLE_INDICES)
 
         for idx, A in enumerate(SAMPLE_INDICES):
             # Check successful loading into memory upon calling __getitem__
@@ -48,9 +48,9 @@ def test_dataset_all_on_disk(indexed, tmpdir):
     and not yet loaded into memory"""
     with tmpdir.as_cwd():
         if indexed:
-            dset = utils.indexed_dataset_on_disk(SAMPLE_INDICES)
+            dset = _tests_utils.indexed_dataset_on_disk(SAMPLE_INDICES)
         else:
-            dset = utils.dataset_on_disk(SAMPLE_INDICES)
+            dset = _tests_utils.dataset_on_disk(SAMPLE_INDICES)
         for idx, A in enumerate(SAMPLE_INDICES):
             # Check that callables are stored internally
             assert callable(dset._data["input"])
@@ -74,9 +74,9 @@ def test_dataset_mixed_mem_disk(indexed, tmpdir):
     and not yet loaded into memory, or in memeory."""
     with tmpdir.as_cwd():
         if indexed:
-            dset = utils.indexed_dataset_mixed_mem_disk(SAMPLE_INDICES)
+            dset = _tests_utils.indexed_dataset_mixed_mem_disk(SAMPLE_INDICES)
         else:
-            dset = utils.dataset_mixed_mem_disk(SAMPLE_INDICES)
+            dset = _tests_utils.dataset_mixed_mem_disk(SAMPLE_INDICES)
         for idx, A in enumerate(SAMPLE_INDICES):
             # Check input/output data are stored as TensorMaps internally
             assert isinstance(dset._data["input"][idx], TensorMap)
@@ -158,7 +158,11 @@ def test_indexed_dataset_fields_arbitrary_types():
 
 @pytest.mark.parametrize(
     "create_dataset",
-    [utils.dataset_in_mem, utils.dataset_on_disk, utils.dataset_mixed_mem_disk],
+    [
+        _tests_utils.dataset_in_mem,
+        _tests_utils.dataset_on_disk,
+        _tests_utils.dataset_mixed_mem_disk,
+    ],
 )
 def test_dataset_nonexistant_index_error(create_dataset, tmpdir):
     """
@@ -174,9 +178,9 @@ def test_dataset_nonexistant_index_error(create_dataset, tmpdir):
 @pytest.mark.parametrize(
     "create_dataset",
     [
-        utils.indexed_dataset_in_mem,
-        utils.indexed_dataset_on_disk,
-        utils.indexed_dataset_mixed_mem_disk,
+        _tests_utils.indexed_dataset_in_mem,
+        _tests_utils.indexed_dataset_on_disk,
+        _tests_utils.indexed_dataset_mixed_mem_disk,
     ],
 )
 def test_indexed_dataset_nonexistant_index_error(create_dataset, tmpdir):

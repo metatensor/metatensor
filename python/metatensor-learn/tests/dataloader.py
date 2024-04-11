@@ -11,7 +11,7 @@ import metatensor  # noqa: E402
 from metatensor import TensorMap  # noqa: E402
 from metatensor.learn.data import DataLoader, group  # noqa: E402
 
-from . import utils  # noqa: E402
+from . import _tests_utils  # noqa: E402
 
 
 SAMPLE_INDICES = [i * 7 for i in range(6)]  # non-continuous sample index range
@@ -19,7 +19,11 @@ SAMPLE_INDICES = [i * 7 for i in range(6)]  # non-continuous sample index range
 
 @pytest.mark.parametrize(
     "create_dataset",
-    [utils.dataset_in_mem, utils.dataset_on_disk, utils.dataset_mixed_mem_disk],
+    [
+        _tests_utils.dataset_in_mem,
+        _tests_utils.dataset_on_disk,
+        _tests_utils.dataset_mixed_mem_disk,
+    ],
 )
 def test_dataloader_indices(create_dataset, tmpdir):
     """
@@ -49,9 +53,9 @@ def test_dataloader_indices(create_dataset, tmpdir):
 @pytest.mark.parametrize(
     "create_dataset",
     [
-        utils.indexed_dataset_in_mem,
-        utils.indexed_dataset_on_disk,
-        utils.indexed_dataset_mixed_mem_disk,
+        _tests_utils.indexed_dataset_in_mem,
+        _tests_utils.indexed_dataset_on_disk,
+        _tests_utils.indexed_dataset_mixed_mem_disk,
     ],
 )
 def test_dataloader_indices_indexed(create_dataset, tmpdir):
@@ -82,9 +86,9 @@ def test_dataloader_indices_indexed(create_dataset, tmpdir):
 @pytest.mark.parametrize(
     "create_dataset",
     [
-        utils.indexed_dataset_in_mem,
-        utils.indexed_dataset_on_disk,
-        utils.indexed_dataset_mixed_mem_disk,
+        _tests_utils.indexed_dataset_in_mem,
+        _tests_utils.indexed_dataset_on_disk,
+        _tests_utils.indexed_dataset_mixed_mem_disk,
     ],
 )
 def test_indexed_dataloader_indices_shuffle(create_dataset, tmpdir):
@@ -110,7 +114,7 @@ def test_dataloader_collate_fn_group_and_join(tmpdir):
     Tests the output using the default "group_and_join" collate function.
     """
     with tmpdir.as_cwd():
-        dset = utils.indexed_dataset_on_disk(SAMPLE_INDICES)
+        dset = _tests_utils.indexed_dataset_on_disk(SAMPLE_INDICES)
 
         # Build dataloader using default collate function "group_and_join"
         dloader = DataLoader(dset, batch_size=6)
@@ -134,7 +138,7 @@ def test_dataloader_collate_fn_group(tmpdir):
     Tests the output using the default "group_and_join" collate function.
     """
     with tmpdir.as_cwd():
-        dset = utils.indexed_dataset_mixed_mem_disk(SAMPLE_INDICES)
+        dset = _tests_utils.indexed_dataset_mixed_mem_disk(SAMPLE_INDICES)
         dloader = DataLoader(dset, collate_fn=group, batch_size=5)
 
         for batch in dloader:

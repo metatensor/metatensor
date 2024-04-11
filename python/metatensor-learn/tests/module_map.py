@@ -9,7 +9,7 @@ from torch.nn import Module, Sigmoid  # noqa: E402
 
 from metatensor.learn.nn import ModuleMap  # noqa: E402
 
-from .utils import random_single_block_no_components_tensor_map  # noqa: E402
+from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
 
 
 @pytest.fixture

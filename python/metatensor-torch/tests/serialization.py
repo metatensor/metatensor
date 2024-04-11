@@ -8,7 +8,7 @@ import torch
 import metatensor.torch
 from metatensor.torch import Labels, TensorMap
 
-from . import utils
+from . import _tests_utils
 
 
 @pytest.fixture
@@ -81,7 +81,7 @@ def test_save(tmpdir):
     """Check that we can save and load a tensor to a file"""
     tmpfile = "serialize-test.npz"
 
-    tensor = utils.tensor(dtype=torch.float64)
+    tensor = _tests_utils.tensor(dtype=torch.float64)
 
     with tmpdir.as_cwd():
         metatensor.torch.save(tmpfile, tensor)
@@ -123,7 +123,7 @@ def test_save_load_zero_length_block(tmpdir):
     Tests that attempting to save and load a TensorMap with a zero-length axis block
     does not raise an error.
     """
-    tensor_zero_len_block = utils.tensor_zero_len_block()
+    tensor_zero_len_block = _tests_utils.tensor_zero_len_block()
 
     with tmpdir.as_cwd():
         file = "serialize-test-zero-len-block.npz"
@@ -153,7 +153,7 @@ def test_save_labels(tmpdir):
     """Check that we can save and load a tensor to a file"""
     tmpfile = "serialize-test.npz"
 
-    labels = utils.tensor(dtype=torch.float64).keys
+    labels = _tests_utils.tensor(dtype=torch.float64).keys
 
     with tmpdir.as_cwd():
         metatensor.torch.save(tmpfile, labels)

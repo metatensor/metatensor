@@ -6,7 +6,7 @@ import pytest
 import metatensor
 from metatensor import Labels
 
-from . import utils
+from . import _tests_utils
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -15,12 +15,12 @@ TEST_FILE = "qm7-spherical-expansion.npz"
 
 @pytest.fixture
 def tensor():
-    return utils.tensor()
+    return _tests_utils.tensor()
 
 
 @pytest.fixture
 def large_tensor():
-    return utils.large_tensor()
+    return _tests_utils.large_tensor()
 
 
 @pytest.fixture

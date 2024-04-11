@@ -6,17 +6,17 @@ from packaging import version
 
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
-from . import utils
+from . import _tests_utils
 
 
 @pytest.fixture
 def tensor():
-    return utils.tensor()
+    return _tests_utils.tensor()
 
 
 @pytest.fixture
 def large_tensor():
-    return utils.large_tensor()
+    return _tests_utils.large_tensor()
 
 
 def test_keys(tensor):
@@ -710,7 +710,7 @@ class Issue349(torch.nn.Module):
 
 def test_script_variable_scoping(tensor):
     problematic = Issue349()
-    tensor = utils.tensor()
+    tensor = _tests_utils.tensor()
 
     # This is fine
     assert problematic(tensor).item() == 42.0
