@@ -59,7 +59,7 @@ jobs:
 
             for (const artifact of artifacts) {
                 if (artifact.name == "wheels") {
-                    const link = `https://nightly.link/${owner}/${repo}/actions/artifacts/${artifacts[0].id}.zip`
+                    const link = `https://nightly.link/${owner}/${repo}/actions/artifacts/${artifact.id}.zip`
 
                     let body = `Here is a pre-built version of the code in this pull request: [wheels.zip](${link}), `;
                     body += 'you can install it locally by unzipping `wheels.zip` and using `pip` to install the file matching your system';
