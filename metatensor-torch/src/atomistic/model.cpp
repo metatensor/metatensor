@@ -4,6 +4,7 @@
 #include <array>
 #include <sstream>
 #include <algorithm>
+#include <filesystem>
 
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
@@ -718,12 +719,12 @@ struct Version {
     int minor = 0;
 };
 
-struct Extension {
+struct Library {
     std::string name;
     std::string path;
 };
 
-void from_json(const nlohmann::json& json, Extension& extension) {
+void from_json(const nlohmann::json& json, Library& extension) {
     json.at("name").get_to(extension.name);
     json.at("path").get_to(extension.path);
 }
@@ -737,30 +738,54 @@ static std::string record_to_string(std::tuple<at::DataPtr, size_t> data) {
     );
 }
 
-static void load_extension(
-    const std::string& context,
-    const nlohmann::json data,
-    c10::optional<std::string> extensions_directory
+
+/// Check if a library is already loaded. To handle multiple platforms, this
+/// does fuzzy matching on the file name; assuming that the name of the library
+/// is the same across platforms.
+static bool library_already_loaded(
+    const std::vector<std::string>& loaded_libraries,
+    const std::string& name
 ) {
-    auto path = data["path"].get<std::string>();
+    for (const auto& library: loaded_libraries) {
+        auto filename = std::filesystem::path(library).filename().string();
+        if (filename.find(name) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+/// Load a shared library (either TorchScript extension or dependency of
+/// extension) in the process
+static void load_library(
+    const Library& library,
+    c10::optional<std::string> extensions_directory,
+    bool is_dependency
+) {
     auto candidates = std::vector<std::string>();
-    if (path[0] == '/') {
-        candidates.push_back(path);
+    if (library.path[0] == '/') {
+        candidates.push_back(library.path);
     }
     if (extensions_directory) {
-        candidates.push_back(extensions_directory.value() + "/" + path);
+        candidates.push_back(extensions_directory.value() + "/" + library.path);
     }
 
-    auto loaded = details::load_library(data["name"], candidates);
+    auto loaded = details::load_library(library.name, candidates);
 
     if (!loaded) {
         std::ostringstream oss;
-        oss << "failed to load " << context << " " << data["name"] << ". ";
-        oss << "We tried the following:\n";
+        oss << "failed to load ";
+        if (is_dependency) {
+            oss << "extension dependency ";
+        } else {
+            oss << "TorchScript extension ";
+        }
+        oss << library.name << ". We tried the following:\n";
         for (const auto& candidate: candidates) {
             oss << " - " << candidate << "\n";
         }
-        oss << " - loading " << data["name"].get<std::string>() << " directly by name\n";
+        oss << " - loading " << library.name << " directly by name\n";
 
         if (getenv("METATENSOR_DEBUG_EXTENSIONS_LOADING") == nullptr) {
             oss << "You can set `METATENSOR_DEBUG_EXTENSIONS_LOADING=1` ";
@@ -783,23 +808,33 @@ void metatensor_torch::load_model_extensions(
         );
     }
 
-    auto dependencies = nlohmann::json::parse(record_to_string(
+    auto debug = getenv("METATENSOR_DEBUG_EXTENSIONS_LOADING") != nullptr;
+    auto loaded_libraries = metatensor_torch::details::get_loaded_libraries();
+
+    std::vector<Library> dependencies = nlohmann::json::parse(record_to_string(
         reader.getRecord("extra/extensions-deps")
     ));
     for (const auto& dep: dependencies) {
-        load_extension("extension dependency", dep, extensions_directory);
+        if (!library_already_loaded(loaded_libraries, dep.name)) {
+            load_library(dep, extensions_directory, /*is_dependency=*/true);
+        } else if (debug) {
+            std::cerr << dep.name << " dependency was already loaded" << std::endl;
+        }
     }
 
-    auto extensions = nlohmann::json::parse(record_to_string(
+    std::vector<Library> extensions = nlohmann::json::parse(record_to_string(
         reader.getRecord("extra/extensions")
     ));
-
     for (const auto& ext: extensions) {
-        if (ext["name"] == "metatensor_torch") {
+        if (ext.name == "metatensor_torch") {
             continue;
         }
 
-        load_extension("TorchScript extension", ext, extensions_directory);
+        if (!library_already_loaded(loaded_libraries, ext.name)) {
+            load_library(ext, extensions_directory, /*is_dependency=*/false);
+        } else if (debug) {
+            std::cerr << ext.name << " extension was already loaded" << std::endl;
+        }
     }
 }
 
@@ -841,22 +876,14 @@ void metatensor_torch::check_atomistic_model(std::string path) {
     // loaded now. Since the model can be exported from a different machine, or
     // the extensions might change how they organize code, we only try to do
     // fuzzy matching on the file name, and warn if we can not find a match.
-    std::vector<Extension> extensions = nlohmann::json::parse(record_to_string(
+    std::vector<Library> extensions = nlohmann::json::parse(record_to_string(
         reader.getRecord("extra/extensions")
     ));
 
     auto loaded_libraries = metatensor_torch::details::get_loaded_libraries();
 
     for (const auto& extension: extensions) {
-        auto found = false;
-        for (const auto& library: loaded_libraries) {
-            if (library.find(extension.name) != std::string::npos) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
+        if (!library_already_loaded(loaded_libraries, extension.name)) {
             TORCH_WARN(
                 "The model at '", path, "' was exported with extension '",
                 extension.name, "' loaded (from '", extension.path, "'), ",
