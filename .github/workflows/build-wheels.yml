@@ -172,7 +172,6 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
-      # TODO?: use metatensor_core wheel from above for the build
       - name: build metatensor-torch wheel
         run: python -m cibuildwheel python/metatensor-torch
         env:
@@ -182,8 +181,16 @@ jobs:
           CIBW_BUILD_VERBOSITY: 2
           CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2014_x86_64
           CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux2014_aarch64
+          # METATENSOR_NO_LOCAL_DEPS is set to 1 when building a tag of
+          # metatensor-torch, which will force to use the version of
+          # metatensor-core already released on PyPI. Otherwise, this will use
+          # the version of metatensor-core from git checkout (in case there are
+          # unreleased breaking changes). This means we can not release breaking
+          # changes in metatensor-core and metatensor-torch by putting a tag on
+          # the same commit. Instead metatensor-core must be fully released
+          # before we start the build of metatensor-torch wheels.
           CIBW_ENVIRONMENT: >
-            METATENSOR_NO_LOCAL_DEPS=1
+            METATENSOR_NO_LOCAL_DEPS=${{ startsWith(github.ref, 'refs/tags/metatensor-torch-v') && '1' || '0' }}
             METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION=${{ matrix.torch-version }}.*
             PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
             MACOSX_DEPLOYMENT_TARGET=11

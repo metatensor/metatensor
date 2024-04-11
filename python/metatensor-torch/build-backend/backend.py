@@ -15,13 +15,15 @@ METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "..", "metatensor-co
 FORCED_METATENSOR_CORE_VERSION = os.environ.get(
     "METATENSOR_TORCH_BUILD_WITH_METATENSOR_CORE_VERSION"
 )
+METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
+
 
 if FORCED_METATENSOR_CORE_VERSION is not None:
     # force a specific version for metatensor-core, this is used when checking the build
     # from a sdist on a non-released version
     METATENSOR_CORE_DEP = f"metatensor-core =={FORCED_METATENSOR_CORE_VERSION}"
 
-elif os.path.exists(METATENSOR_CORE):
+elif not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
     # we are building from a git checkout
 
     # add a random uuid to the file url to prevent pip from using a cached
