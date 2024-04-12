@@ -5,6 +5,11 @@ import site
 
 import torch
 
+from .. import _c_lib
+
+
+METATENSOR_TORCH_LIB_PATH = _c_lib._lib_path()
+
 
 def _rascaline_lib_path():
     import rascaline
@@ -36,6 +41,9 @@ def _collect_extensions(extensions_path):
     extensions = []
     extensions_deps = []
     for library in torch.ops.loaded_libraries:
+        if library == METATENSOR_TORCH_LIB_PATH:
+            continue
+
         path = _copy_extension(library, extensions_path)
         info = _extension_info(library)
         info["path"] = path
