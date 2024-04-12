@@ -38,8 +38,8 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     :param extensions_directory: path to a directory containing all extensions required
         by the exported model
     """
-    check_atomistic_model(path)
     load_model_extensions(path, extensions_directory)
+    check_atomistic_model(path)
     return torch.jit.load(path)
 
 

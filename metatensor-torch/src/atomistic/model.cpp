@@ -897,8 +897,8 @@ torch::jit::Module metatensor_torch::load_atomistic_model(
     std::string path,
     c10::optional<std::string> extensions_directory
 ) {
-    check_atomistic_model(path);
     load_model_extensions(path, extensions_directory);
+    check_atomistic_model(path);
     return torch::jit::load(path);
 }
 
