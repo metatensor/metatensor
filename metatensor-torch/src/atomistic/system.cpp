@@ -145,6 +145,11 @@ torch::Tensor NeighborsAutograd::forward(
     auto distances = neighbors->values();
 
     if (check_consistency) {
+        auto epsilon = 1e-6;
+        if (distances.scalar_type() != torch::kFloat64) {
+            auto epsilon = 1e-4;
+        }
+
         auto samples = neighbors->samples()->values();
         for (int64_t sample_i=0; sample_i<samples.size(0); sample_i++) {
             auto atom_i = samples[sample_i][0];
@@ -154,8 +159,8 @@ torch::Tensor NeighborsAutograd::forward(
             auto actual_distance = distances[sample_i].reshape({3});
             auto expected_distance = positions[atom_j] - positions[atom_i] + cell_shift.matmul(cell);
 
-            auto diff_norm = (actual_distance - expected_distance).norm();
-            if (diff_norm.to(torch::kCPU).to(torch::kF64).item<double>() > 1e-6) {
+            auto diff_norm = (actual_distance - expected_distance).norm().to(torch::kCPU).to(torch::kF64);
+            if (diff_norm.item<double>() > epsilon) {
                 std::ostringstream oss;
 
                 oss << "one neighbor pair does not match its metadata: ";
@@ -167,18 +172,20 @@ torch::Tensor NeighborsAutograd::forward(
                 oss << cell_shift_i32[1].item<int32_t>() << ", ";
                 oss << cell_shift_i32[2].item<int32_t>() << "] cell shift ";
 
-                auto expected_f64 = expected_distance.to(torch::kF64);
+                auto expected_f64 = expected_distance.to(torch::kCPU).to(torch::kF64);
                 oss << "should have a distance vector of ";
                 oss << "[" << expected_f64[0].item<double>() << ", ";
                 oss << expected_f64[1].item<double>() << ", ";
                 oss << expected_f64[2].item<double>() << "] ";
 
 
-                auto actual_f64 = actual_distance.to(torch::kF64);
+                auto actual_f64 = actual_distance.to(torch::kCPU).to(torch::kF64);
                 oss << "but has a distance vector of ";
                 oss << "[" << actual_f64[0].item<double>() << ", ";
                 oss << actual_f64[1].item<double>() << ", ";
                 oss << actual_f64[2].item<double>() << "] ";
+
+                oss << "norm difference is " << diff_norm.item<double>();
 
                 C10_THROW_ERROR(ValueError, oss.str());
             }
