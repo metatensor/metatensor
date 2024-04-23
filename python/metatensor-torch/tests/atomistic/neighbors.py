@@ -76,9 +76,9 @@ def test_neighbors_autograd():
         system = System(
             torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell
         )
-        register_autograd_neighbors(system, neighbors)
+        register_autograd_neighbors(system, neighbors, check_consistency=True)
 
-        return neighbors.values
+        return neighbors.values.sum()
 
     options = NeighborsListOptions(cutoff=2.0, full_list=False)
     torch.autograd.gradcheck(
@@ -126,9 +126,9 @@ def test_neighbors_autograd_errors():
 
     message = (
         "one neighbor pair does not match its metadata: the pair between atom 0 and "
-        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
-        "\\[0.489917, 1.24926, 0.102936\\] but has a distance vector of "
-        "\\[1.46975, 3.74777, 0.308807\\]"
+        "atom 6 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
+        "\\[-0.220464, -0.407372, 1.07291\\] but has a distance vector of "
+        "\\[-0.661392, -1.22212, 3.21872\\]"
     )
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"

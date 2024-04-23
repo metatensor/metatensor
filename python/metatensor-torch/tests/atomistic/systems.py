@@ -293,11 +293,7 @@ def test_neighbors_validation(system):
                     "cell_shift_a",
                     "cell_shift_b",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0)]),
             ),
             components=[Labels.range("xyz", 3)],
             properties=Labels.range("distance", 1),
@@ -320,11 +316,7 @@ def test_neighbors_validation(system):
                     "cell_shift_b",
                     "cell_shift_c",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0, 0)]),
             ),
             components=[Labels.range("a", 3)],
             properties=Labels.range("distance", 1),
@@ -347,11 +339,7 @@ def test_neighbors_validation(system):
                     "cell_shift_b",
                     "cell_shift_c",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0, 0)]),
             ),
             components=[Labels.range("xyz", 3)],
             properties=Labels.range("distance", 2),
@@ -371,11 +359,7 @@ def test_neighbors_validation(system):
                     "cell_shift_b",
                     "cell_shift_c",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0, 0)]),
             ),
             components=[Labels.range("xyz", 3)],
             properties=Labels.range("distance", 1),
@@ -407,11 +391,7 @@ def test_neighbors_validation(system):
                     "cell_shift_b",
                     "cell_shift_c",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0, 0)]),
             ).to(device="meta"),
             components=[Labels.range("xyz", 3).to(device="meta")],
             properties=Labels.range("distance", 1).to(device="meta"),
@@ -434,11 +414,7 @@ def test_neighbors_validation(system):
                     "cell_shift_b",
                     "cell_shift_c",
                 ],
-                torch.tensor(
-                    [
-                        (0, 1, 0, 0, 0),
-                    ]
-                ),
+                torch.tensor([(0, 1, 0, 0, 0)]),
             ),
             components=[Labels.range("xyz", 3)],
             properties=Labels.range("distance", 1),
