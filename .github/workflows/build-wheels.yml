@@ -100,7 +100,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2']
+        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-22.04', 'macos-11', 'macos-14', 'windows-2019']
         exclude:
@@ -145,6 +145,7 @@ jobs:
           - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}
           - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
           - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
+          - {torch-version: '2.3',  python-version: '3.12', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v4
         with:
