@@ -438,7 +438,7 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
 
         selected.append(pair_i)
 
-    selected = np.array(selected)
+    selected = np.array(selected, dtype=np.int32)
     n_pairs = len(selected)
 
     if options.full_list:

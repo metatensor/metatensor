@@ -1,0 +1,19 @@
+{
+    "description": "NL for an empty system",
+    "system": {
+        "positions": [],
+        "cell": [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ]
+    },
+    "options": {
+        "cutoff": 3.4,
+        "full_list": false
+    },
+    "expected-neighbors": {
+        "samples": [],
+        "distances": []
+    }
+}
