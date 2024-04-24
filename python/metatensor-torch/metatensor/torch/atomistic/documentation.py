@@ -94,9 +94,9 @@ class System:
             this is set to ``None``.
         """
 
-    def add_neighbors_list(
+    def add_neighbor_list(
         self,
-        options: "NeighborsListOptions",
+        options: "NeighborListOptions",
         neighbors: TensorBlock,
     ):
         """
@@ -119,9 +119,9 @@ class System:
         :param neighbors: list of neighbors stored in a :py:class:`TensorBlock`
         """
 
-    def get_neighbors_list(
+    def get_neighbor_list(
         self,
-        options: "NeighborsListOptions",
+        options: "NeighborListOptions",
     ) -> TensorBlock:
         """
         Retrieve a previously stored neighbors list with the given ``options``, or throw
@@ -130,7 +130,7 @@ class System:
         :param options: options of the neighbors list to retrieve
         """
 
-    def known_neighbors_lists(self) -> List["NeighborsListOptions"]:
+    def known_neighbor_lists(self) -> List["NeighborListOptions"]:
         """
         Get all the neighbors lists options registered with this :py:class:`System`
         """
@@ -162,7 +162,7 @@ class System:
         """
 
 
-class NeighborsListOptions:
+class NeighborListOptions:
     """Options for the calculation of a neighbors list"""
 
     def __init__(self, cutoff: float, full_list: bool, requestor: str = ""):
@@ -218,10 +218,10 @@ class NeighborsListOptions:
     def __str__(self) -> str:
         pass
 
-    def __eq__(self, other: "NeighborsListOptions") -> bool:
+    def __eq__(self, other: "NeighborListOptions") -> bool:
         pass
 
-    def __ne__(self, other: "NeighborsListOptions") -> bool:
+    def __ne__(self, other: "NeighborListOptions") -> bool:
         pass
 
 
@@ -469,7 +469,7 @@ def register_autograd_neighbors(
     :param system: system containing the positions and cell used to compute the
         neighbors list
     :param system: neighbors list, following the same format as
-        :py:meth:`System.add_neighbors_list`
+        :py:meth:`System.add_neighbor_list`
     :param check_consistency: can be set to ``True`` to run a handful of additional
         checks in case the data in neighbors does not follow what's expected.
     """

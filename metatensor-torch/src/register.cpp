@@ -298,31 +298,31 @@ TORCH_LIBRARY(metatensor, m) {
     // ====================================================================== //
     //               code specific to atomistic simulations                   //
     // ====================================================================== //
-    m.class_<NeighborsListOptionsHolder>("NeighborsListOptions")
+    m.class_<NeighborListOptionsHolder>("NeighborListOptions")
         .def(
             torch::init<double, bool, std::string>(), DOCSTRING,
             {torch::arg("cutoff"), torch::arg("full_list"), torch::arg("requestor") = ""}
         )
-        .def_property("cutoff", &NeighborsListOptionsHolder::cutoff)
-        .def_property("length_unit", &NeighborsListOptionsHolder::length_unit, &NeighborsListOptionsHolder::set_length_unit)
-        .def("engine_cutoff", &NeighborsListOptionsHolder::engine_cutoff,
+        .def_property("cutoff", &NeighborListOptionsHolder::cutoff)
+        .def_property("length_unit", &NeighborListOptionsHolder::length_unit, &NeighborListOptionsHolder::set_length_unit)
+        .def("engine_cutoff", &NeighborListOptionsHolder::engine_cutoff,
             DOCSTRING, {torch::arg("engine_length_unit")}
         )
-        .def_property("full_list", &NeighborsListOptionsHolder::full_list)
-        .def("requestors", &NeighborsListOptionsHolder::requestors)
-        .def("add_requestor", &NeighborsListOptionsHolder::add_requestor, DOCSTRING,
+        .def_property("full_list", &NeighborListOptionsHolder::full_list)
+        .def("requestors", &NeighborListOptionsHolder::requestors)
+        .def("add_requestor", &NeighborListOptionsHolder::add_requestor, DOCSTRING,
             {torch::arg("requestor")}
         )
-        .def("__repr__", &NeighborsListOptionsHolder::repr)
-        .def("__str__", &NeighborsListOptionsHolder::str)
-        .def("__eq__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator==))
-        .def("__ne__", static_cast<bool (*)(const NeighborsListOptions&, const NeighborsListOptions&)>(operator!=))
+        .def("__repr__", &NeighborListOptionsHolder::repr)
+        .def("__str__", &NeighborListOptionsHolder::str)
+        .def("__eq__", static_cast<bool (*)(const NeighborListOptions&, const NeighborListOptions&)>(operator==))
+        .def("__ne__", static_cast<bool (*)(const NeighborListOptions&, const NeighborListOptions&)>(operator!=))
         .def_pickle(
-            [](const NeighborsListOptions& self) -> std::string {
+            [](const NeighborListOptions& self) -> std::string {
                 return self->to_json();
             },
-            [](const std::string& data) -> NeighborsListOptions {
-                return NeighborsListOptionsHolder::from_json(data);
+            [](const std::string& data) -> NeighborListOptions {
+                return NeighborListOptionsHolder::from_json(data);
             }
         );
 
@@ -346,13 +346,13 @@ TORCH_LIBRARY(metatensor, m) {
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt
         })
-        .def("add_neighbors_list", &SystemHolder::add_neighbors_list, DOCSTRING,
+        .def("add_neighbor_list", &SystemHolder::add_neighbor_list, DOCSTRING,
             {torch::arg("options"), torch::arg("neighbors")}
         )
-        .def("get_neighbors_list", &SystemHolder::get_neighbors_list, DOCSTRING,
+        .def("get_neighbor_list", &SystemHolder::get_neighbor_list, DOCSTRING,
             {torch::arg("options")}
         )
-        .def("known_neighbors_lists", &SystemHolder::known_neighbors_lists)
+        .def("known_neighbor_lists", &SystemHolder::known_neighbor_lists)
         .def("add_data", &SystemHolder::add_data, DOCSTRING,
             {torch::arg("name"), torch::arg("data"), torch::arg("override") = false}
         )

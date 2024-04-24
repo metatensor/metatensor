@@ -16,7 +16,7 @@ from . import (
     ModelEvaluationOptions,
     ModelMetadata,
     ModelOutput,
-    NeighborsListOptions,
+    NeighborListOptions,
     System,
     check_atomistic_model,
     load_model_extensions,
@@ -54,10 +54,10 @@ class ModelInterface(torch.nn.Module):
 
     Additionally, the model can request neighbor lists to be computed by the simulation
     engine, and stored inside the input :py:class:`System`. This is done by defining the
-    optional :py:meth:`requested_neighbors_lists` method for the model or any of it's
+    optional :py:meth:`requested_neighbor_lists` method for the model or any of it's
     sub-module.
 
-    :py:class:`MetatensorAtomisticModel` will check if ``requested_neighbors_lists`` is
+    :py:class:`MetatensorAtomisticModel` will check if ``requested_neighbor_lists`` is
     defined for all the sub-modules of the model, then collect and unify identical
     requests for the simulation engine.
     """
@@ -105,7 +105,7 @@ class ModelInterface(torch.nn.Module):
         :return: properties of the systems, as predicted by the machine learning model
         """
 
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
+    def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         """
         Optional function declaring which neighbors list this model requires.
 
@@ -116,7 +116,7 @@ class ModelInterface(torch.nn.Module):
         It is then the responsibility of the code calling the model to:
 
         1. call this function (or more generally
-           :py:meth:`MetatensorAtomisticModel.requested_neighbors_lists`) to get the
+           :py:meth:`MetatensorAtomisticModel.requested_neighbor_lists`) to get the
            list of requests;
         2. compute all neighbor lists corresponding to these requests and add them to
            the systems before calling the model.
@@ -232,7 +232,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     """
 
     # Some annotation to make the TorchScript compiler happy
-    _requested_neighbors_lists: List[NeighborsListOptions]
+    _requested_neighbor_lists: List[NeighborListOptions]
 
     def __init__(
         self,
@@ -260,12 +260,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         # ============================================================================ #
 
-        # recursively explore `module` to get all the requested_neighbors_lists
-        self._requested_neighbors_lists = []
-        _get_requested_neighbors_lists(
+        # recursively explore `module` to get all the requested_neighbor_lists
+        self._requested_neighbor_lists = []
+        _get_requested_neighbor_lists(
             self._module,
             self._module.__class__.__name__,
-            self._requested_neighbors_lists,
+            self._requested_neighbor_lists,
             capabilities.length_unit,
         )
         # ============================================================================ #
@@ -320,12 +320,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
         return self._metadata
 
     @torch.jit.export
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
+    def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         """
         Get the neighbors lists required by the wrapped model or any of the child
         module.
         """
-        return self._requested_neighbors_lists
+        return self._requested_neighbor_lists
 
     def forward(
         self,
@@ -343,7 +343,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         :param systems: input systems on which we should run the model. The systems
             should already contain all neighbors lists corresponding to the options in
-            :py:meth:`requested_neighbors_lists()`.
+            :py:meth:`requested_neighbor_lists()`.
         :param options: options for this run of the model
         :param check_consistency: Should we run additional check that everything is
             consistent? This should be set to ``True`` when verifying a model, and to
@@ -355,7 +355,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         if check_consistency:
             _check_inputs(
                 capabilities=self._capabilities,
-                requested_neighbors_lists=self._requested_neighbors_lists,
+                requested_neighbor_lists=self._requested_neighbor_lists,
                 systems=systems,
                 options=options,
                 expected_dtype=self._model_dtype,
@@ -467,14 +467,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
         )
 
 
-def _get_requested_neighbors_lists(
+def _get_requested_neighbor_lists(
     module: torch.nn.Module,
     module_name: str,
-    requested: List[NeighborsListOptions],
+    requested: List[NeighborListOptions],
     length_unit: str,
 ):
-    if hasattr(module, "requested_neighbors_lists"):
-        for new_options in module.requested_neighbors_lists():
+    if hasattr(module, "requested_neighbor_lists"):
+        for new_options in module.requested_neighbor_lists():
             new_options.add_requestor(module_name)
 
             already_requested = False
@@ -496,7 +496,7 @@ def _get_requested_neighbors_lists(
                 requested.append(new_options)
 
     for child_name, child in module.named_children():
-        _get_requested_neighbors_lists(
+        _get_requested_neighbor_lists(
             module=child,
             module_name=module_name + "." + child_name,
             requested=requested,
@@ -555,7 +555,7 @@ def _check_annotation(module: torch.nn.Module):
 
 def _check_inputs(
     capabilities: ModelCapabilities,
-    requested_neighbors_lists: List[NeighborsListOptions],
+    requested_neighbor_lists: List[NeighborListOptions],
     systems: List[System],
     options: ModelEvaluationOptions,
     expected_dtype: torch.dtype,
@@ -647,10 +647,10 @@ def _check_inputs(
                 )
 
         # Check neighbors lists
-        known_neighbors_lists = system.known_neighbors_lists()
-        for request in requested_neighbors_lists:
+        known_neighbor_lists = system.known_neighbor_lists()
+        for request in requested_neighbor_lists:
             found = False
-            for known in known_neighbors_lists:
+            for known in known_neighbor_lists:
                 if request == known:
                     found = True
 
@@ -680,9 +680,9 @@ def _convert_systems_units(
         )
 
         # also update the neighbors list distances
-        for request in system.known_neighbors_lists():
-            neighbors = system.get_neighbors_list(request)
-            new_system.add_neighbors_list(
+        for request in system.known_neighbor_lists():
+            neighbors = system.get_neighbor_list(request)
+            new_system.add_neighbor_list(
                 request,
                 TensorBlock(
                     values=conversion * neighbors.values,

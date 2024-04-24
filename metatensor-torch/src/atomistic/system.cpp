@@ -17,7 +17,7 @@
 
 using namespace metatensor_torch;
 
-NeighborsListOptionsHolder::NeighborsListOptionsHolder(
+NeighborListOptionsHolder::NeighborListOptionsHolder(
     double cutoff,
     bool full_list,
     std::string requestor
@@ -29,7 +29,7 @@ NeighborsListOptionsHolder::NeighborsListOptionsHolder(
 }
 
 
-void NeighborsListOptionsHolder::add_requestor(std::string requestor) {
+void NeighborListOptionsHolder::add_requestor(std::string requestor) {
     if (requestor.empty()) {
         return;
     }
@@ -43,19 +43,19 @@ void NeighborsListOptionsHolder::add_requestor(std::string requestor) {
     requestors_.emplace_back(requestor);
 }
 
-void NeighborsListOptionsHolder::set_length_unit(std::string length_unit) {
+void NeighborListOptionsHolder::set_length_unit(std::string length_unit) {
     validate_unit("length", length_unit);
     this->length_unit_ = std::move(length_unit);
 }
 
-double NeighborsListOptionsHolder::engine_cutoff(const std::string& engine_length_unit) const {
+double NeighborListOptionsHolder::engine_cutoff(const std::string& engine_length_unit) const {
     return cutoff_ * unit_conversion_factor("length", length_unit_, engine_length_unit);
 }
 
-std::string NeighborsListOptionsHolder::repr() const {
+std::string NeighborListOptionsHolder::repr() const {
     auto ss = std::ostringstream();
 
-    ss << "NeighborsListOptions\n";
+    ss << "NeighborListOptions\n";
     ss << "    cutoff: " << std::to_string(cutoff_);
     if (!length_unit_.empty()) {
         ss << " " << length_unit_;
@@ -72,15 +72,15 @@ std::string NeighborsListOptionsHolder::repr() const {
     return ss.str();
 }
 
-std::string NeighborsListOptionsHolder::str() const {
-    return "NeighborsListOptions(cutoff=" + std::to_string(cutoff_) + \
+std::string NeighborListOptionsHolder::str() const {
+    return "NeighborListOptions(cutoff=" + std::to_string(cutoff_) + \
         ", full_list=" + (full_list_ ? "True" : "False") + ")";
 }
 
-std::string NeighborsListOptionsHolder::to_json() const {
+std::string NeighborListOptionsHolder::to_json() const {
     nlohmann::json result;
 
-    result["class"] = "NeighborsListOptions";
+    result["class"] = "NeighborListOptions";
 
     // Store cutoff using it's binary representation to ensure perfect
     // round-tripping of the data
@@ -94,38 +94,38 @@ std::string NeighborsListOptionsHolder::to_json() const {
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
-NeighborsListOptions NeighborsListOptionsHolder::from_json(const std::string& json) {
+NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json) {
     auto data = nlohmann::json::parse(json);
 
     if (!data.is_object()) {
-        throw std::runtime_error("invalid JSON data for NeighborsListOptions, expected an object");
+        throw std::runtime_error("invalid JSON data for NeighborListOptions, expected an object");
     }
 
     if (!data.contains("class") || !data["class"].is_string()) {
-        throw std::runtime_error("expected 'class' in JSON for NeighborsListOptions, did not find it");
+        throw std::runtime_error("expected 'class' in JSON for NeighborListOptions, did not find it");
     }
 
-    if (data["class"] != "NeighborsListOptions") {
-        throw std::runtime_error("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'");
+    if (data["class"] != "NeighborListOptions") {
+        throw std::runtime_error("'class' in JSON for NeighborListOptions must be 'NeighborListOptions'");
     }
 
     if (!data.contains("cutoff") || !data["cutoff"].is_number_integer()) {
-        throw std::runtime_error("'cutoff' in JSON for NeighborsListOptions must be a number");
+        throw std::runtime_error("'cutoff' in JSON for NeighborListOptions must be a number");
     }
     auto int_cutoff = data["cutoff"].get<int64_t>();
     double cutoff = 0;
     std::memcpy(&cutoff, &int_cutoff, sizeof(double));
 
     if (!data.contains("full_list") || !data["full_list"].is_boolean()) {
-        throw std::runtime_error("'full_list' in JSON for NeighborsListOptions must be a boolean");
+        throw std::runtime_error("'full_list' in JSON for NeighborListOptions must be a boolean");
     }
     auto full_list = data["full_list"].get<bool>();
 
-    auto options = torch::make_intrusive<NeighborsListOptionsHolder>(cutoff, full_list);
+    auto options = torch::make_intrusive<NeighborListOptionsHolder>(cutoff, full_list);
 
     if (data.contains("length_unit")) {
         if (!data["length_unit"].is_string()) {
-            throw std::runtime_error("'length_unit' in JSON for NeighborsListOptions must be a string");
+            throw std::runtime_error("'length_unit' in JSON for NeighborListOptions must be a string");
         }
         options->set_length_unit(data["length_unit"]);
     }
@@ -530,7 +530,7 @@ System SystemHolder::to(
     );
 
     for (const auto& it: this->neighbors_) {
-        system->add_neighbors_list(it.first, it.second->to(dtype, device));
+        system->add_neighbor_list(it.first, it.second->to(dtype, device));
     }
 
     for (const auto& it: this->data_) {
@@ -559,7 +559,7 @@ System SystemHolder::to_positional(
 }
 
 
-void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorBlock neighbors) {
+void SystemHolder::add_neighbor_list(NeighborListOptions options, TorchTensorBlock neighbors) {
     // check the structure of the NL
     auto samples_names = neighbors->samples()->names();
     if (samples_names.size() != 5 ||
@@ -630,19 +630,19 @@ void SystemHolder::add_neighbors_list(NeighborsListOptions options, TorchTensorB
     neighbors_.emplace(std::move(options), std::move(neighbors));
 }
 
-TorchTensorBlock SystemHolder::get_neighbors_list(NeighborsListOptions options) const {
+TorchTensorBlock SystemHolder::get_neighbor_list(NeighborListOptions options) const {
     auto it = neighbors_.find(options);
     if (it == neighbors_.end()) {
         C10_THROW_ERROR(ValueError,
-            "No neighbors list for " + options->str() + " was found.\n"
-            "Is it part of the `requested_neighbors_lists` for this model?"
+            "No neighbor list for " + options->str() + " was found.\n"
+            "Is it part of the `requested_neighbor_lists` for this model?"
         );
     }
     return it->second;
 }
 
-std::vector<NeighborsListOptions> SystemHolder::known_neighbors_lists() const {
-    auto result = std::vector<NeighborsListOptions>();
+std::vector<NeighborListOptions> SystemHolder::known_neighbor_lists() const {
+    auto result = std::vector<NeighborListOptions>();
     for (const auto& it: neighbors_) {
         result.emplace_back(it.first);
     }

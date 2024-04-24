@@ -6,7 +6,7 @@ Systems
 .. doxygenclass:: metatensor_torch::SystemHolder
     :members:
 
-.. doxygentypedef:: metatensor_torch::NeighborsListOptions
+.. doxygentypedef:: metatensor_torch::NeighborListOptions
 
-.. doxygenclass:: metatensor_torch::NeighborsListOptionsHolder
+.. doxygenclass:: metatensor_torch::NeighborListOptionsHolder
     :members:
