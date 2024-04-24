@@ -1,0 +1,36 @@
+{
+    "description": "Large cell with a small cutoff and atoms outside the natural boundaries",
+    "system": {
+        "positions": [
+            [0.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 2.0],
+            [-6.0, 0.0, 0.0],
+            [-6.0, -2.0, 0.0],
+            [-6.0, 0.0, -2.0]
+        ],
+        "cell": [
+            [42.0, 0.0, 0.0],
+            [0.0, 42.0, 0.0],
+            [0.0, 0.0, 42.0]
+        ]
+    },
+    "options": {
+        "cutoff": 2.1,
+        "full_list": false
+    },
+    "expected-neighbors": {
+        "samples": [
+            [0, 1, 0, 0, 0],
+            [0, 2, 0, 0, 0],
+            [3, 4, 0, 0, 0],
+            [3, 5, 0, 0, 0]
+        ],
+        "distances": [
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 2.0],
+            [0.0, -2.0, 0.0],
+            [0.0, 0.0, -2.0]
+        ]
+    }
+}

@@ -264,6 +264,11 @@ explained below.
         using :py:func:`register_neighbors_autograd` before adding the neighbors
         lists to the systems.
 
+        We provide a set of regression tests for neighbors lists in
+        `metatensor-torch/tests/neighbor-checks`. The data in these files can be
+        used to validate that a specific engine is computing the expected set of
+        pairs for integration with metatensor models.
+
 7. the engine calls the model ``forward()`` function with all the systems, the
    evaluations options and selected atoms, if any;
 8. the model runs and executes its calculations;

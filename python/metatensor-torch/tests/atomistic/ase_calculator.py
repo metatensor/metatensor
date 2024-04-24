@@ -1,3 +1,5 @@
+import glob
+import json
 import os
 import subprocess
 import sys
@@ -11,9 +13,17 @@ import numpy as np
 import pytest
 import torch
 
-from metatensor.torch import Labels
-from metatensor.torch.atomistic import MetatensorAtomisticModel, ModelOutput
-from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
+from metatensor.torch import Labels, TensorBlock
+from metatensor.torch.atomistic import (
+    MetatensorAtomisticModel,
+    ModelOutput,
+    NeighborListOptions,
+    System,
+)
+from metatensor.torch.atomistic.ase_calculator import (
+    MetatensorCalculator,
+    _compute_ase_neighbors,
+)
 
 
 STR_TO_DTYPE = {
@@ -285,3 +295,93 @@ model.export("{model_path}", collect_extensions="{extensions_directory}")
     )
 
     assert np.allclose(ref.get_potential_energy(), atoms.get_potential_energy())
+
+
+def _read_neighbor_check(path):
+    with open(path) as fd:
+        data = json.load(fd)
+
+    dtype = torch.float64
+
+    positions = torch.tensor(data["system"]["positions"], dtype=dtype).reshape(-1, 3)
+    system = System(
+        types=torch.tensor([1] * positions.shape[0], dtype=torch.int32),
+        positions=positions,
+        cell=torch.tensor(data["system"]["cell"], dtype=dtype),
+    )
+
+    options = NeighborListOptions(
+        cutoff=data["options"]["cutoff"],
+        full_list=data["options"]["full_list"],
+    )
+
+    samples = torch.tensor(
+        data["expected-neighbors"]["samples"], dtype=torch.int32
+    ).reshape(-1, 5)
+    distances = torch.tensor(
+        data["expected-neighbors"]["distances"], dtype=dtype
+    ).reshape(-1, 3, 1)
+
+    neighbors = TensorBlock(
+        values=distances,
+        samples=Labels(
+            [
+                "first_atom",
+                "second_atom",
+                "cell_shift_a",
+                "cell_shift_b",
+                "cell_shift_c",
+            ],
+            samples,
+        ),
+        components=[Labels.range("xyz", 3)],
+        properties=Labels.range("distance", 1),
+    )
+
+    return system, options, neighbors
+
+
+def _check_same_set_of_neighbors(expected, actual, full_list):
+    assert expected.samples.names == actual.samples.names
+    assert len(expected.samples) == len(actual.samples)
+
+    for sample_i, sample in enumerate(expected.samples):
+        sign = 1.0
+        position = actual.samples.position(sample)
+
+        if position is None and not full_list:
+            # try looking for the inverse pair
+            sign = -1.0
+            position = actual.samples.position(
+                [sample[1], sample[0], -sample[2], -sample[3], -sample[4]]
+            )
+
+        if position is None:
+            raise AssertionError(f"missing expected neighbors sample: {sample}")
+
+        assert torch.allclose(expected.values[sample_i], sign * actual.values[position])
+
+
+def test_neighbor_list_adapter():
+    HERE = os.path.realpath(os.path.dirname(__file__))
+    test_files = os.path.join(
+        HERE, "..", "..", "..", "..", "metatensor-torch", "tests", "neighbor-checks"
+    )
+
+    for path in glob.glob(os.path.join(test_files, "*.json")):
+        system, options, expected_neighbors = _read_neighbor_check(path)
+
+        print(os.path.basename(path), options)
+
+        atoms = ase.Atoms(
+            symbols=system.types.numpy(),
+            positions=system.positions.numpy(),
+            cell=system.cell.numpy(),
+            pbc=not torch.all(system.cell == torch.zeros((3, 3))),
+        )
+
+        neighbors = _compute_ase_neighbors(
+            atoms, options, torch.float64, torch.device("cpu")
+        )
+
+        _check_same_set_of_neighbors(expected_neighbors, neighbors, options.full_list)
