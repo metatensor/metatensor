@@ -199,7 +199,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         system = System(types, positions, cell)
 
         # Compute the neighbors lists requested by the model using ASE NL
-        for options in self._model.requested_neighbors_lists():
+        for options in self._model.requested_neighbor_lists():
             neighbors = _compute_ase_neighbors(
                 atoms, options, dtype=self._dtype, device=self._device
             )
@@ -208,7 +208,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 neighbors,
                 check_consistency=self.parameters["check_consistency"],
             )
-            system.add_neighbors_list(options, neighbors)
+            system.add_neighbor_list(options, neighbors)
 
         options = ModelEvaluationOptions(
             length_unit="angstrom",
@@ -274,7 +274,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         # convert from ase.Atoms to metatensor.torch.atomistic.System
         system = System(types, positions, cell)
-        for options in self._model.requested_neighbors_lists():
+        for options in self._model.requested_neighbor_lists():
             neighbors = _compute_ase_neighbors(
                 atoms, options, dtype=self._dtype, device=self._device
             )
@@ -283,7 +283,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 neighbors,
                 check_consistency=self.parameters["check_consistency"],
             )
-            system.add_neighbors_list(options, neighbors)
+            system.add_neighbor_list(options, neighbors)
 
         run_options = ModelEvaluationOptions(
             length_unit="angstrom",

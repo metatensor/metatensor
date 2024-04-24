@@ -4,7 +4,7 @@ Systems
 .. autoclass:: metatensor.torch.atomistic.System
     :members:
 
-.. autoclass:: metatensor.torch.atomistic.NeighborsListOptions
+.. autoclass:: metatensor.torch.atomistic.NeighborListOptions
     :members:
     :special-members: __eq__, __ne__
 

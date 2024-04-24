@@ -4,7 +4,7 @@ from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock
-from metatensor.torch.atomistic import NeighborsListOptions, System
+from metatensor.torch.atomistic import NeighborListOptions, System
 
 
 @pytest.fixture
@@ -71,28 +71,28 @@ def test_system(types, positions, cell, neighbors):
         # custom __repr__ definitions are only available since torch 2.1
         assert repr(system) == expected
 
-    options = NeighborsListOptions(cutoff=3.5, full_list=False)
-    system.add_neighbors_list(options, neighbors)
+    options = NeighborListOptions(cutoff=3.5, full_list=False)
+    system.add_neighbor_list(options, neighbors)
 
-    assert metatensor.torch.equal_block(system.get_neighbors_list(options), neighbors)
+    assert metatensor.torch.equal_block(system.get_neighbor_list(options), neighbors)
 
     message = (
-        "No neighbors list for NeighborsListOptions\\(cutoff=3.500000, "
+        "No neighbor list for NeighborListOptions\\(cutoff=3.500000, "
         "full_list=True\\) was found.\n"
-        "Is it part of the `requested_neighbors_lists` for this model?"
+        "Is it part of the `requested_neighbor_lists` for this model?"
     )
     with pytest.raises(ValueError, match=message):
-        system.get_neighbors_list(NeighborsListOptions(cutoff=3.5, full_list=True))
+        system.get_neighbor_list(NeighborListOptions(cutoff=3.5, full_list=True))
 
     message = (
-        "the neighbors list for NeighborsListOptions\\(cutoff=3.500000, "
+        "the neighbors list for NeighborListOptions\\(cutoff=3.500000, "
         "full_list=False\\) already exists in this system"
     )
     with pytest.raises(ValueError, match=message):
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
-    assert system.known_neighbors_lists() == [
-        NeighborsListOptions(cutoff=3.5, full_list=False)
+    assert system.known_neighbor_lists() == [
+        NeighborListOptions(cutoff=3.5, full_list=False)
     ]
 
 
@@ -277,7 +277,7 @@ def test_data_validation(types, positions, cell):
 
 
 def test_neighbors_validation(system):
-    options = NeighborsListOptions(cutoff=3.5, full_list=False)
+    options = NeighborListOptions(cutoff=3.5, full_list=False)
 
     message = (
         "invalid samples for `neighbors`: the samples names must be 'first_atom', "
@@ -299,7 +299,7 @@ def test_neighbors_validation(system):
             properties=Labels.range("distance", 1),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
     message = (
         "invalid components for `neighbors`: "
@@ -322,7 +322,7 @@ def test_neighbors_validation(system):
             properties=Labels.range("distance", 1),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
     message = (
         "invalid properties for `neighbors`: "
@@ -345,7 +345,7 @@ def test_neighbors_validation(system):
             properties=Labels.range("distance", 2),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
     message = "`neighbors` should not have any gradients"
     with pytest.raises(ValueError, match=message):
@@ -375,7 +375,7 @@ def test_neighbors_validation(system):
             ),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
     message = (
         "`neighbors` device \\(meta\\) does not match this system's device \\(cpu\\)"
@@ -397,7 +397,7 @@ def test_neighbors_validation(system):
             properties=Labels.range("distance", 1).to(device="meta"),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
     message = (
         "`neighbors` dtype \\(torch.float64\\) does not match "
@@ -420,12 +420,12 @@ def test_neighbors_validation(system):
             properties=Labels.range("distance", 1),
         )
 
-        system.add_neighbors_list(options, neighbors)
+        system.add_neighbor_list(options, neighbors)
 
 
 def test_to(system, neighbors):
-    options = NeighborsListOptions(cutoff=3.5, full_list=False)
-    system.add_neighbors_list(options, neighbors)
+    options = NeighborListOptions(cutoff=3.5, full_list=False)
+    system.add_neighbor_list(options, neighbors)
     system.add_data("test-data", neighbors)
 
     assert system.device.type == torch.device("cpu").type

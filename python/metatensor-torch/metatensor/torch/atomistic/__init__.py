@@ -2,7 +2,7 @@ import torch
 import os
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
-    from .documentation import System, NeighborsListOptions
+    from .documentation import System, NeighborListOptions
     from .documentation import (
         ModelOutput,
         ModelEvaluationOptions,
@@ -19,7 +19,7 @@ if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
 
 else:
     System = torch.classes.metatensor.System
-    NeighborsListOptions = torch.classes.metatensor.NeighborsListOptions
+    NeighborListOptions = torch.classes.metatensor.NeighborListOptions
 
     ModelOutput = torch.classes.metatensor.ModelOutput
     ModelEvaluationOptions = torch.classes.metatensor.ModelEvaluationOptions

@@ -8,11 +8,11 @@ using namespace metatensor_torch;
 using namespace Catch::Matchers;
 
 TEST_CASE("Models metadata") {
-    SECTION("NeighborsListOptions") {
+    SECTION("NeighborListOptions") {
         // save to JSON
-        auto options = torch::make_intrusive<NeighborsListOptionsHolder>(3.5426, true);
+        auto options = torch::make_intrusive<NeighborListOptionsHolder>(3.5426, true);
         const auto* expected = R"({
-    "class": "NeighborsListOptions",
+    "class": "NeighborListOptions",
     "cutoff": 4615159644819978768,
     "full_list": true,
     "length_unit": ""
@@ -23,19 +23,19 @@ TEST_CASE("Models metadata") {
         std::string json = R"({
     "cutoff": 4615159644819978768,
     "full_list": false,
-    "class": "NeighborsListOptions"
+    "class": "NeighborListOptions"
 })";
-        options = NeighborsListOptionsHolder::from_json(json);
+        options = NeighborListOptionsHolder::from_json(json);
         CHECK(options->cutoff() == 3.5426);
         CHECK(options->full_list() == false);
 
         CHECK_THROWS_WITH(
-            NeighborsListOptionsHolder::from_json("{}"),
-            StartsWith("expected 'class' in JSON for NeighborsListOptions, did not find it")
+            NeighborListOptionsHolder::from_json("{}"),
+            StartsWith("expected 'class' in JSON for NeighborListOptions, did not find it")
         );
         CHECK_THROWS_WITH(
-            NeighborsListOptionsHolder::from_json("{\"class\": \"nope\"}"),
-            StartsWith("'class' in JSON for NeighborsListOptions must be 'NeighborsListOptions'")
+            NeighborListOptionsHolder::from_json("{\"class\": \"nope\"}"),
+            StartsWith("'class' in JSON for NeighborListOptions must be 'NeighborListOptions'")
         );
 
         CHECK_THROWS_WITH(options->set_length_unit("unknown"),

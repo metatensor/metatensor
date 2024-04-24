@@ -13,25 +13,25 @@
 
 namespace metatensor_torch {
 
-class NeighborsListOptionsHolder;
-/// TorchScript will always manipulate `NeighborsListOptions` through a `torch::intrusive_ptr`
-using NeighborsListOptions = torch::intrusive_ptr<NeighborsListOptionsHolder>;
+class NeighborListOptionsHolder;
+/// TorchScript will always manipulate `NeighborListOptions` through a `torch::intrusive_ptr`
+using NeighborListOptions = torch::intrusive_ptr<NeighborListOptionsHolder>;
 
 class SystemHolder;
 /// TorchScript will always manipulate `SystemHolder` through a `torch::intrusive_ptr`
 using System = torch::intrusive_ptr<SystemHolder>;
 
-/// Options for the calculation of a neighbors list
-class METATENSOR_TORCH_EXPORT NeighborsListOptionsHolder final: public torch::CustomClassHolder {
+/// Options for the calculation of a neighbor list
+class METATENSOR_TORCH_EXPORT NeighborListOptionsHolder final: public torch::CustomClassHolder {
 public:
-    /// Create `NeighborsListOptions` with the given `cutoff` and `full_list`.
+    /// Create `NeighborListOptions` with the given `cutoff` and `full_list`.
     ///
     /// `requestor` can be used to store information about who requested the
-    /// neighbors list.
-    NeighborsListOptionsHolder(double cutoff, bool full_list, std::string requestor = "");
-    ~NeighborsListOptionsHolder() override = default;
+    /// neighbor list.
+    NeighborListOptionsHolder(double cutoff, bool full_list, std::string requestor = "");
+    ~NeighborListOptionsHolder() override = default;
 
-    /// Spherical cutoff radius for this neighbors list, in the units of the model
+    /// Spherical cutoff radius for this neighbor list, in the units of the model
     double cutoff() const {
         return cutoff_;
     }
@@ -47,21 +47,21 @@ public:
     /// need to be set by users directly.
     void set_length_unit(std::string length_unit);
 
-    /// Spherical cutoff radius for this neighbors list, in the units of the engine
+    /// Spherical cutoff radius for this neighbor list, in the units of the engine
     double engine_cutoff(const std::string& engine_length_unit) const;
 
-    /// Should the list be a full neighbors list (contains both the pair i->j
-    /// and j->i) or a half neighbors list (contains only the pair i->j)
+    /// Should the list be a full neighbor list (contains both the pair i->j
+    /// and j->i) or a half neighbor list (contains only the pair i->j)
     bool full_list() const {
         return full_list_;
     }
 
-    /// Get the list of strings describing who requested this neighbors list
+    /// Get the list of strings describing who requested this neighbor list
     std::vector<std::string> requestors() const {
         return requestors_;
     }
 
-    /// Add a new requestor to the list of who requested this neighbors list
+    /// Add a new requestor to the list of who requested this neighbor list
     void add_requestor(std::string requestor);
 
     /// Implementation of Python's `__repr__`
@@ -69,10 +69,10 @@ public:
     /// Implementation of Python's `__str__`
     std::string str() const;
 
-    /// Serialize a `NeighborsListOptions` to a JSON string.
+    /// Serialize a `NeighborListOptions` to a JSON string.
     std::string to_json() const;
-    /// Load a serialized `NeighborsListOptions` from a JSON string.
-    static NeighborsListOptions from_json(const std::string& json);
+    /// Load a serialized `NeighborListOptions` from a JSON string.
+    static NeighborListOptions from_json(const std::string& json);
 
 private:
     // cutoff in the model units
@@ -82,22 +82,22 @@ private:
     std::vector<std::string> requestors_;
 };
 
-/// Check `NeighborsListOptions` for equality. The `requestors` list is ignored
+/// Check `NeighborListOptions` for equality. The `requestors` list is ignored
 /// when checking for equality
-inline bool operator==(const NeighborsListOptions& lhs, const NeighborsListOptions& rhs) {
+inline bool operator==(const NeighborListOptions& lhs, const NeighborListOptions& rhs) {
     return lhs->cutoff() == rhs->cutoff() && lhs->full_list() == rhs->full_list();
 }
 
-/// Check `NeighborsListOptions` for inequality.
-inline bool operator!=(const NeighborsListOptions& lhs, const NeighborsListOptions& rhs) {
+/// Check `NeighborListOptions` for inequality.
+inline bool operator!=(const NeighborListOptions& lhs, const NeighborListOptions& rhs) {
     return !(lhs == rhs);
 }
 
 
-/// Custom autograd node going (positions, cell) => neighbors list distances
+/// Custom autograd node going (positions, cell) => neighbor list distances
 ///
-/// This does not actually computes the neighbors list, but registers a new node
-/// in the overall computational graph, allowing to re-use neighbors list
+/// This does not actually computes the neighbor list, but registers a new node
+/// in the overall computational graph, allowing to re-use neighbor list
 /// computed outside of torch. The public interface for this is the
 /// `register_autograd_neighbors()` function.
 class METATENSOR_TORCH_EXPORT NeighborsAutograd: public torch::autograd::Function<NeighborsAutograd> {
@@ -212,29 +212,28 @@ public:
         return this->types_.size(0);
     }
 
-    /// Add a new neighbors list in this system corresponding to the given
+    /// Add a new neighbor list in this system corresponding to the given
     /// `options`.
     ///
-    /// The neighbors list should have the following samples: "first_atom",
+    /// The neighbor list should have the following samples: "first_atom",
     /// "second_atom", "cell_shift_a", "cell_shift_b", "cell_shift_c",
-    /// containing the index of the first and second atom and the number of
-    /// cell vector a/b/c to add to the positions difference to get the pair
-    /// vector.
+    /// containing the index of the first and second atom and the number of cell
+    /// vector a/b/c to add to the positions difference to get the pair vector.
     ///
-    /// The neighbors should also have a single component "xyz" with values `[0,
-    /// 1, 2]`; and a single property "distance" with value 0.
+    /// The `neighbors` should also have a single component "xyz" with values
+    /// `[0, 1, 2]`; and a single property "distance" with value 0.
     ///
     /// The neighbors values must contain the distance vector from the first to
     /// the second atom, i.e. `positions[second_atom] - positions[first_atom] +
     /// cell_shift_a * cell_a + cell_shift_b * cell_b + cell_shift_c * cell_c`.
-    void add_neighbors_list(NeighborsListOptions options, TorchTensorBlock neighbors);
+    void add_neighbor_list(NeighborListOptions options, TorchTensorBlock neighbors);
 
-    /// Retrieve a previously stored neighbors list with the given options, or
-    /// throw an error if no such neighbors list exists.
-    TorchTensorBlock get_neighbors_list(NeighborsListOptions options) const;
+    /// Retrieve a previously stored neighbor list with the given options, or
+    /// throw an error if no such neighbor list exists.
+    TorchTensorBlock get_neighbor_list(NeighborListOptions options) const;
 
-    /// Get the list of neighbors lists registered with this `System`
-    std::vector<NeighborsListOptions> known_neighbors_lists() const;
+    /// Get the options for all neighbor lists registered with this `System`
+    std::vector<NeighborListOptions> known_neighbor_lists() const;
 
     /// Add custom data to this system, stored as `TensorBlock`.
     ///
@@ -258,7 +257,7 @@ public:
 
 private:
     struct nl_options_compare {
-        bool operator()(const NeighborsListOptions& a, const NeighborsListOptions& b) const {
+        bool operator()(const NeighborListOptions& a, const NeighborListOptions& b) const {
             assert(a->length_unit() == b->length_unit());
             if (a->full_list() == b->full_list()) {
                 return a->cutoff() < b->cutoff();
@@ -272,7 +271,7 @@ private:
     torch::Tensor positions_;
     torch::Tensor cell_;
 
-    std::map<NeighborsListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
+    std::map<NeighborListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
     std::unordered_map<std::string, TorchTensorBlock> data_;
 };
 

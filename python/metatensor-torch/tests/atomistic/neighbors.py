@@ -3,7 +3,7 @@ import torch
 from packaging import version
 
 from metatensor.torch.atomistic import (
-    NeighborsListOptions,
+    NeighborListOptions,
     System,
     register_autograd_neighbors,
 )
@@ -19,8 +19,8 @@ except ImportError:
     HAVE_ASE = False
 
 
-def test_neighbors_lists_options():
-    options = NeighborsListOptions(3.4, True, "hello")
+def test_neighbor_list_options():
+    options = NeighborListOptions(3.4, True, "hello")
 
     assert options.cutoff == 3.4
     assert options.full_list
@@ -34,14 +34,14 @@ def test_neighbors_lists_options():
     options.add_requestor("hello")
     assert options.requestors() == ["hello", "another one"]
 
-    assert NeighborsListOptions(3.4, True, "a") == NeighborsListOptions(3.4, True, "b")
-    assert NeighborsListOptions(3.4, True) != NeighborsListOptions(3.4, False)
-    assert NeighborsListOptions(3.4, True) != NeighborsListOptions(3.5, True)
+    assert NeighborListOptions(3.4, True, "a") == NeighborListOptions(3.4, True, "b")
+    assert NeighborListOptions(3.4, True) != NeighborListOptions(3.4, False)
+    assert NeighborListOptions(3.4, True) != NeighborListOptions(3.5, True)
 
-    expected = "NeighborsListOptions(cutoff=3.400000, full_list=True)"
+    expected = "NeighborListOptions(cutoff=3.400000, full_list=True)"
     assert str(options) == expected
 
-    expected = """NeighborsListOptions
+    expected = """NeighborListOptions
     cutoff: 3.400000
     full_list: True
     requested by:
@@ -52,7 +52,7 @@ def test_neighbors_lists_options():
         assert repr(options) == expected
 
 
-@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbors list")
+@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbor list")
 def test_neighbors_autograd():
     torch.manual_seed(0xDEADBEEF)
     n_atoms = 20
@@ -80,14 +80,14 @@ def test_neighbors_autograd():
 
         return neighbors.values.sum()
 
-    options = NeighborsListOptions(cutoff=2.0, full_list=False)
+    options = NeighborListOptions(cutoff=2.0, full_list=False)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
         fast_mode=True,
     )
 
-    options = NeighborsListOptions(cutoff=2.0, full_list=True)
+    options = NeighborListOptions(cutoff=2.0, full_list=True)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
@@ -95,8 +95,8 @@ def test_neighbors_autograd():
     )
 
 
-@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbors list")
-def test_neighbors_autograd_errors():
+@pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbor list")
+def test_neighbor_autograd_errors():
     n_atoms = 20
     cell_size = 6.0
     positions = cell_size * torch.rand(
@@ -110,7 +110,7 @@ def test_neighbors_autograd_errors():
         cell=cell.detach().numpy(),
         pbc=True,
     )
-    options = NeighborsListOptions(cutoff=2.0, full_list=False)
+    options = NeighborListOptions(cutoff=2.0, full_list=False)
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"
     )

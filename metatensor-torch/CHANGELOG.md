@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+
+### Changed
+
+- We renamed `neighbors_list` to `neighbor_list` in all functions.
+
 ## [Version 0.4.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.4.0) - 2024-04-11
 
 ### metatensor-torch C++

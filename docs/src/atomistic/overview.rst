@@ -249,7 +249,7 @@ explained below.
    .. tip::
 
         This can be done by calling
-        :py:func:`MetatensorAtomisticModel.requested_neighbors_lists`. This
+        :py:func:`MetatensorAtomisticModel.requested_neighbor_lists`. This
         function is also exported to TorchScript and can be called from C++ with
         :cpp:func:`torch::jit::Module::run_method`.
 

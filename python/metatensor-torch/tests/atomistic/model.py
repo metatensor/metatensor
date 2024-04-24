@@ -10,7 +10,7 @@ from metatensor.torch.atomistic import (
     ModelCapabilities,
     ModelMetadata,
     ModelOutput,
-    NeighborsListOptions,
+    NeighborListOptions,
     System,
     check_atomistic_model,
 )
@@ -39,11 +39,11 @@ class MinimalModel(torch.nn.Module):
         else:
             return {}
 
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
+    def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         return [
-            NeighborsListOptions(cutoff=1.2, full_list=False),
-            NeighborsListOptions(cutoff=4.3, full_list=True),
-            NeighborsListOptions(cutoff=1.2, full_list=False),
+            NeighborListOptions(cutoff=1.2, full_list=False),
+            NeighborListOptions(cutoff=4.3, full_list=True),
+            NeighborListOptions(cutoff=1.2, full_list=False),
         ]
 
 
@@ -96,8 +96,8 @@ class ExampleModule(torch.nn.Module):
     ) -> Dict[str, TensorMap]:
         return {}
 
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
-        return [NeighborsListOptions(1.0, False, self._name)]
+    def requested_neighbor_lists(self) -> List[NeighborListOptions]:
+        return [NeighborListOptions(1.0, False, self._name)]
 
 
 class OtherModule(torch.nn.Module):
@@ -112,8 +112,8 @@ class OtherModule(torch.nn.Module):
     ) -> Dict[str, TensorMap]:
         return {}
 
-    def requested_neighbors_lists(self) -> List[NeighborsListOptions]:
-        return [NeighborsListOptions(2.0, True, "other module")]
+    def requested_neighbor_lists(self) -> List[NeighborListOptions]:
+        return [NeighborListOptions(2.0, True, "other module")]
 
 
 class FullModel(torch.nn.Module):
@@ -136,7 +136,7 @@ class FullModel(torch.nn.Module):
         return result
 
 
-def test_requested_neighbors_lists():
+def test_requested_neighbor_lists():
     model = FullModel()
     model.train(False)
 
@@ -146,7 +146,7 @@ def test_requested_neighbors_lists():
         dtype="float64",
     )
     atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
-    requests = atomistic.requested_neighbors_lists()
+    requests = atomistic.requested_neighbor_lists()
 
     assert len(requests) == 2
 
