@@ -228,11 +228,14 @@ jobs:
             os: windows-2019
             arch: x86_64
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download wheels
         uses: actions/download-artifact@v4
         with:
           pattern: torch-single-version-wheel-*-${{ matrix.os }}-${{ matrix.arch }}
           merge-multiple: false
+          path: dist
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -244,14 +247,24 @@ jobs:
 
       - name: merge wheels
         run: |
-          # unpack all single torch versions wheels in the same directory,
-          # and repack the directory as a new wheel
+          # collect all torch versions used for the build
+          REQUIRES_TORCH=$(find dist -name "*.whl" -exec unzip -p {} "metatensor_torch-*.dist-info/METADATA" \; | grep "Requires-Dist: torch")
+          MERGED_TORCH_REQUIRE=$(python scripts/create-torch-versions-range.py "$REQUIRES_TORCH")
 
-          mkdir unpacked
-          find . -name "*.whl" -print -exec python -m wheel unpack --dest unpacked/ {} ';'
+          echo MERGED_TORCH_REQUIRE=$MERGED_TORCH_REQUIRE
 
+          # unpack all single torch versions wheels in the same directory
+          mkdir dist/unpacked
+          find dist -name "*.whl" -print -exec python -m wheel unpack --dest dist/unpacked/ {} ';'
+
+          sed -i "s/Requires-Dist: torch ==.*/$MERGED_TORCH_REQUIRE/" dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
+
+          echo "\n\n METADATA = \n\n"
+          cat dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
+
+          # repack the directory as a new wheel
           mkdir wheelhouse
-          python -m wheel pack --dest wheelhouse/ unpacked/*
+          python -m wheel pack --dest wheelhouse/ dist/unpacked/*
 
       - name: check wheels with twine
         run: twine check wheelhouse/*
