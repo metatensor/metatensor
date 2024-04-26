@@ -15,11 +15,10 @@ build:
     rust: "1.75"
   jobs:
     post_install:
-      # install metatensor-torch with the CPU version of PyTorch we can not use
-      # the `python` section below since it does not allow to specify
-      # `--extra-index-url`
-      - pip install --extra-index-url https://download.pytorch.org/whl/cpu python/metatensor-torch
-      - pip install python/metatensor-learn
+      # install metatensor-torch without build isolation (including using the
+      # CPU version of PyTorch as requested in `docs/requirements.txt`).
+      - pip install --upgrade wheel
+      - CMAKE_BUILD_PARALLEL_LEVEL=1 pip install --no-deps --no-build-isolation --check-build-dependencies python/metatensor-torch
 
     post_build:
       - cargo rustdoc --package metatensor -- --html-before-content docs/src/core/reference/rust/backlink.html
