@@ -525,11 +525,7 @@ def test_to():
         assert isinstance(tensor.block(0).values, torch.Tensor)
 
         devices = ["meta", torch.device("meta")]
-        if (
-            hasattr(torch.backends, "mps")
-            and torch.backends.mps.is_built()
-            and torch.backends.mps.is_available()
-        ):
+        if _tests_utils.can_use_mps_backend():
             devices.append("mps")
             devices.append(torch.device("mps"))
 

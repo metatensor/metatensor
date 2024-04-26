@@ -24,7 +24,7 @@ jobs:
           - os: ubuntu-20.04
             julia-version: "1.9"
 
-          - os: macos-11
+          - os: macos-14
             julia-version: "1.9"
 
           # TODO

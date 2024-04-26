@@ -25,6 +25,8 @@ from metatensor.torch.atomistic.ase_calculator import (
     _compute_ase_neighbors,
 )
 
+from .. import _tests_utils
+
 
 STR_TO_DTYPE = {
     "float32": torch.float32,
@@ -222,11 +224,7 @@ def test_dtype_device(tmpdir, model, atoms):
         ("float32", "cpu"),
     ]
 
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         dtype_device.append(("float32", "mps"))
 
     if torch.cuda.is_available():

@@ -6,6 +6,8 @@ import metatensor.torch
 from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import NeighborListOptions, System
 
+from .. import _tests_utils
+
 
 @pytest.fixture
 def types():
@@ -437,11 +439,7 @@ def test_to(system, neighbors):
         check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         devices.append("mps")
         devices.append(torch.device("mps"))
 
