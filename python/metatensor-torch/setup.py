@@ -291,7 +291,18 @@ if __name__ == "__main__":
         with open(os.path.join(ROOT, authors[0])) as fd:
             authors = fd.read().splitlines()
 
-    install_requires = ["torch >= 1.12"]
+    try:
+        import torch
+
+        # if we have torch, we are building a wheel, which will only be compatible with
+        # a single torch version
+        torch_v_major, torch_v_minor, *_ = torch.__version__.split(".")
+        torch_version = f"== {torch_v_major}.{torch_v_minor}.*"
+    except ImportError:
+        # otherwise we are building a sdist
+        torch_version = ">= 1.12"
+
+    install_requires = [f"torch {torch_version}"]
 
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
