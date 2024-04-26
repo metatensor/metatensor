@@ -29,7 +29,7 @@ function(get_tempdir _outvar_)
     endif()
 
 
-    find_program(POWERSHELL_EXE NAMES pwsh)
+    find_program(POWERSHELL_EXE NAMES pwsh powershell)
     if(POWERSHELL_EXE)
         execute_process(
             COMMAND ${POWERSHELL_EXE} -c "[System.IO.Path]::GetTempPath()"
@@ -47,5 +47,5 @@ function(get_tempdir _outvar_)
         endif()
     endif()
 
-    message(FATAL_ERROR "Could not find mktemp or powsershell to make temporary directory")
+    message(FATAL_ERROR "Could not find mktemp or PowerShell to make temporary directory")
 endfunction()
