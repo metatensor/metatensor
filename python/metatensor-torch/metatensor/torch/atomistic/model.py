@@ -643,7 +643,7 @@ def _check_inputs(
         for atom_type in all_types:
             if atom_type not in capabilities.atomic_types:
                 raise ValueError(
-                    f"this model can not run for the atomic type '{atom_type}'"
+                    f"this model can not run for the atomic type '{atom_type.item()}'"
                 )
 
         # Check neighbors lists
