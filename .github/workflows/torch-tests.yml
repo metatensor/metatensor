@@ -32,7 +32,7 @@ jobs:
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
-          - os: macos-11
+          - os: macos-14
             torch-version: 2.3.*
             python-version: "3.12"
             cargo-test-flags: --release

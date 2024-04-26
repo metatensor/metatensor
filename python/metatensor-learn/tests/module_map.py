@@ -8,7 +8,7 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn import ModuleMap  # noqa: E402
 
-from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
+from . import _tests_utils  # noqa: E402
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def tensor():
     """
     random tensor map with no components using torch as array backend
     """
-    return random_single_block_no_components_tensor_map(use_torch=True)
+    return _tests_utils.random_single_block_no_components_tensor_map(use_torch=True)
 
 
 class MockModule(torch.nn.Module):
@@ -75,11 +75,7 @@ def test_to_device(tensor):
     checking that the output tensor is on this device.
     """
     devices = ["meta"]
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         devices.append("mps")
 
     if torch.cuda.is_available():

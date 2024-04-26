@@ -112,6 +112,8 @@ jobs:
           # arm64-macos is only supported for torch >= 2.0
           - {os: macos-14, arch: arm64, torch-version: '1.12'}
           - {os: macos-14, arch: arm64, torch-version: '1.13'}
+          # x86_64-macos is only supported for torch <2.3
+          - {os: macos-11, arch: x86_64, torch-version: '2.3'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux

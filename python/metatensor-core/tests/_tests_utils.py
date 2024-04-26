@@ -1,7 +1,6 @@
-"""Utility functions to be used across all test files.
+"""Utility functions to be used across all test files"""
 
-These functions are by design no pytest fixtures to avoid a confusing global import.
-"""
+import os
 
 import numpy as np
 
@@ -143,4 +142,16 @@ def tensor_zero_len_block():
                 properties=Labels.single(),
             )
         ],
+    )
+
+
+def can_use_mps_backend():
+    import torch
+
+    return (
+        # Github Actions M1 runners don't have a GPU accessible
+        os.environ.get("GITHUB_ACTIONS") is None
+        and hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_built()
+        and torch.backends.mps.is_available()
     )

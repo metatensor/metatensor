@@ -15,6 +15,8 @@ except ImportError:
 
 from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock
 
+from . import _tests_utils
+
 
 @pytest.fixture
 def block():
@@ -440,11 +442,7 @@ def test_to():
         assert isinstance(block.gradient("g").values, torch.Tensor)
 
         devices = ["meta", torch.device("meta")]
-        if (
-            hasattr(torch.backends, "mps")
-            and torch.backends.mps.is_built()
-            and torch.backends.mps.is_available()
-        ):
+        if _tests_utils.can_use_mps_backend():
             devices.append("mps")
             devices.append(torch.device("mps"))
 

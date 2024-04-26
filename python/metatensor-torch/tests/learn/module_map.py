@@ -6,12 +6,12 @@ import torch
 from metatensor.torch import Labels, allclose_raise
 from metatensor.torch.learn.nn import ModuleMap
 
-from ._tests_utils import random_single_block_no_components_tensor_map
+from . import _tests_utils
 
 
 @pytest.fixture
 def tensor():
-    return random_single_block_no_components_tensor_map()
+    return _tests_utils.random_single_block_no_components_tensor_map()
 
 
 try:
@@ -77,11 +77,7 @@ def test_module_map(tensor, out_properties):
 @pytest.mark.parametrize("torch_script", [True, False])
 def test_to_device(tensor, torch_script):
     devices = ["cpu"]
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         devices.append("mps")
 
     if torch.cuda.is_available():

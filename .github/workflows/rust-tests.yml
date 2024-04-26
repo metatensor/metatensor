@@ -41,9 +41,9 @@ jobs:
             cargo-build-flags: --features=rayon
             extra-name: ", cmake 3.16"
 
-          - os: macos-11
+          - os: macos-14
             rust-version: stable
-            rust-target: x86_64-apple-darwin
+            rust-target: aarch64-apple-darwin
             cargo-test-flags: --features=rayon
             extra-name: ""
 

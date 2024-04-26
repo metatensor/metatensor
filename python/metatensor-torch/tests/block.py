@@ -7,6 +7,8 @@ from torch import Tensor
 
 from metatensor.torch import Labels, TensorBlock
 
+from . import _tests_utils
+
 
 def test_constructor():
     # keyword arguments
@@ -194,11 +196,7 @@ def test_different_device():
     )
 
     devices = []
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         devices.append("mps")
 
     if torch.cuda.is_available():
@@ -271,11 +269,7 @@ def test_to():
         check_dtype(converted.gradient("g"), torch.float64)
 
     devices = ["meta", torch.device("meta")]
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    ):
+    if _tests_utils.can_use_mps_backend():
         devices.append("mps")
         devices.append(torch.device("mps"))
 
