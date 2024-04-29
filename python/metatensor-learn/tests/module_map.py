@@ -127,6 +127,7 @@ def test_module_map_meta(single_block_tensor_torch, out_properties):  # noqa F81
 
     # at this point, the parameters should have been moved,
     # but the input keys and output properties should still be on cpu
+    assert len(list(tensor_module.parameters())) > 0
     for parameter in tensor_module.parameters():
         assert parameter.device.type == "meta"
 
@@ -180,6 +181,7 @@ def test_module_map_cuda(single_block_tensor_torch, out_properties):  # noqa F81
 
     # at this point, the parameters should have been moved,
     # but the input keys and output properties should still be on cpu
+    assert len(list(tensor_module.parameters())) > 0
     for parameter in tensor_module.parameters():
         assert parameter.device.type == "cuda"
 

@@ -125,6 +125,7 @@ def test_module_map_cuda(single_block_tensor, out_properties):  # noqa F811
 
     # at this point, the parameters should have been moved,
     # but the input keys and output properties should still be on cpu
+    assert len(list(tensor_module.parameters())) > 0
     for parameter in tensor_module.parameters():
         assert parameter.device.type == "cuda"
 
@@ -137,7 +138,7 @@ def test_module_map_cuda(single_block_tensor, out_properties):  # noqa F811
     out_tensor = tensor_module(single_block_tensor)
     assert out_tensor.device.type == "cuda"
 
-    # the input keys and output properties should be on cuda
+    # the input keys and output properties should now be on cuda
     assert tensor_module._in_keys.device.type == "cuda"
     if out_properties is not None:
         for label in tensor_module._out_properties:
