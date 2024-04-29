@@ -11,6 +11,9 @@ Modules
 .. autoclass:: metatensor.learn.nn.ModuleMap
    :members:
 
+.. autoclass:: metatensor.learn.nn.Sequential
+   :members:
+
 .. autoclass:: metatensor.learn.nn.Linear
    :members:
 
