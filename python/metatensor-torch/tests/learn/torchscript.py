@@ -10,7 +10,14 @@ import torch
 
 import metatensor.torch
 from metatensor.torch import allclose_raise
-from metatensor.torch.learn.nn import EquivariantLinear, InvariantTanh, Linear, Tanh
+from metatensor.torch.learn.nn import (
+    EquivariantLinear,
+    InvariantLayerNorm,
+    InvariantTanh,
+    LayerNorm,
+    Linear,
+    Tanh,
+)
 
 from ._tests_utils import random_single_block_no_components_tensor_map
 
@@ -82,5 +89,28 @@ def test_tanh(tensor_no_grad):
 def test_invariant_tanh(tensor_no_grad):
     """Tests module InvariantTanh"""
     module = InvariantTanh(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_layer_norm(tensor_no_grad):
+    """Tests module LayerNorm"""
+    module = LayerNorm(
+        in_keys=tensor_no_grad.keys,
+        in_features=len(tensor_no_grad[0].properties),
+        dtype=torch.float64,
+    )
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_invariant_layer_norm(tensor_no_grad):
+    """Tests module InvariantLayerNorm"""
+    module = InvariantLayerNorm(
+        in_keys=tensor_no_grad.keys,
+        invariant_key_idxs=[0],
+        in_features=len(tensor_no_grad[0].properties),
+        dtype=torch.float64,
+    )
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)

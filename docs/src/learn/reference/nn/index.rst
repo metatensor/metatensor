@@ -22,3 +22,9 @@ Modules
 
 .. autoclass:: metatensor.learn.nn.InvariantTanh
    :members:
+
+.. autoclass:: metatensor.learn.nn.LayerNorm
+   :members:
+
+.. autoclass:: metatensor.learn.nn.InvariantLayerNorm
+   :members:
