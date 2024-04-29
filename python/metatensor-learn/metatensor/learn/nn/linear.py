@@ -1,138 +1,181 @@
 from typing import List, Optional, Union
 
 import torch
+from torch.nn import Module
 
 from .._backend import Labels, TensorMap
+from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
 
-class Linear(ModuleMap):
+class Linear(Module):
     """
-    Construct a module map with only linear modules.
+    Module similar to :py:class:`torch.nn.Linear` that works with
+    :py:class:`metatensor.torch.TensorMap`.
 
-    :param in_keys:
-        The keys that are assumed to be in the input tensor map in the
-        :py:meth:`forward` function.
-    :param in_features:
-        Specifies the dimensionality of the input after it has been applied on the input
-        tensor map. If a list of integers is given, it specifies the input dimension for
-        each block, therefore it should have the same length as :param in_keys:.  If
-        only one integer is given, it is assumed that the same be applied on each block.
-    :param out_features:
-        Specifies the dimensionality of the output after it has been applied on the
-        input tensor map. If a list of integers is given, it specifies the output
-        dimension for each block, therefore it should have the same length as :param
-        in_keys:.  If only one integer is given, it is assumed that the same be applied
-        on each block.
-    :param bias:
-        Specifies if a bias term (offset) should be applied on the input tensor map in
-        the forward function. If a list of bools is given, it specifies the bias term
-        for each block, therefore it should have the same length as :param in_keys:.  If
-        only one bool value is given, it is assumed that the same be applied on each
-        block.
-    :param device:
-        Specifies the torch device of the values. If None the default torch device is
-        taken.
-    :param dtype:
-        Specifies the torch dtype of the values. If None the default torch dtype is
-        taken.
-    :param out_properties:
-        A list of labels that is used to determine the properties labels of the
-        output.  Because a module could change the number of properties, the labels of
-        the properties cannot be persevered. By default the output properties are
-        relabeled using Labels.range.
+    Applies a linear transformation to each block of a :py:class:`TensorMap` passed to
+    its forward method, indexed by :param in_keys:.
+
+    Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
+    description of the other parameters.
+
+    Each parameter can be passed as a single value of its expected type, which is used
+    as the parameter for all blocks. Alternatively, they can be passed as a list to
+    control the parameters applied to each block indexed by the keys in :param in_keys:.
+
+    :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
+        tensor map in the :py:meth:`forward` method.
+    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+        of the output. By default the output properties are relabeled using
+        Labels.range. If provided, :param out_features: can be inferred and need not be
+        provided.
     """
 
     def __init__(
         self,
         in_keys: Labels,
         in_features: Union[int, List[int]],
-        out_features: Union[int, List[int]],
+        out_features: Optional[Union[int, List[int]]] = None,
+        out_properties: Optional[List[Labels]] = None,
+        *,
         bias: Union[bool, List[bool]] = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
-        out_properties: Optional[List[Labels]] = None,
-    ):
-        if isinstance(in_features, int):
-            in_features = [in_features] * len(in_keys)
-        elif not (isinstance(in_features, List)):
-            raise TypeError(
-                "`in_features` must be integer or List of integers, but not"
-                f" {type(in_features)}."
-            )
-        elif len(in_keys) != len(in_features):
-            raise ValueError(
-                "`in_features` must have same length as `in_keys`, but"
-                f" len(in_features) != len(in_keys) [{len(in_features)} !="
-                f" {len(in_keys)}]"
-            )
+    ) -> None:
+        super().__init__()
+        # Infer `out_features` if not provided
+        if out_features is None:
+            if out_properties is None:
+                raise ValueError(
+                    "If `out_features` is not provided,"
+                    " `out_properties` must be provided."
+                )
+            out_features = [len(p) for p in out_properties]
 
-        if isinstance(out_features, int):
-            out_features = [out_features] * len(in_keys)
-        elif not (isinstance(out_features, List)):
-            raise TypeError(
-                "`out_features` must be integer or List of integers, but not"
-                f" {type(out_features)}."
-            )
-        elif len(in_keys) != len(out_features):
-            raise ValueError(
-                "`out_features` must have same length as `in_keys`, but"
-                f" len(out_features) != len(in_keys) [{len(out_features)} !="
-                f" {len(in_keys)}]"
-            )
+        # Check input parameters, convert to lists (for each key) if necessary
+        in_features = _check_module_map_parameter(
+            in_features, "in_features", int, len(in_keys), "in_keys"
+        )
+        out_features = _check_module_map_parameter(
+            out_features, "out_features", int, len(in_keys), "in_keys"
+        )
+        bias = _check_module_map_parameter(bias, "bias", bool, len(in_keys), "in_keys")
 
-        if isinstance(bias, bool):
-            bias = [bias] * len(in_keys)
-        elif not (isinstance(bias, List)):
-            raise TypeError(
-                f"`bias` must be bool or List of bools, but not {type(bias)}."
-            )
-        elif len(in_keys) != len(bias):
-            raise ValueError(
-                "`bias` must have same length as `in_keys`, but len(bias) !="
-                f" len(in_keys) [{len(bias)} != {len(in_keys)}]"
-            )
-
-        modules = []
+        modules: List[Module] = []
         for i in range(len(in_keys)):
             module = torch.nn.Linear(
-                in_features[i],
-                out_features[i],
-                bias[i],
-                device,
-                dtype,
+                in_features=in_features[i],
+                out_features=out_features[i],
+                bias=bias[i],
+                device=device,
+                dtype=dtype,
+            )
+            modules.append(module)
+        self.module_map = ModuleMap(in_keys, modules, out_properties)
+
+    def forward(self, tensor: TensorMap) -> TensorMap:
+        """
+        Apply the transformation to the input tensor map `tensor`.
+
+        :param tensor: :py:class:`TensorMap` with the input tensor to be transformed.
+        :return: :py:class:`TensorMap`
+        """
+        return self.module_map(tensor)
+
+
+class EquivariantLinear(Module):
+    """
+    Module similar to :py:class:`torch.nn.Linear` that works with equivariant
+    :py:class:`metatensor.torch.TensorMap` objects.
+
+    Applies a linear transformation to each block of a :py:class:`TensorMap` passed to
+    its forward method, indexed by :param in_keys:.
+
+    Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
+    description of the other parameters.
+
+    Each parameter can be passed as a single value of its expected type, which is used
+    as the parameter for all blocks. Alternatively, they can be passed as a list to
+    control the parameters applied to each block indexed by the keys in :param in_keys:.
+
+    For :py:class:`EquivariantLinear`, by contrast to :py:class:`Linear`, the parameter
+    :param bias: is only applied to modules corresponding to invariant blocks, i.e.
+    those indexed by keys in :param in_keys` at numeric indices :param
+    invariant_key_idxs:. If passed as a list, :param bias: must therefore have the same
+    length as :param invariant_key_idxs:.
+
+    :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
+        tensor map in the :py:meth:`forward` method.
+    :param invariant_key_idxs: list of int, the indices of the invariant keys present in
+        `in_keys` in the input :py:class:`TensorMap`. Only blocks for these keys will
+        have bias applied according to the user choice. Covariant blocks will not have
+        bias applied.
+    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+        of the output. By default the output properties are relabeled using
+        Labels.range. If provided, :param out_features: can be inferred and need not be
+        provided.
+    """
+
+    def __init__(
+        self,
+        in_keys: Labels,
+        invariant_key_idxs: List[int],
+        in_features: Union[int, List[int]],
+        out_features: Optional[Union[int, List[int]]] = None,
+        out_properties: Optional[List[Labels]] = None,
+        *,
+        bias: Union[bool, List[bool]] = True,
+        device: Optional[torch.device] = None,
+        dtype: Optional[torch.dtype] = None,
+    ) -> None:
+        super().__init__()
+        # Infer `out_features` if not provided
+        if out_features is None:
+            if out_properties is None:
+                raise ValueError(
+                    "If `out_features` is not provided,"
+                    " `out_properties` must be provided."
+                )
+            out_features = [len(p) for p in out_properties]
+
+        # Check input parameters, convert to lists (for each key) if necessary
+        in_features = _check_module_map_parameter(
+            in_features, "in_features", int, len(in_keys), "in_keys"
+        )
+        out_features = _check_module_map_parameter(
+            out_features, "out_features", int, len(in_keys), "in_keys"
+        )
+        bias = _check_module_map_parameter(
+            bias, "bias", bool, len(invariant_key_idxs), "invariant_key_idxs"
+        )
+
+        modules: List[Module] = []
+        for i in range(len(in_keys)):
+            if (
+                i in invariant_key_idxs
+            ):  # Invariant block: apply bias according to user choice
+                for j in range(len(invariant_key_idxs)):
+                    if invariant_key_idxs[j] == i:
+                        bias_block = bias[j]
+            else:  # Covariant block: do not apply bias
+                bias_block = False
+
+            module = torch.nn.Linear(
+                in_features=in_features[i],
+                out_features=out_features[i],
+                bias=bias_block,
+                device=device,
+                dtype=dtype,
             )
             modules.append(module)
 
-        super().__init__(in_keys, modules, out_properties)
+        self.module_map = ModuleMap(in_keys, modules, out_properties)
 
-    @classmethod
-    def from_weights(cls, weights: TensorMap, bias: Optional[TensorMap] = None):
+    def forward(self, tensor: TensorMap) -> TensorMap:
         """
-        Construct a linear module map from a tensor map for the weights and bias.
+        Apply the transformation to the input tensor map `tensor`.
 
-        :param weights:
-            The weight tensor map from which we create the linear modules. The
-            properties of the tensor map describe the input dimension and the samples
-            describe the output dimension.
-
-        :param bias:
-            The weight tensor map from which we create the linear layers.
+        :param tensor: :py:class:`TensorMap` with the input tensor to be transformed.
+        :return: :py:class:`TensorMap`
         """
-        linear = cls(
-            weights.keys,
-            in_features=[len(weights[i].samples) for i in range(len(weights))],
-            out_features=[len(weights[i].properties) for i in range(len(weights))],
-            bias=False,
-            device=weights.device,
-            dtype=weights[0].values.dtype,  # dtype is consistent over blocks in map
-            out_properties=[weights[i].properties for i in range(len(weights))],
-        )
-        for i in range(len(weights)):
-            key = weights.keys[i]
-            weights_block = weights[i]
-            linear[i].weight = torch.nn.Parameter(weights_block.values.T)
-            if bias is not None:
-                linear[i].bias = torch.nn.Parameter(bias.block(key).values)
-
-        return linear
+        return self.module_map(tensor)
