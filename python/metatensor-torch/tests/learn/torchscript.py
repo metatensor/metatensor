@@ -8,8 +8,9 @@ import io
 import pytest
 import torch
 
+import metatensor.torch
 from metatensor.torch import allclose_raise
-from metatensor.torch.learn.nn import EquivariantLinear, Linear
+from metatensor.torch.learn.nn import EquivariantLinear, InvariantTanh, Linear, Tanh
 
 from ._tests_utils import random_single_block_no_components_tensor_map
 
@@ -18,6 +19,14 @@ from ._tests_utils import random_single_block_no_components_tensor_map
 def tensor():
     """Returns a single block tensor map"""
     return random_single_block_no_components_tensor_map().to(torch.float64)
+
+
+@pytest.fixture
+def tensor_no_grad():
+    """Returns a single block tensor map with no gradients"""
+    return metatensor.torch.remove_gradients(
+        random_single_block_no_components_tensor_map().to(torch.float64)
+    )
 
 
 def check_module_torch_script(module, tensor):
@@ -60,4 +69,18 @@ def test_equivariant_linear(tensor):
         dtype=torch.float64,
     )
     check_module_torch_script(module, tensor)
+    check_module_save_load(module)
+
+
+def test_tanh(tensor_no_grad):
+    """Tests module Tanh"""
+    module = Tanh(in_keys=tensor_no_grad.keys)
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_invariant_tanh(tensor_no_grad):
+    """Tests module InvariantTanh"""
+    module = InvariantTanh(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
+    check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
