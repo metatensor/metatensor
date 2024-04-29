@@ -359,9 +359,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            wheels/metatensor-core-*.tar.gz
             wheels/cxx/metatensor-core-cxx-*.tar.gz
-            wheels/metatensor_core-*.whl
+            wheels/metatensor_core-*
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -371,9 +370,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            wheels/metatensor-torch-*.tar.gz
             wheels/cxx/metatensor-torch-cxx-*.tar.gz
-            wheels/metatensor_torch-*.whl
+            wheels/metatensor_torch-*
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -383,8 +381,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            wheels/metatensor-operations-*.tar.gz
-            wheels/metatensor_operations-*.whl
+            wheels/metatensor_operations-*
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -394,26 +391,17 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            wheels/metatensor-learn-*.tar.gz
-            wheels/metatensor_learn-*.whl
+            wheels/metatensor_learn-*
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: remove all sdist except metatensor
-        run: |
-          rm wheels/metatensor-core-*.tar.gz
-          rm wheels/metatensor-torch-*.tar.gz
-          rm wheels/metatensor-learn-*.tar.gz
-          rm wheels/metatensor-operations-*.tar.gz
 
       - name: upload to GitHub release (metatensor-python)
         if: startsWith(github.ref, 'refs/tags/metatensor-python-v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            wheels/metatensor-*.tar.gz
-            wheels/metatensor-*.whl
+            wheels/metatensor-*
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
