@@ -16,3 +16,9 @@ Modules
 
 .. autoclass:: metatensor.learn.nn.EquivariantLinear
    :members:
+
+.. autoclass:: metatensor.learn.nn.Tanh
+   :members:
+
+.. autoclass:: metatensor.learn.nn.InvariantTanh
+   :members:
