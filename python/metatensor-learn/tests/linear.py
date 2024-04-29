@@ -1,14 +1,13 @@
-import numpy as np
 import pytest
 
 import metatensor
-from metatensor import Labels
 
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn import Linear  # noqa: E402
+from metatensor.learn.nn import EquivariantLinear, Linear  # noqa: E402
 
+from ._rotation_utils import WignerDReal  # noqa: E402
 from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
 
 
@@ -29,6 +28,21 @@ def set_random_generator():
     torch.random.manual_seed(122578741812)
 
 
+@pytest.fixture
+def tensor():
+    tensor = metatensor.load(
+        "../metatensor-operations/tests/data/qm7-spherical-expansion.npz",
+        use_numpy=True,
+    ).to(arrays="torch")
+    tensor = metatensor.remove_gradients(tensor)
+    return tensor
+
+
+@pytest.fixture
+def wigner_d_real():
+    return WignerDReal(lmax=4, angles=(0.87641, 1.8729, 0.9187))
+
+
 def test_linear_single_block_tensor(single_block_tensor_torch):
     # testing initialization by non sequence arguments
     tensor_module_init_nonseq = Linear(
@@ -46,24 +60,24 @@ def test_linear_single_block_tensor(single_block_tensor_torch):
         bias=True,
         out_properties=single_block_tensor_torch[0].properties,
     )
-    for i in range(len(tensor_module_init_seq)):
+    for i in range(len(tensor_module_init_seq.module_map)):
         assert (
-            tensor_module_init_seq[i].in_features
-            == tensor_module_init_nonseq[i].in_features
+            tensor_module_init_seq.module_map[i].in_features
+            == tensor_module_init_nonseq.module_map[i].in_features
         ), (
             "in_features differ when using sequential and non sequential input for"
             " initialization"
         )
         assert (
-            tensor_module_init_seq[i].out_features
-            == tensor_module_init_nonseq[i].out_features
+            tensor_module_init_seq.module_map[i].out_features
+            == tensor_module_init_nonseq.module_map[i].out_features
         ), (
             "out_features differ when using sequential and non sequential input for"
             " initialization"
         )
         assert (
-            tensor_module_init_seq[i].bias.shape
-            == tensor_module_init_nonseq[i].bias.shape
+            tensor_module_init_seq.module_map[i].bias.shape
+            == tensor_module_init_nonseq.module_map[i].bias.shape
         ), (
             "bias differ when using sequential and non sequential input for"
             " initialization"
@@ -76,9 +90,9 @@ def test_linear_single_block_tensor(single_block_tensor_torch):
 
     for i, item in enumerate(single_block_tensor_torch.items()):
         key, block = item
-        module = tensor_module[i]
+        module = tensor_module.module_map[i]
         assert (
-            tensor_module.get_module(key) is module
+            tensor_module.module_map.get_module(key) is module
         ), "modules should be initialized in the same order as keys"
 
         with torch.no_grad():
@@ -95,16 +109,28 @@ def test_linear_single_block_tensor(single_block_tensor_torch):
             assert gradient.properties == out_gradient.properties
 
 
-def test_linear_from_weight(single_block_tensor_torch):
-    weights = metatensor.slice(
-        single_block_tensor_torch,
-        axis="samples",
-        labels=Labels(["sample", "system"], np.array([[0, 0], [1, 1]])),
+@pytest.mark.parametrize("bias", [True, False])
+def test_equivariance(tensor, wigner_d_real, bias):
+    """
+    Tests that application of an EquivariantLinear layer is equivariant to O3
+    transformation of the input.
+    """
+    # Define input and rotated input
+    x = tensor
+    Rx = wigner_d_real.transform_tensormap_o3(x)
+
+    # Define the EquivariantLinear module
+    f = EquivariantLinear(
+        in_keys=x.keys,
+        invariant_key_idxs=[i for i, key in enumerate(x.keys) if key["o3_lambda"] == 0],
+        in_features=[len(x.block(key).properties) for key in x.keys],
+        out_features=[len(x.block(key).properties) - 3 for key in x.keys],
+        bias=bias,  # this should only bias the invariant blocks
+        dtype=torch.float64,
     )
-    bias = metatensor.slice(
-        single_block_tensor_torch,
-        axis="samples",
-        labels=Labels(["sample", "system"], np.array([[3, 3]])),
-    )
-    module = Linear.from_weights(weights, bias)
-    module(single_block_tensor_torch)
+
+    # Pass both through the linear layer
+    Rfx = wigner_d_real.transform_tensormap_o3(f(x))  # R . f(x)
+    fRx = f(Rx)  # f(R . x)
+
+    assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)

@@ -1,5 +1,2 @@
-from .module_map import ModuleMap  # noqa
-from .linear import Linear  # noqa
-
-
-___all__ = ["ModuleMap", "Linear"]
+from .linear import EquivariantLinear, Linear  # noqa: F401
+from .module_map import ModuleMap  # noqa: F401

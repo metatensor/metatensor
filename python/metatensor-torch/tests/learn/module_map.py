@@ -7,7 +7,7 @@ from torch.nn import Module, Sigmoid
 from metatensor.torch import Labels, allclose_raise
 from metatensor.torch.learn.nn import ModuleMap
 
-from .utils import random_single_block_no_components_tensor_map
+from ._tests_utils import random_single_block_no_components_tensor_map
 
 
 @pytest.fixture

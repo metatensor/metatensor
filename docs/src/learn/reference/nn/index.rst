@@ -13,3 +13,6 @@ Modules
 
 .. autoclass:: metatensor.learn.nn.Linear
    :members:
+
+.. autoclass:: metatensor.learn.nn.EquivariantLinear
+   :members:
