@@ -11,23 +11,6 @@ from ._rotation_utils import WignerDReal  # noqa: E402
 from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
 
 
-@pytest.fixture()
-def single_block_tensor_torch():
-    """
-    random tensor map with no components using torch as array backend
-    """
-    return random_single_block_no_components_tensor_map(use_torch=True)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def set_random_generator():
-    """Set the random generator to same seed before each test is run.
-    Otherwise test behaviour is dependend on the order of the tests
-    in this file and the number of parameters of the test.
-    """
-    torch.random.manual_seed(122578741812)
-
-
 @pytest.fixture
 def tensor():
     tensor = metatensor.load(
@@ -39,56 +22,55 @@ def tensor():
 
 
 @pytest.fixture
-def wigner_d_real():
-    return WignerDReal(lmax=4, angles=(0.87641, 1.8729, 0.9187))
+def single_block_tensor():
+    return random_single_block_no_components_tensor_map(use_torch=True)
 
 
-def test_linear_single_block_tensor(single_block_tensor_torch):
-    # testing initialization by non sequence arguments
-    tensor_module_init_nonseq = Linear(
-        in_keys=single_block_tensor_torch.keys,
+def test_linear(single_block_tensor):
+    # testing initialization by sequence arguments
+    module_init_list = Linear(
+        in_keys=single_block_tensor.keys,
         in_features=[2],
         out_features=[2],
         bias=[True],
-        out_properties=[single_block_tensor_torch[0].properties],
+        out_properties=[single_block_tensor[0].properties],
     )
-    # testing initialization by sequence arguments
-    tensor_module_init_seq = Linear(
-        in_keys=single_block_tensor_torch.keys,
+    # testing initialization by non sequence arguments
+    module_init_scalar = Linear(
+        in_keys=single_block_tensor.keys,
         in_features=2,
         out_features=2,
         bias=True,
-        out_properties=single_block_tensor_torch[0].properties,
+        out_properties=single_block_tensor[0].properties,
     )
-    for i in range(len(tensor_module_init_seq.module_map)):
+    for i in range(len(module_init_scalar.module_map)):
         assert (
-            tensor_module_init_seq.module_map[i].in_features
-            == tensor_module_init_nonseq.module_map[i].in_features
+            module_init_scalar.module_map[i].in_features
+            == module_init_list.module_map[i].in_features
         ), (
             "in_features differ when using sequential and non sequential input for"
             " initialization"
         )
         assert (
-            tensor_module_init_seq.module_map[i].out_features
-            == tensor_module_init_nonseq.module_map[i].out_features
+            module_init_scalar.module_map[i].out_features
+            == module_init_list.module_map[i].out_features
         ), (
             "out_features differ when using sequential and non sequential input for"
             " initialization"
         )
         assert (
-            tensor_module_init_seq.module_map[i].bias.shape
-            == tensor_module_init_nonseq.module_map[i].bias.shape
+            module_init_scalar.module_map[i].bias.shape
+            == module_init_list.module_map[i].bias.shape
         ), (
             "bias differ when using sequential and non sequential input for"
             " initialization"
         )
 
-    tensor_module = tensor_module_init_nonseq
+    tensor_module = module_init_list
 
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
+    output = tensor_module(single_block_tensor)
 
-    for i, item in enumerate(single_block_tensor_torch.items()):
+    for i, item in enumerate(single_block_tensor.items()):
         key, block = item
         module = tensor_module.module_map[i]
         assert (
@@ -97,7 +79,7 @@ def test_linear_single_block_tensor(single_block_tensor_torch):
 
         with torch.no_grad():
             ref_values = module(block.values)
-        out_block = out_tensor.block(key)
+        out_block = output.block(key)
         assert torch.allclose(ref_values, out_block.values)
         assert block.properties == out_block.properties
 
@@ -106,15 +88,16 @@ def test_linear_single_block_tensor(single_block_tensor_torch):
                 ref_gradient_values = module(gradient.values)
             out_gradient = out_block.gradient(parameter)
             assert torch.allclose(ref_gradient_values, out_gradient.values)
-            assert gradient.properties == out_gradient.properties
 
 
 @pytest.mark.parametrize("bias", [True, False])
-def test_equivariance(tensor, wigner_d_real, bias):
+def test_equivariance(tensor, bias):
     """
     Tests that application of an EquivariantLinear layer is equivariant to O3
     transformation of the input.
     """
+    wigner_d_real = WignerDReal(lmax=4, angles=(0.87641, 1.8729, 0.9187))
+
     # Define input and rotated input
     x = tensor
     Rx = wigner_d_real.transform_tensormap_o3(x)

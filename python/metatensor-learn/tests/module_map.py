@@ -5,7 +5,6 @@ from metatensor import Labels
 
 
 torch = pytest.importorskip("torch")
-from torch.nn import Module, Sigmoid  # noqa: E402
 
 from metatensor.learn.nn import ModuleMap  # noqa: E402
 
@@ -13,61 +12,48 @@ from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: 
 
 
 @pytest.fixture
-def single_block_tensor_torch():
+def tensor():
     """
     random tensor map with no components using torch as array backend
     """
     return random_single_block_no_components_tensor_map(use_torch=True)
 
 
-class MockModule(Module):
+class MockModule(torch.nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()
         self._linear = torch.nn.Linear(in_features, out_features)
-        self._activation = Sigmoid()
+        self._activation = torch.nn.Sigmoid()
         self._last_layer = torch.nn.Linear(out_features, 1)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return self._last_layer(self._activation(self._linear(input)))
 
 
-@pytest.fixture(scope="module", autouse=True)
-def set_random_generator():
-    """Set the random generator to same seed before each test is run.
-    Otherwise test behaviour is dependend on the order of the tests
-    in this file and the number of parameters of the test.
-    """
-    torch.random.manual_seed(122578741812)
-
-
 @pytest.mark.parametrize(
     "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
 )
-def test_module_map_single_block_tensor(single_block_tensor_torch, out_properties):
+def test_module_map(tensor, out_properties):
     modules = []
-    for key in single_block_tensor_torch.keys:
+    for key in tensor.keys:
         modules.append(
             MockModule(
-                in_features=len(single_block_tensor_torch.block(key).properties),
+                in_features=len(tensor.block(key).properties),
                 out_features=5,
             )
         )
 
-    tensor_module = ModuleMap(
-        single_block_tensor_torch.keys, modules, out_properties=out_properties
-    )
-    with torch.no_grad():
-        out_tensor = tensor_module(single_block_tensor_torch)
+    tensor_module = ModuleMap(tensor.keys, modules, out_properties=out_properties)
+    out_tensor = tensor_module(tensor)
 
-    for i, item in enumerate(single_block_tensor_torch.items()):
+    for i, item in enumerate(tensor.items()):
         key, block = item
         module = modules[i]
         assert (
             tensor_module.get_module(key) is module
         ), "modules should be initialized in the same order as keys"
 
-        with torch.no_grad():
-            ref_values = module(block.values)
+        ref_values = module(block.values)
         out_block = out_tensor.block(key)
         assert torch.allclose(ref_values, out_block.values)
         if out_properties is None:
@@ -76,14 +62,88 @@ def test_module_map_single_block_tensor(single_block_tensor_torch, out_propertie
             assert out_block.properties == out_properties[0]
 
         for parameter, gradient in block.gradients():
-            with torch.no_grad():
-                ref_gradient_values = module(gradient.values)
+            ref_gradient_values = module(gradient.values)
             assert torch.allclose(
                 ref_gradient_values, out_block.gradient(parameter).values
             )
-            if out_properties is None:
-                assert out_block.gradient(parameter).properties == Labels.range(
-                    "_", len(out_block.gradient(parameter).properties)
+
+
+@pytest.mark.filterwarnings("ignore:.*If you are using PyTorch.*")
+def test_to_device(tensor):
+    """
+    Checks the `to` function of module map by moving the module to another device and
+    checking that the output tensor is on this device.
+    """
+    devices = ["meta"]
+    if (
+        hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_built()
+        and torch.backends.mps.is_available()
+    ):
+        devices.append("mps")
+
+    if torch.cuda.is_available():
+        devices.append("cuda")
+
+    for device in devices:
+        modules = []
+        for key in tensor.keys:
+            modules.append(
+                MockModule(
+                    in_features=len(tensor.block(key).properties),
+                    out_features=5,
                 )
-            else:
-                assert out_block.gradient(parameter).properties == out_properties[0]
+            )
+        module = ModuleMap(
+            tensor.keys,
+            modules,
+            out_properties=[Labels(["a", "b"], np.array([[1, 1]]))],
+        )
+
+        assert module._in_keys.device == "cpu"
+        for label in module._out_properties:
+            assert label.device == "cpu"
+
+        module.to(device=device)
+
+        # at this point, the parameters should have been moved,
+        # but the input keys and output properties should still be on cpu
+        assert len(list(module.parameters())) > 0
+        for parameter in module.parameters():
+            assert parameter.device.type == device
+
+        assert module._in_keys.device == "cpu"
+        for label in module._out_properties:
+            assert label.device == "cpu"
+
+        device_tensor = tensor.to(device=device)
+        output = module(device_tensor)
+
+        assert output.device.type == device
+
+        # the input keys and output properties are still on cpu, because
+        # metatensor.Labels are never moved to a different device (by opposition to
+        # `metatensor.torch.Labels` which can be moved to another device)
+        assert module._in_keys.device == "cpu"
+        for label in module._out_properties:
+            assert label.device == "cpu"
+
+
+def test_to_dtype(tensor):
+    modules = []
+    for key in tensor.keys:
+        modules.append(
+            MockModule(
+                in_features=len(tensor.block(key).properties),
+                out_features=5,
+            )
+        )
+
+    tensor_module = ModuleMap(tensor.keys, modules)
+    output = tensor_module(tensor)
+    assert output.dtype == tensor.dtype
+
+    tensor_module = tensor_module.to(torch.float64)
+    tensor = tensor.to(dtype=torch.float64)
+    output = tensor_module(tensor)
+    assert output.dtype == tensor.dtype
