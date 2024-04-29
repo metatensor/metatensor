@@ -16,6 +16,7 @@ from metatensor.torch.learn.nn import (
     InvariantTanh,
     LayerNorm,
     Linear,
+    Sequential,
     Tanh,
 )
 
@@ -113,4 +114,23 @@ def test_invariant_layer_norm(tensor_no_grad):
         dtype=torch.float64,
     )
     check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_sequential(tensor):
+    """Tests module Sequential"""
+    in_keys = tensor.keys
+    in_features = [len(tensor.block(key).properties) for key in in_keys]
+    module = Sequential(
+        in_keys,
+        Linear(
+            in_keys=in_keys,
+            in_features=in_features,
+            out_features=4,
+            bias=True,
+            dtype=torch.float64,
+        ),
+        Tanh(in_keys=in_keys),
+    )
+    check_module_torch_script(module, tensor)
     check_module_save_load(module)

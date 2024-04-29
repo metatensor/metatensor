@@ -17,6 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added torch-style neural network module maps to `metatensor.learn.nn`:
+  `LayerNorm`, `InvariantLayerNorm`, `EquivariantLinear`, `Sequential`, `Tanh`,
+  and `InvariantTanh` (#513)
+
 ## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.1) - 2024-03-01
 
 ### Changed
