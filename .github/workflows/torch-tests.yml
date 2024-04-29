@@ -38,7 +38,7 @@ jobs:
             cargo-test-flags: --release
 
           - os: windows-2019
-            torch-version: 2.3.*
+            torch-version: 2.2.*
             python-version: "3.12"
             cargo-test-flags: --release
     steps:
