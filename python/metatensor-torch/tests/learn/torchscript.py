@@ -14,11 +14,13 @@ from metatensor.torch.learn.nn import (
     EquivariantLinear,
     InvariantLayerNorm,
     InvariantReLU,
+    InvariantSiLU,
     InvariantTanh,
     LayerNorm,
     Linear,
     ReLU,
     Sequential,
+    SiLU,
     Tanh,
 )
 
@@ -106,6 +108,20 @@ def test_relu(tensor_no_grad):
 def test_invariant_relu(tensor_no_grad):
     """Tests module InvariantReLU"""
     module = InvariantReLU(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_silu(tensor_no_grad):
+    """Tests module SiLU"""
+    module = SiLU(in_keys=tensor_no_grad.keys)
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_invariant_silu(tensor_no_grad):
+    """Tests module InvariantSiLU"""
+    module = InvariantSiLU(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
 

@@ -32,6 +32,12 @@ Modules
 .. autoclass:: metatensor.learn.nn.InvariantReLU
    :members:
 
+.. autoclass:: metatensor.learn.nn.SiLU
+   :members:
+
+.. autoclass:: metatensor.learn.nn.InvariantSiLU
+   :members:
+
 .. autoclass:: metatensor.learn.nn.LayerNorm
    :members:
 
