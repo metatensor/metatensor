@@ -10,7 +10,7 @@ set(BUILD_TORCH_VERSION @Torch_VERSION@)
 set(BUILD_TORCH_MAJOR @Torch_VERSION_MAJOR@)
 set(BUILD_TORCH_MINOR @Torch_VERSION_MINOR@)
 
-find_package(Torch ${BUILD_TORCH_VERSION} REQUIRED)
+find_package(Torch "${BUILD_TORCH_MAJOR}.${BUILD_TORCH_MINOR}" REQUIRED)
 
 if (NOT "${BUILD_TORCH_MAJOR}" STREQUAL "${Torch_VERSION_MAJOR}")
     message(FATAL_ERROR "found incompatible torch version: metatensor-torch was built against v${BUILD_TORCH_VERSION} but we found v${Torch_VERSION}")
