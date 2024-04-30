@@ -21,9 +21,7 @@ class Tanh(Module):
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
-        of the output. Used to determine the properties labels of the output. Because a
-        module could change the number of properties, the labels of the properties
-        cannot be preserved. By default the output properties are relabeled using
+        of the output. By default the output properties are relabeled using
         Labels.range.
     """
 
@@ -72,9 +70,7 @@ class InvariantTanh(torch.nn.Module):
         have the tanh transformation applied. Covariant blocks will have the identity
         operator applied.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
-        of the output. Used to determine the properties labels of the output. Because a
-        module could change the number of properties, the labels of the properties
-        cannot be preserved. By default the output properties are relabeled using
+        of the output. By default the output properties are relabeled using
         Labels.range.
     """
 
