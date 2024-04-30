@@ -13,9 +13,11 @@ from metatensor.torch import allclose_raise
 from metatensor.torch.learn.nn import (
     EquivariantLinear,
     InvariantLayerNorm,
+    InvariantReLU,
     InvariantTanh,
     LayerNorm,
     Linear,
+    ReLU,
     Sequential,
     Tanh,
 )
@@ -90,6 +92,20 @@ def test_tanh(tensor_no_grad):
 def test_invariant_tanh(tensor_no_grad):
     """Tests module InvariantTanh"""
     module = InvariantTanh(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_relu(tensor_no_grad):
+    """Tests module ReLU"""
+    module = ReLU(in_keys=tensor_no_grad.keys)
+    check_module_torch_script(module, tensor_no_grad)
+    check_module_save_load(module)
+
+
+def test_invariant_relu(tensor_no_grad):
+    """Tests module InvariantReLU"""
+    module = InvariantReLU(in_keys=tensor_no_grad.keys, invariant_key_idxs=[0])
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
 
