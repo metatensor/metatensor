@@ -19,6 +19,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added torch-style activation function module maps to `metatensor.learn.nn`: `ReLU`,
+  `InvariantReLU`, `SiLU`, and `InvariantSiLU` (#597)
 - Added torch-style neural network module maps to `metatensor.learn.nn`:
   `LayerNorm`, `InvariantLayerNorm`, `EquivariantLinear`, `Sequential`, `Tanh`,
   and `InvariantTanh` (#513)
