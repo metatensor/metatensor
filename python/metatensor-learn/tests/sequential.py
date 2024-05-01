@@ -50,10 +50,19 @@ def test_sequential_mlp(tensor):
         nn.Linear(
             in_keys=in_keys,
             in_features=4,
+            out_features=2,
+            bias=True,
+            dtype=torch.float64,
+        ),
+        nn.ReLU(in_keys=in_keys),
+        nn.Linear(
+            in_keys=in_keys,
+            in_features=2,
             out_features=1,
             bias=True,
             dtype=torch.float64,
         ),
+        nn.SiLU(in_keys=in_keys),
     )
 
     prediction = model(tensor)
@@ -94,10 +103,20 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
             in_keys=in_keys,
             invariant_key_idxs=invariant_key_idxs,
             in_features=4,
+            out_features=2,
+            bias=True,
+            dtype=torch.float64,
+        ),
+        nn.InvariantReLU(in_keys=in_keys, invariant_key_idxs=invariant_key_idxs),
+        nn.EquivariantLinear(
+            in_keys=in_keys,
+            invariant_key_idxs=invariant_key_idxs,
+            in_features=2,
             out_features=1,
             bias=True,
             dtype=torch.float64,
         ),
+        nn.InvariantSiLU(in_keys=in_keys, invariant_key_idxs=invariant_key_idxs),
     )
 
     prediction = model(tensor)
