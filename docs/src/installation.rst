@@ -183,12 +183,17 @@ and use it will depend on the programming language you are using.
 
         .. code-block:: bash
 
-            pip install --extra-index-url https://download.pytorch.org/whl/cpu metatensor-torch  --no-binary=metatensor-torch
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu metatensor-torch --no-binary=metatensor-torch
 
         A similar index URL can be used to install the ROCm (AMD GPU) version of
         PyTorch, please refer to the `corresponding documentation
         <https://pytorch.org/get-started/locally/>`_.
 
+        .. seealso::
+
+            Some potential build failures and corresponding workarounds are
+            listed at the end of the :ref:`install-torch-cxx` installation
+            instructions.
 
 
     .. tab-item:: TorchScript C++
@@ -250,6 +255,34 @@ and use it will depend on the programming language you are using.
         |                                      | search for dependencies. This list should     |                |
         |                                      | include the path to metatensor and torch      |                |
         +--------------------------------------+-----------------------------------------------+----------------+
+
+        **Workaround for some build errors**
+
+        The CMake configuration used by libtorch sometimes fails to setup the
+        build environment. You'll find here a list of some known build failures
+        and how to workaround them.
+
+        - .. code-block:: text
+
+              Unknown CUDA Architecture Name 9.0a in CUDA_SELECT_NVCC_ARCH_FLAGS
+
+          This can happen when building with a CUDA-enabled version of torch and
+          a recent version of cmake. This issue is tracked at
+          https://github.com/pytorch/pytorch/issues/113948. To work around it,
+          you can ``export TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0"`` in your
+          environment before building the code.
+
+        - .. code-block:: text
+
+              Imported target "torch" includes non-existent path
+                [...]/MKL_INCLUDE_DIR-NOTFOUND"
+              in its INTERFACE_INCLUDE_DIRECTORIES.
+
+          This can happen when building for x86_64 Linux when MKL is not
+          available on the current machine. Since MKL is a completely optional
+          dependency, you can silence the error by running cmake with the
+          ``-DMKL_INCLUDE_DIR=/usr/include`` option.
+
 
 
 Installing a development version
