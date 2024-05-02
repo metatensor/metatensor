@@ -17,10 +17,23 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.5.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.0) - 2024-05-02
 
 ### Changed
 
-- We renamed `neighbors_list` to `neighbor_list` in all functions.
+- We renamed `neighbors_list` to `neighbor_list` in all functions (#587)
+
+### metatensor-torch Python
+
+#### Changed
+
+- The neighbor lists calculation in `MetatensorCalculator` (ASE calculator based
+  on metatensor models) is now a lot faster (#586)
+- Multiple small improvements related to custom TorchScript extensions (#584)
+- There are reference output for neighbor list calculations, which should help
+  writing interfaces to metatensor models in new simulation engines (#588)
+- The wheels for `metatensor-torch` on PyPI now declare which versions of torch
+  they are compatible with (#592)
 
 ## [Version 0.4.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.4.0) - 2024-04-11
 
