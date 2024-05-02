@@ -3,8 +3,9 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: monthly
+      interval: daily # Temporarily set to daily to test
     open-pull-requests-limit: 1
-    groups:
-      patterns:
-        - "*" # A wildcard to create one PR for all dependencies in the ecosystem
+    # groups:
+    #   action-dependencies:
+    #     patterns:
+    #       - "*" # A wildcard to create one PR for all dependencies in the ecosystem
