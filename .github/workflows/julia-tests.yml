@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
 
       - name: setup Julia
-        uses: julia-actions/setup-julia@v1
+        uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
 
