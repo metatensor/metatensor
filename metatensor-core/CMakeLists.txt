@@ -192,7 +192,7 @@ if (CARGO_VERSION_CHANGED)
         message(FATAL_ERROR "could not create empty project to find default static libs: ${cargo_new_result}")
     endif()
 
-    file(APPEND "${TMPDIR}/_cargo_required_libs/Cargo.toml" "[lib]\ncrate-type=[\"staticlib\"]")
+    file(COPY "Cargo.toml" DESTINATION "${TMPDIR}/_cargo_required_libs/")
 
     execute_process(
         COMMAND ${CARGO_EXE} rustc --color never --target=${RUST_BUILD_TARGET} -- --print=native-static-libs
@@ -228,11 +228,6 @@ if (CARGO_VERSION_CHANGED)
             # Prevent warnings about duplicated `System` in linked libraries
             # from Apple's `ld`
             list(REMOVE_ITEM stripped_lib_list "System")
-        endif()
-
-        if (MSVC)
-            # https://github.com/rust-lang/rust/issues/91974#issuecomment-2090604896
-            list(APPEND stripped_lib_list "bcrypt")
         endif()
 
         list(REMOVE_DUPLICATES stripped_lib_list)
