@@ -46,9 +46,9 @@ jobs:
 
       - name: put documentation in the website
         run: |
-          git clone https://github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
-          rm -rf gh-pages/.git
-          cd gh-pages
+          git clone https://github.com/lab-cosmo/metatensor-docs metatensor-docs
+          rm -rf metatensor-docs/.git
+          cd metatensor-docs
 
           REF_KIND=$(echo $GITHUB_REF | cut -d / -f2)
           if [[ "$REF_KIND" == "tags" ]]; then
@@ -59,10 +59,12 @@ jobs:
               mv ../docs/build/html latest
           fi
 
-      - name: deploy to gh-pages
+      - name: deploy to metatensor-docs
         if: github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages/
+          external_repository: lab-cosmo/metatensor-docs
+          deploy_key: ${{ secrets.METATENSOR_DOCS_SSH_KEY }}
+          publish_branch: main
+          publish_dir: ./metatensor-docs/
           force_orphan: true
