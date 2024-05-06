@@ -230,11 +230,6 @@ if (CARGO_VERSION_CHANGED)
             list(REMOVE_ITEM stripped_lib_list "System")
         endif()
 
-        if (MSVC)
-            # https://github.com/rust-lang/rust/issues/91974#issuecomment-2090604896
-            list(APPEND stripped_lib_list "bcrypt")
-        endif()
-
         list(REMOVE_DUPLICATES stripped_lib_list)
         set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
 
