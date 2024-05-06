@@ -14,7 +14,8 @@ name = "metatensor"
 bench = false
 
 [dependencies]
-ahash = "=0.8.7"  # last version supporting rustc 1.65
+# ahash 0.8.7 is the last version supporting rustc 1.65
+ahash = { version = "=0.8.7", default-features = false, features = ["std"]}
 hashbrown = "0.14"
 indexmap = "2"
 once_cell = "1"
