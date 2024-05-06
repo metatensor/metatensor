@@ -37,6 +37,13 @@ jobs:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
         run: tox -e docs
 
+      - name: store documentation as github artifact to be downloaded by users
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: docs/build/html/*
+          overwrite: true  # only keep the latest version of the documentation
+
       - name: put documentation in the website
         run: |
           git clone https://github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
