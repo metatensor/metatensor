@@ -18,7 +18,7 @@ def _check_outputs(
     atomistic models.
 
     This function checks conformance with the reference documentation in
-    https://lab-cosmo.github.io/metatensor/latest/atomistic/outputs.html
+    https://docs.metatensor.org/latest/atomistic/outputs.html
     """
 
     for name, output in outputs.items():
