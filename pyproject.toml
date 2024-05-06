@@ -26,10 +26,10 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://lab-cosmo.github.io/metatensor/latest/"
-documentation = "https://lab-cosmo.github.io/metatensor/latest/"
+homepage = "https://docs.metatensor.org/"
+documentation = "https://docs.metatensor.org/"
 repository = "https://github.com/lab-cosmo/metatensor"
-changelog = "https://lab-cosmo.github.io/metatensor/latest/core/CHANGELOG.html"
+changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 
 ### ======================================================================== ###
 

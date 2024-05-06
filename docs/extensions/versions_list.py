@@ -1,7 +1,7 @@
 from sphinx_design.grids import GridItemCardDirective
 
 
-DOC_ROOT = "https://lab-cosmo.github.io/metatensor"
+DOC_ROOT = "https://doc.metatensor.org/"
 
 
 class GridItemVersion(GridItemCardDirective):
