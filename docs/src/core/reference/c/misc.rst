@@ -1,7 +1,32 @@
 Miscellaneous
 =============
 
+.. _c-api-version:
+
+Version number
+^^^^^^^^^^^^^^
+
 .. doxygenfunction:: mts_version
+
+.. c:macro:: METATENSOR_VERSION
+
+    Macro containing the compile-time version of metatensor, as a string
+
+.. c:macro:: METATENSOR_VERSION_MAJOR
+
+    Macro containing the compile-time **major** version number of metatensor, as
+    an integer
+
+.. c:macro:: METATENSOR_VERSION_MINOR
+
+    Macro containing the compile-time **minor** version number of metatensor, as
+    an integer
+
+.. c:macro:: METATENSOR_VERSION_PATCH
+
+    Macro containing the compile-time **patch** version number of metatensor, as
+    an integer
+
 
 Error handling
 ^^^^^^^^^^^^^^

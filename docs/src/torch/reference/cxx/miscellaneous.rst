@@ -1,7 +1,30 @@
 Miscellaneous
 =============
 
+
+Version number
+^^^^^^^^^^^^^^
+
 .. doxygenfunction:: metatensor_torch::version
+
+.. c:macro:: METATENSOR_TORCH_VERSION
+
+    Macro containing the compile-time version of metatensor-torch, as a string
+
+.. c:macro:: METATENSOR_TORCH_VERSION_MAJOR
+
+    Macro containing the compile-time **major** version number of
+    metatensor-torch, as an integer
+
+.. c:macro:: METATENSOR_TORCH_VERSION_MINOR
+
+    Macro containing the compile-time **minor** version number of
+    metatensor-torch, as an integer
+
+.. c:macro:: METATENSOR_TORCH_VERSION_PATCH
+
+    Macro containing the compile-time **patch** version number of
+    metatensor-torch, as an integer
 
 
 ``TensorMap`` Serialization

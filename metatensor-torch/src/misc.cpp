@@ -3,6 +3,7 @@
 #include <metatensor.hpp>
 #include <torch/types.h>
 
+#include "metatensor/torch/version.h"
 #include "metatensor/torch/array.hpp"
 #include "metatensor/torch/misc.hpp"
 

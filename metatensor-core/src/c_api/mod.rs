@@ -46,9 +46,9 @@ static VERSION: Lazy<CString> = Lazy::new(|| {
 });
 
 
-/// Get the version of the core metatensor library as a string.
+/// Get the runtime version of the metatensor library as a string.
 ///
-/// This version should follow the `<major>.<minor>.<patch>[-<dev>]` format.
+/// This version follows the `<major>.<minor>.<patch>[-<dev>]` format.
 #[no_mangle]
 pub extern fn mts_version() -> *const c_char {
     return VERSION.as_ptr();

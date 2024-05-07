@@ -1,6 +1,11 @@
 Miscellaneous
 =============
 
+Version number
+^^^^^^^^^^^^^^
+
+The same :ref:`functions and macros <c-api-version>` as the C API are available in C++.
+
 Error handling
 ^^^^^^^^^^^^^^
 

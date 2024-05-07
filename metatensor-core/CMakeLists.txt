@@ -319,13 +319,26 @@ add_custom_target(cargo-build-metatensor ALL
     BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
 )
 
+# Add `#define METATENSOR_VERSION_XXX` to the header
+add_custom_command(TARGET cargo-build-metatensor POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -DMTS_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DMTS_BINARY_DIR=${PROJECT_BINARY_DIR}
+        -DMTS_VERSION=${METATENSOR_FULL_VERSION}
+        -DMTS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        -DMTS_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        -DMTS_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version-defines.cmake
+)
+
 add_dependencies(metatensor::shared cargo-build-metatensor)
 add_dependencies(metatensor::static cargo-build-metatensor)
 set(METATENSOR_HEADERS
-    "${PROJECT_SOURCE_DIR}/include/metatensor.h"
-    "${PROJECT_SOURCE_DIR}/include/metatensor.hpp"
+    "${PROJECT_BINARY_DIR}/include/metatensor.h"
+    "${PROJECT_BINARY_DIR}/include/metatensor.hpp"
 )
-set(METATENSOR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/)
+set(METATENSOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/)
+file(MAKE_DIRECTORY ${METATENSOR_INCLUDE_DIR})
 
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}

@@ -6,16 +6,22 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
 
-<!-- Possible sections for each package:
+<!-- Possible sections:
 
-#### Added
+### Added
 
-#### Fixed
+### Fixed
 
-#### Changed
+### Changed
 
-#### Removed
+### Removed
 -->
+
+### Added
+
+- preprocessor macros containing the version number of metatensor-torch:
+  `METATENSOR_TORCH_VERSION`, `METATENSOR_TORCH_VERSION_MAJOR`,
+  `METATENSOR_TORCH_VERSION_MINOR`, and `METATENSOR_TORCH_VERSION_PATCH`.
 
 ## [Version 0.5.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.0) - 2024-05-02
 

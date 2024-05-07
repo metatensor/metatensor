@@ -1,3 +1,4 @@
+#include "metatensor/torch/version.h"   // IWYU pragma: export
 #include "metatensor/torch/exports.h"   // IWYU pragma: export
 
 #include "metatensor/torch/array.hpp"   // IWYU pragma: export

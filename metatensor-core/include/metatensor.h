@@ -270,9 +270,9 @@ extern "C" {
 void mts_disable_panic_printing(void);
 
 /**
- * Get the version of the core metatensor library as a string.
+ * Get the runtime version of the metatensor library as a string.
  *
- * This version should follow the `<major>.<minor>.<patch>[-<dev>]` format.
+ * This version follows the `<major>.<minor>.<patch>[-<dev>]` format.
  */
 const char *mts_version(void);
 
