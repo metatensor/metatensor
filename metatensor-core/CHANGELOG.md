@@ -19,7 +19,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
+#### Added
+
+- preprocessor macros containing the version number of metatensor:
+  `METATENSOR_VERSION`, `METATENSOR_VERSION_MAJOR`, `METATENSOR_VERSION_MINOR`,
+  and `METATENSOR_VERSION_PATCH`.
+
 ### metatensor-core C
+
+#### Added
+
+- The same versions macros as the C++ interface
 
 ### metatensor-core Python
 

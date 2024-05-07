@@ -10,7 +10,7 @@
 
 namespace metatensor_torch {
 
-/// Get the version of metatensor_torch
+/// Get the runtime version of metatensor-torch as a string
 METATENSOR_TORCH_EXPORT std::string version();
 
 namespace details {

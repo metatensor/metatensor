@@ -130,9 +130,6 @@ add_library(metatensor_torch SHARED
 set_target_properties(metatensor_torch PROPERTIES
     BUILD_VERSION ${METATENSOR_TORCH_FULL_VERSION}
 )
-target_compile_definitions(metatensor_torch PRIVATE
-    METATENSOR_TORCH_VERSION="${METATENSOR_TORCH_FULL_VERSION}"
-)
 
 target_link_libraries(metatensor_torch PUBLIC torch metatensor::shared ${CMAKE_DL_LIBS})
 target_compile_features(metatensor_torch PUBLIC cxx_std_17)
@@ -156,6 +153,16 @@ generate_export_header(metatensor_torch
     EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/exports.h
 )
 target_compile_definitions(metatensor_torch PRIVATE metatensor_torch_EXPORTS)
+
+set(version_header "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/version.h")
+file(WRITE ${version_header} "/** Full version of metatensor-torch as a string */\n")
+file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION \"${METATENSOR_TORCH_FULL_VERSION}\"\n\n")
+file(APPEND ${version_header} "/** Major version number of metatensor-torch as an integer */\n")
+file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
+file(APPEND ${version_header} "/** Minor version number of metatensor-torch as an integer */\n")
+file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_MINOR ${PROJECT_VERSION_MINOR}\n\n")
+file(APPEND ${version_header} "/** Patch version number of metatensor-torch as an integer */\n")
+file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
 
 #------------------------------------------------------------------------------#
 # External dependencies
