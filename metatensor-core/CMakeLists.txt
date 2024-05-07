@@ -60,14 +60,10 @@ set(PROJECT_VERSION ${METATENSOR_FULL_VERSION})
 option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
 option(METATENSOR_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
 
-set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install binaries/DLL")
-set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
-set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
 set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
 set(EXTRA_RUST_FLAGS "" CACHE STRING "Flags used to build rust code")
 
-set(CMAKE_MACOSX_RPATH ON)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
+include(GNUInstallDirs)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "" AND "${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
     message(STATUS "Setting build type to 'release' as none was specified.")
@@ -375,7 +371,7 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/cmake/metatensor-config.in.cmake
     ${PROJECT_BINARY_DIR}/metatensor-config.cmake
-    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/metatensor
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor
 )
 write_basic_package_version_file(
     metatensor-config-version.cmake
@@ -383,33 +379,33 @@ write_basic_package_version_file(
     COMPATIBILITY SameMinorVersion
 )
 
-install(FILES ${METATENSOR_HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR})
+install(FILES ${METATENSOR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
     if (WIN32)
         # DLL files should go in <prefix>/bin
         install(
             FILES ${METATENSOR_SHARED_LOCATION}
-            DESTINATION ${BIN_INSTALL_DIR}
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
             PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE
         )
         # .lib files should go in <prefix>/lib
-        install(FILES ${METATENSOR_IMPLIB_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+        install(FILES ${METATENSOR_IMPLIB_LOCATION} DESTINATION ${CMAKE_INSTALL_LIBDIR})
     else()
         install(
             FILES ${METATENSOR_SHARED_LOCATION}
-            DESTINATION ${LIB_INSTALL_DIR}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
             PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE
         )
     endif()
 endif()
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR NOT BUILD_SHARED_LIBS)
-    install(FILES ${METATENSOR_STATIC_LOCATION} DESTINATION ${LIB_INSTALL_DIR})
+    install(FILES ${METATENSOR_STATIC_LOCATION} DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 install(FILES
     ${PROJECT_BINARY_DIR}/metatensor-config-version.cmake
     ${PROJECT_BINARY_DIR}/metatensor-config.cmake
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/metatensor
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor
 )

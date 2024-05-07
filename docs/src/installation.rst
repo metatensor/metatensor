@@ -92,10 +92,10 @@ and use it will depend on the programming language you are using.
         +-------------------------------------------+-----------------------------------------------+----------------+
         | ``CMAKE_INSTALL_PREFIX``                  | Prefix in which the library will be installed | ``/usr/local`` |
         +-------------------------------------------+-----------------------------------------------+----------------+
-        | ``INCLUDE_INSTALL_DIR``                   | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``include``    |
+        | ``CMAKE_INSTALL_INCLUDEDIR``              | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``include``    |
         |                                           | where the headers will be installed           |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
-        | ``LIB_INSTALL_DIR``                       | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``lib``        |
+        | ``CMAKE_INSTALL_LIBDIR``                  | Path relative to ``CMAKE_INSTALL_PREFIX``     | ``lib``        |
         |                                           | where the shared library will be installed    |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
         | ``BUILD_SHARED_LIBS``                     | Default to installing and using a shared      | ON             |

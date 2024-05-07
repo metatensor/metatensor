@@ -30,9 +30,7 @@ project(metatensor_torch
 set(PROJECT_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 
 option(METATENSOR_TORCH_TESTS "Build metatensor-torch C++ tests" OFF)
-set(BIN_INSTALL_DIR "bin" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install binaries/DLL")
-set(LIB_INSTALL_DIR "lib" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install libraries")
-set(INCLUDE_INSTALL_DIR "include" CACHE PATH "Path relative to CMAKE_INSTALL_PREFIX where to install headers")
+include(GNUInstallDirs)
 
 # Set a default build type if none was specified
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
@@ -136,7 +134,7 @@ target_compile_features(metatensor_torch PUBLIC cxx_std_17)
 target_include_directories(metatensor_torch PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:${INCLUDE_INSTALL_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 # Create a header defining METATENSOR_TORCH_EXPORT for to export classes/functions
@@ -204,12 +202,12 @@ write_basic_package_version_file(
 
 install(TARGETS metatensor_torch
     EXPORT metatensor_torch-targets
-    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 install(EXPORT metatensor_torch-targets
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/metatensor_torch
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor_torch
 )
 
 configure_file(
@@ -220,8 +218,8 @@ configure_file(
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/metatensor_torch-config-version.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/metatensor_torch-config.cmake
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/metatensor_torch
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor_torch
 )
 
-install(DIRECTORY "include/metatensor" DESTINATION ${INCLUDE_INSTALL_DIR})
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/metatensor DESTINATION ${INCLUDE_INSTALL_DIR})
+install(DIRECTORY "include/metatensor" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/metatensor DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
