@@ -223,4 +223,10 @@ html_title = "Metatensor"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["../static"]
 
-html_js_files = [os.path.join("js", "custom.js")]
+html_js_files = [
+    os.path.join("js", "custom.js"),
+    (
+        "https://plausible.io/js/script.js",
+        {"data-domain": "docs.metatensor.org", "defer": "defer"},
+    ),
+]
