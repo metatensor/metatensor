@@ -29,6 +29,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
 
+## [Version 0.1.8](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.8) - 2024-05-13
+
+### Fixed
+
+- fix the build when using metatensor from the Rust bindings
+
 ## [Version 0.1.7](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.7) - 2024-05-13
 
 ### metatensor-core C/C++
