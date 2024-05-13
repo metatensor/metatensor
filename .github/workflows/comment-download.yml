@@ -38,7 +38,7 @@ jobs:
             const {owner, repo} = context.repo;
             const run_id = ${{github.event.workflow_run.id}};
             const workflow_name = "${{github.event.workflow_run.name}}";
-    
+
             console.info(`${workflow_name} triggered this run`)
 
             // Find the PR with the right sha, see https://github.com/orgs/community/discussions/25220
@@ -62,7 +62,7 @@ jobs:
                 body_message = `\n----\n 📚 [Download documentation preview for this pull-request](${link})\n`;
             } else { // wheels
                 link = await getArtifactLink('wheels', owner, repo, run_id);
-                body_message = `⚙️ [Download Python wheels for this pull-request (you can install these with `pip`)](${link})\n`;
+                body_message = `⚙️ [Download Python wheels for this pull-request (you can install these with pip)](${link})\n`;
             }
 
             const MESSAGE_SEPARATOR_START = `\r\n\r\n<!-- download-section ${workflow_name} start -->\r\n`;
