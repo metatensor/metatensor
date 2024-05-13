@@ -47,6 +47,7 @@ fn main() {
         .define("CARGO_EXE", env!("CARGO"))
         .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
         .define("BUILD_SHARED_LIBS", if cfg!(feature="static") { "OFF" } else { "ON" })
+        .define("CMAKE_INSTALL_LIBDIR", "lib")
         .define("METATENSOR_INSTALL_BOTH_STATIC_SHARED", "OFF")
         .build();
 
