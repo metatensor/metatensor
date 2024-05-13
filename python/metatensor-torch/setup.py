@@ -62,6 +62,7 @@ class cmake_ext(build_ext):
         cmake_options = [
             "-DCMAKE_BUILD_TYPE=Release",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
+            "-DCMAKE_INSTALL_LIBDIR=lib",
             f"-DCMAKE_PREFIX_PATH={';'.join(cmake_prefix_path)}",
         ]
 
