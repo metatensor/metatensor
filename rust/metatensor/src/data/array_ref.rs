@@ -11,7 +11,7 @@ use super::Array;
 #[derive(Debug, Clone, Copy)]
 pub struct ArrayRef<'a> {
     array: mts_array_t,
-    /// ArrayRef should behave like &'a mts_array_t
+    /// `ArrayRef` should behave like `&'a mts_array_t`
     marker: std::marker::PhantomData<&'a mts_array_t>,
 }
 
@@ -98,7 +98,7 @@ impl<'a> ArrayRef<'a> {
 #[derive(Debug)]
 pub struct ArrayRefMut<'a> {
     array: mts_array_t,
-    /// ArrayRef should behave like &'a mut mts_array_t
+    /// `ArrayRefMut` should behave like `&'a mut mts_array_t`
     marker: std::marker::PhantomData<&'a mut mts_array_t>,
 }
 
