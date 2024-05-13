@@ -19,17 +19,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
-#### Added
-
-- preprocessor macros containing the version number of metatensor:
-  `METATENSOR_VERSION`, `METATENSOR_VERSION_MAJOR`, `METATENSOR_VERSION_MINOR`,
-  and `METATENSOR_VERSION_PATCH`.
-
 ### metatensor-core C
-
-#### Added
-
-- The same versions macros as the C++ interface
 
 ### metatensor-core Python
 
@@ -39,9 +29,28 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
 
+## [Version 0.1.7](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.7) - 2024-05-13
+
+### metatensor-core C/C++
+
+#### Added
+
+- preprocessor macros containing the version number of metatensor:
+  `METATENSOR_VERSION`, `METATENSOR_VERSION_MAJOR`, `METATENSOR_VERSION_MINOR`,
+  and `METATENSOR_VERSION_PATCH`.
+
+#### Changed
+
+- installation configuration in CMake now uses the standard `GNUInstallDirs`
+
+#### Fixed
+
+- removed dependency on `bcrypt` on Windows
+- the shared libraries is installed with execute permissions
+
 ## [Version 0.1.6](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.6) - 2024-05-03
 
-### metatensor-core C++
+### metatensor-core C/C++
 
 #### Fixed
 
