@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.5.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.1) - 2024-05-14
+
 ### Added
 
 - preprocessor macros containing the version number of metatensor-torch:
