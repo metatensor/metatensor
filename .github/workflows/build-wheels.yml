@@ -5,8 +5,16 @@ on:
     tags: ["*"]
   pull_request:
     paths:
-      # run the build if this file was changed
+      # build wheels in PR if this file changed
       - '.github/workflows/build-wheels.yml'
+      # build wheels in PR if any of the build system files changed
+      - '**/VERSION'
+      - '**/setup.py'
+      - '**/pyproject.toml'
+      - '**/MANIFEST.in'
+      - '**/Cargo.toml'
+      - '**/CMakeLists.txt'
+      - '**/build.rs'
   schedule:
     # check the build once a week on mondays
     - cron: '0 10 * * 1'
