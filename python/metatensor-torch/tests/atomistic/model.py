@@ -14,6 +14,7 @@ from metatensor.torch.atomistic import (
     NeighborListOptions,
     System,
     check_atomistic_model,
+    load_atomistic_model,
 )
 
 
@@ -240,3 +241,29 @@ def test_bad_capabilities():
     )
     with pytest.raises(ValueError, match=message):
         ModelCapabilities(outputs={"not-a-standard::": ModelOutput()})
+
+
+def test_access_module(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    # Access wrapped module
+    assert atomistic.module is model
+
+    atomistic.save(str(tmpdir / "export.pt"))
+    loaded_atomistic = load_atomistic_model(str(tmpdir / "export.pt"))
+
+    # Access wrapped module after loading
+    loaded_atomistic.module
+
+    # Verfify that it contains the original submodules
+    loaded_atomistic.module.first
+    loaded_atomistic.module.second
+    loaded_atomistic.module.other
