@@ -131,7 +131,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     :py:class:`MetatensorAtomisticModel` is the main entry point for atomistic machine
     learning based on metatensor. It is the interface between custom, user-defined
     models and simulation engines. Users should wrap their models with this class, and
-    use :py:meth:`export()` to save and export the model to a file. The exported models
+    use :py:meth:`save()` to save the wrapped model to a file. The exported models
     can then be loaded by a simulation engine to compute properties of atomistic
     systems.
 
@@ -228,9 +228,9 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ... )
     >>> # wrap the model
     >>> wrapped = MetatensorAtomisticModel(model, metadata, capabilities)
-    >>> # export the model
+    >>> # save the wrapped model to disk
     >>> with tempfile.TemporaryDirectory() as directory:
-    ...     wrapped.export(os.path.join(directory, "constant-energy-model.pt"))
+    ...     wrapped.save(os.path.join(directory, "constant-energy-model.pt"))
     ...
     """
 
@@ -424,6 +424,24 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
     def export(self, file: str, collect_extensions: Optional[str] = None):
         """Export this model to a file that can then be loaded by simulation engine.
+
+        .. warning::
+            :py:meth:`export` is deprecated. Use :py:meth:`save` instead.
+
+        :param file: where to save the model. This can be a path or a file-like object.
+        :param collect_extensions: if not None, all currently loaded PyTorch extension
+            will be collected in this directory. If this directory already exists, it
+            is removed and re-created.
+        """
+        warnings.warn(
+            message="`export()` is deprecated, use `save()` instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.save(file, collect_extensions)
+
+    def save(self, file: str, collect_extensions: Optional[str] = None):
+        """Save this model to a file that can then be loaded by simulation engine.
 
         :param file: where to save the model. This can be a path or a file-like object.
         :param collect_extensions: if not None, all currently loaded PyTorch extension

@@ -73,8 +73,6 @@ class MyCustomModel(torch.nn.Module):
 # the calculation. For example when working with additive atom-centered models, only
 # atoms in ``selected_atoms`` will be used as atomic centers, but all atoms will be
 # considered when looking for neighbors of the central atoms.
-
-# %%
 #
 # Let's define a model that predict the energy of a system as a sum of single atom
 # energy (for example some isolated atom energy computed with DFT), and completely
@@ -91,7 +89,7 @@ class SingleAtomEnergy(torch.nn.Module):
         self,
         systems: List[System],
         outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels],
+        selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
         # if the model user did not request an energy calculation, we have nothing to do
         if "energy" not in outputs:
@@ -113,7 +111,7 @@ class SingleAtomEnergy(torch.nn.Module):
         # add metadata to the output
         block = TensorBlock(
             values=energy,
-            samples=Labels("system", torch.arange(len(systems))),
+            samples=Labels("system", torch.arange(len(systems)).reshape(-1, 1)),
             components=[],
             properties=Labels("energy", torch.tensor([[0]])),
         )
@@ -137,16 +135,19 @@ model = SingleAtomEnergy(
     }
 )
 
-# We don't need to train this model since there are no trainable parameters inside. If
-# you are adapting this example to your own models, this is where you would train them!
-
-# optimizer = ...
-# for epoch in range(...):
-#     optimizer.zero_grad()
-#     loss = ...
-#     optimizer.step()
-
 # %%
+#
+# We don't need to train this model since there are no trainable parameters inside. If
+# you are adapting this example to your own models, this is where you would train them
+# for example like:
+#
+# .. code-block:: python
+#
+#    optimizer = ...
+#    for epoch in range(...):
+#        optimizer.zero_grad()
+#        loss = ...
+#        optimizer.step()
 #
 # Exporting the model
 # -------------------
@@ -215,7 +216,7 @@ capabilities = ModelCapabilities(
 # the model, and export it to a file:
 
 wrapper = MetatensorAtomisticModel(model.eval(), metadata, capabilities)
-wrapper.export("exported-model.pt")
+wrapper.save("exported-model.pt")
 
 # the file was created in the current directory
 print(glob.glob("*.pt"))
