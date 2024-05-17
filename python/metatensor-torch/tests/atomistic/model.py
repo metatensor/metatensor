@@ -1,3 +1,4 @@
+import os
 import zipfile
 from typing import Dict, List, Optional
 
@@ -72,15 +73,22 @@ def model():
     return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
-def test_export(model, tmpdir):
-    with tmpdir.as_cwd():
+def test_save(model, tmp_path):
+    os.chdir(tmp_path)
+    model.save("export.pt")
+
+    with zipfile.ZipFile("export.pt") as file:
+        assert "export/extra/metatensor-version" in file.namelist()
+        assert "export/extra/torch-version" in file.namelist()
+
+    check_atomistic_model("export.pt")
+
+
+def test_export(model, tmp_path):
+    os.chdir(tmp_path)
+    match = r"`export\(\)` is deprecated, use `save\(\)` instead"
+    with pytest.warns(DeprecationWarning, match=match):
         model.export("export.pt")
-
-        with zipfile.ZipFile("export.pt") as file:
-            assert "export/extra/metatensor-version" in file.namelist()
-            assert "export/extra/torch-version" in file.namelist()
-
-        check_atomistic_model("export.pt")
 
 
 class ExampleModule(torch.nn.Module):

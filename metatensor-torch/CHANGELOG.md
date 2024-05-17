@@ -6,6 +6,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/lab-cosmo/metatensor/)
 
+### Added
+
+- ``MetatensorAtomisticModel.save()`` to save a wrapped model to a file.
+
+### Deprecated
+
+- ``MetatensorAtomisticModel.export()`` is deprecated in favor of ``MetatensorAtomisticModel.save()``
+
 <!-- Possible sections:
 
 ### Added
@@ -13,6 +21,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Fixed
 
 ### Changed
+
+### Deprecated
 
 ### Removed
 -->
