@@ -261,15 +261,14 @@ def create_version_number(version):
 
 if __name__ == "__main__":
     if not os.path.exists(METATENSOR_TORCH):
-        # we are building from a sdist, which should include metatensor-core Rust
+        # we are building from a sdist, which should include metatensor-torch C++
         # sources as a tarball
-        tarballs = glob.glob(os.path.join(ROOT, "metatensor-torch-*.tar.gz"))
+        tarballs = glob.glob(os.path.join(ROOT, "metatensor-torch-cxx-*.tar.gz"))
 
         if not len(tarballs) == 1:
             raise RuntimeError(
-                "expected a single 'metatensor-torch-*.tar.gz' file containing "
-                "metatensor-torch C++ sources. remove all files and re-run "
-                "scripts/package-torch.sh"
+                "expected a single 'metatensor-torch-cxx-*.tar.gz' file containing "
+                "metatensor-torch C++ sources"
             )
 
         METATENSOR_TORCH = os.path.realpath(tarballs[0])

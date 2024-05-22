@@ -37,6 +37,7 @@ requires = [
     "setuptools >=68",
     "packaging >=23",
     "wheel >=0.41",
+    "cmake",
 ]
 
 # use a custom build backend to :
