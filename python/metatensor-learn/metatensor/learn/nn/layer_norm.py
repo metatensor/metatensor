@@ -326,7 +326,7 @@ def _layer_norm(
     :return: :py:class:`torch.Tensor` with layer normalization applied.
     """
     # Contract over all dimensions except samples
-    dim: List[int] = list(range(1, len(tensor.shape) - 1))
+    dim: List[int] = list(range(1, len(tensor.shape)))
 
     if mean:  # subtract mean over properties dimension
         tensor_out = tensor - torch.mean(tensor, dim=dim, keepdim=True)
