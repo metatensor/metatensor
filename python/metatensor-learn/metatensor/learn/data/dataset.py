@@ -109,6 +109,38 @@ class Dataset(_BaseDataset):
     ID. This data field for a given sample is then only lazily loaded into memory when
     the :py:meth:`Dataset.__getitem__` method is called.
 
+    >>> # create a Dataset with only lists
+    >>> dataset = Dataset(num=[1, 2, 3], string=["a", "b", "c"])
+    >>> dataset[0]
+    Sample(num=1, string='a')
+    >>> dataset[2]
+    Sample(num=3, string='c')
+
+    >>> # create a Dataset with callables for lazy loading of data
+    >>> def call_me(sample_id: int):
+    ...     # this could also read from a file
+    ...     return f"compute something with sample {sample_id}"
+    >>> dataset = Dataset(num=[1, 2, 3], call_me=call_me)
+    >>> dataset[0]
+    Sample(num=1, call_me='compute something with sample 0')
+    >>> dataset[2]
+    Sample(num=3, call_me='compute something with sample 2')
+
+    >>> # iterating over a dataset
+    >>> for num, called in dataset:
+    ...     print(num, " -- ", called)
+    ...
+    1  --  compute something with sample 0
+    2  --  compute something with sample 1
+    3  --  compute something with sample 2
+    >>> for sample in dataset:
+    ...     print(sample.num, " -- ", sample.call_me)
+    ...
+    1  --  compute something with sample 0
+    2  --  compute something with sample 1
+    3  --  compute something with sample 2
+
+
     :param size: Optional, an integer indicating the size of the dataset, i.e. the
         number of samples. This only needs to be specified if all data
     :param kwargs: List or Callable. Keyword arguments specifying the data fields for
@@ -178,6 +210,25 @@ class IndexedDataset(_BaseDataset):
     return the data object for that sample ID. This data field for a given sample is
     then only lazily loaded into memory when :py:meth:`IndexedDataset.__getitem__` or
     :py:meth:`IndexedDataset.get_sample` methods are called.
+
+    >>> # create an IndexedDataset with lists
+    >>> dataset = IndexedDataset(sample_id=["cat", "bird", "dog"], y=[11, 22, 33])
+    >>> dataset[0]
+    Sample(sample_id='cat', y=11)
+    >>> dataset[2]
+    Sample(sample_id='dog', y=33)
+
+    >>> # create an IndexedDataset with callables for lazy loading of data
+    >>> def call_me(sample_id: int):
+    ...     # this could also read from a file
+    ...     return f"compute something with sample {sample_id}"
+    >>> dataset = IndexedDataset(sample_id=["cat", "bird", "dog"], call_me=call_me)
+    >>> dataset[0]
+    Sample(sample_id='cat', call_me='compute something with sample cat')
+    >>> dataset[2]
+    Sample(sample_id='dog', call_me='compute something with sample dog')
+    >>> dataset.get_sample("bird")
+    Sample(sample_id='bird', call_me='compute something with sample bird')
 
     :param sample_id: A list of unique IDs for each sample in the dataset.
     :param kwargs: Keyword arguments specifying the data fields for the dataset.
