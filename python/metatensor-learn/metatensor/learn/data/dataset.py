@@ -1,9 +1,5 @@
-"""
-Module for defining a Dataset or IndexedDataset.
-"""
-
 from collections import namedtuple
-from typing import List, NamedTuple, Optional
+from typing import Any, Dict, List, NamedTuple, Optional
 
 import torch
 
@@ -13,7 +9,12 @@ class _BaseDataset(torch.utils.data.Dataset):
     Defines the base private class for a metatensor-learn dataset.
     """
 
-    def __init__(self, arg_name: str, size: Optional[int] = None, **kwargs):
+    def __init__(
+        self,
+        data: Dict[str, Any],
+        size_arg_name: str,
+        size: Optional[int] = None,
+    ):
         super(_BaseDataset, self).__init__()
 
         field_names = []
@@ -21,12 +22,14 @@ class _BaseDataset(torch.utils.data.Dataset):
         field_sizes = []
 
         # Check type consistency in kwarg fields
-        for name, field in kwargs.items():
+        for name, field in data.items():
             if isinstance(field, list):
-                if not all([isinstance(field[0], type(f)) for f in field]):
-                    raise TypeError(
-                        f"Data field {name} must be a list of the same type"
-                    )
+                if name != "sample_id":
+                    # sample_id is allowed to used different types for different entries
+                    if not all([isinstance(field[0], type(f)) for f in field]):
+                        raise TypeError(
+                            f"Data field {name} must be a list of the same type"
+                        )
                 field_sizes.append(len(field))
             else:
                 if not callable(field):
@@ -41,7 +44,7 @@ class _BaseDataset(torch.utils.data.Dataset):
             if len(field_sizes) == 0:
                 raise ValueError(
                     "If passing all data fields as callables, argument "
-                    f"'{arg_name}' must also be provided."
+                    f"'{size_arg_name}' must also be provided."
                 )
             else:
                 if not all([s == field_sizes[0] for s in field_sizes]):
@@ -54,15 +57,17 @@ class _BaseDataset(torch.utils.data.Dataset):
             if len(field_sizes) > 0:
                 if not all([s == size for s in field_sizes]):
                     raise ValueError(
-                        f"Number of samples inconsistent between argument '{arg_name}' "
-                        f"({size}) and data fields in kwargs: ({field_sizes})"
+                        "Number of samples inconsistent between argument "
+                        f"'{size_arg_name}' ({size}) and data fields: ({field_sizes})"
                     )
 
         # Define an internal numeric index list as a range from 0 to size
         self._indices = list(range(size))
         self._field_names = field_names
-        self._data = {name: kwargs[name] for name in self._field_names}
+        self._data = data
         self._size = size
+
+        self._sample_class = namedtuple("Sample", self._field_names)
 
     def __len__(self) -> int:
         """
@@ -118,7 +123,7 @@ class Dataset(_BaseDataset):
                 " instead."
             )
 
-        super(Dataset, self).__init__(arg_name="size", size=size, **kwargs)
+        super().__init__(data=kwargs, size_arg_name="size", size=size)
 
     def __getitem__(self, idx: int) -> NamedTuple:
         """
@@ -130,7 +135,6 @@ class Dataset(_BaseDataset):
         """
         if idx not in self._indices:
             raise ValueError(f"Index {idx} not in dataset")
-        names = self._field_names
         sample_data = []
         for name in self._field_names:
             if callable(self._data[name]):  # lazy load
@@ -145,7 +149,7 @@ class Dataset(_BaseDataset):
                 assert isinstance(self._data[name], list)
                 sample_data.append(self._data[name][idx])
 
-        return namedtuple("Sample", names)(*sample_data)
+        return self._sample_class(*sample_data)
 
 
 class IndexedDataset(_BaseDataset):
@@ -189,9 +193,10 @@ class IndexedDataset(_BaseDataset):
         if len(set(sample_id)) != len(sample_id):
             raise ValueError("Sample IDs must be unique. Found duplicate sample IDs.")
 
-        super(IndexedDataset, self).__init__(
-            arg_name="sample_id", size=len(sample_id), **kwargs
-        )
+        data = {"sample_id": sample_id}
+        data.update(kwargs)
+        super().__init__(data=data, size_arg_name="sample_id", size=len(sample_id))
+
         self._sample_id = sample_id
         self._sample_id_to_idx = {smpl_id: idx for idx, smpl_id in enumerate(sample_id)}
 
@@ -205,22 +210,25 @@ class IndexedDataset(_BaseDataset):
         """
         if idx not in self._indices:
             raise ValueError(f"Index {idx} not in dataset")
-        names = ["sample_id"] + self._field_names
-        sample_data = [self._sample_id[idx]]
+
+        sample_id = self._sample_id[idx]
+
+        sample_data = []
         for name in self._field_names:
-            if callable(self._data[name]):  # lazy load using sample ID
+            if name == "sample_id":
+                sample_data.append(sample_id)
+            elif callable(self._data[name]):  # lazy load using sample ID
                 try:
-                    sample_data.append(self._data[name](self._sample_id[idx]))
+                    sample_data.append(self._data[name](sample_id))
                 except Exception as e:
-                    raise IOError(
-                        f"Error loading data field '{name}' for sample"
-                        f" ID {self._sample_id[idx]}: {e}"
-                    )
+                    raise ValueError(
+                        f"Error loading data field '{name}' for sample '{sample_id}'"
+                    ) from e
             else:
                 assert isinstance(self._data[name], list)
                 sample_data.append(self._data[name][idx])
 
-        return namedtuple("Sample", names)(*sample_data)
+        return self._sample_class(*sample_data)
 
     def get_sample(self, sample_id) -> NamedTuple:
         """

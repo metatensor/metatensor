@@ -218,14 +218,13 @@ def test_indexed_dataset_invalid_callable():
     Tests that passing a data fields as a callable that is invalid with a
     specific sample ID raises the appropriate error.
     """
-    message = "Error loading data field 'c' for sample ID cat"
-    with pytest.raises(IOError) as excinfo:
+    message = "Error loading data field 'c' for sample 'cat'"
+    with pytest.raises(ValueError, match=message):
         dset = IndexedDataset(
             c=lambda y: metatensor.load(f"path/to/{y}"),
             sample_id=["cat", "dog"],
         )
         dset.get_sample("cat")
-    assert message in str(excinfo.value)
 
 
 def test_dataset_inconsistent_lengths():
@@ -235,7 +234,7 @@ def test_dataset_inconsistent_lengths():
     """
     message = (
         "Number of samples inconsistent between argument 'size' (5) "
-        "and data fields in kwargs: ([10])"
+        "and data fields: ([10])"
     )
     with pytest.raises(ValueError, match=re.escape(message)):
         Dataset(
@@ -257,7 +256,7 @@ def test_indexed_dataset_inconsistent_lengths():
     """
     message = (
         "Number of samples inconsistent between argument 'sample_id' (9) "
-        "and data fields in kwargs: ([10])"
+        "and data fields: ([9, 10])"
     )
     with pytest.raises(ValueError, match=re.escape(message)):
         IndexedDataset(
@@ -297,7 +296,7 @@ def test_iterate_over_dataset():
         assert sample.b == torch.zeros((1, 1))
 
 
-def test_iterate_over_indexeddataset():
+def test_iterate_over_indexed_dataset():
     """
     Tests iterating over the IndexedDataset object.
     """
