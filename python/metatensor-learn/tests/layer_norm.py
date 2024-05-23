@@ -83,3 +83,19 @@ def test_equivariance(tensor, wigner_d_real):
     fRx = f(Rx)  # f(R . x)
 
     assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_layer_norm_indep_samples():
+    """
+    Tests that the LayerNorm is applied to each sample independently.
+    """
+    layer_norm_module = _LayerNorm(
+        in_features=10, elementwise_affine=True, dtype=torch.float64
+    )
+    tensor = torch.randn(5, 3, 10)
+    norm = layer_norm_module(tensor)
+
+    # Apply to each sample independently and check consistency
+    for i in range(tensor.shape[0]):
+        norm_i = layer_norm_module(tensor[i : i + 1])
+        assert torch.allclose(norm[i], norm_i, atol=1e-10, rtol=1e-10)
