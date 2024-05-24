@@ -17,6 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- Dataset and DataLoader can now handle fields with a name which is not a valid
+  Python identifier.
+
+
 ## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.2) - 2024-05-16
 
 ### Added

@@ -2,13 +2,14 @@
 Module containing a collate function for use in a Dataloader.
 """
 
-from collections import namedtuple
 from typing import List, NamedTuple, Optional, Union
 
 import torch
 
 import metatensor
 from metatensor import TensorMap
+
+from ._namedtuple import namedtuple
 
 
 def group(batch: List[NamedTuple]) -> NamedTuple:
