@@ -268,7 +268,7 @@ fig.show()
 # pre-exported model, meaning you can also run simulations without defining or
 # re-training a model:
 
-wrapper.export("exported-model.pt")
+wrapper.save("exported-model.pt")
 
 atoms.calc = MetatensorCalculator("exported-model.pt")
 

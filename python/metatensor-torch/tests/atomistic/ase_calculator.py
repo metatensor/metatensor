@@ -110,10 +110,10 @@ def test_torch_script_model(model, model_different_units, atoms):
 
 def test_exported_model(tmpdir, model, model_different_units, atoms):
     path = os.path.join(tmpdir, "exported-model.pt")
-    model.export(path)
+    model.save(path)
     check_against_ase_lj(atoms, MetatensorCalculator(path, check_consistency=True))
 
-    model_different_units.export(path)
+    model_different_units.save(path)
     check_against_ase_lj(atoms, MetatensorCalculator(path, check_consistency=True))
 
 
@@ -135,7 +135,7 @@ def test_selected_atoms(tmpdir, model, atoms):
     )
 
     path = os.path.join(tmpdir, "exported-model.pt")
-    model.export(path)
+    model.save(path)
     calculator = MetatensorCalculator(path, check_consistency=True)
 
     first_mask = [a % 2 == 0 for a in range(len(atoms))]
@@ -190,7 +190,7 @@ def test_serialize_ase(tmpdir, model, atoms):
 
     # save with exported model
     path = os.path.join(tmpdir, "exported-model.pt")
-    model.export(path)
+    model.save(path)
 
     calculator = MetatensorCalculator(path)
     data = calculator.todict()
@@ -242,7 +242,7 @@ def test_dtype_device(tmpdir, model, atoms):
             capabilities,
         )
 
-        dtype_model.export(path)
+        dtype_model.save(path)
         atoms.calc = MetatensorCalculator(path, check_consistency=True, device=device)
         assert np.allclose(atoms.get_potential_energy(), expected)
 
@@ -276,7 +276,7 @@ model = metatensor_lj_test.lennard_jones_model(
     with_extension=True,
 )
 
-model.export("{model_path}", collect_extensions="{extensions_directory}")
+model.save("{model_path}", collect_extensions="{extensions_directory}")
     """
 
     subprocess.run([sys.executable, "-c", script], check=True)
