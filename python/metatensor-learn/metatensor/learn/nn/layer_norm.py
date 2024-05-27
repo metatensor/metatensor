@@ -25,12 +25,11 @@ class LayerNorm(Module):
 
     The main difference from :py:class:`torch.nn.LayerNorm` is that there is no
     `normalized_shape` parameter. Instead, the standard deviation and mean (if
-    applicable) are calculated over the property dimension of each
-    :py:class:`TensorBlock`.
+    applicable) are calculated over all dimensions except the samples (first) dimension
+    of each :py:class:`TensorBlock`.
 
-    This module also has an extra parameter :param mean: that controls whether or not
-    the mean over the properties dimension is subtracted from the input tensor in the
-    transformation.
+    The extra parameter :param mean: controls whether or not the mean over these
+    dimensions is subtracted from the input tensor in the transformation.
 
     Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
@@ -47,8 +46,9 @@ class LayerNorm(Module):
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
-    :mean bool: whether or not to subtract the mean over the properties (final)
-        dimension of each block of the input passed to :py:meth:`forward`.
+    :mean bool: whether or not to subtract the mean over all dimensions except the
+        samples (first) dimension of each block of the input passed to
+        :py:meth:`forward`.
     """
 
     def __init__(
@@ -119,12 +119,11 @@ class InvariantLayerNorm(Module):
 
     The main difference from :py:class:`torch.nn.LayerNorm` is that there is no
     `normalized_shape` parameter. Instead, the standard deviation and mean (if
-    applicable) are calculated over the property dimension of each
-    :py:class:`TensorBlock`.
+    applicable) are calculated over all dimensions except the samples (first) dimension
+    of each :py:class:`TensorBlock`.
 
-    This module also has an extra parameter :param mean: that controls whether or not
-    the mean over the properties dimension is subtracted from the input tensor in the
-    transformation.
+    The extra parameter :param mean: controls whether or not the mean over these
+    dimensions is subtracted from the input tensor in the transformation.
 
     Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
@@ -146,8 +145,8 @@ class InvariantLayerNorm(Module):
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
-    :param mean: bool or list of bool. Whether or not to subtract the mean over the
-        properties (final) dimension of each invariant block of the input passed to
+    :mean bool: whether or not to subtract the mean over all dimensions except the
+        samples (first) dimension of each block of the input passed to
         :py:meth:`forward`. If passed as a list, must have the same length as :param
         invariant_key_idxs:.
     """
@@ -237,8 +236,8 @@ class _LayerNorm(Module):
     Custom :py:class:`Module` re-implementing :py:class:`torch.nn.LayerNorm`.
 
     In this case, `normalized_shape` is not provided as a parameter. Instead, the
-    standard deviation and mean (if applicable) are calculated over the final dimension
-    of the input tensor.
+    standard deviation and mean (if applicable) are calculated over all dimensions
+    except the samples of the input tensor.
 
     Subtraction of this mean can be switched on or off using the extra :param mean:
     parameter.
@@ -246,8 +245,8 @@ class _LayerNorm(Module):
     Refer to :py:class:`torch.nn.LayerNorm` documentation for more information on the
     other parameters.
 
-    :param mean: bool, whether or not to subtract the mean over the final dimension of
-        the input tensor passed to :py:meth:`forward`.
+    :param mean: bool, whether or not to subtract the mean over all dimension except the
+        samples of the input tensor passed to :py:meth:`forward`.
     """
 
     __constants__ = ["in_features", "eps", "elementwise_affine"]
@@ -314,23 +313,23 @@ def _layer_norm(
     """
     Apply layer normalization to the input `tensor`.
 
-    See :py:class:`torch.nn.functional.layer_norm` for more information on the
-    other parameters.
+    See :py:class:`torch.nn.functional.layer_norm` for more information on the other
+    parameters.
 
     In addition to base torch implementation, this function has the added control of
-    whether or not the mean over the properties (final) dimension is subtracted from the
-    input tensor.
+    whether or not the mean over all dimensions except the samples (first) dimension is
+    subtracted from the input tensor.
 
     :param mean: whether or not to subtract from the input :param tensor: the mean over
-        the dimensions not included in :param normalized_shape:.
+        all dimensions except the samples (first) dimension.
 
     :return: :py:class:`torch.Tensor` with layer normalization applied.
     """
-    # Contract over all dimensions except properties
-    dim: List[int] = list(range(0, len(tensor.shape) - 1))
+    # Contract over all dimensions except samples
+    dim: List[int] = list(range(1, len(tensor.shape)))
 
     if mean:  # subtract mean over properties dimension
-        tensor_out = tensor - torch.mean(tensor, dim=dim)
+        tensor_out = tensor - torch.mean(tensor, dim=dim, keepdim=True)
     else:
         tensor_out = tensor
 
