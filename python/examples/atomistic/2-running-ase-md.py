@@ -1,4 +1,6 @@
 """
+.. _atomistic-tutorial-md:
+
 Running Molecular Dynamics with ASE
 ===================================
 
