@@ -19,6 +19,7 @@ EXAMPLES = os.path.abspath(
 
 def test_export_atomistic_model(tmp_path):
     """test if model defined in `1-export-atomistic-model.py` can run"""
+    os.chdir(tmp_path)
 
     # import example from full path
     spec = importlib.util.spec_from_file_location(
@@ -49,7 +50,6 @@ def test_export_atomistic_model(tmp_path):
     export_atomistic_model.wrapper([system], options, check_consistency=True)
 
     # run wrapped and saved model
-    os.chdir(tmp_path)
     export_atomistic_model.wrapper.save("exported-model.pt")
     atomistic_model = load_atomistic_model("exported-model.pt")
     atomistic_model([system], options, check_consistency=True)
