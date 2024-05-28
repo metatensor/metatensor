@@ -145,6 +145,7 @@ torch::Tensor NeighborsAutograd::forward(
     auto distances = neighbors->values();
 
     if (check_consistency) {
+        auto n_atoms = positions.size(0);
         auto epsilon = 1e-6;
         if (distances.scalar_type() != torch::kFloat64) {
             epsilon = 1e-4;
@@ -154,6 +155,25 @@ torch::Tensor NeighborsAutograd::forward(
         for (int64_t sample_i=0; sample_i<samples.size(0); sample_i++) {
             auto atom_i = samples[sample_i][0];
             auto atom_j = samples[sample_i][1];
+
+            auto atom_i_cpu = atom_i.to(torch::kCPU).item<int32_t>();
+            auto atom_j_cpu = atom_j.to(torch::kCPU).item<int32_t>();
+            if (atom_i_cpu < 0 || atom_i_cpu >= n_atoms) {
+                C10_THROW_ERROR(ValueError,
+                    "checking internal consistency: 'first_atom' in neighbor list (" +
+                    std::to_string(atom_i_cpu) + ") is out of bounds (we have " +
+                    std::to_string(n_atoms) + " atoms in the system)"
+                );
+            }
+
+            if (atom_j_cpu < 0 || atom_j_cpu >= n_atoms) {
+                C10_THROW_ERROR(ValueError,
+                    "checking internal consistency: 'second_atom' in neighbor list (" +
+                    std::to_string(atom_j_cpu) + ") is out of bounds (we have " +
+                    std::to_string(n_atoms) + " atoms in the system)"
+                );
+            }
+
             auto cell_shift = samples.index({sample_i, torch::indexing::Slice(2, 5)}).to(positions.scalar_type());
 
             auto actual_distance = distances[sample_i].reshape({3});
@@ -573,9 +593,6 @@ void SystemHolder::add_neighbor_list(NeighborListOptions options, TorchTensorBlo
             "'first_atom', 'second_atom', 'cell_shift_a', 'cell_shift_b', 'cell_shift_c'"
         );
     }
-
-    // TODO: we could check that the values of first_atom and second_atom match
-    // entried in positions, but this might be a bit costly
 
     auto components = neighbors->components();
     if (components.size() != 1 || *components[0] != metatensor::Labels({"xyz"}, {{0}, {1}, {2}})) {
