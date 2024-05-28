@@ -147,7 +147,7 @@ torch::Tensor NeighborsAutograd::forward(
     if (check_consistency) {
         auto epsilon = 1e-6;
         if (distances.scalar_type() != torch::kFloat64) {
-            auto epsilon = 1e-4;
+            epsilon = 1e-4;
         }
 
         auto samples = neighbors->samples()->values();
@@ -163,7 +163,7 @@ torch::Tensor NeighborsAutograd::forward(
             if (diff_norm.item<double>() > epsilon) {
                 std::ostringstream oss;
 
-                oss << "one neighbor pair does not match its metadata: ";
+                oss << "checking internal consistency: one neighbor pair does not match its metadata: ";
                 oss << "the pair between atom " << atom_i.item<int32_t>();
                 oss << " and atom " << atom_j.item<int32_t>() << " for the ";
 
