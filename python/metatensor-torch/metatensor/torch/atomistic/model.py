@@ -7,6 +7,7 @@ import warnings
 from typing import Dict, List, Optional
 
 import torch
+from torch.profiler import record_function
 
 from .. import Labels, TensorBlock, TensorMap
 from .. import __version__ as metatensor_version
@@ -356,69 +357,75 @@ class MetatensorAtomisticModel(torch.nn.Module):
         """
 
         if check_consistency:
-            _check_inputs(
-                capabilities=self._capabilities,
-                requested_neighbor_lists=self._requested_neighbor_lists,
-                systems=systems,
-                options=options,
-                expected_dtype=self._model_dtype,
-            )
-
-        # convert systems from engine to model units
-        if self._capabilities.length_unit != options.length_unit:
-            conversion = unit_conversion_factor(
-                quantity="length",
-                from_unit=options.length_unit,
-                to_unit=self._capabilities.length_unit,
-            )
-
-            systems = _convert_systems_units(
-                systems,
-                conversion,
-                model_length_unit=self._capabilities.length_unit,
-                system_length_unit=options.length_unit,
-            )
-
-        # run the actual calculations
-        outputs = self._module(
-            systems=systems,
-            outputs=options.outputs,
-            selected_atoms=options.selected_atoms,
-        )
-
-        if check_consistency:
-            _check_outputs(
-                systems=systems,
-                requested=options.outputs,
-                selected_atoms=options.selected_atoms,
-                outputs=outputs,
-                expected_dtype=self._model_dtype,
-            )
-
-        # convert outputs from model to engine units
-        for name, output in outputs.items():
-            declared = self._capabilities.outputs[name]
-            requested = options.outputs[name]
-            if declared.quantity == "" or requested.quantity == "":
-                continue
-
-            if declared.quantity != requested.quantity:
-                raise ValueError(
-                    f"model produces values as '{declared.quantity}' for the '{name}' "
-                    f"output, but the engine requested '{requested.quantity}'"
+            with record_function("MetatensorAtomisticModel::check_inputs"):
+                _check_inputs(
+                    capabilities=self._capabilities,
+                    requested_neighbor_lists=self._requested_neighbor_lists,
+                    systems=systems,
+                    options=options,
+                    expected_dtype=self._model_dtype,
                 )
 
-            conversion = unit_conversion_factor(
-                quantity=declared.quantity,
-                from_unit=declared.unit,
-                to_unit=requested.unit,
+        # convert systems from engine to model units
+        with record_function("MetatensorAtomisticModel::convert_units_input"):
+            if self._capabilities.length_unit != options.length_unit:
+                conversion = unit_conversion_factor(
+                    quantity="length",
+                    from_unit=options.length_unit,
+                    to_unit=self._capabilities.length_unit,
+                )
+
+                systems = _convert_systems_units(
+                    systems,
+                    conversion,
+                    model_length_unit=self._capabilities.length_unit,
+                    system_length_unit=options.length_unit,
+                )
+
+        # run the actual calculations
+        with record_function("Model::forward"):
+            outputs = self._module(
+                systems=systems,
+                outputs=options.outputs,
+                selected_atoms=options.selected_atoms,
             )
 
-            if conversion != 1.0:
-                for block in output.blocks():
-                    block.values[:] *= conversion
-                    for _, gradient in block.gradients():
-                        gradient.values[:] *= conversion
+        if check_consistency:
+            with record_function("MetatensorAtomisticModel::check_outputs"):
+                _check_outputs(
+                    systems=systems,
+                    requested=options.outputs,
+                    selected_atoms=options.selected_atoms,
+                    outputs=outputs,
+                    expected_dtype=self._model_dtype,
+                )
+
+        # convert outputs from model to engine units
+        with record_function("MetatensorAtomisticModel::convert_units_output"):
+            for name, output in outputs.items():
+                declared = self._capabilities.outputs[name]
+                requested = options.outputs[name]
+                if declared.quantity == "" or requested.quantity == "":
+                    continue
+
+                if declared.quantity != requested.quantity:
+                    raise ValueError(
+                        f"model produces values as '{declared.quantity}' for the "
+                        f"'{name}' output, but the engine requested "
+                        f"'{requested.quantity}'"
+                    )
+
+                conversion = unit_conversion_factor(
+                    quantity=declared.quantity,
+                    from_unit=declared.unit,
+                    to_unit=requested.unit,
+                )
+
+                if conversion != 1.0:
+                    for block in output.blocks():
+                        block.values[:] *= conversion
+                        for _, gradient in block.gradients():
+                            gradient.values[:] *= conversion
 
         return outputs
 
