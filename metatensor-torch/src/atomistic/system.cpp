@@ -214,21 +214,21 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
 
     auto positions_grad = torch::Tensor();
     if (positions.requires_grad()) {
-        auto positions_grad_neighbors = torch::zeros_like(positions);
-        positions_grad_neighbors = torch::index_add(
-            positions_grad_neighbors,
+        positions_grad = torch::zeros_like(positions);
+        positions_grad = torch::index_add(
+            positions_grad,
             /*dim=*/0,
             /*index=*/samples.index({torch::indexing::Slice(), 1}),
             /*source=*/distances_grad.squeeze(-1)
         );
         auto positions_grad_centers = torch::zeros_like(positions);
-        positions_grad_centers = torch::index_add(
-            positions_grad_centers,
+        positions_grad = torch::index_add(
+            positions_grad,
             /*dim=*/0,
             /*index=*/samples.index({torch::indexing::Slice(), 0}),
-            /*source=*/distances_grad.squeeze(-1)
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/-1
         );
-        positions_grad = positions_grad_neighbors - positions_grad_centers;
     }
 
     auto cell_grad = torch::Tensor();
