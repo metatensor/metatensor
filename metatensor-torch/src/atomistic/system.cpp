@@ -219,15 +219,15 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
             positions_grad,
             /*dim=*/0,
             /*index=*/samples.index({torch::indexing::Slice(), 1}),
-            /*source=*/distances_grad.squeeze(-1)
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/1.0
         );
-        auto positions_grad_centers = torch::zeros_like(positions);
         positions_grad = torch::index_add(
             positions_grad,
             /*dim=*/0,
             /*index=*/samples.index({torch::indexing::Slice(), 0}),
             /*source=*/distances_grad.squeeze(-1),
-            /*alpha=*/-1
+            /*alpha=*/-1.0
         );
     }
 
