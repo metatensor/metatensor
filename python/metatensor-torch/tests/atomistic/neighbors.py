@@ -56,11 +56,14 @@ def test_neighbor_list_options():
 def test_neighbors_autograd():
     torch.manual_seed(0xDEADBEEF)
     n_atoms = 20
-    cell_size = 6.0
-    positions = cell_size * torch.rand(
+    approx_cell_size = 6.0
+    positions = approx_cell_size * torch.rand(
         n_atoms, 3, dtype=torch.float64, requires_grad=True
     )
-    cell = cell_size * torch.eye(3, dtype=torch.float64, requires_grad=True)
+    cell = approx_cell_size * (
+        torch.eye(3, dtype=torch.float64) + 0.1 * torch.rand(3, 3, dtype=torch.float64)
+    )
+    cell.requires_grad = True
 
     def compute(positions, cell, options):
         atoms = ase.Atoms(
@@ -125,10 +128,10 @@ def test_neighbor_autograd_errors():
         register_autograd_neighbors(system, neighbors)
 
     message = (
-        "one neighbor pair does not match its metadata: the pair between atom 0 and "
-        "atom 6 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
-        "\\[-0.220464, -0.407372, 1.07291\\] but has a distance vector of "
-        "\\[-0.661392, -1.22212, 3.21872\\]"
+        "one neighbor pair does not match its metadata: the pair between atom 1 and "
+        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
+        "\\[0.926094, -0.219122, 1.4382\\] but has a distance vector of "
+        "\\[2.77828, -0.657366, 4.31461\\]"
     )
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"

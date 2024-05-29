@@ -215,30 +215,29 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
     auto positions_grad = torch::Tensor();
     if (positions.requires_grad()) {
         positions_grad = torch::zeros_like(positions);
-
-        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
-            auto atom_i = samples[sample_i][0].item<int32_t>();
-            auto atom_j = samples[sample_i][1].item<int32_t>();
-
-            auto all = torch::indexing::Slice();
-            auto grad = distances_grad.index({sample_i, all, 0});
-            positions_grad.index({atom_i, all}) -= grad;
-            positions_grad.index({atom_j, all}) += grad;
-        }
+        positions_grad = torch::index_add(
+            positions_grad,
+            /*dim=*/0,
+            /*index=*/samples.index({torch::indexing::Slice(), 1}),
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/1.0
+        );
+        positions_grad = torch::index_add(
+            positions_grad,
+            /*dim=*/0,
+            /*index=*/samples.index({torch::indexing::Slice(), 0}),
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/-1.0
+        );
     }
 
     auto cell_grad = torch::Tensor();
     if (cell.requires_grad()) {
-        cell_grad = torch::zeros_like(cell);
-
-        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
-            auto cell_shift = samples.index({
-                torch::indexing::Slice(sample_i, sample_i + 1),
-                torch::indexing::Slice(2, 5)
-            }).to(cell.scalar_type());
-
-            cell_grad += cell_shift.t().matmul(distances_grad[sample_i].t());
-        }
+        auto cell_shifts = samples.index({
+            torch::indexing::Slice(),
+            torch::indexing::Slice(2, 5)
+        }).to(cell.scalar_type());
+        cell_grad = cell_shifts.t().matmul(distances_grad.squeeze(-1));
     }
 
     return {positions_grad, cell_grad, torch::Tensor(), torch::Tensor()};
