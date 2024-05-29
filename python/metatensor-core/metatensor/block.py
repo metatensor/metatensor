@@ -182,6 +182,12 @@ class TensorBlock:
             "TensorMap first"
         )
 
+    def __len__(self):
+        """
+        get len of the values array
+        """
+        return len(self.values)
+
     def copy(self) -> "TensorBlock":
         """
         get a deep copy of this block, including all the data and metadata
