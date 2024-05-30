@@ -192,9 +192,7 @@ class TensorBlock:
     @property
     def shape(self):
         """
-        Get the shape of the values stored in this block
-        (i.e. the number of samples, of components, of properties
-        in the block)
+        Get the shape of the values  array in this block.
         """
         return self.values.shape
 
