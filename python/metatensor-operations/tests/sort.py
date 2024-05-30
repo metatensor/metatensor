@@ -260,6 +260,53 @@ def tensor_sorted_descending():
     return TensorMap(keys, [block_2, block_1])
 
 
+@pytest.fixture
+def tensor_two_samples():
+    # samples are descending, components and properties are ascending
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [3, 5],
+                [1, 2],
+                [-1, -2],
+                [11, 22],
+                [41, 42],
+            ]
+        ),
+        samples=Labels(
+            ["s", "a"], np.array([[2, 5], [0, 0], [0, 9], [0, 1], [0, 110]])
+        ),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    keys = Labels(names=["key_1"], values=np.array([[0]]))
+    # block order is descending
+    return TensorMap(keys, [block_1])
+
+
+@pytest.fixture
+def tensor_two_samples_ascending_a():
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [1, 2],
+                [11, 22],
+                [3, 5],
+                [-1, -2],
+                [41, 42],
+            ]
+        ),
+        samples=Labels(
+            ["s", "a"], np.array([[0, 0], [0, 1], [2, 5], [0, 9], [0, 110]])
+        ),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    keys = Labels(names=["key_1"], values=np.array([[0]]))
+    # block order is descending
+    return TensorMap(keys, [block_1])
+
+
 def test_sort(tensor, tensor_sorted_ascending):
     metatensor.allclose_block_raise(
         metatensor.sort_block(tensor.block(0)), tensor_sorted_ascending.block(1)
@@ -294,3 +341,10 @@ def test_raise_error(tensor, tensor_sorted_ascending):
     )
     with pytest.raises(ValueError, match=error_message):
         metatensor.operations.sort(tensor, axes=[5])
+
+
+def test_sort_two_sample(tensor_two_samples, tensor_two_samples_ascending_a):
+    metatensor.allclose_block_raise(
+        metatensor.sort_block(tensor_two_samples.block(0), axes="samples", name="a"),
+        tensor_two_samples_ascending_a.block(0),
+    )

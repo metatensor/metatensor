@@ -16,6 +16,7 @@ def _sort_single_gradient_block(
     gradient_block: TensorBlock,
     axes: List[str],
     descending: bool,
+    name: str = "_last_dimension_",
 ) -> TensorBlock:
     """
     Sorts a single gradient tensor block given the tensor block which the gradients are
@@ -95,6 +96,7 @@ def _sort_single_block(
     block: TensorBlock,
     axes: List[str],
     descending: bool,
+    name: str = "_last_dimension_",
 ) -> TensorBlock:
     """
     Sorts a single TensorBlock without the user input checking and sorting of gradients
@@ -102,6 +104,10 @@ def _sort_single_block(
 
     sample_names = block.samples.names
     sample_values = block.samples.values
+    if name != "_last_dimension_" and name not in sample_names:
+        raise ValueError(
+            "`name` must be or '_last_dimension_' " "or one of the sample names"
+        )
 
     component_names: List[List[str]] = []
     components_values = []
@@ -114,20 +120,32 @@ def _sort_single_block(
 
     values = block.values
     if "samples" in axes:
-        sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        if name == "_last_dimension_":
+            sorted_idx = _dispatch.argsort_labels_values(
+                sample_values, reverse=descending
+            )
+        else:
+            axis = 0
+            for i, v in enumerate(sample_names):
+                if v == name:
+                    axis = i
+                    break
+            sorted_idx = _dispatch.argsort(sample_values[:, axis], reverse=descending)
         sample_values = sample_values[sorted_idx]
         values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(block.components):
-            sorted_idx = _dispatch.argsort_labels_values(
-                components_values[i], reverse=descending
-            )
+            if name == "_last_dimension_":
+                sorted_idx = _dispatch.argsort_labels_values(
+                    components_values[i], reverse=descending
+                )
             components_values[i] = components_values[i][sorted_idx]
             values = _dispatch.take(values, sorted_idx, axis=i + 1)
     if "properties" in axes:
-        sorted_idx = _dispatch.argsort_labels_values(
-            properties_values, reverse=descending
-        )
+        if name == "_last_dimension_":
+            sorted_idx = _dispatch.argsort_labels_values(
+                properties_values, reverse=descending
+            )
         properties_values = properties_values[sorted_idx]
         values = _dispatch.take(values, sorted_idx, axis=-1)
 
@@ -151,6 +169,7 @@ def sort_block(
     block: TensorBlock,
     axes: Union[str, List[str]] = "all",
     descending: bool = False,
+    name: str = "_last_dimension_",
 ) -> TensorBlock:
     """
     Rearrange the values of a block according to the order given by the sorted metadata
@@ -250,7 +269,7 @@ def sort_block(
                 f"not '{axis}'"
             )
 
-    result_block = _sort_single_block(block, axes_list, descending)
+    result_block = _sort_single_block(block, axes_list, descending, name)
 
     for parameter, gradient in block.gradients():
         if len(gradient.gradients_list()) != 0:
@@ -259,7 +278,7 @@ def sort_block(
         result_block.add_gradient(
             parameter=parameter,
             gradient=_sort_single_gradient_block(
-                block, gradient, axes_list, descending
+                block, gradient, axes_list, descending, name
             ),
         )
 
@@ -271,6 +290,7 @@ def sort(
     tensor: TensorMap,
     axes: Union[str, List[str]] = "all",
     descending: bool = False,
+    name: str = "_last_dimension_",
 ) -> TensorMap:
     """
     Sort the ``tensor`` according to the key values and the blocks for each specified
@@ -365,6 +385,7 @@ def sort(
                 block=tensor.block(tensor.keys[int(i)]),
                 axes=axes_list,
                 descending=descending,
+                name=name,
             )
         )
 
