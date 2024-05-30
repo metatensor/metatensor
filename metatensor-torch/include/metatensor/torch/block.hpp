@@ -59,6 +59,11 @@ public:
         return this->labels(0);
     }
 
+    // get the len of the samples
+    int64_t len() const {
+        return this->labels(0).size(0);
+    }
+
     /// Access the component `Labels` for this block.
     ///
     /// The entries in these labels describe intermediate dimensions of the

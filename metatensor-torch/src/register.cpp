@@ -178,6 +178,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def("__repr__", &TensorBlockHolder::repr)
         .def("__str__", &TensorBlockHolder::repr)
+        .def("__len__", &TensorBlockHolder::len )
         .def("copy", &TensorBlockHolder::copy)
         .def_property("values", &TensorBlockHolder::values)
         .def_property("samples", &TensorBlockHolder::samples)
