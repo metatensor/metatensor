@@ -184,7 +184,8 @@ class TensorBlock:
 
     def __len__(self):
         """
-        Get the length of the values stored in this block (i.e. the number of samples in the block)
+        Get the length of the values stored in this block
+        (i.e. the number of samples in the block)
         """
         return len(self.values)
 
