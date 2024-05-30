@@ -44,9 +44,20 @@ def _sort_single_gradient_block(
         # the parent block
         block_sample_values = block.samples.values
         # sample index -> sample labels
-        sorted_idx = _dispatch.argsort_labels_values(
-            block_sample_values, reverse=descending
-        )
+        if name == "-1":
+            sorted_idx = _dispatch.argsort_labels_values(
+                block_sample_values, reverse=descending
+            )
+        else:
+            axis = 0
+            for iv, v in enumerate(sample_names):
+                if v == name:
+                    axis = iv
+                    break
+            sorted_idx = _dispatch.argsort(
+                block_sample_values[:, axis], reverse=descending
+            )
+
         # obtain inverse mapping sample labels -> sample index
         sorted_idx_inverse = _dispatch.empty_like(sorted_idx, shape=(len(sorted_idx),))
         sorted_idx_inverse[sorted_idx] = _dispatch.int_array_like(
