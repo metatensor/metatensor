@@ -182,12 +182,21 @@ class TensorBlock:
             "TensorMap first"
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Get the length of the values stored in this block
         (i.e. the number of samples in the block)
         """
         return len(self.values)
+
+    @property
+    def shape(self):
+        """
+        Get the shape of the values stored in this block
+        (i.e. the number of samples, of components, of properties
+        in the block)
+        """
+        return self.values.shape
 
     def copy(self) -> "TensorBlock":
         """

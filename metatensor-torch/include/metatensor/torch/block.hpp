@@ -59,9 +59,17 @@ public:
         return this->labels(0);
     }
 
-    /// get the len of the samples
+    /// Get the len of the samples
     int64_t len() const {
         return this->labels(0)->count();
+    }
+
+    /// Get the shape of the values Tensor
+    torch::Tensor shape() const{
+        auto shape  = this->block_.values_shape();
+        auto options = torch::TensorOptions().dtype(at::kLong);
+        torch::Tensor t = torch::from_blob(shape.data(), {(int)shape.size()},options);
+        return t ;
     }
 
     /// Access the component `Labels` for this block.
