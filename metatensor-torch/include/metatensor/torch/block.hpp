@@ -59,7 +59,7 @@ public:
         return this->labels(0);
     }
 
-    // get the len of the samples
+    /// get the len of the samples
     int64_t len() const {
         return this->labels(0)->count();
     }
