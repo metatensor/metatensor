@@ -61,7 +61,7 @@ public:
 
     // get the len of the samples
     int64_t len() const {
-        return this->labels(0).count();
+        return this->labels(0)->count();
     }
 
     /// Access the component `Labels` for this block.
