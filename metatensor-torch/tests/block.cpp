@@ -14,6 +14,8 @@ TEST_CASE("Blocks") {
             LabelsHolder::create({"p"}, {{0}, {1}})
         );
 
+        CHECK((block.len == 2));
+        CHECK((block.shape() == block.values().sizes()));
         CHECK((block.values().sizes() == std::vector<int64_t>{3, 2}));
         CHECK(torch::all(block.values() == 11.0).item<bool>());
 
