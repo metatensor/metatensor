@@ -16,7 +16,7 @@ def _sort_single_gradient_block(
     gradient_block: TensorBlock,
     axes: List[str],
     descending: bool,
-    name: str = "_last_dimension_",
+    name: str = "-1",
 ) -> TensorBlock:
     """
     Sorts a single gradient tensor block given the tensor block which the gradients are
@@ -96,7 +96,7 @@ def _sort_single_block(
     block: TensorBlock,
     axes: List[str],
     descending: bool,
-    name: str = "_last_dimension_",
+    name: str = "-1",
 ) -> TensorBlock:
     """
     Sorts a single TensorBlock without the user input checking and sorting of gradients
@@ -104,10 +104,8 @@ def _sort_single_block(
 
     sample_names = block.samples.names
     sample_values = block.samples.values
-    if name != "_last_dimension_" and name not in sample_names:
-        raise ValueError(
-            "`name` must be or '_last_dimension_' " "or one of the sample names"
-        )
+    if name != "-1" and name not in sample_names:
+        raise ValueError("`name` must be or '-1' " "or one of the sample names")
 
     component_names: List[List[str]] = []
     components_values = []
@@ -120,31 +118,49 @@ def _sort_single_block(
 
     values = block.values
     if "samples" in axes:
-        if name == "_last_dimension_":
+        if name == "-1":
             sorted_idx = _dispatch.argsort_labels_values(
                 sample_values, reverse=descending
             )
         else:
             axis = 0
-            for i, v in enumerate(sample_names):
+            for iv, v in enumerate(sample_names):
                 if v == name:
-                    axis = i
+                    axis = iv
                     break
             sorted_idx = _dispatch.argsort(sample_values[:, axis], reverse=descending)
         sample_values = sample_values[sorted_idx]
         values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(block.components):
-            if name == "_last_dimension_":
+            if name == "-1":
                 sorted_idx = _dispatch.argsort_labels_values(
                     components_values[i], reverse=descending
+                )
+            else:
+                axis = 0
+                for ic, c in enumerate(component_names[i]):
+                    if c == name:
+                        axis = ic
+                        break
+                sorted_idx = _dispatch.argsort(
+                    components_values[i][:, axis], reverse=descending
                 )
             components_values[i] = components_values[i][sorted_idx]
             values = _dispatch.take(values, sorted_idx, axis=i + 1)
     if "properties" in axes:
-        if name == "_last_dimension_":
+        if name == "-1":
             sorted_idx = _dispatch.argsort_labels_values(
                 properties_values, reverse=descending
+            )
+        else:
+            axis = 0
+            for ip, p in enumerate(property_names):
+                if p == name:
+                    axis = ip
+                    break
+            sorted_idx = _dispatch.argsort(
+                properties_values[:, axis], reverse=descending
             )
         properties_values = properties_values[sorted_idx]
         values = _dispatch.take(values, sorted_idx, axis=-1)
@@ -169,7 +185,7 @@ def sort_block(
     block: TensorBlock,
     axes: Union[str, List[str]] = "all",
     descending: bool = False,
-    name: str = "_last_dimension_",
+    name: str = "-1",
 ) -> TensorBlock:
     """
     Rearrange the values of a block according to the order given by the sorted metadata
@@ -183,6 +199,9 @@ def sort_block(
         ``'all'`` to sort everything.
 
     :param descending: if false, the order is ascending
+
+    :param name: name of `axes` to be used for the sorting. Default == "-1"
+         means sort along the last axis
 
     :return: sorted tensor block
 
@@ -220,6 +239,23 @@ def sort_block(
     >>> sorted_block = metatensor.sort_block(block)
     >>> np.all(sorted_block.values == block_sorted_stepwise.values)
     True
+    >>> # You can also choose along which axis of "samples“ you sort
+    >>> block2 = TensorBlock(
+    ...     values=np.arange(12).reshape(4, 3),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 2], [1, 0], [2,5],[2,1]])),
+    ...     components=[],
+    ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
+    ... )
+    >>> block_sorted_2_sample = metatensor.sort_block(
+    ...     block2, axes=["samples"],name="atom"
+    ... )
+    >>> # samples (first dimension of the array) are sorted
+    >>> block_sorted_2_sample.values
+    array([[4, 5, 6],
+           [10,11,12],
+           [1, 2, 3],
+           [7, 8, 9],
+           ])
     >>> # This function can also sort gradients:
     >>> sorted_block.add_gradient(
     ...     parameter="g",
@@ -250,9 +286,21 @@ def sort_block(
     if isinstance(axes, str):
         if axes == "all":
             axes_list = ["samples", "components", "properties"]
+            if name != "-1":
+                raise ValueError(
+                    "'name' is allowed only if 'axes' is one of"
+                    "'samples', 'components','properties' but"
+                    "'axes'=='all'"
+                )
         else:
             axes_list = [axes]
     elif isinstance(axes, list):
+        if name != "-1":
+            raise ValueError(
+                "'name' is allowed only if 'axes' is one of"
+                "'samples', 'components','properties' but"
+                "'axes' is a List"
+            )
         axes_list = axes
     else:
         if torch_jit_is_scripting():
@@ -290,7 +338,7 @@ def sort(
     tensor: TensorMap,
     axes: Union[str, List[str]] = "all",
     descending: bool = False,
-    name: str = "_last_dimension_",
+    name: str = "-1",
 ) -> TensorMap:
     """
     Sort the ``tensor`` according to the key values and the blocks for each specified
@@ -305,6 +353,8 @@ def sort(
         Possible values are ``'keys'``, ``'samples'``, ``'components'``,
         ``'properties'`` and ``'all'`` to sort everything.
     :param descending: if false, the order is ascending
+    :param name: name of `axes` to be used for the sorting. Default == "-1"
+         means sort along the last axis
     :return: sorted tensor map
 
     >>> import numpy as np
@@ -336,6 +386,12 @@ def sort(
         if axes == "all":
             axes_list = ["samples", "components", "properties"]
             sort_keys = True
+            if name != "-1":
+                raise ValueError(
+                    "'name' is allowed only if 'axes' is one of"
+                    "'samples', 'components','properties' but"
+                    "'axes'=='all'"
+                )
         elif axes == "keys":
             axes_list = torch_jit_annotate(List[str], [])
             sort_keys = True
@@ -344,6 +400,12 @@ def sort(
             sort_keys = False
 
     elif isinstance(axes, list):
+        if name != "-1":
+            raise ValueError(
+                "'name' is allowed only if 'axes' is one of"
+                "'samples', 'components','properties' but"
+                "'axes' is a List"
+            )
         axes_list = axes
 
         if "keys" in axes_list:
