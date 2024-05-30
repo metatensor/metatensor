@@ -65,11 +65,13 @@ public:
     }
 
     /// Get the shape of the values Tensor
-    torch::Tensor shape() const{
-        auto shape  = this->block_.values_shape();
-        auto options = torch::TensorOptions().dtype(at::kLong);
-        torch::Tensor t = torch::from_blob(shape.data(), {(int)shape.size()},options);
-        return t ;
+    at::IntArrayRef shape() const{
+        auto _shape  = this->block_.values_shape();
+        std::vector<int64_t> shapei64(_shape.begin(), _shape.end());
+        at::IntArrayRef shape(shapei64);
+        //auto options = torch::TensorOptions().dtype(at::kLong);
+        //torch::Tensor t = torch::from_blob(shape.data(), {(int)shape.size()},options);
+        return shape ;
     }
 
     /// Access the component `Labels` for this block.
