@@ -66,9 +66,7 @@ public:
 
     /// Get the shape of the values Tensor
     at::IntArrayRef shape() const{
-        auto _shape  = this->block_.values_shape();
-        std::vector<int64_t> shapei64(_shape.begin(), _shape.end());
-        at::IntArrayRef shape(shapei64);
+        at::IntArrayRef shape(this->shapei64);
         return shape ;
     }
 
@@ -183,6 +181,8 @@ private:
     /// If this TensorBlock contains gradients, these are gradients w.r.t. this
     /// parameter
     std::string parameter_;
+    /// Shape
+    std::vector<int64_t> shapei64 ;
 };
 
 }

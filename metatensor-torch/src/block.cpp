@@ -36,6 +36,11 @@ TensorBlockHolder::TensorBlockHolder(
         /* parent */ torch::IValue()
     )
 {
+    auto _shape  = this->block_.values_shape();
+    for (auto i :_shape){
+        shapei64.push_back(i);
+    }
+    
     auto values_device = this->values().device();
     if (values_device != this->samples()->values().device()) {
         C10_THROW_ERROR(ValueError,
