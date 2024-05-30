@@ -59,7 +59,7 @@ public:
         return this->labels(0);
     }
 
-    /// Get the len of the samples
+    /// Get the length of this block, i.e. the number of samples
     int64_t len() const {
         return this->labels(0)->count();
     }
@@ -69,8 +69,6 @@ public:
         auto _shape  = this->block_.values_shape();
         std::vector<int64_t> shapei64(_shape.begin(), _shape.end());
         at::IntArrayRef shape(shapei64);
-        //auto options = torch::TensorOptions().dtype(at::kLong);
-        //torch::Tensor t = torch::from_blob(shape.data(), {(int)shape.size()},options);
         return shape ;
     }
 
