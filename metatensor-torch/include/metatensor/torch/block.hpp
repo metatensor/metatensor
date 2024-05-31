@@ -66,8 +66,7 @@ public:
 
     /// Get the shape of the values Tensor
     at::IntArrayRef shape() const{
-        at::IntArrayRef shape(this->shapei64);
-        return shape ;
+        return this->values().sizes() ;
     }
 
     /// Access the component `Labels` for this block.
@@ -181,8 +180,6 @@ private:
     /// If this TensorBlock contains gradients, these are gradients w.r.t. this
     /// parameter
     std::string parameter_;
-    /// Shape
-    std::vector<int64_t> shapei64 ;
 };
 
 }

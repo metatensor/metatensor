@@ -36,6 +36,8 @@ def test_constructor():
     assert block.samples.names == ["s"]
     assert block.components == []
     assert block.properties.names == ["p"]
+    assert len(block) == len(block.values)
+    assert block.shape == list(block.values.shape)
 
 
 def test_repr():
