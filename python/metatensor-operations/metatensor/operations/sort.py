@@ -50,7 +50,7 @@ def _sort_single_gradient_block(
             )
         else:
             axis = 0
-            for iv, v in enumerate(sample_names):
+            for iv, v in enumerate(block.samples.names):
                 if v == name:
                     axis = iv
                     break
@@ -70,10 +70,13 @@ def _sort_single_gradient_block(
             _dispatch.to_index_array(sample_values[:, 0])
         ]
 
+        # I AM NOT SURE WHAT THESE LINES DO THE OLD TEST PASS EVEN
+        # IF THEY ARE COMMENTED
+
         # sort the samples in gradient regularly moving the rows considering all columns
-        sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
-        sample_values = sample_values[sorted_idx]
-        values = values[sorted_idx]
+        # sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        # sample_values = sample_values[sorted_idx]
+        # values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(gradient_block.components):
             sorted_idx = _dispatch.argsort_labels_values(

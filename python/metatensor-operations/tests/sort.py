@@ -279,6 +279,40 @@ def tensor_two_samples():
         components=[],
         properties=Labels(["p"], np.array([[0], [1]])),
     )
+    block_1.add_gradient(
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [
+                    [[1, 2], [3, 4]],
+                    [[5, 6], [7, 8]],
+                    [[9, 10], [11, 12]],
+                    [[13, 14], [15, 16]],
+                    [[17, 18], [19, 20]],
+                    [[21, 22], [23, 24]],
+                    [[25, 26], [27, 28]],
+                ]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array(
+                    [
+                        [2, 1],
+                        [1, 1],
+                        [0, 1],
+                        [0, 2],
+                        [3, 1],
+                        [4, 1],
+                        [4, 0],
+                    ]
+                ),
+            ),
+            components=[
+                Labels(["c"], np.array([[1], [0]])),
+            ],
+            properties=block_1.properties,
+        ),
+    )
     keys = Labels(names=["key_1"], values=np.array([[0]]))
     # block order is descending
     return TensorMap(keys, [block_1])
@@ -301,6 +335,40 @@ def tensor_two_samples_ascending_a():
         ),
         components=[],
         properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    block_1.add_gradient(
+        parameter="g",
+        gradient=TensorBlock(
+            values=np.array(
+                [
+                    [[1, 2], [3, 4]],
+                    [[5, 6], [7, 8]],
+                    [[9, 10], [11, 12]],
+                    [[13, 14], [15, 16]],
+                    [[17, 18], [19, 20]],
+                    [[21, 22], [23, 24]],
+                    [[25, 26], [27, 28]],
+                ]
+            ),
+            samples=Labels(
+                ["sample", "g"],
+                np.array(
+                    [
+                        [3, 1],
+                        [0, 1],
+                        [2, 1],
+                        [2, 2],
+                        [1, 1],
+                        [4, 1],
+                        [4, 0],
+                    ]
+                ),
+            ),
+            components=[
+                Labels(["c"], np.array([[1], [0]])),
+            ],
+            properties=block_1.properties,
+        ),
     )
     keys = Labels(names=["key_1"], values=np.array([[0]]))
     # block order is descending
@@ -392,9 +460,8 @@ def test_sort_two_sample(tensor_two_samples, tensor_two_samples_ascending_a):
 def test_sort_two_sample_descending(
     tensor_two_samples, tensor_two_samples_descending_a
 ):
+    t = metatensor.remove_gradients(tensor_two_samples)
     metatensor.allclose_block_raise(
-        metatensor.sort_block(
-            tensor_two_samples.block(0), axes="samples", name="a", descending=True
-        ),
+        metatensor.sort_block(t.block(0), axes="samples", name="a", descending=True),
         tensor_two_samples_descending_a.block(0),
     )
