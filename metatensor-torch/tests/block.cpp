@@ -1,5 +1,4 @@
 #include <torch/torch.h>
-#include <iostream>
 
 #include <metatensor/torch.hpp>
 using namespace metatensor_torch;
