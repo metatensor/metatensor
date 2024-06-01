@@ -265,10 +265,10 @@ def sort_block(
     ... )
     >>> # samples (first dimension of the array) are sorted
     >>> block_sorted_2_sample.values
-    array([[4, 5, 6],
-           [10,11,12],
-           [1, 2, 3],
-           [7, 8, 9],
+    array([[3, 4, 5],
+           [9,10,11],
+           [0, 1, 2],
+           [6, 7, 8],
            ])
     >>> # This function can also sort gradients:
     >>> sorted_block.add_gradient(
