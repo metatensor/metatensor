@@ -70,14 +70,10 @@ def _sort_single_gradient_block(
             _dispatch.to_index_array(sample_values[:, 0])
         ]
 
-        # I AM NOT SURE WHAT THESE LINES DO THE OLD TEST PASS EVEN
-        # IF THEY ARE COMMENTED
-
         # sort the samples in gradient regularly moving the rows considering all columns
-        # sorted_idx = _dispatch.argsort_labels_values(sample_values,
-        # reverse=descending)
-        # sample_values = sample_values[sorted_idx]
-        # values = values[sorted_idx]
+        sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        sample_values = sample_values[sorted_idx]
+        values = values[sorted_idx]
     if "components" in axes:
         for i, _ in enumerate(gradient_block.components):
             sorted_idx = _dispatch.argsort_labels_values(
@@ -254,24 +250,6 @@ def sort_block(
     >>> sorted_block = metatensor.sort_block(block)
     >>> np.all(sorted_block.values == block_sorted_stepwise.values)
     True
-    >>> # You can also choose along which axis of "samples“ you sort
-    >>> block2 = TensorBlock(
-    ...     values=np.arange(12).reshape(4, 3),
-    ...     samples=Labels(
-    ...         ["system", "atom"], np.array([[0, 2], [1, 0], [2, 5], [2, 1]])
-    ...     ),
-    ...     components=[],
-    ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
-    ... )
-    >>> block_sorted_2_sample = metatensor.sort_block(
-    ...     block2, axes=["samples"], name="atom"
-    ... )
-    >>> # samples (first dimension of the array) are sorted
-    >>> block_sorted_2_sample.values
-    array([[ 3,  4,  5],
-           [ 9, 10, 11],
-           [ 0,  1,  2],
-           [ 6,  7,  8]])
     >>> # This function can also sort gradients:
     >>> sorted_block.add_gradient(
     ...     parameter="g",
@@ -297,7 +275,24 @@ def sort_block(
     <BLANKLINE>
            [[ 6,  7,  8],
             [ 9, 10, 11]]])
-
+    >>> # You can also choose along which axis of "samples“ you sort
+    >>> block2 = TensorBlock(
+    ...     values=np.arange(12).reshape(4, 3),
+    ...     samples=Labels(
+    ...         ["system", "atom"], np.array([[0, 2], [1, 0], [2, 5], [2, 1]])
+    ...     ),
+    ...     components=[],
+    ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
+    ... )
+    >>> block_sorted_2_sample = metatensor.sort_block(
+    ...     block2, axes=["samples"], name="atom"
+    ... )
+    >>> # samples (first dimension of the array) are sorted
+    >>> block_sorted_2_sample.values
+    array([[ 3,  4,  5],
+           [ 9, 10, 11],
+           [ 0,  1,  2],
+           [ 6,  7,  8]])
     """
     if isinstance(axes, str):
         if axes == "all":

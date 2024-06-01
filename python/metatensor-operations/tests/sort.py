@@ -341,26 +341,26 @@ def tensor_two_samples_ascending_a():
         gradient=TensorBlock(
             values=np.array(
                 [
-                    [[1, 2], [3, 4]],
                     [[5, 6], [7, 8]],
+                    [[17, 18], [19, 20]],
                     [[9, 10], [11, 12]],
                     [[13, 14], [15, 16]],
-                    [[17, 18], [19, 20]],
-                    [[21, 22], [23, 24]],
+                    [[1, 2], [3, 4]],
                     [[25, 26], [27, 28]],
+                    [[21, 22], [23, 24]],
                 ]
             ),
             samples=Labels(
                 ["sample", "g"],
                 np.array(
                     [
-                        [3, 1],
                         [0, 1],
+                        [1, 1],
                         [2, 1],
                         [2, 2],
-                        [1, 1],
-                        [4, 1],
+                        [3, 1],
                         [4, 0],
+                        [4, 1],
                     ]
                 ),
             ),
@@ -451,6 +451,14 @@ def test_raise_error(tensor, tensor_sorted_ascending):
 
 
 def test_sort_two_sample(tensor_two_samples, tensor_two_samples_ascending_a):
+    print(
+        "ii",
+        metatensor.sort_block(tensor_two_samples.block(0), axes="samples", name="a")
+        .gradient("g")
+        .samples,
+    )
+    print("jj", tensor_two_samples_ascending_a.block(0).gradient("g").samples)
+
     metatensor.allclose_block_raise(
         metatensor.sort_block(tensor_two_samples.block(0), axes="samples", name="a"),
         tensor_two_samples_ascending_a.block(0),
