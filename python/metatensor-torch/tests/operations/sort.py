@@ -3,7 +3,6 @@ import io
 import pytest
 import torch
 from packaging import version
-import pytest
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap

@@ -74,7 +74,8 @@ def _sort_single_gradient_block(
         # IF THEY ARE COMMENTED
 
         # sort the samples in gradient regularly moving the rows considering all columns
-        # sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
+        # sorted_idx = _dispatch.argsort_labels_values(sample_values,
+        # reverse=descending)
         # sample_values = sample_values[sorted_idx]
         # values = values[sorted_idx]
     if "components" in axes:
@@ -256,12 +257,14 @@ def sort_block(
     >>> # You can also choose along which axis of "samples“ you sort
     >>> block2 = TensorBlock(
     ...     values=np.arange(12).reshape(4, 3),
-    ...     samples=Labels(["system", "atom"], np.array([[0, 2], [1, 0], [2,5],[2,1]])),
+    ...     samples=Labels(
+    ...         ["system", "atom"], np.array([[0, 2], [1, 0], [2, 5], [2, 1]])
+    ...     ),
     ...     components=[],
     ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
     ... )
     >>> block_sorted_2_sample = metatensor.sort_block(
-    ...     block2, axes=["samples"],name="atom"
+    ...     block2, axes=["samples"], name="atom"
     ... )
     >>> # samples (first dimension of the array) are sorted
     >>> block_sorted_2_sample.values
