@@ -113,7 +113,7 @@ def allclose(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def argsort(values, axis=-1, reverse: bool = False):
+def argsort(values, axis: int = -1, reverse: bool = False):
     """
     Similar to :py:func:`np.argsort`.
 
