@@ -343,6 +343,12 @@ class TensorBlockWrap:
     def __repr__(self) -> str:
         return self._c.__repr__()
 
+    def __len__(self) -> int:
+        return self._c.__len__()
+
+    def shape(self):
+        return self._c.shape
+
     def copy(self) -> TensorBlock:
         return self._c.copy()
 
