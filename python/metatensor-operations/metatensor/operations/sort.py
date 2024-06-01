@@ -119,7 +119,7 @@ def _sort_single_block(
     sample_names = block.samples.names
     sample_values = block.samples.values
     if name != "-1" and name not in sample_names:
-        raise ValueError("`name` must be or '-1' " "or one of the sample names")
+        raise ValueError("`name` must be or '-1' or one of the sample names")
 
     component_names: List[List[str]] = []
     components_values = []
@@ -309,7 +309,7 @@ def sort_block(
         else:
             axes_list = [axes]
     elif isinstance(axes, list):
-        if name != "-1":
+        if len(axes) > 1 and name != "-1":
             raise ValueError(
                 "'name' is allowed only if 'axes' is one of"
                 "'samples', 'components','properties' but"
@@ -414,7 +414,7 @@ def sort(
             sort_keys = False
 
     elif isinstance(axes, list):
-        if name != "-1":
+        if len(axes) > 1 and name != "-1":
             raise ValueError(
                 "'name' is allowed only if 'axes' is one of"
                 "'samples', 'components','properties' but"
