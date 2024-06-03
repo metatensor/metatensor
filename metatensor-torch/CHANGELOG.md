@@ -9,6 +9,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Added
 
 - ``MetatensorAtomisticModel.save()`` to save a wrapped model to a file.
+- `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
+  shape of the values in the block respectively
 
 ### Deprecated
 

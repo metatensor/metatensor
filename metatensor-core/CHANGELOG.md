@@ -23,6 +23,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core Python
 
+#### Added
+
+- `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
+  shape of the values in the block respectively
+
 ### metatensor-core Julia
 
 #### Added

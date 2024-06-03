@@ -36,6 +36,8 @@ def test_constructor():
     assert block.samples.names == ["s"]
     assert block.components == []
     assert block.properties.names == ["p"]
+    assert len(block) == len(block.values)
+    assert block.shape == list(block.values.shape)
 
 
 def test_repr():
@@ -340,6 +342,12 @@ class TensorBlockWrap:
 
     def __repr__(self) -> str:
         return self._c.__repr__()
+
+    def __len__(self) -> int:
+        return self._c.__len__()
+
+    def shape(self):
+        return self._c.shape
 
     def copy(self) -> TensorBlock:
         return self._c.copy()

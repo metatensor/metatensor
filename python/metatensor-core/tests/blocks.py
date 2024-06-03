@@ -41,6 +41,14 @@ def block_components():
     )
 
 
+def test_len(block):
+    assert len(block) == len(block.values)
+
+
+def test_shape(block):
+    assert block.shape == block.values.shape
+
+
 def test_constructor_errors():
     values = np.full((3, 3, 2, 2), -1.0)
     samples = Labels(["s"], np.array([[0], [2], [4]]))
