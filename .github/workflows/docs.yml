@@ -28,8 +28,7 @@ jobs:
           python-version: "3.12"
       - name: install dependencies
         run: |
-          # https://github.com/tox-dev/tox/issues/3238
-          python -m pip install tox==4.14.0
+          python -m pip install tox
           sudo apt install doxygen
       - name: build documentation
         env:
