@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -124,13 +124,132 @@ def argsort_labels_values(labels_values, reverse: bool = False):
     :return: indices corresponding to the sorted values in ``labels_values``
     """
     if isinstance(labels_values, TorchTensor):
-        # torchscript does not support sorted for List[List[int]]
-        # so we temporary do this trick. this will be fixed with issue #366
-        max_int = torch.max(labels_values)
-        idx = torch.sum(
-            max_int ** torch.arange(labels_values.shape[1]) * labels_values, dim=1
-        )
-        return torch.argsort(idx, dim=-1, descending=reverse)
+        if labels_values.shape[1] == 1:
+            data = [(int(row[0]), i) for i, row in enumerate(labels_values)]
+            return torch.tensor(
+                [i[-1] for i in sort_list_2(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 2:
+            data = [
+                (int(row[0]), int(row[1]), i) for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_3(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 3:
+            data = [
+                (int(row[0]), int(row[1]), int(row[2]), i)
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_4(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 4:
+            data = [
+                (int(row[0]), int(row[1]), int(row[2]), int(row[3]), i)
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_5(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 5:
+            data = [
+                (int(row[0]), int(row[1]), int(row[2]), int(row[3]), int(row[4]), i)
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_6(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 6:
+            data = [
+                (
+                    int(row[0]),
+                    int(row[1]),
+                    int(row[2]),
+                    int(row[3]),
+                    int(row[4]),
+                    int(row[5]),
+                    i,
+                )
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_7(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 7:
+            data = [
+                (
+                    int(row[0]),
+                    int(row[1]),
+                    int(row[2]),
+                    int(row[3]),
+                    int(row[4]),
+                    int(row[5]),
+                    int(row[6]),
+                    i,
+                )
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_8(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 8:
+            data = [
+                (
+                    int(row[0]),
+                    int(row[1]),
+                    int(row[2]),
+                    int(row[3]),
+                    int(row[4]),
+                    int(row[5]),
+                    int(row[6]),
+                    int(row[7]),
+                    i,
+                )
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_9(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        if labels_values.shape[1] == 9:
+            data = [
+                (
+                    int(row[0]),
+                    int(row[1]),
+                    int(row[2]),
+                    int(row[3]),
+                    int(row[4]),
+                    int(row[5]),
+                    int(row[6]),
+                    int(row[7]),
+                    int(row[8]),
+                    i,
+                )
+                for i, row in enumerate(labels_values)
+            ]
+            return torch.tensor(
+                [i[-1] for i in sort_list_10(data, reverse=reverse)],
+                dtype=torch.int64,
+                device=labels_values.device,
+            )
+        else:
+            raise Exception("labels_values.shape[1]> 9 is not supported")
     elif isinstance(labels_values, np.ndarray):
         # Index is appended at the end to get the indices corresponding to the
         # sorted values. Because we append the indices at the end and since metadata
@@ -756,3 +875,95 @@ def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = F
         return np.zeros_like(array, shape=shape, subok=False)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+@torch.jit.script
+def sort_list_2(
+    data: List[Tuple[int, int]], reverse: bool = False
+) -> List[Tuple[int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_3(
+    data: List[Tuple[int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_4(
+    data: List[Tuple[int, int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_5(
+    data: List[Tuple[int, int, int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_6(
+    data: List[Tuple[int, int, int, int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_7(
+    data: List[Tuple[int, int, int, int, int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_8(
+    data: List[Tuple[int, int, int, int, int, int, int, int]], reverse: bool = False
+) -> List[Tuple[int, int, int, int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_9(
+    data: List[Tuple[int, int, int, int, int, int, int, int, int]],
+    reverse: bool = False,
+) -> List[Tuple[int, int, int, int, int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
+
+
+@torch.jit.script
+def sort_list_10(
+    data: List[Tuple[int, int, int, int, int, int, int, int, int, int]],
+    reverse: bool = False,
+) -> List[Tuple[int, int, int, int, int, int, int, int, int, int]]:
+    if reverse:
+        return list(sorted(data))[::-1]
+    else:
+        return list(sorted(data))
