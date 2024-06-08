@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from ._backend import torch_jit_is_scripting
+from ._backend import torch_jit_is_scripting, torch_jit_script
 
 
 def parse_version(version):
@@ -877,7 +877,7 @@ def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = F
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_2(
     data: List[Tuple[int, int]], reverse: bool = False
 ) -> List[Tuple[int, int]]:
@@ -887,7 +887,7 @@ def sort_list_2(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_3(
     data: List[Tuple[int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int]]:
@@ -897,7 +897,7 @@ def sort_list_3(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_4(
     data: List[Tuple[int, int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int, int]]:
@@ -907,7 +907,7 @@ def sort_list_4(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_5(
     data: List[Tuple[int, int, int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int, int, int]]:
@@ -917,7 +917,7 @@ def sort_list_5(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_6(
     data: List[Tuple[int, int, int, int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int, int, int, int]]:
@@ -927,7 +927,7 @@ def sort_list_6(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_7(
     data: List[Tuple[int, int, int, int, int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int, int, int, int, int]]:
@@ -937,7 +937,7 @@ def sort_list_7(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_8(
     data: List[Tuple[int, int, int, int, int, int, int, int]], reverse: bool = False
 ) -> List[Tuple[int, int, int, int, int, int, int, int]]:
@@ -947,7 +947,7 @@ def sort_list_8(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_9(
     data: List[Tuple[int, int, int, int, int, int, int, int, int]],
     reverse: bool = False,
@@ -958,7 +958,7 @@ def sort_list_9(
         return list(sorted(data))
 
 
-@torch.jit.script
+@torch_jit_script
 def sort_list_10(
     data: List[Tuple[int, int, int, int, int, int, int, int, int, int]],
     reverse: bool = False,
