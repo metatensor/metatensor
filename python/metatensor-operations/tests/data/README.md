@@ -1,4 +1,4 @@
-# Tests data files for metatrain
+# Tests data files for metatensor
 
 - **qm7-spherical-expansion**: SOAP spherical expansion for the first 10
   structures in QM7, computed with rascaline (commit 81218aca), with 'cell'
