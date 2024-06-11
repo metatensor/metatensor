@@ -32,12 +32,7 @@ def test_save():
 def tensor():
     # samples are descending, components and properties are ascending
     block_1 = TensorBlock(
-        values=torch.tensor(
-            [
-                [3, 5],
-                [1, 2],
-            ]
-        ),
+        values=torch.tensor([[3, 5], [1, 2]]),
         samples=Labels(["s"], torch.tensor([[2], [0]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[0], [1]])),
@@ -46,12 +41,7 @@ def tensor():
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=torch.tensor(
-                [
-                    [[8, 3], [9, 4]],
-                    [[6, 1], [7, 2]],
-                ]
-            ),
+            values=torch.tensor([[[8, 3], [9, 4]], [[6, 1], [7, 2]]]),
             samples=Labels(["sample", "g"], torch.tensor([[1, 1], [0, 1]])),
             components=[
                 Labels(["c"], torch.tensor([[0], [1]])),
@@ -62,13 +52,7 @@ def tensor():
 
     # samples are disordered, components are ascending, properties are descending
     block_2 = TensorBlock(
-        values=torch.tensor(
-            [
-                [3, 4],
-                [5, 6],
-                [1, 2],
-            ]
-        ),
+        values=torch.tensor([[3, 4], [5, 6], [1, 2]]),
         samples=Labels(["s"], torch.tensor([[7], [0], [2]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[1], [0]])),
@@ -77,21 +61,11 @@ def tensor():
         parameter="g",
         gradient=TensorBlock(
             values=torch.tensor(
-                [
-                    [[15, 14], [11, 10]],
-                    [[13, 12], [15, 14]],
-                    [[11, 10], [13, 12]],
-                ]
+                [[[15, 14], [11, 10]], [[13, 12], [15, 14]], [[11, 10], [13, 12]]]
             ),
             samples=Labels(
                 ["sample", "g"],
-                torch.tensor(
-                    [
-                        [1, 1],
-                        [2, 1],
-                        [0, 1],
-                    ]
-                ),
+                torch.tensor([[1, 1], [2, 1], [0, 1]]),
             ),
             components=[
                 Labels(["c"], torch.tensor([[0], [1]])),
@@ -111,12 +85,7 @@ def tensor_sorted_ascending():
     when applying metatensor.operations.sort with `descending=False` option.
     """
     block_1 = TensorBlock(
-        values=torch.tensor(
-            [
-                [1, 2],
-                [3, 5],
-            ]
-        ),
+        values=torch.tensor([[1, 2], [3, 5]]),
         samples=Labels(["s"], torch.tensor([[0], [2]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[0], [1]])),
@@ -125,20 +94,10 @@ def tensor_sorted_ascending():
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=torch.tensor(
-                [
-                    [[8, 3], [9, 4]],
-                    [[6, 1], [7, 2]],
-                ]
-            ),
+            values=torch.tensor([[[8, 3], [9, 4]], [[6, 1], [7, 2]]]),
             samples=Labels(
                 ["sample", "g"],
-                torch.tensor(
-                    [
-                        [0, 1],
-                        [1, 1],
-                    ]
-                ),
+                torch.tensor([[0, 1], [1, 1]]),
             ),
             components=[
                 Labels(["c"], torch.tensor([[0], [1]])),
@@ -147,13 +106,7 @@ def tensor_sorted_ascending():
         ),
     )
     block_2 = TensorBlock(
-        values=torch.tensor(
-            [
-                [6, 5],
-                [2, 1],
-                [4, 3],
-            ]
-        ),
+        values=torch.tensor([[6, 5], [2, 1], [4, 3]]),
         samples=Labels(["s"], torch.tensor([[0], [2], [7]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[0], [1]])),
@@ -163,21 +116,11 @@ def tensor_sorted_ascending():
         parameter="g",
         gradient=TensorBlock(
             values=torch.tensor(
-                [
-                    [[14, 15], [10, 11]],
-                    [[12, 13], [14, 15]],
-                    [[10, 11], [12, 13]],
-                ]
+                [[[14, 15], [10, 11]], [[12, 13], [14, 15]], [[10, 11], [12, 13]]]
             ),
             samples=Labels(
                 ["sample", "g"],
-                torch.tensor(
-                    [
-                        [0, 1],
-                        [1, 1],
-                        [2, 1],
-                    ]
-                ),
+                torch.tensor([[0, 1], [1, 1], [2, 1]]),
             ),
             components=[
                 Labels(["c"], torch.tensor([[0], [1]])),
@@ -197,12 +140,7 @@ def tensor_sorted_descending():
     when applying metatensor.operations.sort with `descending=True` option.
     """
     block_1 = TensorBlock(
-        values=torch.tensor(
-            [
-                [3, 5],
-                [1, 2],
-            ]
-        ),
+        values=torch.tensor([[3, 5], [1, 2]]),
         samples=Labels(["s"], torch.tensor([[2], [0]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[1], [0]])),
@@ -211,20 +149,10 @@ def tensor_sorted_descending():
     block_1.add_gradient(
         parameter="g",
         gradient=TensorBlock(
-            values=torch.tensor(
-                [
-                    [[4, 9], [3, 8]],
-                    [[2, 7], [1, 6]],
-                ]
-            ),
+            values=torch.tensor([[[4, 9], [3, 8]], [[2, 7], [1, 6]]]),
             samples=Labels(
                 ["sample", "g"],
-                torch.tensor(
-                    [
-                        [1, 1],
-                        [0, 1],
-                    ]
-                ),
+                torch.tensor([[1, 1], [0, 1]]),
             ),
             components=[
                 Labels(["c"], torch.tensor([[1], [0]])),
@@ -234,13 +162,7 @@ def tensor_sorted_descending():
     )
 
     block_2 = TensorBlock(
-        values=torch.tensor(
-            [
-                [3, 4],
-                [1, 2],
-                [5, 6],
-            ]
-        ),
+        values=torch.tensor([[3, 4], [1, 2], [5, 6]]),
         samples=Labels(["s"], torch.tensor([[7], [2], [0]])),
         components=[],
         properties=Labels(["p"], torch.tensor([[1], [0]])),
@@ -249,21 +171,11 @@ def tensor_sorted_descending():
         parameter="g",
         gradient=TensorBlock(
             values=torch.tensor(
-                [
-                    [[11, 10], [15, 14]],
-                    [[15, 14], [13, 12]],
-                    [[13, 12], [11, 10]],
-                ]
+                [[[11, 10], [15, 14]], [[15, 14], [13, 12]], [[13, 12], [11, 10]]]
             ),
             samples=Labels(
                 ["sample", "g"],
-                torch.tensor(
-                    [
-                        [2, 1],
-                        [1, 1],
-                        [0, 1],
-                    ]
-                ),
+                torch.tensor([[2, 1], [1, 1], [0, 1]]),
             ),
             components=[
                 Labels(["c"], torch.tensor([[1], [0]])),
@@ -273,12 +185,7 @@ def tensor_sorted_descending():
     )
     keys = Labels(
         names=["key_1", "key_2"],
-        values=torch.tensor(
-            [
-                [1, 0],
-                [0, 0],
-            ]
-        ),
+        values=torch.tensor([[1, 0], [0, 0]]),
     )
     return TensorMap(keys, [block_2, block_1])
 
@@ -318,23 +225,12 @@ def test_high_numb():
                 values=torch.tensor([[1, 2], [3, 4], [5, 6]], dtype=torch.float32),
                 samples=Labels(
                     names=["s1", "s2", "s3"],
-                    values=torch.tensor(
-                        [
-                            [0, 1, 2],
-                            [2, 3, 4],
-                            [1, 5, 7],
-                        ]
-                    ),
+                    values=torch.tensor([[0, 1, 2], [2, 3, 4], [1, 5, 7]]),
                 ),
                 components=[],
                 properties=Labels(
                     names=["p1", "p2"],
-                    values=torch.tensor(
-                        [
-                            [100, 0],
-                            [5, 7000],
-                        ]
-                    ),
+                    values=torch.tensor([[100, 0], [5, 7000]]),
                 ),
             ),
             TensorBlock(
@@ -343,24 +239,12 @@ def test_high_numb():
                 ),
                 samples=Labels(
                     names=["s1", "s2", "s3"],
-                    values=torch.tensor(
-                        [
-                            [0, 2, 2],
-                            [0, 1, 2],
-                            [1, 5, 7],
-                        ]
-                    ),
+                    values=torch.tensor([[0, 2, 2], [0, 1, 2], [1, 5, 7]]),
                 ),
                 components=[],
                 properties=Labels(
                     names=["p1", "p2"],
-                    values=torch.tensor(
-                        [
-                            [5, 10],
-                            [5, 5],
-                            [5, 6],
-                        ]
-                    ),
+                    values=torch.tensor([[5, 10], [5, 5], [5, 6]]),
                 ),
             ),
         ],
@@ -378,47 +262,24 @@ def test_high_numb():
                 ),
                 samples=Labels(
                     names=["s1", "s2", "s3"],
-                    values=torch.tensor(
-                        [
-                            [0, 1, 2],
-                            [0, 2, 2],
-                            [1, 5, 7],
-                        ]
-                    ),
+                    values=torch.tensor([[0, 1, 2], [0, 2, 2], [1, 5, 7]]),
                 ),
                 components=[],
                 properties=Labels(
                     names=["p1", "p2"],
-                    values=torch.tensor(
-                        [
-                            [5, 5],
-                            [5, 6],
-                            [5, 10],
-                        ]
-                    ),
+                    values=torch.tensor([[5, 5], [5, 6], [5, 10]]),
                 ),
             ),
             TensorBlock(
                 values=torch.tensor([[2, 1], [6, 5], [4, 3]], dtype=torch.float32),
                 samples=Labels(
                     names=["s1", "s2", "s3"],
-                    values=torch.tensor(
-                        [
-                            [0, 1, 2],
-                            [1, 5, 7],
-                            [2, 3, 4],
-                        ]
-                    ),
+                    values=torch.tensor([[0, 1, 2], [1, 5, 7], [2, 3, 4]]),
                 ),
                 components=[],
                 properties=Labels(
                     names=["p1", "p2"],
-                    values=torch.tensor(
-                        [
-                            [5, 7000],
-                            [100, 0],
-                        ]
-                    ),
+                    values=torch.tensor([[5, 7000], [100, 0]]),
                 ),
             ),
         ],
