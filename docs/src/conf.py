@@ -161,15 +161,19 @@ python_use_unqualified_type_names = True
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # official extensions
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx_toggleprompt",
-    "sphinx_gallery.gen_gallery",
+    # third party extensions
     "sphinxcontrib.details.directive",
+    "sphinx_gallery.gen_gallery",
+    "sphinx_toggleprompt",
     "breathe",
     "myst_parser",
     "sphinx_design",
+    "chemiscope.sphinx",
+    # local extensions
     "versions_list",
 ]
 
