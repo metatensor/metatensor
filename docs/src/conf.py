@@ -211,12 +211,17 @@ intersphinx_mapping = {
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
+# The theme to use for HTML and HTML Help pages.
 html_theme = "furo"
 
 html_title = "Metatensor"
+html_favicon = "../logo/metatensor-64.png"
+
+html_theme_options = {
+    "light_logo": "images/metatensor-horizontal.png",
+    "dark_logo": "images/metatensor-horizontal-dark.png",
+    "sidebar_hide_name": True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
