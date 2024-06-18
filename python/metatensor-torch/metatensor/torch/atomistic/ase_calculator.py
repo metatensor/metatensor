@@ -424,7 +424,7 @@ def _find_best_device(devices: List[str]) -> torch.device:
 def _ase_properties_to_metatensor_outputs(properties):
     energy_properties = []
     for p in properties:
-        if p in ["energy", "energies", "forces", "stress", "stresses"]:
+        if p in ["energy", "energies", "forces", "stress", "stresses", "mtt::aux::energy_uncertainty"]:
             energy_properties.append(p)
         else:
             raise PropertyNotImplementedError(
