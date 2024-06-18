@@ -403,6 +403,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         # convert outputs from model to engine units
         with record_function("MetatensorAtomisticModel::convert_units_output"):
             for name, output in outputs.items():
+                if name == "mtt::aux::last_layer_features": continue
                 declared = self._capabilities.outputs[name]
                 requested = options.outputs[name]
                 if declared.quantity == "" or requested.quantity == "":
