@@ -136,7 +136,8 @@ ModelOutput ModelOutputHolder::from_json(std::string_view json) {
 /******************************************************************************/
 
 std::unordered_set<std::string> KNOWN_OUTPUTS = {
-    "energy"
+    "energy",
+    "mtt::aux::energy_uncertainty"
 };
 
 void ModelCapabilitiesHolder::set_outputs(torch::Dict<std::string, ModelOutput> outputs) {
@@ -1031,6 +1032,10 @@ static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
         // alternative names
         {"J", "Joule"},
         {"Ry", "Rydberg"},
+    }}},
+    {"mtt:aux::energy_uncertainty", Quantity{/* name */ "energy_uncertainty", /* baseline */ "(eV)^2", {
+        {"(eV)^2", 1.0},
+    }, {
     }}},
 };
 

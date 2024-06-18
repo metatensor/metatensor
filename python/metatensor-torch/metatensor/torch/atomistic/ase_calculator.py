@@ -30,6 +30,13 @@ from ase.calculators.calculator import (  # isort: skip
 )
 
 
+try:
+    import vesin
+    HAS_VESIN = True
+except ImportError:
+    HAS_VESIN = False
+
+
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
     # this can not be imported when building the documentation
     from .. import sum_over_samples  # isort: skip
@@ -62,6 +69,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         extensions_directory=None,
         check_consistency=False,
         device=None,
+        properties_to_store: Optional[List[str]] = None,
     ):
         """
         :param model: model to use for the calculation. This can be a file path, a
@@ -73,6 +81,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             running, defaults to False.
         :param device: torch device to use for the calculation. If ``None``, we will try
             the options in the model's ``supported_device`` in order.
+        :param properties_to_store: list of model outputs to store as results of the ASE
+            calculator at every step. This is useful when you want to store properties
+            that are not used in the propagation of the dynamics and/or are not standard
+            ASE properties ('energy', 'forces', 'stress', 'stresses', 'dipole',
+            'charges', 'magmom', 'magmoms', 'free_energy', 'energies'). These properties
+            will be available as ``atoms.calc.results['<stored_property>']``.
         """
         super().__init__()
 
@@ -147,6 +161,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
         self.implemented_properties = ALL_ASE_PROPERTIES
+        self.properties_to_store = (
+            properties_to_store if properties_to_store is not None else []
+        )
 
     def todict(self):
         if "model_path" not in self.parameters:
@@ -242,8 +259,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             system_changes=system_changes,
         )
 
+        properties_to_calculate = properties + self.properties_to_store
+
         with record_function("ASECalculator::prepare_inputs"):
-            outputs = _ase_properties_to_metatensor_outputs(properties)
+            outputs = _ase_properties_to_metatensor_outputs(properties_to_calculate)
             capabilities = self._model.capabilities()
             for name in outputs.keys():
                 if name not in capabilities.outputs:
@@ -257,11 +276,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             )
 
             do_backward = False
-            if "forces" in properties:
+            if "forces" in properties_to_calculate:
                 do_backward = True
                 positions.requires_grad_(True)
 
-            if "stress" in properties:
+            if "stress" in properties_to_calculate:
                 do_backward = True
 
                 scaling = torch.eye(3, requires_grad=True, dtype=self._dtype)
@@ -271,7 +290,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
                 cell = cell @ scaling
 
-            if "stresses" in properties:
+            if "stresses" in properties_to_calculate:
                 raise NotImplementedError("'stresses' are not implemented yet")
 
             run_options = ModelEvaluationOptions(
@@ -322,14 +341,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
             self.results = {}
 
-            if "energies" in properties:
+            if "energies" in properties_to_calculate:
                 energies_values = energies.detach().reshape(-1)
                 energies_values = energies_values.to(device="cpu").to(
                     dtype=torch.float64
                 )
                 self.results["energies"] = energies_values.numpy()
 
-            if "energy" in properties:
+            if "energy" in properties_to_calculate:
                 energy_values = energy.detach()
                 energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["energy"] = energy_values.numpy()[0, 0]
@@ -339,12 +358,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 energy.backward(-torch.ones_like(energy))
 
         with record_function("ASECalculator::convert_outputs"):
-            if "forces" in properties:
+            if "forces" in properties_to_calculate:
                 forces_values = system.positions.grad.reshape(-1, 3)
                 forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["forces"] = forces_values.numpy()
 
-            if "stress" in properties:
+            if "stress" in properties_to_calculate:
                 stress_values = -scaling.grad.reshape(3, 3) / atoms.cell.volume
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
@@ -423,11 +442,19 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-    nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
-        "ijSD",
-        atoms,
-        cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
-    )
+
+    if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
+        nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
+    else:
+        nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
 
     selected = []
     for pair_i, (i, j, S) in enumerate(zip(nl_i, nl_j, nl_S)):
