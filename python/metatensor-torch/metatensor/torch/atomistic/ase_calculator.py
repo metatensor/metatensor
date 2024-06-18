@@ -264,7 +264,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             if "stress" in properties:
                 do_backward = True
 
-                strain = torch.eye(3, requires_grad=True, device=positions.device, dtype=self._dtype)
+                strain = torch.eye(3, requires_grad=True, device=self._device, dtype=self._dtype)
 
                 positions = positions @ strain
                 positions.retain_grad()
