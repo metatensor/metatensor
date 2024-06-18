@@ -1033,7 +1033,7 @@ static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
         {"J", "Joule"},
         {"Ry", "Rydberg"},
     }}},
-    {"mtt:aux::energy_uncertainty", Quantity{/* name */ "mtt:aux::energy_uncertainty", /* baseline */ "(eV)^2", {
+    {"mtt::aux::energy_uncertainty", Quantity{/* name */ "mtt::aux::energy_uncertainty", /* baseline */ "(eV)^2", {
         {"(eV)^2", 1.0},
     }, {
     }}},
