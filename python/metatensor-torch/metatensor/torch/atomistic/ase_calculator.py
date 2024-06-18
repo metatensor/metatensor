@@ -283,7 +283,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             if "stress" in properties_to_calculate:
                 do_backward = True
 
-                scaling = torch.eye(3, requires_grad=True, dtype=self._dtype)
+                scaling = torch.eye(3, requires_grad=True, device=positions.device, dtype=self._dtype)
 
                 positions = positions @ scaling
                 positions.retain_grad()
@@ -369,6 +369,13 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
                 )
+
+            if "mtt::aux::energy_uncertainty" in properties_to_calculate:
+                uncertainty = outputs["mtt::aux::energy_uncertainty"]
+                uncertainty_values = uncertainty.block().values.detach().to(
+                    device="cpu"
+                ).to(dtype=torch.float64)
+                self.results["mtt::aux::energy_uncertainty"] = uncertainty_values.numpy()[0, 0]
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
