@@ -445,7 +445,12 @@ def _ase_properties_to_metatensor_outputs(properties):
     if "stresses" in properties:
         output.explicit_gradients = ["cell"]
 
-    return {"energy": output}
+    return {"energy": output, "mtt::aux::energy_uncertainty": ModelOutput(
+        quantity="energy_uncertainty",
+        unit="(eV)^2",
+        per_atom=False,
+        explicit_gradients=[],
+    )}
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
