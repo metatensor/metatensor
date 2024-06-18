@@ -1050,10 +1050,10 @@ bool metatensor_torch::valid_quantity(const std::string& quantity) {
             valid_quantities.emplace_back(it.first);
         }
 
-        TORCH_WARN(
-            "unknown quantity '", quantity, "', only [",
-            torch::str(valid_quantities), "] are supported"
-        );
+        // TORCH_WARN(
+        //     "unknown quantity '", quantity, "', only [",
+        //     torch::str(valid_quantities), "] are supported"
+        // );
         return false;
     } else {
         return true;
