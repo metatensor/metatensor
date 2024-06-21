@@ -60,6 +60,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
+
+    Neighbor lists are computed using ASE's neighbor list utilities, unless the faster
+    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library is
+    installed, in which case it will be used instead.
     """
 
     def __init__(
