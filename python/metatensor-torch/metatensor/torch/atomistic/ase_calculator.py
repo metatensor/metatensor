@@ -29,6 +29,13 @@ from ase.calculators.calculator import (  # isort: skip
     all_properties as ALL_ASE_PROPERTIES,
 )
 
+try:
+    import vesin
+
+    HAS_VESIN = True
+except ImportError:
+    HAS_VESIN = False
+
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
     # this can not be imported when building the documentation
@@ -423,11 +430,19 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-    nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
-        "ijSD",
-        atoms,
-        cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
-    )
+
+    if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
+        nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
+    else:
+        nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
 
     selected = []
     for pair_i, (i, j, S) in enumerate(zip(nl_i, nl_j, nl_S)):
