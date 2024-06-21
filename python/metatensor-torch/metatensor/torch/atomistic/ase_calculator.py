@@ -264,12 +264,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             if "stress" in properties:
                 do_backward = True
 
-                scaling = torch.eye(3, requires_grad=True, dtype=self._dtype)
+                strain = torch.eye(
+                    3, requires_grad=True, device=self._device, dtype=self._dtype
+                )
 
-                positions = positions @ scaling
+                positions = positions @ strain
                 positions.retain_grad()
 
-                cell = cell @ scaling
+                cell = cell @ strain
 
             if "stresses" in properties:
                 raise NotImplementedError("'stresses' are not implemented yet")
@@ -345,7 +347,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["forces"] = forces_values.numpy()
 
             if "stress" in properties:
-                stress_values = -scaling.grad.reshape(3, 3) / atoms.cell.volume
+                stress_values = -strain.grad.reshape(3, 3) / atoms.cell.volume
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
