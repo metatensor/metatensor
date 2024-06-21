@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.profiler import record_function
 
-from .. import Labels, TensorBlock
+from .. import Labels, TensorBlock, TensorMap
 from . import (
     MetatensorAtomisticModel,
     ModelEvaluationOptions,
@@ -175,7 +175,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
-    ) -> Dict[str, TensorBlock]:
+    ) -> Dict[str, TensorMap]:
         """
         Run the model on the given ``atoms``, computing properties according to the
         ``outputs`` and ``selected_atoms`` options.
