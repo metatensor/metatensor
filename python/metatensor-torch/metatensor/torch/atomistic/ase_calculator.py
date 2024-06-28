@@ -37,13 +37,6 @@ except ImportError:
     HAS_VESIN = False
 
 
-try:
-    import vesin
-    HAS_VESIN = True
-except ImportError:
-    HAS_VESIN = False
-
-
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
     # this can not be imported when building the documentation
     from .. import sum_over_samples  # isort: skip
@@ -175,6 +168,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         self.properties_to_store = (
             properties_to_store if properties_to_store is not None else []
         )
+        self.additional_properties_to_store = []
 
     def todict(self):
         if "model_path" not in self.parameters:
@@ -270,7 +264,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             system_changes=system_changes,
         )
 
-        properties_to_calculate = properties + self.properties_to_store
+        properties_to_calculate = (
+            properties + self.properties_to_store + self.additional_properties_to_store
+        )
 
         with record_function("ASECalculator::prepare_inputs"):
             outputs = _ase_properties_to_metatensor_outputs(properties_to_calculate)
@@ -382,6 +378,42 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
                 )
+
+    def request_properties_every_n_steps(
+        self,
+        dyn: ase.md.MolecularDynamics,
+        properties: List[str],
+        n: int,
+    ):
+        """
+        Makes a property available every n steps of the dynamics.
+
+        :param dyn: ASE molecular dynamics object
+        :param properties: list of properties to be made available
+            at regular intervals
+        :param n: number of steps between each property calculation
+        """
+
+        # prepare for step 0, where the properties must be available
+        self.additional_properties_to_store.extend(properties)
+
+        def _request_properties():
+            self.additional_properties_to_store.extend(properties)
+
+        def _unrequest_properties():
+            for prop in properties:
+                self.additional_properties_to_store.remove(prop)
+
+        def _manage_additional_properties():
+            step_count = dyn.nsteps
+            if step_count % n == n - 1:
+                _request_properties()
+            elif step_count % n == 0:
+                _unrequest_properties()
+            else:
+                pass
+
+        dyn.attach(_manage_additional_properties, interval=1, mode="step")
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
