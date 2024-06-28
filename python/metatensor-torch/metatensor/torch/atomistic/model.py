@@ -459,7 +459,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         if os.environ.get("PYTORCH_JIT") == "0":
             raise RuntimeError(
                 "found PYTORCH_JIT=0 in the environment, "
-                "we can not export models without TorchScript"
+                "we can not save models without TorchScript"
             )
 
         try:
@@ -483,7 +483,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         extensions, deps = _collect_extensions(extensions_path=collect_extensions)
 
         torch.jit.save(
-            module,
+            module.to("cpu"),  # this allows to torch.jit.load without devices
             file,
             _extra_files={
                 "torch-version": torch.__version__,
