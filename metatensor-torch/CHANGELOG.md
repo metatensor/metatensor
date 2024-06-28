@@ -14,6 +14,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Changed
 
+- `MetatensorAtomisticModel.save()` always saves models on the CPU.
+
 ### Deprecated
 
 ### Removed
