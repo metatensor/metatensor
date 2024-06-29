@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.profiler import record_function
 
-from .. import Labels, TensorBlock
+from .. import Labels, TensorBlock, TensorMap
 from . import (
     MetatensorAtomisticModel,
     ModelEvaluationOptions,
@@ -28,6 +28,13 @@ from ase.calculators.calculator import (  # isort: skip
     PropertyNotImplementedError,
     all_properties as ALL_ASE_PROPERTIES,
 )
+
+try:
+    import vesin
+
+    HAS_VESIN = True
+except ImportError:
+    HAS_VESIN = False
 
 
 try:
@@ -60,6 +67,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
+
+    Neighbor lists are computed using ASE's neighbor list utilities, unless the faster
+    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library is
+    installed, in which case it will be used instead.
     """
 
     def __init__(
@@ -164,6 +175,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         self.properties_to_store = (
             properties_to_store if properties_to_store is not None else []
         )
+        self.additional_properties_to_store = []
 
     def todict(self):
         if "model_path" not in self.parameters:
@@ -192,7 +204,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
-    ) -> Dict[str, TensorBlock]:
+    ) -> Dict[str, TensorMap]:
         """
         Run the model on the given ``atoms``, computing properties according to the
         ``outputs`` and ``selected_atoms`` options.
@@ -259,7 +271,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             system_changes=system_changes,
         )
 
-        properties_to_calculate = properties + self.properties_to_store
+        properties_to_calculate = (
+            properties + self.properties_to_store + self.additional_properties_to_store
+        )
 
         with record_function("ASECalculator::prepare_inputs"):
             outputs = _ase_properties_to_metatensor_outputs(properties_to_calculate)
@@ -283,12 +297,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             if "stress" in properties_to_calculate:
                 do_backward = True
 
-                scaling = torch.eye(3, requires_grad=True, device=positions.device, dtype=self._dtype)
+                strain = torch.eye(
+                    3, requires_grad=True, device=self._device, dtype=self._dtype
+                )
 
-                positions = positions @ scaling
+                positions = positions @ strain
                 positions.retain_grad()
 
-                cell = cell @ scaling
+                cell = cell @ strain
 
             if "stresses" in properties_to_calculate:
                 raise NotImplementedError("'stresses' are not implemented yet")
@@ -364,7 +380,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["forces"] = forces_values.numpy()
 
             if "stress" in properties_to_calculate:
-                stress_values = -scaling.grad.reshape(3, 3) / atoms.cell.volume
+                stress_values = -strain.grad.reshape(3, 3) / atoms.cell.volume
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
@@ -376,6 +392,42 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     device="cpu"
                 ).to(dtype=torch.float64)
                 self.results["mtt::aux::energy_uncertainty"] = uncertainty_values.numpy()[0, 0]
+
+    def request_properties_every_n_steps(
+        self,
+        dyn: ase.md.MolecularDynamics,
+        properties: List[str],
+        n: int,
+    ):
+        """
+        Makes a property available every n steps of the dynamics.
+
+        :param dyn: ASE molecular dynamics object
+        :param properties: list of properties to be made available
+            at regular intervals
+        :param n: number of steps between each property calculation
+        """
+
+        # prepare for step 0, where the properties must be available
+        self.additional_properties_to_store.extend(properties)
+
+        def _request_properties():
+            self.additional_properties_to_store.extend(properties)
+
+        def _unrequest_properties():
+            for prop in properties:
+                self.additional_properties_to_store.remove(prop)
+
+        def _manage_additional_properties():
+            step_count = dyn.nsteps
+            if step_count % n == n - 1:
+                _request_properties()
+            elif step_count % n == 0:
+                _unrequest_properties()
+            else:
+                pass
+
+        dyn.attach(_manage_additional_properties, interval=1, mode="step")
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
