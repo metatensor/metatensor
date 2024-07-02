@@ -22,6 +22,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Changed
 
 - `MetatensorAtomisticModel.save()` always saves models on the CPU.
+- We now require Python >= 3.9
 
 ## [Version 0.5.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.2) - 2024-06-21
 
