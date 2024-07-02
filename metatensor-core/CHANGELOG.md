@@ -28,6 +28,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
   shape of the values in the block respectively
 
+#### Changed
+
+- We now require Python >= 3.9
+
 ### metatensor-core Julia
 
 #### Added

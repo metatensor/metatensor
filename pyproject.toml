@@ -1,7 +1,6 @@
 [project]
 name = "metatensor"
 dynamic = ["version", "authors", "dependencies", "optional-dependencies"]
-requires-python = ">=3.8"
 
 readme = "README.md"
 license = {text = "BSD-3-Clause"}
