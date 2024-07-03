@@ -80,6 +80,30 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_load_deflate(use_numpy):
+    # This file was saved using DEFLATE to compress the different ZIP archive members
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "metatensor-operations",
+        "tests",
+        "data",
+        "qm7-power-spectrum.npz",
+    )
+
+    tensor = metatensor.load(path, use_numpy=use_numpy)
+
+    assert isinstance(tensor, TensorMap)
+    assert tensor.keys.names == [
+        "center_type",
+        "neighbor_1_type",
+        "neighbor_2_type",
+    ]
+    assert len(tensor.keys) == 17
+
+
 # using tmpdir as pytest-built-in fixture
 # https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
 @pytest.mark.parametrize("use_numpy", (True, False))
