@@ -24,7 +24,7 @@ smallvec = {version = "1", features = ["union"]}
 # implementation of the NPZ serialization format
 byteorder = {version = "1"}
 num-traits = {version = "0.2", default-features = false}
-zip = {version = "0.6", default-features = false}
+zip = {version = "0.6", default-features = false, features = ["deflate"]}
 
 [build-dependencies]
 cbindgen = { version = "0.26", default-features = false }
