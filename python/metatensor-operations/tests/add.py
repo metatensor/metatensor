@@ -276,7 +276,8 @@ def test_add_finite_difference():
         tensor_2 = _gradcheck.cartesian_cubic(array)
         return metatensor.add(tensor_1, tensor_2)
 
-    array = np.random.rand(5, 3)
+    rng = np.random.default_rng(seed=123456)
+    array = rng.random((5, 3))
     _gradcheck.check_finite_differences(function, array, parameter="g")
 
 
@@ -287,5 +288,7 @@ def test_torch_add_finite_difference():
         tensor_2 = _gradcheck.cartesian_cubic(array)
         return metatensor.add(tensor_1, tensor_2)
 
-    array = torch.rand(5, 3, dtype=torch.float64)
+    rng = torch.Generator()
+    rng.manual_seed(123456)
+    array = torch.rand(5, 3, dtype=torch.float64, generator=rng)
     _gradcheck.check_finite_differences(function, array, parameter="g")
