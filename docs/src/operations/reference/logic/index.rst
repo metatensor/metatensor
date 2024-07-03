@@ -6,5 +6,5 @@ Logic function
 
     allclose() <allclose>
     equal() <equal>
-    equal_metadata() <equal_metadata>
-    is_contiguous() <is_contiguous>
+    equal_metadata() <equal-metadata>
+    is_contiguous() <is-contiguous>

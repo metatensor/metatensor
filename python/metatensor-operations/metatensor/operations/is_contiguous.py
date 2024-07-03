@@ -1,11 +1,5 @@
 from . import _dispatch
-from ._backend import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-    torch_jit_is_scripting,
-    torch_jit_script,
-)
+from ._backend import TensorBlock, TensorMap, torch_jit_script
 
 
 @torch_jit_script
@@ -20,15 +14,17 @@ def is_contiguous_block(block: TensorBlock) -> bool:
 
     :return: bool, true if all values arrays contiguous, false otherwise.
     """
-    check_contiguous: bool = True
-    if not _dispatch.is_contiguous_array(block.values):
-        check_contiguous = False
+    if not _dispatch.is_contiguous(block.values):
+        return False
 
-    for _param, gradient in block.gradients():
-        if not _dispatch.is_contiguous_array(gradient.values):
-            check_contiguous = False
+    for _parameter, gradient in block.gradients():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
 
-    return check_contiguous
+        if not _dispatch.is_contiguous(gradient.values):
+            return False
+
+    return True
 
 
 @torch_jit_script
@@ -43,9 +39,8 @@ def is_contiguous(tensor: TensorMap) -> bool:
 
     :return: bool, true if all values arrays contiguous, false otherwise.
     """
-    check_contiguous: bool = True
-    for _key, block in tensor.items():
+    for block in tensor.blocks():
         if not is_contiguous_block(block):
-            check_contiguous = False
+            return False
 
-    return check_contiguous
+    return True

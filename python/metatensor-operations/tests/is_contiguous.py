@@ -19,7 +19,7 @@ def tensor():
 
 
 @pytest.fixture
-def incontiguous_tensor(tensor) -> TensorMap:
+def non_contiguous_tensor(tensor) -> TensorMap:
     """
     Make a TensorMap non-contiguous by reversing the order of the samples/properties
     rows/columns in all values and gradient blocks.
@@ -27,15 +27,14 @@ def incontiguous_tensor(tensor) -> TensorMap:
     keys = tensor.keys
     new_blocks = []
 
-    for _key, block in tensor.items():
-        # Create a new TM with a non-contig array
-        new_block = _incontiguous_block(block)
+    for block in tensor.blocks():
+        new_block = _non_contiguous_block(block)
         new_blocks.append(new_block)
 
     return TensorMap(keys=keys, blocks=new_blocks)
 
 
-def _incontiguous_block(block: TensorBlock) -> TensorBlock:
+def _non_contiguous_block(block: TensorBlock) -> TensorBlock:
     """
     Make a non-contiguous block by reversing the order in both the main value block and
     the gradient block(s).
@@ -62,9 +61,9 @@ def _incontiguous_block(block: TensorBlock) -> TensorBlock:
 
 def test_is_contiguous_block(tensor):
     assert metatensor.is_contiguous_block(tensor.block(0))
-    assert not metatensor.is_contiguous_block(_incontiguous_block(tensor.block(0)))
+    assert not metatensor.is_contiguous_block(_non_contiguous_block(tensor.block(0)))
 
 
-def test_is_contiguous(tensor, incontiguous_tensor):
+def test_is_contiguous(tensor, non_contiguous_tensor):
     assert metatensor.is_contiguous(tensor)
-    assert not metatensor.is_contiguous(incontiguous_tensor)
+    assert not metatensor.is_contiguous(non_contiguous_tensor)

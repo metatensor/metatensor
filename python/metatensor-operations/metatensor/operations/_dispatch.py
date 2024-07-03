@@ -343,7 +343,7 @@ def concatenate(arrays: List[TorchTensor], axis: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def is_contiguous_array(array):
+def is_contiguous(array):
     """
     Checks if a given array is contiguous.
 
@@ -360,11 +360,12 @@ def is_contiguous_array(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def make_contiguous_array(array):
+def make_contiguous(array):
     """
     Returns a contiguous array.
-    It is equivalent of np.ascontiguousarray(array) and tensor.contiguous(). In
-    the case of numpy, C order is used for consistency with torch. As such, only
+
+    This is equivalent of ``np.ascontiguousarray(array)`` and ``tensor.contiguous()``.
+    In the case of numpy, C order is used for consistency with torch. As such, only
     C-contiguity is checked.
     """
     if isinstance(array, TorchTensor):
