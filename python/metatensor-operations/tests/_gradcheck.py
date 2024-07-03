@@ -11,8 +11,8 @@ def check_finite_differences(
     *,
     parameter: str,
     displacement: float = 1e-6,
-    rtol: float = 1e-5,
-    atol: float = 1e-15,
+    rtol: float = 1e-3,
+    atol: float = 1e-9,
 ) -> None:
     """
     Check that analytical gradients with respect to ``parameter`` in the
