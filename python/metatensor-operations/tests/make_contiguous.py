@@ -18,22 +18,6 @@ def tensor():
     )
 
 
-@pytest.fixture
-def non_contiguous_tensor(tensor) -> TensorMap:
-    """
-    Make a TensorMap non-contiguous by reversing the order of the samples/properties
-    rows/columns in all values and gradient blocks.
-    """
-    keys = tensor.keys
-    new_blocks = []
-
-    for _key, block in tensor.items():
-        new_block = _non_contiguous_block(block)
-        new_blocks.append(new_block)
-
-    return TensorMap(keys=keys, blocks=new_blocks)
-
-
 def _non_contiguous_block(block: TensorBlock) -> TensorBlock:
     """
     Make a non-contiguous block by reversing the order in both the main value block and
@@ -57,6 +41,22 @@ def _non_contiguous_block(block: TensorBlock) -> TensorBlock:
         new_block.add_gradient(param, new_gradient)
 
     return new_block
+
+
+@pytest.fixture
+def non_contiguous_tensor(tensor) -> TensorMap:
+    """
+    Make a TensorMap non-contiguous by reversing the order of the samples/properties
+    rows/columns in all values and gradient blocks.
+    """
+    keys = tensor.keys
+    new_blocks = []
+
+    for _key, block in tensor.items():
+        new_block = _non_contiguous_block(block)
+        new_blocks.append(new_block)
+
+    return TensorMap(keys=keys, blocks=new_blocks)
 
 
 def test_make_contiguous_block(tensor):
