@@ -789,3 +789,104 @@ std::string SystemHolder::str() const {
 
     return result.str();
 }
+
+template<typename scalar_t>
+nlohmann::json tensor_to_vector_string(const torch::Tensor& tensor) {
+    torch::Tensor contiguous_cpu_tensor = tensor.cpu().contiguous();
+    scalar_t* pointer = contiguous_cpu_tensor.data<scalar_t>();
+    size_t size = static_cast<size_t>(contiguous_cpu_tensor.numel());
+    nlohmann::json result = std::vector<scalar_t>(pointer, pointer + size);
+    return result;
+}
+
+template<typename scalar_t>
+torch::Tensor tensor_from_vector_string(nlohmann::json data) {
+    if (!data.contains("dtype") || !data["dtype"].is_string()) {
+        throw std::runtime_error("expected 'dtype' in JSON for tensor, did not find it");
+    }
+    auto dtype = data["dtype"].get<std::string>();
+    auto torch_dtype = scalar_type_from_name(dtype);
+
+    if (!data.contains("sizes")) {
+        throw std::runtime_error("expected 'sizes' in JSON for tensor, did not find it");
+    }
+    auto sizes = data["sizes"].get<std::vector<int64_t>>();
+
+    if (!data.contains("values")) {
+        throw std::runtime_error("expected 'values' in JSON for tensor, did not find it");
+    }
+    auto values = data["values"].get<std::vector<scalar_t>>();
+
+    auto options = torch::TensorOptions().dtype(torch_dtype);
+    auto tensor = torch::empty(sizes, options);
+    auto* tensor_data = tensor.data<scalar_t>();
+    std::copy(values.begin(), values.end(), tensor_data);
+    return tensor;
+}
+
+nlohmann::json tensor_to_json(const torch::Tensor& tensor) {
+    nlohmann::json result;
+    result["dtype"] = scalar_type_name(tensor.scalar_type());
+    result["sizes"] = tensor.sizes().vec();
+    result["values"] = AT_DISPATCH_ALL_TYPES(tensor.scalar_type(), "tensor_to_vector", ([&] {
+        return tensor_to_vector_string<scalar_t>(tensor);
+    }));
+    return result;
+}
+
+torch::Tensor tensor_from_json(const nlohmann::json& data) {
+    if (!data.contains("dtype") || !data["dtype"].is_string()) {
+        throw std::runtime_error("expected 'dtype' in JSON for tensor, did not find it");
+    }
+    auto dtype = data["dtype"].get<std::string>();
+    auto torch_dtype = scalar_type_from_name(dtype);
+
+    return AT_DISPATCH_ALL_TYPES(torch_dtype, "tensor_from_vector", ([&] {
+        return tensor_from_vector_string<scalar_t>(data);
+    }));
+}
+
+std::string SystemHolder::to_json() const {
+    nlohmann::json result;
+
+    result["class"] = "System";
+    result["positions"] = tensor_to_json(this->positions());
+    result["cell"] = tensor_to_json(this->cell());
+    result["types"] = tensor_to_json(this->types());
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+}
+
+System SystemHolder::from_json(const std::string_view json) {
+    auto data = nlohmann::json::parse(json);
+
+    if (!data.is_object()) {
+        throw std::runtime_error("invalid JSON data for System, expected an object");
+    }
+
+    if (!data.contains("class") || !data["class"].is_string()) {
+        throw std::runtime_error("expected 'class' in JSON for System, did not find it");
+    }
+
+    if (data["class"] != "System") {
+        throw std::runtime_error("'class' in JSON for System must be 'System'");
+    }
+
+    if (!data.contains("positions")) {
+        throw std::runtime_error("expected 'positions' in JSON for System, did not find it");
+    }
+    auto positions = tensor_from_json(data["positions"]);
+
+    if (!data.contains("cell")) {
+        throw std::runtime_error("expected 'cell' in JSON for System, did not find it");
+    }
+    auto cell = tensor_from_json(data["cell"]);
+
+    if (!data.contains("types")) {
+        throw std::runtime_error("expected 'types' in JSON for System, did not find it");
+    }
+    auto types = tensor_from_json(data["types"]);
+
+    auto system = torch::make_intrusive<SystemHolder>(types, positions, cell);
+    return system;
+}

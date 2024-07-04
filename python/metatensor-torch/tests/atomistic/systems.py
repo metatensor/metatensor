@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import torch
 from packaging import version
@@ -477,3 +479,17 @@ def test_to(system, neighbors):
 @torch.jit.script
 def check_dtype(system: System, dtype: torch.dtype):
     assert system.dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+def test_save_load(tmpdir, dtype):
+    system = System(
+        types=torch.tensor([1, 2, 3, 4]),
+        positions=torch.rand((4, 3), dtype=dtype),
+        cell=torch.rand((3, 3), dtype=dtype),
+    )
+    torch.save(system, os.path.join(tmpdir, "system.pt"))
+    system_loaded = torch.load(os.path.join(tmpdir, "system.pt"))
+    assert torch.equal(system.types, system_loaded.types)
+    assert torch.equal(system.positions, system_loaded.positions)
+    assert torch.equal(system.cell, system_loaded.cell)
