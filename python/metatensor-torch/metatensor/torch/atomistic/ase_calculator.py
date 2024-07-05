@@ -536,7 +536,7 @@ def _full_3x3_to_voigt_6_stress(stress):
     Re-implementation of ``ase.stress.full_3x3_to_voigt_6_stress`` which does not do the
     stress symmetrization correctly (they do ``(stress[1, 2] + stress[1, 2]) / 2.0``)
     """
-    return np.transpose(
+    return np.array(
         [
             stress[0, 0],
             stress[1, 1],
