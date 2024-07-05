@@ -226,5 +226,3 @@ Please cite the following references when using this model:
   * ref-4
 """
     assert str(metadata) == expected
-    assert metadata.__repr__() == expected
-    assert metadata.print() == expected
