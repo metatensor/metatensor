@@ -382,6 +382,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def("__repr__", &ModelMetadataHolder::print)
         .def("__str__", &ModelMetadataHolder::print)
+        .def("print", &ModelMetadataHolder::print)
         .def_readwrite("name", &ModelMetadataHolder::name)
         .def_readwrite("description", &ModelMetadataHolder::description)
         .def_readwrite("authors", &ModelMetadataHolder::authors)
