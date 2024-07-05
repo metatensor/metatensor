@@ -238,7 +238,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         properties: List[str],
         system_changes: List[str],
-    ) -> Dict[str, np.ndarray]:
+    ) -> None:
         """
         Compute some ``properties`` with this calculator, and return them in the format
         expected by ASE.
