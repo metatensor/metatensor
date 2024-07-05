@@ -68,6 +68,9 @@ def get_metatensor_force(
 
     model = load_atomistic_model(path, extensions_directory=extensions_directory)
 
+    # Print the model's metadata
+    print(model.metadata().print())
+
     # Get the atomic numbers of the ML region.
     all_atoms = list(topology.atoms())
     atomic_types = [atom.element.atomic_number for atom in all_atoms]

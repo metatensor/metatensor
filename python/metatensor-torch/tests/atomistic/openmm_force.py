@@ -102,8 +102,6 @@ def _check_against_ase(tmpdir, atoms):
     atoms.set_calculator(calculator)
     ase_forces = atoms.get_forces()
 
-    print(openmm_forces)
-    print(ase_forces)
     assert np.allclose(openmm_forces, ase_forces)
 
 
