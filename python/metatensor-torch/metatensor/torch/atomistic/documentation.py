@@ -388,8 +388,8 @@ class ModelMetadata:
     """
     Metadata about a specific exported model
 
-    This class implements the __str__ and __repr__ methods, so its representation can be
-    easily printed, logged, inserted into other strings, etc.
+    This class implements the ``__str__`` and ``__repr__`` methods, so its
+    representation can be easily printed, logged, inserted into other strings, etc.
     """
 
     def __init__(
