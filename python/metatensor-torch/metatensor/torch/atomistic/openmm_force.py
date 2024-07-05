@@ -1,3 +1,4 @@
+import warnings
 from typing import Iterable, List, Optional
 
 import torch
@@ -10,6 +11,8 @@ from metatensor.torch.atomistic import (
     System,
     load_atomistic_model,
 )
+
+from .ase_calculator import STR_TO_DTYPE
 
 
 try:
@@ -127,6 +130,8 @@ def get_metatensor_force(
                 self.requested_neighbor_list = None
 
             self.check_consistency = check_consistency
+            self.dtype = STR_TO_DTYPE[self.model.capabilities().dtype]
+            self.already_warned = False
 
         def forward(
             self, positions: torch.Tensor, cell: Optional[torch.Tensor] = None
@@ -152,13 +157,28 @@ def get_metatensor_force(
             )
             system = _attach_neighbors(system, self.requested_neighbor_list)
 
+            original_dtype = system.dtype
+            if self.dtype != system.dtype:
+                if not self.already_warned:
+                    model_dtype_string = dtype_to_str(self.dtype)
+                    system_dtype_string = dtype_to_str(system.dtype)
+                    warnings.warn(
+                        f"Model dtype {model_dtype_string} does not match the dtype "
+                        f"of the system {system_dtype_string}. The system will be "
+                        f"converted to {model_dtype_string} temporarily to allow the "
+                        "model to run.",
+                        stacklevel=2,
+                    )
+                    self.already_warned = True
+                system = system.to(dtype=self.dtype)
+
             outputs = self.model(
                 [system],
                 self.evaluation_options,
                 check_consistency=self.check_consistency,
             )
             energy = outputs["energy"].block().values.reshape(())
-            return energy
+            return energy.to(original_dtype)
 
     metatensor_force = MetatensorForce(
         model,
@@ -182,7 +202,7 @@ def get_metatensor_force(
 
 
 def _attach_neighbors(
-    system: System, requested_nl_options: NeighborListOptions
+    system: System, requested_nl_options: Optional[NeighborListOptions]
 ) -> System:
 
     if requested_nl_options is None:
@@ -255,3 +275,12 @@ def _attach_neighbors(
 
     system.add_neighbor_list(requested_nl_options, neighbor_list)
     return system
+
+
+def dtype_to_str(dtype: torch.dtype) -> str:
+    if dtype == torch.float32:
+        return "float32"
+    elif dtype == torch.float64:
+        return "float64"
+    else:
+        raise ValueError(f"Unsupported dtype {dtype}.")
