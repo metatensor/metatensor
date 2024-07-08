@@ -112,7 +112,20 @@ def _load_library():
     metatensor._c_lib._get_library()
 
     # load the C++ operators and custom classes
-    torch.ops.load_library(_lib_path())
+    try:
+        torch.ops.load_library(_lib_path())
+    except Exception as e:
+        if "undefined symbol" in str(e):
+            file_name = os.path.basename(_lib_path())
+            raise ImportError(
+                f"{file_name} is not compatible with the current PyTorch "
+                "installation.\nThis can happen if PyTorch comes from one source "
+                "(pip, conda, custom), but metatensor-torch comes from a different "
+                "one.\nIn this case, you can try to compile metatensor-torch yourself "
+                "with `pip install --no-binary=metatensor-torch metatensor-torch`"
+            ) from e
+        else:
+            raise e
 
     lib_version = torch.ops.metatensor.version()
     if not version_compatible(lib_version, __version__):
