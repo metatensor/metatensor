@@ -28,5 +28,6 @@ static = []
 cmake = "0.1.49"
 which = "5"
 
-# This is the last version supporting rustc 1.65
+# these are the last version supporting rustc 1.65
 home = "=0.5.5"
+cc = "=1.0.105"
