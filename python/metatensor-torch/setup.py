@@ -66,38 +66,6 @@ class cmake_ext(build_ext):
             f"-DCMAKE_PREFIX_PATH={';'.join(cmake_prefix_path)}",
         ]
 
-        # ==================================================================== #
-        # HACK: Torch cmake build system has a hard time finding CuDNN, so we
-        # help it by pointing it to the right files
-
-        # First try using the `nvidia.cudnn` package (dependency of torch on PyPI)
-        try:
-            import nvidia.cudnn
-
-            cudnn_root = os.path.dirname(nvidia.cudnn.__file__)
-        except ImportError:
-            # Otherwise try to find CuDNN inside PyTorch itself
-            cudnn_root = os.path.join(torch.utils.cmake_prefix_path, "..", "..")
-
-            cudnn_version = os.path.join(cudnn_root, "include", "cudnn_version.h")
-            if not os.path.exists(cudnn_version):
-                # create a minimal cudnn_version.h (with a made-up version),
-                # because it is not bundled together with the CuDNN shared
-                # library in PyTorch conda distribution, see
-                # https://github.com/pytorch/pytorch/issues/47743
-                with open(cudnn_version, "w") as fd:
-                    fd.write("#define CUDNN_MAJOR 8\n")
-                    fd.write("#define CUDNN_MINOR 5\n")
-                    fd.write("#define CUDNN_PATCHLEVEL 0\n")
-
-        cmake_options.append(f"-DCUDNN_INCLUDE_DIR={cudnn_root}/include")
-        cmake_options.append(f"-DCUDNN_LIBRARY={cudnn_root}/lib")
-        # do not warn if the two variables above aren't used
-        cmake_options.append("--no-warn-unused-cli")
-
-        # end of HACK
-        # ==================================================================== #
-
         subprocess.run(
             ["cmake", source_dir, *cmake_options],
             cwd=build_dir,
