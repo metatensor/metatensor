@@ -238,7 +238,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         properties: List[str],
         system_changes: List[str],
-    ) -> Dict[str, np.ndarray]:
+    ) -> None:
         """
         Compute some ``properties`` with this calculator, and return them in the format
         expected by ASE.
@@ -349,16 +349,16 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         if do_backward:
             with record_function("ASECalculator::run_backward"):
-                energy.backward(-torch.ones_like(energy))
+                energy.backward()
 
         with record_function("ASECalculator::convert_outputs"):
             if "forces" in properties:
-                forces_values = system.positions.grad.reshape(-1, 3)
+                forces_values = -system.positions.grad.reshape(-1, 3)
                 forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["forces"] = forces_values.numpy()
 
             if "stress" in properties:
-                stress_values = -strain.grad.reshape(3, 3) / atoms.cell.volume
+                stress_values = strain.grad.reshape(3, 3) / atoms.cell.volume
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
@@ -536,7 +536,7 @@ def _full_3x3_to_voigt_6_stress(stress):
     Re-implementation of ``ase.stress.full_3x3_to_voigt_6_stress`` which does not do the
     stress symmetrization correctly (they do ``(stress[1, 2] + stress[1, 2]) / 2.0``)
     """
-    return np.transpose(
+    return np.array(
         [
             stress[0, 0],
             stress[1, 1],

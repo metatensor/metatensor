@@ -385,7 +385,12 @@ class ModelEvaluationOptions:
 
 
 class ModelMetadata:
-    """Metadata about a specific exported model"""
+    """
+    Metadata about a specific exported model
+
+    This class implements the ``__str__`` and ``__repr__`` methods, so its
+    representation can be easily printed, logged, inserted into other strings, etc.
+    """
 
     def __init__(
         self,
@@ -415,12 +420,6 @@ class ModelMetadata:
       used by this model
     - "model": for reference specific to this exact model
     """
-
-    def print(self) -> str:
-        """
-        Format the model metadata into a string. This is the same format used for
-        ``__str__`` and ``__repr__``.
-        """
 
 
 def check_atomistic_model(path: str):
