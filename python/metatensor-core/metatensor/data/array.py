@@ -174,7 +174,7 @@ class ArrayWrapper:
         mts_array = mts_array_t()
         # `mts_array_t::ptr` is a pointer to the PyObject `self`
         mts_array.ptr = ctypes.cast(
-            ctypes.pointer(ctypes.py_object(self)), ctypes.c_void_p
+            ctypes.pointer(self._get_py_object()), ctypes.c_void_p
         )
 
         @catch_exceptions
@@ -200,6 +200,11 @@ class ArrayWrapper:
 
         self._mts_array = mts_array
 
+    def _get_py_object(self):
+        # this seems to be the only way to get a PyObject* from Python
+        # cf https://groups.google.com/g/dev-python/c/QRRqVC7gkf4
+        return ctypes.cast(id(self), ctypes.py_object)
+
     def into_mts_array(self):
         """
         Get an mts_array_t instance for the wrapper array.
@@ -211,7 +216,7 @@ class ArrayWrapper:
         """
         # The returned array is keeping a reference to this python object, we
         # need to tell Python so that it does not garbage-collect the wrapper
-        ctypes.pythonapi.Py_IncRef(ctypes.py_object(self))
+        ctypes.pythonapi.Py_IncRef(self._get_py_object())
 
         return self._mts_array
 
@@ -223,13 +228,13 @@ def _object_from_ptr(ptr):
 
 @catch_exceptions
 def _mts_array_data(this, data):
-    storage = _object_from_ptr(this)
+    wrapper = _object_from_ptr(this)
 
-    if _is_numpy_array(storage.array):
-        array = storage.array
+    if _is_numpy_array(wrapper.array):
+        array = wrapper.array
 
-    elif _is_torch_array(storage.array):
-        array = storage.array
+    elif _is_torch_array(wrapper.array):
+        array = wrapper.array
 
         if array.device.type != "cpu":
             raise ValueError("can only get data pointer for tensors on CPU")
@@ -317,7 +322,7 @@ def _mts_array_copy(this, new_array):
 def _mts_array_destroy(this):
     wrapper = _object_from_ptr(this)
     # remove the additional reference to the wrapper, added in `into_mts_array``
-    ctypes.pythonapi.Py_DecRef(ctypes.py_object(wrapper))
+    ctypes.pythonapi.Py_DecRef(wrapper._get_py_object())
 
 
 @catch_exceptions
