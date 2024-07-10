@@ -212,8 +212,7 @@ torch::Tensor NeighborsAutograd::forward(
         }
     }
 
-    ctx->save_for_backward({positions, cell});
-    ctx->saved_data["neighbors"] = neighbors;
+    ctx->save_for_backward({positions, cell, neighbors->values(), neighbors->samples()->values()});
 
     return distances;
 }
@@ -228,9 +227,9 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
     auto saved_variables = ctx->get_saved_variables();
     auto positions = saved_variables[0];
     auto cell = saved_variables[1];
-    auto neighbors = ctx->saved_data["neighbors"].toCustomClass<TensorBlockHolder>();
-    auto samples = neighbors->samples()->values();
-    auto distances = neighbors->values();
+
+    auto distances = saved_variables[2];
+    auto samples = saved_variables[3];
 
     auto positions_grad = torch::Tensor();
     if (positions.requires_grad()) {
