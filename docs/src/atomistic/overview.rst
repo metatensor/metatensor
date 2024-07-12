@@ -261,7 +261,7 @@ explained below.
         If the engine does not use torch to compute the neighbor lists (using
         instead some other neighbors list implementation), the neighbors list
         should be registered with torch's automatic differentiation framework by
-        using :py:func:`register_neighbors_autograd` before adding the neighbors
+        using :py:func:`register_autograd_neighbors` before adding the neighbors
         lists to the systems.
 
         We provide a set of regression tests for neighbors lists in
