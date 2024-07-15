@@ -19,10 +19,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.5.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
+
 ### Changed
 
 - `MetatensorAtomisticModel.save()` always saves models on the CPU.
 - We now require Python >= 3.9
+
+### Fixed
+
+- Fixed a memory leak in `register_autograd_neighbors` (#684)
 
 ## [Version 0.5.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.2) - 2024-06-21
 
