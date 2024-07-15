@@ -1,6 +1,7 @@
 [package]
 name = "metatensor-sys"
-version = "0.1.8"
+# This should be kept in sync with metatensor-core version number
+version = "0.1.9"
 edition = "2021"
 
 description = "Bindings to the metatensor C library"
