@@ -67,3 +67,14 @@ learn = ["python/metatensor-learn/", ".tox/*/lib/python*/site-packages/"]
 [tool.coverage.report]
 show_missing = true
 omit = ["documentation.py"]
+
+### ======================================================================== ###
+
+[tool.pytest.ini_options]
+# ignore" a bunch of internal warnings with Python 3.12 and PyTorch
+filterwarnings = [
+    "error",
+    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+]
