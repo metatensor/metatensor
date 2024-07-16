@@ -203,6 +203,12 @@ class TensorBlock:
         return copy.deepcopy(self)
 
     def __repr__(self) -> str:
+        if self._actual_ptr is None:
+            return (
+                "Empty TensorBlock (data has been moved to another "
+                "TensorBlock or TensorMap)"
+            )
+
         if len(self._gradient_parameters) != 0:
             s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
         else:

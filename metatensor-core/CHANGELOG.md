@@ -23,20 +23,30 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core Python
 
-#### Added
-
-- `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
-  shape of the values in the block respectively
-
-#### Changed
-
-- We now require Python >= 3.9
-
 ### metatensor-core Julia
 
 #### Added
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
+
+## [Version 0.1.9](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.9) - 2024-07-15
+
+### metatensor-core Python
+
+#### Added
+
+- `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
+  shape of the values in the block respectively
+- We can now load (but not save) TensorMap stored in npz files using DEFLATE
+  compression (#671)
+
+#### Changed
+
+- We now require Python >= 3.9
+
+#### Fixed
+
+- Fixed a memory leak affecting all data stored in TensorBlock (#683)
 
 ## [Version 0.1.8](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.8) - 2024-05-13
 

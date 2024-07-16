@@ -11,6 +11,10 @@ C API reference
   .. grid::
     :margin: 0 0 0 0
 
+    .. grid-item-version:: 0.1.9
+      :tag-prefix: metatensor-core-v
+      :url-suffix: core/reference/c/index.html
+
     .. grid-item-version:: 0.1.7
       :tag-prefix: metatensor-core-v
       :url-suffix: core/reference/c/index.html

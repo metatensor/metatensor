@@ -9,3 +9,5 @@ Systems
     :special-members: __eq__, __ne__
 
 .. autofunction:: metatensor.torch.atomistic.systems_to_torch
+
+.. autofunction:: metatensor.torch.atomistic.register_autograd_neighbors
