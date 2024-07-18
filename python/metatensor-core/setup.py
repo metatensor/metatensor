@@ -51,6 +51,7 @@ class cmake_ext(build_ext):
         cmake_options = [
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
+            "-DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF",
             f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
             "-DBUILD_SHARED_LIBS=ON",
             "-DMETATENSOR_INSTALL_BOTH_STATIC_SHARED=OFF",

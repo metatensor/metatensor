@@ -64,6 +64,7 @@ class cmake_ext(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
             f"-DCMAKE_PREFIX_PATH={';'.join(cmake_prefix_path)}",
+            "-DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF",
         ]
 
         subprocess.run(
