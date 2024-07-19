@@ -15,6 +15,8 @@ encouraged to come together, define the metadata they need and add a new section
 to this page.
 
 
+.. _energy:
+
 Energy
 ^^^^^^
 
@@ -54,6 +56,8 @@ have the following metadata:
     - ``"energy"``
     - the energy must have a single property dimension named ``"energy"``, with
       a single entry set to ``0``.
+
+.. _energy-gradients:
 
 Energy gradients
 ----------------
@@ -119,3 +123,47 @@ The following gradients can be defined and requested with
     - ``["xyz_1", "xyz_2"]``
     - Both ``"xyz_1"`` and ``"xyz_2"`` have values ``[0, 1, 2]``, and correspond
       to the two axes of the 3x3 strain matrix :math:`\epsilon`.
+
+
+Energy ensemble
+^^^^^^^^^^^^^^^
+
+An ensemble of energies is associated with the ``"energy_ensemble"`` key in the
+model outputs. Such ensembles are sometimes used to perform uncertainty
+quantification, using multiple prediction to estimate an error on the mean
+prediction.
+
+Energy ensembles must have the following metadata:
+
+.. list-table:: Metadata for energy ensemble output
+  :widths: 2 3 7
+  :header-rows: 1
+
+  * - Metadata
+    - Names
+    - Description
+
+  * - keys
+    - same as `Energy`_
+    - same as `Energy`_
+
+  * - samples
+    - same as `Energy`_
+    - same as `Energy`_
+
+  * - components
+    - same as `Energy`_
+    - same as `Energy`_
+
+  * - properties
+    - ``"energy"``
+    - the energy ensemble must have a single property dimension named
+      ``"energy"``, with entries ranging from 0 to the number of members of the
+      ensemble minus one.
+
+
+Energy ensemble gradients
+-------------------------
+
+The gradient metadata for energy ensemble is the same as for the ``energy``
+output (see `Energy gradients`_).
