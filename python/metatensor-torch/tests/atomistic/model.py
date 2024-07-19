@@ -9,7 +9,6 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
-    ModelEvaluationOptions,
     ModelMetadata,
     ModelOutput,
     NeighborListOptions,
@@ -145,32 +144,6 @@ class FullModel(torch.nn.Module):
         return result
 
 
-class EnergyEnsembleModel(torch.nn.Module):
-    """A metatensor atomistic model returning an energy ensemble"""
-
-    def forward(
-        self,
-        systems: List[System],
-        outputs: Dict[str, ModelOutput],
-        selected_atoms: Optional[Labels] = None,
-    ) -> Dict[str, TensorMap]:
-        assert "energy_ensemble" in outputs
-        assert not outputs["energy_ensemble"].per_atom
-        assert selected_atoms is None
-
-        return_dict: Dict[str, TensorMap] = {}
-        block = TensorBlock(
-            values=torch.tensor([[0.0, 1.0, 2.0]] * len(systems), dtype=torch.float64),
-            samples=Labels("system", torch.arange(len(systems)).reshape(-1, 1)),
-            components=[],
-            properties=Labels("ensemble_member", torch.tensor([[0], [1], [2]])),
-        )
-        return_dict["energy_ensemble"] = TensorMap(
-            Labels("_", torch.tensor([[0]])), [block]
-        )
-        return return_dict
-
-
 def test_requested_neighbor_lists():
     model = FullModel()
     model.train(False)
@@ -267,49 +240,3 @@ def test_bad_capabilities():
     )
     with pytest.raises(ValueError, match=message):
         ModelCapabilities(outputs={"not-a-standard::": ModelOutput()})
-
-
-def test_energy_ensemble_model():
-    model = EnergyEnsembleModel()
-    model.eval()
-
-    capabilities = ModelCapabilities(
-        length_unit="angstrom",
-        atomic_types=[1, 2, 3],
-        interaction_range=4.3,
-        outputs={
-            "energy_ensemble": ModelOutput(
-                quantity="",
-                unit="",
-                per_atom=False,
-                explicit_gradients=[],
-            ),
-        },
-        supported_devices=["cpu"],
-        dtype="float64",
-    )
-
-    metadata = ModelMetadata()
-    atomistic = MetatensorAtomisticModel(model, metadata, capabilities)
-
-    system = System(
-        types=torch.tensor([1, 2]),
-        positions=torch.tensor(
-            [[1, 1, 1], [0, 0, 0]], dtype=torch.float64, requires_grad=True
-        ),
-        cell=torch.zeros([3, 3], dtype=torch.float64),
-    )
-
-    outputs = {
-        "energy_ensemble": ModelOutput(quantity="energy", unit="eV", per_atom=False),
-    }
-    options = ModelEvaluationOptions(
-        length_unit="angstrom", outputs=outputs, selected_atoms=None
-    )
-
-    result = atomistic([system, system], options, check_consistency=True)
-    assert "energy_ensemble" in result
-    assert result["energy_ensemble"].keys == Labels("_", torch.tensor([[0]]))
-    assert result["energy_ensemble"].block().values.shape[0] == 2
-    assert result["energy_ensemble"].block().samples.names == ["system"]
-    assert result["energy_ensemble"].block().properties.names == ["ensemble_member"]

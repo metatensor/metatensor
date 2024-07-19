@@ -129,7 +129,11 @@ Energy ensemble
 ^^^^^^^^^^^^^^^
 
 An ensemble of energies is associated with the ``"energy_ensemble"`` key in the
-model outputs, and must have the following metadata:
+model outputs. Such ensembles are sometimes used to perform uncertainty
+quantification, using multiple prediction to estimate an error on the mean
+prediction.
+
+Energy ensembles must have the following metadata:
 
 .. list-table:: Metadata for energy ensemble output
   :widths: 2 3 7
@@ -152,10 +156,10 @@ model outputs, and must have the following metadata:
     - same as `Energy`_
 
   * - properties
-    - ``"ensemble_member"``
+    - ``"energy"``
     - the energy ensemble must have a single property dimension named
-      ``"ensemble_member"``, with entries ranging from 0 to the number of
-      members of the ensemble minus one.
+      ``"energy"``, with entries ranging from 0 to the number of members of the
+      ensemble minus one.
 
 
 Energy ensemble gradients
