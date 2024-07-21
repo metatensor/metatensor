@@ -237,6 +237,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
     # Some annotation to make the TorchScript compiler happy
     _requested_neighbor_lists: List[NeighborListOptions]
 
+    # Documentation for the module attribute
+    module: ModelInterface
+    """
+    The torch module wrapped by this :py:class:`MetatensorAtomisticModel`.
+    Reading from this attribute is safe, but modifying it is not recommended,
+    unless you are familiar with the implementation of the model.
+    """
+
     def __init__(
         self,
         module: ModelInterface,
@@ -259,15 +267,15 @@ class MetatensorAtomisticModel(torch.nn.Module):
             raise ValueError("module should not be in training mode")
 
         _check_annotation(module)
-        self._module = module
+        self.module = module
 
         # ============================================================================ #
 
         # recursively explore `module` to get all the requested_neighbor_lists
         self._requested_neighbor_lists = []
         _get_requested_neighbor_lists(
-            self._module,
-            self._module.__class__.__name__,
+            self.module,
+            self.module.__class__.__name__,
             self._requested_neighbor_lists,
             capabilities.length_unit,
         )
@@ -308,9 +316,9 @@ class MetatensorAtomisticModel(torch.nn.Module):
         else:
             raise ValueError(f"unknown dtype in capabilities: {capabilities.dtype}")
 
-    def wrapped_module(self) -> torch.nn.Module:
+    def wrappedmodule(self) -> torch.nn.Module:
         """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
-        return self._module
+        return self.module
 
     @torch.jit.export
     def capabilities(self) -> ModelCapabilities:
@@ -380,7 +388,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
             )
 
         # run the actual calculations
-        outputs = self._module(
+        outputs = self.module(
             systems=systems,
             outputs=options.outputs,
             selected_atoms=options.selected_atoms,

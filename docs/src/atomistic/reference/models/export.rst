@@ -16,3 +16,4 @@ define some information about the model, using :py:class:`ModelMetadata` and
 
 .. autoclass:: metatensor.torch.atomistic.MetatensorAtomisticModel
     :members:
+    :exclude-members: wrapped_module
