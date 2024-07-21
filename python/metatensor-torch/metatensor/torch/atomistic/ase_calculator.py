@@ -253,6 +253,25 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             system_changes=system_changes,
         )
 
+        # In the next few lines, we decide which properties to calculate among energy,
+        # forces and stress. In addition to the requested properties, we calculate the
+        # energy if any of the three is requested, as it is an intermediate step in the
+        # calculation of the other two. We also calculate the forces if the stress is
+        # requested, and vice-versa. The overhead for the latter operation is also
+        # small, assuming that the majority of the model computes forces and stresses
+        # by backpropagation as opposed to forward-mode differentiation.
+        calculate_energy = (
+            "energy" in properties
+            or "energies" in properties
+            or "forces" in properties
+            or "stress" in properties
+        )
+        calculate_energies = "energies" in properties
+        calculate_forces = "forces" in properties or "stress" in properties
+        calculate_stress = "stress" in properties or "forces" in properties
+        if "stresses" in properties:
+            raise NotImplementedError("'stresses' are not implemented yet")
+
         with record_function("ASECalculator::prepare_inputs"):
             outputs = _ase_properties_to_metatensor_outputs(properties)
             capabilities = self._model.capabilities()
@@ -268,11 +287,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             )
 
             do_backward = False
-            if "forces" in properties:
+            if calculate_forces:
                 do_backward = True
                 positions.requires_grad_(True)
 
-            if "stress" in properties:
+            if calculate_stress:
                 do_backward = True
 
                 strain = torch.eye(
@@ -283,9 +302,6 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 positions.retain_grad()
 
                 cell = cell @ strain
-
-            if "stresses" in properties:
-                raise NotImplementedError("'stresses' are not implemented yet")
 
             run_options = ModelEvaluationOptions(
                 length_unit="angstrom",
@@ -335,14 +351,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
             self.results = {}
 
-            if "energies" in properties:
+            if calculate_energies:
                 energies_values = energies.detach().reshape(-1)
                 energies_values = energies_values.to(device="cpu").to(
                     dtype=torch.float64
                 )
                 self.results["energies"] = energies_values.numpy()
 
-            if "energy" in properties:
+            if calculate_energy:
                 energy_values = energy.detach()
                 energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["energy"] = energy_values.numpy()[0, 0]
@@ -352,12 +368,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 energy.backward()
 
         with record_function("ASECalculator::convert_outputs"):
-            if "forces" in properties:
+            if calculate_forces:
                 forces_values = -system.positions.grad.reshape(-1, 3)
                 forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["forces"] = forces_values.numpy()
 
-            if "stress" in properties:
+            if calculate_stress:
                 stress_values = strain.grad.reshape(3, 3) / atoms.cell.volume
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
