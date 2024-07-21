@@ -11,6 +11,7 @@ if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     )
 
     from .documentation import (
+        read_model_metadata,
         check_atomistic_model,
         load_model_extensions,
         register_autograd_neighbors,
@@ -26,6 +27,7 @@ else:
     ModelCapabilities = torch.classes.metatensor.ModelCapabilities
     ModelMetadata = torch.classes.metatensor.ModelMetadata
 
+    read_model_metadata = torch.ops.metatensor.read_model_metadata
     load_model_extensions = torch.ops.metatensor.load_model_extensions
     check_atomistic_model = torch.ops.metatensor.check_atomistic_model
 
