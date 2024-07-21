@@ -68,7 +68,7 @@ the metatensor ecosystem!
     - `torch_spex <https://github.com/lab-cosmo/torch_spex/>`_: pure PyTorch
       implementation of spherical expansion representation, with GPU and
       learnable representations support, which outputs to metatensor format;
-    - `metatensor-models <https://github.com/lab-cosmo/metatensor-models/>`_: an
+    - `metatrain <https://github.com/lab-cosmo/metatrain/>`_: an
       end-to-end training and evaluation library for models based on metatensor;
     - `Q-stack <https://github.com/lcmd-epfl/Q-stack/>`_: library of pre- and
       post-processing tasks for Quantum Machine Learning; can output some of its

@@ -16,11 +16,12 @@ model itself, and to allow any model architecture to be used.
 This part of metatensor focusses on exporting and importing fully working,
 already trained models. There are some tools elsewhere to define new models (in
 the :ref:`operations <python-api-operations>` and :ref:`learn
-<python-api-learn>` submodules). If you want to train existing architectures
-with new data or re-use existing trained models, look into the (work in
-progress!) metatensor-models_ project instead.
+<python-api-learn>` submodules).
 
-.. _metatensor-models: https://github.com/lab-cosmo/metatensor-models
+If you want to train existing architectures with new data or re-use existing trained
+models, look into the (work in progress!) metatrain_ project instead.
+
+.. _metatrain: https://github.com/lab-cosmo/metatrain
 
 .. grid::
 

@@ -7,6 +7,7 @@ import warnings
 from typing import Dict, List, Optional
 
 import torch
+from torch.profiler import record_function
 
 from .. import Labels, TensorBlock, TensorMap
 from .. import __version__ as metatensor_version
@@ -131,7 +132,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     :py:class:`MetatensorAtomisticModel` is the main entry point for atomistic machine
     learning based on metatensor. It is the interface between custom, user-defined
     models and simulation engines. Users should wrap their models with this class, and
-    use :py:meth:`export()` to save and export the model to a file. The exported models
+    use :py:meth:`save()` to save the wrapped model to a file. The exported models
     can then be loaded by a simulation engine to compute properties of atomistic
     systems.
 
@@ -228,9 +229,9 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ... )
     >>> # wrap the model
     >>> wrapped = MetatensorAtomisticModel(model, metadata, capabilities)
-    >>> # export the model
+    >>> # save the wrapped model to disk
     >>> with tempfile.TemporaryDirectory() as directory:
-    ...     wrapped.export(os.path.join(directory, "constant-energy-model.pt"))
+    ...     wrapped.save(os.path.join(directory, "constant-energy-model.pt"))
     ...
     """
 
@@ -364,74 +365,98 @@ class MetatensorAtomisticModel(torch.nn.Module):
         """
 
         if check_consistency:
-            _check_inputs(
-                capabilities=self._capabilities,
-                requested_neighbor_lists=self._requested_neighbor_lists,
-                systems=systems,
-                options=options,
-                expected_dtype=self._model_dtype,
-            )
-
-        # convert systems from engine to model units
-        if self._capabilities.length_unit != options.length_unit:
-            conversion = unit_conversion_factor(
-                quantity="length",
-                from_unit=options.length_unit,
-                to_unit=self._capabilities.length_unit,
-            )
-
-            systems = _convert_systems_units(
-                systems,
-                conversion,
-                model_length_unit=self._capabilities.length_unit,
-                system_length_unit=options.length_unit,
-            )
-
-        # run the actual calculations
-        outputs = self.module(
-            systems=systems,
-            outputs=options.outputs,
-            selected_atoms=options.selected_atoms,
-        )
-
-        if check_consistency:
-            _check_outputs(
-                systems=systems,
-                requested=options.outputs,
-                selected_atoms=options.selected_atoms,
-                outputs=outputs,
-                expected_dtype=self._model_dtype,
-            )
-
-        # convert outputs from model to engine units
-        for name, output in outputs.items():
-            declared = self._capabilities.outputs[name]
-            requested = options.outputs[name]
-            if declared.quantity == "" or requested.quantity == "":
-                continue
-
-            if declared.quantity != requested.quantity:
-                raise ValueError(
-                    f"model produces values as '{declared.quantity}' for the '{name}' "
-                    f"output, but the engine requested '{requested.quantity}'"
+            with record_function("MetatensorAtomisticModel::check_inputs"):
+                _check_inputs(
+                    capabilities=self._capabilities,
+                    requested_neighbor_lists=self._requested_neighbor_lists,
+                    systems=systems,
+                    options=options,
+                    expected_dtype=self._model_dtype,
                 )
 
-            conversion = unit_conversion_factor(
-                quantity=declared.quantity,
-                from_unit=declared.unit,
-                to_unit=requested.unit,
+        # convert systems from engine to model units
+        with record_function("MetatensorAtomisticModel::convert_units_input"):
+            if self._capabilities.length_unit != options.length_unit:
+                conversion = unit_conversion_factor(
+                    quantity="length",
+                    from_unit=options.length_unit,
+                    to_unit=self._capabilities.length_unit,
+                )
+
+                systems = _convert_systems_units(
+                    systems,
+                    conversion,
+                    model_length_unit=self._capabilities.length_unit,
+                    system_length_unit=options.length_unit,
+                )
+
+        # run the actual calculations
+        with record_function("Model::forward"):
+            outputs = self.module(
+                systems=systems,
+                outputs=options.outputs,
+                selected_atoms=options.selected_atoms,
             )
 
-            if conversion != 1.0:
-                for block in output.blocks():
-                    block.values[:] *= conversion
-                    for _, gradient in block.gradients():
-                        gradient.values[:] *= conversion
+        if check_consistency:
+            with record_function("MetatensorAtomisticModel::check_outputs"):
+                _check_outputs(
+                    systems=systems,
+                    requested=options.outputs,
+                    selected_atoms=options.selected_atoms,
+                    outputs=outputs,
+                    expected_dtype=self._model_dtype,
+                )
+
+        # convert outputs from model to engine units
+        with record_function("MetatensorAtomisticModel::convert_units_output"):
+            for name, output in outputs.items():
+                declared = self._capabilities.outputs[name]
+                requested = options.outputs[name]
+                if declared.quantity == "" or requested.quantity == "":
+                    continue
+
+                if declared.quantity != requested.quantity:
+                    raise ValueError(
+                        f"model produces values as '{declared.quantity}' for the "
+                        f"'{name}' output, but the engine requested "
+                        f"'{requested.quantity}'"
+                    )
+
+                conversion = unit_conversion_factor(
+                    quantity=declared.quantity,
+                    from_unit=declared.unit,
+                    to_unit=requested.unit,
+                )
+
+                if conversion != 1.0:
+                    for block in output.blocks():
+                        block.values[:] *= conversion
+                        for _, gradient in block.gradients():
+                            gradient.values[:] *= conversion
 
         return outputs
 
     def export(self, file: str, collect_extensions: Optional[str] = None):
         """Export this model to a file that can then be loaded by simulation engine.
+
+        .. warning::
+            :py:meth:`export` is deprecated. Use :py:meth:`save` instead.
+
+        :param file: where to save the model. This can be a path or a file-like object.
+        :param collect_extensions: if not None, all currently loaded PyTorch extension
+            will be collected in this directory. If this directory already exists, it
+            is removed and re-created.
+        """
+        warnings.warn(
+            message="`export()` is deprecated, use `save()` instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.save(file, collect_extensions)
+
+    def save(self, file: str, collect_extensions: Optional[str] = None):
+        """Save this model to a file that can then be loaded by simulation engine.
 
         :param file: where to save the model. This can be a path or a file-like object.
         :param collect_extensions: if not None, all currently loaded PyTorch extension
@@ -442,7 +467,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         if os.environ.get("PYTORCH_JIT") == "0":
             raise RuntimeError(
                 "found PYTORCH_JIT=0 in the environment, "
-                "we can not export models without TorchScript"
+                "we can not save models without TorchScript"
             )
 
         try:
@@ -466,7 +491,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         extensions, deps = _collect_extensions(extensions_path=collect_extensions)
 
         torch.jit.save(
-            module,
+            module.to("cpu"),  # this allows to torch.jit.load without devices
             file,
             _extra_files={
                 "torch-version": torch.__version__,

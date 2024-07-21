@@ -17,6 +17,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- Dataset and DataLoader can now handle fields with a name which is not a valid
+  Python identifier.
+- We now require Python >= 3.9
+
+
 ## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.2) - 2024-05-16
 
 ### Added
@@ -29,6 +36,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `metatensor.learn.nn` modules `LayerNorm` and `InvariantLayerNorm` now applies
+  sample-independent transformations to input tensors.
 - Set correct device for output of when torch default device is different than input device (#595)
 
 ## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.1) - 2024-03-01

@@ -152,15 +152,49 @@ generate_export_header(metatensor_torch
 )
 target_compile_definitions(metatensor_torch PRIVATE metatensor_torch_EXPORTS)
 
-set(version_header "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/version.h")
-file(WRITE ${version_header} "/** Full version of metatensor-torch as a string */\n")
-file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION \"${METATENSOR_TORCH_FULL_VERSION}\"\n\n")
-file(APPEND ${version_header} "/** Major version number of metatensor-torch as an integer */\n")
-file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
-file(APPEND ${version_header} "/** Minor version number of metatensor-torch as an integer */\n")
-file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_MINOR ${PROJECT_VERSION_MINOR}\n\n")
-file(APPEND ${version_header} "/** Patch version number of metatensor-torch as an integer */\n")
-file(APPEND ${version_header} "#define METATENSOR_TORCH_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
+
+set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
+file(WRITE ${_path_} "/** Full version of metatensor-torch as a string */\n")
+file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION \"${METATENSOR_TORCH_FULL_VERSION}\"\n\n")
+file(APPEND ${_path_} "/** Major version number of metatensor-torch as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
+file(APPEND ${_path_} "/** Minor version number of metatensor-torch as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MINOR ${PROJECT_VERSION_MINOR}\n\n")
+file(APPEND ${_path_} "/** Patch version number of metatensor-torch as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
+
+function(copy_if_different _src_ _dst_)
+    # file(COPY_FILE ...) was added in cmake 3.21, this emulates the same
+    # behavior on older versions
+    get_filename_component(_dst_dir_ ${_dst_} DIRECTORY)
+    get_filename_component(_src_name_ ${_src_} NAME)
+
+    if (EXISTS ${_dst_})
+        file(SHA1 ${_src_} new_hash)
+        file(SHA1 ${_dst_} old_hash)
+
+        if ("${new_hash}" STREQUAL "${old_hash}")
+            set(_do_copy_ FALSE)
+        else()
+            set(_do_copy_ TRUE)
+        endif()
+    else()
+        # The destination does not exist
+        set(_do_copy_ TRUE)
+    endif()
+
+    if (${_do_copy_})
+        file(COPY ${_src_} DESTINATION ${_dst_dir_})
+        file(RENAME ${_dst_dir_}/${_src_name_} ${_dst_})
+    endif()
+endfunction()
+
+set(_destination_ "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/version.h")
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
+    file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
+else()
+    copy_if_different(${_path_} ${_destination_})
+endif()
 
 #------------------------------------------------------------------------------#
 # External dependencies

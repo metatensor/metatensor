@@ -4,6 +4,16 @@ import pytest
 import metatensor
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _gradcheck
+
+
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
 
 @pytest.fixture
 def keys():
@@ -258,3 +268,27 @@ def test_self_add_error():
     )
     with pytest.raises(TypeError, match=message):
         metatensor.add(tensor, np.ones((3, 4)))
+
+
+def test_add_finite_difference():
+    def function(array):
+        tensor_1 = _gradcheck.cartesian_linear(array)
+        tensor_2 = _gradcheck.cartesian_cubic(array)
+        return metatensor.add(tensor_1, tensor_2)
+
+    rng = np.random.default_rng(seed=123456)
+    array = rng.random((5, 3))
+    _gradcheck.check_finite_differences(function, array, parameter="g")
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
+def test_torch_add_finite_difference():
+    def function(array):
+        tensor_1 = _gradcheck.cartesian_linear(array)
+        tensor_2 = _gradcheck.cartesian_cubic(array)
+        return metatensor.add(tensor_1, tensor_2)
+
+    rng = torch.Generator()
+    rng.manual_seed(123456)
+    array = torch.rand(5, 3, dtype=torch.float64, generator=rng)
+    _gradcheck.check_finite_differences(function, array, parameter="g")

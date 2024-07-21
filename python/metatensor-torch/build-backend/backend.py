@@ -55,4 +55,4 @@ build_sdist = build_meta.build_sdist
 # Special dependencies to build the wheels
 def get_requires_for_build_wheel(config_settings=None):
     defaults = build_meta.get_requires_for_build_wheel(config_settings)
-    return defaults + ["cmake", TORCH_DEP, METATENSOR_CORE_DEP]
+    return defaults + [TORCH_DEP, METATENSOR_CORE_DEP]

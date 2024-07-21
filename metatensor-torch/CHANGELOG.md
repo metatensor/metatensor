@@ -14,8 +14,43 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Changed
 
+### Deprecated
+
 ### Removed
 -->
+
+## [Version 0.5.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
+
+### Changed
+
+- `MetatensorAtomisticModel.save()` always saves models on the CPU.
+- We now require Python >= 3.9
+
+### Fixed
+
+- Fixed a memory leak in `register_autograd_neighbors` (#684)
+
+## [Version 0.5.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.2) - 2024-06-21
+
+### Added
+
+- `MetatensorAtomisticModel.save()` to save a wrapped model to a file.
+- `TensorBlock.__len__` and `TensorBlock.shape`, which return the length and
+  shape of the values in the block respectively (#640)
+- `metatensor.torch.atomistic.ase_calculator.MetatensorCalculator` can now use
+  [`vesin`](https://github.com/Luthaf/vesin) for faster neighbor list
+  calculations (#659)
+- When running atomistic models in the PyTorch profiler, different sections of
+  the code now have meaningful names
+
+### Deprecated
+
+- `MetatensorAtomisticModel.export()` is deprecated in favor of `MetatensorAtomisticModel.save()`
+
+### Fixed
+
+- `metatensor.torch.atomistic.ase_calculator.MetatensorCalculator` uses the
+  right device when computing stress/virial (#660)
 
 ## [Version 0.5.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.1) - 2024-05-14
 

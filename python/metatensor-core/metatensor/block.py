@@ -182,6 +182,20 @@ class TensorBlock:
             "TensorMap first"
         )
 
+    def __len__(self) -> int:
+        """
+        Get the length of the values stored in this block
+        (i.e. the number of samples in the block)
+        """
+        return len(self.values)
+
+    @property
+    def shape(self):
+        """
+        Get the shape of the values  array in this block.
+        """
+        return self.values.shape
+
     def copy(self) -> "TensorBlock":
         """
         get a deep copy of this block, including all the data and metadata
@@ -189,6 +203,12 @@ class TensorBlock:
         return copy.deepcopy(self)
 
     def __repr__(self) -> str:
+        if self._actual_ptr is None:
+            return (
+                "Empty TensorBlock (data has been moved to another "
+                "TensorBlock or TensorMap)"
+            )
+
         if len(self._gradient_parameters) != 0:
             s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
         else:

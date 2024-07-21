@@ -59,11 +59,15 @@ def _collect_extensions(extensions_path):
 
 
 def _copy_extension(full_path, extensions_path):
+    site_packages = site.getsitepackages()
+    if site.ENABLE_USER_SITE:
+        site_packages.append(site.getusersitepackages())
+
     path = full_path
-    for site_packages in site.getsitepackages():
+    for prefix in site_packages:
         # Remove any site-package prefix
-        if path.startswith(site_packages):
-            path = os.path.relpath(path, site_packages)
+        if path.startswith(prefix):
+            path = os.path.relpath(path, prefix)
             break
 
     if extensions_path is not None:

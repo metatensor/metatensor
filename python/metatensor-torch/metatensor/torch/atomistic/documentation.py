@@ -385,7 +385,12 @@ class ModelEvaluationOptions:
 
 
 class ModelMetadata:
-    """Metadata about a specific exported model"""
+    """
+    Metadata about a specific exported model
+
+    This class implements the ``__str__`` and ``__repr__`` methods, so its
+    representation can be easily printed, logged, inserted into other strings, etc.
+    """
 
     def __init__(
         self,
@@ -415,12 +420,6 @@ class ModelMetadata:
       used by this model
     - "model": for reference specific to this exact model
     """
-
-    def print(self) -> str:
-        """
-        Format the model metadata into a string. This is the same format used for
-        ``__str__`` and ``__repr__``.
-        """
 
 
 def check_atomistic_model(path: str):
@@ -458,8 +457,8 @@ def register_autograd_neighbors(
     system: System, neighbors: TensorBlock, check_consistency: bool
 ):
     """
-    Register a new autograd node going from (``system.positions``, ``system.cell``) to
-    the ``neighbors`` distance vectors.
+    Register a new torch autograd node going from (``system.positions``,
+    ``system.cell``) to the ``neighbors`` distance vectors.
 
     This does not recompute the distance vectors, but work as-if all the data in
     ``neighbors.values`` was computed directly from ``system.positions`` and
@@ -468,10 +467,10 @@ def register_autograd_neighbors(
 
     :param system: system containing the positions and cell used to compute the
         neighbors list
-    :param system: neighbors list, following the same format as
+    :param neighbors: neighbors list, following the same format as
         :py:meth:`System.add_neighbor_list`
-    :param check_consistency: can be set to ``True`` to run a handful of additional
-        checks in case the data in neighbors does not follow what's expected.
+    :param check_consistency: can be set to ``True`` to run additional checks in case
+        the data in neighbors does not follow what's expected.
     """
 
 

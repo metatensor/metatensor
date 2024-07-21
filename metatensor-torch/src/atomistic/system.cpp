@@ -145,15 +145,35 @@ torch::Tensor NeighborsAutograd::forward(
     auto distances = neighbors->values();
 
     if (check_consistency) {
+        auto n_atoms = positions.size(0);
         auto epsilon = 1e-6;
         if (distances.scalar_type() != torch::kFloat64) {
-            auto epsilon = 1e-4;
+            epsilon = 1e-4;
         }
 
         auto samples = neighbors->samples()->values();
         for (int64_t sample_i=0; sample_i<samples.size(0); sample_i++) {
             auto atom_i = samples[sample_i][0];
             auto atom_j = samples[sample_i][1];
+
+            auto atom_i_cpu = atom_i.to(torch::kCPU).item<int32_t>();
+            auto atom_j_cpu = atom_j.to(torch::kCPU).item<int32_t>();
+            if (atom_i_cpu < 0 || atom_i_cpu >= n_atoms) {
+                C10_THROW_ERROR(ValueError,
+                    "checking internal consistency: 'first_atom' in neighbor list (" +
+                    std::to_string(atom_i_cpu) + ") is out of bounds (we have " +
+                    std::to_string(n_atoms) + " atoms in the system)"
+                );
+            }
+
+            if (atom_j_cpu < 0 || atom_j_cpu >= n_atoms) {
+                C10_THROW_ERROR(ValueError,
+                    "checking internal consistency: 'second_atom' in neighbor list (" +
+                    std::to_string(atom_j_cpu) + ") is out of bounds (we have " +
+                    std::to_string(n_atoms) + " atoms in the system)"
+                );
+            }
+
             auto cell_shift = samples.index({sample_i, torch::indexing::Slice(2, 5)}).to(positions.scalar_type());
 
             auto actual_distance = distances[sample_i].reshape({3});
@@ -163,7 +183,7 @@ torch::Tensor NeighborsAutograd::forward(
             if (diff_norm.item<double>() > epsilon) {
                 std::ostringstream oss;
 
-                oss << "one neighbor pair does not match its metadata: ";
+                oss << "checking internal consistency: one neighbor pair does not match its metadata: ";
                 oss << "the pair between atom " << atom_i.item<int32_t>();
                 oss << " and atom " << atom_j.item<int32_t>() << " for the ";
 
@@ -192,8 +212,7 @@ torch::Tensor NeighborsAutograd::forward(
         }
     }
 
-    ctx->save_for_backward({positions, cell});
-    ctx->saved_data["neighbors"] = neighbors;
+    ctx->save_for_backward({positions, cell, neighbors->values(), neighbors->samples()->values()});
 
     return distances;
 }
@@ -208,37 +227,36 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
     auto saved_variables = ctx->get_saved_variables();
     auto positions = saved_variables[0];
     auto cell = saved_variables[1];
-    auto neighbors = ctx->saved_data["neighbors"].toCustomClass<TensorBlockHolder>();
-    auto samples = neighbors->samples()->values();
-    auto distances = neighbors->values();
+
+    auto distances = saved_variables[2];
+    auto samples = saved_variables[3];
 
     auto positions_grad = torch::Tensor();
     if (positions.requires_grad()) {
         positions_grad = torch::zeros_like(positions);
-
-        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
-            auto atom_i = samples[sample_i][0].item<int32_t>();
-            auto atom_j = samples[sample_i][1].item<int32_t>();
-
-            auto all = torch::indexing::Slice();
-            auto grad = distances_grad.index({sample_i, all, 0});
-            positions_grad.index({atom_i, all}) -= grad;
-            positions_grad.index({atom_j, all}) += grad;
-        }
+        positions_grad = torch::index_add(
+            positions_grad,
+            /*dim=*/0,
+            /*index=*/samples.index({torch::indexing::Slice(), 1}),
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/1.0
+        );
+        positions_grad = torch::index_add(
+            positions_grad,
+            /*dim=*/0,
+            /*index=*/samples.index({torch::indexing::Slice(), 0}),
+            /*source=*/distances_grad.squeeze(-1),
+            /*alpha=*/-1.0
+        );
     }
 
     auto cell_grad = torch::Tensor();
     if (cell.requires_grad()) {
-        cell_grad = torch::zeros_like(cell);
-
-        for (int64_t sample_i = 0; sample_i < samples.size(0); sample_i++) {
-            auto cell_shift = samples.index({
-                torch::indexing::Slice(sample_i, sample_i + 1),
-                torch::indexing::Slice(2, 5)
-            }).to(cell.scalar_type());
-
-            cell_grad += cell_shift.t().matmul(distances_grad[sample_i].t());
-        }
+        auto cell_shifts = samples.index({
+            torch::indexing::Slice(),
+            torch::indexing::Slice(2, 5)
+        }).to(cell.scalar_type());
+        cell_grad = cell_shifts.t().matmul(distances_grad.squeeze(-1));
     }
 
     return {positions_grad, cell_grad, torch::Tensor(), torch::Tensor()};
@@ -574,9 +592,6 @@ void SystemHolder::add_neighbor_list(NeighborListOptions options, TorchTensorBlo
             "'first_atom', 'second_atom', 'cell_shift_a', 'cell_shift_b', 'cell_shift_c'"
         );
     }
-
-    // TODO: we could check that the values of first_atom and second_atom match
-    // entried in positions, but this might be a bit costly
 
     auto components = neighbors->components();
     if (components.size() != 1 || *components[0] != metatensor::Labels({"xyz"}, {{0}, {1}, {2}})) {

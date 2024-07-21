@@ -59,6 +59,16 @@ public:
         return this->labels(0);
     }
 
+    /// Get the length of this block, i.e. the number of samples
+    int64_t len() const {
+        return this->labels(0)->count();
+    }
+
+    /// Get the shape of the values Tensor
+    at::IntArrayRef shape() const{
+        return this->values().sizes() ;
+    }
+
     /// Access the component `Labels` for this block.
     ///
     /// The entries in these labels describe intermediate dimensions of the

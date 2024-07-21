@@ -158,9 +158,6 @@ def generate_cxx_tar():
     except Exception as e:
         raise RuntimeError("could not run `bash`, is it installed?") from e
 
-    stderr = ""
-    stdout = ""
-
     output = subprocess.run(
         ["bash", script, os.getcwd()],
         stderr=subprocess.PIPE,

@@ -45,16 +45,14 @@ def test_layer_norm_torch_mts_equivalence(tensor):
             dtype=torch.float64,
         )(array)
 
-        # Apply the native torch.nn.LayerNorm. This requires reshaping such that the
-        # properties are in the first dimension. This is because the `normalized_shape`
-        # parameter is defined over the *final* D dimensions of the array, and we want
-        # to reduce over samples and components.
-        array_T = array.transpose(0, 2)
+        # Apply the native torch.nn.LayerNorm. `normalized_shape` is defined over the
+        # last D dimensions of the array, and we want to reduce over components and
+        # properties
         norm_torch = torch.nn.LayerNorm(
-            normalized_shape=array_T.shape[1:],
+            normalized_shape=array.shape[1:],
             elementwise_affine=True,
             dtype=torch.float64,
-        )(array_T).transpose(0, 2)
+        )(array)
         assert torch.allclose(norm_mts, norm_torch, atol=1e-10, rtol=1e-10)
 
 
@@ -83,3 +81,19 @@ def test_equivariance(tensor, wigner_d_real):
     fRx = f(Rx)  # f(R . x)
 
     assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_layer_norm_independent_samples():
+    """
+    Tests that the LayerNorm is applied to each sample independently.
+    """
+    layer_norm_module = _LayerNorm(
+        in_features=10, elementwise_affine=True, dtype=torch.float64
+    )
+    tensor = torch.randn(5, 3, 10)
+    norm = layer_norm_module(tensor)
+
+    # Apply to each sample independently and check consistency
+    for i in range(tensor.shape[0]):
+        norm_i = layer_norm_module(tensor[i : i + 1])
+        assert torch.allclose(norm[i], norm_i, atol=1e-10, rtol=1e-10)

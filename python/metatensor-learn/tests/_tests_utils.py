@@ -15,14 +15,11 @@ torch = pytest.importorskip("torch")
 from metatensor.learn.data import Dataset, IndexedDataset  # noqa E402
 
 
-TORCH_KWARGS = {"device": "cpu", "dtype": torch.float32}
-
-
 def random_single_block_no_components_tensor_map(use_torch):
     """Create a dummy tensor map to be used in tests."""
 
     if use_torch:
-        create_random_array = partial(torch.rand, **TORCH_KWARGS)
+        create_random_array = partial(torch.rand, device="cpu", dtype=torch.float32)
     else:
         create_random_array = np.random.rand
 
@@ -154,7 +151,7 @@ def generate_data(sample_indices):
     return inputs, outputs, auxiliaries
 
 
-def transform(sample_index: int, filename: str):
+def load_tensor_map(sample_index: int, filename: str):
     """
     Loads a TensorMap for a given sample indexed by `sample_index` from disk and
     converts it to a torch tensor.
@@ -164,7 +161,7 @@ def transform(sample_index: int, filename: str):
     tensor = metatensor.io.load_custom_array(
         path, create_array=metatensor.io.create_torch_array
     )
-    return tensor.to(**TORCH_KWARGS)
+    return tensor
 
 
 def dataset_in_mem(sample_indices):
@@ -183,9 +180,9 @@ def dataset_on_disk(sample_indices):
     _ = generate_data(range(len(sample_indices)))
     return Dataset(
         size=len(sample_indices),
-        input=partial(transform, filename="input"),
-        output=partial(transform, filename="output"),
-        auxiliary=partial(transform, filename="auxiliary"),
+        input=partial(load_tensor_map, filename="input"),
+        output=partial(load_tensor_map, filename="output"),
+        auxiliary=partial(load_tensor_map, filename="auxiliary"),
     )
 
 
@@ -197,7 +194,7 @@ def dataset_mixed_mem_disk(sample_indices):
         size=len(sample_indices),
         input=inputs,
         output=outputs,
-        auxiliary=partial(transform, filename="auxiliary"),
+        auxiliary=partial(load_tensor_map, filename="auxiliary"),
     )
 
 
@@ -217,9 +214,9 @@ def indexed_dataset_on_disk(sample_indices):
     _ = generate_data(sample_indices)
     return IndexedDataset(
         sample_id=sample_indices,
-        input=partial(transform, filename="input"),
-        output=partial(transform, filename="output"),
-        auxiliary=partial(transform, filename="auxiliary"),
+        input=partial(load_tensor_map, filename="input"),
+        output=partial(load_tensor_map, filename="output"),
+        auxiliary=partial(load_tensor_map, filename="auxiliary"),
     )
 
 
@@ -233,7 +230,7 @@ def indexed_dataset_mixed_mem_disk(sample_indices):
         sample_id=sample_indices,
         input=inputs,
         output=outputs,
-        auxiliary=partial(transform, filename="auxiliary"),
+        auxiliary=partial(load_tensor_map, filename="auxiliary"),
     )
 
 

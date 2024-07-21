@@ -1,11 +1,8 @@
-"""
-Module for defining a Dataset or IndexedDataset.
-"""
-
-from collections import namedtuple
-from typing import List, NamedTuple, Optional
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union
 
 import torch
+
+from ._namedtuple import namedtuple
 
 
 class _BaseDataset(torch.utils.data.Dataset):
@@ -13,7 +10,12 @@ class _BaseDataset(torch.utils.data.Dataset):
     Defines the base private class for a metatensor-learn dataset.
     """
 
-    def __init__(self, arg_name: str, size: Optional[int] = None, **kwargs):
+    def __init__(
+        self,
+        data: Dict[str, Any],
+        size_arg_name: str,
+        size: Optional[int] = None,
+    ):
         super(_BaseDataset, self).__init__()
 
         field_names = []
@@ -21,12 +23,14 @@ class _BaseDataset(torch.utils.data.Dataset):
         field_sizes = []
 
         # Check type consistency in kwarg fields
-        for name, field in kwargs.items():
+        for name, field in data.items():
             if isinstance(field, list):
-                if not all([isinstance(field[0], type(f)) for f in field]):
-                    raise TypeError(
-                        f"Data field {name} must be a list of the same type"
-                    )
+                if name != "sample_id":
+                    # sample_id is allowed to used different types for different entries
+                    if not all([isinstance(field[0], type(f)) for f in field]):
+                        raise TypeError(
+                            f"Data field {name} must be a list of the same type"
+                        )
                 field_sizes.append(len(field))
             else:
                 if not callable(field):
@@ -41,7 +45,7 @@ class _BaseDataset(torch.utils.data.Dataset):
             if len(field_sizes) == 0:
                 raise ValueError(
                     "If passing all data fields as callables, argument "
-                    f"'{arg_name}' must also be provided."
+                    f"'{size_arg_name}' must also be provided."
                 )
             else:
                 if not all([s == field_sizes[0] for s in field_sizes]):
@@ -54,15 +58,17 @@ class _BaseDataset(torch.utils.data.Dataset):
             if len(field_sizes) > 0:
                 if not all([s == size for s in field_sizes]):
                     raise ValueError(
-                        f"Number of samples inconsistent between argument '{arg_name}' "
-                        f"({size}) and data fields in kwargs: ({field_sizes})"
+                        "Number of samples inconsistent between argument "
+                        f"'{size_arg_name}' ({size}) and data fields: ({field_sizes})"
                     )
 
         # Define an internal numeric index list as a range from 0 to size
         self._indices = list(range(size))
         self._field_names = field_names
-        self._data = {name: kwargs[name] for name in self._field_names}
+        self._data = data
         self._size = size
+
+        self._sample_class = namedtuple("Sample", self._field_names)
 
     def __len__(self) -> int:
         """
@@ -104,13 +110,46 @@ class Dataset(_BaseDataset):
     ID. This data field for a given sample is then only lazily loaded into memory when
     the :py:meth:`Dataset.__getitem__` method is called.
 
-    :param size: Optional, an integer indicating the size of the dataset, i.e. the
-        number of samples. This only needs to be specified if all data
-    :param kwargs: List or Callable. Keyword arguments specifying the data fields for
-        the dataset.
+    >>> # create a Dataset with only lists
+    >>> dataset = Dataset(num=[1, 2, 3], string=["a", "b", "c"])
+    >>> dataset[0]
+    Sample(num=1, string='a')
+    >>> dataset[2]
+    Sample(num=3, string='c')
+
+    >>> # create a Dataset with callables for lazy loading of data
+    >>> def call_me(sample_id: int):
+    ...     # this could also read from a file
+    ...     return f"compute something with sample {sample_id}"
+    >>> dataset = Dataset(num=[1, 2, 3], call_me=call_me)
+    >>> dataset[0]
+    Sample(num=1, call_me='compute something with sample 0')
+    >>> dataset[2]
+    Sample(num=3, call_me='compute something with sample 2')
+
+    >>> # iterating over a dataset
+    >>> for num, called in dataset:
+    ...     print(num, " -- ", called)
+    ...
+    1  --  compute something with sample 0
+    2  --  compute something with sample 1
+    3  --  compute something with sample 2
+    >>> for sample in dataset:
+    ...     print(sample.num, " -- ", sample.call_me)
+    ...
+    1  --  compute something with sample 0
+    2  --  compute something with sample 1
+    3  --  compute something with sample 2
     """
 
     def __init__(self, size: Optional[int] = None, **kwargs):
+        """
+        :param size: Optional, an integer indicating the size of the dataset, i.e. the
+            number of samples. This only needs to be specified if all the fields are
+            callable.
+        :param kwargs: List or Callable. Keyword arguments specifying the data fields
+            for the dataset.
+        """
         if "sample_id" in kwargs:
             raise ValueError(
                 "Keyword argument 'sample_id' is not accepted by Dataset."
@@ -118,7 +157,54 @@ class Dataset(_BaseDataset):
                 " instead."
             )
 
-        super(Dataset, self).__init__(arg_name="size", size=size, **kwargs)
+        super().__init__(data=kwargs, size_arg_name="size", size=size)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Dict[str, Union[List, Callable]],
+        size: Optional[int] = None,
+    ) -> "Dataset":
+        """
+        Create a :py:class:`Dataset` from the given ``data``. This function behave like
+        ``Dataset(size=size, **data)``, but allows to use names for the different fields
+        that would not be valid in the main constructor.
+
+        >>> dataset = Dataset.from_dict(
+        ...     {
+        ...         "valid": [0, 0, 0],
+        ...         "with space": [-1, 2, -3],
+        ...         "with/slash": ["a", "b", "c"],
+        ...     }
+        ... )
+        >>> sample = dataset[1]
+        >>> sample
+        Sample(valid=0, 'with space'=2, 'with/slash'='b')
+        >>> # fields for which the name is a valid identifier can be accessed as usual
+        >>> sample.valid
+        0
+        >>> # fields which are not valid identifiers can be accessed like this
+        >>> sample["with space"]
+        2
+        >>> sample["with/slash"]
+        'b'
+
+        :param data: Dictionary of List or Callable containing the data. This will
+            behave as if all the entries of the dictionary where passed as keyword
+            arguments to ``__init__``.
+        :param size: Optional, an integer indicating the size of the dataset, i.e. the
+            number of samples. This only needs to be specified if all the fields are
+            callable.
+        """
+        if "sample_id" in data:
+            raise ValueError(
+                "'sample_id' is not accepted by Dataset. For an indexed dataset, "
+                "use the IndexedDataset class instead."
+            )
+
+        dataset = cls.__new__(cls)
+        _BaseDataset.__init__(self=dataset, data=data, size_arg_name="size", size=size)
+        return dataset
 
     def __getitem__(self, idx: int) -> NamedTuple:
         """
@@ -130,22 +216,20 @@ class Dataset(_BaseDataset):
         """
         if idx not in self._indices:
             raise ValueError(f"Index {idx} not in dataset")
-        names = self._field_names
         sample_data = []
         for name in self._field_names:
             if callable(self._data[name]):  # lazy load
                 try:
                     sample_data.append(self._data[name](idx))
                 except Exception as e:
-                    raise IOError(
-                        f"Error loading data field '{name}' at numeric"
-                        f" sample index {idx}: {e}"
-                    )
+                    raise ValueError(
+                        f"Error loading data field '{name}' at sample index {idx}"
+                    ) from e
             else:
                 assert isinstance(self._data[name], list)
                 sample_data.append(self._data[name][idx])
 
-        return namedtuple("Sample", names)(*sample_data)
+        return self._sample_class(*sample_data)
 
 
 class IndexedDataset(_BaseDataset):
@@ -175,6 +259,25 @@ class IndexedDataset(_BaseDataset):
     then only lazily loaded into memory when :py:meth:`IndexedDataset.__getitem__` or
     :py:meth:`IndexedDataset.get_sample` methods are called.
 
+    >>> # create an IndexedDataset with lists
+    >>> dataset = IndexedDataset(sample_id=["cat", "bird", "dog"], y=[11, 22, 33])
+    >>> dataset[0]
+    Sample(sample_id='cat', y=11)
+    >>> dataset[2]
+    Sample(sample_id='dog', y=33)
+
+    >>> # create an IndexedDataset with callables for lazy loading of data
+    >>> def call_me(sample_id: int):
+    ...     # this could also read from a file
+    ...     return f"compute something with sample {sample_id}"
+    >>> dataset = IndexedDataset(sample_id=["cat", "bird", "dog"], call_me=call_me)
+    >>> dataset[0]
+    Sample(sample_id='cat', call_me='compute something with sample cat')
+    >>> dataset[2]
+    Sample(sample_id='dog', call_me='compute something with sample dog')
+    >>> dataset.get_sample("bird")
+    Sample(sample_id='bird', call_me='compute something with sample bird')
+
     :param sample_id: A list of unique IDs for each sample in the dataset.
     :param kwargs: Keyword arguments specifying the data fields for the dataset.
     """
@@ -187,13 +290,74 @@ class IndexedDataset(_BaseDataset):
                 " use the Dataset class instead."
             )
         if len(set(sample_id)) != len(sample_id):
-            raise ValueError("Sample IDs must be unique. Found duplicate sample IDs.")
+            raise ValueError("Sample IDs must be unique, found some duplicate")
 
-        super(IndexedDataset, self).__init__(
-            arg_name="sample_id", size=len(sample_id), **kwargs
-        )
+        data = {"sample_id": sample_id}
+        data.update(kwargs)
+        super().__init__(data=data, size_arg_name="sample_id", size=len(sample_id))
+
         self._sample_id = sample_id
-        self._sample_id_to_idx = {smpl_id: idx for idx, smpl_id in enumerate(sample_id)}
+        self._sample_id_to_idx = {sample: i for i, sample in enumerate(sample_id)}
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Dict[str, Any],
+        sample_id: List,
+    ) -> "IndexedDataset":
+        """
+        Create a :py:class:`IndexedDataset` from the given ``data``. This function
+        behave like ``IndexedDataset(sample_id=sample_id, **data)``, but allows to use
+        names for the different fields that would not be valid in the main constructor.
+
+        >>> dataset = IndexedDataset.from_dict(
+        ...     {
+        ...         "valid": [0, 0, 0],
+        ...         "with space": [-1, 2, -3],
+        ...         "with/slash": ["a", "b", "c"],
+        ...     },
+        ...     sample_id=[11, 22, 33],
+        ... )
+        >>> sample = dataset[1]
+        >>> sample
+        Sample(sample_id=22, valid=0, 'with space'=2, 'with/slash'='b')
+        >>> # fields for which the name is a valid identifier can be accessed as usual
+        >>> sample.valid
+        0
+        >>> # fields which are not valid identifiers can be accessed like this
+        >>> sample["with space"]
+        2
+        >>> sample["with/slash"]
+        'b'
+
+        :param data: Dictionary of List or Callable containing the data. This will
+            behave as if all the entries of the dictionary where passed as keyword
+            arguments to ``__init__``.
+        :param sample_id: A list of unique IDs for each sample in the dataset.
+        """
+        if "size" in data:
+            raise ValueError(
+                "'size' is not accepted by IndexedDataset. For a dataset defined on "
+                "size rather than explicit sample IDs, use the Dataset class instead."
+            )
+
+        if len(set(sample_id)) != len(sample_id):
+            raise ValueError("Sample IDs must be unique, found some duplicate")
+
+        clean_data = {"sample_id": sample_id}
+        clean_data.update(data)
+
+        dataset = cls.__new__(cls)
+        _BaseDataset.__init__(
+            self=dataset,
+            data=clean_data,
+            size_arg_name="sample_id",
+            size=len(sample_id),
+        )
+
+        dataset._sample_id = sample_id
+        dataset._sample_id_to_idx = {sample: i for i, sample in enumerate(sample_id)}
+        return dataset
 
     def __getitem__(self, idx: int) -> NamedTuple:
         """
@@ -205,22 +369,25 @@ class IndexedDataset(_BaseDataset):
         """
         if idx not in self._indices:
             raise ValueError(f"Index {idx} not in dataset")
-        names = ["sample_id"] + self._field_names
-        sample_data = [self._sample_id[idx]]
+
+        sample_id = self._sample_id[idx]
+
+        sample_data = []
         for name in self._field_names:
-            if callable(self._data[name]):  # lazy load using sample ID
+            if name == "sample_id":
+                sample_data.append(sample_id)
+            elif callable(self._data[name]):  # lazy load using sample ID
                 try:
-                    sample_data.append(self._data[name](self._sample_id[idx]))
+                    sample_data.append(self._data[name](sample_id))
                 except Exception as e:
-                    raise IOError(
-                        f"Error loading data field '{name}' for sample"
-                        f" ID {self._sample_id[idx]}: {e}"
-                    )
+                    raise ValueError(
+                        f"Error loading data field '{name}' for sample '{sample_id}'"
+                    ) from e
             else:
                 assert isinstance(self._data[name], list)
                 sample_data.append(self._data[name][idx])
 
-        return namedtuple("Sample", names)(*sample_data)
+        return self._sample_class(*sample_data)
 
     def get_sample(self, sample_id) -> NamedTuple:
         """

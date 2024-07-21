@@ -674,6 +674,16 @@ class TensorBlock:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
+    def __len__(self) -> int:
+        """Get the length of the values stored in this block
+        (i.e. the number of samples in the :py:class:`TensorBlock`)"""
+
+    @property
+    def shape(self):
+        """
+        Get the shape of the values  array in this block.
+        """
+
     @property
     def values(self) -> torch.Tensor:
         """get the values for this block"""

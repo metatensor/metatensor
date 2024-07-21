@@ -6,8 +6,9 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
+from torch.profiler import record_function
 
-from .. import Labels, TensorBlock
+from .. import Labels, TensorBlock, TensorMap
 from . import (
     MetatensorAtomisticModel,
     ModelEvaluationOptions,
@@ -27,6 +28,13 @@ from ase.calculators.calculator import (  # isort: skip
     PropertyNotImplementedError,
     all_properties as ALL_ASE_PROPERTIES,
 )
+
+try:
+    import vesin
+
+    HAS_VESIN = True
+except ImportError:
+    HAS_VESIN = False
 
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
@@ -52,6 +60,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
+
+    Neighbor lists are computed using ASE's neighbor list utilities, unless the faster
+    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library is
+    installed, in which case it will be used instead.
     """
 
     def __init__(
@@ -174,7 +186,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
-    ) -> Dict[str, TensorBlock]:
+    ) -> Dict[str, TensorMap]:
         """
         Run the model on the given ``atoms``, computing properties according to the
         ``outputs`` and ``selected_atoms`` options.
@@ -226,7 +238,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: ase.Atoms,
         properties: List[str],
         system_changes: List[str],
-    ) -> Dict[str, np.ndarray]:
+    ) -> None:
         """
         Compute some ``properties`` with this calculator, and return them in the format
         expected by ASE.
@@ -241,56 +253,62 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             system_changes=system_changes,
         )
 
-        outputs = _ase_properties_to_metatensor_outputs(properties)
-        capabilities = self._model.capabilities()
-        for name in outputs.keys():
-            if name not in capabilities.outputs:
-                raise ValueError(
-                    f"you asked for the calculation of {name}, but this model does not "
-                    "support it"
+        with record_function("ASECalculator::prepare_inputs"):
+            outputs = _ase_properties_to_metatensor_outputs(properties)
+            capabilities = self._model.capabilities()
+            for name in outputs.keys():
+                if name not in capabilities.outputs:
+                    raise ValueError(
+                        f"you asked for the calculation of {name}, but this model "
+                        "does not support it"
+                    )
+
+            types, positions, cell = _ase_to_torch_data(
+                atoms=atoms, dtype=self._dtype, device=self._device
+            )
+
+            do_backward = False
+            if "forces" in properties:
+                do_backward = True
+                positions.requires_grad_(True)
+
+            if "stress" in properties:
+                do_backward = True
+
+                strain = torch.eye(
+                    3, requires_grad=True, device=self._device, dtype=self._dtype
                 )
 
-        types, positions, cell = _ase_to_torch_data(
-            atoms=atoms, dtype=self._dtype, device=self._device
-        )
+                positions = positions @ strain
+                positions.retain_grad()
 
-        do_backward = False
-        if "forces" in properties:
-            do_backward = True
-            positions.requires_grad_(True)
+                cell = cell @ strain
 
-        if "stress" in properties:
-            do_backward = True
+            if "stresses" in properties:
+                raise NotImplementedError("'stresses' are not implemented yet")
 
-            scaling = torch.eye(3, requires_grad=True, dtype=self._dtype)
-
-            positions = positions @ scaling
-            positions.retain_grad()
-
-            cell = cell @ scaling
-
-        if "stresses" in properties:
-            raise NotImplementedError("'stresses' are not implemented yet")
-
-        # convert from ase.Atoms to metatensor.torch.atomistic.System
-        system = System(types, positions, cell)
-        for options in self._model.requested_neighbor_lists():
-            neighbors = _compute_ase_neighbors(
-                atoms, options, dtype=self._dtype, device=self._device
+            run_options = ModelEvaluationOptions(
+                length_unit="angstrom",
+                outputs=outputs,
+                selected_atoms=None,
             )
-            register_autograd_neighbors(
-                system,
-                neighbors,
-                check_consistency=self.parameters["check_consistency"],
-            )
-            system.add_neighbor_list(options, neighbors)
 
-        run_options = ModelEvaluationOptions(
-            length_unit="angstrom",
-            outputs=outputs,
-            selected_atoms=None,
-        )
+        with record_function("ASECalculator::compute_neighbors"):
+            # convert from ase.Atoms to metatensor.torch.atomistic.System
+            system = System(types, positions, cell)
 
+            for options in self._model.requested_neighbor_lists():
+                neighbors = _compute_ase_neighbors(
+                    atoms, options, dtype=self._dtype, device=self._device
+                )
+                register_autograd_neighbors(
+                    system,
+                    neighbors,
+                    check_consistency=self.parameters["check_consistency"],
+                )
+                system.add_neighbor_list(options, neighbors)
+
+        # no `record_function` here, this will be handled by MetatensorAtomisticModel
         outputs = self._model(
             [system],
             run_options,
@@ -298,46 +316,53 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
         energy = outputs["energy"]
 
-        if run_options.outputs["energy"].per_atom:
-            assert len(energy) == 1
-            assert energy.sample_names == ["system", "atom"]
-            assert torch.all(energy.block().samples["system"] == 0)
-            assert torch.all(
-                energy.block().samples["atom"] == torch.arange(positions.shape[0])
-            )
-            energies = energy.block().values
-            assert energies.shape == (len(atoms), 1)
+        with record_function("ASECalculator::convert_outputs"):
+            if run_options.outputs["energy"].per_atom:
+                assert len(energy) == 1
+                assert energy.sample_names == ["system", "atom"]
+                assert torch.all(energy.block().samples["system"] == 0)
+                assert torch.all(
+                    energy.block().samples["atom"] == torch.arange(positions.shape[0])
+                )
+                energies = energy.block().values
+                assert energies.shape == (len(atoms), 1)
 
-            energy = sum_over_samples(energy, sample_names=["atom"])
+                energy = sum_over_samples(energy, sample_names=["atom"])
 
-        assert len(energy.block().gradients_list()) == 0
-        energy = energy.block().values
-        assert energy.shape == (1, 1)
+            assert len(energy.block().gradients_list()) == 0
+            energy = energy.block().values
+            assert energy.shape == (1, 1)
 
-        self.results = {}
+            self.results = {}
 
-        if "energies" in properties:
-            energies_values = energies.detach().reshape(-1)
-            energies_values = energies_values.to(device="cpu").to(dtype=torch.float64)
-            self.results["energies"] = energies_values.numpy()
+            if "energies" in properties:
+                energies_values = energies.detach().reshape(-1)
+                energies_values = energies_values.to(device="cpu").to(
+                    dtype=torch.float64
+                )
+                self.results["energies"] = energies_values.numpy()
 
-        if "energy" in properties:
-            energy_values = energy.detach()
-            energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
-            self.results["energy"] = energy_values.numpy()[0, 0]
+            if "energy" in properties:
+                energy_values = energy.detach()
+                energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
+                self.results["energy"] = energy_values.numpy()[0, 0]
 
         if do_backward:
-            energy.backward(-torch.ones_like(energy))
+            with record_function("ASECalculator::run_backward"):
+                energy.backward()
 
-        if "forces" in properties:
-            forces_values = system.positions.grad.reshape(-1, 3)
-            forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
-            self.results["forces"] = forces_values.numpy()
+        with record_function("ASECalculator::convert_outputs"):
+            if "forces" in properties:
+                forces_values = -system.positions.grad.reshape(-1, 3)
+                forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
+                self.results["forces"] = forces_values.numpy()
 
-        if "stress" in properties:
-            stress_values = -scaling.grad.reshape(3, 3) / atoms.cell.volume
-            stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
-            self.results["stress"] = _full_3x3_to_voigt_6_stress(stress_values.numpy())
+            if "stress" in properties:
+                stress_values = strain.grad.reshape(3, 3) / atoms.cell.volume
+                stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
+                self.results["stress"] = _full_3x3_to_voigt_6_stress(
+                    stress_values.numpy()
+                )
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
@@ -411,11 +436,19 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-    nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
-        "ijSD",
-        atoms,
-        cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
-    )
+
+    if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
+        nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
+    else:
+        nl_i, nl_j, nl_S, nl_D = ase.neighborlist.neighbor_list(
+            "ijSD",
+            atoms,
+            cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
+        )
 
     selected = []
     for pair_i, (i, j, S) in enumerate(zip(nl_i, nl_j, nl_S)):
@@ -499,12 +532,11 @@ def _ase_to_torch_data(atoms, dtype, device):
 
 
 def _full_3x3_to_voigt_6_stress(stress):
-    ase.stress.full_3x3_to_voigt_6_stress
     """
     Re-implementation of ``ase.stress.full_3x3_to_voigt_6_stress`` which does not do the
     stress symmetrization correctly (they do ``(stress[1, 2] + stress[1, 2]) / 2.0``)
     """
-    return np.transpose(
+    return np.array(
         [
             stress[0, 0],
             stress[1, 1],
