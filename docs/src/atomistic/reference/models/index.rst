@@ -13,6 +13,8 @@ below:
 
 We also provide a couple of functions to work with the models:
 
+.. autofunction:: metatensor.torch.atomistic.read_model_metadata
+
 .. autofunction:: metatensor.torch.atomistic.load_atomistic_model
 
 .. autofunction:: metatensor.torch.atomistic.check_atomistic_model
