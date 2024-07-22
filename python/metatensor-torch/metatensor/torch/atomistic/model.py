@@ -239,7 +239,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     _requested_neighbor_lists: List[NeighborListOptions]
 
     # Documentation for the module attribute
-    module: ModelInterface
+    module: torch.nn.Module
     """
     The torch module wrapped by this :py:class:`MetatensorAtomisticModel`.
     Reading from this attribute is safe, but modifying it is not recommended,
