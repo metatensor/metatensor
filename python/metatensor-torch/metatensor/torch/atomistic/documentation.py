@@ -422,7 +422,7 @@ class ModelMetadata:
     """
 
 
-def read_model_metadata(path: str):
+def read_model_metadata(path: str) -> ModelMetadata:
     """
     Read metadata of a saved metatenor atomistic model.
 

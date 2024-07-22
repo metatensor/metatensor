@@ -484,7 +484,7 @@ TORCH_LIBRARY(metatensor, m) {
             }
         );
 
-    m.def("read_model_metadata(str path) -> str", read_model_metadata);
+    m.def("read_model_metadata(str path)", read_model_metadata);
     m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
     m.def("load_model_extensions(str path, str? extensions_directory) -> ()", load_model_extensions);
 

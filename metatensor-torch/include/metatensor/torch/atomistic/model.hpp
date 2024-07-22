@@ -291,7 +291,7 @@ private:
 /// Read the metadata of the exported model at the given `path` and return it
 /// as a string. This is useful to check the metadata of a model without
 /// loading it.
-METATENSOR_TORCH_EXPORT std::string read_model_metadata(std::string path);
+METATENSOR_TORCH_EXPORT ModelMetadata read_model_metadata(std::string path);
 
 /// Check the exported metatensor atomistic model at the given `path`, and
 /// warn/error as required. This should be called after `load_model_extensions`
