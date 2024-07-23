@@ -317,10 +317,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
         else:
             raise ValueError(f"unknown dtype in capabilities: {capabilities.dtype}")
 
-    def wrappedmodule(self) -> torch.nn.Module:
-        """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
-        return self.module
-
     @torch.jit.export
     def capabilities(self) -> ModelCapabilities:
         """Get the capabilities of the wrapped model"""
