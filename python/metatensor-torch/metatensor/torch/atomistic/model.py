@@ -4,7 +4,8 @@ import math
 import os
 import platform
 import warnings
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import torch
 from torch.profiler import record_function
@@ -452,7 +453,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         )
         return self.save(file, collect_extensions)
 
-    def save(self, file: str, collect_extensions: Optional[str] = None):
+    def save(self, file: Union[str, Path], collect_extensions: Optional[str] = None):
         """Save this model to a file that can then be loaded by simulation engine.
 
         :param file: where to save the model. This can be a path or a file-like object.
