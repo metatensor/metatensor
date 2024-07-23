@@ -257,8 +257,8 @@ def test_access_module(tmpdir):
     # Access wrapped module
     assert atomistic.module is model
 
-    atomistic.save(str(tmpdir / "export.pt"))
-    loaded_atomistic = load_atomistic_model(str(tmpdir / "export.pt"))
+    atomistic.save(tmpdir / "export.pt")
+    loaded_atomistic = load_atomistic_model(tmpdir / "export.pt")
 
     # Access wrapped module after loading
     loaded_atomistic.module
