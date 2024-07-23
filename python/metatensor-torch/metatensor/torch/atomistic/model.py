@@ -39,7 +39,8 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     :param extensions_directory: path to a directory containing all extensions required
         by the exported model
     """
-    load_model_extensions(path, extensions_directory)
+    path = str(path)
+    load_model_extensions(path, str(extensions_directory))
     check_atomistic_model(path)
     return torch.jit.load(path)
 
@@ -488,7 +489,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         torch.jit.save(
             module.to("cpu"),  # this allows to torch.jit.load without devices
-            file,
+            str(file),
             _extra_files={
                 "torch-version": torch.__version__,
                 "metatensor-version": metatensor_version,
