@@ -1,10 +1,16 @@
 import io
 import os
+import sys
 
+import pytest
 import torch
+from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
+
+
+TORCH_VERSION = version.parse(torch.__version__)
 
 
 def check_operation(reduce_over_samples):
@@ -28,6 +34,15 @@ def check_operation(reduce_over_samples):
     assert reduced_tensor.sample_names == ["system"]
 
 
+@pytest.mark.skipif(
+    TORCH_VERSION.major == 2
+    and TORCH_VERSION.minor == 4
+    and sys.platform.startswith("win32"),
+    reason=(
+        "These tests cause a memory corruption in scatter_add, "
+        "but only when running from pytest, with torch 2.4 on Windows"
+    ),
+)
 def test_reduce_over_samples():
     check_operation(metatensor.torch.sum_over_samples)
     check_operation(metatensor.torch.mean_over_samples)
