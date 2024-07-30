@@ -77,7 +77,8 @@ class System:
 
             Due to limitations in TorchScript C++ extensions, the dtype is returned as
             an integer, which can not be compared with :py:class:`torch.dtype`
-            instances. See :py:meth:`TensorBlock.dtype` for more information.
+            instances. See :py:attr:`TensorBlock.dtype
+            <metatensor.torch.TensorBlock.dtype>` for more information.
         """
 
     def to(
