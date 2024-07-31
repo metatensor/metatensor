@@ -19,6 +19,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+
+- `read_model_metadata` to load only the `ModelMetadata` from an exported
+  atomistic model without having to load the whole model.
+
 ## [Version 0.5.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
 
 ### Changed

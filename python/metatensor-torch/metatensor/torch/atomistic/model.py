@@ -497,7 +497,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
                 "extensions": json.dumps(extensions),
                 "extensions-deps": json.dumps(deps),
                 "export-metadata": json.dumps(export_metadata),
-                "model-metadata": self._metadata.to_json(),
+                "model-metadata": self._metadata.__getstate__()[0],
             },
         )
 

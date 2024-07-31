@@ -393,8 +393,7 @@ TORCH_LIBRARY(metatensor, m) {
             [](const std::string& data) -> ModelMetadata {
                 return ModelMetadataHolder::from_json(data);
             }
-        )
-        .def("to_json", &ModelMetadataHolder::to_json);
+        );
 
 
     m.class_<ModelOutputHolder>("ModelOutput")
