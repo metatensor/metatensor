@@ -89,10 +89,10 @@ def split(
     Split a :py:class:`TensorMap` into multiple :py:class:`TensorMap`.
 
     The operation is based on some specified groups of indices, along either the
-    "samples" or "properties" ``axis``. The number of returned :py:class:`TensorMap`s is
-    equal to the number of :py:class:`Labels` objects passed in ``grouped_labels``. Each
-    returned :py:class`TensorMap` will have the same keys and number of blocks at the
-    input ``tensor``, but with the dimensions of the blocks reduced to only contain the
+    "samples" or "properties" ``axis``. The length of the returned list is equal to the
+    number of :py:class:`Labels` objects passed in ``grouped_labels``. Each returned
+    :py:class`TensorMap` will have the same keys and number of blocks at the input
+    ``tensor``, but with the dimensions of the blocks reduced to only contain the
     specified indices for the corresponding group.
 
     For example, to split a tensor along the ``"samples"`` axis, according to the
@@ -198,10 +198,10 @@ def split_block(
     """
     Splits an input :py:class:`TensorBlock` into multiple :py:class:`TensorBlock`
     objects based on some specified ``grouped_labels``, along either the ``"samples"``
-    or ``"properties"`` ``axis``. The number of returned :py:class:`TensorBlock` is
-    equal to the number of :py:class:`Labels` objects passed in ``grouped_labels``. Each
-    returned :py:class`TensorBlock` will have the same keys and number of blocks at the
-    input ``tensor``, but with the dimensions of the blocks reduced to only contain the
+    or ``"properties"`` ``axis``. The length of the returned list is equal to the number
+    of :py:class:`Labels` objects passed in ``grouped_labels``. Each returned
+    :py:class`TensorBlock` will have the same keys and number of blocks at the input
+    ``tensor``, but with the dimensions of the blocks reduced to only contain the
     specified indices for the corresponding group.
 
     For example, to split a block along the ``"samples"`` axis, according to the

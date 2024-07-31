@@ -237,7 +237,7 @@ def test_dtype_device(tmpdir, model, atoms):
 
         # re-create the model with a different dtype
         dtype_model = MetatensorAtomisticModel(
-            model._module.to(STR_TO_DTYPE[dtype]),
+            model.module.to(STR_TO_DTYPE[dtype]),
             model.metadata(),
             capabilities,
         )

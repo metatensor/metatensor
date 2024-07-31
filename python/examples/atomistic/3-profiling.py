@@ -74,9 +74,11 @@ class HarmonicModel(torch.nn.Module):
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
-        # if the model user did not request an energy calculation, we have nothing to do
-        if "energy" not in outputs:
-            return {}
+        if list(outputs.keys()) != ["energy"]:
+            raise ValueError(
+                "this model can only compute 'energy', but `outputs` contains other "
+                f"keys: {', '.join(outputs.keys())}"
+            )
 
         # we don't want to worry about selected_atoms yet
         if selected_atoms is not None:
