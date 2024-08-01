@@ -399,7 +399,7 @@ class ModelMetadata:
         description: str = "",
         authors: List[str] = [],  # noqa: B006
         references: Dict[str, List[str]] = {},  # noqa: B006
-        extra_metadata: Dict[str, str] = {},  # noqa: B006
+        extra: Dict[str, str] = {},  # noqa: B006
     ):
         pass
 
@@ -423,10 +423,11 @@ class ModelMetadata:
     - "model": for reference specific to this exact model
     """
 
-    extra_metadata: Dict[str, str]
+    extra: Dict[str, str]
     """
     Any additional metadata that is not contained in the other fields. There are
-    no constraints on the keys or values of this dictionary.
+    no constraints on the keys or values of this dictionary. The extra metadata
+    is intended to be used by models to store data they need.
     """
 
 

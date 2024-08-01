@@ -228,7 +228,7 @@ Please cite the following references when using this model:
     assert str(metadata) == expected
 
 
-def test_with_extra_metadata():
+def test_with_extra_metadata(tmpdir):
 
     metadata = ModelMetadata(
         name="SOTA model",
@@ -239,13 +239,20 @@ def test_with_extra_metadata():
             "architecture": ["ref-3"],
             "implementation": ["ref-3"],
         },
-        extra_metadata={
+        extra={
             "number_of_parameters": "1000",
             "foo": "bar",
             "GPU?": "Yes",
         },
     )
 
-    assert metadata.extra_metadata["number_of_parameters"] == "1000"
-    assert metadata.extra_metadata["foo"] == "bar"
-    assert metadata.extra_metadata["GPU?"] == "Yes"
+    assert metadata.extra["number_of_parameters"] == "1000"
+    assert metadata.extra["foo"] == "bar"
+    assert metadata.extra["GPU?"] == "Yes"
+
+    torch.save(metadata, str(tmpdir.join("metadata.pt")))
+    loaded_metadata = torch.load(str(tmpdir.join("metadata.pt")))
+
+    assert loaded_metadata.extra["number_of_parameters"] == "1000"
+    assert loaded_metadata.extra["foo"] == "bar"
+    assert loaded_metadata.extra["GPU?"] == "Yes"
