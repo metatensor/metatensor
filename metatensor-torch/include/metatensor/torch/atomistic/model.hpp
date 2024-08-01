@@ -243,12 +243,14 @@ public:
         std::string name_,
         std::string description_,
         std::vector<std::string> authors_,
-        torch::Dict<std::string, std::vector<std::string>> references_
+        torch::Dict<std::string, std::vector<std::string>> references_,
+        torch::Dict<std::string, std::string> extra_
     ):
         name(std::move(name_)),
         description(std::move(description_)),
         authors(std::move(authors_)),
-        references(references_)
+        references(references_),
+        extra(extra_)
     {
         this->validate();
     }
@@ -273,6 +275,10 @@ public:
     ///   used by this model
     /// - "model": for reference specific to this exact model
     torch::Dict<std::string, std::vector<std::string>> references;
+
+    /// Extra metadata about this model. This can be anything, and it is intended
+    /// to be used by models to store data they need.
+    torch::Dict<std::string, std::string> extra;
 
     /// Implementation of Python's `__repr__` and `__str__`, printing all
     /// metadata about this model.

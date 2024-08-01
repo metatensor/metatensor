@@ -468,6 +468,12 @@ std::string ModelMetadataHolder::to_json() const {
     }
     result["references"] = references;
 
+    auto extra = nlohmann::json::object();
+    for (const auto& it: this->extra) {
+        extra[it.key()] = it.value();
+    }
+    result["extra"] = extra;
+
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
@@ -544,6 +550,19 @@ ModelMetadata ModelMetadataHolder::from_json(std::string_view json) {
                 "'references.model' in JSON for ModelMetadata"
             );
             result->references.insert("model", std::move(model));
+        }
+    }
+
+    if (data.contains("extra")) {
+        if (!data["extra"].is_object()) {
+            throw std::runtime_error("'extra' in JSON for ModelMetadata must be an object");
+        }
+
+        for (const auto& item: data["extra"].items()) {
+            if (!item.value().is_string()) {
+                throw std::runtime_error("extra values in JSON for ModelMetadata must be strings");
+            }
+            result->extra.insert(item.key(), item.value());
         }
     }
 

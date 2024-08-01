@@ -371,13 +371,15 @@ TORCH_LIBRARY(metatensor, m) {
                 std::string,
                 std::string,
                 std::vector<std::string>,
-                torch::Dict<std::string, std::vector<std::string>>
+                torch::Dict<std::string, std::vector<std::string>>,
+                torch::Dict<std::string, std::string>
             >(),
             DOCSTRING, {
                 torch::arg("name") = "",
                 torch::arg("description") = "",
                 torch::arg("authors") = std::vector<std::string>(),
                 torch::arg("references") = torch::Dict<std::string, std::vector<std::string>>(),
+                torch::arg("extra") = torch::Dict<std::string, std::string>(),
             }
         )
         .def("__repr__", &ModelMetadataHolder::print)
@@ -386,6 +388,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_readwrite("description", &ModelMetadataHolder::description)
         .def_readwrite("authors", &ModelMetadataHolder::authors)
         .def_readwrite("references", &ModelMetadataHolder::references)
+        .def_readwrite("extra", &ModelMetadataHolder::extra)
         .def_pickle(
             [](const ModelMetadata& self) -> std::string {
                 return self->to_json();
