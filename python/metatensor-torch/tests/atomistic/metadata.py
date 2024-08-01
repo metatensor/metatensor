@@ -226,3 +226,26 @@ Please cite the following references when using this model:
   * ref-4
 """
     assert str(metadata) == expected
+
+
+def test_with_extra_metadata():
+
+    metadata = ModelMetadata(
+        name="SOTA model",
+        description="This is a state-of-the-art model",
+        authors=["Author 1", "Author 2"],
+        references={
+            "model": ["ref-1", "ref-2"],
+            "architecture": ["ref-3"],
+            "implementation": ["ref-3"],
+        },
+        extra_metadata={
+            "number_of_parameters": "1000",
+            "foo": "bar",
+            "GPU?": "Yes",
+        },
+    )
+
+    assert metadata.extra_metadata["number_of_parameters"] == "1000"
+    assert metadata.extra_metadata["foo"] == "bar"
+    assert metadata.extra_metadata["GPU?"] == "Yes"
