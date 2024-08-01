@@ -15,6 +15,7 @@ from metatensor.torch.atomistic import (
     System,
     check_atomistic_model,
     load_atomistic_model,
+    read_model_metadata,
 )
 
 
@@ -267,3 +268,26 @@ def test_access_module(tmpdir):
     loaded_atomistic.module.first
     loaded_atomistic.module.second
     loaded_atomistic.module.other
+
+
+def test_read_metadata(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    metadata = ModelMetadata(
+        name="NEW_SOTA",
+        description="A SOTA model",
+        authors=["Alice", "Bob"],
+        references={"implementation": ["doi:1234", "arXiv:1234"]},
+    )
+    atomistic = MetatensorAtomisticModel(model, metadata, capabilities)
+    atomistic.save(tmpdir / "model.pt")
+
+    extracted_metadata = read_model_metadata(str(tmpdir / "model.pt"))
+
+    assert str(extracted_metadata) == str(metadata)

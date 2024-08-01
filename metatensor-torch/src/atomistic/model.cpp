@@ -839,6 +839,20 @@ void metatensor_torch::load_model_extensions(
     }
 }
 
+ModelMetadata metatensor_torch::read_model_metadata(std::string path) {
+    auto reader = caffe2::serialize::PyTorchStreamReader(path);
+    if (!reader.hasRecord("extra/model-metadata")) {
+        C10_THROW_ERROR(ValueError,
+            "could not find model metadata in file at '" + path +
+            "', did you export your model with metatensor-torch >=0.5.4?"
+        );
+    }
+
+    return ModelMetadataHolder::from_json(
+        record_to_string(reader.getRecord("extra/model-metadata"))
+    );
+}
+
 void metatensor_torch::check_atomistic_model(std::string path) {
     auto reader = caffe2::serialize::PyTorchStreamReader(path);
 

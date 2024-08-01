@@ -423,6 +423,17 @@ class ModelMetadata:
     """
 
 
+def read_model_metadata(path: str) -> ModelMetadata:
+    """
+    Read metadata of a saved metatenor atomistic model.
+
+    This function allows to access the metadata of a model without loading it
+    in advance.
+
+    :param path: path to the exported model file
+    """
+
+
 def check_atomistic_model(path: str):
     """
     Check that the file at ``path`` contains an exported metatensor atomistic model, and
