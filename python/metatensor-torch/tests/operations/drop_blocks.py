@@ -1,4 +1,5 @@
 import io
+import os
 
 import torch
 from packaging import version
@@ -6,13 +7,22 @@ from packaging import version
 import metatensor.torch
 from metatensor.torch import Labels
 
-from ._data import load_data
-
 
 def test_drop_blocks():
     # this only runs basic checks functionality checks, and that the code produces
     # output with the right type
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     tensor = tensor.keys_to_properties("neighbor_1_type")
     tensor = tensor.keys_to_properties("neighbor_2_type")
 

@@ -28,11 +28,7 @@ TEST_FILE = "qm7-spherical-expansion.npz"
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(
-        os.path.join(DATA_ROOT, TEST_FILE),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    return metatensor.load(os.path.join(DATA_ROOT, TEST_FILE))
 
 
 def _construct_empty_slice_block(block, axis, labels) -> TensorBlock:

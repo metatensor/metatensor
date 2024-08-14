@@ -1,14 +1,24 @@
 import io
+import os
 
 import torch
 
 import metatensor.torch
 
-from ._data import load_data
-
 
 def test_multiply():
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     product_tensor = metatensor.torch.multiply(tensor, tensor)
     assert metatensor.torch.equal_metadata(product_tensor, tensor)
     assert torch.allclose(product_tensor.block(0).values, tensor.block(0).values ** 2)

@@ -1,15 +1,25 @@
 import io
+import os
 
 import torch
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
-from ._data import load_data
-
 
 def check_operation(reduce_over_samples):
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
 
     assert tensor.sample_names == ["system", "atom"]
     reduced_tensor = reduce_over_samples(tensor, "atom")

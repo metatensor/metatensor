@@ -12,20 +12,12 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def test_tensor_map_1() -> TensorMap:
-    return metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
 
 
 @pytest.fixture
 def test_tensor_map_2() -> TensorMap:
-    return metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
 
 
 @pytest.fixture

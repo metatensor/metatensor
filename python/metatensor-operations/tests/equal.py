@@ -117,10 +117,8 @@ def test_equal_no_gradient():
 
 
 def test_self_equal_grad():
-    tensor_1 = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor_1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+
     blocks = []
     blocks_e6 = []
     for block in tensor_1:

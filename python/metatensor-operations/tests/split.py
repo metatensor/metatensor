@@ -12,10 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 def test_split_block_samples():
     # use a TensorMap with multiple components
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
     block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=6)
 
     grouped_labels = [
@@ -65,10 +62,7 @@ def test_split_block_samples():
 
 def test_split_block_samples_not_everything():
     # use a TensorMap with multiple components
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
     block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=6)
 
     # using `grouped_labels` with some samples not present in the initial block,
@@ -99,10 +93,7 @@ def test_split_block_samples_not_everything():
 
 
 def test_split_samples():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
 
     grouped_labels = [
         Labels(names=["system"], values=np.array([[0], [6], [7]])),
@@ -137,10 +128,7 @@ def test_split_samples():
 
 def test_split_block_properties():
     # TensorMap with multiple properties
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
     block = tensor.block(center_type=8, neighbor_1_type=6, neighbor_2_type=8)
 
     grouped_labels = [
@@ -184,10 +172,7 @@ def test_split_block_properties():
 
 def test_split_properties():
     # TensorMap with multiple properties
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
 
     grouped_labels = [
         Labels(names=["l", "n_2"], values=np.array([[0, 0], [1, 3], [3, 1]])),
@@ -215,10 +200,7 @@ def test_split_properties():
 
 
 def test_split_errors():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
     block = tensor.block(4)
     grouped_labels = [
         Labels(names=["system"], values=np.array([[0], [6], [7]])),

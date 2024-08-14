@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import metatensor
@@ -10,12 +12,15 @@ from metatensor.learn.nn.silu import InvariantSiLU  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
+DATA_ROOT = os.path.join(
+    os.path.dirname(__file__), "..", "..", "metatensor-operations", "tests", "data"
+)
+
+
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(
-        "../metatensor-operations/tests/data/qm7-spherical-expansion.npz",
-        use_numpy=True,
-    ).to(arrays="torch")
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    tensor = tensor.to(arrays="torch")
     tensor = metatensor.remove_gradients(tensor)
     return tensor
 

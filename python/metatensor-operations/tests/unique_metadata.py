@@ -25,7 +25,7 @@ def large_tensor():
 
 @pytest.fixture
 def real_tensor():
-    return metatensor.load(os.path.join(DATA_ROOT, TEST_FILE), use_numpy=True)
+    return metatensor.load(os.path.join(DATA_ROOT, TEST_FILE))
 
 
 def test_unique_metadata_block(large_tensor):
