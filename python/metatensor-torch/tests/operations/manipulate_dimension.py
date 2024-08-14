@@ -1,17 +1,27 @@
 import io
+import os
 
 import torch
 
 import metatensor.torch
-
-from ._data import load_data
 
 
 def get_tensor_map():
     # Since there will be different samples in blocks with different center_type,
     # and this would make all the operations fail due to different samples in different
     # blocks, we build a TensorMap with only two blocks which have the same samples.
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     keys = metatensor.torch.Labels.range("block", 2)
     blocks = [
         tensor.block({"center_type": 6, "neighbor_1_type": 1, "neighbor_2_type": 1}),

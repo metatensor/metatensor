@@ -10,11 +10,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_zeros_like():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
     zeros_tensor = metatensor.zeros_like(tensor)
     zeros_tensor_positions = metatensor.zeros_like(tensor, gradients="positions")
 
@@ -35,11 +31,7 @@ def test_zeros_like():
 
 
 def test_zeros_like_error():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
 
     message = "requested gradient 'err' in 'zeros_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):

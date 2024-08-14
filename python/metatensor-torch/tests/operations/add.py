@@ -1,14 +1,24 @@
 import io
+import os
 
 import torch
 
 import metatensor.torch
 
-from ._data import load_data
-
 
 def test_add():
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     sum_tensor = metatensor.torch.add(tensor, tensor)
     assert metatensor.torch.equal_metadata(sum_tensor, tensor)
     assert metatensor.torch.allclose(sum_tensor, metatensor.torch.multiply(tensor, 2))

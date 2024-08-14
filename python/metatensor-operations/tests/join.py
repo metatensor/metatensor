@@ -1,4 +1,4 @@
-from os import path
+import os
 
 import numpy as np
 import pytest
@@ -8,15 +8,12 @@ import metatensor
 from metatensor import Labels, TensorBlock, TensorMap
 
 
-DATA_ROOT = path.join(path.dirname(__file__), "data")
+DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(
-        path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
 
     msg = (
         "Tensor must have at least one gradient. When no gradients are present certain "
@@ -30,7 +27,7 @@ def tensor():
 @pytest.fixture
 def components_tensor():
     components_tensor = metatensor.load(
-        path.join(DATA_ROOT, "qm7-spherical-expansion.npz"), use_numpy=True
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz")
     )
 
     # Test if Tensormaps have at least one gradient. This avoids dropping gradient

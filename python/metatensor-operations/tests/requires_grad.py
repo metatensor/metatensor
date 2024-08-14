@@ -11,11 +11,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_requires_grad():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
     tensor = tensor.to(arrays="torch")
 
     for block in tensor:

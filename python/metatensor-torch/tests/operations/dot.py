@@ -1,15 +1,25 @@
 import io
+import os
 
 import torch
 from packaging import version
 
 import metatensor.torch
 
-from ._data import load_data
-
 
 def test_dot():
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     dot_tensor = metatensor.torch.dot(tensor, metatensor.torch.remove_gradients(tensor))
 
     # right output type

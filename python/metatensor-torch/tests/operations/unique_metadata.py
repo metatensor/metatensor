@@ -1,16 +1,30 @@
 import io
+import os
 
+import pytest
 import torch
 from packaging import version
 
 import metatensor.torch
 
-from ._data import load_data
+
+@pytest.fixture
+def tensor():
+    return metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
 
 
-def test_unique_metadata():
-    tensor = load_data("qm7-power-spectrum.npz")
-
+def test_unique_metadata(tensor):
     unique_labels = metatensor.torch.unique_metadata(
         tensor,
         axis="samples",
@@ -40,8 +54,7 @@ def test_unique_metadata():
     assert unique_labels.names == ["atom"]
 
 
-def test_unique_metadata_block():
-    tensor = load_data("qm7-power-spectrum.npz")
+def test_unique_metadata_block(tensor):
     block = tensor.block(0)
 
     unique_labels = metatensor.torch.unique_metadata_block(

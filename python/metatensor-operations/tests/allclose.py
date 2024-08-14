@@ -119,10 +119,8 @@ def test_allclose_nograd():
 
 
 def test_self_allclose_grad():
-    tensor1 = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+
     blocks = []
     blocks_e6 = []
     for block in tensor1:
