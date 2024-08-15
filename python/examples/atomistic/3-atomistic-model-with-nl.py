@@ -99,16 +99,16 @@ print(f"ρ_m = {mass_density:.3f} g/cm³")
 
 # %%
 #
-# Metatensor Neighbor Lists
-# -------------------------
+# Metatensor's neighbor lists
+# ---------------------------
 #
 # .. note::
 #
 #   The steps below of creating a neighbor list, wrapping it inside a
 #   :py:class:`TensorBlock <metatensor.torch.TensorBlock>` and attaching it to a system
-#   will be done by the simulation engine and must not be handled by
-#   the model developer. How to request a neighbor list will be presented below when the
-#   actual model is defined.
+#   will be done by the simulation engine and must not be handled by the model
+#   developer. How to request a neighbor list will be presented below when the actual
+#   model is defined.
 #
 # Before implementing the actual model, let's take a look at how metatensor stores
 # neighbor lists inside a :py:class:`System` object. We start by computing the neighbor
@@ -118,10 +118,10 @@ i, j, S, D = ase.neighborlist.neighbor_list(quantities="ijSD", a=atoms, cutoff=5
 
 # %%
 #
-# The :py:func:`neighbor_list <ase.neighborlist.neighbor_list>` function returns the
-# neighbor indices: quantities ``"i"`` and ``"j"``, the neighbor shifts: ``"S"``, and
-# the distance vectors: ``"D"``. We now stack these together and convert them into the
-# suitable types.
+# The :py:func:`ase.neighborlist.neighbor_list` function returns the neighbor indices:
+# quantities ``"i"`` and ``"j"``, the neighbor shifts ``"S"``, and the distance
+# vectors ``"D"``. We now stack these together and convert them into the suitable
+# types.
 
 i = torch.from_numpy(i.astype(int))
 j = torch.from_numpy(j.astype(int))
@@ -132,12 +132,12 @@ print("neighbor_indices:", neighbor_indices)
 print("neighbor_shifts:", neighbor_shifts)
 
 # %%
-# Creating a Neighbor List
+# Creating a neighbor list
 # ^^^^^^^^^^^^^^^^^^^^^^^^
 #
-# We now assemble the neighbor list. First, we create the ``samples`` metadata for the
-# :py:class:`TensorBlock <metatensor.torch.TensorBlock>` which will hold the neighbor
-# list.
+# We now assemble the neighbor list following metatensor conventions. First, we create
+# the ``samples`` metadata for the :py:class:`TensorBlock
+# <metatensor.torch.TensorBlock>` which will hold the neighbor list.
 
 sample_values = torch.hstack([neighbor_indices, neighbor_shifts])
 samples = Labels(
@@ -172,33 +172,20 @@ options = NeighborListOptions(cutoff=5.0, full_list=True)
 # %%
 #
 # We set ``full_list=True`` because ASE computes a “full” list (as opposed to a half
-# list) where each `i, j` pair appears twice, stored once with `i` and once with `j`.
+# list) where each `i, j` pair appears twice, stored once as `i, j` and once as `j, i`.
 #
-# Now we can, in principle, attach the neighbor list to a metatensor system as
+# Now we can, in principle, attach the neighbor list to a metatensor system using
 #
 # .. code:: python
 #
 #   system.add_neighbor_list(options=options, neighbors=neighbors)
 #
-# Receive Data from a Neighbor List
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Accessing data in neighbor lists
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #
-# Now that we have a neighbor list, we can also access the data. Inside your model's
-# ``forward`` method, you can retrieve the from the engine computed neighborlist using
-# the ``options``:
-#
-# .. code:: python
-#
-#   neighbors = system.get_neighbor_list(options)
-#
-# You can also loop over all attached lists of a :py:class:`System` using
-# :py:meth:`System.known_neighbor_lists` to find a suitable one based on
-# :py:class:`NeighborListOptions` attributes like ``cutoff``, ``full_list``, and
-# ``requestor``.
-#
-# After the neighbor list is attached, we can access the data and metadata. First, we
-# extract the ``distances`` between the neighboring pairs within the cutoff, which we
-# will need for our model below.
+# Now that we have a neighbor list, we can access the data and metadata. First, we can
+# extract the ``distances`` vectors between the neighboring pairs within the cutoff,
+# which we can then use in our models.
 
 distances = neighbors.values
 
@@ -206,7 +193,7 @@ print(distances.shape)
 
 # %%
 #
-# You can also get the metadata values like *neighbor indices* or the *neighbor
+# We can also get the metadata values like *neighbor indices* or the *neighbor
 # shifts* using the :py:meth:`Labels.column <metatensor.torch.Labels.column>` and
 # :py:meth:`Labels.view <metatensor.torch.Labels.view>` methods.
 
@@ -218,13 +205,29 @@ neighbor_shifts = neighbors.samples.view(
     ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
 ).values
 
+# %%
+#
+# As mentioned above, in practical use cases you will not have to compute neighbor lists
+# yourself, but instead the simulation engine will compute it for you and you'll just
+# need to get the right list for a given :py:class:`System` using the corresponding
+# ``options``:
+#
+# .. code:: python
+#
+#   neighbors = system.get_neighbor_list(options)
+#
+# You can also loop over all attached lists of a :py:class:`System` using
+# :py:meth:`System.known_neighbor_lists` to find a suitable one based on
+# :py:class:`NeighborListOptions` attributes like ``cutoff``, ``full_list``, and
+# ``requestors``.
+
 
 # %%
 #
-# A Lennard-Jones Model
+# A Lennard-Jones model
 # ---------------------
 #
-# Now that we know how the neigbor data is stored and can be accessed, and know how to
+# Now that we know how the neighbor data is stored and can be accessed, and know how to
 # use it we can construct our Lennard-Jones model with a fixed cutoff. The Lennard-Jones
 # potential is a mathematical basis to approximate the interaction between a pair of
 # neutral atoms or molecules. It is given by the equation:
