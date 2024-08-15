@@ -21,7 +21,7 @@ if __name__ == "__main__":
         if version.strip() == "":
             continue
 
-        match = re.match(r"Requires-Dist: torch ==(\d+)\.(\d+)\.\*", version)
+        match = re.match(r"Requires-Dist: torch[ ]?==(\d+)\.(\d+)\.\*", version)
         if match is None:
             raise ValueError(f"unexpected Requires-Dist format: {version}")
 
