@@ -35,6 +35,19 @@ N-dimensional arrays
 
 .. doxygenfunction:: metatensor::details::default_create_array
 
+``TensorBlock`` serialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. doxygenfunction:: metatensor::io::save(const std::string& path, const TensorBlock& block)
+
+.. doxygenfunction:: metatensor::io::save_buffer(const TensorBlock& block)
+
+.. doxygenfunction:: metatensor::io::load_block
+
+.. doxygenfunction:: metatensor::io::load_block_buffer(const uint8_t* buffer, size_t buffer_count, mts_create_array_callback_t create_array)
+
+.. doxygenfunction:: metatensor::io::load_block_buffer(const Buffer& buffer, mts_create_array_callback_t create_array)
+
 ``Labels`` serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

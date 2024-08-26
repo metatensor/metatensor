@@ -54,7 +54,7 @@ impl<'a> TensorBlockRef<'a> {
     }
 
     /// Get the underlying raw pointer
-    pub(super) fn as_ptr(&self) -> *const mts_block_t {
+    pub(crate) fn as_ptr(&self) -> *const mts_block_t {
         self.ptr
     }
 }
@@ -245,6 +245,20 @@ impl<'a> TensorBlockRef<'a> {
             parameters: self.gradient_list().into_iter(),
             block: self.as_ptr(),
         }
+    }
+
+    /// Save the given block to the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::save_block`]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), Error> {
+        return crate::io::save_block(path, *self);
+    }
+
+    /// Save the given block to an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::save_block_buffer`]
+    pub fn save_buffer(&self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        return crate::io::save_block_buffer(*self, buffer);
     }
 }
 

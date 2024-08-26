@@ -940,6 +940,67 @@ class TensorBlock:
             ``None`` and does nothing.
         """
 
+    @staticmethod
+    def load(path: str) -> "TensorBlock":
+        """
+        Load a serialized :py:class:`TensorBlock` from the file at ``path``, this is
+        equivalent to :py:func:`metatensor.torch.load_block`.
+
+        :param path: Path of the file containing a saved :py:class:`TensorBlock`
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the mean
+            time, you should use :py:func:`metatensor.torch.load` instead of this
+            function to save your code to TorchScript.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+        """
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> "TensorBlock":
+        """
+        Load a serialized :py:class:`TensorBlock` from an in-memory ``buffer``, this is
+        equivalent to :py:func:`metatensor.torch.load_block_buffer`.
+
+        :param buffer: torch Tensor representing an in-memory buffer
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the mean
+            time, you should use :py:func:`metatensor.torch.load_buffer` instead of this
+            function to save your code to TorchScript.
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+        """
+
+    def save(self, path: str):
+        """
+        Save this :py:class:`TensorBlock` to a file, this is equivalent to
+        :py:func:`metatensor.torch.save`.
+
+        :param path: Path of the file. If the file already exists, it will be
+            overwritten
+        """
+
+    def save_buffer(self) -> torch.Tensor:
+        """
+        Save this :py:class:`TensorBlock` to an in-memory buffer, this is equivalent to
+        :py:func:`metatensor.torch.save_buffer`.
+        """
+
 
 class TensorMap:
     """
@@ -1306,6 +1367,14 @@ def load(path: str) -> TensorMap:
     """
 
 
+def load_block(path: str) -> TensorBlock:
+    """
+    Load previously saved :py:class:`TensorBlock` from the given file.
+
+    :param path: path of the file to load
+    """
+
+
 def load_labels(path: str) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given file.
@@ -1331,6 +1400,15 @@ def save(path: str, data: Union[TensorMap, Labels]):
 def load_buffer(buffer: torch.Tensor) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from an in-memory buffer, stored
+    inside a 1-dimensional :py:class:`torch.Tensor` of ``uint8``.
+
+    :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
+    """
+
+
+def load_block_buffer(buffer: torch.Tensor) -> TensorBlock:
+    """
+    Load a previously saved :py:class:`TensorBlock` from an in-memory buffer, stored
     inside a 1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer

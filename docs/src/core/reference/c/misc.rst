@@ -73,6 +73,25 @@ Tensors
 .. doxygentypedef:: mts_realloc_buffer_t
 
 
+Blocks
+------
+
+- :c:func:`mts_block_save`: serialize and save a ``mts_block_t`` to a file
+- :c:func:`mts_block_load`: load serialized ``mts_block_t`` from a file
+- :c:func:`mts_block_save_buffer`: serialize and save a ``mts_block_t``
+  to a in-memory buffer
+- :c:func:`mts_block_load_buffer`: load serialized ``mts_block_t`` from
+  a in-memory buffer
+
+.. doxygenfunction:: mts_block_load
+
+.. doxygenfunction:: mts_block_save
+
+.. doxygenfunction:: mts_block_load_buffer
+
+.. doxygenfunction:: mts_block_save_buffer
+
+
 Labels
 -------
 

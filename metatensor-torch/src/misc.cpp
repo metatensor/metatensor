@@ -38,6 +38,7 @@ mts_status_t metatensor_torch::details::create_torch_array(
     }, shape_ptr, shape_count, array);
 }
 
+/******************************************************************************/
 
 TorchTensorMap metatensor_torch::load(const std::string& path) {
     return TensorMapHolder::load(path);
@@ -56,6 +57,26 @@ torch::Tensor metatensor_torch::save_buffer(TorchTensorMap tensor) {
     return tensor->save_buffer();
 }
 
+/******************************************************************************/
+
+TorchTensorBlock metatensor_torch::load_block(const std::string& path) {
+    return TensorBlockHolder::load(path);
+}
+
+TorchTensorBlock metatensor_torch::load_block_buffer(torch::Tensor buffer) {
+    return TensorBlockHolder::load_buffer(buffer);
+}
+
+
+void metatensor_torch::save(const std::string& path, TorchTensorBlock block) {
+    block->save(path);
+}
+
+torch::Tensor metatensor_torch::save_buffer(TorchTensorBlock block) {
+    return block->save_buffer();
+}
+
+/******************************************************************************/
 
 TorchLabels metatensor_torch::load_labels(const std::string& path) {
     return LabelsHolder::load(path);

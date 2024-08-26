@@ -177,9 +177,9 @@ class TensorMap:
         Used by the Pickler to dump TensorMap object to bytes object. When protocol >= 5
         it supports PickleBuffer which reduces number of copies needed
         """
-        from .io import _save_tensormap_buffer_raw
+        from .io import _save_tensor_buffer_raw
 
-        buffer = _save_tensormap_buffer_raw(self)
+        buffer = _save_tensor_buffer_raw(self)
         if protocol >= 5:
             return self._from_pickle, (PickleBuffer(buffer),)
         else:
@@ -203,7 +203,7 @@ class TensorMap:
     def load_buffer(
         buffer: Union[bytes, bytearray, memoryview],
         use_numpy=False,
-    ) -> "Labels":
+    ) -> "TensorMap":
         """
         Load a serialized :py:class:`TensorMap` from a buffer, calling
         :py:func:`metatensor.io.load_buffer`.

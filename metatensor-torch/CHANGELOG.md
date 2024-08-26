@@ -25,6 +25,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   atomistic model without having to load the whole model.
 - Users can now store arbitrary additional metadata in `ModelMetadata.extra`
 - Added `Labels.select` function to sub-select entries in labels
+- Added support for serialization of TensorBlock with `TensorBlock::load`,
+  `TensorBlock::load_buffer`, `TensorBlock::save`, `TensorBlock::save_buffer`
+  and the corresponding functions in `metatensor.torch`.
 
 ## [Version 0.5.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
 

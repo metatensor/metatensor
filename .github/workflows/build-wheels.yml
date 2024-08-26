@@ -158,6 +158,7 @@ jobs:
           - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
           - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
           - {torch-version: '2.3',  python-version: '3.12', cibw-python: 'cp312-*'}
+          - {torch-version: '2.4',  python-version: '3.12', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v4
         with:

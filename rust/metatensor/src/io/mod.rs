@@ -2,10 +2,15 @@
 //! [`crate::Labels`] on disk
 
 use std::os::raw::c_void;
-use crate::c_api::MTS_SUCCESS;
+
+use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
+use crate::Array;
 
 mod tensor;
 pub use self::tensor::{load, save, load_buffer, save_buffer};
+
+mod block;
+pub use self::block::{load_block, load_block_buffer, save_block, save_block_buffer};
 
 mod labels;
 pub use self::labels::{load_labels, load_labels_buffer, save_labels, save_labels_buffer};
@@ -31,4 +36,18 @@ unsafe extern fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: us
     }
 
     return result;
+}
+
+/// callback used to create `ndarray::ArrayD` when loading a `TensorMap`
+unsafe extern fn create_ndarray(
+    shape_ptr: *const usize,
+    shape_count: usize,
+    c_array: *mut mts_array_t,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        assert!(shape_count != 0);
+        let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
+        let array = ndarray::ArrayD::from_elem(shape, 0.0);
+        *c_array = (Box::new(array) as Box<dyn Array>).into();
+    })
 }

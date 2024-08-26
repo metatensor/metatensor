@@ -45,14 +45,18 @@ pub unsafe extern fn mts_labels_load(
             .map_err(|err| match err {
                 Error::Serialization(message) => {
                     if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Path(path)) {
-                    Error::Serialization(format!(
-                        "unable to load Labels from '{}', use `load` to load TensorMap: {}", path, message
-                    ))
-                } else {
-                    Error::Serialization(format!(
-                        "unable to load Labels from '{}': {}", path, message
-                    ))
-                }
+                        Error::Serialization(format!(
+                            "unable to load Labels from '{}', use `load` to load TensorMap: {}", path, message
+                        ))
+                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Path(path)) {
+                        Error::Serialization(format!(
+                            "unable to load Labels from '{}', use `load_block` to load TensorBlock: {}", path, message
+                        ))
+                    } else {
+                        Error::Serialization(format!(
+                            "unable to load Labels from '{}': {}", path, message
+                        ))
+                    }
                 }
                 err => return err,
             })?;
@@ -102,6 +106,10 @@ pub unsafe extern fn mts_labels_load_buffer(
                     if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
                         Error::Serialization(format!(
                             "unable to load Labels from buffer, use `load_buffer` to load TensorMap: {}", message
+                        ))
+                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                        Error::Serialization(format!(
+                            "unable to load Labels from buffer, use `load_block_buffer` to load TensorBlock: {}", message
                         ))
                     } else {
                         Error::Serialization(format!(

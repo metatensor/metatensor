@@ -2,7 +2,7 @@ use std::ffi::{CString, CStr};
 use std::iter::FusedIterator;
 
 use crate::c_api::{mts_block_t, mts_array_t, MTS_INVALID_PARAMETER_ERROR};
-use crate::{ArrayRef, ArrayRefMut, Labels};
+use crate::{ArrayRef, ArrayRefMut, Labels, Error};
 
 use super::{TensorBlockRef, LazyMetadata};
 use super::block_ref::{get_samples, get_components, get_properties};
@@ -174,6 +174,20 @@ impl<'a> TensorBlockRefMut<'a> {
             parameters: self.as_ref().gradient_list().into_iter(),
             block: block_ptr,
         }
+    }
+
+    /// Save the given block to the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::save_block`]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), Error> {
+        self.as_ref().save(path)
+    }
+
+    /// Save the given block to an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::save_block_buffer`]
+    pub fn save_buffer(&self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        self.as_ref().save_buffer(buffer)
     }
 }
 

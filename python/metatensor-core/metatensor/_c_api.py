@@ -317,6 +317,34 @@ def setup_functions(lib):
     ]
     lib.mts_labels_save_buffer.restype = _check_status
 
+    lib.mts_block_load.argtypes = [
+        ctypes.c_char_p,
+        mts_create_array_callback_t,
+    ]
+    lib.mts_block_load.restype = POINTER(mts_block_t)
+
+    lib.mts_block_load_buffer.argtypes = [
+        ctypes.c_char_p,
+        c_uintptr_t,
+        mts_create_array_callback_t,
+    ]
+    lib.mts_block_load_buffer.restype = POINTER(mts_block_t)
+
+    lib.mts_block_save.argtypes = [
+        ctypes.c_char_p,
+        POINTER(mts_block_t),
+    ]
+    lib.mts_block_save.restype = _check_status
+
+    lib.mts_block_save_buffer.argtypes = [
+        POINTER(ctypes.c_char_p),
+        POINTER(c_uintptr_t),
+        ctypes.c_void_p,
+        mts_realloc_buffer_t,
+        POINTER(mts_block_t),
+    ]
+    lib.mts_block_save_buffer.restype = _check_status
+
     lib.mts_tensormap_load.argtypes = [
         ctypes.c_char_p,
         mts_create_array_callback_t,

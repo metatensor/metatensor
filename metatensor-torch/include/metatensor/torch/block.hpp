@@ -164,6 +164,20 @@ public:
         return block_;
     }
 
+    /// Load a serialized TensorBlock from the given path
+    static TorchTensorBlock load(const std::string& path);
+
+    /// Load a serialized TensorBlock from an in-memory buffer (represented as a
+    /// `torch::Tensor` of bytes)
+    static TorchTensorBlock load_buffer(torch::Tensor buffer);
+
+    /// Serialize and save a TensorBlock to the given path
+    void save(const std::string& path) const;
+
+    /// Serialize and save a TensorBlock to an in-memory buffer (represented as
+    /// a `torch::Tensor` of bytes)
+    torch::Tensor save_buffer() const;
+
 private:
     /// Create a TensorBlockHolder containing gradients with respect to
     /// `parameter`
