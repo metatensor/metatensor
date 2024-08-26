@@ -196,6 +196,7 @@ autoclass_content = "both"
 autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"
+autodoc_type_aliases = {"CreateArrayCallback": "CreateArrayCallback"}
 
 breathe_projects = {
     "metatensor": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),

@@ -22,14 +22,23 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Added
 
 - `Labels::select` to sub-select entries in labels
+- Added support for serialization of TensorBlock with `TensorBlock::load`,
+  `TensorBlock::load_buffer`, `TensorBlock::save`, `TensorBlock::save_buffer`
+  and the corresponding functions in `metatensor::io`.
 
 ### metatensor-core C
 
 - `mts_labels_select` to sub-select entries in labels
+- Added support for serialization of TensorBlock with `mts_block_load`,
+  `mts_block_load_buffer`, `mts_block_save`, and `mts_block_save_buffer`.
+
 
 ### metatensor-core Python
 
 - `Labels.select` to sub-select entries in labels
+- Added support for serialization of TensorBlock with `TensorBlock.load`,
+  `TensorBlock.load_buffer`, `TensorBlock.save`, `TensorBlock.save_buffer`
+  and the corresponding functions in `metatensor.io`.
 
 ### metatensor-core Julia
 

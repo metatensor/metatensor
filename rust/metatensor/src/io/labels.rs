@@ -6,9 +6,7 @@ use crate::{Labels, Error};
 
 use super::realloc_vec;
 
-/// Save labels to the file at the given path.
-///
-/// If the file already exists, it is overwritten
+/// Load previously saved `Labels` from the file at the given path.
 pub fn load_labels(path: impl AsRef<std::path::Path>) -> Result<Labels, Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");
@@ -22,7 +20,7 @@ pub fn load_labels(path: impl AsRef<std::path::Path>) -> Result<Labels, Error> {
     return Ok(unsafe { Labels::from_raw(labels) });
 }
 
-/// Load a serialized `TensorMap` from a `buffer`.
+/// Load previously saved `Labels` from an in-memory `buffer`.
 pub fn load_labels_buffer(buffer: &[u8]) -> Result<Labels, Error> {
     let mut labels = mts_labels_t::null();
 
@@ -37,7 +35,9 @@ pub fn load_labels_buffer(buffer: &[u8]) -> Result<Labels, Error> {
     return Ok(unsafe { Labels::from_raw(labels) });
 }
 
-/// Save the given Labels to a file.
+/// Save the given `Labels` to a file.
+///
+/// If the file already exists, it is overwritten.
 pub fn save_labels(path: impl AsRef<std::path::Path>, labels: &Labels) -> Result<(), Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");

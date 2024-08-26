@@ -980,6 +980,25 @@ namespace io {
     template<>
     std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& tensor);
 
+    /**************************************************************************/
+
+    /// Save a `TensorBlock` to the file at `path`.
+    ///
+    /// If the file exists, it will be overwritten.
+    void save(const std::string& path, const TensorBlock& block);
+
+    /// Save a `TensorBlock` to an in-memory buffer.
+    ///
+    /// The `Buffer` template parameter can be set to any type that can be
+    /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+    template <typename Buffer = std::vector<uint8_t>>
+    Buffer save_buffer(const TensorBlock& block);
+
+    template<>
+    std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorBlock& block);
+
+    /**************************************************************************/
+
     /// Save `Labels` to the file at `path`.
     ///
     /// If the file exists, it will be overwritten.
@@ -994,6 +1013,9 @@ namespace io {
 
     template<>
     std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const Labels& labels);
+
+    /**************************************************************************/
+    /**************************************************************************/
 
     /*!
      * Load a previously saved `TensorMap` from the given path.
@@ -1048,6 +1070,60 @@ namespace io {
         const Buffer& buffer,
         mts_create_array_callback_t create_array = details::default_create_array
     );
+
+    /**************************************************************************/
+
+    /*!
+     * Load a previously saved `TensorBlock` from the given path.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     *
+     */
+    TensorBlock load_block(
+        const std::string& path,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+
+    /*!
+     * Load a previously saved `TensorBlock` from the given `buffer`, containing
+     * `buffer_count` elements.
+     *
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * ``create_array`` will be used to create new arrays when constructing the
+     * blocks and gradients, the default version will create data using
+     * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+     * for more information.
+     *
+     * \endverbatim
+     */
+    TensorBlock load_block_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+
+
+    /// Load a previously saved `TensorBlock` from the given `buffer`.
+    ///
+    /// The `Buffer` template parameter would typically be a
+    /// `std::vector<uint8_t>` or a `std::string`, but any container with
+    /// contiguous data and an `item_type` with the same size as a `uint8_t` can
+    /// work.
+    template <typename Buffer>
+    TensorBlock load_block_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array = details::default_create_array
+    );
+
+    /**************************************************************************/
 
     /// Load previously saved `Labels` from the given path.
     Labels load_labels(const std::string& path);
@@ -1978,9 +2054,109 @@ public:
         return {shape, shape + shape_count};
     }
 
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load a previously saved ``TensorBlock`` from the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_block`, and provided
+     * as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorBlock load(
+        const std::string& path,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_block(path, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load a previously saved ``TensorBlock`` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_block_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorBlock load_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_block_buffer(buffer, buffer_count, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load a previously saved ``TensorBlock`` from a in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_block_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    template <typename Buffer>
+    static TensorBlock load_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_block_buffer<Buffer>(buffer, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save this ``TensorBlock`` to the given path.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
+     * convenience API.
+     *
+     * \endverbatim
+     */
+    void save(const std::string& path) const {
+        return metatensor::io::save(path, *this);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save this ``TensorBlock`` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    std::vector<uint8_t> save_buffer() const {
+        return metatensor::io::save_buffer(*this);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Save this ``TensorBlock`` to an in-memory buffer.
+     *
+     * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    template <typename Buffer>
+    Buffer save_buffer() const {
+        return metatensor::io::save_buffer<Buffer>(*this);
+    }
+
 private:
     /// Constructor of a TensorBlock not associated with anything
     explicit TensorBlock(): block_(nullptr), is_view_(true) {}
+
+    /// Create a C++ TensorBlock from a C `mts_block_t` pointer. The C++
+    /// block takes ownership of the C pointer.
+    explicit TensorBlock(mts_block_t* block): block_(block), is_view_(false) {}
 
     /// Get the `mts_array_t` for this block.
     ///
@@ -2014,6 +2190,15 @@ private:
 
     friend class TensorMap;
     friend class metatensor_torch::TensorBlockHolder;
+    friend TensorBlock metatensor::io::load_block(
+        const std::string& path,
+        mts_create_array_callback_t create_array
+    );
+    friend TensorBlock metatensor::io::load_block_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array
+    );
 
     mts_block_t* block_;
     bool is_view_;
@@ -2338,7 +2523,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a ``TensorMap`` to the given path.
+     * Save this ``TensorMap`` to the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
      * convenience API.
@@ -2352,7 +2537,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a ``TensorMap`` to an in-memory buffer.
+     * Save this ``TensorMap`` to an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
      * provided as a convenience API.
@@ -2366,7 +2551,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Save a ``TensorMap`` to an in-memory buffer.
+     * Save this ``TensorMap`` to an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::save_buffer`, and
      * provided as a convenience API.
@@ -2449,6 +2634,46 @@ namespace io {
         return buffer;
     }
 
+    /**************************************************************************/
+
+    inline void save(const std::string& path, const TensorBlock& block) {
+        details::check_status(mts_block_save(path.c_str(), block.as_mts_block_t()));
+    }
+
+    template <typename Buffer>
+    Buffer save_buffer(const TensorBlock& block) {
+        auto buffer = metatensor::io::save_buffer<std::vector<uint8_t>>(block);
+        return Buffer(buffer.begin(), buffer.end());
+    }
+
+    template<>
+    inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorBlock& block) {
+        std::vector<uint8_t> buffer;
+
+        auto* ptr = buffer.data();
+        auto size = buffer.size();
+
+        auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
+            auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
+            buffer->resize(new_size, '\0');
+            return buffer->data();
+        };
+
+        details::check_status(mts_block_save_buffer(
+            &ptr,
+            &size,
+            &buffer,
+            realloc,
+            block.as_mts_block_t()
+        ));
+
+        buffer.resize(size, '\0');
+
+        return buffer;
+    }
+
+    /**************************************************************************/
+
     inline void save(const std::string& path, const Labels& labels) {
         details::check_status(mts_labels_save(path.c_str(), labels.as_mts_labels_t()));
     }
@@ -2485,6 +2710,9 @@ namespace io {
         return buffer;
     }
 
+    /**************************************************************************/
+    /**************************************************************************/
+
     inline TensorMap load(
         const std::string& path,
         mts_create_array_callback_t create_array
@@ -2520,6 +2748,46 @@ namespace io {
             create_array
         );
     }
+
+    /**************************************************************************/
+
+    inline TensorBlock load_block(
+        const std::string& path,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_block_load(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorBlock(ptr);
+    }
+
+    inline TensorBlock load_block_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_block_load_buffer(buffer, buffer_count, create_array);
+        details::check_pointer(ptr);
+        return TensorBlock(ptr);
+    }
+
+    template <typename Buffer>
+    TensorBlock load_block_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array
+    ) {
+        static_assert(
+            sizeof(typename Buffer::value_type) == sizeof(uint8_t),
+            "`Buffer` must be a container of uint8_t or equivalent"
+        );
+
+        return metatensor::io::load_block_buffer(
+            reinterpret_cast<const uint8_t*>(buffer.data()),
+            buffer.size(),
+            create_array
+        );
+    }
+
+    /**************************************************************************/
 
     inline Labels load_labels(const std::string& path) {
         mts_labels_t labels;

@@ -44,6 +44,9 @@ static void save_ivalue(const std::string& path, torch::IValue data) {
         if (custom_class_is<TensorMapHolder>(data)) {
             auto tensor = data.toCustomClass<TensorMapHolder>();
             return metatensor_torch::save(path, tensor);
+        } else if (custom_class_is<TensorBlockHolder>(data)) {
+            auto block = data.toCustomClass<TensorBlockHolder>();
+            return metatensor_torch::save(path, block);
         } else if (custom_class_is<LabelsHolder>(data)) {
             auto labels = data.toCustomClass<LabelsHolder>();
             return metatensor_torch::save(path, labels);
@@ -51,8 +54,8 @@ static void save_ivalue(const std::string& path, torch::IValue data) {
     }
 
     C10_THROW_ERROR(TypeError,
-        "data` must be either 'Labels' or 'TensorMap' in `save`, not "
-        + data.type()->str()
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap' in `save`, "
+        "not " + data.type()->str()
     );
 }
 
@@ -61,6 +64,9 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
         if (custom_class_is<TensorMapHolder>(data)) {
             auto tensor = data.toCustomClass<TensorMapHolder>();
             return metatensor_torch::save_buffer(tensor);
+        } else if (custom_class_is<TensorBlockHolder>(data)) {
+            auto block = data.toCustomClass<TensorBlockHolder>();
+            return metatensor_torch::save_buffer(block);
         } else if (custom_class_is<LabelsHolder>(data)) {
             auto labels = data.toCustomClass<LabelsHolder>();
             return metatensor_torch::save_buffer(labels);
@@ -68,8 +74,8 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
     }
 
     C10_THROW_ERROR(TypeError,
-        "data` must be either 'Labels' or 'TensorMap' in `save_buffer`, not "
-        + data.type()->str()
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap' in `save_buffer`, "
+        "not " + data.type()->str()
     );
 }
 
@@ -206,7 +212,16 @@ TORCH_LIBRARY(metatensor, m) {
             torch::arg("device") = torch::nullopt,
             torch::arg("arrays") = torch::nullopt
         })
-        ;
+        .def("save", &TensorBlockHolder::save, DOCSTRING, {torch::arg("file")})
+        .def("save_buffer", &TensorBlockHolder::save_buffer)
+        .def_static("load", &TensorBlockHolder::load)
+        .def_static("load_buffer", &TensorBlockHolder::load_buffer)
+        .def_pickle(
+            // __getstate__
+            [](const TorchTensorBlock& self){ return self->save_buffer(); },
+            // __setstate__
+            [](torch::Tensor buffer){ return metatensor_torch::load_block_buffer(buffer); }
+        );
 
     m.class_<TensorMapHolder>("TensorMap")
         .def(
@@ -284,6 +299,15 @@ TORCH_LIBRARY(metatensor, m) {
     m.def(
         "load_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorMap",
         metatensor_torch::load_buffer
+    );
+
+    m.def(
+        "load_block(str path) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block
+    );
+    m.def(
+        "load_block_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block_buffer
     );
 
     m.def(

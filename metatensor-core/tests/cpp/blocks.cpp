@@ -1,7 +1,12 @@
+#include <fstream>
+#include <sstream>
+
 #include <catch.hpp>
 
 #include <metatensor.hpp>
 using namespace metatensor;
+
+static void check_loaded_block(metatensor::TensorBlock& block);
 
 TEST_CASE("Blocks") {
     SECTION("no components") {
@@ -171,4 +176,76 @@ TEST_CASE("Blocks") {
             Labels({}, {})
         );
     }
+}
+
+TEST_CASE("Serialization") {
+    SECTION("loading file") {
+        // TEST_BLOCK_NPZ_PATH is defined by cmake and expand to the path of
+        // `tests/block.npz`
+        auto block = TensorBlock::load(TEST_BLOCK_NPZ_PATH);
+        check_loaded_block(block);
+
+        block = metatensor::io::load_block(TEST_BLOCK_NPZ_PATH);
+        check_loaded_block(block);
+    }
+
+    SECTION("Load/Save with buffers") {
+        // read the whole file into a buffer
+        std::ifstream file(TEST_BLOCK_NPZ_PATH, std::ios::binary);
+        std::ostringstream string_stream;
+        string_stream << file.rdbuf();
+        auto buffer = string_stream.str();
+
+        auto block = TensorBlock::load_buffer(buffer);
+        check_loaded_block(block);
+
+        block = metatensor::io::load_block_buffer(buffer);
+        check_loaded_block(block);
+
+        auto saved = block.save_buffer<std::string>();
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        saved = metatensor::io::save_buffer<std::string>(block);
+        REQUIRE(saved.size() == buffer.size());
+        CHECK(saved == buffer);
+
+        // using the raw C API, making the callback a small wrapper around
+        // std::realloc
+        uint8_t* raw_buffer = nullptr;
+        uintptr_t buflen = 0;
+        auto status = mts_block_save_buffer(
+            &raw_buffer,
+            &buflen,
+            nullptr,
+            [](void*, uint8_t* ptr, uintptr_t new_size){
+                return static_cast<uint8_t*>(std::realloc(ptr, new_size));
+            },
+            block.as_mts_block_t()
+        );
+        REQUIRE(status == MTS_SUCCESS);
+        CHECK(saved == std::string(raw_buffer, raw_buffer + buflen));
+
+        std::free(raw_buffer);
+    }
+}
+
+void check_loaded_block(metatensor::TensorBlock& block) {
+    auto samples = block.samples();
+    CHECK(samples.names().size() == 2);
+    CHECK(samples.names()[0] == std::string("system"));
+    CHECK(samples.names()[1] == std::string("atom"));
+
+    auto values = block.values();
+    CHECK(values.shape() == std::vector<size_t>{9, 5, 3});
+
+    auto gradient = block.gradient("positions");
+    samples = gradient.samples();
+    CHECK(samples.names().size() == 3);
+    CHECK(samples.names()[0] == std::string("sample"));
+    CHECK(samples.names()[1] == std::string("system"));
+    CHECK(samples.names()[2] == std::string("atom"));
+
+    values = gradient.values();
+    CHECK(values.shape() == std::vector<size_t>{59, 3, 5, 3});
 }

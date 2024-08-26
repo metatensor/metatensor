@@ -155,6 +155,34 @@ impl TensorBlock {
 
         return Ok(());
     }
+
+    /// Load a `TensorBlock` from the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::load_block`]
+    pub fn load(path: impl AsRef<std::path::Path>) -> Result<TensorBlock, Error> {
+        return crate::io::load_block(path);
+    }
+
+    /// Load a `TensorBlock` from an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::load_block_buffer`]
+    pub fn load_buffer(buffer: &[u8]) -> Result<TensorBlock, Error> {
+        return crate::io::load_block_buffer(buffer);
+    }
+
+    /// Save the given block to the file at `path`
+    ///
+    /// This is a convenience function calling [`crate::io::save_block`]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), Error> {
+        self.as_ref().save(path)
+    }
+
+    /// Save the given block to an in-memory buffer
+    ///
+    /// This is a convenience function calling [`crate::io::save_block_buffer`]
+    pub fn save_buffer(&self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        self.as_ref().save_buffer(buffer)
+    }
 }
 
 

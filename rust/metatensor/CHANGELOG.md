@@ -15,6 +15,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added support for serialization of TensorBlock with `TensorBlock::load`,
+  `TensorBlock::load_buffer`, `TensorBlock::save`, `TensorBlock::save_buffer`
+  and the corresponding functions in `metatensor::io`.
+
 ## [Version 0.1.5](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-rust-v0.1.5) - 2024-03-12
 
 ### Fixed

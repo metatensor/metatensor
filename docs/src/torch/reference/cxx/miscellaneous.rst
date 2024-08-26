@@ -39,6 +39,19 @@ Version number
 .. doxygenfunction:: metatensor_torch::load_buffer
 
 
+
+``TensorBlock`` Serialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. doxygenfunction:: metatensor_torch::save(const std::string &path, TorchTensorBlock block)
+
+.. doxygenfunction:: metatensor_torch::save_buffer(TorchTensorBlock block)
+
+.. doxygenfunction:: metatensor_torch::load_block
+
+.. doxygenfunction:: metatensor_torch::load_block_buffer
+
+
 ``Labels`` Serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

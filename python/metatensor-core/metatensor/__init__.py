@@ -22,7 +22,7 @@ from .status import MetatensorError  # noqa: F401
 from .tensor import TensorMap  # noqa: F401
 from .data import DeviceWarning  # noqa: F401
 
-from .io import load, load_labels, save  # noqa: F401
+from .io import load, load_labels, load_block, save  # noqa: F401
 
 try:
     from . import operations  # noqa: F401

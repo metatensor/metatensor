@@ -20,6 +20,11 @@ def tensor():
 
 
 @pytest.fixture
+def block(tensor):
+    return tensor.block(1)
+
+
+@pytest.fixture
 def labels():
     return _tests_utils.tensor().keys
 
@@ -180,12 +185,12 @@ def test_save_warning_errors(tmpdir, tensor):
     tmpfile = "serialize-test.npz"
 
     message = (
-        "`data` must be either 'Labels' or 'TensorMap', "
-        "not <class 'metatensor.block.TensorBlock'>"
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap', "
+        "not <class 'numpy.ndarray'>"
     )
     with pytest.raises(TypeError, match=message):
         with tmpdir.as_cwd():
-            metatensor.save(tmpfile, tensor.block(0))
+            metatensor.save(tmpfile, tensor.block(0).values)
 
 
 @pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
@@ -445,3 +450,83 @@ def test_wrong_load_error():
             buffer = fd.read()
 
         metatensor.load_labels(io.BytesIO(buffer))
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+@pytest.mark.parametrize("memory_buffer", (True, False))
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load_block(use_numpy, memory_buffer, standalone_fn):
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.npz",
+    )
+
+    if memory_buffer:
+        with open(path, "rb") as fd:
+            buffer = fd.read()
+
+        assert isinstance(buffer, bytes)
+    else:
+        file = path
+
+    if standalone_fn:
+        if memory_buffer:
+            block = metatensor.io.load_block_buffer(buffer, use_numpy=use_numpy)
+        else:
+            block = metatensor.load_block(file, use_numpy=use_numpy)
+    else:
+        if memory_buffer:
+            block = TensorBlock.load_buffer(buffer, use_numpy=use_numpy)
+        else:
+            block = TensorBlock.load(file, use_numpy=use_numpy)
+
+    assert isinstance(block, TensorBlock)
+    assert block.samples.names == ["system", "atom"]
+    assert block.values.shape == (9, 5, 3)
+
+    gradient = block.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+@pytest.mark.parametrize("memory_buffer", (True, False))
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
+    with tmpdir.as_cwd():
+        if memory_buffer:
+            if standalone_fn:
+                buffer = metatensor.io.save_buffer(block, use_numpy=use_numpy)
+            else:
+                buffer = block.save_buffer(use_numpy=use_numpy)
+
+            file = io.BytesIO(buffer)
+
+        else:
+            file = "serialize-test.npz"
+            if standalone_fn:
+                metatensor.save(file, block, use_numpy=use_numpy)
+            else:
+                block.save(file, use_numpy=use_numpy)
+
+        data = np.load(file)
+
+    assert len(data.keys()) == 7
+
+    np.testing.assert_equal(data["values"], block.values)
+    assert _npz_labels(data["samples"]) == block.samples
+    assert _npz_labels(data["components/0"]) == block.components[0]
+    assert _npz_labels(data["properties"]) == block.properties
+
+    for parameter in block.gradients_list():
+        gradient = block.gradient(parameter)
+        prefix = f"gradients/{parameter}"
+
+        np.testing.assert_equal(data[f"{prefix}/values"], gradient.values)
+        assert _npz_labels(data[f"{prefix}/samples"]) == gradient.samples
+        assert _npz_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
