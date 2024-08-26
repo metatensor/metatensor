@@ -157,9 +157,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pycparser
 
+      - name: install bindgen
+        run: |
+          cargo install bindgen-cli --version ^0.69
+
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
-          # bindgen is already installed on GitHub Actions VM
           ./scripts/update-declarations.sh
           git diff --exit-code
 
