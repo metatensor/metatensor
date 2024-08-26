@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
-from .. import Labels, TensorMap, dtype_name
+from .. import Labels, TensorBlock, TensorMap, dtype_name
 from . import ModelOutput, System
 
 
@@ -43,22 +43,10 @@ def _check_outputs(
                 f"the model did not produce the '{name}' output, which was requested"
             )
 
-        if name == "energy":
-            _check_energy_like(
-                "energy",
-                value,
-                systems,
-                request,
-                selected_atoms,
-            )
-        elif name == "energy_ensemble":
-            _check_energy_like(
-                "energy_ensemble",
-                value,
-                systems,
-                request,
-                selected_atoms,
-            )
+        if name in ["energy", "energy_ensemble"]:
+            _check_energy_like(name, value, systems, request, selected_atoms)
+        elif name == "features":
+            _check_features(value, systems, request, selected_atoms)
         else:
             # this is a non-standard output, there is nothing to check
             continue
@@ -74,69 +62,21 @@ def _check_energy_like(
     """
     Check either "energy" or "energy_ensemble" output metadata
     """
-
     assert name in ["energy", "energy_ensemble"]
 
-    if value.keys != Labels("_", torch.tensor([[0]])):
-        raise ValueError(
-            f"invalid keys for '{name}' output: expected `Labels('_', [[0]])`"
-        )
+    # Ensure the output contains a single block with the expected key
+    _validate_single_block(name, value)
 
-    device = value.device
+    # Check samples values from systems & selected_atoms
+    _validate_atomic_samples(name, value, systems, request, selected_atoms)
+
     energy_block = value.block_by_id(0)
+    device = value.device
 
-    if request.per_atom:
-        expected_samples_names = ["system", "atom"]
-    else:
-        expected_samples_names = ["system"]
+    # Ensure that the block has no components
+    _validate_no_components(name, energy_block)
 
-    if energy_block.samples.names != expected_samples_names:
-        raise ValueError(
-            f"invalid sample names for '{name}' output: "
-            f"expected {expected_samples_names}, got {energy_block.samples.names}"
-        )
-
-    # check samples values from systems & selected_atoms
-    if request.per_atom:
-        expected_values: List[List[int]] = []
-        for s, system in enumerate(systems):
-            for a in range(len(system)):
-                expected_values.append([s, a])
-
-        expected_samples = Labels(
-            ["system", "atom"], torch.tensor(expected_values, device=device)
-        )
-        if selected_atoms is not None:
-            expected_samples = expected_samples.intersection(selected_atoms)
-
-        if len(expected_samples.union(energy_block.samples)) != len(expected_samples):
-            raise ValueError(
-                f"invalid samples entries for '{name}' output, they do not match the "
-                f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
-            )
-
-    else:
-        expected_samples = Labels(
-            "system", torch.arange(len(systems), device=device).reshape(-1, 1)
-        )
-        if selected_atoms is not None:
-            selected_systems = Labels(
-                "system", torch.unique(selected_atoms.column("system")).reshape(-1, 1)
-            )
-            expected_samples = expected_samples.intersection(selected_systems)
-
-        if len(expected_samples.union(energy_block.samples)) != len(expected_samples):
-            raise ValueError(
-                f"invalid samples entries for '{name}' output, they do not match the "
-                f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
-            )
-
-    if len(energy_block.components) != 0:
-        raise ValueError(
-            f"invalid components for '{name}' output: components should be empty"
-        )
-
-    # the only difference between energy & energy_ensemble is in the properties
+    # The only difference between energy & energy_ensemble is in the properties
     if name == "energy":
         expected_properties = Labels("energy", torch.tensor([[0]], device=device))
         message = "`Labels('energy', [[0]])`"
@@ -202,3 +142,107 @@ def _check_energy_like(
                     f"invalid components for '{name}' output 'positions' gradients: "
                     "expected Labels('xyz', [[0], [1], [2]]) for the first component"
                 )
+
+
+def _check_features(
+    value: TensorMap,
+    systems: List[System],
+    request: ModelOutput,
+    selected_atoms: Optional[Labels],
+):
+    """
+    Check "features" output metadata. It is standardized with Plumed
+    https://www.plumed.org/doc-master/user-doc/html/_m_e_t_a_t_e_n_s_o_r.html
+    """
+    # Ensure the output contains a single block with the expected key
+    _validate_single_block("features", value)
+
+    # Check samples values from systems & selected_atoms
+    _validate_atomic_samples("features", value, systems, request, selected_atoms)
+
+    features_block = value.block_by_id(0)
+
+    # Check that the block has no components
+    _validate_no_components("features", features_block)
+
+    # Should not have any explicit gradients
+    # all gradient calculations are done using autograd
+    if len(features_block.gradients_list()) > 0:
+        raise ValueError(
+            "invalid gradients for 'features' output: it should not have any explicit",
+            "gradients. all gradient calculations should be done using autograd",
+        )
+
+
+def _validate_atomic_samples(
+    name: str,
+    value: TensorMap,
+    systems: List[System],
+    request: ModelOutput,
+    selected_atoms: Optional[Labels],
+):
+    """
+    Validates the sample labels in the output against the expected structure
+    """
+    device = value.device
+    block = value.block_by_id(0)
+
+    # Check if the samples names are as expected based on whether the output is
+    # per-atom or global
+    if request.per_atom:
+        expected_samples_names = ["system", "atom"]
+    else:
+        expected_samples_names = ["system"]
+
+    if block.samples.names != expected_samples_names:
+        raise ValueError(
+            f"invalid sample names for '{name}' output: "
+            f"expected {expected_samples_names}, got {block.samples.names}"
+        )
+
+    # Check if the samples match the systems and selected_atoms
+    if request.per_atom:
+        expected_values: List[List[int]] = []
+        for s, system in enumerate(systems):
+            for a in range(len(system)):
+                expected_values.append([s, a])
+        expected_samples = Labels(
+            ["system", "atom"], torch.tensor(expected_values, device=device)
+        )
+        if selected_atoms is not None:
+            expected_samples = expected_samples.intersection(selected_atoms)
+    else:
+        expected_samples = Labels(
+            "system", torch.arange(len(systems), device=device).reshape(-1, 1)
+        )
+        if selected_atoms is not None:
+            selected_systems = Labels(
+                "system", torch.unique(selected_atoms.column("system")).reshape(-1, 1)
+            )
+            expected_samples = expected_samples.intersection(selected_systems)
+
+    if len(expected_samples.union(block.samples)) != len(expected_samples):
+        raise ValueError(
+            f"invalid samples entries for '{name}' output, they do not match the "
+            f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
+        )
+
+
+def _validate_single_block(name: str, value: TensorMap):
+    """
+    Ensure the TensorMap has a single block with the expected key
+    """
+    if value.keys != Labels("_", torch.tensor([[0]])):
+        raise ValueError(
+            f"invalid keys for '{name}' output: expected `Labels('_', [[0]])`"
+        )
+
+
+def _validate_no_components(name: str, block: TensorBlock):
+    """
+    Ensure the block has no components"
+    """
+    if len(block.components) != 0:
+        raise ValueError(
+            f"invalid components for {name} output: components should be empty"
+        )

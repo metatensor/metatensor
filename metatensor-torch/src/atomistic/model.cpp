@@ -137,7 +137,8 @@ ModelOutput ModelOutputHolder::from_json(std::string_view json) {
 
 std::unordered_set<std::string> KNOWN_OUTPUTS = {
     "energy",
-    "energy_ensemble"
+    "energy_ensemble",
+    "features"
 };
 
 void ModelCapabilitiesHolder::set_outputs(torch::Dict<std::string, ModelOutput> outputs) {
