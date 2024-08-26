@@ -265,8 +265,7 @@ class LennardJonesModel(torch.nn.Module):
     def __init__(self, cutoff, sigma, epsilon):
         super().__init__()
 
-        # define a neighborlist options attribute to select the requested neighbors
-        # during evaluation
+        # define neighbor list options to request the right set of neighbors
         self._nl_options = NeighborListOptions(cutoff=cutoff, full_list=False)
 
         self._sigma = sigma
@@ -279,10 +278,10 @@ class LennardJonesModel(torch.nn.Module):
         """Method declaring which neighbors lists this model desires.
 
         The method is required to tell an simulation engine (here ase) to compute and
-        attach the requested neigborlist to a system which will be passed to the
+        attach the requested neighbor list to a system which will be passed to the
         ``forward`` method defined below
 
-        Note that a model can request as many neighborlists as it wants
+        Note that a model can request as many neighbor lists as it wants
         """
         return [self._nl_options]
 
@@ -368,7 +367,7 @@ capabilities = ModelCapabilities(
     outputs={
         "energy": ModelOutput(quantity="energy", unit="kJ/mol", per_atom=False),
     },
-    atomic_types=[6],
+    atomic_types=[18],
     interaction_range=5.0,
     length_unit="Angstrom",
     supported_devices=["cpu"],
