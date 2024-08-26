@@ -372,6 +372,17 @@ class MetatensorAtomisticModel(torch.nn.Module):
                     expected_dtype=self._model_dtype,
                 )
 
+        for system in systems:
+            # always (i.e. even if check_consistency=False) check that the atomic types
+            # of the system match the one the model supports
+            all_types = torch.unique(system.types)
+            for atom_type in all_types:
+                if atom_type not in self._capabilities.atomic_types:
+                    raise ValueError(
+                        "this model does not support the atomic type "
+                        f"'{atom_type.item()}' which is present in the input systems"
+                    )
+
         # convert systems from engine to model units
         with record_function("MetatensorAtomisticModel::convert_units_input"):
             if self._capabilities.length_unit != options.length_unit:
@@ -672,14 +683,6 @@ def _check_inputs(
                 "expected all systems to have the same dtype, "
                 f"got {global_dtype} and {system.positions.dtype}"
             )
-
-        # check that the atomic types of the system match the one the model supports
-        all_types = torch.unique(system.types)
-        for atom_type in all_types:
-            if atom_type not in capabilities.atomic_types:
-                raise ValueError(
-                    f"this model can not run for the atomic type '{atom_type.item()}'"
-                )
 
         # Check neighbors lists
         known_neighbor_lists = system.known_neighbor_lists()
