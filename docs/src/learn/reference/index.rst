@@ -8,26 +8,14 @@ API reference
   This is the documentation for ``metatensor-learn`` version
   |metatensor-learn-version|. For other versions, look in the following pages:
 
+  .. version-list::
+    :tag-prefix: metatensor-learn-v
+    :url-suffix: learn/reference/index.html
 
-  .. grid::
-    :margin: 0 0 0 0
-
-    .. grid-item-version:: 0.2.2
-        :tag-prefix: metatensor-learn-v
-        :url-suffix: learn/reference/index.html
-
-    .. grid-item-version:: 0.2.1
-        :tag-prefix: metatensor-learn-v
-        :url-suffix: learn/reference/index.html
-
-    .. grid-item-version:: 0.2.0
-        :tag-prefix: metatensor-learn-v
-        :url-suffix: learn/reference/index.html
-
-    .. grid-item-version:: 0.1.0
-        :tag-prefix: metatensor-learn-v
-        :url-suffix: learn/reference/index.html
-
+    .. version:: 0.2.2
+    .. version:: 0.2.1
+    .. version:: 0.2.0
+    .. version:: 0.1.0
 
 .. toctree::
     :maxdepth: 3

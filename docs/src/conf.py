@@ -153,7 +153,8 @@ rst_prolog = f"""
 
 # -- General configuration ---------------------------------------------------
 
-needs_sphinx = "4.0.0"
+needs_sphinx = "7.4.0"
+suppress_warnings = ["config.cache"]
 
 python_use_unqualified_type_names = True
 

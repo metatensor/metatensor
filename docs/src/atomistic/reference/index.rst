@@ -9,20 +9,21 @@ API reference
   ``metatensor-torch`` version |metatensor-torch-version|. For other versions,
   look in the following pages:
 
-  .. grid::
-    :margin: 0 0 0 0
 
-    .. grid-item-version:: 0.3.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: atomistic/reference/index.html
+  .. version-list::
+    :tag-prefix: metatensor-torch-v
+    :url-suffix: atomistic/reference/index.html
 
-    .. grid-item-version:: 0.2.1
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: atomistic/reference/index.html
+    .. version:: 0.5.3
+    .. version:: 0.5.2
+    .. version:: 0.5.1
+    .. version:: 0.5.0
+    .. version:: 0.4.0
+    .. version:: 0.3.0
+    .. version:: 0.2.1
 
-    .. grid-item-version:: 0.2.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: atomistic/reference/index.html
+    .. version:: 0.2.0
+      :url-suffix: reference/torch/index.html
 
 
 The atomistic machine learning models capabilities of metatensor are part of the
