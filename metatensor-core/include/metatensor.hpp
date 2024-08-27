@@ -2163,8 +2163,8 @@ public:
     /// `keys_to_move.count() == 0`), then the new property labels will contain
     /// entries corresponding to the merged blocks only. For example, merging a
     /// block with key `a=0` and properties `p=1, 2` with a block with key `a=2`
-    /// and properties `p=1, 3` will produce a block with properties `a, p = (0,
-    /// 1), (0, 2), (2, 1), (2, 3)`.
+    /// and properties `p=1, 3` will produce a block with properties
+    /// `a, p = (0, 1), (0, 2), (2, 1), (2, 3)`.
     ///
     /// If `keys_to_move` contains entries, then the property labels must be the
     /// same for all the merged blocks. In that case, the merged property labels
