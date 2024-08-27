@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 import pytest
 import torch
+from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -127,7 +128,10 @@ def test_pickle(tmpdir, tensor_path):
 
     with tmpdir.as_cwd():
         torch.save(tensor, tmpfile)
-        loaded = torch.load(tmpfile)
+        if version.parse(torch.__version__) <= version.parse("1.12"):
+            loaded = torch.load(tmpfile, weights_only=False)
+        else:
+            loaded = torch.load(tmpfile)
 
     check_tensor(loaded)
 
@@ -194,7 +198,11 @@ def test_pickle_block(tmpdir, block_path):
 
     with tmpdir.as_cwd():
         torch.save(block, tmpfile)
-        loaded = torch.load(tmpfile)
+
+        if version.parse(torch.__version__) <= version.parse("1.12"):
+            loaded = torch.load(tmpfile, weights_only=False)
+        else:
+            loaded = torch.load(tmpfile)
 
     check_block(loaded)
 
@@ -248,7 +256,11 @@ def test_pickle_labels(tmpdir, labels_path):
 
     with tmpdir.as_cwd():
         torch.save(labels, tmpfile)
-        loaded = torch.load(tmpfile)
+
+        if version.parse(torch.__version__) <= version.parse("1.12"):
+            loaded = torch.load(tmpfile, weights_only=False)
+        else:
+            loaded = torch.load(tmpfile)
 
     check_labels(loaded)
 
