@@ -9,25 +9,16 @@ API reference
   |metatensor-operations-version|. For other versions, look in the following
   pages:
 
-  .. grid::
-    :margin: 0 0 0 0
+  .. version-list::
+    :tag-prefix: metatensor-operations-v
+    :url-suffix: operations/reference/index.html
 
-    .. grid-item-version:: 0.2.2
-        :tag-prefix: metatensor-operations-v
-        :url-suffix: operations/reference/index.html
+    .. version:: 0.2.2
+    .. version:: 0.2.1
+    .. version:: 0.2.0
 
-    .. grid-item-version:: 0.2.1
-        :tag-prefix: metatensor-operations-v
-        :url-suffix: operations/reference/index.html
-
-    .. grid-item-version:: 0.2.0
-        :tag-prefix: metatensor-operations-v
-        :url-suffix: operations/reference/index.html
-
-    .. grid-item-version:: 0.1.0
-        :tag-prefix: metatensor-operations-v
-        :url-suffix: reference/operations/index.html
-
+    .. version:: 0.1.0
+      :url-suffix: reference/operations/index.html
 
 All operations are automatically re-exported from
 ``metatensor.operations.<xxx>`` as ``metatensor.<xxx>`` when using the Python

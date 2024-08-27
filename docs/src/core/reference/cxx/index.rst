@@ -8,44 +8,16 @@ C++ API reference
   This is the documentation for ``metatensor-core`` version
   |metatensor-core-version|. For other versions, look in the following pages:
 
-  .. grid::
-    :margin: 0 0 0 0
+  .. version-list::
+    :tag-prefix: metatensor-core-v
+    :url-suffix: core/reference/cxx/index.html
 
-    .. grid-item-version:: 0.1.9
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.7
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.6
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.5
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.4
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.3
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.2
-      :tag-prefix: metatensor-core-v
-      :url-suffix: core/reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.1
-      :tag-prefix: metatensor-core-v
-      :url-suffix: reference/cxx/index.html
-
-    .. grid-item-version:: 0.1.0
-      :tag-prefix: metatensor-core-v
-      :url-suffix: reference/cxx/index.html
+    .. version:: 0.1.9
+    .. version:: 0.1.7
+    .. version:: 0.1.6
+    .. version:: 0.1.5
+    .. version:: 0.1.4
+    .. version:: 0.1.3
 
 Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-core>`.
 You can the provided classes and functions in your own code by :ref:`installing

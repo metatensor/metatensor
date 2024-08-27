@@ -8,45 +8,23 @@ API reference
   This is the documentation for ``metatensor-torch`` version
   |metatensor-torch-version|. For other versions, look in the following pages:
 
-  .. grid::
-    :margin: 0 0 0 0
+  .. version-list::
+    :tag-prefix: metatensor-torch-v
+    :url-suffix: torch/reference/index.html
 
-    .. grid-item-version:: 0.5.3
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
+    .. version:: 0.5.3
+    .. version:: 0.5.2
+    .. version:: 0.5.1
+    .. version:: 0.5.0
+    .. version:: 0.4.0
+    .. version:: 0.3.0
+    .. version:: 0.2.1
 
-    .. grid-item-version:: 0.5.2
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
+    .. version:: 0.2.0
+      :url-suffix: reference/torch/index.html
 
-    .. grid-item-version:: 0.5.1
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
-
-    .. grid-item-version:: 0.5.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
-
-    .. grid-item-version:: 0.4.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
-
-    .. grid-item-version:: 0.3.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
-
-    .. grid-item-version:: 0.2.1
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: torch/reference/index.html
-
-    .. grid-item-version:: 0.2.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: reference/torch/index.html
-
-    .. grid-item-version:: 0.1.0
-        :tag-prefix: metatensor-torch-v
-        :url-suffix: reference/torch/index.html
-
+    .. version:: 0.1.0
+      :url-suffix: reference/torch/index.html
 
 .. py:currentmodule:: metatensor.torch
 
