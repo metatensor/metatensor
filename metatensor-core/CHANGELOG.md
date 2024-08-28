@@ -17,6 +17,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-core Julia
+
+#### Added
+
+- the Julia bindings to metatensor-core in the Metatensor.jl package
+
+## [Version 0.1.10](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.10) - 2024-08-28
+
 ### metatensor-core C++
 
 #### Added
@@ -28,6 +36,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C
 
+#### Added
+
 - `mts_labels_select` to sub-select entries in labels
 - Added support for serialization of TensorBlock with `mts_block_load`,
   `mts_block_load_buffer`, `mts_block_save`, and `mts_block_save_buffer`.
@@ -35,16 +45,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core Python
 
+#### Added
+
 - `Labels.select` to sub-select entries in labels
 - Added support for serialization of TensorBlock with `TensorBlock.load`,
   `TensorBlock.load_buffer`, `TensorBlock.save`, `TensorBlock.save_buffer`
   and the corresponding functions in `metatensor.io`.
-
-### metatensor-core Julia
-
-#### Added
-
-- the Julia bindings to metatensor-core in the Metatensor.jl package
 
 ## [Version 0.1.9](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.9) - 2024-07-15
 

@@ -72,7 +72,7 @@ function(check_compatible_versions _actual_ _requested_)
 endfunction()
 
 
-set(REQUIRED_METATENSOR_VERSION "0.1.0")
+set(REQUIRED_METATENSOR_VERSION "0.1.10")
 if (NOT "$ENV{METATENSOR_NO_LOCAL_DEPS}" STREQUAL "1")
     # If building a dev version, we also need to update the
     # REQUIRED_METATENSOR_VERSION in the same way we update the metatensor-torch
