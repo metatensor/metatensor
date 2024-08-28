@@ -12,6 +12,7 @@ Python API reference
     :tag-prefix: metatensor-core-v
     :url-suffix: core/reference/python/index.html
 
+    .. version:: 0.1.10
     .. version:: 0.1.9
     .. version:: 0.1.7
     .. version:: 0.1.6
