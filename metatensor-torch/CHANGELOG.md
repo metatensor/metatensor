@@ -19,6 +19,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.5.4](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.4) - 2024-08-28
+
 ### Added
 
 - `read_model_metadata` to load only the `ModelMetadata` from an exported
