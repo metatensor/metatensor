@@ -12,6 +12,7 @@ API reference
     :tag-prefix: metatensor-learn-v
     :url-suffix: learn/reference/index.html
 
+    .. version:: 0.2.3
     .. version:: 0.2.2
     .. version:: 0.2.1
     .. version:: 0.2.0

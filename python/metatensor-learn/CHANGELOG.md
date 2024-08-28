@@ -17,12 +17,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.3) - 2024-08-28
+
 ### Changed
 
+- We now require Python >= 3.9
 - Dataset and DataLoader can now handle fields with a name which is not a valid
   Python identifier.
-- We now require Python >= 3.9
-
 
 ## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.2) - 2024-05-16
 

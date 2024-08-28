@@ -17,9 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.3) - 2024-08-28
+
 ### Changed
 
 - We now require Python >= 3.9
+- `slice` and `drop_blocks` are now faster thanks to `Labels.select`
 
 ## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.2) - 2024-06-19
 
