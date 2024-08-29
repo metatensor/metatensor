@@ -20,7 +20,7 @@ if METATENSOR_BUILD_TYPE not in ["debug", "release"]:
         "expected 'debug' or 'release'"
     )
 
-METATENSOR_CORE = os.path.join(ROOT, "..", "..", "metatensor-core")
+METATENSOR_CORE_SRC = os.path.join(ROOT, "..", "..", "metatensor-core")
 
 
 class universal_wheel(bdist_wheel):
@@ -42,20 +42,22 @@ class cmake_ext(build_ext):
     """
 
     def run(self):
-        source_dir = METATENSOR_CORE
+        source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
         install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor")
 
         os.makedirs(build_dir, exist_ok=True)
 
+        use_external_lib = os.environ.get(
+            "METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB", "OFF"
+        )
+
         cmake_options = [
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+            f"-DMETATENSOR_CORE_SOURCE_DIR={METATENSOR_CORE_SRC}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
             f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
-            "-DBUILD_SHARED_LIBS=ON",
-            "-DMETATENSOR_INSTALL_BOTH_STATIC_SHARED=OFF",
-            # strip dynamic library for smaller wheels to download/install
-            "-DEXTRA_RUST_FLAGS=-Cstrip=symbols",
+            f"-DMETATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB={use_external_lib}",
         ]
 
         if "CARGO" in os.environ:
@@ -175,7 +177,7 @@ def generate_cxx_tar():
 
 def get_rust_version():
     # read version from Cargo.toml
-    with open(os.path.join(METATENSOR_CORE, "Cargo.toml")) as fd:
+    with open(os.path.join(METATENSOR_CORE_SRC, "Cargo.toml")) as fd:
         for line in fd:
             if line.startswith("version"):
                 _, version = line.split(" = ")
@@ -252,7 +254,7 @@ def create_version_number(version):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(METATENSOR_CORE):
+    if not os.path.exists(METATENSOR_CORE_SRC):
         # we are building from a sdist, which should include metatensor-core Rust
         # sources as a tarball
         tarballs = glob.glob(os.path.join(ROOT, "metatensor-core-*.tar.gz"))
@@ -264,14 +266,14 @@ if __name__ == "__main__":
                 "scripts/package-core.sh"
             )
 
-        METATENSOR_CORE = os.path.realpath(tarballs[0])
+        METATENSOR_CORE_SRC = os.path.realpath(tarballs[0])
         subprocess.run(
-            ["cmake", "-E", "tar", "xf", METATENSOR_CORE],
+            ["cmake", "-E", "tar", "xf", METATENSOR_CORE_SRC],
             cwd=ROOT,
             check=True,
         )
 
-        METATENSOR_CORE = ".".join(METATENSOR_CORE.split(".")[:-2])
+        METATENSOR_CORE_SRC = ".".join(METATENSOR_CORE_SRC.split(".")[:-2])
 
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
         authors = fd.read().splitlines()

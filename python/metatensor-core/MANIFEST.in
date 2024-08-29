@@ -1,6 +1,7 @@
 include metatensor-core-cxx-*.tar.gz
 
 include pyproject.toml
+include CMakeLists.txt
 include AUTHORS
 include LICENSE
 

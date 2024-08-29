@@ -55,8 +55,8 @@ class LibraryFinder(object):
             if not _compatible_versions(version, __version__):
                 self._cached_dll = None
                 raise RuntimeError(
-                    f"wrong version for libmetatensor, we want {__version__}, "
-                    f"but we got {version} @ '{path}'"
+                    f"wrong version for libmetatensor, we want v{__version__}, "
+                    f"but we got v{version} @ '{path}'"
                 )
 
             # Register the origin used by the Rust API as an external CPU array
@@ -66,6 +66,15 @@ class LibraryFinder(object):
 
 
 def _lib_path():
+    try:
+        # check if we are using an externally-provided version of the shared library
+        from ._external import EXTERNAL_METATENSOR_PATH
+
+        return EXTERNAL_METATENSOR_PATH
+    except ImportError:
+        pass
+
+    # otherwise load from the local installation
     if sys.platform.startswith("darwin"):
         windows = False
         path = os.path.join(_HERE, "lib", "libmetatensor.dylib")
