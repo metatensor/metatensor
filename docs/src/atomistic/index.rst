@@ -85,5 +85,5 @@ models, look into the (work in progress!) metatrain_ project instead.
 
     overview
     reference/index
-    outputs
+    outputs/index
     ../examples/atomistic/index
