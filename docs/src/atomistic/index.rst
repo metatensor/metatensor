@@ -46,6 +46,14 @@ models, look into the (work in progress!) metatrain_ project instead.
         Learn how to define your own models using metatensor, and how to use
         these models to run simulation in various simulation engines.
 
+    .. grid-item-card:: TODO: ENGINES
+        :link: atomistic-models-engines
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        TODO
+
     .. grid-item-card:: 📋 Standard models outputs
         :link: atomistic-models-outputs
         :link-type: ref
@@ -86,4 +94,5 @@ models, look into the (work in progress!) metatrain_ project instead.
     overview
     reference/index
     outputs/index
+    engines/index
     ../examples/atomistic/index

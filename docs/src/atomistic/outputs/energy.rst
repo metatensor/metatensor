@@ -40,6 +40,34 @@ have the following metadata:
     - the energy must have a single property dimension named ``"energy"``, with
       a single entry set to ``0``.
 
+The following simulation engines can use the ``"energy"`` output:
+
+.. grid:: 1 3 3 3
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-lammps
+    :link-type: ref
+
+    LAMMPS
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ase
+    :link-type: ref
+
+    ASE
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ipi
+    :link-type: ref
+
+    i-PI
+
 .. _energy-output-gradients:
 
 Energy gradients

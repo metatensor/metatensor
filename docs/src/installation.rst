@@ -64,7 +64,7 @@ and use it will depend on the programming language you are using.
         <https://github.com/metatensor/metatensor/releases>`_, and download the
         corresponding ``metatensor-core-cxx`` file in the release assets.
 
-        You will also need to install a rust compiler and ``cargo`` either with
+        You will also need to install a Rust compiler and ``cargo`` either with
         `rustup`_ or the package manager of your operating system. Then, you can
         run the following commands:
 
