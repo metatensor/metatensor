@@ -53,6 +53,28 @@ in the model outputs, and must adhere to the following metadata:
   Features are typically handled without a unit, so the ``"unit"`` field of
   :py:func:`metatensor.torch.atomistic.ModelOutput` is mainly left empty.
 
+The following simulation engines can use the ``"features"`` output:
+
+.. grid:: 1 3 3 3
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-plumed
+    :link-type: ref
+
+    PLUMED
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ase
+    :link-type: ref
+
+    .. py:currentmodule:: metatensor.torch.atomistic.ase_calculator.MetatensorCalculator
+
+    ASE (using :py:meth:`run_model`)
+
 Features gradients
 ------------------
 
