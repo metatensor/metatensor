@@ -271,10 +271,14 @@ jobs:
           mkdir dist/unpacked
           find dist -name "*.whl" -print -exec python -m wheel unpack --dest dist/unpacked/ {} ';'
 
-          sed -i "s/Requires-Dist: torch ==.*/$MERGED_TORCH_REQUIRE/" dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
+          sed -i "s/Requires-Dist: torch.*/$MERGED_TORCH_REQUIRE/" dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
 
           echo "\n\n METADATA = \n\n"
           cat dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
+
+          # check the right metadata was added to the file. grep will exit with
+          # code `1` if the line is not found, which will stop CI
+          grep "$MERGED_TORCH_REQUIRE" dist/unpacked/metatensor_torch-*/metatensor_torch-*.dist-info/METADATA
 
           # repack the directory as a new wheel
           mkdir wheelhouse
