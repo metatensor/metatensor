@@ -19,6 +19,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.5.5](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.5) - 2024-09-03
+
+### Added
+
+- a `"features"` standard output for atomistic models (#718)
+
+### Fixed
+
+- the Python wheels request the right versions of torch in their metadata (#724)
+
 ## [Version 0.5.4](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.4) - 2024-08-28
 
 ### Added
