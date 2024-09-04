@@ -1,3 +1,4 @@
+import importlib
 import os
 import re
 from collections import namedtuple
@@ -28,14 +29,24 @@ def version_compatible(actual, required):
         return True
 
 
+_HERE = os.path.dirname(__file__)
 _TORCH_VERSION = parse_version(torch.__version__)
-
-cmake_prefix_path = os.path.join(
-    os.path.dirname(__file__),
-    f"torch-{_TORCH_VERSION.major}.{_TORCH_VERSION.minor}",
-    "lib",
-    "cmake",
+install_prefix = os.path.join(
+    _HERE, f"torch-{_TORCH_VERSION.major}.{_TORCH_VERSION.minor}"
 )
-"""
-Path containing the CMake configuration files for the underlying C library
-"""
+
+
+external_path = os.path.join(install_prefix, "_external.py")
+if os.path.exists(external_path):
+    spec = importlib.util.spec_from_file_location("_external", external_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    cmake_prefix_path = module.EXTERNAL_METATENSOR_TORCH_PREFIX
+    """
+    Path containing the CMake configuration files for the underlying C++ library
+    """
+else:
+    cmake_prefix_path = os.path.join(install_prefix, "lib", "cmake")
+    """
+    Path containing the CMake configuration files for the underlying C++ library
+    """
