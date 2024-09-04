@@ -1,4 +1,5 @@
 include pyproject.toml
+include CMakeLists.txt
 include AUTHORS
 include LICENSE
 

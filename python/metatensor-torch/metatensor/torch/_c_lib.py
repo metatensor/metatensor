@@ -1,4 +1,5 @@
 import glob
+import importlib
 import os
 import sys
 
@@ -25,18 +26,27 @@ _HERE = os.path.realpath(os.path.dirname(__file__))
 def _lib_path():
 
     torch_version = parse_version(torch.__version__)
-    expected_prefix = os.path.join(
+    install_prefix = os.path.join(
         _HERE, f"torch-{torch_version.major}.{torch_version.minor}"
     )
-    if os.path.exists(expected_prefix):
+
+    if os.path.exists(install_prefix):
+        # check if we are using an externally-provided version of the shared library
+        external_path = os.path.join(install_prefix, "_external.py")
+        if os.path.exists(external_path):
+            spec = importlib.util.spec_from_file_location("_external", external_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module.EXTERNAL_METATENSOR_TORCH_PATH
+
         if sys.platform.startswith("darwin"):
-            path = os.path.join(expected_prefix, "lib", "libmetatensor_torch.dylib")
+            path = os.path.join(install_prefix, "lib", "libmetatensor_torch.dylib")
             windows = False
         elif sys.platform.startswith("linux"):
-            path = os.path.join(expected_prefix, "lib", "libmetatensor_torch.so")
+            path = os.path.join(install_prefix, "lib", "libmetatensor_torch.so")
             windows = False
         elif sys.platform.startswith("win"):
-            path = os.path.join(expected_prefix, "bin", "metatensor_torch.dll")
+            path = os.path.join(install_prefix, "bin", "metatensor_torch.dll")
             windows = True
         else:
             raise ImportError("Unknown platform. Please edit this file")
