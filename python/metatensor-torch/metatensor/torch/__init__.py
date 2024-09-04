@@ -37,24 +37,24 @@ else:
     save = torch.ops.metatensor.save
     save_buffer = torch.ops.metatensor.save_buffer
 
-    try:
-        import metatensor.operations  # noqa: F401
+try:
+    import metatensor.operations  # noqa: F401
 
-        HAS_METATENSOR_OPERATIONS = True
-    except ImportError:
-        HAS_METATENSOR_OPERATIONS = False
+    HAS_METATENSOR_OPERATIONS = True
+except ImportError:
+    HAS_METATENSOR_OPERATIONS = False
 
-    if HAS_METATENSOR_OPERATIONS:
-        from . import operations  # noqa: F401
-        from .operations import *  # noqa: F401, F403
-    else:
-        # __getattr__ is called when a module attribute can not be found, we use it to
-        # give the user a better error message if they don't have metatensor-operations
-        def __getattr__(name):
-            raise AttributeError(
-                f"metatensor.torch.{name} is not defined, are you sure you have the "
-                "metatensor-operations package installed?"
-            )
+if HAS_METATENSOR_OPERATIONS:
+    from . import operations  # noqa: F401
+    from .operations import *  # noqa: F401, F403
+else:
+    # __getattr__ is called when a module attribute can not be found, we use it to
+    # give the user a better error message if they don't have metatensor-operations
+    def __getattr__(name):
+        raise AttributeError(
+            f"metatensor.torch.{name} is not defined, are you sure you have the "
+            "metatensor-operations package installed?"
+        )
 
 
 try:
