@@ -61,7 +61,7 @@ and use it will depend on the programming language you are using.
 
         To build and install the code, you'll need to find the latest release of
         ``metatensor-core`` on `GitHub releases
-        <https://github.com/lab-cosmo/metatensor/releases>`_, and download the
+        <https://github.com/metatensor/metatensor/releases>`_, and download the
         corresponding ``metatensor-core-cxx`` file in the release assets.
 
         You will also need to install a rust compiler and ``cargo`` either with
@@ -210,7 +210,7 @@ and use it will depend on the programming language you are using.
 
         To build and install the code, you'll need to find the latest release of
         ``metatensor-torch`` on `GitHub releases
-        <https://github.com/lab-cosmo/metatensor/releases>`_, and download the
+        <https://github.com/metatensor/metatensor/releases>`_, and download the
         corresponding ``metatensor-torch-cxx`` file in the release assets. Then,
         you can run the following commands:
 
@@ -288,7 +288,7 @@ and use it will depend on the programming language you are using.
 Installing a development version
 --------------------------------
 
-Metatensor is developed on `GitHub <https://github.com/lab-cosmo/metatensor>`_.
+Metatensor is developed on `GitHub <https://github.com/metatensor/metatensor>`_.
 If you want to install a development version of the code, you will need `git
 <https://git-scm.com>`_ to fetch the latest version of the code. You will also
 need a Rust compiler on top of any language specific compiler. You can install
@@ -307,18 +307,18 @@ Rust using `rustup`_ or the package manager of your operating system.
             # Make sure you are using the latest version of pip
             pip install --upgrade pip
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor
             pip install .
 
             # alternatively, the same thing in a single command
-            pip install git+https://github.com/lab-cosmo/metatensor
+            pip install git+https://github.com/metatensor/metatensor
 
         You can also install a single sub-package at the time with
 
         .. code-block:: bash
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor
             pip install ./python/metatensor-core
             pip install ./python/metatensor-operations
@@ -326,10 +326,10 @@ Rust using `rustup`_ or the package manager of your operating system.
             pip install ./python/metatensor-torch
 
             # alternatively, the same thing in a single command
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-core
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-operations
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-learn
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-torch
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-core
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-operations
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-learn
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-torch
 
 
     .. tab-item:: C and C++
@@ -340,7 +340,7 @@ Rust using `rustup`_ or the package manager of your operating system.
 
         .. code-block:: bash
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor/metatensor-core
 
             mkdir build && cd build
@@ -360,7 +360,7 @@ Rust using `rustup`_ or the package manager of your operating system.
         .. code-block:: toml
 
             [dependencies]
-            metatensor = {git = "https://github.com/lab-cosmo/metatensor.git"}
+            metatensor = {git = "https://github.com/metatensor/metatensor.git"}
 
 
 
@@ -375,12 +375,12 @@ Rust using `rustup`_ or the package manager of your operating system.
             # Make sure you are using the latest version of pip
             pip install --upgrade pip
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor
             pip install .[torch]
 
             # alternatively, the same thing in a single command
-            pip install "metatensor[torch] @ git+https://github.com/lab-cosmo/metatensor"
+            pip install "metatensor[torch] @ git+https://github.com/metatensor/metatensor"
 
 
         If you want to install and update only the ``metatensor-torch`` package,
@@ -388,12 +388,12 @@ Rust using `rustup`_ or the package manager of your operating system.
 
         .. code-block:: bash
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor
             pip install ./python/metatensor-torch
 
             # alternatively, the same thing in a single command
-            pip install git+https://github.com/lab-cosmo/metatensor#subdirectory=python/metatensor-torch
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-torch
 
 
     .. tab-item:: TorchScript C++
@@ -405,7 +405,7 @@ Rust using `rustup`_ or the package manager of your operating system.
 
         .. code-block:: bash
 
-            git clone https://github.com/lab-cosmo/metatensor
+            git clone https://github.com/metatensor/metatensor
             cd metatensor/metatensor-torch
             mkdir build && cd build
 

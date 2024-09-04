@@ -405,7 +405,7 @@ def test_intersection():
 
 
 def test_values_reference():
-    # see https://github.com/lab-cosmo/metatensor/issues/293
+    # see https://github.com/metatensor/metatensor/issues/293
     data = [0, 1, 2, 3, 4, 5]
     values = Labels(names=["_"], values=np.array(data).reshape(-1, 1)).values
 

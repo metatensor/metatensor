@@ -87,7 +87,7 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
         return Err(Error::Serialization(
             "trying to load a file in the old metatensor format, please convert \
             it to the new format first using the script at \
-            https://github.com/lab-cosmo/metatensor/blob/master/python/scripts/convert-metatensor-npz.py
+            https://github.com/metatensor/metatensor/blob/master/python/scripts/convert-metatensor-npz.py
             ".into()
         ));
     }

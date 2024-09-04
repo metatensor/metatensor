@@ -4,7 +4,7 @@ All notable changes to metatensor-learn are documented here, following the
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format. This project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/lab-cosmo/metatensor/)
+## [Unreleased](https://github.com/metatensor/metatensor/)
 
 <!-- Possible sections
 
@@ -17,7 +17,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-## [Version 0.2.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.3) - 2024-08-28
+## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.2.3) - 2024-08-28
 
 ### Changed
 
@@ -25,7 +25,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dataset and DataLoader can now handle fields with a name which is not a valid
   Python identifier.
 
-## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.2) - 2024-05-16
+## [Version 0.2.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.2.2) - 2024-05-16
 
 ### Added
 
@@ -41,7 +41,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sample-independent transformations to input tensors.
 - Set correct device for output of when torch default device is different than input device (#595)
 
-## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.1) - 2024-03-01
+## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.2.1) - 2024-03-01
 
 ### Changed
 
@@ -53,7 +53,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Make sure the `Dataset` class is iterable (#500)
 
-## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.2.0) - 2024-02-07
+## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.2.0) - 2024-02-07
 
 ### Changed
 
@@ -65,7 +65,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Removal of usage of Labels.range in nn modules to support torch.jit.save (#410)
 
-## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-learn-v0.1.0) - 2024-01-26
+## [Version 0.1.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.1.0) - 2024-01-26
 
 ### Added
 

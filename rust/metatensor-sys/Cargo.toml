@@ -7,7 +7,7 @@ edition = "2021"
 description = "Bindings to the metatensor C library"
 readme = "README.md"
 homepage = "https://docs.metatensor.org/latest/"
-repository = "https://github.com/lab-cosmo/metatensor"
+repository = "https://github.com/metatensor/metatensor"
 license = "BSD-3-Clause"
 
 include = [
