@@ -19,9 +19,9 @@ sys.path.append(os.path.join(ROOT, "docs", "extensions"))
 
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
-# examples and generate the actual output for our shinx-gallery. This is necessary
+# examples and generate the actual output for our sphinx-gallery. This is necessary
 # because here we have to set `METATENSOR_IMPORT_FOR_SPHINX` to `"1"` allowing the
-# correct generation of the class and function docstrings which are seperate from the
+# correct generation of the class and function docstrings which are separate from the
 # actual code.
 #
 # We register and use the same sphinx gallery configuration as in the pseudo project.
