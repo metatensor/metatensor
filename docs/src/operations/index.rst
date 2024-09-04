@@ -21,7 +21,7 @@ depending on how the arrays are stored in the various :py:class:`TensorBlock`.
 
 The list of all operations currently implemented is available in the API
 reference below. If you need any other operation, please `open an issue
-<https://github.com/lab-cosmo/metatensor/issues>`_!
+<https://github.com/metatensor/metatensor/issues>`_!
 
 .. grid::
 

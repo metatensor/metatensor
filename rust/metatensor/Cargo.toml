@@ -7,7 +7,7 @@ rust-version = "1.65"
 description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"
 readme = "../../README.md"
 homepage = "https://docs.metatensor.org/latest/"
-repository = "https://github.com/lab-cosmo/metatensor"
+repository = "https://github.com/metatensor/metatensor"
 license = "BSD-3-Clause"
 
 [lib]

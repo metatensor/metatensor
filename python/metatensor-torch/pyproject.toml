@@ -28,7 +28,7 @@ classifiers = [
 [project.urls]
 homepage = "https://docs.metatensor.org/latest/"
 documentation = "https://docs.metatensor.org/latest/"
-repository = "https://github.com/lab-cosmo/metatensor"
+repository = "https://github.com/metatensor/metatensor"
 changelog = "https://docs.metatensor.org/latest/torch/CHANGELOG.html"
 
 ### ======================================================================== ###

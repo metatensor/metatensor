@@ -4,7 +4,7 @@ All notable changes to metatensor-core are documented here, following the [keep
 a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/lab-cosmo/metatensor/)
+## [Unreleased](https://github.com/metatensor/metatensor/)
 
 <!-- Possible sections for each package:
 
@@ -23,7 +23,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
 
-## [Version 0.1.10](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.10) - 2024-08-28
+## [Version 0.1.10](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.10) - 2024-08-28
 
 ### metatensor-core C++
 
@@ -52,7 +52,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `TensorBlock.load_buffer`, `TensorBlock.save`, `TensorBlock.save_buffer`
   and the corresponding functions in `metatensor.io`.
 
-## [Version 0.1.9](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.9) - 2024-07-15
+## [Version 0.1.9](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.9) - 2024-07-15
 
 ### metatensor-core Python
 
@@ -71,13 +71,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Fixed a memory leak affecting all data stored in TensorBlock (#683)
 
-## [Version 0.1.8](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.8) - 2024-05-13
+## [Version 0.1.8](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.8) - 2024-05-13
 
 ### Fixed
 
 - fix the build when using metatensor from the Rust bindings
 
-## [Version 0.1.7](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.7) - 2024-05-13
+## [Version 0.1.7](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.7) - 2024-05-13
 
 ### metatensor-core C/C++
 
@@ -96,7 +96,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - removed dependency on `bcrypt` on Windows
 - the shared libraries is installed with execute permissions
 
-## [Version 0.1.6](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.6) - 2024-05-03
+## [Version 0.1.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.6) - 2024-05-03
 
 ### metatensor-core C/C++
 
@@ -105,7 +105,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - fixed compilation with Rust 1.78 (#605)
 - fixed compilation on some Windows systems (#575)
 
-## [Version 0.1.5](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.5) - 2024-04-09
+## [Version 0.1.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.5) - 2024-04-09
 
 ### metatensor-core C++
 
@@ -120,14 +120,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 -  allow positional arguments in `TensorMap.to`/`TensorBlock.to` (#556)
 
 
-## [Version 0.1.4](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.4) - 2024-03-01
+## [Version 0.1.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.4) - 2024-03-01
 
 ### Fixed
 
 - fixed compilation on macOS (#525)
 - added checks for the size of the new values in `Labels.insert` (#519)
 
-## [Version 0.1.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.3) - 2024-02-12
+## [Version 0.1.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.3) - 2024-02-12
 
 ### Fixed
 
@@ -135,7 +135,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Pin dependencies for metatensor-core, ensuring reproducibility of the build as
   new dependencies versions are published (#506)
 
-## [Version 0.1.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.2) - 2024-01-26
+## [Version 0.1.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.2) - 2024-01-26
 
 ### metatensor-core C++
 
@@ -176,7 +176,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `Labels.save_buffer`, `Labels.load_buffer` and the corresponding free
   functions.
 
-## [Version 0.1.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.1) - 2024-01-05
+## [Version 0.1.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.1) - 2024-01-05
 
 ### Fixed
 
@@ -184,7 +184,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Allowed saving and loading empty TensorMap; i.e. TensorMap where one of the
   dimensions of the array has 0 elements (#419)
 
-## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-core-v0.1.0) - 2023-10-11
+## [Version 0.1.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.0) - 2023-10-11
 
 ### metatensor-core C
 

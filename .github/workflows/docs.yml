@@ -45,7 +45,7 @@ jobs:
 
       - name: put documentation in the website
         run: |
-          git clone https://github.com/lab-cosmo/metatensor-docs metatensor-docs
+          git clone https://github.com/metatensor/docs metatensor-docs
           rm -rf metatensor-docs/.git
           cd metatensor-docs
 
@@ -62,7 +62,7 @@ jobs:
         if: github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4
         with:
-          external_repository: lab-cosmo/metatensor-docs
+          external_repository: metatensor/docs
           deploy_key: ${{ secrets.METATENSOR_DOCS_SSH_KEY }}
           publish_branch: main
           publish_dir: ./metatensor-docs/

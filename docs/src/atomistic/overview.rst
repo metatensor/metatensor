@@ -176,7 +176,7 @@ atomic spins, non-spherical particle orientation, *etc.*) you can use
 If you need such data, please contact us (using email or `GitHub issues`_) to
 formulate a plan to add it to metatensor interface!
 
-.. _GitHub issues: https://github.com/lab-cosmo/metatensor/issues/new
+.. _GitHub issues: https://github.com/metatensor/metatensor/issues/new
 
 Finally, your model can compute and output what it wants, and organize the data
 and metadata of the outputs as it pleases, except for a set of standardized

@@ -4,7 +4,7 @@ All notable changes to metatensor-operations are documented here, following the
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format. This project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/lab-cosmo/metatensor/)
+## [Unreleased](https://github.com/metatensor/metatensor/)
 
 <!-- Possible sections
 
@@ -17,14 +17,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-## [Version 0.2.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.3) - 2024-08-28
+## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.3) - 2024-08-28
 
 ### Changed
 
 - We now require Python >= 3.9
 - `slice` and `drop_blocks` are now faster thanks to `Labels.select`
 
-## [Version 0.2.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.2) - 2024-06-19
+## [Version 0.2.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.2) - 2024-06-19
 
 ### Fixed
 
@@ -33,14 +33,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fix `metatensor.abs` when used with complex values (#553)
 
 
-## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.1) - 2024-03-01
+## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.1) - 2024-03-01
 
 ### Changed
 
 - Use `torch.jit.script` by default on all operations when using the TorchScript
   backend (i.e. `metatensor.torch`) (#504)
 
-## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.2.0) - 2024-02-07
+## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.0) - 2024-02-07
 
 ### Changed
 
@@ -61,7 +61,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `TensorMap.to`, `TensorBlock.to`, and the operations `detach()` and
   `requires_grad()`.
 
-## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-operations-v0.1.0) - 2023-10-11
+## [Version 0.1.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.1.0) - 2023-10-11
 
 ### Added
 
