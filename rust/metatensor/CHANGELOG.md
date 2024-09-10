@@ -15,11 +15,14 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.1.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.1.6) - 2024-09-10
+
 ### Added
 
 - Added support for serialization of TensorBlock with `TensorBlock::load`,
   `TensorBlock::load_buffer`, `TensorBlock::save`, `TensorBlock::save_buffer`
   and the corresponding functions in `metatensor::io`.
+- `Labels::select` function, to sub-select labels entries.
 
 ## [Version 0.1.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.1.5) - 2024-03-12
 
