@@ -63,7 +63,7 @@ The following simulation engines can use the ``"features"`` output:
     :link: engine-plumed
     :link-type: ref
 
-    PLUMED
+    |plumed-logo|
 
   .. grid-item-card::
     :text-align: center
@@ -73,7 +73,9 @@ The following simulation engines can use the ``"features"`` output:
 
     .. py:currentmodule:: metatensor.torch.atomistic.ase_calculator.MetatensorCalculator
 
-    ASE (using :py:meth:`run_model`)
+    |ase-logo|
+
+    (using :py:meth:`run_model`)
 
 Features gradients
 ------------------
