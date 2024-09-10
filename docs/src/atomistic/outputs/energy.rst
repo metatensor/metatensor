@@ -50,7 +50,7 @@ The following simulation engines can use the ``"energy"`` output:
     :link: engine-lammps
     :link-type: ref
 
-    LAMMPS
+    |lammps-logo|
 
   .. grid-item-card::
     :text-align: center
@@ -58,7 +58,7 @@ The following simulation engines can use the ``"energy"`` output:
     :link: engine-ase
     :link-type: ref
 
-    ASE
+    |ase-logo|
 
   .. grid-item-card::
     :text-align: center
@@ -66,7 +66,7 @@ The following simulation engines can use the ``"energy"`` output:
     :link: engine-ipi
     :link-type: ref
 
-    i-PI
+    |ipi-logo|
 
 .. _energy-output-gradients:
 
@@ -173,6 +173,7 @@ Energy ensembles must have the following metadata:
       ``"energy"``, with entries ranging from 0 to the number of members of the
       ensemble minus one.
 
+Currently, no simulation engines can use the ``"energy_ensemble"`` output.
 
 Energy ensemble gradients
 -------------------------

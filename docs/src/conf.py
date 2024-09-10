@@ -110,46 +110,14 @@ rst_prolog = f"""
 .. |metatensor-operations-version| replace:: {metatensor.operations.__version__}
 .. |metatensor-learn-version| replace:: {metatensor.learn.__version__}
 
-.. |C-32x32| image:: /../static/images/logo-c.*
-    :width: 32px
-    :height: 32px
-    :alt: C
-
-.. |C-16x16| image:: /../static/images/logo-c.*
-    :width: 16px
-    :height: 16px
-    :alt: C
-
-.. |Cxx-32x32| image:: /../static/images/logo-cxx.*
-    :width: 32px
-    :height: 32px
-    :alt: C++
-
-.. |Cxx-16x16| image:: /../static/images/logo-cxx.*
-    :width: 16px
-    :height: 16px
-    :alt: C++
-
-.. |Rust-32x32| image:: /../static/images/logo-rust.*
-    :width: 32px
-    :height: 32px
-    :alt: Rust
-
-.. |Rust-16x16| image:: /../static/images/logo-rust.*
-    :width: 16px
-    :height: 16px
-    :alt: Rust
-
-.. |Python-32x32| image:: /../static/images/logo-python.*
-    :width: 32px
-    :height: 32px
-    :alt: Python
-
-.. |Python-16x16| image:: /../static/images/logo-python.*
-    :width: 16px
-    :height: 16px
-    :alt: Python
 """
+
+with open(os.path.join(ROOT, "docs", "src", "_prolog.rst")) as fd:
+    rst_prolog += fd.read()
+
+# print(rst_prolog)
+
+# raise 44
 
 # -- General configuration ---------------------------------------------------
 
@@ -190,6 +158,7 @@ exclude_patterns = [
     "examples/index.rst",
     "examples/sg_execution_times.rst",
     "sg_execution_times.rst",
+    "_prolog.rst",
 ]
 
 autoclass_content = "both"
