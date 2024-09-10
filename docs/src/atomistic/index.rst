@@ -46,22 +46,24 @@ models, look into the (work in progress!) metatrain_ project instead.
         Learn how to define your own models using metatensor, and how to use
         these models to run simulation in various simulation engines.
 
-    .. grid-item-card:: TODO: ENGINES
-        :link: atomistic-models-engines
-        :link-type: ref
-        :columns: 12 12 6 6
-        :margin: 0 3 0 0
-
-        TODO
-
     .. grid-item-card:: 📋 Standard models outputs
         :link: atomistic-models-outputs
         :link-type: ref
         :columns: 12 12 6 6
         :margin: 0 3 0 0
 
-        Understand the metadata convention for specific models outputs, such as
-        the potential energy.
+        Understand the different outputs a model can have, and what the metadata
+        should be for standardized outputs, such as the potential energy.
+
+    .. grid-item-card:: ⚙️ Simulation engines
+        :link: atomistic-models-engines
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Explore the various simulation softwares that can use metatensor models,
+        and what each one of them can do, from running molecular dynamics
+        simulations to interactive dataset exploration.
 
     .. grid-item-card:: |Python-16x16| Python API reference
         :link: python-api-atomistic-models
