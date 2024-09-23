@@ -128,7 +128,7 @@ def test_pickle(tmpdir, tensor_path):
 
     with tmpdir.as_cwd():
         torch.save(tensor, tmpfile)
-        if version.parse(torch.__version__) <= version.parse("1.12"):
+        if version.parse(torch.__version__) >= version.parse("1.13"):
             loaded = torch.load(tmpfile, weights_only=False)
         else:
             loaded = torch.load(tmpfile)
@@ -199,7 +199,7 @@ def test_pickle_block(tmpdir, block_path):
     with tmpdir.as_cwd():
         torch.save(block, tmpfile)
 
-        if version.parse(torch.__version__) <= version.parse("1.12"):
+        if version.parse(torch.__version__) >= version.parse("1.13"):
             loaded = torch.load(tmpfile, weights_only=False)
         else:
             loaded = torch.load(tmpfile)
@@ -257,7 +257,7 @@ def test_pickle_labels(tmpdir, labels_path):
     with tmpdir.as_cwd():
         torch.save(labels, tmpfile)
 
-        if version.parse(torch.__version__) <= version.parse("1.12"):
+        if version.parse(torch.__version__) >= version.parse("1.13"):
             loaded = torch.load(tmpfile, weights_only=False)
         else:
             loaded = torch.load(tmpfile)

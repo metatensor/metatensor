@@ -253,7 +253,7 @@ def test_with_extra_metadata(tmpdir):
 
     torch.save(metadata, str(tmpdir.join("metadata.pt")))
 
-    if version.parse(torch.__version__) <= version.parse("1.12"):
+    if version.parse(torch.__version__) >= version.parse("1.13"):
         loaded_metadata = torch.load(
             str(tmpdir.join("metadata.pt")), weights_only=False
         )
