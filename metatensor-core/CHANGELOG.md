@@ -17,6 +17,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Changed
+
+- The code now requires Rustc v1.74 to build.
+
 ### metatensor-core Julia
 
 #### Added
