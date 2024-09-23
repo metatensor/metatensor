@@ -1166,7 +1166,7 @@ mts_status_t mts_tensormap_save_buffer(uint8_t **buffer,
                                        const struct mts_tensormap_t *tensor);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
-#endif /* METATENSOR_H */
+#endif  /* METATENSOR_H */

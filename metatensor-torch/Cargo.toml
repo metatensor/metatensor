@@ -3,13 +3,11 @@ name = "metatensor-torch"
 version = "0.1.0"
 edition = "2021"
 publish = false
+rust-version = "1.74"
 
 [lib]
 path = "lib.rs"
 
 [dev-dependencies]
-which = "5"
+which = "6"
 lazy_static = "1"
-
-# This is the last version supporting rustc 1.65
-home = "=0.5.5"
