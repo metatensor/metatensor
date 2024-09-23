@@ -151,9 +151,9 @@ public:
     ///        cell of the system. Each row should be one of the bounding box
     ///        vector; and columns should contain the x, y, and z components of
     ///        these vectors (i.e. the cell should be given in row-major order).
-    ///        Systems are assumed to obey periodic boundary conditions,
-    ///        non-periodic systems should set the cell to 0.
-    SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell);
+    /// @param pbc 1D tensor of 3 boolean values, indicating if the system is
+    ///        periodic in the x, y, and z directions, respectively.
+    SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc);
     ~SystemHolder() override = default;
 
     /// Get the particle types for all particles in the system.

@@ -338,16 +338,17 @@ static bool is_floating_point(torch::Dtype dtype) {
     return dtype == torch::kF16 || dtype == torch::kF32 || dtype == torch::kF64;
 }
 
-SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell):
+SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc):
     types_(std::move(types)),
     positions_(std::move(positions)),
     cell_(std::move(cell))
+    pbc_(std::move(pbc))
 {
-    if (positions_.device() != types_.device() || cell_.device() != types_.device()) {
+    if (positions_.device() != types_.device() || cell_.device() != types_.device() || pbc_.device() != types_.device()) {
         C10_THROW_ERROR(ValueError,
-            "`types`, `positions`, and `cell` must be on the same device, got " +
-            types_.device().str() + ", " + positions_.device().str() + ", and " +
-            cell_.device().str()
+            "`types`, `positions`, `cell`, and `pbc` must be on the same device, got " +
+            types_.device().str() +  + positions_.device().str() + ", " +
+            cell_.device().str() ", and " + pbc_.device().str()
         );
     }
 
@@ -408,6 +409,27 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
             "`cell` must be have the same dtype as `positions`, got " +
             scalar_type_name(cell_.scalar_type()) + " and " +
             scalar_type_name(positions_.scalar_type())
+        );
+    }
+
+    if pbc_.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(pbc_.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (pbc_.size(0) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must contain 3 entries, got a tensor with " +
+            std::to_string(pbc_.size(0)) + " values"
+        );
+    }
+
+    if (pbc_.scalar_type() != torch::kBool) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must be a tensor of booleans, got " +
+            scalar_type_name(pbc_.scalar_type()) + " instead"
         );
     }
 }
