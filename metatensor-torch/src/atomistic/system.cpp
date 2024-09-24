@@ -544,6 +544,38 @@ void SystemHolder::set_cell(torch::Tensor cell) {
     this->cell_ = std::move(cell);
 }
 
+void SystemHolder::set_pbc(torch::Tensor pbc) {
+    if (pbc.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be on the same device as existing data, got " +
+            pbc.device().str() + " and " + this->device().str()
+        );
+    }
+
+    if (pbc.scalar_type() != torch::kBool) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be a tensor of booleans, got " +
+            scalar_type_name(pbc.scalar_type()) + " instead"
+        );
+    }
+
+    if (pbc.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(pbc.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (pbc.size(0) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must contain 3 entries, got a tensor with " +
+            std::to_string(pbc.size(0)) + " values"
+        );
+    }
+
+    this->pbc_ = std::move(pbc);
+}
+
 System SystemHolder::to(
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device
