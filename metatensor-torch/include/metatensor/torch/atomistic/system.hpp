@@ -180,6 +180,14 @@ public:
     /// Set cell for the system
     void set_cell(torch::Tensor cell);
 
+    /// Periodic boundary conditions for the system.
+    torch::Tensor pbc() const {
+        return pbc_;
+    }
+
+    /// Set periodic boundary conditions for the system
+    void set_pbc(torch::Tensor pbc);
+
     /// Get the device used by all the data in this `System`
     torch::Device device() const {
         return this->types_.device();
@@ -270,6 +278,7 @@ private:
     torch::Tensor types_;
     torch::Tensor positions_;
     torch::Tensor cell_;
+    torch::Tensor pbc_;
 
     std::map<NeighborListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
     std::unordered_map<std::string, TorchTensorBlock> data_;

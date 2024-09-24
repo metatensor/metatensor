@@ -477,3 +477,17 @@ def test_to(system, neighbors):
 @torch.jit.script
 def check_dtype(system: System, dtype: torch.dtype):
     assert system.dtype == dtype
+
+
+def test_partial_pbc():
+    with pytest.raises(
+        ValueError,
+        match="if `pbc` is False along any direction, "
+        "the corresponding cell vector must be zero",
+    ):
+        System(
+            torch.tensor([1]),
+            torch.tensor([[1.0, 1.0, 1.0]]),
+            torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+            pbc=torch.tensor([True, False, True]),
+        )

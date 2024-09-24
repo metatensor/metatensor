@@ -341,14 +341,14 @@ static bool is_floating_point(torch::Dtype dtype) {
 SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc):
     types_(std::move(types)),
     positions_(std::move(positions)),
-    cell_(std::move(cell))
+    cell_(std::move(cell)),
     pbc_(std::move(pbc))
 {
     if (positions_.device() != types_.device() || cell_.device() != types_.device() || pbc_.device() != types_.device()) {
         C10_THROW_ERROR(ValueError,
             "`types`, `positions`, `cell`, and `pbc` must be on the same device, got " +
-            types_.device().str() +  + positions_.device().str() + ", " +
-            cell_.device().str() ", and " + pbc_.device().str()
+            types_.device().str() + ", " + positions_.device().str() + ", " +
+            cell_.device().str() + ", and " + pbc_.device().str()
         );
     }
 
@@ -412,7 +412,7 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
         );
     }
 
-    if pbc_.sizes().size() != 1) {
+    if (pbc_.sizes().size() != 1) {
         C10_THROW_ERROR(ValueError,
             "`pbc` must be a 1 dimensional tensor, got a tensor with " +
             std::to_string(pbc_.sizes().size()) + " dimensions"
@@ -430,6 +430,15 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
         C10_THROW_ERROR(ValueError,
             "`pbc` must be a tensor of booleans, got " +
             scalar_type_name(pbc_.scalar_type()) + " instead"
+        );
+    }
+
+    // if the pbcs are False along any directions, we check that the
+    // corresponding cell vectors are zero
+    auto cell_where_pbc_is_false = cell_.index({pbc_ == false});
+    if (!torch::all(cell_where_pbc_is_false == 0.0).item<bool>()) {
+        C10_THROW_ERROR(ValueError,
+            "if `pbc` is False along any direction, the corresponding cell vector must be zero"
         );
     }
 }
@@ -559,6 +568,15 @@ System SystemHolder::to(
             /*memory_format*/ torch::MemoryFormat::Preserve
         ),
         this->cell().to(
+            dtype,
+            /*layout*/ torch::nullopt,
+            device,
+            /*pin_memory*/ torch::nullopt,
+            /*non_blocking*/ false,
+            /*copy*/ false,
+            /*memory_format*/ torch::MemoryFormat::Preserve
+        ),
+        this->pbc().to(
             dtype,
             /*layout*/ torch::nullopt,
             device,
