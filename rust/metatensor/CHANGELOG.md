@@ -15,6 +15,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.0) - 2024-09-24
+
+### Changed
+
+- The code now requires Rustc v1.74 to build.
+- We now depend on `ndarray=^0.16`
+
 ## [Version 0.1.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.1.6) - 2024-09-10
 
 ### Added
