@@ -159,8 +159,8 @@ def test_data_validation(types, positions, cell, pbc):
 
     # ===== types checks ===== #
     message = (
-        "`types`, `positions`, and `cell` must be on the same device, "
-        "got meta, cpu, and cpu"
+        "`types`, `positions`, `cell`, and `pbc` must be on the same "
+        "device, got meta, cpu, cpu, and cpu"
     )
     with pytest.raises(ValueError, match=message):
         System(types.to(device="meta"), positions, cell, pbc)
@@ -191,8 +191,8 @@ def test_data_validation(types, positions, cell, pbc):
 
     # ===== positions checks ===== #
     message = (
-        "`types`, `positions`, and `cell` must be on the same device, "
-        "got cpu, meta, and cpu"
+        "`types`, `positions`, `cell`, and `pbc` must be on the same device, "
+        "got cpu, meta, cpu, and cpu"
     )
     with pytest.raises(ValueError, match=message):
         System(types, positions.to(device="meta"), cell, pbc)
@@ -244,8 +244,8 @@ def test_data_validation(types, positions, cell, pbc):
 
     # ===== cell checks ===== #
     message = (
-        "`types`, `positions`, and `cell` must be on the same device, "
-        "got cpu, cpu, and meta"
+        "`types`, `positions`, `cell`, and `pbc` must be on the same device, "
+        "got cpu, cpu, meta, and cpu"
     )
     with pytest.raises(ValueError, match=message):
         System(types, positions, cell.to(device="meta"), pbc)

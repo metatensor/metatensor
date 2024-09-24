@@ -529,7 +529,7 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
 
 
 def _ase_to_torch_data(atoms, dtype, device):
-    """Get the positions, cell and pbcs from ASE atoms as torch tensors"""
+    """Get the positions, cell and pbc from ASE atoms as torch tensors"""
 
     types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32, device=device)
     positions = torch.from_numpy(atoms.positions).to(dtype=dtype, device=device)

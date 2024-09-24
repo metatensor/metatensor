@@ -159,7 +159,7 @@ def test_neighbor_autograd_errors():
         torch.from_numpy(atoms.numbers).to(torch.int32),
         positions.to(torch.float32),
         cell.to(torch.float32),
-        pbcs=torch.tensor([True, True, True]),
+        pbc=torch.tensor([True, True, True]),
     )
     with pytest.raises(ValueError, match=message):
         register_autograd_neighbors(system, neighbors, check_consistency=True)
@@ -169,7 +169,7 @@ def test_neighbor_autograd_errors():
         torch.from_numpy(atoms.numbers).to(torch.int32).to(torch.device("meta")),
         positions.to(torch.device("meta")),
         cell.to(torch.device("meta")),
-        pbcs=torch.tensor([True, True, True]).to(torch.device("meta")),
+        pbc=torch.tensor([True, True, True]).to(torch.device("meta")),
     )
     with pytest.raises(ValueError, match=message):
         register_autograd_neighbors(system, neighbors, check_consistency=True)
