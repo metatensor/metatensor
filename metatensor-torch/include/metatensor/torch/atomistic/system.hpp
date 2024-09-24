@@ -152,7 +152,7 @@ public:
     ///        vector; and columns should contain the x, y, and z components of
     ///        these vectors (i.e. the cell should be given in row-major order).
     /// @param pbc 1D tensor of 3 boolean values, indicating if the system is
-    ///        periodic in the x, y, and z directions, respectively.
+    ///        periodic along the directions defined by cell axes `a`, `b` and `c`, respectively.
     SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc);
     ~SystemHolder() override = default;
 
