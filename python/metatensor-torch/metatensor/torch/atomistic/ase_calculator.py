@@ -66,10 +66,20 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
     installed, in which case it will be used instead.
     """
 
+    additional_outputs: Dict[str, TensorMap]
+    """
+    Additional outputs computed by :py:meth:`calculate` are stored in this dictionary.
+
+    The keys will match the keys of the ``additional_outputs`` parameters to the
+    constructor; and the values will be the corresponding raw
+    :py:class:`metatensor.torch.TensorMap` produced by the model.
+    """
+
     def __init__(
         self,
         model: Union[FilePath, MetatensorAtomisticModel],
         *,
+        additional_outputs: Optional[Dict[str, ModelOutput]] = None,
         extensions_directory=None,
         check_consistency=False,
         device=None,
@@ -78,6 +88,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :param model: model to use for the calculation. This can be a file path, a
             Python instance of :py:class:`MetatensorAtomisticModel`, or the output of
             :py:func:`torch.jit.script` on :py:class:`MetatensorAtomisticModel`.
+        :param additional_outputs: Dictionary of additional outputs to be computed by
+            the model. These outputs will always be computed whenever the
+            :py:meth:`calculate` function is called (e.g. by
+            :py:meth:`ase.Atoms.get_potential_energy`,
+            :py:meth:`ase.optimize.optimize.Dynamics.run`, *etc.*) and stored in the
+            :py:attr:`additional_outputs` attribute. If you want more control over when
+            and how to compute specific outputs, you should use :py:meth:`run_model`
+            instead.
         :param extensions_directory: if the model uses extensions, we will try to load
             them from this directory
         :param check_consistency: should we check the model for consistency when
@@ -152,6 +170,19 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 f"found unexpected dtype in model capabilities: {capabilities.dtype}"
             )
 
+        if additional_outputs is None:
+            self._additional_output_requests = {}
+        else:
+            assert isinstance(additional_outputs, dict)
+            for name, output in additional_outputs.items():
+                assert isinstance(name, str)
+                assert isinstance(output, torch.ScriptObject)
+                assert (
+                    "explicit_gradients_setter" in output._method_names()
+                ), "outputs must be ModelOutput instances"
+
+            self._additional_output_requests = additional_outputs
+
         self._device = device
         self._model = model.to(device=self._device)
 
@@ -188,15 +219,15 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
         """
-        Run the model on the given ``atoms``, computing properties according to the
-        ``outputs`` and ``selected_atoms`` options.
+        Run the model on the given ``atoms``, computing the requested ``outputs`` and
+        only these.
 
         The output of the model is returned directly, and as such the blocks' ``values``
         will be :py:class:`torch.Tensor`.
 
         This is intended as an easy way to run metatensor models on
-        :py:class:`ase.Atoms` when the model can predict properties not supported by the
-        usual ASE's calculator interface.
+        :py:class:`ase.Atoms` when the model can compute outputs not supported by the
+        standard ASE's calculator interface.
 
         All the parameters have the same meaning as the corresponding ones in
         :py:meth:`metatensor.torch.atomistic.ModelInterface.forward`.
@@ -259,7 +290,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         # calculation of the other two. We also calculate the forces if the stress is
         # requested, and vice-versa. The overhead for the latter operation is also
         # small, assuming that the majority of the model computes forces and stresses
-        # by backpropagation as opposed to forward-mode differentiation.
+        # by backward propagation as opposed to forward-mode differentiation.
         calculate_energy = (
             "energy" in properties
             or "energies" in properties
@@ -274,6 +305,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         with record_function("ASECalculator::prepare_inputs"):
             outputs = _ase_properties_to_metatensor_outputs(properties)
+            outputs.update(self._additional_output_requests)
+
             capabilities = self._model.capabilities()
             for name in outputs.keys():
                 if name not in capabilities.outputs:
@@ -379,6 +412,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
                 )
+
+            self.additional_outputs = {}
+            for name in self._additional_output_requests:
+                self.additional_outputs[name] = outputs[name]
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
