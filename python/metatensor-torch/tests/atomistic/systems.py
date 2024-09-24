@@ -25,8 +25,13 @@ def cell():
 
 
 @pytest.fixture
-def system(types, positions, cell):
-    return System(types=types, positions=positions, cell=cell)
+def pbc():
+    return torch.tensor([True, True, True])
+
+
+@pytest.fixture
+def system(types, positions, cell, pbc):
+    return System(types=types, positions=positions, cell=cell, pbc=pbc)
 
 
 @pytest.fixture
@@ -53,12 +58,13 @@ def neighbors():
     )
 
 
-def test_system(types, positions, cell, neighbors):
-    system = System(types, positions, cell)
+def test_system(types, positions, cell, pbc, neighbors):
+    system = System(types, positions, cell, pbc)
 
     assert torch.all(system.types == types)
     assert torch.all(system.positions == positions)
     assert torch.all(system.cell == cell)
+    assert torch.all(system.pbc == pbc)
 
     expected = "System with 8 atoms, periodic cell: [12, 0, 0, 0, 12.3, 0, 0, 0, 10]"
     assert str(system) == expected
@@ -66,7 +72,12 @@ def test_system(types, positions, cell, neighbors):
         # custom __repr__ definitions are only available since torch 2.1
         assert repr(system) == expected
 
-    system = System(types, positions, cell=torch.zeros_like(cell))
+    system = System(
+        types,
+        positions,
+        cell=torch.zeros_like(cell),
+        pbc=torch.tensor([False, False, False]),
+    )
     expected = "System with 8 atoms, non periodic"
     assert str(system) == expected
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -142,9 +153,9 @@ def test_custom_data(system):
     assert metatensor.torch.equal_block(system.get_data("data-name"), new_data)
 
 
-def test_data_validation(types, positions, cell):
+def test_data_validation(types, positions, cell, pbc):
     # this should run without error:
-    system = System(types, positions, cell)
+    system = System(types, positions, cell, pbc)
 
     # ===== types checks ===== #
     message = (
@@ -152,7 +163,7 @@ def test_data_validation(types, positions, cell):
         "got meta, cpu, and cpu"
     )
     with pytest.raises(ValueError, match=message):
-        System(types.to(device="meta"), positions, cell)
+        System(types.to(device="meta"), positions, cell, pbc)
 
     message = (
         "new `types` must be on the same device as existing data, got meta and cpu"
@@ -162,7 +173,7 @@ def test_data_validation(types, positions, cell):
 
     message = "`types` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
     with pytest.raises(ValueError, match=message):
-        System(types.reshape(-1, 1), positions, cell)
+        System(types.reshape(-1, 1), positions, cell, pbc)
 
     message = (
         "new `types` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
@@ -172,7 +183,7 @@ def test_data_validation(types, positions, cell):
 
     message = "`types` must be a tensor of integers, got torch.float64 instead"
     with pytest.raises(ValueError, match=message):
-        System(types.to(dtype=torch.float64), positions, cell)
+        System(types.to(dtype=torch.float64), positions, cell, pbc)
 
     message = "`types` must be a tensor of integers, got torch.float64 instead"
     with pytest.raises(ValueError, match=message):
@@ -184,7 +195,7 @@ def test_data_validation(types, positions, cell):
         "got cpu, meta, and cpu"
     )
     with pytest.raises(ValueError, match=message):
-        System(types, positions.to(device="meta"), cell)
+        System(types, positions.to(device="meta"), cell, pbc)
 
     message = (
         "new `positions` must be on the same device as existing data, got meta and cpu"
@@ -196,7 +207,7 @@ def test_data_validation(types, positions, cell):
         "`positions` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
     )
     with pytest.raises(ValueError, match=message):
-        System(types, positions.reshape(1, -1, 3), cell)
+        System(types, positions.reshape(1, -1, 3), cell, pbc)
 
     message = (
         "new `positions` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
@@ -209,7 +220,7 @@ def test_data_validation(types, positions, cell):
         "got a tensor with shape \\[8, 3\\]"
     )
     with pytest.raises(ValueError, match=message):
-        System(torch.hstack([types, types]), positions, cell)
+        System(torch.hstack([types, types]), positions, cell, pbc)
 
     message = (
         "`positions` must be a \\(len\\(types\\) x 3\\) tensor, "
@@ -222,7 +233,7 @@ def test_data_validation(types, positions, cell):
         "`positions` must be a tensor of floating point data, got torch.int32 instead"
     )
     with pytest.raises(ValueError, match=message):
-        System(types, positions.to(dtype=torch.int32), cell)
+        System(types, positions.to(dtype=torch.int32), cell, pbc)
 
     message = (
         "new `positions` must have the same dtype as existing data, "
@@ -237,7 +248,7 @@ def test_data_validation(types, positions, cell):
         "got cpu, cpu, and meta"
     )
     with pytest.raises(ValueError, match=message):
-        System(types, positions, cell.to(device="meta"))
+        System(types, positions, cell.to(device="meta"), pbc)
 
     message = "new `cell` must be on the same device as existing data, got meta and cpu"
     with pytest.raises(ValueError, match=message):
@@ -245,7 +256,7 @@ def test_data_validation(types, positions, cell):
 
     message = "`cell` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
     with pytest.raises(ValueError, match=message):
-        System(types, positions, cell.reshape(3, 1, 3))
+        System(types, positions, cell.reshape(3, 1, 3), pbc)
 
     message = (
         "new `cell` must be a 2 dimensional tensor, got a tensor with 3 dimensions"
@@ -255,7 +266,7 @@ def test_data_validation(types, positions, cell):
 
     message = "`cell` must be a \\(3 x 3\\) tensor, got a tensor with shape \\[6, 3\\]"
     with pytest.raises(ValueError, match=message):
-        System(types, positions, torch.vstack([cell, cell]))
+        System(types, positions, torch.vstack([cell, cell]), pbc)
 
     message = (
         "new `cell` must be a \\(3 x 3\\) tensor, got a tensor with shape \\[6, 3\\]"
@@ -268,7 +279,7 @@ def test_data_validation(types, positions, cell):
         "got torch.int32 and torch.float32"
     )
     with pytest.raises(ValueError, match=message):
-        System(types, positions, cell.to(dtype=torch.int32))
+        System(types, positions, cell.to(dtype=torch.int32), pbc)
 
     message = (
         "new `cell` must have the same dtype as existing data, "

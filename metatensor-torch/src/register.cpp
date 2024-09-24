@@ -362,6 +362,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("types", &SystemHolder::types, &SystemHolder::set_types)
         .def_property("positions", &SystemHolder::positions, &SystemHolder::set_positions)
         .def_property("cell", &SystemHolder::cell, &SystemHolder::set_cell)
+        .def_property("pbc", &SystemHolder::pbc, &SystemHolder::set_pbc)
         .def("__len__", &SystemHolder::size)
         .def("__str__", &SystemHolder::str)
         .def("__repr__", &SystemHolder::str)

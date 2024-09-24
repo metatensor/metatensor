@@ -715,6 +715,7 @@ def _convert_systems_units(
             types=system.types,
             positions=conversion * system.positions,
             cell=conversion * system.cell,
+            pbc=system.pbc,
         )
 
         # also update the neighbors list distances
