@@ -288,6 +288,34 @@ def test_data_validation(types, positions, cell, pbc):
     with pytest.raises(ValueError, match=message):
         system.cell = cell.to(dtype=torch.float64)
 
+    # ===== pbc checks ===== #
+    message = (
+        "`types`, `positions`, `cell`, and `pbc` must be on the same device, "
+        "got cpu, cpu, cpu, and meta"
+    )
+    with pytest.raises(ValueError, match=message):
+        System(types, positions, cell, pbc.to(device="meta"))
+
+    message = "new `pbc` must be on the same device as existing data, got meta and cpu"
+    with pytest.raises(ValueError, match=message):
+        system.pbc = pbc.to(device="meta")
+
+    message = "`pbc` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
+    with pytest.raises(ValueError, match=message):
+        System(types, positions, cell, pbc.reshape(-1, 1))
+
+    message = "new `pbc` must be a 1 dimensional tensor, got a tensor with 2 dimensions"
+    with pytest.raises(ValueError, match=message):
+        system.pbc = pbc.reshape(-1, 1)
+
+    message = "`pbc` must be a tensor of booleans, got torch.int32 instead"
+    with pytest.raises(ValueError, match=message):
+        System(types, positions, cell, pbc.to(dtype=torch.int32))
+
+    message = "`pbc` must be a tensor of booleans, got torch.int32 instead"
+    with pytest.raises(ValueError, match=message):
+        system.pbc = pbc.to(dtype=torch.int32)
+
 
 def test_neighbors_validation(system):
     options = NeighborListOptions(cutoff=3.5, full_list=False)
@@ -491,6 +519,13 @@ def check_dtype(system: System, dtype: torch.dtype):
 
 
 def test_partial_pbc():
+    system = System(
+        torch.tensor([1]),
+        torch.tensor([[1.0, 1.0, 1.0]]),
+        torch.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
+        pbc=torch.tensor([True, False, True]),
+    )
+
     with pytest.raises(
         ValueError,
         match="if `pbc` is False along any direction, "
@@ -502,3 +537,10 @@ def test_partial_pbc():
             torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
             pbc=torch.tensor([True, False, True]),
         )
+
+    with pytest.raises(
+        ValueError,
+        match="if `pbc` is False along any direction, "
+        "the corresponding cell vector must be zero",
+    ):
+        system.pbc = torch.tensor([True, True, False])
