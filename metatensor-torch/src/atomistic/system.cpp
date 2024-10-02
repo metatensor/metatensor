@@ -433,9 +433,9 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
         );
     }
 
-    // if the pbcs are False along any directions, we check that the
+    // if the PBC are False along any directions, we check that the
     // corresponding cell vectors are zero
-    if (pbc_.device().str() != "meta") {  // skip this check for meta tensors
+    if (!pbc_.device().is_meta()) {
         auto cell_where_pbc_is_false = cell_.index({pbc_ == false});
         if (!torch::all(cell_where_pbc_is_false == 0.0).item<bool>()) {
             C10_THROW_ERROR(ValueError,
@@ -575,9 +575,10 @@ void SystemHolder::set_pbc(torch::Tensor pbc) {
         );
     }
 
-    // if the pbcs are False along any directions, we check that the
+
+    // if the PBC are False along any directions, we check that the
     // corresponding cell vectors are zero
-    if (pbc.device().str() != "meta") {  // skip this check for meta tensors
+    if (!pbc_.device().is_meta()) {
         auto cell_where_pbc_is_false = cell_.index({pbc == false});
         if (!torch::all(cell_where_pbc_is_false == 0.0).item<bool>()) {
             C10_THROW_ERROR(ValueError,
