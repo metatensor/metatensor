@@ -105,30 +105,23 @@ def _system_to_torch(
         device=device,
     )
 
-    if np.all(system.pbc):
-        cell = torch.tensor(
-            system.cell[:],
-            requires_grad=cell_requires_grad,
-            dtype=dtype,
-            device=device,
+    cell_vectors_are_not_zero = np.any(system.cell == 0, axis=1)
+
+    if not np.all(cell_vectors_are_not_zero == system.pbc):
+        warnings.warn(
+            "A conversion to `System` was requested for an `ase.Atoms` object "
+            "with one or more non-zero cell vectors but where the corresponding "
+            "boundary conditions are set to `False`. "
+            "The corresponding cell vectors will be set to zero.",
+            stacklevel=2,
         )
-    elif not np.any(system.pbc):
-        if system.cell is not None and not np.all(system.cell == 0):
-            warnings.warn(
-                "A conversion to `System` was requested for an `ase.Atoms` object "
-                "with non-zero cell vectors but no periodic boundary conditions. "
-                "The cell vectors will be set to zero.",
-                stacklevel=2,
-            )
-        cell = torch.zeros(
-            (3, 3), requires_grad=cell_requires_grad, dtype=dtype, device=device
-        )
-    else:
-        raise ValueError(
-            "The `metatensor.torch.atomistic.System` class does not support "
-            "systems with mixed periodic and non-periodic dimensions."
-        )
+
+    cell = torch.zeros((3, 3), dtype=dtype, device=device)
+
+    pbc = torch.tensor(system.pbc, dtype=torch.bool, device=device)
+
+    cell[pbc] = torch.tensor(system.cell[system.pbc], dtype=dtype, device=device)
 
     types = torch.tensor(system.numbers, device=device, dtype=torch.int32)
 
-    return System(positions=positions, cell=cell, types=types)
+    return System(positions=positions, cell=cell, types=types, pbc=pbc)

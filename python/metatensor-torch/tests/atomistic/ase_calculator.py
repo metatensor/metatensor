@@ -309,6 +309,7 @@ def _read_neighbor_check(path):
         types=torch.tensor([1] * positions.shape[0], dtype=torch.int32),
         positions=positions,
         cell=torch.tensor(data["system"]["cell"], dtype=dtype),
+        pbc=torch.tensor([True, True, True]),
     )
 
     options = NeighborListOptions(

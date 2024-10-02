@@ -6,18 +6,22 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-<!-- Possible sections:
+<!-- Possible sections for each package:
 
-### Added
+#### Added
 
-### Fixed
+#### Fixed
+
+#### Changed
+
+#### Removed
+-->
 
 ### Changed
 
-### Deprecated
-
-### Removed
--->
+- the `System` class now supports boundary conditions along some axes but not others. This is implemented
+  via a new `pbc` attribute. Any non-periodic dimension in a `System` must have the corrresponding cell
+  vector set to zero.
 
 ## [Version 0.5.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.5) - 2024-09-03
 

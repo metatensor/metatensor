@@ -20,6 +20,7 @@ def system():
         types=torch.tensor([1, 2, 3]),
         positions=torch.tensor([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=torch.float64),
         cell=torch.zeros([3, 3], dtype=torch.float64),
+        pbc=torch.tensor([False, False, False]),
     )
 
 

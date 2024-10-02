@@ -356,12 +356,13 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<SystemHolder>("System")
         .def(
-            torch::init<torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
-            {torch::arg("types"), torch::arg("positions"), torch::arg("cell")}
+            torch::init<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
+            {torch::arg("types"), torch::arg("positions"), torch::arg("cell"), torch::arg("pbc")}
         )
         .def_property("types", &SystemHolder::types, &SystemHolder::set_types)
         .def_property("positions", &SystemHolder::positions, &SystemHolder::set_positions)
         .def_property("cell", &SystemHolder::cell, &SystemHolder::set_cell)
+        .def_property("pbc", &SystemHolder::pbc, &SystemHolder::set_pbc)
         .def("__len__", &SystemHolder::size)
         .def("__str__", &SystemHolder::str)
         .def("__repr__", &SystemHolder::str)

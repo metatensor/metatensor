@@ -338,16 +338,17 @@ static bool is_floating_point(torch::Dtype dtype) {
     return dtype == torch::kF16 || dtype == torch::kF32 || dtype == torch::kF64;
 }
 
-SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell):
+SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc):
     types_(std::move(types)),
     positions_(std::move(positions)),
-    cell_(std::move(cell))
+    cell_(std::move(cell)),
+    pbc_(std::move(pbc))
 {
-    if (positions_.device() != types_.device() || cell_.device() != types_.device()) {
+    if (positions_.device() != types_.device() || cell_.device() != types_.device() || pbc_.device() != types_.device()) {
         C10_THROW_ERROR(ValueError,
-            "`types`, `positions`, and `cell` must be on the same device, got " +
-            types_.device().str() + ", " + positions_.device().str() + ", and " +
-            cell_.device().str()
+            "`types`, `positions`, `cell`, and `pbc` must be on the same device, got " +
+            types_.device().str() + ", " + positions_.device().str() + ", " +
+            cell_.device().str() + ", and " + pbc_.device().str()
         );
     }
 
@@ -409,6 +410,38 @@ SystemHolder::SystemHolder(torch::Tensor types, torch::Tensor positions, torch::
             scalar_type_name(cell_.scalar_type()) + " and " +
             scalar_type_name(positions_.scalar_type())
         );
+    }
+
+    if (pbc_.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(pbc_.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (pbc_.size(0) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must contain 3 entries, got a tensor with " +
+            std::to_string(pbc_.size(0)) + " values"
+        );
+    }
+
+    if (pbc_.scalar_type() != torch::kBool) {
+        C10_THROW_ERROR(ValueError,
+            "`pbc` must be a tensor of booleans, got " +
+            scalar_type_name(pbc_.scalar_type()) + " instead"
+        );
+    }
+
+    // if the PBC are False along any directions, we check that the
+    // corresponding cell vectors are zero
+    if (!pbc_.device().is_meta()) {
+        auto cell_where_pbc_is_false = cell_.index({pbc_ == false});
+        if (!torch::all(cell_where_pbc_is_false == 0.0).item<bool>()) {
+            C10_THROW_ERROR(ValueError,
+                "if `pbc` is False along any direction, the corresponding cell vector must be zero"
+            );
+        }
     }
 }
 
@@ -513,6 +546,50 @@ void SystemHolder::set_cell(torch::Tensor cell) {
     this->cell_ = std::move(cell);
 }
 
+void SystemHolder::set_pbc(torch::Tensor pbc) {
+    if (pbc.device() != this->device()) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be on the same device as existing data, got " +
+            pbc.device().str() + " and " + this->device().str()
+        );
+    }
+
+    if (pbc.scalar_type() != torch::kBool) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be a tensor of booleans, got " +
+            scalar_type_name(pbc.scalar_type()) + " instead"
+        );
+    }
+
+    if (pbc.sizes().size() != 1) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must be a 1 dimensional tensor, got a tensor with " +
+            std::to_string(pbc.sizes().size()) + " dimensions"
+        );
+    }
+
+    if (pbc.size(0) != 3) {
+        C10_THROW_ERROR(ValueError,
+            "new `pbc` must contain 3 entries, got a tensor with " +
+            std::to_string(pbc.size(0)) + " values"
+        );
+    }
+
+
+    // if the PBC are False along any directions, we check that the
+    // corresponding cell vectors are zero
+    if (!pbc_.device().is_meta()) {
+        auto cell_where_pbc_is_false = cell_.index({pbc == false});
+        if (!torch::all(cell_where_pbc_is_false == 0.0).item<bool>()) {
+            C10_THROW_ERROR(ValueError,
+                "if `pbc` is False along any direction, the corresponding cell vector must be zero"
+            );
+        }
+    }
+
+    this->pbc_ = std::move(pbc);
+}
+
 System SystemHolder::to(
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device
@@ -538,6 +615,15 @@ System SystemHolder::to(
         ),
         this->cell().to(
             dtype,
+            /*layout*/ torch::nullopt,
+            device,
+            /*pin_memory*/ torch::nullopt,
+            /*non_blocking*/ false,
+            /*copy*/ false,
+            /*memory_format*/ torch::MemoryFormat::Preserve
+        ),
+        this->pbc().to(
+            /*dtype*/ torch::nullopt,
             /*layout*/ torch::nullopt,
             device,
             /*pin_memory*/ torch::nullopt,
