@@ -72,6 +72,17 @@ def block_from_array(
     >>> # The data inside the TensorBlock will correspond to the provided array:
     >>> print(np.all(array == tensor_block.values))
     True
+    >>> # High-dimensional tensor
+    >>> array = np.linspace(0, 10, 60).reshape((2, 3, 5, 1, 2))
+    >>> # Specify axes names:
+    >>> tensor_block = metatensor.block_from_array(array, 
+        sample_names=["a", "b"], property_names=['y'] )
+    >>> print(tensor_block)
+    TensorBlock
+        samples (6): ['a', 'b']
+        components (5, 1): ['component_1', 'component_2']
+        properties (2): ['y']
+        gradients: None
     """
 
     shape = tuple(array.shape)
@@ -140,8 +151,5 @@ def block_from_array(
     components = [component.to(device) for component in components]
     properties = properties.to(device)
     block_shape = (len(samples),) + shape[d_samples:-d_properties] + (len(properties),)
-    print(samples)
-    print(components)
-    print(properties)
 
     return TensorBlock(array.reshape(block_shape), samples, components, properties)
