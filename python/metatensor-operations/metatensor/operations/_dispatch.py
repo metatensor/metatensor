@@ -527,6 +527,33 @@ def int_array_like(int_list: List[int], like):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def indices_like(shape: Tuple[int], like):
+    """
+    Creates a tensor of shape ``shape`` filled with ints that
+    enumerate the indices of the entries in the array, e.g.
+    ``shape = (3,2)`` returns ``[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]``.
+
+    If the backend is torch and the device is "meta",
+    the device is set to "cpu". This is useful in case where
+    we create labels for a block that is on the meta device.
+    In that case, `int_list` are the labels, and `like` are the block
+    values.
+    """
+
+    if isinstance(like, TorchTensor):
+        if like.device.type == "meta":
+            device = torch.device("cpu")
+        else:
+            device = like.device
+        return torch.cartesian_prod(
+            *[torch.arange(s, dtype=torch.int64, device=device) for s in shape]
+        )
+    elif isinstance(like, np.ndarray):
+        return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def lstsq(X, Y, rcond: Optional[float], driver: Optional[str] = None):
     """
     Computes a solution to the least squares problem of a system of linear
