@@ -85,7 +85,7 @@ def block_from_array(
         gradients: None
     """
 
-    shape = tuple(array.shape)
+    shape = array.shape
     n_dimensions = len(shape)
     if n_dimensions < 2:
         raise ValueError(
@@ -150,6 +150,6 @@ def block_from_array(
     samples = samples.to(device)
     components = [component.to(device) for component in components]
     properties = properties.to(device)
-    block_shape = (len(samples),) + shape[d_samples:-d_properties] + (len(properties),)
+    block_shape = (len(samples),) + tuple(shape[i] for i in range(d_samples,d_samples+d_components)) + (len(properties),)
 
     return TensorBlock(array.reshape(block_shape), samples, components, properties)
