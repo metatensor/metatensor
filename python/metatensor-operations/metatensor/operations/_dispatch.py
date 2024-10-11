@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -527,7 +527,7 @@ def int_array_like(int_list: List[int], like):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def indices_like(shape: Sequence[int], like):
+def indices_like(shape: List[int], like):
     """
     Creates a tensor of shape ``shape`` filled with ints that
     enumerate the indices of the entries in the array, e.g.
@@ -545,7 +545,10 @@ def indices_like(shape: Sequence[int], like):
             device = torch.device("cpu")
         else:
             device = like.device
-        indices = torch.meshgrid([torch.arange(s) for s in shape], indexing="ij")
+        indices = torch.meshgrid(
+            [torch.arange(s, dtype=torch.int64, device=device) for s in shape],
+            indexing="ij",
+        )
         return torch.stack(indices, dim=-1).reshape(-1, len(shape))
     elif isinstance(like, np.ndarray):
         return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)

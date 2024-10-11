@@ -151,13 +151,12 @@ def block_from_array(
     samples = samples.to(device)
     components = [component.to(device) for component in components]
     properties = properties.to(device)
-    block_shape = (
-        (len(samples),)
-        + tuple(shape[i] for i in range(d_samples, d_samples + d_components))
-        + (len(properties),)
-    )
-    # reshape array _if needed_
-    if block_shape != shape:
+    block_shape = [len(samples)]
+    for i in range(d_samples, d_samples + d_components):
+        block_shape.append(shape[i])
+    block_shape.append(len(properties))
+    # reshape array if sample of property axes need to be merged
+    if len(block_shape) != len(shape):
         array = array.reshape(block_shape)
 
     return TensorBlock(array, samples, components, properties)
