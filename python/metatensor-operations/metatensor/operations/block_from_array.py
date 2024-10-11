@@ -75,8 +75,9 @@ def block_from_array(
     >>> # High-dimensional tensor
     >>> array = np.linspace(0, 10, 60).reshape((2, 3, 5, 1, 2))
     >>> # Specify axes names:
-    >>> tensor_block = metatensor.block_from_array(array, 
-        sample_names=["a", "b"], property_names=['y'] )
+    >>> tensor_block = metatensor.block_from_array(
+    ...     array, sample_names=["a", "b"], property_names=["y"]
+    ... )
     >>> print(tensor_block)
     TensorBlock
         samples (6): ['a', 'b']
@@ -102,7 +103,7 @@ def block_from_array(
     d_properties = len(property_names)
     # guess number of components
     d_components = n_dimensions - d_samples - d_properties
-    if d_components <= 0:
+    if d_components < 0:
         raise ValueError(
             f"the array provided to `block_from_array` does not have enough "
             + "dimensions to match the sample and property names"
@@ -150,6 +151,10 @@ def block_from_array(
     samples = samples.to(device)
     components = [component.to(device) for component in components]
     properties = properties.to(device)
-    block_shape = (len(samples),) + tuple(shape[i] for i in range(d_samples,d_samples+d_components)) + (len(properties),)
+    block_shape = (
+        (len(samples),)
+        + tuple(shape[i] for i in range(d_samples, d_samples + d_components))
+        + (len(properties),)
+    )
 
     return TensorBlock(array.reshape(block_shape), samples, components, properties)

@@ -545,9 +545,8 @@ def indices_like(shape: Tuple[int], like):
             device = torch.device("cpu")
         else:
             device = like.device
-        return torch.cartesian_prod(
-            *[torch.arange(s, dtype=torch.int64, device=device) for s in shape]
-        )
+        indices = torch.meshgrid([torch.arange(s) for s in shape], indexing="ij")
+        return torch.stack(indices, dim=-1).reshape(-1, len(shape))
     elif isinstance(like, np.ndarray):
         return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)
     else:
