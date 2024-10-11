@@ -26,35 +26,35 @@ def block_from_array(
     """
     Creates a simple TensorBlock from an array.
 
-    The metadata in the resulting :py:class:`TensorBlock` is filled with ranges
-    of integers. This function should be seen as a quick way of creating a
-    :py:class:`TensorBlock` from arbitrary data. However, the metadata generated
-    in this way has little meaning.
+    The metadata in the resulting :py:class:`TensorBlock` is filled with ranges of
+    integers. This function should be seen as a quick way of creating a
+    :py:class:`TensorBlock` from arbitrary data. However, the metadata generated in this
+    way has little meaning.
 
     :param array: An array with two or more dimensions. This can either be a
         :py:class:`numpy.ndarray` or a :py:class:`torch.Tensor`.
-    :param sample_names: A list containing ``d_samples`` sample axes names. The first
-        ``d_samples`` dimensions in the array will be interpreted as enumerating
-        samples. ``None`` implies a single axis named ``"sample"``.
-    :param property_names: A list containing `n_properties` property axes names. The
-        last ``n_properties`` dimensions in the array will be interpreted as enumerating
-        properties. ``None`` implies a single axis named ``"property"``.
-    :param component_names: A list containing ``n_component`` component axes names. The
-        middle ``n_components`` dimensions in the array will be interpreted as
-        enumerating components. ``None`` implies that all the middle dimensions will be
-        considered components, and named ``"component_xxx"``.
+    :param sample_names: A list containing ``d_samples`` names for the sample
+        dimensions. The first ``d_samples`` dimensions in the array will be interpreted
+        as enumerating samples. ``None`` implies a single dimension named ``"sample"``.
+    :param property_names: A list containing ``d_properties`` names for the property
+        dimensions. The last ``d_properties`` dimensions in the array will be
+        interpreted as enumerating properties. ``None`` implies a single dimension named
+        ``"property"``.
+    :param component_names: A list containing ``n_component`` names for the component
+        dimensions. The middle ``d_components`` dimensions in the array will be
+        interpreted as enumerating components. ``None`` implies that all the middle
+        dimensions (after removing any sample and property dimensions) will be
+        considered components, named ``"component_xxx"``.
 
     :return: A :py:class:`TensorBlock` whose values correspond to the provided
-        ``array``. If no name options are provided, the metadata names are set
-        to ``"sample"`` for samples; ``"component_1"``, ``"component_2"``, ...
-        for components; and ``property`` for properties. The number of ``component``
-        labels is adapted to the dimensionality of the input array. If axes names
-        are given, as indicated in the parameter list, the dimensions of the array
-        will be interpreted accordingly, and indices also generated in a similar way.
-        The metadata associated with each axis is a range of integers going from 0
-        to the size of the corresponding axis. The returned :py:class:`TensorBlock`
-        has no gradients.
-
+        ``array``. If no name options are provided, the metadata names are set to
+        ``"sample"`` for samples; ``"component_1"``, ``"component_2"``, ... for
+        components; and ``property`` for properties. The number of ``component`` labels
+        is adapted to the dimensionality of the input array. If axes names are given, as
+        indicated in the parameter list, the dimensions of the array will be interpreted
+        accordingly, and indices also generated in a similar way. The metadata
+        associated with each axis is a range of integers going from 0 to the size of the
+        corresponding axis. The returned :py:class:`TensorBlock` has no gradients.
 
     >>> import numpy as np
     >>> import metatensor
@@ -120,7 +120,8 @@ def block_from_array(
         )
     if component_names is None:
         component_names = [
-            f"component_{component_index+1}" for component_index in range(d_components)
+            f"component_{component_index + 1}"
+            for component_index in range(d_components)
         ]
     if len(component_names) != d_components:
         raise ValueError(
@@ -151,7 +152,9 @@ def block_from_array(
     samples = samples.to(device)
     components = [component.to(device) for component in components]
     properties = properties.to(device)
-    # reshape array if sample of property axes need to be merged
+
+    # reshape the array if multiple axes of the input array are grouped as samples or
+    # properties (i.e. if `len(sample_names) > 1` or `len(property_names) > 1`)
     if d_samples > 1 or d_properties > 1:
         block_shape = [len(samples)]
         for i in range(d_samples, d_samples + d_components):
