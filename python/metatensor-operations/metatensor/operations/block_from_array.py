@@ -85,6 +85,17 @@ def block_from_array(
         gradients: None
     """
 
+    if torch_jit_is_scripting():
+        # we are using metatensor-torch
+        labels_array_like = torch.empty(0)
+    else:
+        if isinstance(Labels, TorchScriptClass):
+            # we are using metatensor-torch
+            labels_array_like = torch.empty(0)
+        else:
+            # we are using metatensor-core
+            labels_array_like = np.empty(0)
+            
     shape = array.shape
     n_dimensions = len(shape)
     if n_dimensions < 2:
@@ -116,17 +127,6 @@ def block_from_array(
             f"the array provided to `block_from_array` does not have enough "
             + "dimensions to match the given sample, component, and property names"
         )
-
-    if torch_jit_is_scripting():
-        # we are using metatensor-torch
-        labels_array_like = torch.empty(0)
-    else:
-        if isinstance(Labels, TorchScriptClass):
-            # we are using metatensor-torch
-            labels_array_like = torch.empty(0)
-        else:
-            # we are using metatensor-core
-            labels_array_like = np.empty(0)
 
     samples = Labels(
         names=sample_names,
