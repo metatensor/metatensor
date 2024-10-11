@@ -131,7 +131,7 @@ def block_from_array(
 
     samples = Labels(
         names=sample_names,
-        values=_dispatch.indices_like(tuple(shape[0:d_samples]), labels_array_like),
+        values=_dispatch.indices_like(shape[0:d_samples], labels_array_like),
     )
     components = [
         Labels(
@@ -144,7 +144,7 @@ def block_from_array(
     ]
     properties = Labels(
         names=property_names,
-        values=_dispatch.indices_like(tuple(shape[-d_properties:]), labels_array_like),
+        values=_dispatch.indices_like(shape[-d_properties:], labels_array_like),
     )
 
     device = _dispatch.get_device(array)
@@ -156,5 +156,8 @@ def block_from_array(
         + tuple(shape[i] for i in range(d_samples, d_samples + d_components))
         + (len(properties),)
     )
+    # reshape array _if needed_
+    if block_shape != shape:
+        array = array.reshape(block_shape)
 
-    return TensorBlock(array.reshape(block_shape), samples, components, properties)
+    return TensorBlock(array, samples, components, properties)
