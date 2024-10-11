@@ -33,17 +33,16 @@ def block_from_array(
 
     :param array: An array with two or more dimensions. This can either be a
         :py:class:`numpy.ndarray` or a :py:class:`torch.Tensor`.
-    :param sample_names: A list containing `d_samples` optional sample axes names.
-        The first `d_samples` dimensions in the array will be interpreted as
-        enumerating samples. ``None`` implies one axis named ``"sample"``.
-    :param property_names: A list containing `d_properties` optional property axes
-        names. The last `d_properties` dimensions in the array will be interpreted
-        as enumerating properties. ``None`` implies one axis named ``"property"``.
-    :param component_names: A list containing `d_component` optional component axes
-        names. The middle `d_components` dimensions in the array will be interpreted
-        as enumerating components. ``None`` implies that all the middle dimensions
-        will be considered components, and named ``"component_xxx"``.
-
+    :param sample_names: A list containing ``d_samples`` sample axes names. The first
+        ``d_samples`` dimensions in the array will be interpreted as enumerating
+        samples. ``None`` implies a single axis named ``"sample"``.
+    :param property_names: A list containing `n_properties` property axes names. The
+        last ``n_properties`` dimensions in the array will be interpreted as enumerating
+        properties. ``None`` implies a single axis named ``"property"``.
+    :param component_names: A list containing ``n_component`` component axes names. The
+        middle ``n_components`` dimensions in the array will be interpreted as
+        enumerating components. ``None`` implies that all the middle dimensions will be
+        considered components, and named ``"component_xxx"``.
 
     :return: A :py:class:`TensorBlock` whose values correspond to the provided
         ``array``. If no name options are provided, the metadata names are set
