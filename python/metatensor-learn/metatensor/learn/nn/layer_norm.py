@@ -263,7 +263,6 @@ class _LayerNorm(Module):
         dtype: Optional[torch.dtype] = None,
         mean: bool = True,
     ) -> None:
-
         super().__init__()
 
         self.in_features = in_features

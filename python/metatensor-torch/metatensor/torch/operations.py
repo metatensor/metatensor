@@ -2,9 +2,8 @@ import importlib
 import os
 import sys
 
-import torch
-
 import metatensor.operations
+import torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
