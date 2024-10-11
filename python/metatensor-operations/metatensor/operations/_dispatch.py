@@ -527,6 +527,25 @@ def int_array_like(int_list: List[int], like):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def indices_like(shape: List[int], like):
+    """
+    Creates a tensor of shape ``shape`` filled with ints that
+    enumerate the indices of the entries in the array, e.g.
+    ``shape = (3,2)`` returns ``[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]``.
+    """
+
+    if isinstance(like, TorchTensor):
+        indices = torch.meshgrid(
+            [torch.arange(s, dtype=torch.int64, device=like.device) for s in shape],
+            indexing="ij",
+        )
+        return torch.stack(indices, dim=-1).reshape(-1, len(shape))
+    elif isinstance(like, np.ndarray):
+        return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def lstsq(X, Y, rcond: Optional[float], driver: Optional[str] = None):
     """
     Computes a solution to the least squares problem of a system of linear
