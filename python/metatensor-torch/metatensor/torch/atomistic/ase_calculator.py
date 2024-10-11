@@ -5,6 +5,7 @@ import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+
 import torch
 from torch.profiler import record_function
 
@@ -489,7 +490,6 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-
     if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
         nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
             "ijSD",

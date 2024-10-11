@@ -85,9 +85,7 @@ def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlo
             [-1] + [1] * diff_components + _shape
         ) ** 2 + gradient_1.values / block_2.values[
             _dispatch.to_index_array(gradient_samples_to_values_samples_2)
-        ].reshape(
-            [-1] + [1] * diff_components + _shape
-        )
+        ].reshape([-1] + [1] * diff_components + _shape)
 
         result_block.add_gradient(
             parameter=parameter_1,
