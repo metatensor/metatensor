@@ -83,7 +83,8 @@ def test_with_label_names(sample_names, property_names):
         )
         + (len(property_names),)
     )
-    assert (s1 == s2 for (s1, s2) in zip(block.values.shape, expected_shape))
+    for actual_shape, expected in zip(block.values.shape, expected_shape)
+        assert actual_shape == expected
 
     assert len(block.samples.names) == len(sample_names)
     assert (s1 == s2 for (s1, s2) in zip(block.samples.names, sample_names))
