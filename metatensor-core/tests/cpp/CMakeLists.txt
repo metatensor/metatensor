@@ -12,6 +12,11 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     endif()
 endif()
 
+if (MINGW)
+    # CI can't find libsdc++, so we statically link it
+    set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
+endif()
+
 add_subdirectory(../../ metatensor)
 get_target_property(METATENSOR_IMPORTED_LOCATION metatensor::shared IMPORTED_LOCATION)
 get_filename_component(METATENSOR_DIR ${METATENSOR_IMPORTED_LOCATION} DIRECTORY)
@@ -65,6 +70,7 @@ foreach(_file_ ${ALL_TESTS})
 
     # Give path to tests data files to the tests through defines
     target_compile_definitions(${_name_} PRIVATE "-DTEST_DATA_NPZ_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../data.npz\"")
+    target_compile_definitions(${_name_} PRIVATE "-DTEST_BLOCK_NPZ_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../block.npz\"")
     target_compile_definitions(${_name_} PRIVATE "-DTEST_KEYS_NPY_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../keys.npy\"")
 
     add_test(

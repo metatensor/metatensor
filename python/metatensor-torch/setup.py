@@ -13,9 +13,9 @@ from wheel.bdist_wheel import bdist_wheel
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
+METATENSOR_CORE_SRC = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
 
-METATENSOR_TORCH = os.path.join(ROOT, "..", "..", "metatensor-torch")
+METATENSOR_TORCH_SRC = os.path.join(ROOT, "..", "..", "metatensor-torch")
 
 
 class universal_wheel(bdist_wheel):
@@ -39,7 +39,7 @@ class cmake_ext(build_ext):
 
         import metatensor
 
-        source_dir = METATENSOR_TORCH
+        source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
         install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor/torch")
 
@@ -59,11 +59,17 @@ class cmake_ext(build_ext):
             install_dir, f"torch-{torch_major}.{torch_minor}"
         )
 
+        use_external_lib = os.environ.get(
+            "METATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB", "OFF"
+        )
+
         cmake_options = [
             "-DCMAKE_BUILD_TYPE=Release",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
             f"-DCMAKE_PREFIX_PATH={';'.join(cmake_prefix_path)}",
+            f"-DMETATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB={use_external_lib}",
+            f"-DMETATENSOR_TORCH_SOURCE_DIR={METATENSOR_TORCH_SRC}",
         ]
 
         subprocess.run(
@@ -228,7 +234,39 @@ def create_version_number(version):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(METATENSOR_TORCH):
+    if sys.platform == "win32":
+        # On Windows, starting with PyTorch 2.3, the file shm.dll in torch has a
+        # dependency on mkl DLLs. When building the code using pip build isolation, pip
+        # installs the mkl package in a place where the os is not trying to load
+        #
+        # This is a very similar fix to https://github.com/pytorch/pytorch/pull/126095,
+        # except only applying when importing torch from a build-isolation virtual
+        # environment created by pip (`python -m build` does not seems to suffer from
+        # this).
+        import wheel
+
+        pip_virtualenv = os.path.realpath(
+            os.path.join(
+                os.path.dirname(wheel.__file__),
+                "..",
+                "..",
+                "..",
+                "..",
+            )
+        )
+        mkl_dll_dir = os.path.join(
+            pip_virtualenv,
+            "normal",
+            "Library",
+            "bin",
+        )
+
+        if os.path.exists(mkl_dll_dir):
+            os.add_dll_directory(mkl_dll_dir)
+
+        # End of Windows/MKL/PIP hack
+
+    if not os.path.exists(METATENSOR_TORCH_SRC):
         # we are building from a sdist, which should include metatensor-torch C++
         # sources as a tarball
         tarballs = glob.glob(os.path.join(ROOT, "metatensor-torch-cxx-*.tar.gz"))
@@ -239,16 +277,16 @@ if __name__ == "__main__":
                 "metatensor-torch C++ sources"
             )
 
-        METATENSOR_TORCH = os.path.realpath(tarballs[0])
+        METATENSOR_TORCH_SRC = os.path.realpath(tarballs[0])
         subprocess.run(
-            ["cmake", "-E", "tar", "xf", METATENSOR_TORCH],
+            ["cmake", "-E", "tar", "xf", METATENSOR_TORCH_SRC],
             cwd=ROOT,
             check=True,
         )
 
-        METATENSOR_TORCH = ".".join(METATENSOR_TORCH.split(".")[:-2])
+        METATENSOR_TORCH_SRC = ".".join(METATENSOR_TORCH_SRC.split(".")[:-2])
 
-    with open(os.path.join(METATENSOR_TORCH, "VERSION")) as fd:
+    with open(os.path.join(METATENSOR_TORCH_SRC, "VERSION")) as fd:
         METATENSOR_TORCH_VERSION = fd.read().strip()
 
     with open(os.path.join(ROOT, "AUTHORS")) as fd:
@@ -275,16 +313,18 @@ if __name__ == "__main__":
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
 
-    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
+    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE_SRC):
         # we are building from a git checkout
 
         # add a random uuid to the file url to prevent pip from using a cached
         # wheel for metatensor-core, and force it to re-build from scratch
         uuid = uuid.uuid4()
-        install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE}?{uuid}")
+        install_requires.append(
+            f"metatensor-core @ file://{METATENSOR_CORE_SRC}?{uuid}"
+        )
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core >=0.1.0,<0.2.0")
+        install_requires.append("metatensor-core >=0.1.10,<0.2.0")
 
     setup(
         version=create_version_number(METATENSOR_TORCH_VERSION),

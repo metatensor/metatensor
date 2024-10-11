@@ -36,6 +36,7 @@ def test_export_atomistic_model(tmp_path):
         types=torch.tensor([1]),
         positions=torch.tensor([[1.0, 1, 1]], dtype=torch.float64, requires_grad=True),
         cell=torch.zeros([3, 3], dtype=torch.float64),
+        pbc=torch.tensor([False, False, False]),
     )
 
     outputs = {

@@ -448,6 +448,32 @@ mts_status_t mts_labels_intersection(struct mts_labels_t first,
                                      uintptr_t second_mapping_count);
 
 /**
+ * Select entries in the `labels` that match the `selection`.
+ *
+ * The selection's names must be a subset of the name of the `labels` names.
+ *
+ * All entries in the `labels` that match one of the entry in the `selection`
+ * for all the selection's dimension will be picked. Any entry in the
+ * `selection` but not in the `labels` will be ignored.
+ *
+ * @param labels Labels on which to run the selection
+ * @param selection definition of the selection criteria. Multiple entries are
+ *        interpreted as a logical `or` operation.
+ * @param selected on input, a pointer to an array with space for
+ *        `*selected_count` entries. On output, the first `*selected_count`
+ *        values will contain the index in `labels` of selected entries.
+ * @param selected_count on input, size of the `selected` array. On output,
+ *        this will contain the number of selected entries.
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_select(struct mts_labels_t labels,
+                               struct mts_labels_t selection,
+                               int64_t *selected,
+                               uintptr_t *selected_count);
+
+/**
  * Decrease the reference count of `labels`, and release the corresponding
  * memory once the reference count reaches 0.
  *
@@ -926,6 +952,98 @@ mts_status_t mts_labels_save_buffer(uint8_t **buffer,
                                     struct mts_labels_t labels);
 
 /**
+ * Load a tensor block from the file at the given path.
+ *
+ * Arrays for the values and gradient data will be created with the given
+ * `create_array` callback, and filled by this function with the corresponding
+ * data.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_block_free`.
+ *
+ * See `mts_tensormap_load` for more information about the format used to
+ * serialize the data.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_block_t *mts_block_load(const char *path, mts_create_array_callback_t create_array);
+
+/**
+ * Load a tensor block from the given in-memory buffer.
+ *
+ * Arrays for the values and gradient data will be created with the given
+ * `create_array` callback, and filled by this function with the corresponding
+ * data.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_block_free`.
+ *
+ * @param buffer buffer containing a previously serialized `mts_block_t`
+ * @param buffer_count number of elements in the buffer
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated tensor block, or a `NULL` pointer
+ *          in case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
+                                          uintptr_t buffer_count,
+                                          mts_create_array_callback_t create_array);
+
+/**
+ * Save a tensor block to the file at the given path.
+ *
+ * If the file already exists, it is overwritten.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param block tensor block to save to the file
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_block_save(const char *path, const struct mts_block_t *block);
+
+/**
+ * Save a tensor block to an in-memory buffer.
+ *
+ * On input, `*buffer` should contain the address of a starting buffer (which
+ * can be NULL) and `*buffer_count` should contain the size of the allocation.
+ *
+ * On output, `*buffer` will contain the serialized data, and `*buffer_count`
+ * the total number of written bytes (which might be less than the allocation
+ * size).
+ *
+ * Users of this function are responsible for freeing the `*buffer` when they
+ * are done with it, using the function matching the `realloc` callback.
+ *
+ * @param buffer pointer to the buffer the block will be stored to, which can
+ *        change due to reallocations.
+ * @param buffer_count pointer to the buffer size on input, number of written
+ *        bytes on output
+ * @param realloc_user_data custom data for the `realloc` callback. This will
+ *        be passed as the first argument to `realloc` as-is.
+ * @param realloc function that allows to grow the buffer allocation
+ * @param block tensor block that will saved to the buffer
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
+ *          message.
+ */
+mts_status_t mts_block_save_buffer(uint8_t **buffer,
+                                   uintptr_t *buffer_count,
+                                   void *realloc_user_data,
+                                   mts_realloc_buffer_t realloc,
+                                   const struct mts_block_t *block);
+
+/**
  * Load a tensor map from the file at the given path.
  *
  * Arrays for the values and gradient data will be created with the given
@@ -1048,7 +1166,7 @@ mts_status_t mts_tensormap_save_buffer(uint8_t **buffer,
                                        const struct mts_tensormap_t *tensor);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
-#endif /* METATENSOR_H */
+#endif  /* METATENSOR_H */

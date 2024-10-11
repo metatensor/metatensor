@@ -383,6 +383,13 @@ extern "C" {
         second_mapping_count: usize,
     ) -> mts_status_t;
     #[must_use]
+    pub fn mts_labels_select(
+        labels: mts_labels_t,
+        selection: mts_labels_t,
+        selected: *mut i64,
+        selected_count: *mut usize,
+    ) -> mts_status_t;
+    #[must_use]
     pub fn mts_labels_free(labels: *mut mts_labels_t) -> mts_status_t;
     #[must_use]
     pub fn mts_register_data_origin(
@@ -495,6 +502,28 @@ extern "C" {
         realloc_user_data: *mut ::std::os::raw::c_void,
         realloc: mts_realloc_buffer_t,
         labels: mts_labels_t,
+    ) -> mts_status_t;
+    pub fn mts_block_load(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_array_callback_t,
+    ) -> *mut mts_block_t;
+    pub fn mts_block_load_buffer(
+        buffer: *const u8,
+        buffer_count: usize,
+        create_array: mts_create_array_callback_t,
+    ) -> *mut mts_block_t;
+    #[must_use]
+    pub fn mts_block_save(
+        path: *const ::std::os::raw::c_char,
+        block: *const mts_block_t,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_block_save_buffer(
+        buffer: *mut *mut u8,
+        buffer_count: *mut usize,
+        realloc_user_data: *mut ::std::os::raw::c_void,
+        realloc: mts_realloc_buffer_t,
+        block: *const mts_block_t,
     ) -> mts_status_t;
     pub fn mts_tensormap_load(
         path: *const ::std::os::raw::c_char,

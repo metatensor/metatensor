@@ -1,15 +1,31 @@
 import io
+import os
+import sys
 
+import pytest
 import torch
+from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
-from ._data import load_data
+
+TORCH_VERSION = version.parse(torch.__version__)
 
 
 def check_operation(reduce_over_samples):
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
 
     assert tensor.sample_names == ["system", "atom"]
     reduced_tensor = reduce_over_samples(tensor, "atom")
@@ -18,6 +34,15 @@ def check_operation(reduce_over_samples):
     assert reduced_tensor.sample_names == ["system"]
 
 
+@pytest.mark.skipif(
+    TORCH_VERSION.major == 2
+    and TORCH_VERSION.minor == 4
+    and sys.platform.startswith("win32"),
+    reason=(
+        "These tests cause a memory corruption in scatter_add, "
+        "but only when running from pytest, with torch 2.4 on Windows"
+    ),
+)
 def test_reduce_over_samples():
     check_operation(metatensor.torch.sum_over_samples)
     check_operation(metatensor.torch.mean_over_samples)

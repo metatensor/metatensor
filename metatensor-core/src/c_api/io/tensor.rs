@@ -10,23 +10,7 @@ use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::tensor::mts_tensormap_t;
-
-/// Function pointer to create a new `mts_array_t` when de-serializing tensor
-/// maps.
-///
-/// This function gets the `shape` of the array (the `shape` contains
-/// `shape_count` elements) and should fill `array` with a new valid
-/// `mts_array_t` or return non-zero `mts_status_t`.
-///
-/// The newly created array should contains 64-bit floating points (`double`)
-/// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
-/// the data pointer and write to it.
-#[allow(non_camel_case_types)]
-type mts_create_array_callback_t = unsafe extern fn(
-    shape: *const usize,
-    shape_count: usize,
-    array: *mut mts_array_t,
-) -> mts_status_t;
+use super::mts_create_array_callback_t;
 
 /// Load a tensor map from the file at the given path.
 ///
@@ -97,6 +81,10 @@ pub unsafe extern fn mts_tensormap_load(
                         Error::Serialization(format!(
                             "unable to load a TensorMap from '{}', use `load_labels` to load Labels: {}", path, message
                         ))
+                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Path(path)) {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from '{}', use `load_block` to load TensorBlock: {}", path, message
+                        ))
                     } else {
                         Error::Serialization(format!(
                             "unable to load a TensorMap from '{}': {}", path, message
@@ -162,6 +150,10 @@ pub unsafe extern fn mts_tensormap_load_buffer(
                     if crate::io::looks_like_labels_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
                         Error::Serialization(format!(
                             "unable to load a TensorMap from buffer, use `load_labels_buffer` to load Labels: {}", message
+                        ))
+                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                        Error::Serialization(format!(
+                            "unable to load a TensorMap from buffer, use `load_block_buffer` to load TensorBlock: {}", message
                         ))
                     } else {
                         Error::Serialization(format!(

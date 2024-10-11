@@ -14,6 +14,8 @@ from metatensor.torch.atomistic import (
     NeighborListOptions,
     System,
     check_atomistic_model,
+    load_atomistic_model,
+    read_model_metadata,
 )
 
 
@@ -240,3 +242,52 @@ def test_bad_capabilities():
     )
     with pytest.raises(ValueError, match=message):
         ModelCapabilities(outputs={"not-a-standard::": ModelOutput()})
+
+
+def test_access_module(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+    # Access wrapped module
+    assert atomistic.module is model
+
+    atomistic.save(tmpdir / "export.pt")
+    loaded_atomistic = load_atomistic_model(tmpdir / "export.pt")
+
+    # Access wrapped module after loading
+    loaded_atomistic.module
+
+    # Verfify that it contains the original submodules
+    loaded_atomistic.module.first
+    loaded_atomistic.module.second
+    loaded_atomistic.module.other
+
+
+def test_read_metadata(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    metadata = ModelMetadata(
+        name="NEW_SOTA",
+        description="A SOTA model",
+        authors=["Alice", "Bob"],
+        references={"implementation": ["doi:1234", "arXiv:1234"]},
+    )
+    atomistic = MetatensorAtomisticModel(model, metadata, capabilities)
+    atomistic.save(tmpdir / "model.pt")
+
+    extracted_metadata = read_model_metadata(str(tmpdir / "model.pt"))
+
+    assert str(extracted_metadata) == str(metadata)

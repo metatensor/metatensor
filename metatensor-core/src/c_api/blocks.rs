@@ -34,6 +34,19 @@ impl mts_block_t {
     pub(super) fn into_block(self) -> TensorBlock {
         self.0
     }
+
+    /// Create a raw pointer to `mts_block_t` using a rust Box
+    pub fn into_boxed_raw(block: TensorBlock) -> *mut mts_block_t {
+        let boxed = Box::new(mts_block_t(block));
+        return Box::into_raw(boxed);
+    }
+
+    /// Take a raw pointer created by `mts_block_t::into_boxed_raw` and
+    /// extract the TensorMap. The pointer is consumed by this function and no
+    /// longer valid.
+    pub unsafe fn from_boxed_raw(block: *mut mts_block_t) -> TensorBlock {
+        return Box::from_raw(block).0;
+    }
 }
 
 
@@ -79,12 +92,11 @@ pub unsafe extern fn mts_block(
         let properties = mts_labels_to_rust(&properties)?;
 
         let block = TensorBlock::new(data, samples, rust_components, properties)?;
-        let boxed = Box::new(mts_block_t(block));
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        *(unwind_wrapper.0) = mts_block_t::into_boxed_raw(block);
         Ok(())
     });
 
@@ -112,7 +124,7 @@ pub unsafe extern fn mts_block_free(
 ) -> mts_status_t {
     catch_unwind(|| {
         if !block.is_null() {
-            std::mem::drop(Box::from_raw(block));
+            std::mem::drop(mts_block_t::from_boxed_raw(block));
         }
 
         Ok(())

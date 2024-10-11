@@ -10,11 +10,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_self_dot_no_components():
-    tensor_1 = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor_1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
     tensor_2 = metatensor.remove_gradients(tensor_1)
 
     dot_tensor = metatensor.dot(tensor_1=tensor_1, tensor_2=tensor_2)
@@ -47,10 +43,7 @@ def test_self_dot_no_components():
 
 
 def test_self_dot_components():
-    tensor_1 = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        use_numpy=True,
-    )
+    tensor_1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
 
     tensor_2 = []
     n_samples = 42

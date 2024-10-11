@@ -1,13 +1,14 @@
 [package]
 name = "metatensor-sys"
 # This should be kept in sync with metatensor-core version number
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
+rust-version = "1.74"
 
 description = "Bindings to the metatensor C library"
 readme = "README.md"
 homepage = "https://docs.metatensor.org/latest/"
-repository = "https://github.com/lab-cosmo/metatensor"
+repository = "https://github.com/metatensor/metatensor"
 license = "BSD-3-Clause"
 
 include = [
@@ -27,8 +28,4 @@ static = []
 [build-dependencies]
 # we want a recent version of the cmake crate
 cmake = "0.1.49"
-which = "5"
-
-# these are the last version supporting rustc 1.65
-home = "=0.5.5"
-cc = "=1.0.105"
+which = "6"

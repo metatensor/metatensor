@@ -1,7 +1,9 @@
 import copy
 import ctypes
+import pathlib
 import warnings
-from typing import Generator, List, Sequence, Tuple
+from pickle import PickleBuffer
+from typing import BinaryIO, Generator, List, Sequence, Tuple, Union
 
 from . import data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
@@ -525,3 +527,87 @@ class TensorBlock:
             )
 
         return block
+
+    # ===== Serialization support ===== #
+
+    @classmethod
+    def _from_pickle(cls, buffer: Union[bytes, bytearray]):
+        """
+        Passed to pickler to reconstruct TensorBlock from bytes object
+        """
+        from .io import create_numpy_array, load_block_buffer_custom_array
+
+        # TODO: make it so when saving data in torch tensors, we load back data in torch
+        # tensors.
+        return load_block_buffer_custom_array(buffer, create_numpy_array)
+
+    def __reduce_ex__(self, protocol: int):
+        """
+        Used by the Pickler to dump TensorBlock object to bytes object. When protocol >=
+        5 it supports PickleBuffer which reduces number of copies needed
+        """
+        from .io import _save_block_buffer_raw
+
+        buffer = _save_block_buffer_raw(self)
+        if protocol >= 5:
+            return self._from_pickle, (PickleBuffer(buffer),)
+        else:
+            return self._from_pickle, (buffer.raw,)
+
+    @staticmethod
+    def load(
+        file: Union[str, pathlib.Path, BinaryIO], use_numpy=False
+    ) -> "TensorBlock":
+        """
+        Load a serialized :py:class:`TensorBlock` from a file or a buffer, calling
+        :py:func:`metatensor.load_block`.
+
+        :param file: file path or file object to load from
+        :param use_numpy: should we use the numpy loader or metatensor's. See
+            :py:func:`metatensor.load` for more information.
+        """
+        from .io import load_block
+
+        return load_block(file=file, use_numpy=use_numpy)
+
+    @staticmethod
+    def load_buffer(
+        buffer: Union[bytes, bytearray, memoryview],
+        use_numpy=False,
+    ) -> "TensorBlock":
+        """
+        Load a serialized :py:class:`TensorMap` from a buffer, calling
+        :py:func:`metatensor.io.load_block_buffer`.
+
+        :param buffer: in-memory buffer containing the data
+        :param use_numpy: should we use the numpy loader or metatensor's. See
+            :py:func:`metatensor.load` for more information.
+        """
+        from .io import load_block_buffer
+
+        return load_block_buffer(buffer=buffer)
+
+    def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
+        """
+        Save this :py:class:`TensorBlock` to a file or a buffer, calling
+        :py:func:`metatensor.save`.
+
+        :param file: file path or file object to save to
+        :param use_numpy: should we use the numpy serializer or metatensor's. See
+            :py:func:`metatensor.save` for more information.
+        """
+        from .io import save
+
+        return save(file=file, data=self, use_numpy=use_numpy)
+
+    def save_buffer(self, use_numpy=False) -> memoryview:
+        """
+        Save this :py:class:`TensorBlock` to an in-memory buffer, calling
+        :py:func:`metatensor.io.save_buffer`.
+
+        :param use_numpy: should we use numpy serialization or metatensor's. See
+            :py:func:`metatensor.save` for more information.
+        """
+        from .io import save_buffer
+
+        return save_buffer(data=self, use_numpy=use_numpy)

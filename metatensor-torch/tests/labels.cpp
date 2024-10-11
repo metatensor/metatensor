@@ -139,7 +139,7 @@ TEST_CASE("Labels") {
     }
 
     SECTION("Labels keep the values tensor alive") {
-        // see https://github.com/lab-cosmo/metatensor/issues/290 for the use case
+        // see https://github.com/metatensor/metatensor/issues/290 for the use case
         auto names = std::vector<std::string>{"a", "b"};
         auto values = torch::tensor(std::vector<int32_t>{0, 0, 1, 0, 0, -1, 1, -2});
         values = values.reshape({-1, 2}).to(torch::kInt32);

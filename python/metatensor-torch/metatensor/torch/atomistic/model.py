@@ -4,7 +4,8 @@ import math
 import os
 import platform
 import warnings
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import torch
 from torch.profiler import record_function
@@ -39,7 +40,8 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     :param extensions_directory: path to a directory containing all extensions required
         by the exported model
     """
-    load_model_extensions(path, extensions_directory)
+    path = str(path)
+    load_model_extensions(path, str(extensions_directory))
     check_atomistic_model(path)
     return torch.jit.load(path)
 
@@ -74,7 +76,7 @@ class ModelInterface(torch.nn.Module):
         selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
         """
-        This function should run the model for the given ``systems``, returning the
+        This method should run the model for the given ``systems``, returning the
         requested ``outputs``. If ``selected_atoms`` is a set of :py:class:`Labels`,
         only the corresponding atoms should be included as "main" atoms in the
         calculation and the output.
@@ -108,17 +110,17 @@ class ModelInterface(torch.nn.Module):
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         """
-        Optional function declaring which neighbors list this model requires.
+        Optional method declaring which neighbors list this model requires.
 
-        This function can be defined on either the root model or any of it's
-        sub-modules. A single module can request multiple neighbors list simultaneously
-        if it needs them.
+        This method can be defined on either the root model or any of it's sub-modules.
+        A single module can request multiple neighbors list simultaneously if it needs
+        them.
 
         It is then the responsibility of the code calling the model to:
 
-        1. call this function (or more generally
-           :py:meth:`MetatensorAtomisticModel.requested_neighbor_lists`) to get the
-           list of requests;
+        1. call this method (or more generally
+           :py:meth:`MetatensorAtomisticModel.requested_neighbor_lists`) to get the list
+           of the requested neighbor lists.;
         2. compute all neighbor lists corresponding to these requests and add them to
            the systems before calling the model.
         """
@@ -233,6 +235,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
     >>> with tempfile.TemporaryDirectory() as directory:
     ...     wrapped.save(os.path.join(directory, "constant-energy-model.pt"))
     ...
+
+    .. py:attribute:: module
+        :type: ModelInterface
+
+    The torch module wrapped by this :py:class:`MetatensorAtomisticModel`.
+
+    Reading from this attribute is safe, but modifying it is not recommended,
+    unless you are familiar with the implementation of the model.
     """
 
     # Some annotation to make the TorchScript compiler happy
@@ -260,15 +270,15 @@ class MetatensorAtomisticModel(torch.nn.Module):
             raise ValueError("module should not be in training mode")
 
         _check_annotation(module)
-        self._module = module
+        self.module = module
 
         # ============================================================================ #
 
         # recursively explore `module` to get all the requested_neighbor_lists
         self._requested_neighbor_lists = []
         _get_requested_neighbor_lists(
-            self._module,
-            self._module.__class__.__name__,
+            self.module,
+            self.module.__class__.__name__,
             self._requested_neighbor_lists,
             capabilities.length_unit,
         )
@@ -308,10 +318,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
             self._model_dtype = torch.float64
         else:
             raise ValueError(f"unknown dtype in capabilities: {capabilities.dtype}")
-
-    def wrapped_module(self) -> torch.nn.Module:
-        """Get the module wrapped in this :py:class:`MetatensorAtomisticModel`"""
-        return self._module
 
     @torch.jit.export
     def capabilities(self) -> ModelCapabilities:
@@ -366,6 +372,17 @@ class MetatensorAtomisticModel(torch.nn.Module):
                     expected_dtype=self._model_dtype,
                 )
 
+        for system in systems:
+            # always (i.e. even if check_consistency=False) check that the atomic types
+            # of the system match the one the model supports
+            all_types = torch.unique(system.types)
+            for atom_type in all_types:
+                if atom_type not in self._capabilities.atomic_types:
+                    raise ValueError(
+                        "this model does not support the atomic type "
+                        f"'{atom_type.item()}' which is present in the input systems"
+                    )
+
         # convert systems from engine to model units
         with record_function("MetatensorAtomisticModel::convert_units_input"):
             if self._capabilities.length_unit != options.length_unit:
@@ -384,7 +401,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         # run the actual calculations
         with record_function("Model::forward"):
-            outputs = self._module(
+            outputs = self.module(
                 systems=systems,
                 outputs=options.outputs,
                 selected_atoms=options.selected_atoms,
@@ -447,7 +464,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         )
         return self.save(file, collect_extensions)
 
-    def save(self, file: str, collect_extensions: Optional[str] = None):
+    def save(self, file: Union[str, Path], collect_extensions: Optional[str] = None):
         """Save this model to a file that can then be loaded by simulation engine.
 
         :param file: where to save the model. This can be a path or a file-like object.
@@ -484,13 +501,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         torch.jit.save(
             module.to("cpu"),  # this allows to torch.jit.load without devices
-            file,
+            str(file),
             _extra_files={
                 "torch-version": torch.__version__,
                 "metatensor-version": metatensor_version,
                 "extensions": json.dumps(extensions),
                 "extensions-deps": json.dumps(deps),
-                "metadata": json.dumps(export_metadata),
+                "export-metadata": json.dumps(export_metadata),
+                "model-metadata": self._metadata.__getstate__()[0],
             },
         )
 
@@ -666,14 +684,6 @@ def _check_inputs(
                 f"got {global_dtype} and {system.positions.dtype}"
             )
 
-        # check that the atomic types of the system match the one the model supports
-        all_types = torch.unique(system.types)
-        for atom_type in all_types:
-            if atom_type not in capabilities.atomic_types:
-                raise ValueError(
-                    f"this model can not run for the atomic type '{atom_type.item()}'"
-                )
-
         # Check neighbors lists
         known_neighbor_lists = system.known_neighbor_lists()
         for request in requested_neighbor_lists:
@@ -705,6 +715,7 @@ def _convert_systems_units(
             types=system.types,
             positions=conversion * system.positions,
             cell=conversion * system.cell,
+            pbc=system.pbc,
         )
 
         # also update the neighbors list distances

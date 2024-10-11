@@ -1,10 +1,9 @@
 use std::ffi::CString;
 
-use crate::c_api::{mts_array_t, mts_status_t};
 use crate::errors::{check_status, check_ptr};
-use crate::{TensorMap, Error, Array};
+use crate::{TensorMap, Error};
 
-use super::realloc_vec;
+use super::{realloc_vec, create_ndarray};
 
 /// Load the serialized tensor map from the given path.
 ///
@@ -108,18 +107,4 @@ pub fn save_buffer(tensor: &TensorMap, buffer: &mut Vec<u8>) -> Result<(), Error
     buffer.resize(buffer_count, 0);
 
     Ok(())
-}
-
-/// callback used to create `ndarray::ArrayD` when loading a `TensorMap`
-unsafe extern fn create_ndarray(
-    shape_ptr: *const usize,
-    shape_count: usize,
-    c_array: *mut mts_array_t,
-) -> mts_status_t {
-    crate::errors::catch_unwind(|| {
-        assert!(shape_count != 0);
-        let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
-        let array = ndarray::ArrayD::from_elem(shape, 0.0);
-        *c_array = (Box::new(array) as Box<dyn Array>).into();
-    })
 }

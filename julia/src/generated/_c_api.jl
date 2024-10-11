@@ -152,6 +152,14 @@ function mts_labels_intersection(first::mts_labels_t, second::mts_labels_t, resu
     )
 end
 
+function mts_labels_select(labels::mts_labels_t, selection::mts_labels_t, selected::Ptr{Int64}, selected_count::Ptr{UIntptr})
+    ccall((:mts_labels_select, libmetatensor), 
+        mts_status_t,
+        (mts_labels_t, mts_labels_t, Ptr{Int64}, Ptr{UIntptr},),
+        labels, selection, selected, selected_count
+    )
+end
+
 function mts_labels_free(labels::Ptr{mts_labels_t})
     ccall((:mts_labels_free, libmetatensor), 
         mts_status_t,
@@ -341,6 +349,38 @@ function mts_labels_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntp
         mts_status_t,
         (Ptr{Ptr{UInt8}}, Ptr{UIntptr}, Ptr{Cvoid}, mts_realloc_buffer_t, mts_labels_t,),
         buffer, buffer_count, realloc_user_data, realloc, labels
+    )
+end
+
+function mts_block_load(path::Ptr{Cchar}, create_array::mts_create_array_callback_t)
+    ccall((:mts_block_load, libmetatensor), 
+        Ptr{mts_block_t},
+        (Ptr{Cchar}, mts_create_array_callback_t,),
+        path, create_array
+    )
+end
+
+function mts_block_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, create_array::mts_create_array_callback_t)
+    ccall((:mts_block_load_buffer, libmetatensor), 
+        Ptr{mts_block_t},
+        (Ptr{UInt8}, UIntptr, mts_create_array_callback_t,),
+        buffer, buffer_count, create_array
+    )
+end
+
+function mts_block_save(path::Ptr{Cchar}, block::Ptr{mts_block_t})
+    ccall((:mts_block_save, libmetatensor), 
+        mts_status_t,
+        (Ptr{Cchar}, Ptr{mts_block_t},),
+        path, block
+    )
+end
+
+function mts_block_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntptr}, realloc_user_data::Ptr{Cvoid}, realloc::mts_realloc_buffer_t, block::Ptr{mts_block_t})
+    ccall((:mts_block_save_buffer, libmetatensor), 
+        mts_status_t,
+        (Ptr{Ptr{UInt8}}, Ptr{UIntptr}, Ptr{Cvoid}, mts_realloc_buffer_t, Ptr{mts_block_t},),
+        buffer, buffer_count, realloc_user_data, realloc, block
     )
 end
 

@@ -293,6 +293,7 @@ TEST_CASE("Models metadata") {
     ],
     "class": "ModelMetadata",
     "description": "describing it",
+    "extra": {},
     "name": "some name",
     "references": {
         "architecture": [

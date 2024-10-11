@@ -243,12 +243,14 @@ public:
         std::string name_,
         std::string description_,
         std::vector<std::string> authors_,
-        torch::Dict<std::string, std::vector<std::string>> references_
+        torch::Dict<std::string, std::vector<std::string>> references_,
+        torch::Dict<std::string, std::string> extra_
     ):
         name(std::move(name_)),
         description(std::move(description_)),
         authors(std::move(authors_)),
-        references(references_)
+        references(references_),
+        extra(extra_)
     {
         this->validate();
     }
@@ -274,6 +276,10 @@ public:
     /// - "model": for reference specific to this exact model
     torch::Dict<std::string, std::vector<std::string>> references;
 
+    /// Extra metadata about this model. This can be anything, and it is intended
+    /// to be used by models to store data they need.
+    torch::Dict<std::string, std::string> extra;
+
     /// Implementation of Python's `__repr__` and `__str__`, printing all
     /// metadata about this model.
     std::string print() const;
@@ -287,6 +293,11 @@ private:
     /// validate the metadata before using it
     void validate() const;
 };
+
+/// Read the metadata of the exported model at the given `path` and return it
+/// as a string. This is useful to check the metadata of a model without
+/// loading it.
+METATENSOR_TORCH_EXPORT ModelMetadata read_model_metadata(std::string path);
 
 /// Check the exported metatensor atomistic model at the given `path`, and
 /// warn/error as required. This should be called after `load_model_extensions`

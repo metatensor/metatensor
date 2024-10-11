@@ -28,7 +28,7 @@
 #![allow(clippy::unreadable_literal, clippy::option_if_let_else, clippy::module_name_repetitions)]
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc, clippy::missing_safety_doc)]
 #![allow(clippy::similar_names, clippy::borrow_as_ptr, clippy::uninlined_format_args)]
-#![allow(clippy::thread_local_initializer_can_be_made_const)]
+#![allow(clippy::missing_const_for_thread_local)]
 
 pub use metatensor_sys as c_api;
 

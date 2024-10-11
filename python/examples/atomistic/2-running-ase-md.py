@@ -92,9 +92,11 @@ class HarmonicModel(torch.nn.Module):
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels],
     ) -> Dict[str, TensorMap]:
-        # if the model user did not request an energy calculation, we have nothing to do
-        if "energy" not in outputs:
-            return {}
+        if list(outputs.keys()) != ["energy"]:
+            raise ValueError(
+                "this model can only compute 'energy', but `outputs` contains other "
+                f"keys: {', '.join(outputs.keys())}"
+            )
 
         # we don't want to worry about selected_atoms yet
         if selected_atoms is not None:
@@ -129,7 +131,7 @@ class HarmonicModel(torch.nn.Module):
 #
 # Now that we have a model for the energy of our system, let's create some initial
 # simulation state. We'll build a 3x3x3 super cell of diamond carbon. In practice, you
-# could also read the initial state from a file.
+# could also read the initial state from a file using :py:func:`ase.io.read`.
 
 primitive = ase.build.bulk(name="C", crystalstructure="diamond", a=3.567)
 

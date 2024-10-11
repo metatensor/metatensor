@@ -44,6 +44,9 @@ static void save_ivalue(const std::string& path, torch::IValue data) {
         if (custom_class_is<TensorMapHolder>(data)) {
             auto tensor = data.toCustomClass<TensorMapHolder>();
             return metatensor_torch::save(path, tensor);
+        } else if (custom_class_is<TensorBlockHolder>(data)) {
+            auto block = data.toCustomClass<TensorBlockHolder>();
+            return metatensor_torch::save(path, block);
         } else if (custom_class_is<LabelsHolder>(data)) {
             auto labels = data.toCustomClass<LabelsHolder>();
             return metatensor_torch::save(path, labels);
@@ -51,8 +54,8 @@ static void save_ivalue(const std::string& path, torch::IValue data) {
     }
 
     C10_THROW_ERROR(TypeError,
-        "data` must be either 'Labels' or 'TensorMap' in `save`, not "
-        + data.type()->str()
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap' in `save`, "
+        "not " + data.type()->str()
     );
 }
 
@@ -61,6 +64,9 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
         if (custom_class_is<TensorMapHolder>(data)) {
             auto tensor = data.toCustomClass<TensorMapHolder>();
             return metatensor_torch::save_buffer(tensor);
+        } else if (custom_class_is<TensorBlockHolder>(data)) {
+            auto block = data.toCustomClass<TensorBlockHolder>();
+            return metatensor_torch::save_buffer(block);
         } else if (custom_class_is<LabelsHolder>(data)) {
             auto labels = data.toCustomClass<LabelsHolder>();
             return metatensor_torch::save_buffer(labels);
@@ -68,8 +74,8 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
     }
 
     C10_THROW_ERROR(TypeError,
-        "data` must be either 'Labels' or 'TensorMap' in `save_buffer`, not "
-        + data.type()->str()
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap' in `save_buffer`, "
+        "not " + data.type()->str()
     );
 }
 
@@ -163,6 +169,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
         .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})
         .def("intersection_and_mapping", &LabelsHolder::intersection_and_mapping, DOCSTRING, {torch::arg("other")})
+        .def("select", &LabelsHolder::select, DOCSTRING, {torch::arg("selection")})
         .def_pickle(
             // __getstate__
             [](const TorchLabels& self){ return self->save_buffer(); },
@@ -205,7 +212,16 @@ TORCH_LIBRARY(metatensor, m) {
             torch::arg("device") = torch::nullopt,
             torch::arg("arrays") = torch::nullopt
         })
-        ;
+        .def("save", &TensorBlockHolder::save, DOCSTRING, {torch::arg("file")})
+        .def("save_buffer", &TensorBlockHolder::save_buffer)
+        .def_static("load", &TensorBlockHolder::load)
+        .def_static("load_buffer", &TensorBlockHolder::load_buffer)
+        .def_pickle(
+            // __getstate__
+            [](const TorchTensorBlock& self){ return self->save_buffer(); },
+            // __setstate__
+            [](torch::Tensor buffer){ return metatensor_torch::load_block_buffer(buffer); }
+        );
 
     m.class_<TensorMapHolder>("TensorMap")
         .def(
@@ -286,6 +302,15 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
+        "load_block(str path) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block
+    );
+    m.def(
+        "load_block_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block_buffer
+    );
+
+    m.def(
         "load_labels(str path) -> __torch__.torch.classes.metatensor.Labels",
         metatensor_torch::load_labels
     );
@@ -331,12 +356,13 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<SystemHolder>("System")
         .def(
-            torch::init<torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
-            {torch::arg("types"), torch::arg("positions"), torch::arg("cell")}
+            torch::init<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>(), DOCSTRING,
+            {torch::arg("types"), torch::arg("positions"), torch::arg("cell"), torch::arg("pbc")}
         )
         .def_property("types", &SystemHolder::types, &SystemHolder::set_types)
         .def_property("positions", &SystemHolder::positions, &SystemHolder::set_positions)
         .def_property("cell", &SystemHolder::cell, &SystemHolder::set_cell)
+        .def_property("pbc", &SystemHolder::pbc, &SystemHolder::set_pbc)
         .def("__len__", &SystemHolder::size)
         .def("__str__", &SystemHolder::str)
         .def("__repr__", &SystemHolder::str)
@@ -378,13 +404,15 @@ TORCH_LIBRARY(metatensor, m) {
                 std::string,
                 std::string,
                 std::vector<std::string>,
-                torch::Dict<std::string, std::vector<std::string>>
+                torch::Dict<std::string, std::vector<std::string>>,
+                torch::Dict<std::string, std::string>
             >(),
             DOCSTRING, {
                 torch::arg("name") = "",
                 torch::arg("description") = "",
                 torch::arg("authors") = std::vector<std::string>(),
                 torch::arg("references") = torch::Dict<std::string, std::vector<std::string>>(),
+                torch::arg("extra") = torch::Dict<std::string, std::string>(),
             }
         )
         .def("__repr__", &ModelMetadataHolder::print)
@@ -393,6 +421,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_readwrite("description", &ModelMetadataHolder::description)
         .def_readwrite("authors", &ModelMetadataHolder::authors)
         .def_readwrite("references", &ModelMetadataHolder::references)
+        .def_readwrite("extra", &ModelMetadataHolder::extra)
         .def_pickle(
             [](const ModelMetadata& self) -> std::string {
                 return self->to_json();
@@ -491,6 +520,7 @@ TORCH_LIBRARY(metatensor, m) {
             }
         );
 
+    m.def("read_model_metadata(str path) -> __torch__.torch.classes.metatensor.ModelMetadata", read_model_metadata);
     m.def("check_atomistic_model(str path) -> ()", check_atomistic_model);
     m.def("load_model_extensions(str path, str? extensions_directory) -> ()", load_model_extensions);
 

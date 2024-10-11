@@ -19,9 +19,9 @@ sys.path.append(os.path.join(ROOT, "docs", "extensions"))
 
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
-# examples and generate the actual output for our shinx-gallery. This is necessary
+# examples and generate the actual output for our sphinx-gallery. This is necessary
 # because here we have to set `METATENSOR_IMPORT_FOR_SPHINX` to `"1"` allowing the
-# correct generation of the class and function docstrings which are seperate from the
+# correct generation of the class and function docstrings which are separate from the
 # actual code.
 #
 # We register and use the same sphinx gallery configuration as in the pseudo project.
@@ -110,50 +110,19 @@ rst_prolog = f"""
 .. |metatensor-operations-version| replace:: {metatensor.operations.__version__}
 .. |metatensor-learn-version| replace:: {metatensor.learn.__version__}
 
-.. |C-32x32| image:: /../static/images/logo-c.*
-    :width: 32px
-    :height: 32px
-    :alt: C
-
-.. |C-16x16| image:: /../static/images/logo-c.*
-    :width: 16px
-    :height: 16px
-    :alt: C
-
-.. |Cxx-32x32| image:: /../static/images/logo-cxx.*
-    :width: 32px
-    :height: 32px
-    :alt: C++
-
-.. |Cxx-16x16| image:: /../static/images/logo-cxx.*
-    :width: 16px
-    :height: 16px
-    :alt: C++
-
-.. |Rust-32x32| image:: /../static/images/logo-rust.*
-    :width: 32px
-    :height: 32px
-    :alt: Rust
-
-.. |Rust-16x16| image:: /../static/images/logo-rust.*
-    :width: 16px
-    :height: 16px
-    :alt: Rust
-
-.. |Python-32x32| image:: /../static/images/logo-python.*
-    :width: 32px
-    :height: 32px
-    :alt: Python
-
-.. |Python-16x16| image:: /../static/images/logo-python.*
-    :width: 16px
-    :height: 16px
-    :alt: Python
 """
+
+with open(os.path.join(ROOT, "docs", "src", "_prolog.rst")) as fd:
+    rst_prolog += fd.read()
+
+# print(rst_prolog)
+
+# raise 44
 
 # -- General configuration ---------------------------------------------------
 
-needs_sphinx = "4.0.0"
+needs_sphinx = "7.4.0"
+suppress_warnings = ["config.cache"]
 
 python_use_unqualified_type_names = True
 
@@ -189,12 +158,14 @@ exclude_patterns = [
     "examples/index.rst",
     "examples/sg_execution_times.rst",
     "sg_execution_times.rst",
+    "_prolog.rst",
 ]
 
 autoclass_content = "both"
 autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"
+autodoc_type_aliases = {"CreateArrayCallback": "CreateArrayCallback"}
 
 breathe_projects = {
     "metatensor": os.path.join(ROOT, "docs", "build", "doxygen", "xml"),

@@ -2,11 +2,11 @@ Contribution via pull requests are always welcome. Source code is available from
 `Github`_. Before submitting a pull request, please open an issue to discuss
 your changes. Use only the `master` branch as the target branch when submitting a pull request (PR).
 
-.. _`Github` : https://github.com/lab-cosmo/metatensor
+.. _`Github` : https://github.com/metatensor/metatensor
 
 Interactions with the metatensor projects must follow our `code of conduct`_.
 
-.. _code of conduct: https://github.com/lab-cosmo/metatensor/blob/master/CODE_OF_CONDUCT.md
+.. _code of conduct: https://github.com/metatensor/metatensor/blob/master/CODE_OF_CONDUCT.md
 
 Required tools
 --------------
@@ -19,7 +19,7 @@ on metatensor:
 - **the rust compiler**: you will need both ``rustc`` (the compiler) and
   ``cargo`` (associated build tool). You can install both using `rustup`_, or
   use a version provided by your operating system. We need at least Rust version
-  1.65 to build metatensor.
+  1.74 to build metatensor.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
   We require a Python version of at least 3.9.
 - **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
@@ -71,7 +71,7 @@ repository on github, and then clone it locally:
 
     # setup the local repository so that the master branch tracks changes in
     # the main repository
-    git remote add upstream https://github.com/lab-cosmo/metatensor
+    git remote add upstream https://github.com/metatensor/metatensor
     git fetch upstream
     git branch master --set-upstream-to=upstream/master
 
@@ -198,7 +198,7 @@ html file in a browser
     coverage html
     firefox htmlcov/index.html
 
-.. _codecov: https://codecov.io/gh/lab-cosmo/metatensor
+.. _codecov: https://codecov.io/gh/metatensor/metatensor
 
 Contributing to the documentation
 ---------------------------------

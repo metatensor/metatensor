@@ -1,19 +1,4 @@
-.. _atomistic-models-outputs:
-
-Standard model outputs
-======================
-
-In order for multiple simulation engines to be able to exploit atomic properties
-computing by arbitrary metatensor atomistic models, we need all the models to
-return data with specific metadata. If your model returns one of the output
-defined in this documentation, then the model should follow the metadata
-structure described here.
-
-For other kind of output, you are free to use any relevant metadata structure,
-but if multiple people are producing the same kind of outputs, they are
-encouraged to come together, define the metadata they need and add a new section
-to this page.
-
+.. _energy-output:
 
 Energy
 ^^^^^^
@@ -54,6 +39,36 @@ have the following metadata:
     - ``"energy"``
     - the energy must have a single property dimension named ``"energy"``, with
       a single entry set to ``0``.
+
+The following simulation engines can use the ``"energy"`` output:
+
+.. grid:: 1 3 3 3
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-lammps
+    :link-type: ref
+
+    |lammps-logo|
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ase
+    :link-type: ref
+
+    |ase-logo|
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ipi
+    :link-type: ref
+
+    |ipi-logo|
+
+.. _energy-output-gradients:
 
 Energy gradients
 ----------------
@@ -119,3 +134,49 @@ The following gradients can be defined and requested with
     - ``["xyz_1", "xyz_2"]``
     - Both ``"xyz_1"`` and ``"xyz_2"`` have values ``[0, 1, 2]``, and correspond
       to the two axes of the 3x3 strain matrix :math:`\epsilon`.
+
+.. _energy-ensemble-output:
+
+Energy ensemble
+---------------
+
+An ensemble of energies is associated with the ``"energy_ensemble"`` key in the
+model outputs. Such ensembles are sometimes used to perform uncertainty
+quantification, using multiple prediction to estimate an error on the mean
+prediction.
+
+Energy ensembles must have the following metadata:
+
+.. list-table:: Metadata for energy ensemble output
+  :widths: 2 3 7
+  :header-rows: 1
+
+  * - Metadata
+    - Names
+    - Description
+
+  * - keys
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - samples
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - components
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - properties
+    - ``"energy"``
+    - the energy ensemble must have a single property dimension named
+      ``"energy"``, with entries ranging from 0 to the number of members of the
+      ensemble minus one.
+
+Currently, no simulation engines can use the ``"energy_ensemble"`` output.
+
+Energy ensemble gradients
+-------------------------
+
+The gradient metadata for energy ensemble is the same as for the ``energy``
+output (see :ref:`energy-output-gradients`).

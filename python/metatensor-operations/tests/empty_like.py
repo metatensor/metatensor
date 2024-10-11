@@ -9,11 +9,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_empty_like():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
     empty_tensor = metatensor.empty_like(tensor)
     empty_tensor_positions = metatensor.empty_like(tensor, gradients="positions")
 
@@ -24,11 +20,7 @@ def test_empty_like():
 
 
 def test_empty_like_error():
-    tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"),
-        # the npz is using DEFLATE compression, metatensor only supports STORED
-        use_numpy=True,
-    )
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
 
     message = "requested gradient 'err' in 'empty_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):

@@ -8,7 +8,7 @@ This package contains the Julia bindings to the C API of metatensor.
 Getting the code:
 
 ```bash
-git clone https://github.com/lab-cosmo/metatensor
+git clone https://github.com/metatensor/metatensor
 cd metatensor
 ```
 

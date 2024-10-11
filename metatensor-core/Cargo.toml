@@ -1,9 +1,9 @@
 [package]
 name = "metatensor-core"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 publish = false
-rust-version = "1.65"
+rust-version = "1.74"
 exclude = [
     "tests"
 ]
@@ -14,8 +14,7 @@ name = "metatensor"
 bench = false
 
 [dependencies]
-# ahash 0.8.7 is the last version supporting rustc 1.65
-ahash = { version = "=0.8.7", default-features = false, features = ["std"]}
+ahash = { version = "0.8", default-features = false, features = ["std"]}
 hashbrown = "0.14"
 indexmap = "2"
 once_cell = "1"
@@ -27,11 +26,8 @@ num-traits = {version = "0.2", default-features = false}
 zip = {version = "0.6", default-features = false, features = ["deflate"]}
 
 [build-dependencies]
-cbindgen = { version = "0.26", default-features = false }
+cbindgen = { version = "0.27", default-features = false }
 
 [dev-dependencies]
-which = "5"
+which = "6"
 lazy_static = "1"
-
-# This is the last version supporting rustc 1.65
-home = "=0.5.5"

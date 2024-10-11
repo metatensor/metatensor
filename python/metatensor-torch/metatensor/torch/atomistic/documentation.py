@@ -77,7 +77,8 @@ class System:
 
             Due to limitations in TorchScript C++ extensions, the dtype is returned as
             an integer, which can not be compared with :py:class:`torch.dtype`
-            instances. See :py:meth:`TensorBlock.dtype` for more information.
+            instances. See :py:attr:`TensorBlock.dtype
+            <metatensor.torch.TensorBlock.dtype>` for more information.
         """
 
     def to(
@@ -398,6 +399,7 @@ class ModelMetadata:
         description: str = "",
         authors: List[str] = [],  # noqa: B006
         references: Dict[str, List[str]] = {},  # noqa: B006
+        extra: Dict[str, str] = {},  # noqa: B006
     ):
         pass
 
@@ -419,6 +421,24 @@ class ModelMetadata:
     - "architecture": for reference that introduced the general architecture
       used by this model
     - "model": for reference specific to this exact model
+    """
+
+    extra: Dict[str, str]
+    """
+    Any additional metadata that is not contained in the other fields. There are
+    no constraints on the keys or values of this dictionary. The extra metadata
+    is intended to be used by models to store data they need.
+    """
+
+
+def read_model_metadata(path: str) -> ModelMetadata:
+    """
+    Read metadata of a saved metatenor atomistic model.
+
+    This function allows to access the metadata of a model without loading it
+    in advance.
+
+    :param path: path to the exported model file
     """
 
 

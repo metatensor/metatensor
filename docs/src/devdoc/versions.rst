@@ -63,4 +63,4 @@ GitHub pages. Once this is done, you should update the release descriptions on
 GitHub, and add links to the new releases version on the API references pages.
 
 .. _semantic versioning: https://semver.org/
-.. _releases: https://github.com/lab-cosmo/metatensor/releases
+.. _releases: https://github.com/metatensor/metatensor/releases

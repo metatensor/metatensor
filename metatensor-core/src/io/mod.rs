@@ -1,15 +1,20 @@
 mod npy_header;
+
 mod labels;
 pub use self::labels::load_labels;
+pub use self::labels::save_labels;
 pub use self::labels::looks_like_labels_data;
 
-mod load;
-pub use self::load::load;
-pub use self::load::looks_like_tensormap_data;
+mod block;
+pub use self::block::load_block;
+pub use self::block::save_block;
+pub use self::block::looks_like_block_data;
 
-mod save;
-pub use self::save::save;
-pub use self::labels::save_labels;
+mod tensor;
+pub use self::tensor::load;
+pub use self::tensor::save;
+pub use self::tensor::looks_like_tensormap_data;
+
 
 use crate::Error;
 

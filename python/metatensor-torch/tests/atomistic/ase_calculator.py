@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+from typing import Dict, List, Optional
 
 import ase.build
 import ase.calculators.lj
@@ -13,9 +14,11 @@ import numpy as np
 import pytest
 import torch
 
-from metatensor.torch import Labels, TensorBlock
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
+    ModelCapabilities,
+    ModelMetadata,
     ModelOutput,
     NeighborListOptions,
     System,
@@ -237,7 +240,7 @@ def test_dtype_device(tmpdir, model, atoms):
 
         # re-create the model with a different dtype
         dtype_model = MetatensorAtomisticModel(
-            model._module.to(STR_TO_DTYPE[dtype]),
+            model.module.to(STR_TO_DTYPE[dtype]),
             model.metadata(),
             capabilities,
         )
@@ -306,6 +309,7 @@ def _read_neighbor_check(path):
         types=torch.tensor([1] * positions.shape[0], dtype=torch.int32),
         positions=positions,
         cell=torch.tensor(data["system"]["cell"], dtype=dtype),
+        pbc=torch.tensor([True, True, True]),
     )
 
     options = NeighborListOptions(
@@ -369,8 +373,6 @@ def test_neighbor_list_adapter():
     for path in glob.glob(os.path.join(test_files, "*.json")):
         system, options, expected_neighbors = _read_neighbor_check(path)
 
-        print(os.path.basename(path), options)
-
         atoms = ase.Atoms(
             symbols=system.types.numpy(),
             positions=system.positions.numpy(),
@@ -383,3 +385,64 @@ def test_neighbor_list_adapter():
         )
 
         _check_same_set_of_neighbors(expected_neighbors, neighbors, options.full_list)
+
+
+class MultipleOutputModel(torch.nn.Module):
+    def forward(
+        self,
+        systems: List[System],
+        outputs: Dict[str, ModelOutput],
+        selected_atoms: Optional[Labels] = None,
+    ) -> Dict[str, TensorMap]:
+        results = {}
+        for name, requested in outputs.items():
+            assert not requested.per_atom
+
+            block = TensorBlock(
+                values=torch.tensor([[0.0]], dtype=torch.float64),
+                samples=Labels("system", torch.tensor([[0]])),
+                components=torch.jit.annotate(List[Labels], []),
+                properties=Labels(name.split(":")[0], torch.tensor([[0]])),
+            )
+            tensor = TensorMap(Labels("_", torch.tensor([[0]])), [block])
+            results[name] = tensor
+
+        return results
+
+
+def test_additional_outputs(atoms):
+    capabilities = ModelCapabilities(
+        outputs={
+            "energy": ModelOutput(per_atom=False),
+            "test::test": ModelOutput(per_atom=False),
+            "another::one": ModelOutput(per_atom=False),
+        },
+        atomic_types=[28],
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    model = MetatensorAtomisticModel(
+        MultipleOutputModel().eval(), ModelMetadata(), capabilities
+    )
+
+    atoms.calc = MetatensorCalculator(model, check_consistency=True)
+
+    assert atoms.get_potential_energy() == 0.0
+    assert atoms.calc.additional_outputs == {}
+
+    atoms.calc = MetatensorCalculator(
+        model,
+        check_consistency=True,
+        additional_outputs={
+            "test::test": ModelOutput(per_atom=False),
+            "another::one": ModelOutput(per_atom=False),
+        },
+    )
+    assert atoms.get_potential_energy() == 0.0
+
+    test = atoms.calc.additional_outputs["test::test"]
+    assert test.block().properties.names == ["test"]
+
+    another = atoms.calc.additional_outputs["another::one"]
+    assert another.block().properties.names == ["another"]

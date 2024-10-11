@@ -4,22 +4,48 @@ All notable changes to metatensor-torch are documented here, following the [keep
 a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/lab-cosmo/metatensor/)
+## [Unreleased](https://github.com/metatensor/metatensor/)
 
-<!-- Possible sections:
+<!-- Possible sections for each package:
 
-### Added
+#### Added
 
-### Fixed
+#### Fixed
+
+#### Changed
+
+#### Removed
+-->
 
 ### Changed
 
-### Deprecated
+- the `System` class now supports boundary conditions along some axes but not others. This is implemented
+  via a new `pbc` attribute. Any non-periodic dimension in a `System` must have the corrresponding cell
+  vector set to zero.
 
-### Removed
--->
+## [Version 0.5.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.5) - 2024-09-03
 
-## [Version 0.5.3](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
+### Added
+
+- a `"features"` standard output for atomistic models (#718)
+
+### Fixed
+
+- the Python wheels request the right versions of torch in their metadata (#724)
+
+## [Version 0.5.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.4) - 2024-08-28
+
+### Added
+
+- `read_model_metadata` to load only the `ModelMetadata` from an exported
+  atomistic model without having to load the whole model.
+- Users can now store arbitrary additional metadata in `ModelMetadata.extra`
+- Added `Labels.select` function to sub-select entries in labels
+- Added support for serialization of TensorBlock with `TensorBlock::load`,
+  `TensorBlock::load_buffer`, `TensorBlock::save`, `TensorBlock::save_buffer`
+  and the corresponding functions in `metatensor.torch`.
+
+## [Version 0.5.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.3) - 2024-07-15
 
 ### Changed
 
@@ -30,7 +56,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Fixed a memory leak in `register_autograd_neighbors` (#684)
 
-## [Version 0.5.2](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.2) - 2024-06-21
+## [Version 0.5.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.2) - 2024-06-21
 
 ### Added
 
@@ -52,7 +78,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `metatensor.torch.atomistic.ase_calculator.MetatensorCalculator` uses the
   right device when computing stress/virial (#660)
 
-## [Version 0.5.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.1) - 2024-05-14
+## [Version 0.5.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.1) - 2024-05-14
 
 ### Added
 
@@ -60,7 +86,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `METATENSOR_TORCH_VERSION`, `METATENSOR_TORCH_VERSION_MAJOR`,
   `METATENSOR_TORCH_VERSION_MINOR`, and `METATENSOR_TORCH_VERSION_PATCH`.
 
-## [Version 0.5.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.5.0) - 2024-05-02
+## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.0) - 2024-05-02
 
 ### Changed
 
@@ -78,7 +104,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - The wheels for `metatensor-torch` on PyPI now declare which versions of torch
   they are compatible with (#592)
 
-## [Version 0.4.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.4.0) - 2024-04-11
+## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.4.0) - 2024-04-11
 
 ### metatensor-torch C++
 
@@ -110,7 +136,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - The `load_model_extensions()` and `load_atomistic_model` functions to
   facilitate loading a model using TorchScript extensions
 
-## [Version 0.3.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.3.0) - 2024-03-01
+## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.3.0) - 2024-03-01
 
 ### metatensor-torch C++
 
@@ -136,7 +162,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - `System.species` has been renamed to `System.types`.
 
-## [Version 0.2.1](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.2.1) - 2024-01-26
+## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.2.1) - 2024-01-26
 
 ### metatensor-torch C++
 
@@ -159,7 +185,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   and the respective free standing functions (#455)
 - Serialization of Labels, with the same API as `TensorMap` (#455)
 
-## [Version 0.2.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.2.0) - 2024-01-08
+## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.2.0) - 2024-01-08
 
 ### metatensor-torch C++
 
@@ -206,7 +232,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   dtype used by the data.
 
 
-## [Version 0.1.0](https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-torch-v0.1.0) - 2023-10-11
+## [Version 0.1.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.1.0) - 2023-10-11
 
 ### metatensor-torch C++
 

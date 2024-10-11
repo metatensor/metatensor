@@ -1,4 +1,5 @@
 import io
+import os
 
 import pytest
 import torch
@@ -7,12 +8,21 @@ from packaging import version
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
-from ._data import load_data
-
 
 def test_sort():
     # Very minimal test, mainly checking that the code runs
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     sorted_tensor = metatensor.torch.sort(tensor)
 
     # right output type

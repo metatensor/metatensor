@@ -12,10 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 @pytest.fixture
 def tensor():
     """Loads a TensorMap from file for use in tests"""
-    return metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"),
-        use_numpy=True,
-    )
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
 
 
 def _non_contiguous_block(block: TensorBlock) -> TensorBlock:

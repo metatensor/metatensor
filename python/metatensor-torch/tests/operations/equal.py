@@ -1,14 +1,24 @@
 import io
+import os
 
 import torch
 
 import metatensor.torch
 
-from ._data import load_data
-
 
 def test_equal():
-    tensor = load_data("qm7-power-spectrum.npz")
+    tensor = metatensor.torch.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-operations",
+            "tests",
+            "data",
+            "qm7-power-spectrum.npz",
+        )
+    )
     assert metatensor.torch.equal(tensor, tensor)
 
     metatensor.torch.equal_raise(tensor, tensor)
