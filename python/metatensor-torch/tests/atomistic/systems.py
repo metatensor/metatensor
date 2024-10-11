@@ -522,11 +522,18 @@ def check_dtype(system: System, dtype: torch.dtype):
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 @pytest.mark.parametrize("nl_size", [10, 100, 1000])
-def test_save_load(tmpdir, dtype, nl_size):
+@pytest.mark.parametrize(
+    "pbc", [[True, True, True], [True, False, True], [False, False, False]]
+)
+def test_save_load(tmpdir, dtype, nl_size, pbc):
+    cell = torch.rand((3, 3), dtype=dtype)
+    cell[[not periodic for periodic in pbc]] = 0.0
+
     system = System(
         types=torch.tensor([1, 2, 3, 4]),
         positions=torch.rand((4, 3), dtype=dtype),
-        cell=torch.rand((3, 3), dtype=dtype),
+        cell=cell,
+        pbc=torch.tensor(pbc, dtype=torch.bool),
     )
     system.add_neighbor_list(
         NeighborListOptions(cutoff=3.5, full_list=False),
@@ -552,6 +559,7 @@ def test_save_load(tmpdir, dtype, nl_size):
     assert torch.equal(system.types, system_loaded.types)
     assert torch.equal(system.positions, system_loaded.positions)
     assert torch.equal(system.cell, system_loaded.cell)
+    assert torch.equal(system.pbc, system_loaded.pbc)
     neigbor_list = system.get_neighbor_list(
         NeighborListOptions(cutoff=3.5, full_list=False)
     )

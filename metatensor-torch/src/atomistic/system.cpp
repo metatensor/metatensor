@@ -883,7 +883,7 @@ std::string SystemHolder::str() const {
 template<typename scalar_t>
 nlohmann::json tensor_to_vector_string(const torch::Tensor& tensor) {
     torch::Tensor contiguous_cpu_tensor = tensor.cpu().contiguous();
-    scalar_t* pointer = contiguous_cpu_tensor.data<scalar_t>();
+    scalar_t* pointer = contiguous_cpu_tensor.data_ptr<scalar_t>();
     size_t size = static_cast<size_t>(contiguous_cpu_tensor.numel());
     nlohmann::json result = std::vector<scalar_t>(pointer, pointer + size);
     return result;
@@ -909,7 +909,7 @@ torch::Tensor tensor_from_vector_string(nlohmann::json data) {
 
     auto options = torch::TensorOptions().dtype(torch_dtype);
     auto tensor = torch::empty(sizes, options);
-    auto* tensor_data = tensor.data<scalar_t>();
+    auto* tensor_data = tensor.data_ptr<scalar_t>();
     std::copy(values.begin(), values.end(), tensor_data);
     return tensor;
 }
@@ -980,6 +980,9 @@ std::string SystemHolder::to_json() const {
     result["cell"] = tensor_to_json(this->cell());
     result["types"] = tensor_to_json(this->types());
 
+    // torch doesn't dispatch bools with AT_DISPATCH_ALL_TYPES, use trick
+    result["pbc"] = tensor_to_json(this->pbc().to(torch::kInt32));
+
     result["neighbor_lists"] = std::vector<nlohmann::json>();
     for (auto nl_option: this->known_neighbor_lists()) {
         auto nl_data = this->get_neighbor_list(nl_option);
@@ -1023,7 +1026,13 @@ System SystemHolder::from_json(const std::string_view json) {
     }
     auto types = tensor_from_json(data["types"]);
 
-    auto system = torch::make_intrusive<SystemHolder>(types, positions, cell);
+    if (!data.contains("pbc")) {
+        throw std::runtime_error("expected 'pbc' in JSON for System, did not find it");
+    }
+    // undo the bool->int trick (see to_json)
+    auto pbc = tensor_from_json(data["pbc"]).to(torch::kBool);
+
+    auto system = torch::make_intrusive<SystemHolder>(types, positions, cell, pbc);
 
     for (const auto& nl_data: data["neighbor_lists"]) {
         if (!nl_data.contains("options") || !nl_data["options"].is_object()) {
