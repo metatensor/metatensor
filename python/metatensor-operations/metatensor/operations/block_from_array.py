@@ -95,7 +95,7 @@ def block_from_array(
         else:
             # we are using metatensor-core
             labels_array_like = np.empty(0)
-            
+
     shape = array.shape
     n_dimensions = len(shape)
     if n_dimensions < 2:
@@ -115,8 +115,8 @@ def block_from_array(
     d_components = n_dimensions - d_samples - d_properties
     if d_components < 0:
         raise ValueError(
-            f"the array provided to `block_from_array` does not have enough "
-            + "dimensions to match the sample and property names"
+            f"the array provided to `block_from_array` with shape {shape} "
+            + "does not have enough dimensions to match the sample and property names"
         )
     if component_names is None:
         component_names = [
@@ -124,8 +124,9 @@ def block_from_array(
         ]
     if len(component_names) != d_components:
         raise ValueError(
-            f"the array provided to `block_from_array` does not have enough "
-            + "dimensions to match the given sample, component, and property names"
+            f"the array provided to `block_from_array` with shape {shape} "
+            + "does not have enough dimensions to match the given sample, "
+            + "component, and property names"
         )
 
     samples = Labels(
