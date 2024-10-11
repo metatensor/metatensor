@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -527,7 +527,7 @@ def int_array_like(int_list: List[int], like):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def indices_like(shape: Tuple[int], like):
+def indices_like(shape: Sequence[int], like):
     """
     Creates a tensor of shape ``shape`` filled with ints that
     enumerate the indices of the entries in the array, e.g.

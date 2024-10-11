@@ -60,6 +60,40 @@ def test_with_components():
     )
 
 
+@pytest.mark.parametrize("sample_names", [None, ["a"], ["a", "b"]])
+@pytest.mark.parametrize("property_names", [None, ["A"], ["A", "B"]])
+def test_with_label_names(sample_names, property_names):
+    """Test block_from_array with explicit sample and property names."""
+    array = array = np.zeros((3, 2, 1, 2, 3))
+    block = metatensor.block_from_array(
+        array, sample_names=sample_names, property_names=property_names
+    )
+
+    if sample_names is None:
+        sample_names = ["sample"]
+    if property_names is None:
+        property_names = ["property"]
+    expected_shape = (
+        np.prod(
+            array.shape[: len(sample_names)],
+        )
+        + tuple(
+            array.shape[i]
+            for i in range(len(sample_names), len(array.shape) - len(property_names))
+        )
+        + (len(property_names),)
+    )
+    assert (s1 == s2 for (s1, s2) in zip(block.values.shape, expected_shape))
+
+    assert len(block.samples.names) == len(sample_names)
+    assert (s1 == s2 for (s1, s2) in zip(block.samples.names, sample_names))
+
+    assert len(block.properties.names) == len(property_names)
+    assert (s1 == s2 for (s1, s2) in zip(block.properties.names, property_names))
+
+    assert len(block.components) == 5 - len(sample_names) - len(property_names)
+
+
 @pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
 def test_torch_with_components():
     """Test block_from_array with components and torch arrays"""
