@@ -20,7 +20,6 @@ class Sequential(Module):
     """
 
     def __init__(self, in_keys: Labels, *args: List[ModuleMap]):
-
         super().__init__()
         if not check_isinstance(in_keys, Labels):
             raise TypeError("`in_keys` must be a `Labels` object.")

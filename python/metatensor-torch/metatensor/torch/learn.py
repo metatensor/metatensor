@@ -1,9 +1,8 @@
 import importlib
 import sys
 
-import torch
-
 import metatensor.learn
+import torch
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
 

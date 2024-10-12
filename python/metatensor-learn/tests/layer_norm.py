@@ -41,7 +41,6 @@ def test_layer_norm_torch_mts_equivalence(tensor):
     parameter in the metatensor version.
     """
     for block in tensor:
-
         # Apply the backend metatensor layer norm
         array = block.values
         norm_mts = _LayerNorm(

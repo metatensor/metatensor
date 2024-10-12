@@ -2,18 +2,12 @@ import io
 import pathlib
 from typing import BinaryIO, Union
 
-
 from ..block import TensorBlock
 from ..labels import Labels
 from ..tensor import TensorMap
-
-from ._labels import _save_labels, _save_labels_buffer_raw
-from ._block import _save_block, _save_block_buffer_raw
-from ._tensor import _save_tensor, _save_tensor_buffer_raw
-
-
-from ._labels import load_labels, load_labels_buffer  # noqa: F401
 from ._block import (  # noqa: F401
+    _save_block,
+    _save_block_buffer_raw,
     create_numpy_array,
     create_torch_array,
     load_block,
@@ -21,7 +15,15 @@ from ._block import (  # noqa: F401
     load_block_buffer_custom_array,
     load_block_custom_array,
 )
+from ._labels import (  # noqa: F401
+    _save_labels,
+    _save_labels_buffer_raw,
+    load_labels,
+    load_labels_buffer,
+)
 from ._tensor import (  # noqa: F401
+    _save_tensor,
+    _save_tensor_buffer_raw,
     load,
     load_buffer,
     load_buffer_custom_array,

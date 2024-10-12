@@ -3,9 +3,8 @@ import importlib
 import os
 import sys
 
-import torch
-
 import metatensor
+import torch
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION
 from .utils import parse_version, version_compatible
@@ -24,7 +23,6 @@ _HERE = os.path.realpath(os.path.dirname(__file__))
 
 
 def _lib_path():
-
     torch_version = parse_version(torch.__version__)
     install_prefix = os.path.join(
         _HERE, f"torch-{torch_version.major}.{torch_version.minor}"

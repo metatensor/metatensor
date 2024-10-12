@@ -1,23 +1,29 @@
 import os
+
 import torch
 
-from .version import __version__  # noqa: F401
-from ._c_lib import _load_library
 from . import utils  # noqa: F401
+from ._c_lib import _load_library
+from .version import __version__  # noqa: F401
 
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
-    from .documentation import Labels, LabelsEntry, TensorBlock, TensorMap
     from .documentation import (
+        Labels,
+        LabelsEntry,
+        TensorBlock,
+        TensorMap,
+        dtype_name,
         load,
-        load_labels,
-        load_labels_buffer,
-        load_buffer,
         load_block,
         load_block_buffer,
+        load_buffer,
+        load_labels,
+        load_labels_buffer,
+        save,
+        save_buffer,
+        version,
     )
-    from .documentation import save, save_buffer
-    from .documentation import version, dtype_name
 else:
     _load_library()
     Labels = torch.classes.metatensor.Labels
@@ -59,12 +65,14 @@ else:
 
 try:
     import metatensor.learn  # noqa: F401
+
     from . import learn  # noqa: F401
 
 except ImportError:
     pass
 
 from . import atomistic  # noqa: F401
+
 
 __all__ = [
     "Labels",
