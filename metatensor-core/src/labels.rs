@@ -96,14 +96,21 @@ impl LabelValue {
     }
 }
 
-type DefaultHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
+// Labels uses `AHash` instead of the default hasher in std since `AHash` is
+// much faster and we don't need the cryptographic strength hash from std.
+type AHashHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
+
+// Use a small vec to store Labels entries in the `positions`. This helps by
+// removing heap allocations in the most common case (fewer than 8 dimensions in
+// the Labels), while still allowing the Labels to contains many dimensions.
+type LabelsEntry = SmallVec<[LabelValue; 8]>;
 
 /// Builder for `Labels`, this should be used to construct `Labels`.
 pub struct LabelsBuilder {
     // cf `Labels` for the documentation of the fields
     names: Vec<ConstCString>,
     values: Vec<LabelValue>,
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
+    positions: HashMap<LabelsEntry, usize, AHashHasher>,
 }
 
 impl LabelsBuilder {
@@ -164,7 +171,7 @@ impl LabelsBuilder {
     pub fn add<T>(&mut self, entry: &[T]) -> Result<(), Error>
         where T: Copy + Into<LabelValue>
     {
-        let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
+        let entry = entry.iter().copied().map(Into::into).collect::<LabelsEntry>();
         match self.add_or_get_position(entry) {
             Ok(_) => return Ok(()),
             Err((existing, entry)) => {
@@ -177,7 +184,7 @@ impl LabelsBuilder {
         }
     }
 
-    fn add_or_get_position(&mut self, labels_entry: SmallVec<[LabelValue; 4]>) -> Result<usize, (usize, SmallVec<[LabelValue; 4]>)> {
+    fn add_or_get_position(&mut self, labels_entry: LabelsEntry) -> Result<usize, (usize, LabelsEntry)> {
         assert_eq!(
             self.size(), labels_entry.len(),
             "wrong size for added label: got {}, but expected {}",
@@ -285,10 +292,7 @@ pub struct Labels {
     /// Values of the labels, as a linearized 2D array in row-major order
     values: Vec<LabelValue>,
     /// Store the position of all the known labels, for faster access later.
-    /// This uses `XxHash64` instead of the default hasher in std since
-    /// `XxHash64` is much faster and we don't need the cryptographic strength
-    /// hash from std.
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
+    positions: HashMap<LabelsEntry, usize, AHashHasher>,
     /// Some data provided by the user that we should keep around (this is
     /// used to store a pointer to the on-GPU tensor in metatensor-torch).
     user_data: RwLock<UserData>,
