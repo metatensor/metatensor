@@ -278,8 +278,8 @@ def test_remove_unknown_axis(tensor):
 def test_not_unique_after(tensor):
     """Test error raise if the the labels after the removal would be not valid."""
     match = (
-        r"invalid parameter: can not have the same label value multiple time: \[1, 1\] "
-        r"is already present at position 0"
+        r"invalid parameter: can not have the same label entry multiple time: \[1, 1\] "
+        r"is already present"
     )
     with pytest.raises(metatensor.status.MetatensorError, match=match):
         metatensor.remove_dimension(tensor, axis="keys", name="center_type")
