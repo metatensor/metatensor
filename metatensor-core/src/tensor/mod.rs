@@ -275,7 +275,6 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::LabelsBuilder;
     use crate::data::TestArray;
 
     use super::*;
@@ -286,20 +285,20 @@ mod tests {
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(vec!["samples"], vec![[0]]),
-            vec![example_labels(vec!["components"], vec![[0]])],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["samples"], &[0]),
+            vec![example_labels(&["components"], &[0])],
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 3, 1]),
-            example_labels(vec!["samples"], vec![[0], [1]]),
-            vec![example_labels(vec!["components"], vec![[0], [1], [2]])],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["samples"], &[0, 1]),
+            vec![example_labels(&["components"], &[0, 1, 2])],
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(vec!["keys"], vec![[0], [1]]),
+            example_labels(&["keys"], &[0, 1]),
             vec![block_1, block_2],
         );
         assert!(result.is_ok());
@@ -307,20 +306,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(vec!["samples"], vec![[0]]),
+            example_labels(&["samples"], &[0]),
             vec![],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(vec!["something_else"], vec![[0], [1]]),
+            example_labels(&["something_else"], &[0, 1]),
             vec![],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(vec!["keys"], vec![[0], [1]]),
+            example_labels(&["keys"], &[0, 1]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -332,20 +331,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(vec!["samples"], vec![[0]]),
-            vec![example_labels(vec!["components"], vec![[0]])],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["samples"], &[0]),
+            vec![example_labels(&["components"], &[0])],
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(vec!["samples"], vec![[0], [1]]),
+            example_labels(&["samples"], &[0, 1]),
             vec![],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(vec!["keys"], vec![[0], [1]]),
+            example_labels(&["keys"], &[0, 1]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -358,20 +357,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(vec!["samples"], vec![[0]]),
-            vec![example_labels(vec!["components"], vec![[0]])],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["samples"], &[0]),
+            vec![example_labels(&["components"], &[0])],
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 3, 1]),
-            example_labels(vec!["samples"], vec![[0], [1]]),
-            vec![example_labels(vec!["something_else"], vec![[0], [1], [2]])],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["samples"], &[0, 1]),
+            vec![example_labels(&["something_else"], &[0, 1, 2])],
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(vec!["keys"], vec![[0], [1]]),
+            example_labels(&["keys"], &[0, 1]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -383,20 +382,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(vec!["samples"], vec![[0]]),
+            example_labels(&["samples"], &[0]),
             vec![],
-            example_labels(vec!["properties"], vec![[0]]),
+            example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(vec!["samples"], vec![[0], [1]]),
+            example_labels(&["samples"], &[0, 1]),
             vec![],
-            example_labels(vec!["something_else"], vec![[0]]),
+            example_labels(&["something_else"], &[0]),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(vec!["keys"], vec![[0], [1]]),
+            example_labels(&["keys"], &[0, 1]),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -414,52 +413,46 @@ mod tests {
         for _ in 0..6 {
             blocks.push(TensorBlock::new(
                 TestArray::new(vec![1, 1]),
-                example_labels(vec!["samples"], vec![[0]]),
+                example_labels(&["samples"], &[0]),
                 vec![],
-                example_labels(vec!["properties"], vec![[0]]),
+                example_labels(&["properties"], &[0]),
             ).unwrap());
         }
 
-        let keys = example_labels(vec!["key_1", "key_2"], vec![
-            [0, 1], [0, 2], [1, 1],
-            [1, 2], [3, 0], [4, 3],
+        let keys = example_labels(&["key_1", "key_2"], &[
+            0, 1, /**/ 0, 2, /**/ 1, 1, /**/ 1, 2, /**/ 3, 0, /**/ 4, 3
         ]);
 
         let tensor = TensorMap::new(keys, blocks).unwrap();
 
-        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
-        selection.add(&[1, 1]).unwrap();
+        let selection = Labels::new(&["key_1", "key_2"], vec![1, 1]).unwrap();
         assert_eq!(
-            tensor.blocks_matching(&selection.finish()).unwrap(),
+            tensor.blocks_matching(&selection).unwrap(),
             [2]
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_1"]).unwrap();
-        selection.add(&[1]).unwrap();
+        let selection = Labels::new(&["key_1"], vec![1]).unwrap();
         assert_eq!(
-            tensor.blocks_matching(&selection.finish()).unwrap(),
+            tensor.blocks_matching(&selection).unwrap(),
             [2, 3]
         );
 
-        let selection = LabelsBuilder::new(vec!["key_1"]).unwrap();
-        let result = tensor.blocks_matching(&selection.finish());
+        let selection = Labels::new(&["key_1"], Vec::<i32>::new()).unwrap();
+        let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 0"
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_1", "key_2"]).unwrap();
-        selection.add(&[3, 4]).unwrap();
-        selection.add(&[1, 2]).unwrap();
-        let result = tensor.blocks_matching(&selection.finish());
+        let selection = Labels::new(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
+        let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 2"
         );
 
-        let mut selection = LabelsBuilder::new(vec!["key_3"]).unwrap();
-        selection.add(&[1]).unwrap();
-        let result = tensor.blocks_matching(&selection.finish());
+        let selection = Labels::new(&["key_3"], vec![1]).unwrap();
+        let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: 'key_3' is not part of the keys for this tensor"

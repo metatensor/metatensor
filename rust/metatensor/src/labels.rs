@@ -768,8 +768,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "can not have the same label value multiple time: [0, 1] is already present at position 0")]
-    fn duplicated_label_value() {
+    #[should_panic(expected = "can not have the same label entry multiple time: [0, 1] is already present")]
+    fn duplicated_label_entry() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
         builder.add(&[0, 1]);
         builder.add(&[0, 1]);

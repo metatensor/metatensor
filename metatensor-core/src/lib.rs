@@ -12,7 +12,7 @@
 mod utils;
 
 mod labels;
-use self::labels::{LabelsBuilder, LabelValue, Labels};
+use self::labels::{LabelValue, Labels};
 
 mod data;
 use self::data::{mts_array_t, mts_sample_mapping_t, mts_data_origin_t};
@@ -58,7 +58,7 @@ impl std::fmt::Display for Error {
             Error::Serialization(e) => write!(f, "serialization format error: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
             Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
-            Error::Internal(e) => write!(f, "internal error (this is likely a bug, please report it): {}", e),
+            Error::Internal(e) => write!(f, "internal metatensor error (this is likely a bug, please report it): {}", e),
         }
     }
 }

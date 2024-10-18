@@ -695,7 +695,7 @@ class Labels:
         ... except MetatensorError as e:
         ...     print(e)
         ...
-        invalid parameter: can not have the same label value multiple time: [42] is already present at position 0
+        invalid parameter: can not have the same label entry multiple time: [42] is already present
         """  # noqa E501
         if name not in self.names:
             raise ValueError(f"'{name}' not found in the dimensions of these Labels")

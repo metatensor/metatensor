@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndi
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, PathOrBuffer};
-use crate::{Error, Labels, LabelsBuilder, LabelValue};
+use crate::{Error, Labels};
 
 
 /// Check if the file/buffer in `data` looks like it could contain serialized
@@ -60,12 +60,7 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 
     check_for_extra_bytes(&mut reader)?;
 
-    let mut builder = LabelsBuilder::new(names.iter().map(|s| &**s).collect())?;
-    for chunk in data.chunks_exact(names.len()) {
-        builder.add(&chunk.iter().map(|&i| LabelValue::new(i)).collect::<Vec<_>>())?;
-    }
-
-    return Ok(builder.finish());
+    return Labels::new(&names, data);
 }
 
 /// Write `Labels` to the writer using numpy's NPY format.
@@ -107,7 +102,7 @@ enum Endianness {
 
 /// Check that the given type descriptor matches the expected one for Labels and
 /// return the corresponding set of names & endianness.
-fn check_type_descriptor(desc: &DataType) -> Result<(Vec<String>, Endianness), Error> {
+fn check_type_descriptor(desc: &DataType) -> Result<(Vec<&str>, Endianness), Error> {
     let mut names = Vec::new();
 
     let error = Error::Serialization("invalid dtype for labels".into());
@@ -136,7 +131,7 @@ fn check_type_descriptor(desc: &DataType) -> Result<(Vec<String>, Endianness), E
                     return Err(error);
                 }
 
-                names.push(name.clone());
+                names.push(&**name);
             }
         },
         DataType::Scalar(_) => {
