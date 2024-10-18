@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::labels::{Labels, LabelsBuilder, LabelValue};
+use crate::labels::{Labels, LabelValue};
 use crate::{Error, TensorBlock, mts_sample_mapping_t};
 
 /// single block and part of the associated key, this is used for the various
@@ -53,25 +53,27 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
         }
     }
 
-    let remaining_keys = if remaining_i.is_empty() {
-        let mut builder = LabelsBuilder::new(vec!["_"])?;
-        builder.add(&[0])?;
-        builder.finish()
-    } else {
-        let mut remaining_keys = IndexSet::new();
-        for key in keys {
-            let mut label = Vec::new();
-            for &i in &remaining_i {
-                label.push(key[i]);
-            }
-            remaining_keys.insert(label);
+    let mut remaining_keys = IndexSet::new();
+    for key in keys {
+        let mut entry = Vec::new();
+        for &i in &remaining_i {
+            entry.push(key[i]);
         }
+        remaining_keys.insert(entry);
+    }
 
-        let mut remaining_keys_builder = LabelsBuilder::new(remaining_names)?;
-        for entry in remaining_keys {
-            remaining_keys_builder.add(&entry)?;
+    let values = remaining_keys.into_iter().reduce(|mut values, entry| {
+        values.extend_from_slice(&entry);
+        values
+    }).expect("the set should contain at least an empty vector");
+
+    let remaining_keys = if values.is_empty() {
+        Labels::new(&["_"], vec![LabelValue::new(0)]).expect("invalid labels")
+    } else {
+        unsafe {
+            // SAFETY: the values come from an IndexSet and should already be unique
+            Labels::new_unchecked_uniqueness(&remaining_names, values).expect("invalid labels")
         }
-        remaining_keys_builder.finish()
     };
 
     return Ok(RemovedDimensionsKeys {
@@ -84,14 +86,14 @@ pub fn merge_gradient_samples(
     blocks: &[KeyAndBlock],
     gradient_name: &str,
     samples_mappings: &[Vec<mts_sample_mapping_t>],
-) -> Result<Arc<Labels>, Error> {
-    let mut new_gradient_samples = BTreeSet::new();
-    let mut new_gradient_sample_names = None;
+) -> Arc<Labels> {
+    let mut new_sample_values = BTreeSet::new();
+    let mut new_sample_names = None;
     for (KeyAndBlock{block, ..}, samples_mapping) in blocks.iter().zip(samples_mappings) {
         let gradient = block.gradient(gradient_name).expect("missing gradient");
 
-        if new_gradient_sample_names.is_none() {
-            new_gradient_sample_names = Some(gradient.samples.names());
+        if new_sample_names.is_none() {
+            new_sample_names = Some(gradient.samples.names());
         }
 
         for grad_sample in &*gradient.samples {
@@ -103,24 +105,24 @@ pub fn merge_gradient_samples(
             debug_assert_eq!(mapping.input, old_sample_i);
             grad_sample[0] = mapping.output.into();
 
-            new_gradient_samples.insert(grad_sample);
+            new_sample_values.insert(grad_sample);
         }
     }
 
-    let mut new_gradient_samples_builder = LabelsBuilder::new(
-        new_gradient_sample_names.expect("missing gradient sample names")
-    )?;
+    let labels = unsafe {
+        // SAFETY: values should already be unique since they come from a set
+        Labels::new_unchecked_uniqueness(
+            &new_sample_names.expect("missing gradient sample names"),
+            new_sample_values.iter().flatten().copied().collect()
+        ).expect("invalid labels")
+    };
 
-    for sample in new_gradient_samples {
-        new_gradient_samples_builder.add(&sample)?;
-    }
-
-    return Ok(Arc::new(new_gradient_samples_builder.finish()));
+    return Arc::new(labels);
 }
 
 pub fn merge_samples(
     blocks: &[KeyAndBlock],
-    new_sample_names: Vec<&str>,
+    new_sample_names: &[&str],
     sort: bool
 ) -> (Arc<Labels>, Vec<Vec<mts_sample_mapping_t>>) {
     let add_key_to_samples = blocks[0].block.samples.size() < new_sample_names.len();
@@ -143,12 +145,15 @@ pub fn merge_samples(
         merged_samples.sort_unstable();
     }
 
-    let mut merged_samples_builder = LabelsBuilder::new(new_sample_names).expect("invalid new sample names");
-    for sample in merged_samples {
-        merged_samples_builder.add(&sample).expect("got duplicated samples");
-    }
+    let merged_samples = unsafe {
+        // SAFETY: values should already be unique since they come from a set
+        Labels::new_unchecked_uniqueness(
+            new_sample_names,
+            merged_samples.iter().flatten().copied().collect()
+        ).expect("invalid labels")
+    };
 
-    let merged_samples = Arc::new(merged_samples_builder.finish());
+    let merged_samples = Arc::new(merged_samples);
 
     let mut samples_mappings = Vec::new();
     for KeyAndBlock{key, block} in blocks {
@@ -179,15 +184,10 @@ pub use self::tests_utils::example_labels;
 #[cfg(test)]
 mod tests_utils {
     use std::sync::Arc;
-    use crate::labels::{Labels, LabelsBuilder, LabelValue};
+    use crate::labels::{Labels, LabelValue};
 
-    pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Arc<Labels> {
-        let mut labels = LabelsBuilder::new(names).unwrap();
-        for entry in values {
-            labels.add(
-                &entry.iter().copied().map(LabelValue::from).collect::<Vec<_>>()
-            ).unwrap();
-        }
-        return Arc::new(labels.finish());
+    pub fn example_labels(names: &[&str], values: &[i32]) -> Arc<Labels> {
+        let values = values.iter().copied().map(LabelValue::new).collect();
+        return Arc::new(Labels::new(names, values).expect("invalid labels"));
     }
 }
