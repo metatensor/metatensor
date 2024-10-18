@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
 use crate::utils::ConstCString;
-use crate::{Labels, LabelsBuilder};
+use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
 use crate::Error;
 
@@ -303,17 +303,23 @@ impl TensorBlock {
         let new_property_names = moved_component.names().iter()
             .chain(old_properties.names().iter())
             .copied()
-            .collect();
+            .collect::<Vec<_>>();
 
-        let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
+        let mut new_property_values = Vec::new();
+        new_property_values.reserve_exact(
+            moved_component.count() * moved_component.size()
+            * old_properties.count() * old_properties.size()
+        );
         for new_property in &*moved_component {
             for old_property in old_properties.iter() {
-                let mut property = new_property.to_vec();
-                property.extend_from_slice(old_property);
-                new_properties_builder.add(&property)?;
+                new_property_values.extend_from_slice(new_property);
+                new_property_values.extend_from_slice(old_property);
             }
         }
-        let new_properties = new_properties_builder.finish();
+        let new_properties = unsafe {
+            // SAFETY: the new property can only contain unique entries by construction
+            Labels::new_unchecked_uniqueness(&new_property_names, new_property_values).expect("invalid labels")
+        };
 
         let mut new_shape = self.values.shape()?.to_vec();
         let properties_axis = new_shape.len() - 1;
@@ -336,17 +342,12 @@ impl TensorBlock {
 
 #[cfg(test)]
 mod tests {
-    use crate::{LabelValue, LabelsBuilder};
     use crate::data::TestArray;
 
     use super::*;
 
-    fn example_labels(name: &str, count: usize) -> Arc<Labels> {
-        let mut labels = LabelsBuilder::new(vec![name]).expect("invalid names");
-        for i in 0..count {
-            labels.add(&[LabelValue::from(i)]).unwrap();
-        }
-        return Arc::new(labels.finish());
+    fn example_labels(name: &str, count: i32) -> Arc<Labels> {
+        return Arc::new(Labels::new(&[name], (0..count).collect()).expect("invalid labels"));
     }
 
     #[test]
@@ -427,10 +428,12 @@ mod tests {
         );
 
         let values = TestArray::new(vec![3, 1, 2]);
-        let mut components = LabelsBuilder::new(vec!["component_1", "component_2"]).expect("invalid names");
-        components.add(&[LabelValue::from(0), LabelValue::from(1)]).unwrap();
+        let component = Arc::new(Labels::new(
+            &["component_1", "component_2"],
+            vec![0, 1],
+        ).expect("invalid labels"));
 
-        let result = TensorBlock::new(values, samples, vec![Arc::new(components.finish())], properties);
+        let result = TensorBlock::new(values, samples, vec![component], properties);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: component labels must have a single dimension, \
@@ -449,11 +452,11 @@ mod tests {
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
-            let mut gradient_samples = LabelsBuilder::new(vec!["sample", "foo"]).expect("invalid names");
-            gradient_samples.add(&[0, 0]).unwrap();
-            gradient_samples.add(&[1, 1]).unwrap();
-            gradient_samples.add(&[3, -2]).unwrap();
-            let gradient_samples = Arc::new(gradient_samples.finish());
+            let gradient_samples = Arc::new(Labels::new(
+                &["sample", "foo"],
+                vec![0, 0, /**/ 1, 1, /**/ 3, -2],
+            ).expect("invalid labels"));
+
             let gradient = TensorBlock::new(
                 TestArray::new(vec![3, 7]),
                 gradient_samples,
