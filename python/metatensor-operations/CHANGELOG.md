@@ -17,6 +17,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.4) - 2024-10-11
+
+### Changed
+
+- `block_from_array` now takes optional parameters to specify the names of
+  sample, component and property dimensions
+
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.3) - 2024-08-28
 
 ### Changed
