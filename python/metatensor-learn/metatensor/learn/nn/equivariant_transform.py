@@ -34,6 +34,8 @@ class EquivariantTransform(Module):
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
         provided.
+    :param device: :py:class:`torch.device` Device to instantiate the module in.
+    :param dtype: :py:class:`torch.dtype` passed to the module instance.
     """
 
     def __init__(
@@ -96,19 +98,16 @@ class _CovariantTransform(Module):
     Custom :py:class:`Module` to apply a generic :py:class:`callable` to invariants
     built from a covariant block.
 
-    :param in_features: int
+    :param in_features: :py:class:`int`
         Input feature dimension.
-    :param module: callable
-        The function to apply to the invariant built from the block values.
-    :param device: torch.device
+    :param module: :py:class:`callable`
+        A callable that instantiates a native :py:class:`torch.nn.module`
+        with parameters `in_features`
+    :param device: :py:class:`torch.device`
         Device to instantiate the modules in.
-    :param dtype: torch.dtype
+    :param dtype: :py:class:`torch.dtype`
         dtype of the module.
     """
-
-    __constants__ = ["in_features", "eps", "elementwise_affine"]
-    eps: float
-    elementwise_affine: bool
 
     def __init__(
         self,
