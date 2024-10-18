@@ -343,6 +343,8 @@ jobs:
     name: Merge and release wheels/sdists
     needs: [build-core-wheels, merge-torch-wheels, build-others]
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Download metatensor-core wheels
         uses: actions/download-artifact@v4
