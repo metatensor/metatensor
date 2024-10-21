@@ -1,5 +1,4 @@
-"""Helper functions to dispatch methods between numpy and torch.
-"""
+"""Helper functions to dispatch methods between numpy and torch."""
 
 from typing import List, Union
 
