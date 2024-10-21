@@ -9,7 +9,6 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn import nn as nn  # noqa: E402
 
-from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -87,7 +86,7 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
         len(tensor.block(key).properties) for key in in_keys if key["o3_lambda"] == 0
     ]
     invariant_keys = metatensor.Labels(
-        ["o3_lambda"], int_array_like([0], in_keys.values).reshape(-1, 1)
+        ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
     )
 
     model = nn.Sequential(

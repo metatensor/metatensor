@@ -9,7 +9,6 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.layer_norm import InvariantLayerNorm, _LayerNorm  # noqa: E402
 
-from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -77,7 +76,7 @@ def test_equivariance(tensor, wigner_d_real):
             len(x.block(key).properties) for key in x.keys if key["o3_lambda"] == 0
         ],
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+            ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
         ),
         bias=True,  # should only bias the invariants
         dtype=torch.float64,

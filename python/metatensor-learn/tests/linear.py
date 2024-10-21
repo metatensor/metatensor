@@ -9,7 +9,6 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn import EquivariantLinear  # noqa: E402
 
-from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
 
@@ -50,7 +49,7 @@ def test_equivariance(tensor, bias):
         in_features=[len(x.block(key).properties) for key in x.keys],
         out_features=[len(x.block(key).properties) - 3 for key in x.keys],
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+            ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
         ),
         bias=bias,  # this should only bias the invariant blocks
         dtype=torch.float64,

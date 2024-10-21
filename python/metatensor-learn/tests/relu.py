@@ -9,7 +9,6 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.relu import InvariantReLU  # noqa: E402
 
-from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -44,7 +43,7 @@ def test_equivariance(tensor, wigner_d_real):
     f = InvariantReLU(
         in_keys=x.keys,
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+            ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
         ),
     )
 

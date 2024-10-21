@@ -142,7 +142,7 @@ class InvariantLayerNorm(Module):
         Labels.range.
     :param invariant_keys: a :py:class:`Labels` object that is used to select the
         invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
-        to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are indexed by
+        to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are equal to
         ``[0, 1]``.
     :mean bool: whether or not to subtract the mean over all dimensions except the
         samples (first) dimension of each block of the input passed to
