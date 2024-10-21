@@ -39,8 +39,7 @@ class EquivariantTransform(Module):
         same number of features is assumed for all blocks.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
-        Labels.range. If provided, :param out_features: can be inferred and need not be
-        provided.
+        Labels.range.
     :param device: :py:class:`str` or :py:class:`torch.device`, the computational device
         to use for calculations.
     :param dtype: :py:class:`torch.dtype` , the scalar type to use to store parameters.
