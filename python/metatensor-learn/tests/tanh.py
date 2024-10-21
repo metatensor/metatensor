@@ -9,6 +9,7 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.tanh import InvariantTanh  # noqa: E402
 
+from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -42,7 +43,9 @@ def test_equivariance(tensor, wigner_d_real):
     # Define the EquiLayerNorm module
     f = InvariantTanh(
         in_keys=x.keys,
-        invariant_key_idxs=[i for i, key in enumerate(x.keys) if key["o3_lambda"] == 0],
+        invariant_keys=metatensor.Labels(
+            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+        ),
     )
 
     # Pass both through the linear layer
