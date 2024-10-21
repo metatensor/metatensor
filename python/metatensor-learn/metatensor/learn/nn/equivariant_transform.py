@@ -4,6 +4,8 @@ import torch
 from torch.nn import Module
 
 from .._backend import Labels, TensorMap
+
+# from .._dispatch import int_array_like
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -27,38 +29,43 @@ class EquivariantTransform(Module):
     as the parameter for all blocks. Alternatively, they can be passed as a list to
     control the parameters applied to each block indexed by the keys in :param in_keys:.
 
-    :param module: :py:class:`callable`, the callable to apply to the invariant blocks
-        and to the invariant built from the covariant blocks.
+    :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
+        transformations to be applied to from each block indexed by
+        :param:`in_keys`. Transformations for invariant and covariant blocks differ. See
+        above.
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
-    :param invariant_key_idxs: list of int, the indices of the invariant keys present in
-        `in_keys` in the input :py:class:`TensorMap`. Only blocks for these keys will
-        have bias applied according to the user choice. Covariant blocks will not have
-        bias applied.
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range.
-    :param device: :py:class:`str` or :py:class:`torch.device`, the computational device
-        to use for calculations.
-    :param dtype: :py:class:`torch.dtype` , the scalar type to use to store parameters.
+    :param invariant_keys: a :py:class:`Labels` object that is used to select the
+        invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
+        to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are indexed by
+        ``[0, 1]``.
     """
 
     def __init__(
         self,
-        module: callable,
+        modules: List[torch.nn.Module],
         in_keys: Labels,
-        invariant_key_idxs: List[int],
         in_features: Union[int, List[int]],
         out_features: Optional[Union[int, List[int]]] = None,
         out_properties: Optional[List[Labels]] = None,
-        *,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
+        invariant_keys: Optional[Labels] = None,
     ) -> None:
         super().__init__()
+
+        # Set a default for invariant keys
+        if invariant_keys is None:
+            invariant_keys = Labels(
+                names=["o3_lambda", "o3_sigma"],
+                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 1),
+            )
+        invariant_key_idxs = in_keys.select(invariant_keys)
+
         # Infer `out_features` if not provided
         if out_features is None:
             if out_properties is None:
@@ -73,20 +80,17 @@ class EquivariantTransform(Module):
             in_features, "in_features", int, len(in_keys), "in_keys"
         )
 
-        modules: List[Module] = []
+        modules_for_map: List[Module] = []
         for i in range(len(in_keys)):
             if i in invariant_key_idxs:
-                module_i = module
+                module_i = modules[i]
             else:
                 module_i = _CovariantTransform(
-                    in_features=in_features[i],
-                    module=module,
-                    device=device,
-                    dtype=dtype,
+                    module=modules[i],
                 )
-            modules.append(module_i)
+            modules_for_map.append(module_i)
 
-        self.module_map = ModuleMap(in_keys, modules, out_properties)
+        self.module_map = ModuleMap(in_keys, modules_for_map, out_properties)
 
     def forward(self, tensor: TensorMap) -> TensorMap:
         """
@@ -106,27 +110,20 @@ class _CovariantTransform(Module):
     :param in_features: a :py:class:`int`, the input feature dimension. This also
         corresponds to the output feature size as the shape of the tensor passed to
         :py:meth:`forward` is preserved.
-    :param module: a :py:class:`callable` that when called with parameters
-        ``in_features`` and optionally ``dtype`` and ``device`` constructs a native
-        :py:class:`torch.nn.Module`.
-    :param device: :py:class:`torch.device`
-        Device to instantiate the modules in.
-    :param dtype: :py:class:`torch.dtype`
-        dtype of the module.
+    :param module: :py:class:`torch.nn.Module` containing the transformation to be
+        applied to the invariants constructed from the norms over the component
+        dimension of the input :py:class:`torch.Tensor` passed to the :py:meth:`forward`
+        method.
     """
 
     def __init__(
         self,
-        in_features: int,
-        module: callable,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
+        module: torch.nn.Module,
     ) -> None:
 
         super().__init__()
 
-        self.in_features = in_features
-        self.module = module(in_features, device=device, dtype=dtype)
+        self.module = module
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         """

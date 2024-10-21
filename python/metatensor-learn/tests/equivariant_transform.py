@@ -4,11 +4,11 @@ import pytest
 
 import metatensor
 
-
 torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.equivariant_transform import EquivariantTransform  # noqa: E402
 
+from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -61,15 +61,21 @@ def test_equivariance(tensor, wigner_d_real):
     x = tensor
     Rx = wigner_d_real.transform_tensormap_o3(x)
 
+    in_features = [len(x.block(key).properties) for key in x.keys]
+    modules = [
+        module_wrapper(in_feat, device=x.device, dtype=x.dtype)
+        for in_feat in in_features
+    ]
+
     # Define the EquiLayerNorm module
     f = EquivariantTransform(
-        module=module_wrapper,
-        in_features=[len(x.block(key).properties) for key in x.keys],
+        modules,
+        x.keys,
+        in_features,
         out_properties=[x.block(key).properties for key in x.keys],
-        in_keys=x.keys,
-        invariant_key_idxs=[i for i, key in enumerate(x.keys) if key["o3_lambda"] == 0],
-        dtype=x.dtype,
-        device=x.device,
+        invariant_keys=metatensor.Labels(
+            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+        ),
     )
 
     # Pass both through the linear layer

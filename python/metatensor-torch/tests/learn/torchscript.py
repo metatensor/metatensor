@@ -22,6 +22,7 @@ from metatensor.torch.learn.nn import (
     Sequential,
     SiLU,
     Tanh,
+    EquivariantTransform,
 )
 
 from ._tests_utils import random_single_block_no_components_tensor_map
@@ -163,6 +164,51 @@ def test_sequential(tensor):
             dtype=torch.float64,
         ),
         Tanh(in_keys=in_keys),
+    )
+    check_module_torch_script(module, tensor)
+    check_module_save_load(module)
+
+
+def test_equivariant_transform(tensor):
+    """Tests module EquivariantTransform"""
+
+    def module_wrapper(in_features, device, dtype):
+        """
+        A sequential module with nonlinearities
+        """
+        return torch.nn.Sequential(
+            torch.nn.Tanh(),
+            torch.nn.Linear(
+                in_features=in_features,
+                out_features=5,
+                device=device,
+                dtype=dtype,
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Linear(
+                in_features=5,
+                out_features=in_features,
+                device=device,
+                dtype=dtype,
+            ),
+        )
+
+    in_keys = tensor.keys
+    in_features = [len(tensor.block(key).properties) for key in in_keys]
+
+    modules = [
+        module_wrapper(in_feat, device=tensor.device, dtype=tensor.dtype)
+        for in_feat in in_features
+    ]
+
+    module = EquivariantTransform(
+        modules,
+        in_keys,
+        in_features,
+        out_properties=[tensor.block(key).properties for key in tensor.keys],
+        invariant_keys=metatensor.torch.Labels(
+            ["o3_lambda"], torch.tensor([0]).reshape(-1, 1)
+        ),
     )
     check_module_torch_script(module, tensor)
     check_module_save_load(module)
