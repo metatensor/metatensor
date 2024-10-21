@@ -10,10 +10,17 @@ from ._utils import _check_module_map_parameter
 
 class EquivariantTransform(Module):
     """
-    Applies a module to invariant blocks and to the invariants commputed from each
-    covariant block of a :py:class:`TensorMap` passed to its forward method, indexed by
-    :param in_keys:. For covariant blocks, the transformed values are then elementwise
-    multiplied to the original block, without affecting its `component` dimension.
+    A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and equivariance-preserving
+    transformation to an input :py:class:`TensorMap`.
+    
+    ``module`` is passed as a callable with parameters ``in_features`` and optionally ``dtype`` and 
+    ``device``. This callable constructs an arbitrary shape-preserving :py:class:`torch.nn.Module` 
+    transformation (i.e. :py:class:`torch.nn.Tanh`). Separate instantiations are created for each block
+    using the metadata information passed in ``in_keys`` and ``in_features``. 
+    
+    For invariant blocks in `in_keys` and indexed by `invariant_key_idxs`, the transformation is applied
+    as is. For covariant blocks, an invariant multiplier that preserves covariance is created from the 
+    transformation.
 
     Each parameter can be passed as a single value of its expected type, which is used
     as the parameter for all blocks. Alternatively, they can be passed as a list to
