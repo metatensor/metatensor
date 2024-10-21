@@ -78,7 +78,8 @@ def test_equivariant_linear(tensor):
         in_features=len(tensor[0].properties),
         out_features=5,
         invariant_keys=metatensor.torch.Labels(
-            ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ["_"],
+            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
         ),
         dtype=torch.float64,
     )
@@ -98,7 +99,8 @@ def test_invariant_tanh(tensor_no_grad):
     module = InvariantTanh(
         in_keys=tensor_no_grad.keys,
         invariant_keys=metatensor.torch.Labels(
-            ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ["_"],
+            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
         ),
     )
     check_module_torch_script(module, tensor_no_grad)
@@ -117,7 +119,8 @@ def test_invariant_relu(tensor_no_grad):
     module = InvariantReLU(
         in_keys=tensor_no_grad.keys,
         invariant_keys=metatensor.torch.Labels(
-            ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ["_"],
+            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
         ),
     )
     check_module_torch_script(module, tensor_no_grad)
@@ -136,7 +139,8 @@ def test_invariant_silu(tensor_no_grad):
     module = InvariantSiLU(
         in_keys=tensor_no_grad.keys,
         invariant_keys=metatensor.torch.Labels(
-            ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ["_"],
+            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
         ),
     )
     check_module_torch_script(module, tensor_no_grad)
@@ -160,7 +164,8 @@ def test_invariant_layer_norm(tensor_no_grad):
         in_keys=tensor_no_grad.keys,
         in_features=len(tensor_no_grad[0].properties),
         invariant_keys=metatensor.torch.Labels(
-            ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ["_"],
+            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
         ),
         dtype=torch.float64,
     )
