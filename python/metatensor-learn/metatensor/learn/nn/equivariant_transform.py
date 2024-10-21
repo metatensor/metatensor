@@ -41,8 +41,9 @@ class EquivariantTransform(Module):
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
         provided.
-    :param device: :py:class:`torch.device` Device to instantiate the module in.
-    :param dtype: :py:class:`torch.dtype` passed to the module instance.
+    :param device: :py:class:`str` or :py:class:`torch.device`, the computational device
+        to use for calculations.
+    :param dtype: :py:class:`torch.dtype` , the scalar type to use to store parameters.
     """
 
     def __init__(
