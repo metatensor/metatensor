@@ -33,7 +33,7 @@ class ReLU(Module):
         in_place: bool = False,
     ) -> None:
         super().__init__()
-        modules: List[Module] = [torch.nn.ReLU() for i in range(len(in_keys))]
+        modules: List[Module] = [torch.nn.ReLU(in_place) for i in range(len(in_keys))]
         self.module_map = ModuleMap(in_keys, modules, out_properties)
 
     def forward(self, tensor: TensorMap) -> TensorMap:
@@ -90,7 +90,7 @@ class InvariantReLU(torch.nn.Module):
         modules: List[Module] = []
         for i in range(len(in_keys)):
             if i in invariant_key_idxs:  # Invariant block: apply ReLU
-                module = torch.nn.ReLU()
+                module = torch.nn.ReLU(in_place)
             else:  # Covariant block: apply identity operator
                 module = torch.nn.Identity()
             modules.append(module)
