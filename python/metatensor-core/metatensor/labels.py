@@ -461,7 +461,7 @@ class Labels:
         return (
             self._names == other._names
             and self._values.shape == other._values.shape
-            and np.all(self._values == other._values)
+            and bool(np.all(self._values == other._values))
         )
 
     def __ne__(self, other: "Labels") -> bool:
