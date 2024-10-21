@@ -4,23 +4,24 @@ import torch
 from torch.nn import Module
 
 from .._backend import Labels, TensorMap
-from .module_map import ModuleMap
 from ._utils import _check_module_map_parameter
+from .module_map import ModuleMap
 
 
 class EquivariantTransform(Module):
     """
-    A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and equivariance-preserving
-    transformation to an input :py:class:`TensorMap`.
-    
-    ``module`` is passed as a callable with parameters ``in_features`` and optionally ``dtype`` and 
-    ``device``. This callable constructs an arbitrary shape-preserving :py:class:`torch.nn.Module` 
-    transformation (i.e. :py:class:`torch.nn.Tanh`). Separate instantiations are created for each block
-    using the metadata information passed in ``in_keys`` and ``in_features``. 
-    
-    For invariant blocks in `in_keys` and indexed by `invariant_key_idxs`, the transformation is applied
-    as is. For covariant blocks, an invariant multiplier that preserves covariance is created from the 
-    transformation.
+    A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and
+    equivariance-preserving transformation to an input :py:class:`TensorMap`.
+
+    ``module`` is passed as a callable with parameters ``in_features`` and optionally
+    ``dtype`` and ``device``. This callable constructs an arbitrary shape-preserving
+    :py:class:`torch.nn.Module` transformation (i.e. :py:class:`torch.nn.Tanh`).
+    Separate instantiations are created for each block using the metadata information
+    passed in ``in_keys`` and ``in_features``.
+
+    For invariant blocks in `in_keys` and indexed by `invariant_key_idxs`, the
+    transformation is applied as is. For covariant blocks, an invariant multiplier that
+    preserves covariance is created from the transformation.
 
     Each parameter can be passed as a single value of its expected type, which is used
     as the parameter for all blocks. Alternatively, they can be passed as a list to
@@ -99,13 +100,15 @@ class EquivariantTransform(Module):
 
 class _CovariantTransform(Module):
     """
-    Applies an arbitrary shape-preserving transformation defined in ``module`` to a 3-dimensional
-    tensor in a way that preserves equivariance.
+    Applies an arbitrary shape-preserving transformation defined in ``module`` to a
+    3-dimensional tensor in a way that preserves equivariance.
 
-    :param in_features: a :py:class:`int`, the input feature dimension. This also corresponds to the output
-        feature size as the shape of the tensor passed to :py:meth:`forward` is preserved.
-    :param module: a :py:class:`callable` that when called with parameters ``in_features`` and optionally ``dtype``
-        and ``device`` constructs a native :py:class:`torch.nn.Module`.
+    :param in_features: a :py:class:`int`, the input feature dimension. This also
+        corresponds to the output feature size as the shape of the tensor passed to
+        :py:meth:`forward` is preserved.
+    :param module: a :py:class:`callable` that when called with parameters
+        ``in_features`` and optionally ``dtype`` and ``device`` constructs a native
+        :py:class:`torch.nn.Module`.
     :param device: :py:class:`torch.device`
         Device to instantiate the modules in.
     :param dtype: :py:class:`torch.dtype`
@@ -126,16 +129,17 @@ class _CovariantTransform(Module):
         self.module = module(in_features, device=device, dtype=dtype)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-    """
-    Creates an invariant block from the ``input`` covariant, and transforms it by applying the torch 
-    ``module`` passed to the class constructor. Then uses the transformed invariant as an element
-    -wise multiplier for the ``input`` block. 
-    
-    Transformations are applied consistently to components (axis 1) to preserve equivariance.
-    """
+        """
+        Creates an invariant block from the ``input`` covariant, and transforms it by
+        applying the torch ``module`` passed to the class constructor. Then uses the
+        transformed invariant as an elementwise multiplier for the ``input`` block.
+
+        Transformations are applied consistently to components (axis 1) to preserve
+        equivariance.
+        """
         assert len(input.shape) == 3, "``input`` must be a three-dimensional tensor"
         invariant = input.norm(dim=1, keepdim=True)
-        invariant_transformed = self.module(invariant_components)
+        invariant_transformed = self.module(invariant)
         tensor_out = invariant_transformed * input
 
         return tensor_out
