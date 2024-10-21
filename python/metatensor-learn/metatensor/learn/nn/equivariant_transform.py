@@ -123,8 +123,9 @@ class _CovariantTransform(Module):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
 
-        invariant_components = input.norm(dim=1, keepdim=True)
-        nonlinear_at_invariants = self.module(invariant_components)
-        tensor_out = nonlinear_at_invariants * input
+        assert len(input.shape) == 3, "``input`` must be a three-dimensional tensor"
+        invariant = input.norm(dim=1, keepdim=True)
+        invariant_transformed = self.module(invariant_components)
+        tensor_out = invariant_transformed * input
 
         return tensor_out
