@@ -98,8 +98,8 @@ class _CovariantTransform(Module):
     Custom :py:class:`Module` to apply a generic :py:class:`callable` to invariants
     built from a covariant block.
 
-    :param in_features: :py:class:`int`
-        Input feature dimension.
+    :param in_features: a :py:class:`int`, the input feature dimension. This also corresponds to the output
+        feature size as the shape of the tensor passed to :py:meth:`forward` is preserved.
     :param module: :py:class:`callable`
         A callable that instantiates a native :py:class:`torch.nn.module`
         with parameters `in_features`
