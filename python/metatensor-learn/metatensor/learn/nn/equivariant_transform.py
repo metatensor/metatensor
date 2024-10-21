@@ -64,9 +64,6 @@ class EquivariantTransform(Module):
         in_features = _check_module_map_parameter(
             in_features, "in_features", int, len(in_keys), "in_keys"
         )
-        out_features = _check_module_map_parameter(
-            out_features, "out_features", int, len(in_keys), "in_keys"
-        )
 
         modules: List[Module] = []
         for i in range(len(in_keys)):
