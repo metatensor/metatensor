@@ -100,9 +100,8 @@ class _CovariantTransform(Module):
 
     :param in_features: a :py:class:`int`, the input feature dimension. This also corresponds to the output
         feature size as the shape of the tensor passed to :py:meth:`forward` is preserved.
-    :param module: :py:class:`callable`
-        A callable that instantiates a native :py:class:`torch.nn.module`
-        with parameters `in_features`
+    :param module: a :py:class:`callable` that when called with parameters ``in_features`` and optionally ``dtype``
+        and ``device`` constructs a native :py:class:`torch.nn.Module`.
     :param device: :py:class:`torch.device`
         Device to instantiate the modules in.
     :param dtype: :py:class:`torch.dtype`
