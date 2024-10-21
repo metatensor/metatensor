@@ -199,7 +199,7 @@ def sort_block(
            [2, 0, 1]])
     >>> # sorting both samples and properties at the same time
     >>> sorted_block = metatensor.sort_block(block)
-    >>> np.all(sorted_block.values == block_sorted_stepwise.values)
+    >>> bool(np.all(sorted_block.values == block_sorted_stepwise.values))
     True
     >>> # This function can also sort gradients:
     >>> sorted_block.add_gradient(

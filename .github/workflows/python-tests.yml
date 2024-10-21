@@ -20,6 +20,7 @@ jobs:
           - os: ubuntu-20.04
             python-version: "3.9"
             torch-version: "1.12.*"
+            numpy-version-pin: "<2.0"
           - os: ubuntu-20.04
             python-version: "3.9"
             torch-version: "2.5.*"
@@ -72,3 +73,4 @@ jobs:
         env:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
+          METATENSOR_TESTS_NUMPY_VERSION_PIN:  ${{ matrix.numpy-version-pin }}
