@@ -4,13 +4,14 @@ module maps that apply layer norms in a generic and equivariant way,
 respectively.
 """
 
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import torch
 from torch.nn import Module, init
 from torch.nn.parameter import Parameter
 
 from .._backend import Labels, TensorMap
+from .._dispatch import int_array_like
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -34,9 +35,8 @@ class LayerNorm(Module):
     Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
-    Each parameter can be passed as a single value of its expected type, which is used
-    as the parameter for all blocks. Alternatively, they can be passed as a list to
-    control the parameters applied to each block indexed by the keys in :param in_keys:.
+    Each parameter is passed as a single value of its expected type, which is used
+    as the parameter for all blocks.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
@@ -57,10 +57,10 @@ class LayerNorm(Module):
         in_features: List[int],
         out_properties: Optional[List[Labels]] = None,
         *,
-        eps: Union[float, List[float]] = 1e-5,
-        elementwise_affine: Union[bool, List[bool]] = True,
-        bias: Union[bool, List[bool]] = True,
-        mean: Union[bool, List[bool]] = True,
+        eps: float = 1e-5,
+        elementwise_affine: bool = True,
+        bias: bool = True,
+        mean: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
     ) -> None:
@@ -114,8 +114,9 @@ class InvariantLayerNorm(Module):
     the invariant blocks.
 
     Applies a layer normalization to each invariant block of a :py:class:`TensorMap`
-    passed to :py:meth:`forward` method. These correspond to the blocks indexed by
-    :param in_keys: at numeric positions passed in :param invariant_key_idxs:.
+    passed to :py:meth:`forward` method. These are indexed by
+    the keys in :param in_keys: that correspond to the selection passed in :param
+    invariant_keys:.
 
     The main difference from :py:class:`torch.nn.LayerNorm` is that there is no
     `normalized_shape` parameter. Instead, the standard deviation and mean (if
@@ -128,44 +129,50 @@ class InvariantLayerNorm(Module):
     Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
-    Each parameter can be passed as a single value of its expected type, which is used
-    as the parameter for all blocks. Alternatively, they can be passed as a list to
-    control the parameters applied to each block indexed by the invariant keys in :param
-    in_keys: at numeric poositions :param invariant_key_idxs:.
+    Each parameter is passed as a single value of its expected type, which is used
+    as the parameter for all blocks.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
-    :param invariant_key_idxs: list of int, the indices of the invariant keys present in
-        `in_keys` in the input :py:class:`TensorMap`. Only blocks for these keys will
-        have layer norm applied. The other blocks will have the identity operator
-        applied.
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
+    :param invariant_keys: a :py:class:`Labels` object that is used to select the
+        invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
+        to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are equal to
+        ``[0, 1]``.
     :mean bool: whether or not to subtract the mean over all dimensions except the
         samples (first) dimension of each block of the input passed to
-        :py:meth:`forward`. If passed as a list, must have the same length as :param
-        invariant_key_idxs:.
+        :py:meth:`forward`.
     """
 
     def __init__(
         self,
         in_keys: Labels,
-        invariant_key_idxs: List[int],
         in_features: List[int],
         out_properties: Optional[List[Labels]] = None,
+        invariant_keys: Optional[Labels] = None,
         *,
-        eps: Union[float, List[float]] = 1e-5,
-        elementwise_affine: Union[bool, List[bool]] = True,
-        bias: Union[bool, List[bool]] = True,
-        mean: Union[bool, List[bool]] = True,
+        eps: float = 1e-5,
+        elementwise_affine: bool = True,
+        bias: bool = True,
+        mean: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         super().__init__()
+
+        # Set a default for invariant keys
+        if invariant_keys is None:
+            invariant_keys = Labels(
+                names=["o3_lambda", "o3_sigma"],
+                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 1),
+            )
+        invariant_key_idxs = in_keys.select(invariant_keys)
+
         # Check input parameters, convert to lists (for each *invariant* key) if
         # necessary.
         in_features = _check_module_map_parameter(

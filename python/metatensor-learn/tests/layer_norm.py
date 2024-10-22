@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -72,10 +73,12 @@ def test_equivariance(tensor, wigner_d_real):
     # Define the EquiLayerNorm module
     f = InvariantLayerNorm(
         in_keys=x.keys,
-        invariant_key_idxs=[i for i, key in enumerate(x.keys) if key["o3_lambda"] == 0],
         in_features=[
             len(x.block(key).properties) for key in x.keys if key["o3_lambda"] == 0
         ],
+        invariant_keys=metatensor.Labels(
+            ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
+        ),
         bias=True,  # should only bias the invariants
         dtype=torch.float64,
     )

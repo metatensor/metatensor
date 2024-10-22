@@ -17,6 +17,20 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- `metatensor.learn.nn` modules `InvariantTanh`, `InvariantSiLU`, `InvariantReLU`,
+  `InvariantLayerNorm`, and `EquivariantLinear` have removed and replaced parameter.
+  `invariant_key_idxs` is replaced by `invariant_keys`, a `Labels` object that selects
+  for invariant blocks.
+- `metatensor.learn.nn` modules `LayerNorm`, `InvariantLayerNorm`, `Linear`, and
+  `EquivariantLinear` have altered accepted types for certain parameters. Parameters
+  `eps`, `elementwise_affine`, `bias`, and `mean` for the layer norm modules, and `bias`
+   for the linear modules are affected. Previously these could be passed as list, but
+   now can only be passed as a single value. For greater control over modules applied to
+   individual blocks, users are encouraged to use the `ModuleMap` module from
+   `metatensor.learn.nn`.
+
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.2.3) - 2024-08-28
 
 ### Changed
