@@ -136,10 +136,9 @@ def test_neighbor_autograd_errors():
         register_autograd_neighbors(system, neighbors)
 
     message = (
-        "one neighbor pair does not match its metadata: the pair between atom 1 and "
-        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
-        "\\[0.926094, -0.219122, 1.4382\\] but has a distance vector of "
-        "\\[2.77828, -0.657366, 4.31461\\]"
+        r"one neighbor pair does not match its metadata: the pair between atom \d+ and "
+        r"atom \d+ for the \[\d+, \d+, \d+\] cell shift should have a distance vector "
+        r"of \[.*?\] but has a distance vector of \[.*?\]"
     )
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"

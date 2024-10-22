@@ -406,20 +406,20 @@ class TensorMap:
             properties (5): ['property']
             gradients: None
         >>> # This is the first block
-        >>> block.values.mean()
+        >>> print(block.values.mean())
         1.0
         >>> # use a single key entry (i.e. LabelsEntry) for the selection
-        >>> tensor.block(tensor.keys[0]).values.mean()
+        >>> print(tensor.block(tensor.keys[0]).values.mean())
         1.0
         >>> # Labels with a single entry selection
         >>> labels = Labels(names=["key_1", "key_2"], values=np.array([[6, 8]]))
-        >>> tensor.block(labels).values.mean()
+        >>> print(tensor.block(labels).values.mean())
         2.0
         >>> # keyword arguments selection
-        >>> tensor.block(key_1=0, key_2=0).values.mean()
+        >>> print(tensor.block(key_1=0, key_2=0).values.mean())
         1.0
         >>> # dictionary selection
-        >>> tensor.block({"key_1": 6, "key_2": 8}).values.mean()
+        >>> print(tensor.block({"key_1": 6, "key_2": 8}).values.mean())
         2.0
         """
         if selection is None:
