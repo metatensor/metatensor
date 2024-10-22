@@ -4,6 +4,7 @@ import pytest
 
 import metatensor
 
+
 torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.equivariant_transform import EquivariantTransform  # noqa: E402

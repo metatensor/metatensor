@@ -4,8 +4,7 @@ import torch
 from torch.nn import Module
 
 from .._backend import Labels, TensorMap
-
-# from .._dispatch import int_array_like
+from .._dispatch import int_array_like
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -120,7 +119,6 @@ class _CovariantTransform(Module):
         self,
         module: torch.nn.Module,
     ) -> None:
-
         super().__init__()
 
         self.module = module

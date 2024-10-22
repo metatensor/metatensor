@@ -12,6 +12,7 @@ import metatensor.torch
 from metatensor.torch import allclose_raise
 from metatensor.torch.learn.nn import (
     EquivariantLinear,
+    EquivariantTransform,
     InvariantLayerNorm,
     InvariantReLU,
     InvariantSiLU,
@@ -22,7 +23,6 @@ from metatensor.torch.learn.nn import (
     Sequential,
     SiLU,
     Tanh,
-    EquivariantTransform,
 )
 
 from ._tests_utils import random_single_block_no_components_tensor_map
