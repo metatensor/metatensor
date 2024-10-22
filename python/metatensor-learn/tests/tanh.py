@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -43,7 +44,7 @@ def test_equivariance(tensor, wigner_d_real):
     f = InvariantTanh(
         in_keys=x.keys,
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
+            ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
         ),
     )
 

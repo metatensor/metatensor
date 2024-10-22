@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -86,7 +87,7 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
         len(tensor.block(key).properties) for key in in_keys if key["o3_lambda"] == 0
     ]
     invariant_keys = metatensor.Labels(
-        ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
+        ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
     )
 
     model = nn.Sequential(

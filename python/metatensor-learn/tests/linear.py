@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -49,7 +50,7 @@ def test_equivariance(tensor, bias):
         in_features=[len(x.block(key).properties) for key in x.keys],
         out_features=[len(x.block(key).properties) - 3 for key in x.keys],
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
+            ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
         ),
         bias=bias,  # this should only bias the invariant blocks
         dtype=torch.float64,
