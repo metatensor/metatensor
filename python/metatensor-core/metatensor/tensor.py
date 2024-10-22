@@ -738,7 +738,7 @@ def _can_cast_to_numpy_int(value):
 
 
 def _normalize_selection(
-    selection: Union[Labels, LabelsEntry, Dict[str, int]]
+    selection: Union[Labels, LabelsEntry, Dict[str, int]],
 ) -> Labels:
     if isinstance(selection, dict):
         for key, value in selection.items():

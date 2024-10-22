@@ -1,19 +1,19 @@
-import torch
 import os
 
-if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
-    from .documentation import System, NeighborListOptions
-    from .documentation import (
-        ModelOutput,
-        ModelEvaluationOptions,
-        ModelCapabilities,
-        ModelMetadata,
-    )
+import torch
 
+
+if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     from .documentation import (
-        read_model_metadata,
+        ModelCapabilities,
+        ModelEvaluationOptions,
+        ModelMetadata,
+        ModelOutput,
+        NeighborListOptions,
+        System,
         check_atomistic_model,
         load_model_extensions,
+        read_model_metadata,
         register_autograd_neighbors,
         unit_conversion_factor,
     )
@@ -34,6 +34,9 @@ else:
     register_autograd_neighbors = torch.ops.metatensor.register_autograd_neighbors
     unit_conversion_factor = torch.ops.metatensor.unit_conversion_factor
 
-from .model import MetatensorAtomisticModel, ModelInterface  # noqa: F401
-from .model import load_atomistic_model  # noqa: F401
+from .model import (  # noqa: F401
+    MetatensorAtomisticModel,
+    ModelInterface,
+    load_atomistic_model,  # noqa: F401
+)
 from .systems_to_torch import systems_to_torch  # noqa: F401

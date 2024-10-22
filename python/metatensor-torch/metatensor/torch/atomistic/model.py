@@ -10,9 +10,8 @@ from typing import Dict, List, Optional, Union
 import torch
 from torch.profiler import record_function
 
-from .. import Labels, TensorBlock, TensorMap
+from .. import Labels, TensorBlock, TensorMap, dtype_name
 from .. import __version__ as metatensor_version
-from .. import dtype_name
 from . import (
     ModelCapabilities,
     ModelEvaluationOptions,

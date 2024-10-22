@@ -4,6 +4,7 @@ import torch
 from torch.nn import Module
 
 from .._backend import Labels, TensorMap
+from .._dispatch import int_array_like
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -19,12 +20,17 @@ class Linear(Module):
     Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
     description of the other parameters.
 
-    Each parameter can be passed as a single value of its expected type, which is used
-    as the parameter for all blocks. Alternatively, they can be passed as a list to
-    control the parameters applied to each block indexed by the keys in :param in_keys:.
+    Each parameter is passed as a single value of its expected type, which is used
+    as the parameter for all blocks.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
+    :param in_features: :py:class:`int` or :py:class:`list` of :py:class:`int`, the
+        number of input features for each block. If passed as a single value, the same
+        feature size is taken for all blocks.
+    :param out_features: :py:class:`int` or :py:class:`lint` of :py:class:`int`, the
+        number of output features for each block. If passed as a single value, the same
+        feature size is taken for all blocks.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
@@ -38,7 +44,7 @@ class Linear(Module):
         out_features: Optional[Union[int, List[int]]] = None,
         out_properties: Optional[List[Labels]] = None,
         *,
-        bias: Union[bool, List[bool]] = True,
+        bias: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
     ) -> None:
@@ -94,41 +100,50 @@ class EquivariantLinear(Module):
     Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
     description of the other parameters.
 
-    Each parameter can be passed as a single value of its expected type, which is used
-    as the parameter for all blocks. Alternatively, they can be passed as a list to
-    control the parameters applied to each block indexed by the keys in :param in_keys:.
-
     For :py:class:`EquivariantLinear`, by contrast to :py:class:`Linear`, the parameter
     :param bias: is only applied to modules corresponding to invariant blocks, i.e.
-    those indexed by keys in :param in_keys` at numeric indices :param
-    invariant_key_idxs:. If passed as a list, :param bias: must therefore have the same
-    length as :param invariant_key_idxs:.
+    keys in :param in_keys: that correspond to the selection in :param invariant_keys:.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
-    :param invariant_key_idxs: list of int, the indices of the invariant keys present in
-        `in_keys` in the input :py:class:`TensorMap`. Only blocks for these keys will
-        have bias applied according to the user choice. Covariant blocks will not have
-        bias applied.
+    :param in_features: :py:class:`int` or :py:class:`list` of :py:class:`int`, the
+        number of input features for each block. If passed as a single value, the same
+        feature size is taken for all blocks.
+    :param out_features: :py:class:`int` or :py:class:`lint` of :py:class:`int`, the
+        number of output features for each block. If passed as a single value, the same
+        feature size is taken for all blocks.
     :param out_properties: list of :py:class`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
         provided.
+    :param invariant_keys: a :py:class:`Labels` object that is used to select the
+        invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
+        to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are equal to
+        ``[0, 1]``.
     """
 
     def __init__(
         self,
         in_keys: Labels,
-        invariant_key_idxs: List[int],
         in_features: Union[int, List[int]],
         out_features: Optional[Union[int, List[int]]] = None,
         out_properties: Optional[List[Labels]] = None,
+        invariant_keys: Optional[Labels] = None,
         *,
-        bias: Union[bool, List[bool]] = True,
+        bias: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         super().__init__()
+
+        # Set a default for invariant keys
+        if invariant_keys is None:
+            invariant_keys = Labels(
+                names=["o3_lambda", "o3_sigma"],
+                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 1),
+            )
+        invariant_key_idxs = in_keys.select(invariant_keys)
+
         # Infer `out_features` if not provided
         if out_features is None:
             if out_properties is None:

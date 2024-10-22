@@ -172,7 +172,6 @@ class ModelMetadataWrap:
 
 def test_metadata():
     class TestModule(torch.nn.Module):
-
         def forward(self, x: ModelMetadataWrap) -> ModelMetadataWrap:
             return x
 
@@ -230,7 +229,6 @@ Please cite the following references when using this model:
 
 
 def test_with_extra_metadata(tmpdir):
-
     metadata = ModelMetadata(
         name="SOTA model",
         description="This is a state-of-the-art model",

@@ -81,7 +81,6 @@ class WignerDReal:
         # Copy the block
         block_rotated = block.copy()
         vals = block_rotated.values
-        print(vals.shape)
 
         # Perform the rotation, either with numpy or torch, by taking the
         # tensordot product of the irreducible spherical components. Modify

@@ -52,7 +52,6 @@ def test_ase_to_torch_periodic():
 
 @pytest.mark.skipif(not HAS_ASE, reason="requires ASE")
 def test_ase_to_torch_non_periodic():
-
     atoms = ase.Atoms(
         "CO",
         positions=[(0, 0, 0), (0, 0, 2)],
