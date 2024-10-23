@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Added
+
+- Added `metatensor.learn.nn.EquivariantTransformation` to apply any 
+  `torch.nn.Module` to invariants computed from the norm over components of covariant 
+  blocks. The transformed invariants are then elementwise multiplied back to the 
+  covariant blocks. For invariant blocks, the `torch.nn.Module` is applied as is (#744)
+
 <!-- Possible sections
 
 ### Added
