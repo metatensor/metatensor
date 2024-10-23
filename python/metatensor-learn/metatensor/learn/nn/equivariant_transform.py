@@ -29,7 +29,7 @@ class EquivariantTransform(Module):
     control the parameters applied to each block indexed by the keys in :param in_keys:.
 
     :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
-        transformations to be applied to from each block indexed by
+        transformations to be applied to each block indexed by
         :param:`in_keys`. Transformations for invariant and covariant blocks differ. See
         above.
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
