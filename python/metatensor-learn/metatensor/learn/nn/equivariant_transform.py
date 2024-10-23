@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
 import torch
-from torch.nn import Module
+
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
@@ -9,7 +9,7 @@ from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
 
-class EquivariantTransform(Module):
+class EquivariantTransform(torch.nn.Module):
     """
     A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and
     equivariance-preserving transformation to an input :py:class:`TensorMap`.
