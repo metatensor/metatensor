@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -9,7 +10,6 @@ torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.equivariant_transform import EquivariantTransform  # noqa: E402
 
-from ._dispatch import int_array_like  # noqa: E402
 from ._rotation_utils import WignerDReal  # noqa: E402
 
 
@@ -75,7 +75,7 @@ def test_equivariance(tensor, wigner_d_real):
         in_features,
         out_properties=[x.block(key).properties for key in x.keys],
         invariant_keys=metatensor.Labels(
-            ["o3_lambda"], int_array_like([0], x.keys.values).reshape(-1, 1)
+            ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
         ),
     )
 
