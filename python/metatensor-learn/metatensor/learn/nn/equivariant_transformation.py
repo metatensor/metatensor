@@ -42,6 +42,7 @@ class EquivariantTransformation(torch.nn.Module):
         >>> from metatensor.learn.nn import EquivariantTransformation
 
         Define a dummy invariant TensorBlock
+
         >>> block_1 = TensorBlock(
         ...     values=torch.randn(2, 1, 3),
         ...     samples=Labels(
@@ -58,6 +59,7 @@ class EquivariantTransformation(torch.nn.Module):
         ... )
 
         Define a dummy covariant TensorBlock
+
         >>> block_2 = TensorBlock(
         ...     values=torch.randn(2, 3, 3),
         ...     samples=Labels(
@@ -74,16 +76,19 @@ class EquivariantTransformation(torch.nn.Module):
         ... )
 
         Create a TensorMap containing the dummy TensorBlocks
+
         >>> keys = Labels(names=["o3_lambda"], values=np.array([[0], [1]]))
         >>> tensor = TensorMap(keys, [block_1, block_2])
 
         Define the transformation to apply to the TensorMap
+
         >>> def module_wrapper(in_features, device, dtype):
         ...     '''An activation module'''
         ...     return torch.nn.Tanh()
         ...
 
         Instantiate the modules containing the transformation
+
         >>> in_features = [len(tensor.block(key).properties) for key in tensor.keys]
         >>> modules = [
         ...     module_wrapper(in_feat, device=tensor.device, dtype=tensor.dtype)
@@ -91,6 +96,7 @@ class EquivariantTransformation(torch.nn.Module):
         ... ]
 
         Define the EquivariantTransformation module
+
         >>> transformation = EquivariantTransformation(
         ...     modules,
         ...     tensor.keys,
@@ -102,6 +108,7 @@ class EquivariantTransformation(torch.nn.Module):
         ... )
 
         The output metadata are the same as the input
+
         >>> transformation(tensor)
         TensorMap with 2 blocks
         keys: o3_lambda
@@ -113,7 +120,6 @@ class EquivariantTransformation(torch.nn.Module):
             components (1): ['o3_mu']
             properties (3): ['properties']
             gradients: None
-
 
     """
 
