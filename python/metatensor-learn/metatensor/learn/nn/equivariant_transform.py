@@ -33,7 +33,7 @@ class EquivariantTransform(Module):
         :param:`in_keys`. Transformations for invariant and covariant blocks differ. See
         above.
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
-        tensor map in the :py:meth:`forward` method.
+        :py:class:`TensorMap` in the :py:meth:`forward` method.
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
