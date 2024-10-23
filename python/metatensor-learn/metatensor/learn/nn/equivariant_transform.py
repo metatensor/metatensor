@@ -8,7 +8,7 @@ from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
 
-class EquivariantTransform(torch.nn.Module):
+class EquivariantTransformation(torch.nn.Module):
     """
     A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and
     equivariance-preserving transformation to an input :py:class:`TensorMap`.

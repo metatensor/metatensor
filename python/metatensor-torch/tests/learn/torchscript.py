@@ -12,7 +12,7 @@ import metatensor.torch
 from metatensor.torch import allclose_raise
 from metatensor.torch.learn.nn import (
     EquivariantLinear,
-    EquivariantTransform,
+    EquivariantTransformation,
     InvariantLayerNorm,
     InvariantReLU,
     InvariantSiLU,
@@ -194,7 +194,7 @@ def test_sequential(tensor):
 
 
 def test_equivariant_transform(tensor):
-    """Tests module EquivariantTransform"""
+    """Tests module EquivariantTransformation"""
 
     def module_wrapper(in_features, device, dtype):
         """
@@ -227,7 +227,7 @@ def test_equivariant_transform(tensor):
         for in_feat in in_features
     ]
 
-    module = EquivariantTransform(
+    module = EquivariantTransformation(
         modules,
         in_keys,
         in_features,

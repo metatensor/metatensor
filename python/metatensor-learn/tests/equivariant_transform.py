@@ -8,7 +8,9 @@ import metatensor
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn.equivariant_transform import EquivariantTransform  # noqa: E402
+from metatensor.learn.nn.equivariant_transform import (  # noqa: E402
+    EquivariantTransformation,  # noqa: E402
+)  # noqa:E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 
@@ -55,7 +57,7 @@ def module_wrapper(in_features, device, dtype):
 
 def test_equivariance(tensor, wigner_d_real):
     """
-    Tests that application of the EquivariantTransform layer is equivariant to O3
+    Tests that application of the EquivariantTransformation layer is equivariant to O3
     transformation of the input.
     """
     # Define input and rotated input
@@ -69,7 +71,7 @@ def test_equivariance(tensor, wigner_d_real):
     ]
 
     # Define the EquiLayerNorm module
-    f = EquivariantTransform(
+    f = EquivariantTransformation(
         modules,
         x.keys,
         in_features,
