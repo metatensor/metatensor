@@ -2,7 +2,7 @@ use std::os::raw::{c_char, c_void};
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::{LabelValue, Labels, LabelsBuilder, Error};
+use crate::{LabelValue, Labels, Error};
 use super::status::{mts_status_t, catch_unwind};
 
 /// A set of labels used to carry metadata associated with a tensor map.
@@ -104,8 +104,8 @@ unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error
             return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
         }
 
-        let builder = LabelsBuilder::new(vec![]).expect("invalid builder");
-        return Ok(Arc::new(builder.finish()));
+        let labels = Labels::new(&[], Vec::<i32>::new()).expect("invalid empty labels");
+        return Ok(Arc::new(labels));
     }
 
     if labels.names.is_null() {
@@ -128,18 +128,16 @@ unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error
         names.push(name);
     }
 
-    let mut builder = LabelsBuilder::new(names)?;
-    builder.reserve(labels.count);
-
-    if labels.count != 0 && labels.size != 0 {
+    let values = if labels.count != 0 && labels.size != 0 {
         assert!(!labels.values.is_null());
         let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
-        for chunk in slice.chunks_exact(labels.size) {
-            builder.add(chunk)?;
-        }
-    }
+        slice.to_vec()
+    } else {
+        vec![]
+    };
 
-    return Ok(Arc::new(builder.finish()));
+    let labels = Labels::new(&names, values)?;
+    return Ok(Arc::new(labels));
 }
 
 
