@@ -8,7 +8,7 @@ import metatensor
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn.equivariant_transform import (  # noqa: E402
+from metatensor.learn.nn.equivariant_transformation import (  # noqa: E402
     EquivariantTransformation,  # noqa: E402
 )  # noqa:E402
 
