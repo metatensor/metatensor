@@ -35,6 +35,86 @@ class EquivariantTransformation(torch.nn.Module):
         invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
         to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are equal to
         ``[0, 1]``.
+
+        >>> import torch
+        >>> import numpy as np
+        >>> from metatensor import Labels, TensorBlock, TensorMap
+        >>> from metatensor.learn.nn import EquivariantTransformation
+
+        Define a dummy invariant TensorBlock
+        >>> block_1 = TensorBlock(
+        ...     values=torch.randn(2, 1, 3),
+        ...     samples=Labels(
+        ...         ["system", "atom"],
+        ...         np.array(
+        ...             [
+        ...                 [0, 0],
+        ...                 [0, 1],
+        ...             ]
+        ...         ),
+        ...     ),
+        ...     components=[Labels(["o3_mu"], np.array([[0]]))],
+        ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        ... )
+
+        Define a dummy covariant TensorBlock
+        >>> block_2 = TensorBlock(
+        ...     values=torch.randn(2, 3, 3),
+        ...     samples=Labels(
+        ...         ["system", "atom"],
+        ...         np.array(
+        ...             [
+        ...                 [0, 0],
+        ...                 [0, 1],
+        ...             ]
+        ...         ),
+        ...     ),
+        ...     components=[Labels(["o3_mu"], np.array([[-1], [0], [1]]))],
+        ...     properties=Labels(["properties"], np.array([[3], [4], [5]])),
+        ... )
+
+        Create a TensorMap containing the dummy TensorBlocks
+        >>> keys = Labels(names=["o3_lambda"], values=np.array([[0], [1]]))
+        >>> tensor = TensorMap(keys, [block_1, block_2])
+
+        Define the transformation to apply to the TensorMap
+        >>> def module_wrapper(in_features, device, dtype):
+        ...     '''An activation module'''
+        ...     return torch.nn.Tanh()
+        ...
+
+        Instantiate the modules containing the transformation
+        >>> in_features = [len(tensor.block(key).properties) for key in tensor.keys]
+        >>> modules = [
+        ...     module_wrapper(in_feat, device=tensor.device, dtype=tensor.dtype)
+        ...     for in_feat in in_features
+        ... ]
+
+        Define the EquivariantTransformation module
+        >>> transformation = EquivariantTransformation(
+        ...     modules,
+        ...     tensor.keys,
+        ...     in_features,
+        ...     out_properties=[tensor.block(key).properties for key in tensor.keys],
+        ...     invariant_keys=Labels(
+        ...         ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
+        ...     ),
+        ... )
+
+        The output metadata are the same as the input
+        >>> transformation(tensor)
+        TensorMap with 2 blocks
+        keys: o3_lambda
+                  0
+                  1
+        >>> transformation(tensor)[0]
+        TensorBlock
+            samples (2): ['system', 'atom']
+            components (1): ['o3_mu']
+            properties (3): ['properties']
+            gradients: None
+
+
     """
 
     def __init__(

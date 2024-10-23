@@ -66,7 +66,7 @@ def test_equivariance(tensor, wigner_d_real):
 
     in_features = [len(x.block(key).properties) for key in x.keys]
     modules = [
-        module_wrapper(in_feat, device=x.device, dtype=x.dtype)
+        module_wrapper(in_feat, device=x.device, dtype=x.block(0).values.dtype)
         for in_feat in in_features
     ]
 
