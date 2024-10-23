@@ -27,7 +27,7 @@ class EquivariantTransform(Module):
 
     :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
         transformations to be applied to each block indexed by
-        :param:`in_keys`. Transformations for invariant and covariant blocks differ. See
+        :param in_keys:. Transformations for invariant and covariant blocks differ. See
         above.
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         :py:class:`TensorMap` in the :py:meth:`forward` method.
