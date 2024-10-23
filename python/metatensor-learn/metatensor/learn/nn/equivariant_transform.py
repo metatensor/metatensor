@@ -17,16 +17,13 @@ class EquivariantTransform(Module):
     ``module`` is passed as a callable with parameters ``in_features`` and optionally
     ``dtype`` and ``device``. This callable constructs an arbitrary shape-preserving
     :py:class:`torch.nn.Module` transformation (i.e. :py:class:`torch.nn.Tanh`).
-    Separate instantiations are created for each block using the metadata information
+    Separate instances are created for each block using the metadata information
     passed in ``in_keys`` and ``in_features``.
 
-    For invariant blocks in `in_keys` and indexed by `invariant_key_idxs`, the
-    transformation is applied as is. For covariant blocks, an invariant multiplier that
-    preserves covariance is created from the transformation.
-
-    Each parameter can be passed as a single value of its expected type, which is used
-    as the parameter for all blocks. Alternatively, they can be passed as a list to
-    control the parameters applied to each block indexed by the keys in :param in_keys:.
+    For invariant blocks in `in_keys` and indexed by `invariant_keys`, the
+    transformation is applied as is. For covariant blocks, an invariant multiplier is
+    created applying the transformation to the norm of the block over the component
+    dimension.
 
     :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
         transformations to be applied to each block indexed by
@@ -63,7 +60,7 @@ class EquivariantTransform(Module):
         if invariant_keys is None:
             invariant_keys = Labels(
                 names=["o3_lambda", "o3_sigma"],
-                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 1),
+                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 2),
             )
         invariant_key_idxs = in_keys.select(invariant_keys)
 
@@ -107,7 +104,10 @@ class EquivariantTransform(Module):
 class _CovariantTransform(Module):
     """
     Applies an arbitrary shape-preserving transformation defined in ``module`` to a
-    3-dimensional tensor in a way that preserves equivariance.
+    3-dimensional tensor in a way that preserves equivariance. The transformation is
+    applied to the norm of the :py:class:`torch.Tensor` over the component dimension.
+    The resulting :py:class:`torch.Tensor` is elementwise multiplied back to the
+    original one, thus preserving covariance.
 
     :param in_features: a :py:class:`int`, the input feature dimension. This also
         corresponds to the output feature size as the shape of the tensor passed to

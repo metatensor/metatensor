@@ -221,7 +221,9 @@ def test_equivariant_transform(tensor):
     in_features = [len(tensor.block(key).properties) for key in in_keys]
 
     modules = [
-        module_wrapper(in_feat, device=tensor.device, dtype=tensor.dtype)
+        module_wrapper(
+            in_feat, device=tensor.device, dtype=tensor.block(0).values.dtype
+        )
         for in_feat in in_features
     ]
 
@@ -230,9 +232,7 @@ def test_equivariant_transform(tensor):
         in_keys,
         in_features,
         out_properties=[tensor.block(key).properties for key in tensor.keys],
-        invariant_keys=metatensor.torch.Labels(
-            ["o3_lambda"], torch.tensor([0]).reshape(-1, 1)
-        ),
+        invariant_keys=in_keys,
     )
     check_module_torch_script(module, tensor)
     check_module_save_load(module)
