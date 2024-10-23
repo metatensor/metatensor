@@ -82,18 +82,8 @@ class EquivariantTransformation(torch.nn.Module):
 
         Define the transformation to apply to the TensorMap
 
-        >>> def module_wrapper(in_features, device, dtype):
-        ...     '''An activation module'''
-        ...     return torch.nn.Tanh()
-        ...
-
-        Instantiate the modules containing the transformation
-
+        >>> modules = [torch.nn.Tanh(), torch.nn.Tanh()]
         >>> in_features = [len(tensor.block(key).properties) for key in tensor.keys]
-        >>> modules = [
-        ...     module_wrapper(in_feat, device=tensor.device, dtype=tensor.dtype)
-        ...     for in_feat in in_features
-        ... ]
 
         Define the EquivariantTransformation module
 
