@@ -2,7 +2,6 @@ from typing import List, Optional, Union
 
 import torch
 
-
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
 from ._utils import _check_module_map_parameter
@@ -14,15 +13,10 @@ class EquivariantTransform(torch.nn.Module):
     A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and
     equivariance-preserving transformation to an input :py:class:`TensorMap`.
 
-    ``module`` is passed as a callable with parameters ``in_features`` and optionally
-    ``dtype`` and ``device``. This callable constructs an arbitrary shape-preserving
-    :py:class:`torch.nn.Module` transformation (i.e. :py:class:`torch.nn.Tanh`).
-    Separate instances are created for each block using the metadata information
-    passed in ``in_keys`` and ``in_features``.
-
-    For invariant blocks (specified with ``invariant_keys``), the transformation is 
-    applied as is. For covariant blocks, an invariant multiplier is created, applying 
-    the transformation to the norm of the block over the component dimensions.
+    For invariant blocks (specified with ``invariant_keys``), the respective
+    transformation contained in :param modules: is applied as is. For covariant blocks,
+    an invariant multiplier is created, applying the transformation to the norm of the
+    block over the component dimensions.
 
     :param modules: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
         transformations to be applied to each block indexed by
@@ -76,7 +70,7 @@ class EquivariantTransform(torch.nn.Module):
             in_features, "in_features", int, len(in_keys), "in_keys"
         )
 
-        modules_for_map: List[Module] = []
+        modules_for_map: List[torch.nn.Module] = []
         for i in range(len(in_keys)):
             if i in invariant_key_idxs:
                 module_i = modules[i]
@@ -99,7 +93,7 @@ class EquivariantTransform(torch.nn.Module):
         return self.module_map(tensor)
 
 
-class _CovariantTransform(Module):
+class _CovariantTransform(torch.nn.Module):
     """
     Applies an arbitrary shape-preserving transformation defined in ``module`` to a
     3-dimensional tensor in a way that preserves equivariance. The transformation is
