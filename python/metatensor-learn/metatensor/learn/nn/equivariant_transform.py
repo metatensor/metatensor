@@ -24,7 +24,7 @@ class EquivariantTransform(torch.nn.Module):
     applied as is. For covariant blocks, an invariant multiplier is created, applying 
     the transformation to the norm of the block over the component dimensions.
 
-    :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
+    :param modules: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
         transformations to be applied to each block indexed by
         :param in_keys:. Transformations for invariant and covariant blocks differ. See
         above.
