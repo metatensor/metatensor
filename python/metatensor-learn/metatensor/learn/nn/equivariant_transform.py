@@ -96,7 +96,8 @@ class EquivariantTransform(Module):
         Apply the transformation to the input tensor map `tensor`.
 
         :param tensor: :py:class:`TensorMap` with the input tensor to be transformed.
-        :return: :py:class:`TensorMap` corresponding to the transformed input ``tensor``.
+        :return: :py:class:`TensorMap` corresponding to the transformed input
+        ``tensor``.
         """
         return self.module_map(tensor)
 
