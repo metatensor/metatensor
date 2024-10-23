@@ -20,10 +20,9 @@ class EquivariantTransform(torch.nn.Module):
     Separate instances are created for each block using the metadata information
     passed in ``in_keys`` and ``in_features``.
 
-    For invariant blocks in `in_keys` and indexed by `invariant_keys`, the
-    transformation is applied as is. For covariant blocks, an invariant multiplier is
-    created applying the transformation to the norm of the block over the component
-    dimension.
+    For invariant blocks (specified with ``invariant_keys``), the transformation is 
+    applied as is. For covariant blocks, an invariant multiplier is created, applying 
+    the transformation to the norm of the block over the component dimensions.
 
     :param module: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
         transformations to be applied to each block indexed by
