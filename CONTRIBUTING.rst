@@ -212,7 +212,7 @@ can build the documentation with:
 
     tox -e docs
 
-In addition to have the requirements listed above, you will also need to install doxygen (e.g. apt install doxygen).
+In addition to have the requirements listed above, you will also need to install doxygen (e.g. ``apt install doxygen`` on Debian-based systems).
 
 You can then visualize the local documentation with your favorite browser with
 the following command (or open the :file:`docs/build/html/index.html` file
