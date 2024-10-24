@@ -143,7 +143,7 @@ subset of Python tests, for example:
 .. code-block:: bash
 
     tox -e core-tests                     # unit tests for metatensor-core
-    tox -e operations-notorch-tests       # unit tests for metatensor-operations without torch
+    tox -e operations-numpy-tests       # unit tests for metatensor-operations without torch
     tox -e operations-torch-tests         # unit tests for metatensor-operations with torch
     tox -e torch-tests                    # unit tests for metatensor-torch
     tox -e docs-tests                     # doctests (checking inline examples) for all packages
@@ -211,6 +211,8 @@ can build the documentation with:
 .. code-block:: bash
 
     tox -e docs
+
+In addition to have the requirements listed above, you will also need to install doxygen (e.g. ``apt install doxygen`` on Debian-based systems).
 
 You can then visualize the local documentation with your favorite browser with
 the following command (or open the :file:`docs/build/html/index.html` file
