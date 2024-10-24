@@ -229,10 +229,10 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...     # references and long description can also be added
     ... )
     >>> # export the model
-    >>> exported = MetatensorAtomisticModel(model, metadata, capabilities)
+    >>> model = MetatensorAtomisticModel(model, metadata, capabilities)
     >>> # save the exported model to disk
     >>> with tempfile.TemporaryDirectory() as directory:
-    ...     exported.save(os.path.join(directory, "constant-energy-model.pt"))
+    ...     model.save(os.path.join(directory, "constant-energy-model.pt"))
     ...
 
     .. py:attribute:: module
