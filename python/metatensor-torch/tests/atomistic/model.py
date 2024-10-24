@@ -304,5 +304,3 @@ def test_read_metadata(tmpdir):
     extracted_metadata = read_model_metadata(str(tmpdir / "model.pt"))
 
     assert str(extracted_metadata) == str(metadata)
-
-
