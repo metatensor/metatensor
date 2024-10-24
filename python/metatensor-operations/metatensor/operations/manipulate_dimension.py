@@ -26,7 +26,7 @@ def _check_axis(axis: str):
     if axis not in ["keys", "samples", "components", "properties"]:
         raise ValueError(
             f"'{axis}' is not a valid axis. Choose from 'keys', 'samples', "
-            "'properties', or 'components'."
+            "'components', or 'properties'."
         )
 
 
@@ -382,7 +382,7 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
 
     :param tensor: the input :py:class:`TensorMap`.
     :param axis: axis for which the names should be appended. Allowed are ``"keys"``,
-                 ``"properties"``, ``"samples"``, or ``"components"``.
+                 ``"samples"``, ``"components"``, or ``"properties"``.
     :param old: name to be replaced
     :param new: name after the replacement
 
