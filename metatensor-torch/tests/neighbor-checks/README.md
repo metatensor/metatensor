@@ -14,3 +14,8 @@ For a half neighbor list, the pairs are also permitted to be in reverse order:
 When writing a new interface between metatensor and a simulation engine, you can
 use these files to ensure your neighbor list implementation follows the expected
 behavior for metatensor models.
+
+If your engine can produce non-`strict` neighbor lists, you can still use these
+files for testing. The pairs in the test files then correspond to the minimal
+set that must be included in the output, and any additional pair must be above
+the cutoff.

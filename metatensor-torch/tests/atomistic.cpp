@@ -10,12 +10,17 @@ using namespace Catch::Matchers;
 TEST_CASE("Models metadata") {
     SECTION("NeighborListOptions") {
         // save to JSON
-        auto options = torch::make_intrusive<NeighborListOptionsHolder>(3.5426, true);
+        auto options = torch::make_intrusive<NeighborListOptionsHolder>(
+            /*cutoff=*/ 3.5426,
+            /*full_list=*/ true,
+            /*strict=*/ true
+        );
         const auto* expected = R"({
     "class": "NeighborListOptions",
     "cutoff": 4615159644819978768,
     "full_list": true,
-    "length_unit": ""
+    "length_unit": "",
+    "strict": true
 })";
         CHECK(options->to_json() == expected);
 
@@ -23,11 +28,13 @@ TEST_CASE("Models metadata") {
         std::string json = R"({
     "cutoff": 4615159644819978768,
     "full_list": false,
+    "strict": false,
     "class": "NeighborListOptions"
 })";
         options = NeighborListOptionsHolder::from_json(json);
         CHECK(options->cutoff() == 3.5426);
         CHECK(options->full_list() == false);
+        CHECK(options->strict() == false);
 
         CHECK_THROWS_WITH(
             NeighborListOptionsHolder::from_json("{}"),

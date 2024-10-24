@@ -163,22 +163,47 @@ print(neighbors)
 # %%
 #
 # The data and metadata inside the ``neighbors`` object do not contain information about
-# the ``cutoff`` and whether this is a full or half neighbor list. To account for this,
-# metatensor neighbor lists are always stored together with
-# :py:class:`NeighborListOptions`. For our system, these options can be saved as
+# the ``cutoff``, whether this is a full or half neighbor list, and whether it is
+# restricted to distances strictly below the cutoff. To account for this, metatensor
+# neighbor lists are always stored together with :py:class:`NeighborListOptions`. For
+# example, these options can be defined with
 
-options = NeighborListOptions(cutoff=5.0, full_list=True)
+options = NeighborListOptions(cutoff=5.0, full_list=True, strict=True)
 
 # %%
 #
-# We set ``full_list=True`` because ASE computes a “full” list (as opposed to a half
-# list) where each `i, j` pair appears twice, stored once as `i, j` and once as `j, i`.
+# ``full_list=True`` will give us a list where each `i, j` pair appears twice, stored
+# once as `i, j` and once as `j, i`. ``full_list=False`` would give us a half list, with
+# each pair only stored once. Depending on your model, either of these can be more
+# convenient or faster.
 #
-# Now we can, in principle, attach the neighbor list to a metatensor system using
+# ``strict=True`` will give us a list where all pairs are strictly contained inside the
+# cutoff radius. This is always safe to do and should be your default option.
+# ``strict=False`` can contain additional pairs that you would need to handle
+# explicitly, either by adding a cutoff smoothing function to make the contribution of
+# pairs outside the cutoff got to zero; or by filtering out such pairs. The advantage of
+# using ``strict=False`` is that this will allow simulation engines to re-use the same
+# neighbor list across multiple simulation steps, making the overall simulation faster.
+# It is however a tradeoff, since with ``strict=False`` the model itself will have to
+# process more pairs.
+
+# %%
+#
+# With this we can, in principle, attach the neighbor list to a metatensor system using
 #
 # .. code:: python
 #
 #   system.add_neighbor_list(options=options, neighbors=neighbors)
+#
+# To reiterate, in a typical simulation setup computing the neighbor list and attaching
+# it to the system is done by the simulation engine, and model authors do not have to
+# worry about it.
+#
+# The model can then retrieve the neighbor list with
+#
+# .. code:: python
+#
+#   system.get_neighbor_list(options=options)
 #
 # Accessing data in neighbor lists
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -266,7 +291,9 @@ class LennardJonesModel(torch.nn.Module):
         super().__init__()
 
         # define neighbor list options to request the right set of neighbors
-        self._nl_options = NeighborListOptions(cutoff=cutoff, full_list=False)
+        self._nl_options = NeighborListOptions(
+            cutoff=cutoff, full_list=False, strict=True
+        )
 
         self._sigma = sigma
         self._epsilon = epsilon

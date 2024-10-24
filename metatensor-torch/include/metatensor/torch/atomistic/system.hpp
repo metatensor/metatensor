@@ -24,11 +24,11 @@ using System = torch::intrusive_ptr<SystemHolder>;
 /// Options for the calculation of a neighbor list
 class METATENSOR_TORCH_EXPORT NeighborListOptionsHolder final: public torch::CustomClassHolder {
 public:
-    /// Create `NeighborListOptions` with the given `cutoff` and `full_list`.
+    /// Create `NeighborListOptions` with the given `cutoff` value, and the flags `full_list` and `strict`.
     ///
     /// `requestor` can be used to store information about who requested the
     /// neighbor list.
-    NeighborListOptionsHolder(double cutoff, bool full_list, std::string requestor = "");
+    NeighborListOptionsHolder(double cutoff, bool full_list, bool strict, std::string requestor = "");
     ~NeighborListOptionsHolder() override = default;
 
     /// Spherical cutoff radius for this neighbor list, in the units of the model
@@ -56,6 +56,12 @@ public:
         return full_list_;
     }
 
+    /// Should the list guarantee that *only* atoms within the cutoff are 
+    // included (strict) or possibly also include pairs beyond the cutoff (non-strict)
+    bool strict() const {
+        return strict_;
+    }
+
     /// Get the list of strings describing who requested this neighbor list
     std::vector<std::string> requestors() const {
         return requestors_;
@@ -79,13 +85,14 @@ private:
     double cutoff_;
     std::string length_unit_;
     bool full_list_;
+    bool strict_;
     std::vector<std::string> requestors_;
 };
 
 /// Check `NeighborListOptions` for equality. The `requestors` list is ignored
 /// when checking for equality
 inline bool operator==(const NeighborListOptions& lhs, const NeighborListOptions& rhs) {
-    return lhs->cutoff() == rhs->cutoff() && lhs->full_list() == rhs->full_list();
+    return lhs->cutoff() == rhs->cutoff() && lhs->full_list() == rhs->full_list() && lhs->strict() == rhs->strict();
 }
 
 /// Check `NeighborListOptions` for inequality.
@@ -267,10 +274,14 @@ private:
     struct nl_options_compare {
         bool operator()(const NeighborListOptions& a, const NeighborListOptions& b) const {
             assert(a->length_unit() == b->length_unit());
-            if (a->full_list() == b->full_list()) {
-                return a->cutoff() < b->cutoff();
+            if (a->strict() == b->strict()) {
+                if (a->full_list() == b->full_list()) {
+                    return a->cutoff() < b->cutoff();
+                } else {
+                    return static_cast<int>(a->full_list()) < static_cast<int>(b->full_list());
+                }
             } else {
-                return static_cast<int>(a->full_list()) < static_cast<int>(b->full_list());
+                return static_cast<int>(a->strict()) < static_cast<int>(b->strict());
             }
         }
     };
