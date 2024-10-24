@@ -15,8 +15,8 @@ TEST_CASE("Models metadata") {
     "class": "NeighborListOptions",
     "cutoff": 4615159644819978768,
     "full_list": true,
-    "strict": true,
-    "length_unit": ""
+    "length_unit": "",
+    "strict": true
 })";
         CHECK(options->to_json() == expected);
 
@@ -30,6 +30,7 @@ TEST_CASE("Models metadata") {
         options = NeighborListOptionsHolder::from_json(json);
         CHECK(options->cutoff() == 3.5426);
         CHECK(options->full_list() == false);
+        CHECK(options->strict() == false);
 
         CHECK_THROWS_WITH(
             NeighborListOptionsHolder::from_json("{}"),
