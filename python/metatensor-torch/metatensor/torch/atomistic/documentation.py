@@ -166,11 +166,14 @@ class System:
 class NeighborListOptions:
     """Options for the calculation of a neighbors list"""
 
-    def __init__(self, cutoff: float, full_list: bool, requestor: str = ""):
+    def __init__(
+        self, cutoff: float, full_list: bool, strict: bool, requestor: str = ""
+    ):
         """
         :param cutoff: spherical cutoff radius for the neighbors list, in the
             model units
         :param full_list: should the list be a full or half neighbors list
+        :param strict: whether the list guarantee to have no pairs farther than cutoff
         :param requestor: who requested this neighbors list, you can add additional
             requestors later using :py:meth:`add_requestor`
         """
@@ -203,6 +206,13 @@ class NeighborListOptions:
         """
         Should the list be a full neighbors list (contains both the pair ``i->j`` and
         ``j->i``) or a half neighbors list (contains only the pair ``i->j``)
+        """
+
+    @property
+    def strict(self) -> bool:
+        """
+        Does the list guarantee to have no pairs beyond the cutoff (strict) or
+        can it also have pairs that are farther apart (non strict)
         """
 
     def requestors(self) -> List[str]:

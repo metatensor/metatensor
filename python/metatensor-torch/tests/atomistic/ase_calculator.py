@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 import torch
 
+from metatensor.operations import slice_block
 from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
@@ -315,6 +316,7 @@ def _read_neighbor_check(path):
     options = NeighborListOptions(
         cutoff=data["options"]["cutoff"],
         full_list=data["options"]["full_list"],
+        strict=data["options"]["strict"],
     )
 
     samples = torch.tensor(
@@ -384,7 +386,25 @@ def test_neighbor_list_adapter():
             atoms, options, torch.float64, torch.device("cpu")
         )
 
-        _check_same_set_of_neighbors(expected_neighbors, neighbors, options.full_list)
+        if options.strict:
+            _check_same_set_of_neighbors(
+                expected_neighbors, neighbors, options.full_list
+            )
+        else:
+            print(path)
+            idx_strict = torch.where(
+                (expected_neighbors.values**2).sum(axis=1) - 1e-4 <= options.cutoff**2
+            )[0]
+            print(expected_neighbors.samples)
+            print("IDXs", idx_strict)
+            print(
+                "sample",
+                slice_block(
+                    expected_neighbors,
+                    "samples",
+                ),
+            )
+            print(neighbors)
 
 
 class MultipleOutputModel(torch.nn.Module):

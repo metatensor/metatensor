@@ -163,11 +163,12 @@ print(neighbors)
 # %%
 #
 # The data and metadata inside the ``neighbors`` object do not contain information about
-# the ``cutoff`` and whether this is a full or half neighbor list. To account for this,
+# the ``cutoff``, whether this is a full or half neighbor list, and whether it is
+# restricted to distances strictly below the cutoff (strict). To account for this,
 # metatensor neighbor lists are always stored together with
 # :py:class:`NeighborListOptions`. For our system, these options can be saved as
 
-options = NeighborListOptions(cutoff=5.0, full_list=True)
+options = NeighborListOptions(cutoff=5.0, full_list=True, strict=True)
 
 # %%
 #
@@ -266,7 +267,9 @@ class LennardJonesModel(torch.nn.Module):
         super().__init__()
 
         # define neighbor list options to request the right set of neighbors
-        self._nl_options = NeighborListOptions(cutoff=cutoff, full_list=False)
+        self._nl_options = NeighborListOptions(
+            cutoff=cutoff, full_list=False, strict=True
+        )
 
         self._sigma = sigma
         self._epsilon = epsilon

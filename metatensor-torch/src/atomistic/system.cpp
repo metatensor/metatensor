@@ -20,10 +20,12 @@ using namespace metatensor_torch;
 NeighborListOptionsHolder::NeighborListOptionsHolder(
     double cutoff,
     bool full_list,
+    bool strict,
     std::string requestor
 ):
     cutoff_(cutoff),
-    full_list_(full_list)
+    full_list_(full_list),
+    strict_(strict)
 {
     this->add_requestor(std::move(requestor));
 }
@@ -61,6 +63,7 @@ std::string NeighborListOptionsHolder::repr() const {
         ss << " " << length_unit_;
     }
     ss << "\n    full_list: " << (full_list_ ? "True" : "False") << "\n";
+    ss << "    strict: " << (strict_ ? "True" : "False") << "\n";
 
     if (!requestors_.empty()) {
         ss << "    requested by:\n";
@@ -74,7 +77,8 @@ std::string NeighborListOptionsHolder::repr() const {
 
 std::string NeighborListOptionsHolder::str() const {
     return "NeighborListOptions(cutoff=" + std::to_string(cutoff_) + \
-        ", full_list=" + (full_list_ ? "True" : "False") + ")";
+        ", full_list=" + (full_list_ ? "True" : "False") + \
+        ", strict=" + (strict_ ? "True" : "False") + ")";
 }
 
 std::string NeighborListOptionsHolder::to_json() const {
@@ -89,6 +93,7 @@ std::string NeighborListOptionsHolder::to_json() const {
     std::memcpy(&int_cutoff, &this->cutoff_, sizeof(double));
     result["cutoff"] = int_cutoff;
     result["full_list"] = this->full_list_;
+    result["strict"] = this->strict_;
     result["length_unit"] = this->length_unit_;
 
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
@@ -120,8 +125,13 @@ NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json
         throw std::runtime_error("'full_list' in JSON for NeighborListOptions must be a boolean");
     }
     auto full_list = data["full_list"].get<bool>();
+    
+    if (!data.contains("strict") || !data["strict"].is_boolean()) {
+        throw std::runtime_error("'strict' in JSON for NeighborListOptions must be a boolean");
+    }
+    auto strict = data["strict"].get<bool>();
 
-    auto options = torch::make_intrusive<NeighborListOptionsHolder>(cutoff, full_list);
+    auto options = torch::make_intrusive<NeighborListOptionsHolder>(cutoff, full_list, strict);
 
     if (data.contains("length_unit")) {
         if (!data["length_unit"].is_string()) {
