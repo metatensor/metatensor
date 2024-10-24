@@ -124,17 +124,23 @@ def generate_data(sample_indices):
         input_A = metatensor.slice(
             input,
             "samples",
-            labels=Labels(names=["sample_index"], values=np.array([A]).reshape(-1, 1)),
+            selection=Labels(
+                names=["sample_index"], values=np.array([A]).reshape(-1, 1)
+            ),
         )
         output_A = metatensor.slice(
             output,
             "samples",
-            labels=Labels(names=["sample_index"], values=np.array([A]).reshape(-1, 1)),
+            selection=Labels(
+                names=["sample_index"], values=np.array([A]).reshape(-1, 1)
+            ),
         )
         auxiliary_A = metatensor.slice(
             auxiliary,
             "samples",
-            labels=Labels(names=["sample_index"], values=np.array([A]).reshape(-1, 1)),
+            selection=Labels(
+                names=["sample_index"], values=np.array([A]).reshape(-1, 1)
+            ),
         )
         # Store in memory
         inputs.append(input_A)

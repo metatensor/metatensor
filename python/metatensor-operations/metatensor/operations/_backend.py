@@ -27,6 +27,9 @@ Labels = metatensor.Labels
 TensorBlock = metatensor.TensorBlock
 TensorMap = metatensor.TensorMap
 
+# type used by the values in Labels
+LabelsValues = np.ndarray
+
 
 def torch_jit_is_scripting():
     return False

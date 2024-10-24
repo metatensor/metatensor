@@ -9,6 +9,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Issue #520, PR #763: `axis="components"` can now be passed to `metatensor.operations.rename_dimension`.
 
+### Changed
+
+- `split`, `split_block`, `slice` and `slice_block` have been updated to accept
+  a list of integer directly specifying which samples/properties to keep in the
+  output. The corresponding parameter has been renamed to `selection` or
+  `selections` (for `slice` and `split` respectively) (#772)
+
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.4) - 2024-10-11
 
 ### Changed

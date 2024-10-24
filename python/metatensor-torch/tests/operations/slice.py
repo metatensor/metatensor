@@ -17,10 +17,10 @@ def test_slice():
     samples = Labels(names=["sample"], values=torch.tensor([[1]]))
     properties = Labels(names=["property"], values=torch.tensor([[1]]))
     sliced_tensor_samples = metatensor.torch.slice(
-        tensor, axis="samples", labels=samples
+        tensor, axis="samples", selection=samples
     )
     sliced_tensor_properties = metatensor.torch.slice(
-        tensor, axis="properties", labels=properties
+        tensor, axis="properties", selection=properties
     )
 
     # check type
@@ -43,10 +43,10 @@ def test_slice_block():
     samples = Labels(names=["sample"], values=torch.tensor([[1]]))
     properties = Labels(names=["property"], values=torch.tensor([[1]]))
     sliced_block_samples = metatensor.torch.slice_block(
-        block, axis="samples", labels=samples
+        block, axis="samples", selection=samples
     )
     sliced_block_properties = metatensor.torch.slice_block(
-        block, axis="properties", labels=properties
+        block, axis="properties", selection=properties
     )
 
     # check type
