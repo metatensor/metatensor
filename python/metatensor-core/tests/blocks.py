@@ -489,7 +489,7 @@ def test_values_setter():
 
     # Check that setting with slice assignment works correctly
     block.values[:] = np.array([[4, 5, 6]])
-    assert block.values == np.array([[4, 5, 6]])
+    assert np.allclose(block.values, np.array([[4, 5, 6]]))
 
 
 def test_to_torch_multiple_args():
