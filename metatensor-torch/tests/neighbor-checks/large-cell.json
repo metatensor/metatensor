@@ -17,7 +17,8 @@
     },
     "options": {
         "cutoff": 2.1,
-        "full_list": false
+        "full_list": false,
+        "strict": true
     },
     "expected-neighbors": {
         "samples": [
