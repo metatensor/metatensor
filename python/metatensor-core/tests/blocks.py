@@ -1,4 +1,5 @@
 import copy
+import re
 import warnings
 
 import numpy as np
@@ -479,8 +480,10 @@ def test_values_setter():
 
     with pytest.raises(
         AttributeError,
-        match="Direct assignment to `values` is not allowed. "
-        "Please use block.values[:] = new_values instead.",
+        match=re.escape(
+            "Direct assignment to `values` is not allowed. "
+            "Please use block.values[:] = new_values instead."
+        ),
     ):
         block.values = np.array([[4, 5, 6]])
 
