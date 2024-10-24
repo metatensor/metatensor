@@ -485,14 +485,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
         if self._capabilities.length_unit == "":
             warnings.warn(
-                "No `length_unit` was provided for the model.",
+                "No length unit was provided for the model.",
                 stacklevel=1,
             )
 
         for name, output in self._capabilities.outputs.items():
             if output.unit == "":
                 warnings.warn(
-                    f"No units were provided for output {name!r}.",
+                    f"No units were provided for output {name}.",
                     stacklevel=1,
                 )
 

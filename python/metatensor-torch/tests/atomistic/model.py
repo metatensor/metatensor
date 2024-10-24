@@ -86,6 +86,19 @@ def test_save(model, tmp_path):
     check_atomistic_model("export.pt")
 
 
+def test_save_warning_length_unit(model):
+    model._capabilities.length_unit = ""
+    match = r"No length unit was provided for the model."
+    with pytest.warns(UserWarning, match=match):
+        model.save("export.pt")
+
+
+def test_save_warning_quantity(model):
+    match = r"No units were provided for output tests::dummy::long."
+    with pytest.warns(UserWarning, match=match):
+        model.save("export.pt")
+
+
 def test_export(model, tmp_path):
     os.chdir(tmp_path)
     match = r"`export\(\)` is deprecated, use `save\(\)` instead"
@@ -291,3 +304,5 @@ def test_read_metadata(tmpdir):
     extracted_metadata = read_model_metadata(str(tmpdir / "model.pt"))
 
     assert str(extracted_metadata) == str(metadata)
+
+
