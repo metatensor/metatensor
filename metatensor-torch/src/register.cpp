@@ -192,6 +192,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("components", &TensorBlockHolder::components)
         .def_property("properties", &TensorBlockHolder::properties)
         .def_property("shape", &TensorBlockHolder::shape )
+        .def("set_values", &TensorBlockHolder::set_values)
         .def("add_gradient", &TensorBlockHolder::add_gradient, DOCSTRING,
             {torch::arg("parameter"), torch::arg("gradient")}
         )
