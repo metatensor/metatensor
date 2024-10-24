@@ -160,7 +160,7 @@ torch::Tensor TensorBlockHolder::values() const {
 
 void TensorBlockHolder::set_values(const torch::Tensor& new_values) {
         throw std::runtime_error(
-            "Direct assignment to `values` is not allowed. "
+            "Direct assignment to `values` is not possible. "
             "Please use block.values[:] = new_values instead."
         );
     }

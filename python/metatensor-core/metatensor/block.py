@@ -267,7 +267,7 @@ class TensorBlock:
     @values.setter
     def values(self, new_values):
         raise AttributeError(
-            "Direct assignment to `values` is not allowed. "
+            "Direct assignment to `values` is not possible. "
             "Please use block.values[:] = new_values instead."
         )
 

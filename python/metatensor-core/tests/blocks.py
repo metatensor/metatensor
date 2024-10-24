@@ -481,7 +481,7 @@ def test_values_setter():
     with pytest.raises(
         AttributeError,
         match=re.escape(
-            "Direct assignment to `values` is not allowed. "
+            "Direct assignment to `values` is not possible. "
             "Please use block.values[:] = new_values instead."
         ),
     ):
