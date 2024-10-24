@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added 
+
+- a `is_atomistic_model` (Python only) function to check if an loaded module is an
+  metatensor atomistic model (#697, #766)
+
 ### Changed
 
 - the `System` class now supports boundary conditions along some axes but not others. This is implemented

@@ -14,6 +14,7 @@ from metatensor.torch.atomistic import (
     NeighborListOptions,
     System,
     check_atomistic_model,
+    is_atomistic_model,
     load_atomistic_model,
     read_model_metadata,
 )
@@ -268,6 +269,30 @@ def test_access_module(tmpdir):
     loaded_atomistic.module.first
     loaded_atomistic.module.second
     loaded_atomistic.module.other
+
+
+def test_is_atomistic_model(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+    atomistic.save(tmpdir / "model.pt")
+
+    scripted_atomistic = torch.jit.script(atomistic)
+    loaded_atomistic = load_atomistic_model(tmpdir / "model.pt")
+
+    assert is_atomistic_model(atomistic)
+    assert is_atomistic_model(scripted_atomistic)
+    assert is_atomistic_model(loaded_atomistic)
+
+    match = "`module` should be a torch.nn.Module, not float"
+    with pytest.raises(TypeError, match=match):
+        is_atomistic_model(1.0)
 
 
 def test_read_metadata(tmpdir):
