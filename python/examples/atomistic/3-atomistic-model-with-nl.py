@@ -167,7 +167,7 @@ print(neighbors)
 # metatensor neighbor lists are always stored together with
 # :py:class:`NeighborListOptions`. For our system, these options can be saved as
 
-options = NeighborListOptions(cutoff=5.0, full_list=True)
+options = NeighborListOptions(cutoff=5.0, full_list=True, strict=True)
 
 # %%
 #
@@ -266,7 +266,7 @@ class LennardJonesModel(torch.nn.Module):
         super().__init__()
 
         # define neighbor list options to request the right set of neighbors
-        self._nl_options = NeighborListOptions(cutoff=cutoff, full_list=False)
+        self._nl_options = NeighborListOptions(cutoff=cutoff, full_list=False strict=True)
 
         self._sigma = sigma
         self._epsilon = epsilon
