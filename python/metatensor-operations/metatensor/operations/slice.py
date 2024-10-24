@@ -1,6 +1,9 @@
+from typing import List, Union
+
 from . import _dispatch
 from ._backend import (
     Labels,
+    LabelsValues,
     TensorBlock,
     TensorMap,
     check_isinstance,
@@ -10,10 +13,28 @@ from ._backend import (
 from ._dispatch import TorchTensor
 
 
-def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
-    if axis == "samples":
-        selected = block.samples.select(labels)
+SliceSelection = Union[List[int], LabelsValues, Labels]
 
+
+def _slice_block(
+    block: TensorBlock, axis: str, selection: SliceSelection
+) -> TensorBlock:
+    if isinstance(selection, list):
+        selected = _dispatch.int_array_like(selection, block.samples.values)
+    elif isinstance(selection, LabelsValues):
+        selected = selection
+    else:
+        if not torch_jit_is_scripting():
+            # This should already have been checked
+            assert check_isinstance(selection, Labels)
+
+        if axis == "samples":
+            selected = block.samples.select(selection)
+        else:
+            assert axis == "properties"
+            selected = block.properties.select(selection)
+
+    if axis == "samples":
         bool_array = _dispatch.bool_array_like([], block.properties.values)
         mask = _dispatch.zeros_like(bool_array, [len(block.samples)])
         mask[selected] = True
@@ -28,17 +49,17 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
         # Create a map from the previous samples indexes to the new sample indexes
         # to update the gradient samples
 
-        # sample_map contains at position old_sample the index of the
-        # corresponding new sample
+        # sample_map contains at position `old_sample` the index of the
+        # corresponding `new_sample`
         sample_map = _dispatch.int_array_like(
             int_list=[-1] * len(block.samples),
             like=block.samples.values,
         )
-        last = 0
-        for i, picked in enumerate(mask):
-            if picked:
-                sample_map[i] = last
-                last += 1
+
+        sample_map[selected] = _dispatch.int_array_like(
+            list(range(len(selected))),
+            like=block.samples.values,
+        )
 
         for parameter, gradient in block.gradients():
             if len(gradient.gradients_list()) != 0:
@@ -93,8 +114,6 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
 
     else:
         assert axis == "properties"
-
-        selected = block.properties.select(labels)
         bool_array = _dispatch.bool_array_like([], block.properties.values)
         mask = _dispatch.zeros_like(bool_array, [len(block.properties)])
         mask[selected] = True
@@ -132,55 +151,58 @@ def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     return new_block
 
 
-def _check_args(
+def _check_slice_args(
     block: TensorBlock,
     axis: str,
-    labels: Labels,
+    selection: SliceSelection,
 ):
-    """
-    Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
-    """
-    # check axis
+    """Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`."""
     if axis not in ["samples", "properties"]:
         raise ValueError(
             f"``axis``: {axis} is not known as a slicing axis. Please use"
             "'samples' or 'properties'"
         )
 
-    if not torch_jit_is_scripting():
-        if not check_isinstance(labels, Labels):
-            raise TypeError(f"`labels` must be metatensor Labels, not {type(labels)}")
+    if isinstance(selection, LabelsValues):
+        if len(selection.shape) > 1:
+            raise ValueError("`selection` must be a 1-D array of integers")
+    elif not isinstance(selection, list):
+        if not torch_jit_is_scripting():
+            if not check_isinstance(selection, Labels):
+                raise TypeError(
+                    "`selection` must be metatensor Labels, an array "
+                    + f"or List[int], not {type(selection)}"
+                )
 
-    if axis == "samples":
-        s_names = block.samples.names
-        for name in labels.names:
-            if name not in s_names:
-                raise ValueError(
-                    f"invalid sample name '{name}' which is not part of the input"
-                )
-    else:
-        assert axis == "properties"
-        p_names = block.properties.names
-        for name in labels.names:
-            if name not in p_names:
-                raise ValueError(
-                    f"invalid property name '{name}' which is not part of the input"
-                )
+        if axis == "samples":
+            s_names = block.samples.names
+            for name in selection.names:
+                if name not in s_names:
+                    raise ValueError(
+                        f"invalid sample name '{name}' which is not part of the input"
+                    )
+        else:
+            assert axis == "properties"
+            p_names = block.properties.names
+            for name in selection.names:
+                if name not in p_names:
+                    raise ValueError(
+                        f"invalid property name '{name}' which is not part of the input"
+                    )
 
 
 @torch_jit_script
-def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
+def slice(tensor: TensorMap, axis: str, selection: Labels) -> TensorMap:
     """
     Slice a :py:class:`TensorMap` along either the ``"samples"`` or ``"properties"`
-    ``axis``. ``labels`` is a :py:class:`Labels` objects that specifies the
-    samples/properties (respectively) names and indices that should be sliced, i.e. kept
-    in the output :py:class:`TensorMap`.
+    axis. The ``selection`` specifies which samples/properties (respectively) should be
+    kept in the output :py:class:`TensorMap`.
 
     This function will return a :py:class:`TensorMap` whose blocks are of equal or
     smaller dimensions (due to slicing) than those of the input. However, the returned
     :py:class:`TensorMap` will be returned with the same number of blocks and the
     corresponding keys as the input. If any block upon slicing is reduced to nothing,
-    i.e. in the case that it has none of the specified ``labels`` along the
+    i.e. in the case that it has none of the specified ``selection`` along the
     ``"samples"`` or ``"properties"`` ``axis``, an empty block (i.e. a block with one of
     the dimension set to 0) will used for this key, and a warning will be emitted.
 
@@ -190,9 +212,12 @@ def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
     :param tensor: the input :py:class:`TensorMap` to be sliced.
     :param axis: a :py:class:`str` indicating the axis along which slicing should occur.
         Should be either "samples" or "properties".
-    :param labels: a :py:class:`Labels` object containing the names and indices of the
-        "samples" or "properties" to keep in each of the sliced :py:class:`TensorBlock`
-        of the output :py:class:`TensorMap`.
+    :param selection: a :py:class:`Labels` object containing a selection for the
+        ``"samples"`` or ``"properties"`` to keep in the sliced :py:class:`TensorMap`,
+        or an array or ``List[int]`` indicating the raw indices that should be kept.
+        When using :py:class:`Labels` selection, only a subset of the corresponding
+        dimension names can be specified, and any entry with matching values will be
+        selected.
 
     :return: a :py:class:`TensorMap` that corresponds to the sliced input tensor.
     """
@@ -203,26 +228,27 @@ def slice(tensor: TensorMap, axis: str, labels: Labels) -> TensorMap:
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
-    _check_args(tensor.block(0), axis=axis, labels=labels)
+    _check_slice_args(tensor.block(0), axis=axis, selection=selection)
 
     return TensorMap(
         keys=tensor.keys,
         blocks=[
-            _slice_block(tensor[tensor.keys.entry(i)], axis, labels)
+            _slice_block(tensor[tensor.keys.entry(i)], axis, selection)
             for i in range(len(tensor.keys))
         ],
     )
 
 
 @torch_jit_script
-def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
+def slice_block(
+    block: TensorBlock, axis: str, selection: SliceSelection
+) -> TensorBlock:
     """
-    Slices an input :py:class:`TensorBlock` along either the ``"samples"`` or
-    ``"properties"`` ``axis``. ``labels`` is a :py:class:`Labels` objects that specify
-    the sample/property names and indices that should be sliced, i.e. kept in the output
-    :py:class:`TensorBlock`.
+    Slices a :py:class:`TensorBlock` along either the ``"samples"`` or ``"properties"``
+    axis. The ``selection`` specifies which samples/properties (respectively) should be
+    kept in the output :py:class:`TensorMap`.
 
-    If none of the entries in ``labels`` can be found in the ``block``, the dimension
+    If none of the entries in ``selection`` can be found in the ``block``, the dimension
     corresponding to ``axis`` will be sliced to 0, and the returned block with have a
     shape of either ``(0, n_components, n_properties)`` or ``(n_samples, n_components,
     0)``.
@@ -230,8 +256,12 @@ def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
     :param block: the input :py:class:`TensorBlock` to be sliced.
     :param axis: a :py:class:`str` indicating the axis along which slicing should occur.
         Should be either "samples" or "properties".
-    :param labels: a :py:class:`Labels` object containing the names and indices of the
-        "samples" or "properties" to keep in the sliced output :py:class:`TensorBlock`.
+    :param selection: a :py:class:`Labels` object containing a selection for the
+        ``"samples"`` or ``"properties"`` to keep in the sliced :py:class:`TensorBlock`,
+        or an array or ``List[int]`` indicating the raw indices that should be kept.
+        When using :py:class:`Labels` selection, only a subset of the corresponding
+        dimension names can be specified, and any entry with matching values will be
+        selected.
 
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced input.
     """
@@ -241,10 +271,10 @@ def slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
                 f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )
 
-    _check_args(block, axis=axis, labels=labels)
+    _check_slice_args(block, axis=axis, selection=selection)
 
     return _slice_block(
         block,
         axis=axis,
-        labels=labels,
+        selection=selection,
     )

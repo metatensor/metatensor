@@ -21,14 +21,20 @@ except ImportError:
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
-TEST_FILE = "qm7-spherical-expansion.npz"
+EXAMPLES_ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
 
 # ===== Fixtures and helper functions =====
 
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, TEST_FILE))
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+
+
+@pytest.fixture
+def block_with_grad() -> TensorBlock:
+    tensor = metatensor.load(os.path.join(EXAMPLES_ROOT, "core", "radial-spectrum.npz"))
+    return tensor.block(4)
 
 
 def _construct_empty_slice_block(block, axis, labels) -> TensorBlock:
@@ -70,17 +76,17 @@ def _construct_empty_slice_block(block, axis, labels) -> TensorBlock:
     return reference_block
 
 
-def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
+def _check_sliced_block_samples(block, sliced_block, systems_to_keep):
     # no slicing of properties has occurred
     assert np.all(block.properties == sliced_block.properties)
 
     # samples have been sliced to the correct dimension
     assert len(sliced_block.samples) == len(
-        [s for s in block.samples["system"] if s in structures_to_keep]
+        [s for s in block.samples["system"] if s in systems_to_keep]
     )
 
     # samples in sliced block only feature desired structure indices
-    assert np.all([s in structures_to_keep for s in sliced_block.samples["system"]])
+    assert np.all([s in systems_to_keep for s in sliced_block.samples["system"]])
 
     # no components have been sliced
     assert len(sliced_block.components) == len(block.components)
@@ -89,7 +95,7 @@ def _check_sliced_block_samples(block, sliced_block, structures_to_keep):
 
     # we have the right values
     samples_filter = np.array(
-        [sample["system"] in structures_to_keep for sample in block.samples]
+        [sample["system"] in systems_to_keep for sample in block.samples]
     )
     assert np.all(sliced_block.values == block.values[samples_filter, ...])
 
@@ -161,9 +167,10 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
 
 
 def _check_empty_block(block, sliced_block, axis):
-    if axis == "s":
+    if axis == "samples":
         sliced_axis, unsliced_axis = 0, -1
     else:
+        assert axis == "properties"
         sliced_axis, unsliced_axis = -1, 0
 
     # sliced block has no values
@@ -176,7 +183,7 @@ def _check_empty_block(block, sliced_block, axis):
     for parameter, gradient in block.gradients():
         sliced_gradient = sliced_block.gradient(parameter)
         # no slicing of samples has occurred
-        if axis == "s":
+        if axis == "samples":
             assert np.all(sliced_gradient.properties == gradient.properties)
         else:
             assert np.all(sliced_gradient.samples == gradient.samples)
@@ -190,16 +197,36 @@ def _check_empty_block(block, sliced_block, axis):
 
 def test_slice_block_samples(tensor):
     # Slice only 'systems' 2, 4, 6, 8
-    systems_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
-    samples = Labels(
+    systems_to_keep = [2, 8, 6, 4]
+    selection = Labels(
         names=["system"],
-        values=systems_to_keep,
+        values=np.array(systems_to_keep).reshape(-1, 1),
     )
     block = tensor.block(0)
     sliced_block = metatensor.slice_block(
         block,
         axis="samples",
-        labels=samples,
+        selection=selection,
+    )
+    _check_sliced_block_samples(block, sliced_block, systems_to_keep)
+
+    # Same, but using List[int]
+    selection = [
+        i for i, s in enumerate(block.samples["system"]) if s in systems_to_keep
+    ]
+    assert isinstance(selection, list)
+    sliced_block = metatensor.slice_block(
+        block,
+        axis="samples",
+        selection=selection,
+    )
+    _check_sliced_block_samples(block, sliced_block, systems_to_keep)
+
+    # Same, using array selection
+    sliced_block = metatensor.slice_block(
+        block,
+        axis="samples",
+        selection=np.array(selection),
     )
     _check_sliced_block_samples(block, sliced_block, systems_to_keep)
 
@@ -213,10 +240,10 @@ def test_slice_block_samples(tensor):
     sliced_block = metatensor.slice_block(
         block,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
 
-    _check_empty_block(block, sliced_block, "s")
+    _check_empty_block(block, sliced_block, "samples")
 
 
 def test_slice_samples(tensor):
@@ -229,7 +256,7 @@ def test_slice_samples(tensor):
     sliced_tensor = metatensor.slice(
         tensor,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
 
     for key, block in tensor.items():
@@ -249,11 +276,50 @@ def test_slice_samples(tensor):
     sliced_tensor = metatensor.slice(
         tensor,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
 
     for sliced_block in sliced_tensor:
-        _check_empty_block(tensor.block(key), sliced_block, "s")
+        _check_empty_block(tensor.block(key), sliced_block, "samples")
+
+
+def test_slice_block_gradients(block_with_grad):
+    expected = [
+        [0, 1],
+        [0, 2],
+        [0, 3],
+    ]
+    assert np.all(block_with_grad.samples.values == np.array(expected))
+
+    expected = [
+        [0, 0, 1],
+        [1, 0, 2],
+        [1, 0, 3],
+        [2, 0, 2],
+        [2, 0, 3],
+    ]
+    gradient = block_with_grad.gradient("positions")
+    assert np.all(gradient.samples.values == np.array(expected))
+
+    # re-order samples while slicing
+    sliced = metatensor.slice_block(block_with_grad, "samples", [2, 0])
+
+    # samples are re-ordered
+    expected = [
+        [0, 3],
+        [0, 1],
+    ]
+    assert np.all(sliced.samples.values == np.array(expected))
+
+    # gradients are re-ordered
+    expected = [
+        [1, 0, 1],
+        [0, 0, 2],
+        [0, 0, 3],
+    ]
+    gradient = sliced.gradient("positions")
+    print(gradient.samples.values)
+    assert np.all(gradient.samples.values == np.array(expected))
 
 
 # ===== Tests for slicing along properties =====
@@ -271,7 +337,7 @@ def test_slice_block_properties(tensor):
     sliced_block = metatensor.slice_block(
         block,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
     _check_sliced_block_properties(block, sliced_block, radial_to_keep)
 
@@ -285,10 +351,10 @@ def test_slice_block_properties(tensor):
     sliced_block = metatensor.slice_block(
         block,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
 
-    _check_empty_block(block, sliced_block, "p")
+    _check_empty_block(block, sliced_block, "properties")
 
 
 def test_slice_properties(tensor):
@@ -302,7 +368,7 @@ def test_slice_properties(tensor):
     sliced_tensor = metatensor.slice(
         tensor,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
 
     for key, block in tensor.items():
@@ -322,12 +388,12 @@ def test_slice_properties(tensor):
     sliced_tensor = metatensor.slice(
         tensor,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
 
     for key, block in tensor.items():
         sliced_block = sliced_tensor.block(key)
-        _check_empty_block(block, sliced_block, "p")
+        _check_empty_block(block, sliced_block, "properties")
 
 
 # ===== Tests slicing both samples and properties =====
@@ -352,12 +418,12 @@ def test_slice_block_samples_and_properties(tensor):
     sliced_block = metatensor.slice_block(
         block,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
     sliced_block = metatensor.slice_block(
         sliced_block,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
 
     # only desired samples are in the output.
@@ -388,12 +454,12 @@ def test_slice_block_samples_and_properties(tensor):
     sliced_block = metatensor.slice_block(
         block,
         axis="properties",
-        labels=properties,
+        selection=properties,
     )
     sliced_block = metatensor.slice_block(
         sliced_block,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
 
     # only desired samples are in the output.
@@ -430,7 +496,7 @@ def test_slicing_by_empty(tensor):
     )
     assert metatensor.equal_block(
         metatensor.slice_block(
-            tensor.block(0), axis="samples", labels=empty_labels_samples
+            tensor.block(0), axis="samples", selection=empty_labels_samples
         ),
         reference_block,
     )
@@ -442,7 +508,7 @@ def test_slicing_by_empty(tensor):
     ]
     reference_tensor = TensorMap(tensor.keys, block_list)
     assert metatensor.equal(
-        metatensor.slice(tensor, axis="samples", labels=empty_labels_samples),
+        metatensor.slice(tensor, axis="samples", selection=empty_labels_samples),
         reference_tensor,
     )
 
@@ -453,7 +519,7 @@ def test_slicing_by_empty(tensor):
     )
     assert metatensor.equal_block(
         metatensor.slice_block(
-            tensor.block(0), axis="properties", labels=empty_labels_properties
+            tensor.block(0), axis="properties", selection=empty_labels_properties
         ),
         reference_block,
     )
@@ -465,7 +531,7 @@ def test_slicing_by_empty(tensor):
     ]
     reference_tensor = TensorMap(tensor.keys, block_list)
     assert metatensor.equal(
-        metatensor.slice(tensor, axis="properties", labels=empty_labels_properties),
+        metatensor.slice(tensor, axis="properties", selection=empty_labels_properties),
         reference_tensor,
     )
 
@@ -476,7 +542,7 @@ def test_slicing_all(tensor):
         metatensor.slice_block(
             tensor.block(0),
             axis="samples",
-            labels=metatensor.unique_metadata(
+            selection=metatensor.unique_metadata(
                 tensor, axis="samples", names=tensor.sample_names
             ),
         ),
@@ -488,7 +554,7 @@ def test_slicing_all(tensor):
         metatensor.slice(
             tensor,
             axis="samples",
-            labels=metatensor.unique_metadata(
+            selection=metatensor.unique_metadata(
                 tensor, axis="samples", names=tensor.sample_names
             ),
         ),
@@ -500,7 +566,7 @@ def test_slicing_all(tensor):
         metatensor.slice_block(
             tensor.block(0),
             axis="properties",
-            labels=metatensor.unique_metadata(
+            selection=metatensor.unique_metadata(
                 tensor,
                 axis="properties",
                 names=tensor.property_names,
@@ -514,7 +580,7 @@ def test_slicing_all(tensor):
         metatensor.slice(
             tensor,
             axis="properties",
-            labels=metatensor.unique_metadata(
+            selection=metatensor.unique_metadata(
                 tensor, axis="properties", names=tensor.property_names
             ),
         ),
@@ -530,15 +596,15 @@ def test_slice_different_device():
     tensor = TensorMap(Labels.range("_", 1), [block])
 
     # Slice only samples 2, 4
-    structures_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
+    systems_to_keep = np.arange(2, 10, 2).reshape(-1, 1)
     samples = Labels(
         names=["sample"],
-        values=structures_to_keep,
+        values=systems_to_keep,
     )
     metatensor.slice(
         tensor,
         axis="samples",
-        labels=samples,
+        selection=samples,
     )
 
 
@@ -557,14 +623,14 @@ def test_slice_errors(tensor):
         "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.slice(tensor.block(0), axis="samples", labels=samples)
+        metatensor.slice(tensor.block(0), axis="samples", selection=samples)
 
-    message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"
+    message = "`selection` must be (.*) not <class 'int'>"
     with pytest.raises(TypeError, match=message):
         metatensor.slice(
             tensor,
             axis="samples",
-            labels=np.array([[5], [6]]),
+            selection=1,
         )
 
 
@@ -580,13 +646,21 @@ def test_slice_block_errors(tensor):
         "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.slice_block(tensor, axis="samples", labels=samples)
+        metatensor.slice_block(tensor, axis="samples", selection=samples)
 
     block = tensor.block(0)
-    message = "`labels` must be metatensor Labels, not <class 'numpy.ndarray'>"
+    message = "`selection` must be (.*), not <class 'int'>"
     with pytest.raises(TypeError, match=message):
         metatensor.slice_block(
             block,
             axis="samples",
-            labels=np.array([[5], [6]]),
+            selection=1,
+        )
+
+    message = "`selection` must be a 1-D array of integers"
+    with pytest.raises(ValueError, match=message):
+        metatensor.slice_block(
+            block,
+            axis="samples",
+            selection=np.array([[1], [2]]),
         )

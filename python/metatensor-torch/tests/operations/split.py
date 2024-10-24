@@ -1,5 +1,6 @@
 import io
 
+import pytest
 import torch
 from packaging import version
 
@@ -7,30 +8,52 @@ import metatensor.torch
 from metatensor.torch import Labels, TensorMap
 
 
-def test_split():
+@pytest.mark.parametrize(
+    "selections",
+    [
+        # List[ints]
+        ([[0], [1]], [[0, 1], [2]]),
+        # Labels
+        (
+            [
+                Labels(names=["sample"], values=torch.tensor([[0]])),
+                Labels(names=["sample"], values=torch.tensor([[1]])),
+            ],
+            [
+                Labels(names=["property"], values=torch.tensor([[0], [1]])),
+                Labels(names=["property"], values=torch.tensor([[2]])),
+            ],
+        ),
+        (
+            [  # mixed selection
+                Labels(names=["sample"], values=torch.tensor([[0]])),
+                [1],
+            ],
+            [
+                torch.tensor([0, 1]),
+                Labels(names=["property"], values=torch.tensor([[2]])),
+            ],
+        ),
+    ],
+)
+def test_split(selections):
     tensor = TensorMap(
         keys=Labels.single(),
         blocks=[
             metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
         ],
     )
-    split_labels_samples = [
-        Labels(names=["sample"], values=torch.tensor([[0]])),
-        Labels(names=["sample"], values=torch.tensor([[1]])),
-    ]
-    split_labels_properties = [
-        Labels(names=["property"], values=torch.tensor([[0], [1]])),
-        Labels(names=["property"], values=torch.tensor([[2]])),
-    ]
+    samples_selections, properties_selections = selections
+
     split_tensors_samples = metatensor.torch.split(
         tensor,
         axis="samples",
-        grouped_labels=split_labels_samples,
+        selections=samples_selections,
     )
     split_tensors_properties = metatensor.torch.split(
         tensor,
         axis="properties",
-        grouped_labels=split_labels_properties,
+        selections=properties_selections,
     )
 
     # check type
@@ -72,12 +95,12 @@ def test_split_block():
     split_blocks_samples = metatensor.torch.split_block(
         block,
         axis="samples",
-        grouped_labels=split_labels_samples,
+        selections=split_labels_samples,
     )
     split_blocks_properties = metatensor.torch.split_block(
         block,
         axis="properties",
-        grouped_labels=split_labels_properties,
+        selections=split_labels_properties,
     )
 
     # check type

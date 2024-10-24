@@ -55,6 +55,7 @@ module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
 module.__dict__["Array"] = torch.Tensor
+module.__dict__["LabelsValues"] = torch.Tensor
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     # disable TorchScript compilation when importing the code with
