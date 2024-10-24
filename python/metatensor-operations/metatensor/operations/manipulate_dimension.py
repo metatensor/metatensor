@@ -23,7 +23,7 @@ from ._backend import Array, Labels, TensorBlock, TensorMap, torch_jit_script
 
 
 def _check_axis(axis: str):
-    if axis not in ["keys", "samples", "properties", "components"]:
+    if axis not in ["keys", "samples", "components", "properties"]:
         raise ValueError(
             f"'{axis}' is not a valid axis. Choose from 'keys', 'samples', "
             "'properties', or 'components'."
