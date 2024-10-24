@@ -24,6 +24,7 @@ How to install the code
 The code can be installed with the following command:
 
 .. code-block:: bash
+
    pip install chemiscope[metatensor]
 
 

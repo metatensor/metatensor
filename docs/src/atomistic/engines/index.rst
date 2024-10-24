@@ -26,7 +26,7 @@ add it here!
       :link: engine-chemiscope
       :link-type: ref
 
-      .. image:: /../static/images/logo-chemiscoe.png
+      .. image:: /../static/images/logo-chemiscope.png
         :width: 120px
         :align: center
 
