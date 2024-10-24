@@ -84,28 +84,30 @@ def test_system(types, positions, cell, pbc, neighbors):
         # custom __repr__ definitions are only available since torch 2.1
         assert repr(system) == expected
 
-    options = NeighborListOptions(cutoff=3.5, full_list=False)
+    options = NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
     system.add_neighbor_list(options, neighbors)
 
     assert metatensor.torch.equal_block(system.get_neighbor_list(options), neighbors)
 
     message = (
         "No neighbor list for NeighborListOptions\\(cutoff=3.500000, "
-        "full_list=True\\) was found.\n"
+        "full_list=True, strict=True\\) was found.\n"
         "Is it part of the `requested_neighbor_lists` for this model?"
     )
     with pytest.raises(ValueError, match=message):
-        system.get_neighbor_list(NeighborListOptions(cutoff=3.5, full_list=True))
+        system.get_neighbor_list(
+            NeighborListOptions(cutoff=3.5, full_list=True, strict=True)
+        )
 
     message = (
         "the neighbors list for NeighborListOptions\\(cutoff=3.500000, "
-        "full_list=False\\) already exists in this system"
+        "full_list=False, strict=True\\) already exists in this system"
     )
     with pytest.raises(ValueError, match=message):
         system.add_neighbor_list(options, neighbors)
 
     assert system.known_neighbor_lists() == [
-        NeighborListOptions(cutoff=3.5, full_list=False)
+        NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
     ]
 
 
@@ -318,7 +320,7 @@ def test_data_validation(types, positions, cell, pbc):
 
 
 def test_neighbors_validation(system):
-    options = NeighborListOptions(cutoff=3.5, full_list=False)
+    options = NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
 
     message = (
         "invalid samples for `neighbors`: the samples names must be 'first_atom', "
@@ -465,7 +467,7 @@ def test_neighbors_validation(system):
 
 
 def test_to(system, neighbors):
-    options = NeighborListOptions(cutoff=3.5, full_list=False)
+    options = NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
     system.add_neighbor_list(options, neighbors)
     system.add_data("test-data", neighbors)
 

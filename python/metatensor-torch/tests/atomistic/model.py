@@ -45,9 +45,9 @@ class MinimalModel(torch.nn.Module):
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         return [
-            NeighborListOptions(cutoff=1.2, full_list=False),
-            NeighborListOptions(cutoff=4.3, full_list=True),
-            NeighborListOptions(cutoff=1.2, full_list=False),
+            NeighborListOptions(cutoff=1.2, full_list=False, strict=True),
+            NeighborListOptions(cutoff=4.3, full_list=True, strict=True),
+            NeighborListOptions(cutoff=1.2, full_list=False, strict=False),
         ]
 
 
@@ -146,7 +146,7 @@ class ExampleModule(torch.nn.Module):
         return {}
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
-        return [NeighborListOptions(1.0, False, self._name)]
+        return [NeighborListOptions(1.0, False, True, self._name)]
 
 
 class OtherModule(torch.nn.Module):
@@ -162,7 +162,7 @@ class OtherModule(torch.nn.Module):
         return {}
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
-        return [NeighborListOptions(2.0, True, "other module")]
+        return [NeighborListOptions(2.0, True, False, "other module")]
 
 
 class FullModel(torch.nn.Module):
@@ -201,6 +201,7 @@ def test_requested_neighbor_lists():
 
     assert requests[0].cutoff == 1.0
     assert not requests[0].full_list
+    assert requests[0].strict
     assert requests[0].requestors() == [
         "first module",
         "FullModel.first",
@@ -210,6 +211,7 @@ def test_requested_neighbor_lists():
 
     assert requests[1].cutoff == 2.0
     assert requests[1].full_list
+    assert not requests[1].strict
     assert requests[1].requestors() == [
         "other module",
         "FullModel.other",

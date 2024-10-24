@@ -486,6 +486,9 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
+    # options.strict is ignored by this function, since `ase.neighborlist.neighbor_list`
+    # only computes strict NL, and these are valid even with `strict=False`
+
     if np.all(atoms.pbc) or np.all(~atoms.pbc):
         nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
             "ijSD",
