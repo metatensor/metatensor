@@ -264,6 +264,13 @@ class TensorBlock:
 
         return mts_array_to_python_array(self._raw_values, parent=self)
 
+    @values.setter
+    def values(self, new_values):
+        raise AttributeError(
+            "Direct assignment to `values` is not possible. "
+            "Please use block.values[:] = new_values instead."
+        )
+
     @property
     def samples(self) -> Labels:
         """

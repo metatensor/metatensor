@@ -1,4 +1,5 @@
 import copy
+import re
 import warnings
 
 import numpy as np
@@ -467,6 +468,28 @@ def test_to():
 
             assert moved.device.type == torch.device(device).type
             assert moved.gradient("g").device.type == torch.device(device).type
+
+
+def test_values_setter():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0, 9.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "Direct assignment to `values` is not possible. "
+            "Please use block.values[:] = new_values instead."
+        ),
+    ):
+        block.values = np.array([[4, 5, 6]])
+
+    # Check that setting with slice assignment works correctly
+    block.values[:] = np.array([[4, 5, 6]])
+    assert np.allclose(block.values, np.array([[4, 5, 6]]))
 
 
 def test_to_torch_multiple_args():

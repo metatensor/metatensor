@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional, Tuple
 
 import pytest
@@ -175,6 +176,28 @@ def test_gradients():
     assert isinstance(gradients, list)
     assert len(gradients) == 1
     assert gradients[0][0] == "g"
+
+
+def test_values_setter():
+    block = TensorBlock(
+        values=torch.tensor([[3.0, 4.0, 9.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Direct assignment to `values` is not possible. "
+            "Please use block.values[:] = new_values instead."
+        ),
+    ):
+        block.values = torch.tensor([[4.0, 5.0, 6.0]])
+
+    # Check that setting with slice assignment works correctly
+    block.values[:] = torch.tensor([[4.0, 5.0, 6.0]])
+    assert torch.allclose(block.values, torch.tensor([[4.0, 5.0, 6.0]]))
 
 
 def test_different_device():
