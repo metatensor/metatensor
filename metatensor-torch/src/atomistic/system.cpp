@@ -63,7 +63,7 @@ std::string NeighborListOptionsHolder::repr() const {
         ss << " " << length_unit_;
     }
     ss << "\n    full_list: " << (full_list_ ? "True" : "False") << "\n";
-    ss << "\n    strict:    " << (strict_ ? "True" : "False") << "\n";
+    ss << "    strict: " << (strict_ ? "True" : "False") << "\n";
 
     if (!requestors_.empty()) {
         ss << "    requested by:\n";
