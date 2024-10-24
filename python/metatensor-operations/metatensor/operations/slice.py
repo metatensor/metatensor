@@ -11,8 +11,11 @@ from ._dispatch import TorchTensor
 
 
 def _slice_block(block: TensorBlock, axis: str, labels: Labels) -> TensorBlock:
-    if axis == "samples":
-        selected = block.samples.select(labels)
+    if axis == "samples" or axis == "sample_indices":
+        if axis == "samples":
+            selected = block.samples.select(labels)
+        else:
+            selected = labels.values.flatten()
 
         bool_array = _dispatch.bool_array_like([], block.properties.values)
         mask = _dispatch.zeros_like(bool_array, [len(block.samples)])
@@ -141,7 +144,7 @@ def _check_args(
     Checks the arguments passed to :py:func:`slice` and :py:func:`slice_block`.
     """
     # check axis
-    if axis not in ["samples", "properties"]:
+    if axis not in ["samples", "sample_indices", "properties"]:
         raise ValueError(
             f"``axis``: {axis} is not known as a slicing axis. Please use"
             "'samples' or 'properties'"
@@ -158,14 +161,15 @@ def _check_args(
                 raise ValueError(
                     f"invalid sample name '{name}' which is not part of the input"
                 )
-    else:
-        assert axis == "properties"
+    elif axis == "properties":
         p_names = block.properties.names
         for name in labels.names:
             if name not in p_names:
                 raise ValueError(
                     f"invalid property name '{name}' which is not part of the input"
                 )
+    else:
+        assert axis == "sample_indices"
 
 
 @torch_jit_script
