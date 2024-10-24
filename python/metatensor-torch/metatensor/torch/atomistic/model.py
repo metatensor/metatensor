@@ -45,6 +45,30 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     return torch.jit.load(path)
 
 
+def is_atomistic_model(module: torch.nn.Module) -> bool:
+    """
+    Check if a loaded model is a metatensor atomistic model.
+
+    :param model: model to check
+    :raises TypeError: if the model is not a :py:class:`torch.nn.Module`
+    :return: ``True`` if the ``model`` has been exported, ``False`` otherwise.
+    """
+    if not isinstance(module, torch.nn.Module):
+        raise TypeError(
+            f"`module` should be a torch.nn.Module, not {type(module).__name__}"
+        )
+
+    if isinstance(module, MetatensorAtomisticModel):
+        return True
+    elif (
+        isinstance(module, torch.jit._script.RecursiveScriptModule)
+        and module.original_name == "MetatensorAtomisticModel"
+    ):
+        return True
+    else:
+        return False
+
+
 class ModelInterface(torch.nn.Module):
     """
     Interface for models that can be used with :py:class:`MetatensorAtomisticModel`.
@@ -259,16 +283,12 @@ class MetatensorAtomisticModel(torch.nn.Module):
         """
         super().__init__()
 
-        if not isinstance(module, torch.nn.Module):
-            raise TypeError(f"`module` should be a torch.nn.Module, not {type(module)}")
-
-        if isinstance(module, torch.jit.RecursiveScriptModule):
-            raise TypeError("module should not already be a ScriptModule")
+        if not is_atomistic_model(module):
+            _check_annotation(module)
 
         if module.training:
             raise ValueError("module should not be in training mode")
 
-        _check_annotation(module)
         self.module = module
 
         # ============================================================================ #

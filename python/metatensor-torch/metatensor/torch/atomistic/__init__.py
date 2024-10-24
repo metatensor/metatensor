@@ -37,6 +37,7 @@ else:
 from .model import (  # noqa: F401
     MetatensorAtomisticModel,
     ModelInterface,
+    is_atomistic_model,
     load_atomistic_model,  # noqa: F401
 )
 from .systems_to_torch import systems_to_torch  # noqa: F401
