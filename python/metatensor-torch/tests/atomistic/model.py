@@ -60,7 +60,7 @@ def model():
         atomic_types=[1, 2, 3],
         interaction_range=4.3,
         outputs={
-            "tests::dummy::long": ModelOutput(
+            "energy": ModelOutput(
                 quantity="",
                 unit="",
                 per_atom=False,
@@ -94,7 +94,7 @@ def test_save_warning_length_unit(model):
 
 
 def test_save_warning_quantity(model):
-    match = r"No units were provided for output tests::dummy::long."
+    match = r"No units were provided for output energy."
     with pytest.warns(UserWarning, match=match):
         model.save("export.pt")
 

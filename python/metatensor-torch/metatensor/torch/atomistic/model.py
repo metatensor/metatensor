@@ -490,11 +490,14 @@ class MetatensorAtomisticModel(torch.nn.Module):
             )
 
         for name, output in self._capabilities.outputs.items():
-            if output.unit == "":
-                warnings.warn(
-                    f"No units were provided for output {name}.",
-                    stacklevel=1,
-                )
+            # TODO: coordinate a list of standard outputs needing
+            # unit checks, should also be consistent with `outputs.py`
+            if name in ["energy", "energy_ensemble"]:
+                if output.unit == "":
+                    warnings.warn(
+                        f"No units were provided for output {name}.",
+                        stacklevel=1,
+                    )
 
         # TODO: can we freeze these?
         # module = torch.jit.freeze(module)
