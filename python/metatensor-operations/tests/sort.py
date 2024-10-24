@@ -82,6 +82,47 @@ def tensor():
 
 
 @pytest.fixture
+def tensor_with_empty_block():
+    # samples are descending, components and properties are ascending
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [3, 5],
+                [1, 2],
+            ]
+        ),
+        samples=Labels(["s"], np.array([[2], [0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+
+    # samples are disordered, components are ascending, properties are descending
+    block_2 = TensorBlock(
+        values=np.array(
+            [
+                [3, 4],
+                [5, 6],
+                [1, 2],
+            ]
+        ),
+        samples=Labels(["s"], np.array([[7], [0], [2]])),
+        components=[],
+        properties=Labels(["p"], np.array([[1], [0]])),
+    )
+
+    block_3 = TensorBlock(
+        samples=Labels(["s"], np.array([], dtype=np.int64)),
+        components=[],
+        properties=Labels.range("p", 1),
+        values=np.array([], dtype=np.int64).reshape(-1, 1),
+    )
+
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[1, 0], [0, 0], [1, 1]]))
+    # block order is descending
+    return TensorMap(keys, [block_2, block_1, block_3])
+
+
+@pytest.fixture
 def tensor_sorted_ascending():
     """
     This is the `tensor` fixture sorted in ascending order how it should be returned
@@ -280,6 +321,10 @@ def test_sort_descending(tensor, tensor_sorted_descending):
         tensor_sorted_descending.block(0),
         metatensor.sort_block(tensor.block(0), descending=True),
     )
+
+
+def test_sort_empty_block(tensor_with_empty_block, tensor_sorted_ascending):
+    metatensor.sort_block(tensor_with_empty_block.block(2))
 
 
 def test_raise_error(tensor, tensor_sorted_ascending):
