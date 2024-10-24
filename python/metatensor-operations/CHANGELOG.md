@@ -6,16 +6,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-<!-- Possible sections
-
-### Added
-
-### Fixed
-
 ### Changed
-
-### Removed
--->
+- Issue #520, PR #763: `axis="components"` can now be passed to `metatensor.operations.rename_dimension`.
 
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.4) - 2024-10-11
 

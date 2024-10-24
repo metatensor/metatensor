@@ -19,14 +19,14 @@ changing the columns of the :py:class:`metatensor.Labels` within).
 from typing import List, Union
 
 from . import _dispatch
-from ._backend import Array, TensorBlock, TensorMap, torch_jit_script
+from ._backend import Array, Labels, TensorBlock, TensorMap, torch_jit_script
 
 
 def _check_axis(axis: str):
-    if axis not in ["keys", "samples", "properties"]:
+    if axis not in ["keys", "samples", "components", "properties"]:
         raise ValueError(
-            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples' or "
-            "'properties'."
+            f"'{axis}' is not a valid axis. Choose from 'keys', 'samples', "
+            "'components', or 'properties'."
         )
 
 
@@ -382,7 +382,7 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
 
     :param tensor: the input :py:class:`TensorMap`.
     :param axis: axis for which the names should be appended. Allowed are ``"keys"``,
-                 ``"properties"`` or ``"samples"``.
+                 ``"samples"``, ``"components"``, or ``"properties"``.
     :param old: name to be replaced
     :param new: name after the replacement
 
@@ -418,30 +418,46 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
     for block in tensor.blocks():
         samples = block.samples
         properties = block.properties
+        components = block.components
 
         if axis == "samples":
             samples = samples.rename(old, new)
         elif axis == "properties":
             properties = properties.rename(old, new)
+        elif axis == "components":
+            new_components: List[Labels] = []
+            for component in components:
+                if old in component.names:
+                    component = component.rename(old, new)
+                new_components.append(component)
+            components = new_components
 
         new_block = TensorBlock(
             values=block.values,
             samples=samples,
-            components=block.components,
+            components=components,
             properties=properties,
         )
 
         for parameter, gradient in block.gradients():
             gradient_samples = gradient.samples
+            gradient_components = gradient.components
             if axis == "samples" and old in gradient_samples.names:
                 gradient_samples = gradient_samples.rename(old, new)
+            elif axis == "components":
+                new_components: List[Labels] = []
+                for component in gradient_components:
+                    if old in component.names:
+                        component = component.rename(old, new)
+                    new_components.append(component)
+                gradient_components = new_components
 
             new_block.add_gradient(
                 parameter=parameter,
                 gradient=TensorBlock(
                     values=gradient.values,
                     samples=gradient_samples,
-                    components=gradient.components,
+                    components=gradient_components,
                     properties=properties,
                 ),
             )
