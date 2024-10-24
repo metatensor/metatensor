@@ -60,7 +60,7 @@ def model():
         atomic_types=[1, 2, 3],
         interaction_range=4.3,
         outputs={
-            "energy": ModelOutput(
+            "tests::dummy::long": ModelOutput(
                 quantity="",
                 unit="",
                 per_atom=False,
@@ -73,6 +73,31 @@ def model():
 
     metadata = ModelMetadata()
     return MetatensorAtomisticModel(model, metadata, capabilities)
+
+
+@pytest.fixture
+def model_energy_nounit():
+    model_energy_nounit = MinimalModel()
+    model_energy_nounit.train(False)
+
+    capabilities = ModelCapabilities(
+        length_unit="angstrom",
+        atomic_types=[1, 2, 3],
+        interaction_range=4.3,
+        outputs={
+            "energy": ModelOutput(
+                quantity="",
+                unit="",
+                per_atom=False,
+                explicit_gradients=[],
+            ),
+        },
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model_energy_nounit, metadata, capabilities)
 
 
 def test_save(model, tmp_path):
@@ -93,10 +118,10 @@ def test_save_warning_length_unit(model):
         model.save("export.pt")
 
 
-def test_save_warning_quantity(model):
+def test_save_warning_quantity(model_energy_nounit):
     match = r"No units were provided for output energy."
     with pytest.warns(UserWarning, match=match):
-        model.save("export.pt")
+        model_energy_nounit.save("export.pt")
 
 
 def test_export(model, tmp_path):
