@@ -80,6 +80,7 @@ def tensor():
     # block order is descending
     return TensorMap(keys, [block_2, block_1])
 
+
 @pytest.fixture
 def tensor_with_empty_block():
     # samples are descending, components and properties are ascending
@@ -116,9 +117,10 @@ def tensor_with_empty_block():
         values=np.array([], dtype=np.int64).reshape(-1, 1),
     )
 
-    keys = Labels(names=["key_1", "key_2"], values=np.array([[1, 0], [0, 0], [1,1]]))
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[1, 0], [0, 0], [1, 1]]))
     # block order is descending
     return TensorMap(keys, [block_2, block_1, block_3])
+
 
 @pytest.fixture
 def tensor_sorted_ascending():
@@ -319,6 +321,7 @@ def test_sort_descending(tensor, tensor_sorted_descending):
         tensor_sorted_descending.block(0),
         metatensor.sort_block(tensor.block(0), descending=True),
     )
+
 
 def test_sort_empty_block(tensor_with_empty_block, tensor_sorted_ascending):
     metatensor.sort_block(tensor_with_empty_block.block(2))
