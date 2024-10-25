@@ -77,6 +77,14 @@ The following simulation engines can use the ``"features"`` output:
 
     (using :py:meth:`run_model`)
 
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-chemiscope
+    :link-type: ref
+
+    |chemiscope-logo|
+
 Features gradients
 ------------------
 
