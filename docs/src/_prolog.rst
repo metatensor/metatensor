@@ -61,3 +61,7 @@
 .. |plumed-logo| image:: /../static/images/logo-plumed.*
     :height: 75px
     :alt: PLUMED
+
+.. |chemiscope-logo| image:: /../static/images/logo-chemiscope.*
+    :height: 75px
+    :alt: Chemiscope
