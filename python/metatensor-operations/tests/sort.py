@@ -96,8 +96,15 @@ def tensor_with_empty_block():
         properties=Labels(["p"], np.array([[0], [1]])),
     )
 
-    # samples are disordered, components are ascending, properties are descending
     block_2 = TensorBlock(
+        samples=Labels(["s"], np.array([], dtype=np.int64)),
+        components=[],
+        properties=Labels.range("p", 1),
+        values=np.array([], dtype=np.int64).reshape(-1, 1),
+    )
+
+    # samples are disordered, components are ascending, properties are descending
+    block_3 = TensorBlock(
         values=np.array(
             [
                 [3, 4],
@@ -110,16 +117,50 @@ def tensor_with_empty_block():
         properties=Labels(["p"], np.array([[1], [0]])),
     )
 
-    block_3 = TensorBlock(
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[1, 1], [0, 1], [1, 0]]))
+    # block order is descending
+    return TensorMap(keys, [block_1, block_2, block_3])
+
+
+@pytest.fixture
+def tensor_with_empty_block_sorted():
+    # samples are descending, components and properties are ascending
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [1, 2],
+                [3, 5],
+            ]
+        ),
+        samples=Labels(["s"], np.array([[0], [2]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+
+    block_2 = TensorBlock(
         samples=Labels(["s"], np.array([], dtype=np.int64)),
         components=[],
         properties=Labels.range("p", 1),
         values=np.array([], dtype=np.int64).reshape(-1, 1),
     )
 
-    keys = Labels(names=["key_1", "key_2"], values=np.array([[1, 0], [0, 0], [1, 1]]))
+    # samples are disordered, components are ascending, properties are descending
+    block_3 = TensorBlock(
+        values=np.array(
+            [
+                [6, 5],
+                [2, 1],
+                [4, 3],
+            ]
+        ),
+        samples=Labels(["s"], np.array([[0], [2], [7]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 1], [1, 0], [1, 1]]))
     # block order is descending
-    return TensorMap(keys, [block_2, block_1, block_3])
+    return TensorMap(keys, [block_2, block_3, block_1])
 
 
 @pytest.fixture
@@ -323,8 +364,19 @@ def test_sort_descending(tensor, tensor_sorted_descending):
     )
 
 
-def test_sort_empty_block(tensor_with_empty_block, tensor_sorted_ascending):
-    metatensor.sort_block(tensor_with_empty_block.block(2))
+def test_sort_empty_block(tensor_with_empty_block, tensor_with_empty_block_sorted):
+    metatensor.allclose_block_raise(
+        metatensor.sort_block(tensor_with_empty_block.block(0)),
+        tensor_with_empty_block_sorted.block(2),
+    )
+    metatensor.allclose_block_raise(
+        metatensor.sort_block(tensor_with_empty_block.block(1)),
+        tensor_with_empty_block_sorted.block(0),
+    )
+    metatensor.allclose_block_raise(
+        metatensor.sort_block(tensor_with_empty_block.block(2)),
+        tensor_with_empty_block_sorted.block(1),
+    )
 
 
 def test_raise_error(tensor, tensor_sorted_ascending):
