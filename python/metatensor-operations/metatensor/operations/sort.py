@@ -99,6 +99,8 @@ def _sort_single_block(
     """
     Sorts a single TensorBlock without the user input checking and sorting of gradients
     """
+    if len(block) == 0:
+        return block
 
     sample_names = block.samples.names
     sample_values = block.samples.values
