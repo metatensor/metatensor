@@ -22,7 +22,7 @@ add it here!
         :width: 120px
         :align: center
 
-    .. grid-item-card:: Chemiscope
+    .. grid-item-card:: chemiscope
       :link: engine-chemiscope
       :link-type: ref
 

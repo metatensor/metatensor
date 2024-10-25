@@ -14,9 +14,8 @@ Chemiscope
 Supported model outputs
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-- the :ref:`features <features-output>` output is supported and fully integrated
-  with Chemiscope interface;
-
+The :ref:`features <features-output>` output is supported, and can be used to
+compute features for multiple structures in ``chemiscope.explore()``.
 
 How to install the code
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -31,4 +30,4 @@ The code can be installed with the following command:
 How to use the code
 ^^^^^^^^^^^^^^^^^^^
 
-See the example from https://chemiscope.org/docs/examples/8-explore-with-metatensor.html#sphx-glr-examples-8-explore-with-metatensor-py. 
+See the example from https://chemiscope.org/docs/examples/8-explore-with-metatensor.html.
