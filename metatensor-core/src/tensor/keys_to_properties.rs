@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::labels::{Labels, LabelsBuilder};
+use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
 use crate::data::mts_sample_mapping_t;
@@ -80,11 +80,14 @@ impl TensorMap {
             )?;
             new_blocks.push(block);
         } else {
+            assert!(splitted_keys.new_keys.count() > 1);
             for entry in &splitted_keys.new_keys {
-                let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names())?;
-                selection.add(entry)?;
+                let selection = Labels::new(
+                    &splitted_keys.new_keys.names(),
+                    entry.to_vec(),
+                ).expect("invalid labels");
 
-                let matching = self.blocks_matching(&selection.finish())?;
+                let matching = self.blocks_matching(&selection)?;
                 let blocks_to_merge = matching.iter()
                     .map(|&i| {
                         let block = &self.blocks[i];
@@ -158,7 +161,7 @@ fn merge_blocks_along_properties(
     // collect and merge samples across the blocks
     let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
-        first_block.samples.names(),
+        &first_block.samples.names(),
         sort_samples,
     );
 
@@ -190,14 +193,17 @@ fn merge_blocks_along_properties(
     let new_property_names = extracted_names.iter()
         .chain(first_block.properties.names().iter())
         .copied()
-        .collect();
-    let mut new_properties_builder = LabelsBuilder::new(new_property_names)?;
-    for property in new_properties {
-        new_properties_builder.add(&property)?;
-    }
+        .collect::<Vec<_>>();
+
+    let new_properties = unsafe {
+        // SAFETY: the values come from a set, so they are already unique
+        Arc::new(Labels::new_unchecked_uniqueness(
+            &new_property_names,
+            new_properties.iter().flatten().copied().collect()
+        ).expect("invalid labels"))
+    };
 
     let new_components = first_block.components.to_vec();
-    let new_properties = Arc::new(new_properties_builder.finish());
     let new_properties_count = new_properties.count();
 
     // create a new array and move the data around
@@ -259,7 +265,7 @@ fn merge_blocks_along_properties(
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
             blocks_to_merge, parameter, &samples_mappings
-        )?;
+        );
 
         let mut new_shape = first_gradient.values.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();

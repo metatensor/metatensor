@@ -151,9 +151,9 @@ public:
     ///        cell of the system. Each row should be one of the bounding box
     ///        vector; and columns should contain the x, y, and z components of
     ///        these vectors (i.e. the cell should be given in row-major order).
-    ///        Systems are assumed to obey periodic boundary conditions,
-    ///        non-periodic systems should set the cell to 0.
-    SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell);
+    /// @param pbc 1D tensor of 3 boolean values, indicating if the system is
+    ///        periodic along the directions defined by cell axes `a`, `b` and `c`, respectively.
+    SystemHolder(torch::Tensor types, torch::Tensor positions, torch::Tensor cell, torch::Tensor pbc);
     ~SystemHolder() override = default;
 
     /// Get the particle types for all particles in the system.
@@ -179,6 +179,14 @@ public:
 
     /// Set cell for the system
     void set_cell(torch::Tensor cell);
+
+    /// Periodic boundary conditions for the system.
+    torch::Tensor pbc() const {
+        return pbc_;
+    }
+
+    /// Set periodic boundary conditions for the system
+    void set_pbc(torch::Tensor pbc);
 
     /// Get the device used by all the data in this `System`
     torch::Device device() const {
@@ -270,6 +278,7 @@ private:
     torch::Tensor types_;
     torch::Tensor positions_;
     torch::Tensor cell_;
+    torch::Tensor pbc_;
 
     std::map<NeighborListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
     std::unordered_map<std::string, TorchTensorBlock> data_;

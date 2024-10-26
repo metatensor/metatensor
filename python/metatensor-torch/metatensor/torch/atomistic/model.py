@@ -10,9 +10,8 @@ from typing import Dict, List, Optional, Union
 import torch
 from torch.profiler import record_function
 
-from .. import Labels, TensorBlock, TensorMap
+from .. import Labels, TensorBlock, TensorMap, dtype_name
 from .. import __version__ as metatensor_version
-from .. import dtype_name
 from . import (
     ModelCapabilities,
     ModelEvaluationOptions,
@@ -44,6 +43,30 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     load_model_extensions(path, str(extensions_directory))
     check_atomistic_model(path)
     return torch.jit.load(path)
+
+
+def is_atomistic_model(module: torch.nn.Module) -> bool:
+    """
+    Check if a loaded model is a metatensor atomistic model.
+
+    :param model: model to check
+    :raises TypeError: if the model is not a :py:class:`torch.nn.Module`
+    :return: ``True`` if the ``model`` has been exported, ``False`` otherwise.
+    """
+    if not isinstance(module, torch.nn.Module):
+        raise TypeError(
+            f"`module` should be a torch.nn.Module, not {type(module).__name__}"
+        )
+
+    if isinstance(module, MetatensorAtomisticModel):
+        return True
+    elif (
+        isinstance(module, torch.jit._script.RecursiveScriptModule)
+        and module.original_name == "MetatensorAtomisticModel"
+    ):
+        return True
+    else:
+        return False
 
 
 class ModelInterface(torch.nn.Module):
@@ -133,19 +156,19 @@ class MetatensorAtomisticModel(torch.nn.Module):
     """
     :py:class:`MetatensorAtomisticModel` is the main entry point for atomistic machine
     learning based on metatensor. It is the interface between custom, user-defined
-    models and simulation engines. Users should wrap their models with this class, and
-    use :py:meth:`save()` to save the wrapped model to a file. The exported models
+    models and simulation engines. Users should export their models with this class, and
+    use :py:meth:`save()` to save the exported model to a file. The exported models
     can then be loaded by a simulation engine to compute properties of atomistic
     systems.
 
-    When wrapping a ``module``, you should declare what the model is capable of (using
+    When exporting a ``module``, you should declare what the model is capable of (using
     :py:class:`ModelCapabilities`). This includes what units the model expects as input
     and what properties the model can compute (using :py:class:`ModelOutput`). The
     simulation engine will then ask the model to compute some subset of these properties
     (through a :py:class:`ModelEvaluationOptions`), on all or a subset of atoms of an
     atomistic system.
 
-    The wrapped module must follow the interface defined by :py:class:`ModelInterface`,
+    The exported module must follow the interface defined by :py:class:`ModelInterface`,
     should not already be compiled by TorchScript, and should be in "eval" mode (i.e.
     ``module.training`` should be ``False``).
 
@@ -229,17 +252,17 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...     authors=["Some Author", "Another One"],
     ...     # references and long description can also be added
     ... )
-    >>> # wrap the model
-    >>> wrapped = MetatensorAtomisticModel(model, metadata, capabilities)
-    >>> # save the wrapped model to disk
+    >>> # export the model
+    >>> model = MetatensorAtomisticModel(model, metadata, capabilities)
+    >>> # save the exported model to disk
     >>> with tempfile.TemporaryDirectory() as directory:
-    ...     wrapped.save(os.path.join(directory, "constant-energy-model.pt"))
+    ...     model.save(os.path.join(directory, "constant-energy-model.pt"))
     ...
 
     .. py:attribute:: module
         :type: ModelInterface
 
-    The torch module wrapped by this :py:class:`MetatensorAtomisticModel`.
+    The torch module exported by this :py:class:`MetatensorAtomisticModel`.
 
     Reading from this attribute is safe, but modifying it is not recommended,
     unless you are familiar with the implementation of the model.
@@ -255,21 +278,17 @@ class MetatensorAtomisticModel(torch.nn.Module):
         capabilities: ModelCapabilities,
     ):
         """
-        :param module: The torch module to wrap and export.
+        :param module: The torch module to export.
         :param capabilities: Description of the model capabilities.
         """
         super().__init__()
 
-        if not isinstance(module, torch.nn.Module):
-            raise TypeError(f"`module` should be a torch.nn.Module, not {type(module)}")
-
-        if isinstance(module, torch.jit.RecursiveScriptModule):
-            raise TypeError("module should not already be a ScriptModule")
+        if not is_atomistic_model(module):
+            _check_annotation(module)
 
         if module.training:
             raise ValueError("module should not be in training mode")
 
-        _check_annotation(module)
         self.module = module
 
         # ============================================================================ #
@@ -321,18 +340,18 @@ class MetatensorAtomisticModel(torch.nn.Module):
 
     @torch.jit.export
     def capabilities(self) -> ModelCapabilities:
-        """Get the capabilities of the wrapped model"""
+        """Get the capabilities of the exported model"""
         return self._capabilities
 
     @torch.jit.export
     def metadata(self) -> ModelMetadata:
-        """Get the metadata of the wrapped model"""
+        """Get the metadata of the exported model"""
         return self._metadata
 
     @torch.jit.export
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         """
-        Get the neighbors lists required by the wrapped model or any of the child
+        Get the neighbors lists required by the exported model or any of the child
         module.
         """
         return self._requested_neighbor_lists
@@ -343,7 +362,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
         options: ModelEvaluationOptions,
         check_consistency: bool,
     ) -> Dict[str, TensorMap]:
-        """Run the wrapped model and return the corresponding outputs.
+        """Run the exported model and return the corresponding outputs.
 
         Before running the model, this will convert the ``systems`` data from the engine
         unit to the model unit, including all neighbors lists distances.
@@ -483,6 +502,22 @@ class MetatensorAtomisticModel(torch.nn.Module):
             module = torch.jit.script(module)
         except RuntimeError as e:
             raise RuntimeError("could not convert the module to TorchScript") from e
+
+        if self._capabilities.length_unit == "":
+            warnings.warn(
+                "No length unit was provided for the model.",
+                stacklevel=1,
+            )
+
+        for name, output in self._capabilities.outputs.items():
+            # TODO: coordinate a list of standard outputs needing
+            # unit checks, should also be consistent with `outputs.py`
+            if name in ["energy", "energy_ensemble"]:
+                if output.unit == "":
+                    warnings.warn(
+                        f"No units were provided for output {name}.",
+                        stacklevel=1,
+                    )
 
         # TODO: can we freeze these?
         # module = torch.jit.freeze(module)
@@ -715,6 +750,7 @@ def _convert_systems_units(
             types=system.types,
             positions=conversion * system.positions,
             cell=conversion * system.cell,
+            pbc=system.pbc,
         )
 
         # also update the neighbors list distances

@@ -14,6 +14,7 @@ from metatensor.torch.atomistic import (
     NeighborListOptions,
     System,
     check_atomistic_model,
+    is_atomistic_model,
     load_atomistic_model,
     read_model_metadata,
 )
@@ -75,6 +76,31 @@ def model():
     return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
+@pytest.fixture
+def model_energy_nounit():
+    model_energy_nounit = MinimalModel()
+    model_energy_nounit.train(False)
+
+    capabilities = ModelCapabilities(
+        length_unit="angstrom",
+        atomic_types=[1, 2, 3],
+        interaction_range=4.3,
+        outputs={
+            "energy": ModelOutput(
+                quantity="",
+                unit="",
+                per_atom=False,
+                explicit_gradients=[],
+            ),
+        },
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model_energy_nounit, metadata, capabilities)
+
+
 def test_save(model, tmp_path):
     os.chdir(tmp_path)
     model.save("export.pt")
@@ -84,6 +110,19 @@ def test_save(model, tmp_path):
         assert "export/extra/torch-version" in file.namelist()
 
     check_atomistic_model("export.pt")
+
+
+def test_save_warning_length_unit(model):
+    model._capabilities.length_unit = ""
+    match = r"No length unit was provided for the model."
+    with pytest.warns(UserWarning, match=match):
+        model.save("export.pt")
+
+
+def test_save_warning_quantity(model_energy_nounit):
+    match = r"No units were provided for output energy."
+    with pytest.warns(UserWarning, match=match):
+        model_energy_nounit.save("export.pt")
 
 
 def test_export(model, tmp_path):
@@ -268,6 +307,30 @@ def test_access_module(tmpdir):
     loaded_atomistic.module.first
     loaded_atomistic.module.second
     loaded_atomistic.module.other
+
+
+def test_is_atomistic_model(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+    atomistic.save(tmpdir / "model.pt")
+
+    scripted_atomistic = torch.jit.script(atomistic)
+    loaded_atomistic = load_atomistic_model(tmpdir / "model.pt")
+
+    assert is_atomistic_model(atomistic)
+    assert is_atomistic_model(scripted_atomistic)
+    assert is_atomistic_model(loaded_atomistic)
+
+    match = "`module` should be a torch.nn.Module, not float"
+    with pytest.raises(TypeError, match=match):
+        is_atomistic_model(1.0)
 
 
 def test_read_metadata(tmpdir):

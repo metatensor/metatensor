@@ -77,7 +77,10 @@ def test_neighbors_autograd():
         )
 
         system = System(
-            torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell
+            torch.from_numpy(atoms.numbers).to(torch.int32),
+            positions,
+            cell,
+            pbc=torch.tensor([True, True, True]),
         )
         register_autograd_neighbors(system, neighbors, check_consistency=True)
 
@@ -117,7 +120,12 @@ def test_neighbor_autograd_errors():
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"
     )
-    system = System(torch.from_numpy(atoms.numbers).to(torch.int32), positions, cell)
+    system = System(
+        torch.from_numpy(atoms.numbers).to(torch.int32),
+        positions,
+        cell,
+        pbc=torch.tensor([True, True, True]),
+    )
     register_autograd_neighbors(system, neighbors)
 
     message = (
@@ -128,10 +136,9 @@ def test_neighbor_autograd_errors():
         register_autograd_neighbors(system, neighbors)
 
     message = (
-        "one neighbor pair does not match its metadata: the pair between atom 1 and "
-        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
-        "\\[0.926094, -0.219122, 1.4382\\] but has a distance vector of "
-        "\\[2.77828, -0.657366, 4.31461\\]"
+        r"one neighbor pair does not match its metadata: the pair between atom \d+ and "
+        r"atom \d+ for the \[\d+, \d+, \d+\] cell shift should have a distance vector "
+        r"of \[.*?\] but has a distance vector of \[.*?\]"
     )
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"
@@ -151,6 +158,7 @@ def test_neighbor_autograd_errors():
         torch.from_numpy(atoms.numbers).to(torch.int32),
         positions.to(torch.float32),
         cell.to(torch.float32),
+        pbc=torch.tensor([True, True, True]),
     )
     with pytest.raises(ValueError, match=message):
         register_autograd_neighbors(system, neighbors, check_consistency=True)
@@ -160,6 +168,7 @@ def test_neighbor_autograd_errors():
         torch.from_numpy(atoms.numbers).to(torch.int32).to(torch.device("meta")),
         positions.to(torch.device("meta")),
         cell.to(torch.device("meta")),
+        pbc=torch.tensor([True, True, True]).to(torch.device("meta")),
     )
     with pytest.raises(ValueError, match=message):
         register_autograd_neighbors(system, neighbors, check_consistency=True)

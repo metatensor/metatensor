@@ -36,6 +36,7 @@ def test_export_atomistic_model(tmp_path):
         types=torch.tensor([1]),
         positions=torch.tensor([[1.0, 1, 1]], dtype=torch.float64, requires_grad=True),
         cell=torch.zeros([3, 3], dtype=torch.float64),
+        pbc=torch.tensor([False, False, False]),
     )
 
     outputs = {
@@ -45,11 +46,11 @@ def test_export_atomistic_model(tmp_path):
     # run bare model
     export_atomistic_model.model([system], outputs)
 
-    # run wrapped model
+    # run exported model
     options = ModelEvaluationOptions(length_unit="Angstrom", outputs=outputs)
     export_atomistic_model.wrapper([system], options, check_consistency=True)
 
-    # run wrapped and saved model
+    # run exported and saved model
     export_atomistic_model.wrapper.save("exported-model.pt")
     atomistic_model = load_atomistic_model("exported-model.pt")
     atomistic_model([system], options, check_consistency=True)

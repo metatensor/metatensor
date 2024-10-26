@@ -7,6 +7,7 @@ use std::os::raw::c_void;
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
 
+use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 
 use crate::Error;
@@ -96,129 +97,14 @@ impl LabelValue {
     }
 }
 
-type DefaultHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
+// Labels uses `AHash` instead of the default hasher in std since `AHash` is
+// much faster and we don't need the cryptographic strength hash from std.
+type AHashHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
 
-/// Builder for `Labels`, this should be used to construct `Labels`.
-pub struct LabelsBuilder {
-    // cf `Labels` for the documentation of the fields
-    names: Vec<ConstCString>,
-    values: Vec<LabelValue>,
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
-}
-
-impl LabelsBuilder {
-    /// Create a new empty `LabelsBuilder` with the given `names`
-    pub fn new(names: Vec<&str>) -> Result<LabelsBuilder, Error> {
-        for name in &names {
-            if !is_valid_label_name(name) {
-                return Err(Error::InvalidParameter(format!(
-                    "all labels names must be valid identifiers, '{}' is not", name
-                )));
-            }
-        }
-
-        let mut unique_names = BTreeSet::new();
-        for name in &names {
-            if !unique_names.insert(name) {
-                return Err(Error::InvalidParameter(format!(
-                    "labels names must be unique, got '{}' multiple times", name
-                )));
-            }
-        }
-
-        let names = names.into_iter()
-            .map(|s| ConstCString::new(CString::new(s).expect("invalid C string")))
-            .collect::<Vec<_>>();
-
-        Ok(LabelsBuilder {
-            names: names,
-            values: Vec::new(),
-            positions: Default::default(),
-        })
-    }
-
-    /// Reserve space for `additional` other entries in the labels.
-    pub fn reserve(&mut self, additional: usize) {
-        self.values.reserve(additional * self.names.len());
-        self.positions.reserve(additional);
-    }
-
-    /// Get the number of labels in a single value
-    pub fn size(&self) -> usize {
-        self.names.len()
-    }
-
-    /// Get the current number of entries
-    pub fn count(&self) -> usize {
-        if self.size() == 0 {
-            return 0;
-        } else {
-            return self.values.len() / self.size();
-        }
-    }
-
-    /// Add a single `entry` to this set of labels.
-    ///
-    /// This function will return an `Error` when attempting to add the same
-    /// `label` more than once.
-    pub fn add<T>(&mut self, entry: &[T]) -> Result<(), Error>
-        where T: Copy + Into<LabelValue>
-    {
-        let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
-        match self.add_or_get_position(entry) {
-            Ok(_) => return Ok(()),
-            Err((existing, entry)) => {
-                let values_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
-                return Err(Error::InvalidParameter(format!(
-                    "can not have the same label value multiple time: [{}] is already present at position {}",
-                    values_display, existing
-                )));
-            }
-        }
-    }
-
-    fn add_or_get_position(&mut self, labels_entry: SmallVec<[LabelValue; 4]>) -> Result<usize, (usize, SmallVec<[LabelValue; 4]>)> {
-        assert_eq!(
-            self.size(), labels_entry.len(),
-            "wrong size for added label: got {}, but expected {}",
-            labels_entry.len(), self.size()
-        );
-
-        let new_position = self.positions.len();
-
-        match self.positions.raw_entry_mut().from_key(&labels_entry) {
-            RawEntryMut::Occupied(entry) => {
-                return Err((*entry.get(), labels_entry));
-            },
-            RawEntryMut::Vacant(entry) => {
-                self.values.extend(&labels_entry);
-                entry.insert(labels_entry, new_position);
-            }
-        }
-
-        return Ok(new_position);
-    }
-
-    /// Finish building the `Labels`
-    pub fn finish(self) -> Labels {
-        if self.names.is_empty() {
-            assert!(self.values.is_empty());
-            return Labels {
-                names: Vec::new(),
-                values: Vec::new(),
-                positions: Default::default(),
-                user_data: RwLock::new(UserData::null()),
-            }
-        }
-
-        return Labels {
-            names: self.names,
-            values: self.values,
-            positions: self.positions,
-            user_data: RwLock::new(UserData::null()),
-        };
-    }
-}
+// Use a small vec to store Labels entries in the `positions`. This helps by
+// removing heap allocations in the most common case (fewer than 8 dimensions in
+// the Labels), while still allowing the Labels to contains many dimensions.
+type LabelsEntry = SmallVec<[LabelValue; 8]>;
 
 /// Check if the given name is a valid identifier, to be used as a
 /// column name in `Labels`.
@@ -285,10 +171,10 @@ pub struct Labels {
     /// Values of the labels, as a linearized 2D array in row-major order
     values: Vec<LabelValue>,
     /// Store the position of all the known labels, for faster access later.
-    /// This uses `XxHash64` instead of the default hasher in std since
-    /// `XxHash64` is much faster and we don't need the cryptographic strength
-    /// hash from std.
-    positions: HashMap<SmallVec<[LabelValue; 4]>, usize, DefaultHasher>,
+    /// This is lazily initialized whenever a function requires access to the
+    /// positions of different entries, allowing to skip the construction of the
+    /// `HashMap` when Labels are only used as data storage.
+    positions: OnceCell<HashMap<LabelsEntry, usize, AHashHasher>>,
     /// Some data provided by the user that we should keep around (this is
     /// used to store a pointer to the on-GPU tensor in metatensor-torch).
     user_data: RwLock<UserData>,
@@ -322,7 +208,99 @@ impl std::fmt::Debug for Labels {
     }
 }
 
+fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, AHashHasher> {
+    assert!(values.len() % size == 0);
+
+    let mut positions = HashMap::new();
+    for (i, entry) in values.chunks_exact(size).enumerate() {
+        // entries should be unique!
+        positions.insert_unique_unchecked(entry.into(), i);
+    }
+    return positions;
+}
+
 impl Labels {
+    /// Create new Labels with the given names and values.
+    ///
+    /// The values are given as a flatten, row-major array, and we will check
+    /// that rows are unique in the array.
+    pub fn new(names: &[&str], values: Vec<impl Into<LabelValue>>) -> Result<Labels, Error> {
+        let values = values.into_iter().map(Into::into).collect();
+        return Labels::new_impl(names, values, true);
+    }
+
+    /// Create new labels with the given names and values.
+    ///
+    /// This is identical to [`Labels::new`] except that the rows are not
+    /// checked for uniqueness, but instead the caller must ensure that rows are
+    /// unique.
+    pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<impl Into<LabelValue>>) -> Result<Labels, Error> {
+        let values = values.into_iter().map(Into::into).collect();
+        if cfg!(debug_assertions) {
+            return Labels::new_impl(names, values, true);
+        } else {
+            return Labels::new_impl(names, values, false);
+        }
+    }
+
+    /// Actual implementation of both [`Labels::new`] and
+    /// [`Labels::new_unchecked_uniqueness`]
+    fn new_impl(names: &[&str], values: Vec<LabelValue>, check_unique: bool) -> Result<Labels, Error> {
+        for name in names {
+            if !is_valid_label_name(name) {
+                return Err(Error::InvalidParameter(format!(
+                    "all labels names must be valid identifiers, '{}' is not", name
+                )));
+            }
+        }
+
+        let mut unique_names = BTreeSet::new();
+        for name in names {
+            if !unique_names.insert(name) {
+                return Err(Error::InvalidParameter(format!(
+                    "labels names must be unique, got '{}' multiple times", name
+                )));
+            }
+        }
+
+        let names = names.iter()
+            .map(|&s| ConstCString::new(CString::new(s).expect("invalid C string")))
+            .collect::<Vec<_>>();
+
+        if names.is_empty() {
+            assert!(values.is_empty());
+            return Ok(Labels {
+                names: Vec::new(),
+                values: Vec::new(),
+                positions: Default::default(),
+                user_data: RwLock::new(UserData::null()),
+            });
+        }
+
+        let size = names.len();
+        assert!(values.len() % size == 0);
+
+        if check_unique {
+            let mut vec_ref = values.chunks_exact(size).collect::<Vec<_>>();
+            vec_ref.sort_unstable();
+            if let Some(identical) = vec_ref.windows(2).position(|w| w[0] == w[1]) {
+                let entry = vec_ref[identical];
+                let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+                return Err(Error::InvalidParameter(format!(
+                    "can not have the same label entry multiple time: [{}] is already present",
+                    entry_display
+                )));
+            }
+        }
+
+        Ok(Labels {
+            names: names,
+            values: values,
+            positions: OnceCell::new(),
+            user_data: RwLock::new(UserData::null()),
+        })
+    }
+
     /// Get the number of entries/named values in a single label
     pub fn size(&self) -> usize {
         self.names.len()
@@ -381,7 +359,8 @@ impl Labels {
 
     /// Check whether the given `label` is part of this set of labels
     pub fn contains(&self, label: &[LabelValue]) -> bool {
-        self.positions.contains_key(label)
+        let positions = self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+        positions.contains_key(label)
     }
 
     /// Get the position (i.e. row index) of the given label in the full labels
@@ -389,10 +368,14 @@ impl Labels {
     pub fn position(&self, value: &[LabelValue]) -> Option<usize> {
         assert!(value.len() == self.size(), "invalid size of index in Labels::position");
 
-        self.positions.get(value).copied()
+        return self.get_or_init_positions().get(value).copied();
     }
 
-    /// Iterate over the entries in this set of labels
+    fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, AHashHasher> {
+        return self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+    }
+
+    /// Iterate over the entries in these Labels
     pub fn iter(&self) -> Iter {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
@@ -412,11 +395,8 @@ impl Labels {
             ));
         }
 
-        let mut builder = LabelsBuilder {
-            names: self.names.clone(),
-            values: self.values.clone(),
-            positions: self.positions.clone(),
-        };
+        let mut positions = self.get_or_init_positions().clone();
+        let mut values = self.values.clone();
 
         if !first_mapping.is_empty() {
             assert!(first_mapping.len() == self.count());
@@ -426,22 +406,31 @@ impl Labels {
             }
         }
 
-        for (i, entry) in other.iter().enumerate() {
-            let entry = entry.iter().copied().map(Into::into).collect::<SmallVec<_>>();
-            let position = builder.add_or_get_position(entry);
+        for (i, labels_entry) in other.iter().enumerate() {
+            let labels_entry = labels_entry.iter().copied().map(Into::into).collect::<LabelsEntry>();
 
+            let new_position = positions.len();
+            let index = match positions.raw_entry_mut().from_key(&labels_entry) {
+                RawEntryMut::Occupied(entry) => *entry.get(),
+                RawEntryMut::Vacant(entry) => {
+                    values.extend(&labels_entry);
+                    entry.insert(labels_entry, new_position);
+                    new_position
+                }
+            };
+
+            #[allow(clippy::cast_possible_wrap)]
             if !second_mapping.is_empty() {
-                let index = match position {
-                    #[allow(clippy::cast_possible_wrap)]
-                    Ok(index) | Err((index, _)) => {
-                        index as i64
-                    }
-                };
-                second_mapping[i] = index;
+                second_mapping[i] = index as i64;
             }
         }
 
-        return Ok(builder.finish());
+        return Ok(Labels {
+            names: self.names.clone(),
+            values,
+            positions: OnceCell::with_value(positions),
+            user_data: RwLock::new(UserData::null()),
+        });
     }
 
     /// Compute the intersection of two labels, and optionally the mapping from
@@ -473,12 +462,11 @@ impl Labels {
             second_indexes.fill(-1);
         }
 
-        let mut builder = LabelsBuilder::new(self.names()).expect("should be valid names");
+        let mut values = Vec::new();
+        let mut new_position = 0;
         for (i, entry) in first.iter().enumerate() {
             if let Some(position) = second.position(entry) {
-                #[allow(clippy::cast_possible_wrap)]
-                let new_position = builder.count() as i64;
-                builder.add(entry).expect("should not already exist");
+                values.extend_from_slice(entry);
 
                 if !first_indexes.is_empty() {
                     first_indexes[i] = new_position;
@@ -487,10 +475,17 @@ impl Labels {
                 if !second_indexes.is_empty() {
                     second_indexes[position] = new_position;
                 }
+
+                new_position += 1;
             }
         }
 
-        return Ok(builder.finish());
+        return Ok(Labels {
+            names: self.names.clone(),
+            values,
+            positions: OnceCell::new(),
+            user_data: RwLock::new(UserData::null()),
+        });
     }
 
     /// Select entries in these `Labels` that match the `selection`.
@@ -589,29 +584,30 @@ impl std::ops::Index<usize> for Labels {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
 
     #[test]
     fn valid_names() {
-        let e = LabelsBuilder::new(vec!["not an ident"]).err().unwrap();
+        let e = Labels::new(&["not an ident"], Vec::<i32>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not");
 
-        let e = LabelsBuilder::new(vec!["not", "there", "not"]).err().unwrap();
+        let e = Labels::new(&["not", "there", "not"], Vec::<i32>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
     }
 
     #[test]
     fn union() {
-        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
-        builder.add(&[0, 1]).unwrap();
-        builder.add(&[1, 2]).unwrap();
-        let first = builder.finish();
+        let first = Labels::new(
+            &["aa", "bb"],
+            vec![0, 1, /**/ 1, 2]
+        ).unwrap();
 
-        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
-        builder.add(&[2, 3]).unwrap();
-        builder.add(&[1, 2]).unwrap();
-        builder.add(&[4, 5]).unwrap();
-        let second = builder.finish();
+        let second = Labels::new(
+            &["aa", "bb"],
+            vec![2, 3, /**/ 1, 2, /**/ 4, 5]
+        ).unwrap();
 
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; second.count()];
@@ -631,7 +627,7 @@ mod tests {
         assert_eq!(first_mapping, &[0, 1, 2]);
         assert_eq!(second_mapping, &[3, 1]);
 
-        let labels = LabelsBuilder::new(vec!["aa"]).unwrap().finish();
+        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
         let err = first.union(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -639,7 +635,7 @@ mod tests {
         );
 
         // Take the union with an empty set of labels
-        let empty = LabelsBuilder::new(vec!["aa", "bb"]).unwrap().finish();
+        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -652,16 +648,15 @@ mod tests {
 
     #[test]
     fn intersection() {
-        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
-        builder.add(&[0, 1]).unwrap();
-        builder.add(&[1, 2]).unwrap();
-        let first = builder.finish();
+        let first = Labels::new(
+            &["aa", "bb"],
+            vec![0, 1, /**/ 1, 2]
+        ).unwrap();
 
-        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
-        builder.add(&[2, 3]).unwrap();
-        builder.add(&[1, 2]).unwrap();
-        builder.add(&[4, 5]).unwrap();
-        let second = builder.finish();
+        let second = Labels::new(
+            &["aa", "bb"],
+            vec![2, 3, /**/ 1, 2, /**/ 4, 5]
+        ).unwrap();
 
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; second.count()];
@@ -681,7 +676,7 @@ mod tests {
         assert_eq!(first_mapping, &[-1, 0, -1]);
         assert_eq!(second_mapping, &[-1, 0]);
 
-        let labels = LabelsBuilder::new(vec!["aa"]).unwrap().finish();
+        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
         let err = first.intersection(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -689,7 +684,7 @@ mod tests {
         );
 
         // Take the intersection with an empty set of labels
-        let empty = LabelsBuilder::new(vec!["aa", "bb"]).unwrap().finish();
+        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -706,10 +701,7 @@ mod tests {
         fn use_send(_: impl Send) {}
         fn use_sync(_: impl Sync) {}
 
-        let mut builder = LabelsBuilder::new(vec!["aa", "bb"]).unwrap();
-        builder.add(&[0, 1]).unwrap();
-        builder.add(&[1, 2]).unwrap();
-        let labels = std::sync::Arc::new(builder.finish());
+        let labels = Arc::new(Labels::new(&["aa", "bb"], vec![0, 1, 1, 2]).unwrap());
 
         use_send(labels.clone());
         use_sync(labels);

@@ -6,16 +6,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-<!-- Possible sections
+### Changed
+- Issue #520, PR #763: `axis="components"` can now be passed to `metatensor.operations.rename_dimension`.
 
-### Added
-
-### Fixed
+## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.4) - 2024-10-11
 
 ### Changed
 
-### Removed
--->
+- `block_from_array` now takes optional parameters to specify the names of
+  sample, component and property dimensions
 
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.2.3) - 2024-08-28
 

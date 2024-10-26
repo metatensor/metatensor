@@ -5,6 +5,7 @@ import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+
 import torch
 from torch.profiler import record_function
 
@@ -236,10 +237,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :param outputs: outputs of the model that should be predicted
         :param selected_atoms: subset of atoms on which to run the calculation
         """
-        types, positions, cell = _ase_to_torch_data(
+        types, positions, cell, pbc = _ase_to_torch_data(
             atoms=atoms, dtype=self._dtype, device=self._device
         )
-        system = System(types, positions, cell)
+        system = System(types, positions, cell, pbc)
 
         # Compute the neighbors lists requested by the model using ASE NL
         for options in self._model.requested_neighbor_lists():
@@ -315,7 +316,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                         "does not support it"
                     )
 
-            types, positions, cell = _ase_to_torch_data(
+            types, positions, cell, pbc = _ase_to_torch_data(
                 atoms=atoms, dtype=self._dtype, device=self._device
             )
 
@@ -344,7 +345,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         with record_function("ASECalculator::compute_neighbors"):
             # convert from ase.Atoms to metatensor.torch.atomistic.System
-            system = System(types, positions, cell)
+            system = System(types, positions, cell, pbc)
 
             for options in self._model.requested_neighbor_lists():
                 neighbors = _compute_ase_neighbors(
@@ -365,7 +366,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
         energy = outputs["energy"]
 
-        with record_function("ASECalculator::convert_outputs"):
+        with record_function("ASECalculator::sum_energies"):
             if run_options.outputs["energy"].per_atom:
                 assert len(energy) == 1
                 assert energy.sample_names == ["system", "atom"]
@@ -382,6 +383,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             energy = energy.block().values
             assert energy.shape == (1, 1)
 
+        with record_function("ASECalculator::run_backward"):
+            if do_backward:
+                energy.backward()
+
+        with record_function("ASECalculator::convert_outputs"):
             self.results = {}
 
             if calculate_energies:
@@ -396,11 +402,6 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 energy_values = energy_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["energy"] = energy_values.numpy()[0, 0]
 
-        if do_backward:
-            with record_function("ASECalculator::run_backward"):
-                energy.backward()
-
-        with record_function("ASECalculator::convert_outputs"):
             if calculate_forces:
                 forces_values = -system.positions.grad.reshape(-1, 3)
                 forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
@@ -489,7 +490,6 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-
     if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
         nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
             "ijSD",
@@ -566,22 +566,16 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
 
 
 def _ase_to_torch_data(atoms, dtype, device):
-    """Get the positions and cell from ASE atoms as torch tensors"""
+    """Get the positions, cell and pbc from ASE atoms as torch tensors"""
 
     types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32, device=device)
     positions = torch.from_numpy(atoms.positions).to(dtype=dtype, device=device)
+    cell = torch.zeros((3, 3), dtype=dtype, device=device)
+    pbc = torch.tensor(atoms.pbc, dtype=torch.bool, device=device)
 
-    if np.all(atoms.pbc):
-        cell = torch.from_numpy(atoms.cell[:]).to(dtype=dtype, device=device)
-    elif np.any(atoms.pbc):
-        raise ValueError(
-            f"partial PBC ({atoms.pbc}) are not currently supported in "
-            "metatensor atomistic models"
-        )
-    else:
-        cell = torch.zeros((3, 3), dtype=dtype, device=device)
+    cell[pbc] = torch.tensor(atoms.cell[atoms.pbc], dtype=dtype, device=device)
 
-    return types, positions, cell
+    return types, positions, cell, pbc
 
 
 def _full_3x3_to_voigt_6_stress(stress):
