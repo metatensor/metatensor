@@ -115,10 +115,6 @@ rst_prolog = f"""
 with open(os.path.join(ROOT, "docs", "src", "_prolog.rst")) as fd:
     rst_prolog += fd.read()
 
-# print(rst_prolog)
-
-# raise 44
-
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "7.4.0"

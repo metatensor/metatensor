@@ -2,13 +2,13 @@ name: Coverage
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
     # Check all PR
 
 concurrency:
   group: coverage-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   coverage:
