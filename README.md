@@ -1,8 +1,8 @@
 # Metatensor
 
-[![tests status](https://img.shields.io/github/checks-status/metatensor/metatensor/master)](https://github.com/metatensor/metatensor/actions?query=branch%3Amaster)
+[![tests status](https://img.shields.io/github/checks-status/metatensor/metatensor/main)](https://github.com/metatensor/metatensor/actions?query=branch%3Amain)
 [![documentation](https://img.shields.io/badge/documentation-latest-sucess)](https://docs.metatensor.org/latest/)
-[![coverage](https://codecov.io/gh/metatensor/metatensor/branch/master/graph/badge.svg)](https://codecov.io/gh/metatensor/metatensor)
+[![coverage](https://codecov.io/gh/metatensor/metatensor/branch/main/graph/badge.svg)](https://codecov.io/gh/metatensor/metatensor)
 
 Metatensor is a self-describing sparse tensor data format for atomistic machine
 learning and beyond; storing values and gradients of these values together.
