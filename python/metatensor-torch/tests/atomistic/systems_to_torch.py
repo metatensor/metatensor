@@ -81,7 +81,6 @@ def test_ase_to_torch_non_periodic():
 
     # test the warning when converting a non-periodic
     # system with non-zero cell vectors
-
     atoms = ase.Atoms(
         "CO",
         positions=[(0, 0, 0), (0, 0, 2)],
@@ -89,7 +88,24 @@ def test_ase_to_torch_non_periodic():
         pbc=[False, False, False],
     )
 
-    with pytest.warns(UserWarning, match="non-zero cell vectors"):
+    message = (
+        "A conversion to `System` was requested for an `ase.Atoms` object with one "
+        "or more non-zero cell vectors but where the corresponding boundary conditions "
+        "are set to `False`. The corresponding cell vectors will be set to zero."
+    )
+    with pytest.warns(UserWarning, match=message):
         system = systems_to_torch(atoms)
 
     assert torch.all(system.cell == 0)
+
+    atoms = ase.Atoms(
+        "CO",
+        positions=[(0, 0, 0), (0, 0, 2)],
+        cell=4 * np.eye(3),
+        pbc=[False, False, True],
+    )
+    with pytest.warns(UserWarning, match=message):
+        system = systems_to_torch(atoms)
+
+    assert torch.all(system.cell[0] == 0)
+    assert torch.all(system.cell[1] == 0)

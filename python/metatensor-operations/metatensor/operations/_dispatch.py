@@ -799,6 +799,16 @@ def take(array, indices, axis: int):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def make_like(array, like):
+    """Transform ``array`` to use the same backend/dtype/device as ``like``"""
+    if isinstance(like, TorchTensor):
+        return to(array, backend="torch", dtype=like.dtype, device=like.device)
+    if isinstance(like, np.ndarray):
+        return to(array, backend="numpy", dtype=like.dtype, device="cpu")
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def to(
     array,
     backend: Optional[str] = None,

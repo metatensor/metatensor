@@ -288,6 +288,7 @@ def test_access_module(tmpdir):
     model.train(False)
 
     capabilities = ModelCapabilities(
+        length_unit="nm",
         interaction_range=0.0,
         supported_devices=["cpu"],
         dtype="float64",
@@ -314,6 +315,7 @@ def test_is_atomistic_model(tmpdir):
     model.train(False)
 
     capabilities = ModelCapabilities(
+        length_unit="A",
         interaction_range=0.0,
         supported_devices=["cpu"],
         dtype="float64",
@@ -338,6 +340,7 @@ def test_read_metadata(tmpdir):
     model.train(False)
 
     capabilities = ModelCapabilities(
+        length_unit="nm",
         interaction_range=0.0,
         supported_devices=["cpu"],
         dtype="float64",
