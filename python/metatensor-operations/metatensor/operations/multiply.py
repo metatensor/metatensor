@@ -4,7 +4,7 @@ from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
-    check_isinstance,
+    is_metatensor_class,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -124,14 +124,14 @@ def multiply(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if not torch_jit_is_scripting():
-        if not check_isinstance(A, TensorMap):
+        if not is_metatensor_class(A, TensorMap):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
     blocks: List[TensorBlock] = []
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)
     else:
-        is_tensor_map = check_isinstance(B, TensorMap)
+        is_tensor_map = is_metatensor_class(B, TensorMap)
 
     if isinstance(B, (float, int)):
         B = float(B)

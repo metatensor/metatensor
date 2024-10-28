@@ -5,7 +5,7 @@ from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
-    check_isinstance,
+    is_metatensor_class,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -29,12 +29,12 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
     """
     # Check arg types
     if not torch_jit_is_scripting():
-        if not check_isinstance(tensor, TensorMap):
+        if not is_metatensor_class(tensor, TensorMap):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
 
-        if not check_isinstance(keys, Labels):
+        if not is_metatensor_class(keys, Labels):
             raise TypeError(f"`keys` must be a metatensor Labels, not {type(keys)}")
 
         if not isinstance(copy, bool):

@@ -8,6 +8,8 @@
 # See metatensor-torch/metatensor/torch/operations.py for more information.
 #
 # Any change to this file MUST be also be made to `metatensor/torch/operations.py`.
+import re
+import warnings
 from typing import Union
 
 import numpy as np
@@ -19,8 +21,10 @@ try:
     import torch
 
     Array = Union[np.ndarray, torch.Tensor]
+    _HAS_TORCH = True
 except ImportError:
     Array = np.ndarray
+    _HAS_TORCH = False
 
 
 Labels = metatensor.Labels
@@ -54,4 +58,37 @@ def torch_jit_annotate(type, value):
     return value
 
 
-check_isinstance = isinstance
+_VERSION_REGEX = re.compile(r"(\d+)\.(\d+)\.*.")
+
+
+def _version_at_least(version, expected):
+    version = tuple(map(int, _VERSION_REGEX.match(version).groups()))
+    expected = tuple(map(int, _VERSION_REGEX.match(expected).groups()))
+
+    return version >= expected
+
+
+def is_metatensor_class(value, typ):
+    assert typ in (Labels, TensorBlock, TensorMap)
+
+    if isinstance(value, typ):
+        return True
+    else:
+        if _HAS_TORCH and isinstance(value, torch.ScriptObject):
+            if _version_at_least(torch.__version__, "2.1.0"):
+                # _type() is only working for torch >= 2.1
+                is_metatensor_torch_class = "metatensor" in str(value._type())
+            else:
+                # we don't know, it's fine
+                is_metatensor_torch_class = False
+
+            if is_metatensor_torch_class:
+                warnings.warn(
+                    "Trying to use operations from metatensor with objects from "
+                    "metatensor-torch, you should use the operation from "
+                    "`metatensor.torch` as well, e.g. `metatensor.torch.add(...)` "
+                    "instead of `metatensor.add(...)`",
+                    stacklevel=2,
+                )
+
+        return False

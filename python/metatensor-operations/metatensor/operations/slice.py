@@ -6,7 +6,7 @@ from ._backend import (
     LabelsValues,
     TensorBlock,
     TensorMap,
-    check_isinstance,
+    is_metatensor_class,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -26,7 +26,7 @@ def _slice_block(
     else:
         if not torch_jit_is_scripting():
             # This should already have been checked
-            assert check_isinstance(selection, Labels)
+            assert is_metatensor_class(selection, Labels)
 
         if axis == "samples":
             selected = block.samples.select(selection)
@@ -168,7 +168,7 @@ def _check_slice_args(
             raise ValueError("`selection` must be a 1-D array of integers")
     elif not isinstance(selection, list):
         if not torch_jit_is_scripting():
-            if not check_isinstance(selection, Labels):
+            if not is_metatensor_class(selection, Labels):
                 raise TypeError(
                     "`selection` must be metatensor Labels, an array "
                     + f"or List[int], not {type(selection)}"
@@ -223,7 +223,7 @@ def slice(tensor: TensorMap, axis: str, selection: Labels) -> TensorMap:
     """
     # Check input args
     if not torch_jit_is_scripting():
-        if not check_isinstance(tensor, TensorMap):
+        if not is_metatensor_class(tensor, TensorMap):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
@@ -266,7 +266,7 @@ def slice_block(
     :return new_block: a :py:class:`TensorBlock` that corresponds to the sliced input.
     """
     if not torch_jit_is_scripting():
-        if not check_isinstance(block, TensorBlock):
+        if not is_metatensor_class(block, TensorBlock):
             raise TypeError(
                 f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )
