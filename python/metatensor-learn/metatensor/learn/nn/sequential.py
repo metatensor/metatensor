@@ -3,7 +3,7 @@ from typing import List
 import torch
 from torch.nn import Module
 
-from .._backend import Labels, TensorMap, check_isinstance
+from .._backend import Labels, TensorMap, is_metatensor_class
 from .module_map import ModuleMap
 
 
@@ -21,7 +21,7 @@ class Sequential(Module):
 
     def __init__(self, in_keys: Labels, *args: List[ModuleMap]):
         super().__init__()
-        if not check_isinstance(in_keys, Labels):
+        if not is_metatensor_class(in_keys, Labels):
             raise TypeError("`in_keys` must be a `Labels` object.")
 
         modules: List[Module] = []
