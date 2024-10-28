@@ -503,6 +503,8 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
             cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
         )
 
+    # The pair selection code here below avoids a relatively slow loop over
+    # all pairs to improve performance
     reject_condition = (
         # we want a half neighbor list, so drop all duplicated neighbors
         (nl_j < nl_i)
@@ -527,9 +529,8 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
             )
         )
     )
-    accept_condition = np.logical_not(reject_condition)
-    selected = np.where(accept_condition)[0].astype(np.int32)
-    n_pairs = len(selected)
+    selected = np.logical_not(reject_condition)
+    n_pairs = np.sum(selected)
 
     if options.full_list:
         distances = np.empty((2 * n_pairs, 3), dtype=np.float64)
