@@ -137,7 +137,7 @@ def test_neighbor_autograd_errors():
 
     message = (
         r"one neighbor pair does not match its metadata: the pair between atom \d+ and "
-        r"atom \d+ for the \[\d+, \d+, \d+\] cell shift should have a distance vector "
+        r"atom \d+ for the \[.*?\] cell shift should have a distance vector "
         r"of \[.*?\] but has a distance vector of \[.*?\]"
     )
     neighbors = _compute_ase_neighbors(

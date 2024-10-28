@@ -5,6 +5,7 @@ import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+import vesin
 
 import torch
 from torch.profiler import record_function
@@ -29,13 +30,6 @@ from ase.calculators.calculator import (  # isort: skip
     PropertyNotImplementedError,
     all_properties as ALL_ASE_PROPERTIES,
 )
-
-try:
-    import vesin
-
-    HAS_VESIN = True
-except ImportError:
-    HAS_VESIN = False
 
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
@@ -62,9 +56,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
 
-    Neighbor lists are computed using ASE's neighbor list utilities, unless the faster
-    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library is
-    installed, in which case it will be used instead.
+    Neighbor lists are computed using the fast
+    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library,
+    unless the system has mixed periodic and non-periodic boundary conditions (which
+    are not yet supported by ``vesin``), in which case the slower ASE neighbor list
+    is used.
     """
 
     additional_outputs: Dict[str, TensorMap]
@@ -490,7 +486,7 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
-    if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
+    if np.all(atoms.pbc) or np.all(~atoms.pbc):
         nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
             "ijSD",
             atoms,
