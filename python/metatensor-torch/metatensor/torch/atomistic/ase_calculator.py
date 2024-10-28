@@ -503,29 +503,34 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
             cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
         )
 
-    selected = []
-    for pair_i, (i, j, S) in enumerate(zip(nl_i, nl_j, nl_S)):
+    # The pair selection code here below avoids a relatively slow loop over
+    # all pairs to improve performance
+    reject_condition = (
         # we want a half neighbor list, so drop all duplicated neighbors
-        if j < i:
-            continue
-        elif i == j:
-            if S[0] == 0 and S[1] == 0 and S[2] == 0:
+        (nl_j < nl_i)
+        | (
+            (nl_i == nl_j)
+            & (
                 # only create pairs with the same atom twice if the pair spans more
                 # than one unit cell
-                continue
-            elif S[0] + S[1] + S[2] < 0 or (
-                (S[0] + S[1] + S[2] == 0) and (S[2] < 0 or (S[2] == 0 and S[1] < 0))
-            ):
-                # When creating pairs between an atom and one of its periodic
-                # images, the code generate multiple redundant pairs (e.g. with
-                # shifts 0 1 1 and 0 -1 -1); and we want to only keep one of these.
-                # We keep the pair in the positive half plane of shifts.
-                continue
-
-        selected.append(pair_i)
-
-    selected = np.array(selected, dtype=np.int32)
-    n_pairs = len(selected)
+                ((nl_S[:, 0] == 0) & (nl_S[:, 1] == 0) & (nl_S[:, 2] == 0))
+                |
+                # When creating pairs between an atom and one of its periodic images,
+                # the code generates multiple redundant pairs
+                # (e.g. with shifts 0 1 1 and 0 -1 -1); and we want to only keep one of
+                # these. We keep the pair in the positive half plane of shifts.
+                (
+                    (nl_S.sum(axis=1) < 0)
+                    | (
+                        (nl_S.sum(axis=1) == 0)
+                        & ((nl_S[:, 2] < 0) | ((nl_S[:, 2] == 0) & (nl_S[:, 1] < 0)))
+                    )
+                )
+            )
+        )
+    )
+    selected = np.logical_not(reject_condition)
+    n_pairs = np.sum(selected)
 
     if options.full_list:
         distances = np.empty((2 * n_pairs, 3), dtype=np.float64)
