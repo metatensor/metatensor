@@ -106,15 +106,14 @@ def _system_to_torch(
         device=device,
     )
 
-    cell_vectors_are_not_zero = np.any(system.cell == 0, axis=1)
-
+    cell_vectors_are_not_zero = np.any(system.cell != 0, axis=1)
     if not np.all(cell_vectors_are_not_zero == system.pbc):
         warnings.warn(
             "A conversion to `System` was requested for an `ase.Atoms` object "
             "with one or more non-zero cell vectors but where the corresponding "
             "boundary conditions are set to `False`. "
             "The corresponding cell vectors will be set to zero.",
-            stacklevel=2,
+            stacklevel=3,
         )
 
     cell = torch.zeros((3, 3), dtype=dtype, device=device)
