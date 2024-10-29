@@ -17,16 +17,19 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
-### Added 
+## [Version 0.6.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.0) - 2024-10-29
+
+### Added
 
 - a `is_atomistic_model` (Python only) function to check if an loaded module is an
   metatensor atomistic model (#697, #766)
 
 ### Changed
 
-- the `System` class now supports boundary conditions along some axes but not others. This is implemented
-  via a new `pbc` attribute. Any non-periodic dimension in a `System` must have the corrresponding cell
-  vector set to zero.
+- the `System` class now supports boundary conditions along some axes but not
+  others. This is implemented via a new `pbc` attribute. Any non-periodic
+  dimension in a `System` must have the corresponding cell vector set to zero.
+- `NeighborListOptions` can now request `strict` or non-strict neighbor lists (#770)
 
 ## [Version 0.5.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.5.5) - 2024-09-03
 
