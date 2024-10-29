@@ -6,10 +6,23 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Changed
-- Issue #520, PR #763: `axis="components"` can now be passed to `metatensor.operations.rename_dimension`.
+<!-- Possible sections
+
+### Added
+
+### Fixed
 
 ### Changed
+
+### Removed
+-->
+
+
+## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.0) - 2024-10-29
+
+### Changed
+
+- `axis="components"` can now be passed to `metatensor.operations.rename_dimension` (#763)
 
 - `split`, `split_block`, `slice` and `slice_block` have been updated to accept
   a list of integer directly specifying which samples/properties to keep in the
