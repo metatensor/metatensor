@@ -15,6 +15,13 @@ from wheel.bdist_wheel import bdist_wheel
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE_SRC = os.path.realpath(os.path.join(ROOT, "..", "metatensor-core"))
 
+METATENSOR_BUILD_TYPE = os.environ.get("METATENSOR_BUILD_TYPE", "release")
+if METATENSOR_BUILD_TYPE not in ["debug", "release"]:
+    raise Exception(
+        f"invalid build type passed: '{METATENSOR_BUILD_TYPE}', "
+        "expected 'debug' or 'release'"
+    )
+
 METATENSOR_TORCH_SRC = os.path.join(ROOT, "..", "..", "metatensor-torch")
 
 
@@ -64,7 +71,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
-            "-DCMAKE_BUILD_TYPE=Debug",
+            f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
             f"-DCMAKE_PREFIX_PATH={';'.join(cmake_prefix_path)}",
