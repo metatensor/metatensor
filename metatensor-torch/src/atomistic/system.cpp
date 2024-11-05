@@ -96,6 +96,8 @@ std::string NeighborListOptionsHolder::to_json() const {
     result["strict"] = this->strict_;
     result["length_unit"] = this->length_unit_;
 
+    result["requestors"] = this->requestors_;
+
     return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
@@ -125,7 +127,7 @@ NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json
         throw std::runtime_error("'full_list' in JSON for NeighborListOptions must be a boolean");
     }
     auto full_list = data["full_list"].get<bool>();
-    
+
     if (!data.contains("strict") || !data["strict"].is_boolean()) {
         throw std::runtime_error("'strict' in JSON for NeighborListOptions must be a boolean");
     }
@@ -138,6 +140,20 @@ NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json
             throw std::runtime_error("'length_unit' in JSON for NeighborListOptions must be a string");
         }
         options->set_length_unit(data["length_unit"]);
+    }
+
+    if (data.contains("requestors")) {
+        if (!data["requestors"].is_array()) {
+            throw std::runtime_error("'requestors' in JSON for NeighborListOptions must be an array");
+        }
+
+        for (const auto& requestor: data["requestors"]) {
+            if (!requestor.is_string()) {
+                throw std::runtime_error("'requestors' in JSON for NeighborListOptions must be an array of strings");
+            }
+
+            options->add_requestor(requestor.get<std::string>());
+        }
     }
 
     return options;

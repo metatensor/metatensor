@@ -13,13 +13,20 @@ TEST_CASE("Models metadata") {
         auto options = torch::make_intrusive<NeighborListOptionsHolder>(
             /*cutoff=*/ 3.5426,
             /*full_list=*/ true,
-            /*strict=*/ true
+            /*strict=*/ true,
+            /*requestor=*/ "request"
         );
+        options->add_requestor("another request");
+
         const auto* expected = R"({
     "class": "NeighborListOptions",
     "cutoff": 4615159644819978768,
     "full_list": true,
     "length_unit": "",
+    "requestors": [
+        "request",
+        "another request"
+    ],
     "strict": true
 })";
         CHECK(options->to_json() == expected);
@@ -29,12 +36,14 @@ TEST_CASE("Models metadata") {
     "cutoff": 4615159644819978768,
     "full_list": false,
     "strict": false,
-    "class": "NeighborListOptions"
+    "class": "NeighborListOptions",
+    "requestors": ["some request", "hello.world"]
 })";
         options = NeighborListOptionsHolder::from_json(json);
         CHECK(options->cutoff() == 3.5426);
         CHECK(options->full_list() == false);
         CHECK(options->strict() == false);
+        CHECK(options->requestors() == std::vector<std::string>{"some request", "hello.world"});
 
         CHECK_THROWS_WITH(
             NeighborListOptionsHolder::from_json("{}"),
