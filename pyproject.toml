@@ -77,3 +77,6 @@ ignore = ["B018", "B904"]
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["metatensor"]
+
+[tool.ruff.format]
+docstring-code-format = true

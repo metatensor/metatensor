@@ -105,7 +105,6 @@ class ModuleMap(ModuleList):
         >>> linear = torch.nn.Linear(3, 1, bias=False)
         >>> with torch.no_grad():
         ...     _ = linear.weight.copy_(torch.tensor([1.0, 1.0, 1.0]))
-        ...
         >>> modules = [linear, deepcopy(linear)]
         >>> # you could also extend the module by some nonlinear activation function
 
@@ -229,7 +228,6 @@ class ModuleMap(ModuleList):
         >>> linear = torch.nn.Linear(3, 1, bias=False)
         >>> with torch.no_grad():
         ...     _ = linear.weight.copy_(torch.tensor([1.0, 1.0, 1.0]))
-        ...
         >>> # you could also extend the module by some nonlinear activation function
         >>> from metatensor.learn.nn import ModuleMap
         >>> module_map = ModuleMap.from_module(tensor.keys, linear)

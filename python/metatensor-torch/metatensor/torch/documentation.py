@@ -154,7 +154,6 @@ class Labels:
     tensor([0, 1, 8], dtype=torch.int32)
     >>> for entry in labels:
     ...     print(entry)
-    ...
     LabelsEntry(system=0, atom=1, type=8)
     LabelsEntry(system=0, atom=2, type=1)
     LabelsEntry(system=0, atom=5, type=1)
@@ -490,7 +489,6 @@ class Labels:
         ...     label.remove(name="bar")
         ... except RuntimeError as e:
         ...     print(e)
-        ...
         invalid parameter: can not have the same label entry multiple time: [42] is already present
         """  # noqa E501
 

@@ -130,13 +130,11 @@ class Dataset(_BaseDataset):
     >>> # iterating over a dataset
     >>> for num, called in dataset:
     ...     print(num, " -- ", called)
-    ...
     1  --  compute something with sample 0
     2  --  compute something with sample 1
     3  --  compute something with sample 2
     >>> for sample in dataset:
     ...     print(sample.num, " -- ", sample.call_me)
-    ...
     1  --  compute something with sample 0
     2  --  compute something with sample 1
     3  --  compute something with sample 2

@@ -215,7 +215,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...             )
     ...
     ...         return results
-    ...
 
     Wrapping and exporting this model would then look like this:
 
@@ -257,7 +256,6 @@ class MetatensorAtomisticModel(torch.nn.Module):
     >>> # save the exported model to disk
     >>> with tempfile.TemporaryDirectory() as directory:
     ...     model.save(os.path.join(directory, "constant-energy-model.pt"))
-    ...
 
     .. py:attribute:: module
         :type: ModelInterface
