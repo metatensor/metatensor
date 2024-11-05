@@ -185,17 +185,43 @@ class FullModel(torch.nn.Module):
         return result
 
 
-def test_requested_neighbor_lists():
+def test_requested_neighbor_lists(tmpdir):
     model = FullModel()
     model.train(False)
 
     capabilities = ModelCapabilities(
         interaction_range=0.0,
+        length_unit="A",
         supported_devices=["cpu"],
         dtype="float64",
     )
     atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
     requests = atomistic.requested_neighbor_lists()
+
+    assert len(requests) == 2
+
+    assert requests[0].cutoff == 1.0
+    assert not requests[0].full_list
+    assert requests[0].strict
+    assert requests[0].requestors() == [
+        "first module",
+        "FullModel.first",
+        "second module",
+        "FullModel.second",
+    ]
+
+    assert requests[1].cutoff == 2.0
+    assert requests[1].full_list
+    assert not requests[1].strict
+    assert requests[1].requestors() == [
+        "other module",
+        "FullModel.other",
+    ]
+
+    # check these are still around after serialization/reload
+    atomistic.save(os.path.join(tmpdir, "model.pt"))
+    loaded = torch.jit.load(os.path.join(tmpdir, "model.pt"))
+    requests = loaded.requested_neighbor_lists()
 
     assert len(requests) == 2
 
