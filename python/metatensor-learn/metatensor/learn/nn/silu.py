@@ -93,7 +93,7 @@ class InvariantSiLU(torch.nn.Module):
         if invariant_keys is None:
             invariant_keys = Labels(
                 names=["o3_lambda", "o3_sigma"],
-                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 1),
+                values=int_array_like([0, 1], like=in_keys.values).reshape(-1, 2),
             )
         invariant_key_idxs = in_keys.select(invariant_keys)
         modules: List[Module] = []
