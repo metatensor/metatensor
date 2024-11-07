@@ -112,6 +112,28 @@ def test_save(model, tmp_path):
     check_atomistic_model("export.pt")
 
 
+def test_recreate(model, tmp_path):
+    os.chdir(tmp_path)
+    model.save("export.pt")
+    model_loaded = load_atomistic_model("export.pt")
+    model_loaded.save("export_new.pt")
+
+    with zipfile.ZipFile("export_new.pt") as file:
+        assert "export_new/extra/metatensor-version" in file.namelist()
+        assert "export_new/extra/torch-version" in file.namelist()
+
+    check_atomistic_model("export_new.pt")
+
+
+def test_training_mode():
+    model = MinimalModel()
+    model.train(True)
+    capabilities = ModelCapabilities(supported_devices=["cpu"], dtype="float64")
+
+    with pytest.raises(ValueError, match="module should not be in training mode"):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+
 def test_save_warning_length_unit(model):
     model._capabilities.length_unit = ""
     match = r"No length unit was provided for the model."

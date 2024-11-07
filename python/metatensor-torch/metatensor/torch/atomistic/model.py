@@ -42,7 +42,9 @@ def load_atomistic_model(path, extensions_directory=None) -> "MetatensorAtomisti
     path = str(path)
     load_model_extensions(path, str(extensions_directory))
     check_atomistic_model(path)
-    return torch.jit.load(path)
+
+    model = torch.jit.load(path)
+    return MetatensorAtomisticModel(model, model.metadata(), model.capabilities())
 
 
 def is_atomistic_model(module: torch.nn.Module) -> bool:
@@ -281,20 +283,22 @@ class MetatensorAtomisticModel(torch.nn.Module):
         """
         super().__init__()
 
-        if not is_atomistic_model(module):
+        if is_atomistic_model(module):
+            # module was already checked; take the sub-module as is
+            self.module = module.module
+        else:
             _check_annotation(module)
+            self.module = module
 
         if module.training:
             raise ValueError("module should not be in training mode")
-
-        self.module = module
 
         # ============================================================================ #
 
         # recursively explore `module` to get all the requested_neighbor_lists
         self._requested_neighbor_lists = []
         _get_requested_neighbor_lists(
-            self.module,
+            module,
             self.module.__class__.__name__,
             self._requested_neighbor_lists,
             capabilities.length_unit,
