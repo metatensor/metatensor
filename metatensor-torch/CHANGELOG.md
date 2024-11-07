@@ -17,6 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.6.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.1) - 2024-11-7
+
+### Fixed
+
+- Added missing data to `NeighborListOptions` serialization (#784)
+
+### Changed
+
+- `load_atomistic_model` now returns a `MetatensorAtomisticMode` instead of a
+  raw TorchScript model. This allows to reload, modify and re-export a model
+  (#783).
+
 ## [Version 0.6.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.0) - 2024-10-29
 
 ### Added
