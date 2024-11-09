@@ -178,6 +178,9 @@ public:
     /// a `torch::Tensor` of bytes)
     torch::Tensor save_buffer() const;
 
+    // Setter that throw and error
+    void set_values(const torch::Tensor& new_values);
+
 private:
     /// Create a TensorBlockHolder containing gradients with respect to
     /// `parameter`

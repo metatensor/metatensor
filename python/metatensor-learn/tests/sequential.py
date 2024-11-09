@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
@@ -85,43 +86,45 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
     in_invariant_features = [
         len(tensor.block(key).properties) for key in in_keys if key["o3_lambda"] == 0
     ]
-    invariant_key_idxs = [i for i, key in enumerate(in_keys) if key["o3_lambda"] == 0]
+    invariant_keys = metatensor.Labels(
+        ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
+    )
 
     model = nn.Sequential(
         in_keys,
         nn.InvariantLayerNorm(
             in_keys=in_keys,
-            invariant_key_idxs=invariant_key_idxs,
             in_features=in_invariant_features,
+            invariant_keys=invariant_keys,
             dtype=torch.float64,
         ),
         nn.EquivariantLinear(
             in_keys=in_keys,
-            invariant_key_idxs=invariant_key_idxs,
             in_features=in_features,
             out_features=4,
+            invariant_keys=invariant_keys,
             bias=True,
             dtype=torch.float64,
         ),
-        nn.InvariantTanh(in_keys=in_keys, invariant_key_idxs=invariant_key_idxs),
+        nn.InvariantTanh(in_keys=in_keys, invariant_keys=invariant_keys),
         nn.EquivariantLinear(
             in_keys=in_keys,
-            invariant_key_idxs=invariant_key_idxs,
             in_features=4,
             out_features=2,
+            invariant_keys=invariant_keys,
             bias=True,
             dtype=torch.float64,
         ),
-        nn.InvariantReLU(in_keys=in_keys, invariant_key_idxs=invariant_key_idxs),
+        nn.InvariantReLU(in_keys=in_keys, invariant_keys=invariant_keys),
         nn.EquivariantLinear(
             in_keys=in_keys,
-            invariant_key_idxs=invariant_key_idxs,
             in_features=2,
             out_features=1,
+            invariant_keys=invariant_keys,
             bias=True,
             dtype=torch.float64,
         ),
-        nn.InvariantSiLU(in_keys=in_keys, invariant_key_idxs=invariant_key_idxs),
+        nn.InvariantSiLU(in_keys=in_keys, invariant_keys=invariant_keys),
     )
 
     prediction = model(tensor)

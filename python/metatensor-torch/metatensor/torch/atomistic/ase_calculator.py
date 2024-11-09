@@ -5,6 +5,8 @@ import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+import vesin
+
 import torch
 from torch.profiler import record_function
 
@@ -28,13 +30,6 @@ from ase.calculators.calculator import (  # isort: skip
     PropertyNotImplementedError,
     all_properties as ALL_ASE_PROPERTIES,
 )
-
-try:
-    import vesin
-
-    HAS_VESIN = True
-except ImportError:
-    HAS_VESIN = False
 
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") == "0":
@@ -61,9 +56,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
     This class can be initialized with any :py:class:`MetatensorAtomisticModel`, and
     used to run simulations using ASE's MD facilities.
 
-    Neighbor lists are computed using ASE's neighbor list utilities, unless the faster
-    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library is
-    installed, in which case it will be used instead.
+    Neighbor lists are computed using the fast
+    `vesin <https://luthaf.fr/vesin/latest/index.html>`_ neighbor list library,
+    unless the system has mixed periodic and non-periodic boundary conditions (which
+    are not yet supported by ``vesin``), in which case the slower ASE neighbor list
+    is used.
     """
 
     additional_outputs: Dict[str, TensorMap]
@@ -489,8 +486,10 @@ def _ase_properties_to_metatensor_outputs(properties):
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):
+    # options.strict is ignored by this function, since `ase.neighborlist.neighbor_list`
+    # only computes strict NL, and these are valid even with `strict=False`
 
-    if (np.all(atoms.pbc) or np.all(~atoms.pbc)) and HAS_VESIN:
+    if np.all(atoms.pbc) or np.all(~atoms.pbc):
         nl_i, nl_j, nl_S, nl_D = vesin.ase_neighbor_list(
             "ijSD",
             atoms,
@@ -503,29 +502,34 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
             cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
         )
 
-    selected = []
-    for pair_i, (i, j, S) in enumerate(zip(nl_i, nl_j, nl_S)):
+    # The pair selection code here below avoids a relatively slow loop over
+    # all pairs to improve performance
+    reject_condition = (
         # we want a half neighbor list, so drop all duplicated neighbors
-        if j < i:
-            continue
-        elif i == j:
-            if S[0] == 0 and S[1] == 0 and S[2] == 0:
+        (nl_j < nl_i)
+        | (
+            (nl_i == nl_j)
+            & (
                 # only create pairs with the same atom twice if the pair spans more
                 # than one unit cell
-                continue
-            elif S[0] + S[1] + S[2] < 0 or (
-                (S[0] + S[1] + S[2] == 0) and (S[2] < 0 or (S[2] == 0 and S[1] < 0))
-            ):
-                # When creating pairs between an atom and one of its periodic
-                # images, the code generate multiple redundant pairs (e.g. with
-                # shifts 0 1 1 and 0 -1 -1); and we want to only keep one of these.
-                # We keep the pair in the positive half plane of shifts.
-                continue
-
-        selected.append(pair_i)
-
-    selected = np.array(selected, dtype=np.int32)
-    n_pairs = len(selected)
+                ((nl_S[:, 0] == 0) & (nl_S[:, 1] == 0) & (nl_S[:, 2] == 0))
+                |
+                # When creating pairs between an atom and one of its periodic images,
+                # the code generates multiple redundant pairs
+                # (e.g. with shifts 0 1 1 and 0 -1 -1); and we want to only keep one of
+                # these. We keep the pair in the positive half plane of shifts.
+                (
+                    (nl_S.sum(axis=1) < 0)
+                    | (
+                        (nl_S.sum(axis=1) == 0)
+                        & ((nl_S[:, 2] < 0) | ((nl_S[:, 2] == 0) & (nl_S[:, 1] < 0)))
+                    )
+                )
+            )
+        )
+    )
+    selected = np.logical_not(reject_condition)
+    n_pairs = np.sum(selected)
 
     if options.full_list:
         distances = np.empty((2 * n_pairs, 3), dtype=np.float64)

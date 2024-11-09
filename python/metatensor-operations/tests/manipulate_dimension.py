@@ -17,6 +17,11 @@ def tensor():
 
 
 @pytest.fixture
+def tensor_with_components_and_gradients():
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+
+
+@pytest.fixture
 def tensor_extra():
     """TensorMap with gradient containing extra columns in keys, samples, properties"""
     block = TensorBlock(
@@ -238,6 +243,24 @@ def test_rename_properties(tensor):
             assert gradient.properties.names[0] == "foo"
 
 
+def test_rename_components(tensor_with_components_and_gradients):
+    new_tensor = metatensor.rename_dimension(
+        tensor_with_components_and_gradients,
+        axis="components",
+        old="o3_mu",
+        new="foo",
+    )
+    assert new_tensor.component_names[0] == "foo"
+
+    for block in new_tensor:
+        for parameter, gradient in block.gradients():
+            if parameter == "positions":
+                gradient_component_names = [["xyz"], ["foo"]]
+            elif parameter == "strain":
+                gradient_component_names = [["xyz_1"], ["xyz_2"], ["foo"]]
+            assert [c.names for c in gradient.components] == gradient_component_names
+
+
 def test_rename_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
         metatensor.rename_dimension(tensor, axis="foo", old="foo", new="foo")
@@ -278,8 +301,8 @@ def test_remove_unknown_axis(tensor):
 def test_not_unique_after(tensor):
     """Test error raise if the the labels after the removal would be not valid."""
     match = (
-        r"invalid parameter: can not have the same label value multiple time: \[1, 1\] "
-        r"is already present at position 0"
+        r"invalid parameter: can not have the same label entry multiple time: \[1, 1\] "
+        r"is already present"
     )
     with pytest.raises(metatensor.status.MetatensorError, match=match):
         metatensor.remove_dimension(tensor, axis="keys", name="center_type")

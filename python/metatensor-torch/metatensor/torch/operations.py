@@ -2,9 +2,8 @@ import importlib
 import os
 import sys
 
-import torch
-
 import metatensor.operations
+import torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
@@ -56,6 +55,7 @@ module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
 module.__dict__["TensorMap"] = TensorMap
 module.__dict__["Array"] = torch.Tensor
+module.__dict__["LabelsValues"] = torch.Tensor
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     # disable TorchScript compilation when importing the code with
@@ -70,19 +70,23 @@ else:
 module.__dict__["torch_jit_annotate"] = torch.jit.annotate
 
 
-def check_isinstance(obj, ty):
-    if isinstance(ty, torch.ScriptClass):
-        # This branch is taken when `ty` is a custom class (TensorMap, …). since `ty` is
-        # an instance of `torch.ScriptClass` and not a class itself, there is no way to
-        # check if obj is an "instance" of this class, so we always return True and hope
-        # for the best. Most errors should be caught by the TorchScript compiler anyway.
+def is_metatensor_class(value, typ):
+    if torch.jit.is_scripting():
+        return True
+
+    assert typ in (Labels, TensorBlock, TensorMap)
+    if isinstance(value, torch.ScriptObject):
+        # For custom classes (TensorMap, …), the `typ` is an instance of
+        # `torch.ScriptClass` and not a class itself, and there is no way to check
+        # if obj is an "instance" of this class; so we always return True and hope
+        # for the best. Most errors should be caught by the TorchScript compiler
+        # anyway.
         return True
     else:
-        assert isinstance(ty, type)
-        return isinstance(obj, ty)
+        return False
 
 
-module.__dict__["check_isinstance"] = check_isinstance
+module.__dict__["is_metatensor_class"] = is_metatensor_class
 
 # register the module in sys.modules, so future import find it directly
 sys.modules[spec.name] = module

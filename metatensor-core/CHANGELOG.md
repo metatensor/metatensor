@@ -17,15 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
-### Changed
-
-- The code now requires Rustc v1.74 to build.
-
 ### metatensor-core Julia
 
 #### Added
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
+
+## [Version 0.1.11](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.11) - 2024-10-23
+
+### Changed
+
+- The code now requires Rustc v1.74 to build.
+- Labels creation is quite a bit faster for large labels thanks to #752 and #754
 
 ## [Version 0.1.10](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.10) - 2024-08-28
 

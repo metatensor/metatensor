@@ -171,7 +171,7 @@ def _reduce_over_samples_block(
     values_mean = _dispatch.empty_like(values_result, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
-        bincount = _dispatch.bincount(index)
+        bincount = _dispatch.make_like(_dispatch.bincount(index), values_result)
         values_result = values_result / bincount.reshape(
             (-1,) + (1,) * len(other_shape)
         )

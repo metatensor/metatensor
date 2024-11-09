@@ -102,13 +102,13 @@ def test_join_properties_values(tensor):
         tensor[0].properties.names,
         tensor[0].properties.values[:1],
     )
-    slice_1 = metatensor.slice(tensor, axis="properties", labels=first_property)
+    slice_1 = metatensor.slice(tensor, axis="properties", selection=first_property)
 
     other_properties = Labels(
         tensor[0].properties.names,
         tensor[0].properties.values[1:],
     )
-    slice_2 = metatensor.slice(tensor, axis="properties", labels=other_properties)
+    slice_2 = metatensor.slice(tensor, axis="properties", selection=other_properties)
 
     joined_tensor = metatensor.join([slice_1, slice_2], axis="properties")
 
@@ -204,13 +204,13 @@ def test_join_samples_values(tensor):
         tensor[0].samples.names,
         tensor[0].samples.values[:1],
     )
-    slice_1 = metatensor.slice(tensor, axis="samples", labels=first_samples)
+    slice_1 = metatensor.slice(tensor, axis="samples", selection=first_samples)
 
     other_samples = Labels(
         tensor[0].samples.names,
         tensor[0].samples.values[1:],
     )
-    slice_2 = metatensor.slice(tensor, axis="samples", labels=other_samples)
+    slice_2 = metatensor.slice(tensor, axis="samples", selection=other_samples)
 
     joined_tensor = metatensor.join([slice_1, slice_2], axis="samples")
 
@@ -267,7 +267,7 @@ def test_split_join_samples(tensor):
     labels_2 = Labels(names=["system"], values=np.arange(4, 10).reshape(-1, 1))
 
     split_tensors = metatensor.split(
-        tensor=tensor, axis="samples", grouped_labels=[labels_1, labels_2]
+        tensor=tensor, axis="samples", selections=[labels_1, labels_2]
     )
     joined_tensor = metatensor.join(
         split_tensors, axis="samples", remove_tensor_name=True
@@ -284,7 +284,7 @@ def test_split_join_properties(tensor):
     labels_2 = Labels(names=properties.names, values=properties.values[5:])
 
     split_tensors = metatensor.split(
-        tensor=tensor, axis="properties", grouped_labels=[labels_1, labels_2]
+        tensor=tensor, axis="properties", selections=[labels_1, labels_2]
     )
     joined_tensor = metatensor.join(
         split_tensors, axis="properties", remove_tensor_name=True

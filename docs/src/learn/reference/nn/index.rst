@@ -43,3 +43,6 @@ Modules
 
 .. autoclass:: metatensor.learn.nn.InvariantLayerNorm
    :members:
+
+.. autoclass:: metatensor.learn.nn.EquivariantTransformation
+   :members:

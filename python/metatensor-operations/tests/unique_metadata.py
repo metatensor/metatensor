@@ -75,7 +75,7 @@ def test_empty_block(real_tensor):
     sliced_block = metatensor.slice_block(
         real_tensor.block(0),
         axis="samples",
-        labels=Labels(names=["system"], values=np.array([[-1]])),
+        selection=Labels(names=["system"], values=np.array([[-1]])),
     )
     actual_samples = metatensor.unique_metadata_block(
         sliced_block,
@@ -89,7 +89,7 @@ def test_empty_block(real_tensor):
     sliced_block = metatensor.slice_block(
         real_tensor.block(0),
         axis="properties",
-        labels=Labels(names=["n"], values=np.array([[-1]])),
+        selection=Labels(names=["n"], values=np.array([[-1]])),
     )
     actual_properties = metatensor.unique_metadata_block(
         sliced_block,

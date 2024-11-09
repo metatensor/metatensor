@@ -158,6 +158,13 @@ torch::Tensor TensorBlockHolder::values() const {
     return wrapper->tensor();
 }
 
+void TensorBlockHolder::set_values(const torch::Tensor& new_values) {
+        throw std::runtime_error(
+            "Direct assignment to `values` is not possible. "
+            "Please use block.values[:] = new_values instead."
+        );
+    }
+
 TorchLabels TensorBlockHolder::labels(uintptr_t axis) const {
     return torch::make_intrusive<LabelsHolder>(block_.labels(axis));
 }

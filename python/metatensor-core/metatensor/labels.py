@@ -234,7 +234,6 @@ class Labels:
     [0 1 8]
     >>> for entry in labels:
     ...     print(entry)
-    ...
     LabelsEntry(system=0, atom=1, center_type=8)
     LabelsEntry(system=0, atom=2, center_type=1)
     LabelsEntry(system=0, atom=5, center_type=1)
@@ -461,7 +460,7 @@ class Labels:
         return (
             self._names == other._names
             and self._values.shape == other._values.shape
-            and np.all(self._values == other._values)
+            and bool(np.all(self._values == other._values))
         )
 
     def __ne__(self, other: "Labels") -> bool:
@@ -694,8 +693,7 @@ class Labels:
         ...     label.remove(name="bar")
         ... except MetatensorError as e:
         ...     print(e)
-        ...
-        invalid parameter: can not have the same label value multiple time: [42] is already present at position 0
+        invalid parameter: can not have the same label entry multiple time: [42] is already present
         """  # noqa E501
         if name not in self.names:
             raise ValueError(f"'{name}' not found in the dimensions of these Labels")

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::labels::{Labels, LabelsBuilder};
+use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
 use crate::data::mts_sample_mapping_t;
@@ -71,10 +71,12 @@ impl TensorMap {
             new_blocks.push(block);
         } else {
             for entry in &splitted_keys.new_keys {
-                let mut selection = LabelsBuilder::new(splitted_keys.new_keys.names())?;
-                selection.add(entry)?;
+                let selection = Labels::new(
+                    &splitted_keys.new_keys.names(),
+                    entry.to_vec()
+                ).expect("invalid labels");
 
-                let matching = self.blocks_matching(&selection.finish())?;
+                let matching = self.blocks_matching(&selection)?;
                 let blocks_to_merge = matching.iter()
                     .map(|&i| {
                         let block = &self.blocks[i];
@@ -143,10 +145,10 @@ fn merge_blocks_along_samples(
     let new_sample_names = first_block.samples.names().iter()
         .chain(extracted_names.iter())
         .copied()
-        .collect();
+        .collect::<Vec<_>>();
     let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
-        new_sample_names,
+        &new_sample_names,
         sort_samples,
     );
 
@@ -179,7 +181,7 @@ fn merge_blocks_along_samples(
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
             blocks_to_merge, parameter, &samples_mappings
-        )?;
+        );
 
         let mut new_shape = first_gradient.values.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();

@@ -20,10 +20,11 @@ except ImportError:
 
 
 def test_neighbor_list_options():
-    options = NeighborListOptions(3.4, True, "hello")
+    options = NeighborListOptions(3.4, True, True, "hello")
 
     assert options.cutoff == 3.4
     assert options.full_list
+    assert options.strict
     assert options.requestors() == ["hello"]
 
     options.add_requestor("another one")
@@ -34,16 +35,22 @@ def test_neighbor_list_options():
     options.add_requestor("hello")
     assert options.requestors() == ["hello", "another one"]
 
-    assert NeighborListOptions(3.4, True, "a") == NeighborListOptions(3.4, True, "b")
-    assert NeighborListOptions(3.4, True) != NeighborListOptions(3.4, False)
-    assert NeighborListOptions(3.4, True) != NeighborListOptions(3.5, True)
+    assert NeighborListOptions(3.4, True, True, "a") == NeighborListOptions(
+        3.4, True, True, "b"
+    )
+    assert NeighborListOptions(3.4, True, True) != NeighborListOptions(3.4, False, True)
+    assert NeighborListOptions(3.4, False, True) != NeighborListOptions(
+        3.4, False, False
+    )
+    assert NeighborListOptions(3.4, True, True) != NeighborListOptions(3.5, True, True)
 
-    expected = "NeighborListOptions(cutoff=3.400000, full_list=True)"
+    expected = "NeighborListOptions(cutoff=3.400000, full_list=True, strict=True)"
     assert str(options) == expected
 
     expected = """NeighborListOptions
     cutoff: 3.400000
     full_list: True
+    strict: True
     requested by:
         - hello
         - another one
@@ -86,14 +93,14 @@ def test_neighbors_autograd():
 
         return neighbors.values.sum()
 
-    options = NeighborListOptions(cutoff=2.0, full_list=False)
+    options = NeighborListOptions(cutoff=2.0, full_list=False, strict=True)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
         fast_mode=True,
     )
 
-    options = NeighborListOptions(cutoff=2.0, full_list=True)
+    options = NeighborListOptions(cutoff=2.0, full_list=True, strict=True)
     torch.autograd.gradcheck(
         compute,
         (positions, cell, options),
@@ -116,7 +123,7 @@ def test_neighbor_autograd_errors():
         cell=cell.detach().numpy(),
         pbc=True,
     )
-    options = NeighborListOptions(cutoff=2.0, full_list=False)
+    options = NeighborListOptions(cutoff=2.0, full_list=False, strict=True)
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"
     )
@@ -136,10 +143,9 @@ def test_neighbor_autograd_errors():
         register_autograd_neighbors(system, neighbors)
 
     message = (
-        "one neighbor pair does not match its metadata: the pair between atom 1 and "
-        "atom 4 for the \\[0, 0, 0\\] cell shift should have a distance vector of "
-        "\\[0.926094, -0.219122, 1.4382\\] but has a distance vector of "
-        "\\[2.77828, -0.657366, 4.31461\\]"
+        r"one neighbor pair does not match its metadata: the pair between atom \d+ and "
+        r"atom \d+ for the \[.*?\] cell shift should have a distance vector "
+        r"of \[.*?\] but has a distance vector of \[.*?\]"
     )
     neighbors = _compute_ase_neighbors(
         atoms, options, dtype=torch.float64, device="cpu"

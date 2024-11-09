@@ -315,6 +315,8 @@ def _read_neighbor_check(path):
     options = NeighborListOptions(
         cutoff=data["options"]["cutoff"],
         full_list=data["options"]["full_list"],
+        # ASE can only compute strict NL
+        strict=True,
     )
 
     samples = torch.tensor(

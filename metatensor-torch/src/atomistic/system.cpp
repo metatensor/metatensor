@@ -20,10 +20,12 @@ using namespace metatensor_torch;
 NeighborListOptionsHolder::NeighborListOptionsHolder(
     double cutoff,
     bool full_list,
+    bool strict,
     std::string requestor
 ):
     cutoff_(cutoff),
-    full_list_(full_list)
+    full_list_(full_list),
+    strict_(strict)
 {
     this->add_requestor(std::move(requestor));
 }
@@ -61,6 +63,7 @@ std::string NeighborListOptionsHolder::repr() const {
         ss << " " << length_unit_;
     }
     ss << "\n    full_list: " << (full_list_ ? "True" : "False") << "\n";
+    ss << "    strict: " << (strict_ ? "True" : "False") << "\n";
 
     if (!requestors_.empty()) {
         ss << "    requested by:\n";
@@ -74,7 +77,8 @@ std::string NeighborListOptionsHolder::repr() const {
 
 std::string NeighborListOptionsHolder::str() const {
     return "NeighborListOptions(cutoff=" + std::to_string(cutoff_) + \
-        ", full_list=" + (full_list_ ? "True" : "False") + ")";
+        ", full_list=" + (full_list_ ? "True" : "False") + \
+        ", strict=" + (strict_ ? "True" : "False") + ")";
 }
 
 static nlohmann::json neighbor_list_options_to_json(const NeighborListOptionsHolder& self) {
@@ -91,12 +95,29 @@ static nlohmann::json neighbor_list_options_to_json(const NeighborListOptionsHol
     result["cutoff"] = int_cutoff;
     result["full_list"] = self.full_list();
     result["length_unit"] = self.length_unit();
+    result["strict"] = self.strict();
 
     return result;
 }
 
 std::string NeighborListOptionsHolder::to_json() const {
-    return neighbor_list_options_to_json(*this).dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
+    nlohmann::json result;
+
+    result["class"] = "NeighborListOptions";
+
+    // Store cutoff using it's binary representation to ensure perfect
+    // round-tripping of the data
+    static_assert(sizeof(double) == sizeof(int64_t));
+    int64_t int_cutoff = 0;
+    std::memcpy(&int_cutoff, &this->cutoff_, sizeof(double));
+    result["cutoff"] = int_cutoff;
+    result["full_list"] = this->full_list_;
+    result["strict"] = this->strict_;
+    result["length_unit"] = this->length_unit_;
+
+    result["requestors"] = this->requestors_;
+
+    return result.dump(/*indent*/4, /*indent_char*/' ', /*ensure_ascii*/ true);
 }
 
 NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json) {
@@ -126,13 +147,32 @@ NeighborListOptions NeighborListOptionsHolder::from_json(const std::string& json
     }
     auto full_list = data["full_list"].get<bool>();
 
-    auto options = torch::make_intrusive<NeighborListOptionsHolder>(cutoff, full_list);
+    if (!data.contains("strict") || !data["strict"].is_boolean()) {
+        throw std::runtime_error("'strict' in JSON for NeighborListOptions must be a boolean");
+    }
+    auto strict = data["strict"].get<bool>();
+
+    auto options = torch::make_intrusive<NeighborListOptionsHolder>(cutoff, full_list, strict);
 
     if (data.contains("length_unit")) {
         if (!data["length_unit"].is_string()) {
             throw std::runtime_error("'length_unit' in JSON for NeighborListOptions must be a string");
         }
         options->set_length_unit(data["length_unit"]);
+    }
+
+    if (data.contains("requestors")) {
+        if (!data["requestors"].is_array()) {
+            throw std::runtime_error("'requestors' in JSON for NeighborListOptions must be an array");
+        }
+
+        for (const auto& requestor: data["requestors"]) {
+            if (!requestor.is_string()) {
+                throw std::runtime_error("'requestors' in JSON for NeighborListOptions must be an array of strings");
+            }
+
+            options->add_requestor(requestor.get<std::string>());
+        }
     }
 
     return options;

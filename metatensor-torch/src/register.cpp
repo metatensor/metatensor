@@ -187,7 +187,8 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__str__", &TensorBlockHolder::repr)
         .def("__len__", &TensorBlockHolder::len )
         .def("copy", &TensorBlockHolder::copy)
-        .def_property("values", &TensorBlockHolder::values)
+        .def_property("values", &TensorBlockHolder::values,
+        &TensorBlockHolder::set_values)
         .def_property("samples", &TensorBlockHolder::samples)
         .def_property("components", &TensorBlockHolder::components)
         .def_property("properties", &TensorBlockHolder::properties)
@@ -327,8 +328,8 @@ TORCH_LIBRARY(metatensor, m) {
     // ====================================================================== //
     m.class_<NeighborListOptionsHolder>("NeighborListOptions")
         .def(
-            torch::init<double, bool, std::string>(), DOCSTRING,
-            {torch::arg("cutoff"), torch::arg("full_list"), torch::arg("requestor") = ""}
+            torch::init<double, bool, bool, std::string>(), DOCSTRING,
+            {torch::arg("cutoff"), torch::arg("full_list"), torch::arg("strict"), torch::arg("requestor") = ""}
         )
         .def_property("cutoff", &NeighborListOptionsHolder::cutoff)
         .def_property("length_unit", &NeighborListOptionsHolder::length_unit, &NeighborListOptionsHolder::set_length_unit)
@@ -336,6 +337,7 @@ TORCH_LIBRARY(metatensor, m) {
             DOCSTRING, {torch::arg("engine_length_unit")}
         )
         .def_property("full_list", &NeighborListOptionsHolder::full_list)
+        .def_property("strict", &NeighborListOptionsHolder::strict)
         .def("requestors", &NeighborListOptionsHolder::requestors)
         .def("add_requestor", &NeighborListOptionsHolder::add_requestor, DOCSTRING,
             {torch::arg("requestor")}

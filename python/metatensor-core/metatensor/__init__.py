@@ -14,15 +14,15 @@
 # only declares dependencies on `metatensor-core` and `metatensor-operation`; as well
 # an an optional dependency on `metatensor-torch`.
 
-from .version import __version__  # noqa: F401
 from . import utils  # noqa: F401
 from .block import TensorBlock  # noqa: F401
+from .data import DeviceWarning  # noqa: F401
+from .io import load, load_block, load_labels, save  # noqa: F401
 from .labels import Labels, LabelsEntry  # noqa: F401
 from .status import MetatensorError  # noqa: F401
 from .tensor import TensorMap  # noqa: F401
-from .data import DeviceWarning  # noqa: F401
+from .version import __version__  # noqa: F401
 
-from .io import load, load_labels, load_block, save  # noqa: F401
 
 try:
     from . import operations  # noqa: F401

@@ -1,13 +1,15 @@
 import os
 
+import numpy as np
 import pytest
 
 import metatensor
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn import EquivariantLinear, Linear  # noqa: E402
+from metatensor.learn.nn import EquivariantLinear  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
@@ -31,68 +33,47 @@ def single_block_tensor():
     return random_single_block_no_components_tensor_map(use_torch=True)
 
 
-def test_linear(single_block_tensor):
-    # testing initialization by sequence arguments
-    module_init_list = Linear(
-        in_keys=single_block_tensor.keys,
-        in_features=[2],
-        out_features=[2],
-        bias=[True],
-        out_properties=[single_block_tensor[0].properties],
+@pytest.fixture
+def equivariant_tensor():
+    # Define a dummy invariant TensorBlock
+    block_1 = TensorBlock(
+        values=torch.randn(2, 1, 3, dtype=torch.float64),
+        samples=Labels(
+            ["system", "atom"],
+            np.array(
+                [
+                    [0, 0],
+                    [0, 1],
+                ]
+            ),
+        ),
+        components=[Labels(["o3_mu"], np.array([[0]]))],
+        properties=Labels(["properties"], np.array([[0], [1], [2]])),
     )
-    # testing initialization by non sequence arguments
-    module_init_scalar = Linear(
-        in_keys=single_block_tensor.keys,
-        in_features=2,
-        out_features=2,
-        bias=True,
-        out_properties=single_block_tensor[0].properties,
+
+    # Define a dummy covariant TensorBlock
+    block_2 = TensorBlock(
+        values=torch.randn(2, 3, 3, dtype=torch.float64),
+        samples=Labels(
+            ["system", "atom"],
+            np.array(
+                [
+                    [0, 0],
+                    [0, 1],
+                ]
+            ),
+        ),
+        components=[Labels(["o3_mu"], np.array([[-1], [0], [1]]))],
+        properties=Labels(["properties"], np.array([[3], [4], [5]])),
     )
-    for i in range(len(module_init_scalar.module_map)):
-        assert (
-            module_init_scalar.module_map[i].in_features
-            == module_init_list.module_map[i].in_features
-        ), (
-            "in_features differ when using sequential and non sequential input for"
-            " initialization"
-        )
-        assert (
-            module_init_scalar.module_map[i].out_features
-            == module_init_list.module_map[i].out_features
-        ), (
-            "out_features differ when using sequential and non sequential input for"
-            " initialization"
-        )
-        assert (
-            module_init_scalar.module_map[i].bias.shape
-            == module_init_list.module_map[i].bias.shape
-        ), (
-            "bias differ when using sequential and non sequential input for"
-            " initialization"
-        )
 
-    tensor_module = module_init_list
+    # Create a TensorMap containing the dummy TensorBlocks
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"],
+        values=np.array([[0, 1], [1, 1]]),
+    )
 
-    output = tensor_module(single_block_tensor)
-
-    for i, item in enumerate(single_block_tensor.items()):
-        key, block = item
-        module = tensor_module.module_map[i]
-        assert (
-            tensor_module.module_map.get_module(key) is module
-        ), "modules should be initialized in the same order as keys"
-
-        with torch.no_grad():
-            ref_values = module(block.values)
-        out_block = output.block(key)
-        assert torch.allclose(ref_values, out_block.values)
-        assert block.properties == out_block.properties
-
-        for parameter, gradient in block.gradients():
-            with torch.no_grad():
-                ref_gradient_values = module(gradient.values)
-            out_gradient = out_block.gradient(parameter)
-            assert torch.allclose(ref_gradient_values, out_gradient.values)
+    return TensorMap(keys, [block_1, block_2]).to(arrays="torch")
 
 
 @pytest.mark.parametrize("bias", [True, False])
@@ -110,10 +91,39 @@ def test_equivariance(tensor, bias):
     # Define the EquivariantLinear module
     f = EquivariantLinear(
         in_keys=x.keys,
-        invariant_key_idxs=[i for i, key in enumerate(x.keys) if key["o3_lambda"] == 0],
         in_features=[len(x.block(key).properties) for key in x.keys],
         out_features=[len(x.block(key).properties) - 3 for key in x.keys],
+        invariant_keys=metatensor.Labels(
+            ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
+        ),
         bias=bias,  # this should only bias the invariant blocks
+        dtype=torch.float64,
+    )
+
+    # Pass both through the linear layer
+    Rfx = wigner_d_real.transform_tensormap_o3(f(x))  # R . f(x)
+    fRx = f(Rx)  # f(R . x)
+
+    assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_default_invariant_keys(equivariant_tensor):
+    """
+    Tests the default value of ``invariant_keys`` in EquivariantLinear.
+    The module should be equivariant if applying a bias correctly to the
+    default-identified invariant blocks.
+    """
+    wigner_d_real = WignerDReal(lmax=4, angles=(0.87641, 1.8729, 0.9187))
+
+    # Define input and rotated input
+    x = equivariant_tensor
+    Rx = wigner_d_real.transform_tensormap_o3(x)
+
+    f = EquivariantLinear(
+        in_keys=x.keys,
+        in_features=[len(x.block(key).properties) for key in x.keys],
+        out_features=[len(x.block(key).properties) - 3 for key in x.keys],
+        bias=True,  # this should only bias the invariant blocks
         dtype=torch.float64,
     )
 

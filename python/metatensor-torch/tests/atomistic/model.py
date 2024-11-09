@@ -14,6 +14,7 @@ from metatensor.torch.atomistic import (
     NeighborListOptions,
     System,
     check_atomistic_model,
+    is_atomistic_model,
     load_atomistic_model,
     read_model_metadata,
 )
@@ -44,9 +45,9 @@ class MinimalModel(torch.nn.Module):
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
         return [
-            NeighborListOptions(cutoff=1.2, full_list=False),
-            NeighborListOptions(cutoff=4.3, full_list=True),
-            NeighborListOptions(cutoff=1.2, full_list=False),
+            NeighborListOptions(cutoff=1.2, full_list=False, strict=True),
+            NeighborListOptions(cutoff=4.3, full_list=True, strict=True),
+            NeighborListOptions(cutoff=1.2, full_list=False, strict=False),
         ]
 
 
@@ -75,6 +76,31 @@ def model():
     return MetatensorAtomisticModel(model, metadata, capabilities)
 
 
+@pytest.fixture
+def model_energy_nounit():
+    model_energy_nounit = MinimalModel()
+    model_energy_nounit.train(False)
+
+    capabilities = ModelCapabilities(
+        length_unit="angstrom",
+        atomic_types=[1, 2, 3],
+        interaction_range=4.3,
+        outputs={
+            "energy": ModelOutput(
+                quantity="",
+                unit="",
+                per_atom=False,
+                explicit_gradients=[],
+            ),
+        },
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+
+    metadata = ModelMetadata()
+    return MetatensorAtomisticModel(model_energy_nounit, metadata, capabilities)
+
+
 def test_save(model, tmp_path):
     os.chdir(tmp_path)
     model.save("export.pt")
@@ -84,6 +110,41 @@ def test_save(model, tmp_path):
         assert "export/extra/torch-version" in file.namelist()
 
     check_atomistic_model("export.pt")
+
+
+def test_recreate(model, tmp_path):
+    os.chdir(tmp_path)
+    model.save("export.pt")
+    model_loaded = load_atomistic_model("export.pt")
+    model_loaded.save("export_new.pt")
+
+    with zipfile.ZipFile("export_new.pt") as file:
+        assert "export_new/extra/metatensor-version" in file.namelist()
+        assert "export_new/extra/torch-version" in file.namelist()
+
+    check_atomistic_model("export_new.pt")
+
+
+def test_training_mode():
+    model = MinimalModel()
+    model.train(True)
+    capabilities = ModelCapabilities(supported_devices=["cpu"], dtype="float64")
+
+    with pytest.raises(ValueError, match="module should not be in training mode"):
+        MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+
+
+def test_save_warning_length_unit(model):
+    model._capabilities.length_unit = ""
+    match = r"No length unit was provided for the model."
+    with pytest.warns(UserWarning, match=match):
+        model.save("export.pt")
+
+
+def test_save_warning_quantity(model_energy_nounit):
+    match = r"No units were provided for output energy."
+    with pytest.warns(UserWarning, match=match):
+        model_energy_nounit.save("export.pt")
 
 
 def test_export(model, tmp_path):
@@ -107,7 +168,7 @@ class ExampleModule(torch.nn.Module):
         return {}
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
-        return [NeighborListOptions(1.0, False, self._name)]
+        return [NeighborListOptions(1.0, False, True, self._name)]
 
 
 class OtherModule(torch.nn.Module):
@@ -123,7 +184,7 @@ class OtherModule(torch.nn.Module):
         return {}
 
     def requested_neighbor_lists(self) -> List[NeighborListOptions]:
-        return [NeighborListOptions(2.0, True, "other module")]
+        return [NeighborListOptions(2.0, True, False, "other module")]
 
 
 class FullModel(torch.nn.Module):
@@ -146,12 +207,13 @@ class FullModel(torch.nn.Module):
         return result
 
 
-def test_requested_neighbor_lists():
+def test_requested_neighbor_lists(tmpdir):
     model = FullModel()
     model.train(False)
 
     capabilities = ModelCapabilities(
         interaction_range=0.0,
+        length_unit="A",
         supported_devices=["cpu"],
         dtype="float64",
     )
@@ -162,6 +224,7 @@ def test_requested_neighbor_lists():
 
     assert requests[0].cutoff == 1.0
     assert not requests[0].full_list
+    assert requests[0].strict
     assert requests[0].requestors() == [
         "first module",
         "FullModel.first",
@@ -171,6 +234,32 @@ def test_requested_neighbor_lists():
 
     assert requests[1].cutoff == 2.0
     assert requests[1].full_list
+    assert not requests[1].strict
+    assert requests[1].requestors() == [
+        "other module",
+        "FullModel.other",
+    ]
+
+    # check these are still around after serialization/reload
+    atomistic.save(os.path.join(tmpdir, "model.pt"))
+    loaded = torch.jit.load(os.path.join(tmpdir, "model.pt"))
+    requests = loaded.requested_neighbor_lists()
+
+    assert len(requests) == 2
+
+    assert requests[0].cutoff == 1.0
+    assert not requests[0].full_list
+    assert requests[0].strict
+    assert requests[0].requestors() == [
+        "first module",
+        "FullModel.first",
+        "second module",
+        "FullModel.second",
+    ]
+
+    assert requests[1].cutoff == 2.0
+    assert requests[1].full_list
+    assert not requests[1].strict
     assert requests[1].requestors() == [
         "other module",
         "FullModel.other",
@@ -249,6 +338,7 @@ def test_access_module(tmpdir):
     model.train(False)
 
     capabilities = ModelCapabilities(
+        length_unit="nm",
         interaction_range=0.0,
         supported_devices=["cpu"],
         dtype="float64",
@@ -270,11 +360,37 @@ def test_access_module(tmpdir):
     loaded_atomistic.module.other
 
 
+def test_is_atomistic_model(tmpdir):
+    model = FullModel()
+    model.train(False)
+
+    capabilities = ModelCapabilities(
+        length_unit="A",
+        interaction_range=0.0,
+        supported_devices=["cpu"],
+        dtype="float64",
+    )
+    atomistic = MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
+    atomistic.save(tmpdir / "model.pt")
+
+    scripted_atomistic = torch.jit.script(atomistic)
+    loaded_atomistic = load_atomistic_model(tmpdir / "model.pt")
+
+    assert is_atomistic_model(atomistic)
+    assert is_atomistic_model(scripted_atomistic)
+    assert is_atomistic_model(loaded_atomistic)
+
+    match = "`module` should be a torch.nn.Module, not float"
+    with pytest.raises(TypeError, match=match):
+        is_atomistic_model(1.0)
+
+
 def test_read_metadata(tmpdir):
     model = FullModel()
     model.train(False)
 
     capabilities = ModelCapabilities(
+        length_unit="nm",
         interaction_range=0.0,
         supported_devices=["cpu"],
         dtype="float64",

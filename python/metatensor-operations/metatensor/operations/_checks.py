@@ -66,7 +66,6 @@ class unsafe_enable_checks(_SetChecks):
     ...     with metatensor.unsafe_enable_checks():
     ...         # checks enabled here again
     ...         print(metatensor.checks_enabled())
-    ...
     False
     True
     >>> print(metatensor.checks_enabled())
@@ -95,7 +94,6 @@ class unsafe_disable_checks(_SetChecks):
     >>> with metatensor.unsafe_disable_checks():
     ...     # checks are disabled here
     ...     print(metatensor.checks_enabled())
-    ...
     False
     >>> print(metatensor.checks_enabled())
     True

@@ -114,7 +114,7 @@ class ArrayWrapperMixin:
         array_copy = metatensor.data.mts_array_to_python_array(copy)
         assert id(array_copy) != id(array)
 
-        assert_equal(np.array(array_copy), np.array(array))
+        assert_equal(self.to_numpy(array_copy), self.to_numpy(array))
 
         free_mts_array(mts_array)
         free_mts_array(copy)
@@ -170,6 +170,9 @@ class TestNumpyData(ArrayWrapperMixin):
     def create_array(self, shape):
         return np.zeros(shape)
 
+    def to_numpy(self, array):
+        return np.array(array)
+
 
 if HAS_TORCH:
 
@@ -179,6 +182,9 @@ if HAS_TORCH:
 
         def create_array(self, shape):
             return torch.zeros(shape, device="cpu")
+
+        def to_numpy(self, array):
+            return array.numpy()
 
 
 def _get_shape(mts_array, test):
