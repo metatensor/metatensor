@@ -527,7 +527,9 @@ def check_dtype(system: System, dtype: torch.dtype):
 @pytest.mark.parametrize(
     "pbc", [[True, True, True], [True, False, True], [False, False, False]]
 )
-def test_save_load(tmpdir, dtype, nl_size, pbc):
+@pytest.mark.parametrize("full_list", [True, False])
+@pytest.mark.parametrize("strict", [True, False])
+def test_save_load(tmpdir, dtype, nl_size, pbc, full_list, strict):
     cell = torch.rand((3, 3), dtype=dtype)
     cell[[not periodic for periodic in pbc]] = 0.0
 
@@ -538,7 +540,7 @@ def test_save_load(tmpdir, dtype, nl_size, pbc):
         pbc=torch.tensor(pbc, dtype=torch.bool),
     )
     system.add_neighbor_list(
-        NeighborListOptions(cutoff=3.5, full_list=False),
+        NeighborListOptions(cutoff=3.5, full_list=full_list, strict=strict),
         TensorBlock(
             values=torch.rand(nl_size, 3, 1, dtype=dtype),
             samples=Labels(
@@ -563,10 +565,10 @@ def test_save_load(tmpdir, dtype, nl_size, pbc):
     assert torch.equal(system.cell, system_loaded.cell)
     assert torch.equal(system.pbc, system_loaded.pbc)
     neigbor_list = system.get_neighbor_list(
-        NeighborListOptions(cutoff=3.5, full_list=False)
+        NeighborListOptions(cutoff=3.5, full_list=full_list, strict=strict)
     )
     neighbor_list_loaded = system_loaded.get_neighbor_list(
-        NeighborListOptions(cutoff=3.5, full_list=False)
+        NeighborListOptions(cutoff=3.5, full_list=full_list, strict=strict)
     )
     assert metatensor.torch.equal_block(neigbor_list, neighbor_list_loaded)
 
