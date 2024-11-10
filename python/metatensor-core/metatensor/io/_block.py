@@ -189,6 +189,7 @@ def _save_block(
     assert isinstance(block, TensorBlock)
 
     if isinstance(file, (str, pathlib.Path)):
+        file = str(file)
         if not file.endswith(".npz"):
             file += ".npz"
             warnings.warn(
@@ -201,12 +202,8 @@ def _save_block(
         np.savez(file, **all_entries)
     else:
         lib = _get_library()
-        if isinstance(file, (str, pathlib.Path)):
-            if isinstance(file, str):
-                path = file.encode("utf8")
-            elif isinstance(file, pathlib.Path):
-                path = bytes(file)
-
+        if isinstance(file, str):
+            path = file.encode("utf8")
             lib.mts_block_save(path, block._ptr)
         else:
             # assume we have a file-like object

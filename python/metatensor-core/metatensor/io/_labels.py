@@ -78,6 +78,7 @@ def _save_labels(
     assert isinstance(labels, Labels)
 
     if isinstance(file, (str, pathlib.Path)):
+        file = str(file)
         if not file.endswith(".npy"):
             file += ".npy"
             warnings.warn(
@@ -86,12 +87,8 @@ def _save_labels(
             )
 
     lib = _get_library()
-    if isinstance(file, (str, pathlib.Path)):
-        if isinstance(file, str):
-            path = file.encode("utf8")
-        elif isinstance(file, pathlib.Path):
-            path = bytes(file)
-
+    if isinstance(file, str):
+        path = file.encode("utf8")
         lib.mts_labels_save(path, labels._labels)
     else:
         # assume we have a file-like object
