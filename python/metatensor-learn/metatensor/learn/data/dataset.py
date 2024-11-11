@@ -62,8 +62,6 @@ class _BaseDataset(torch.utils.data.Dataset):
                         f"'{size_arg_name}' ({size}) and data fields: ({field_sizes})"
                     )
 
-        # Define an internal numeric index list as a range from 0 to size
-        self._indices = list(range(size))
         self._field_names = field_names
         self._data = data
         self._size = size
@@ -80,7 +78,7 @@ class _BaseDataset(torch.utils.data.Dataset):
         """
         Returns an iterator over the dataset.
         """
-        for idx in self._indices:
+        for idx in range(len(self)):
             yield self[idx]
 
 
@@ -212,8 +210,10 @@ class Dataset(_BaseDataset):
         fields corresponding to those passed (in order) to the constructor upon class
         initialization.
         """
-        if idx not in self._indices:
+        idx = int(idx)
+        if idx >= len(self) or idx < 0:
             raise ValueError(f"Index {idx} not in dataset")
+
         sample_data = []
         for name in self._field_names:
             if callable(self._data[name]):  # lazy load
@@ -365,7 +365,8 @@ class IndexedDataset(_BaseDataset):
         first field is the sample ID, and the remaining fields correspond those passed
         (in order) to the constructor upon class initialization.
         """
-        if idx not in self._indices:
+        idx = int(idx)
+        if idx >= len(self) or idx < 0:
             raise ValueError(f"Index {idx} not in dataset")
 
         sample_id = self._sample_id[idx]
