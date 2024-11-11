@@ -14,8 +14,25 @@ set(METATENSOR_TORCH_SOURCE_DIR "" CACHE PATH "Path to the sources of metatensor
 
 file(REMOVE ${CMAKE_INSTALL_PREFIX}/_external.py)
 
-set(REQUIRED_METATENSOR_TORCH_VERSION "1")
+set(REQUIRED_METATENSOR_TORCH_VERSION "0.6.1")
 if(${METATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB})
+    # when building a source checkout, update version to include git information
+    # this will not apply when building a sdist
+    if (EXISTS ${CMAKE_SOURCE_DIR}/../../metatensor-torch/cmake/dev-versions.cmake)
+        include(${CMAKE_SOURCE_DIR}/../../metatensor-torch/cmake/dev-versions.cmake)
+        create_development_version(
+            "${REQUIRED_METATENSOR_TORCH_VERSION}"
+            REQUIRED_METATENSOR_TORCH_VERSION
+            "metatensor-torch-v"
+        )
+        # strip any -dev/-rc suffix on the version since find_package does not support it
+        string(
+            REGEX REPLACE "([0-9]*)\\.([0-9]*)\\.([0-9]*).*" "\\1.\\2.\\3"
+            REQUIRED_METATENSOR_TORCH_VERSION
+            ${REQUIRED_METATENSOR_TORCH_VERSION}
+        )
+    endif()
+
     find_package(metatensor_torch ${REQUIRED_METATENSOR_TORCH_VERSION} REQUIRED)
 
     get_target_property(METATENSOR_TORCH_LOCATION metatensor_torch LOCATION)
