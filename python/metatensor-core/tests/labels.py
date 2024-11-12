@@ -432,3 +432,8 @@ def test_select():
     message = "invalid parameter: 'aaaa' in selection is not part of these Labels"
     with pytest.raises(MetatensorError, match=message):
         labels.select(selection)
+
+    # empty labels
+    labels = Labels(["aa", "bb"], np.empty((0, 2), dtype=np.int32))
+    selection = Labels(["aa"], np.array([[1], [2], [5]]))
+    assert len(labels.select(selection)) == 0

@@ -502,6 +502,11 @@ def test_select():
     with pytest.raises(RuntimeError, match=message):
         labels.select(selection)
 
+    # empty labels
+    labels = Labels(["aa", "bb"], torch.empty((0, 2), dtype=torch.int32))
+    selection = Labels(["aa"], torch.tensor([[1], [2], [5]]))
+    assert len(labels.select(selection)) == 0
+
 
 # define a wrapper class to make sure the types TorchScript uses for of all
 # C-defined functions matches what we expect
