@@ -615,6 +615,10 @@ torch::Tensor LabelsHolder::select(const TorchLabels& selection) const {
     auto selected = torch::zeros({this->count()}, options);
     auto selected_count = static_cast<size_t>(selected.size(0));
 
+    if (this->count() == 0) {
+        return selected;
+    }
+
     labels_->select(
         selection->labels_.value(),
         selected.data_ptr<int64_t>(),
