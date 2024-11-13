@@ -1,6 +1,7 @@
 import io
 import os
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -174,6 +175,28 @@ def test_save_load_zero_length_block(
 def test_save_warning_errors(tmpdir, tensor):
     # does not have .npz ending and causes warning
     tmpfile = "serialize-test"
+
+    with pytest.warns() as record:
+        with tmpdir.as_cwd():
+            metatensor.save(tmpfile, tensor)
+
+    expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    assert str(record[0].message) == expected
+
+    tmpfile = "serialize-test.npz"
+
+    message = (
+        "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap', "
+        "not <class 'numpy.ndarray'>"
+    )
+    with pytest.raises(TypeError, match=message):
+        with tmpdir.as_cwd():
+            metatensor.save(tmpfile, tensor.block(0).values)
+
+
+def test_save_pathlib(tmpdir, tensor):
+    # does not have .npz ending and causes warning
+    tmpfile = Path("serialize-test")
 
     with pytest.warns() as record:
         with tmpdir.as_cwd():
