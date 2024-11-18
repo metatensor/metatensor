@@ -29,10 +29,10 @@ class System:
             In addition, some external packages provide ways to create
             :py:class:`System` using data from other libraries:
 
-            - `rascaline`_ has the :py:func:`rascaline.torch.systems_to_torch()`
+            - `featomic`_ has the :py:func:`featomic.torch.systems_to_torch()`
               function that can convert from ASE, chemfiles and PySCF.
 
-            .. _rascaline: https://luthaf.fr/rascaline/latest/index.html
+            .. _featomic: https://metatensor.github.io/featomic/latest/index.html
 
         :param types: 1D tensor of integer representing the particles identity. For
             atoms, this is typically their atomic numbers.

@@ -3,7 +3,7 @@
 #
 # - the `metatensor-core` distribution contains the Python bindings to the
 #   metatensor-core C API in the `metatensor` python package. External package
-#   integrating with metatensor such as rascaline only depend on metatensor-core.
+#   integrating with metatensor such as featomic only depend on metatensor-core.
 # - the `metatensor-operations` distribution contains the operations to manipulate
 #   metatensor data. Is is using Python's namespace packages
 #   (https://peps.python.org/pep-0420/) to install itself in `metatensor/operations`.

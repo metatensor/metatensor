@@ -106,7 +106,7 @@ class WignerDReal:
         matrices.
 
         Assumes the input tensor follows the metadata structure consistent with
-        those produce by rascaline.
+        those produce by featomic.
         """
         # Retrieve the key and the position of the l value in the key names
         keys = tensor.keys
@@ -129,7 +129,7 @@ class WignerDReal:
         SO(3) rigid rotation using Wigner-D Matrices followed by an inversion.
 
         Assumes the input tensor follows the metadata structure consistent with
-        those produce by rascaline.
+        those produce by featomic.
         """
         # Retrieve the key and the position of the l value in the key names
         keys = tensor.keys
@@ -150,7 +150,7 @@ class WignerDReal:
                 inversion_multiplier *= -1
 
             # "o3_sigma" may not be present if CG iterations haven't been
-            # performed (i.e. nu=1 rascaline SphericalExpansion)
+            # performed (i.e. nu=1 featomic SphericalExpansion)
             if "o3_sigma" in keys.names:
                 if key["o3_sigma"] == -1:
                     inversion_multiplier *= -1

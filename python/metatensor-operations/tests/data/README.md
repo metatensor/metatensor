@@ -1,8 +1,9 @@
 # Tests data files for metatensor
 
 - **qm7-spherical-expansion**: SOAP spherical expansion for the first 10
-  structures in QM7, computed with rascaline (commit 81218aca), with 'cell'
-  and 'positions' gradients, using the following hyper-parameters:
+  structures in QM7, computed with rascaline (now featomic) using commit
+  81218aca, with 'cell' and 'positions' gradients, using the following
+  hyper-parameters:
 
 ```py
 cutoff=3.5,
@@ -15,8 +16,8 @@ cutoff_function={"ShiftedCosine": {"width": 0.5}},
 ```
 
 - **qm7-power-spectrum**: SOAP power spectrum for the first 10 structures in
-  QM7, computed with rascaline (commit 81218aca), with 'cell' and 'positions'
-  gradients, using the following hyper-parameters:
+  QM7, computed with rascaline (now featomic) using commit 81218aca, with 'cell'
+  and 'positions' gradients, using the following hyper-parameters:
 
 ```py
 cutoff=3.5,

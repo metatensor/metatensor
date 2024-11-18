@@ -1,22 +1,28 @@
 import ase
-from rascaline import SphericalExpansion
+from featomic import SphericalExpansion
 
 import metatensor
 
 
 co2 = ase.Atoms(
     "CO2",
-    positions=[(0, 0, 0), (-0.2, -0.65,  0.94), (0.2, 0.65, -0.94)],
+    positions=[(0, 0, 0), (-0.2, -0.65, 0.94), (0.2, 0.65, -0.94)],
 )
 
 calculator = SphericalExpansion(
-    cutoff=3.5,
-    max_radial=5,
-    max_angular=2,
-    atomic_gaussian_width=0.2,
-    radial_basis={"Gto": {}},
-    center_atom_weight=1.0,
-    cutoff_function={"ShiftedCosine": {"width": 0.5}},
+    cutoff={
+        "radius": 3.5,
+        "smoothing": {"type": "ShiftedCosine", "width": 0.5},
+    },
+    density={
+        "type": "Gaussian",
+        "width": 0.2,
+    },
+    basis={
+        "type": "TensorProduct",
+        "max_angular": 2,
+        "radial": {"type": "Gto", "max_radial": 4},
+    },
 )
 
 descriptor = calculator.compute(co2, gradients=["positions"])

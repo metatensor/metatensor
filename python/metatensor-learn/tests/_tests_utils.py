@@ -110,7 +110,7 @@ def generate_data(sample_indices):
     Generates data sliced according to sample index "sample". Saves them to disk
     and returns them in memory along with the sample indices.
 
-    The data items are: input (rascaline SphericalExpansion), output (ones like
+    The data items are: input (featomic SphericalExpansion), output (ones like
     input), and auxiliary (zeros like input). Each is sliced to a structure
     index A = {0, ..., 99}
     """
