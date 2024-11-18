@@ -12,15 +12,24 @@ METATENSOR_TORCH_LIB_PATH = _c_lib._lib_path()
 
 
 def _rascaline_lib_path():
+    # This is kept for backward compatibility, but rascaline is now named featomic.
+    # This code should be removed by the middle of 2025.
     import rascaline
 
     return [rascaline._c_lib._lib_path()]
+
+
+def _featomic_lib_path():
+    import featomic
+
+    return [featomic._c_lib._lib_path()]
 
 
 # Manual definition of which TorchScript extensions have their own dependencies. The
 # dependencies should be returned in the order they need to be loaded.
 EXTENSIONS_WITH_DEPENDENCIES = {
     "rascaline_torch": _rascaline_lib_path,
+    "featomic_torch": _featomic_lib_path,
 }
 
 

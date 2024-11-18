@@ -62,7 +62,7 @@ the metatensor ecosystem!
 
     The following libraries use metatensor either as input, output or both:
 
-    - `rascaline <https://github.com/Luthaf/rascaline/>`_: a library computing
+    - `featomic <https://github.com/metatensor/featomic/>`_: a library computing
       physics-inspired representations of atomic systems, the computed
       representations are given in metatensor format;
     - `torch_spex <https://github.com/lab-cosmo/torch_spex/>`_: pure PyTorch
