@@ -22,8 +22,10 @@ have the following metadata:
 
   * - samples
     - ``["system", "atom"]`` or ``["system"]``
-    - if doing ``per_atom`` output, the sample names must be ``["system",
-      "atom"]``, otherwise the sample names must be ``["system"]``.
+    - if using an ``[atom]`` sample kind in the output (per-atom output),
+      the sample names must be ``["system", "atom"]``, if using a ``["system"]``
+      sample kind, the sample names must be ``["system"]``. The ``["pair"]``
+      sample kind is not supported for energy outputs.
 
       ``"system"`` must range from 0 to the number of systems given as input to
       the model. ``"atom"`` must range between 0 and the number of

@@ -429,17 +429,17 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<ModelOutputHolder>("ModelOutput")
         .def(
-            torch::init<std::string, std::string, bool, std::vector<std::string>>(),
+            torch::init<std::string, std::string, std::vector<std::string>, std::vector<std::string>>(),
             DOCSTRING, {
                 torch::arg("quantity") = "",
                 torch::arg("unit") = "",
-                torch::arg("per_atom") = false,
+                torch::arg("sample_kind") = std::vector<std::string>(),
                 torch::arg("explicit_gradients") = std::vector<std::string>()
             }
         )
         .def_property("quantity", &ModelOutputHolder::quantity, &ModelOutputHolder::set_quantity)
         .def_property("unit", &ModelOutputHolder::unit, &ModelOutputHolder::set_unit)
-        .def_readwrite("per_atom", &ModelOutputHolder::per_atom)
+        .def_readwrite("sample_kind", &ModelOutputHolder::sample_kind)
         .def_readwrite("explicit_gradients", &ModelOutputHolder::explicit_gradients)
         .def_pickle(
             [](const ModelOutput& self) -> std::string {

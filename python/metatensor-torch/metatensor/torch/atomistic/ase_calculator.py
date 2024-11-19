@@ -363,7 +363,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         energy = outputs["energy"]
 
         with record_function("ASECalculator::sum_energies"):
-            if run_options.outputs["energy"].per_atom:
+            if run_options.outputs["energy"].sample_kind == ["atom"]:
                 assert len(energy) == 1
                 assert energy.sample_names == ["system", "atom"]
                 assert torch.all(energy.block().samples["system"] == 0)
@@ -475,9 +475,9 @@ def _ase_properties_to_metatensor_outputs(properties):
     output.explicit_gradients = []
 
     if "energies" in properties or "stresses" in properties:
-        output.per_atom = True
+        output.sample_kind = "atom"
     else:
-        output.per_atom = False
+        output.sample_kind = "system"
 
     if "stresses" in properties:
         output.explicit_gradients = ["cell"]

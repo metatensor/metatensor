@@ -31,7 +31,7 @@ def get_capabilities() -> callable:
             length_unit="angstrom",
             atomic_types=[1, 2, 3],
             interaction_range=4.3,
-            outputs={output_name: ModelOutput(per_atom=False)},
+            outputs={output_name: ModelOutput(sample_kind=["system"])},
             supported_devices=["cpu"],
             dtype="float64",
         )
@@ -53,7 +53,7 @@ class BaseAtomisticModel(torch.nn.Module):
         selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
         assert self.output_name in outputs
-        assert not outputs[self.output_name].per_atom
+        assert outputs[self.output_name].sample_kind == ["system"]
         assert selected_atoms is None
 
         block = TensorBlock(
@@ -85,7 +85,7 @@ def test_energy_ensemble_model(system, get_capabilities):
     atomistic = MetatensorAtomisticModel(model.eval(), ModelMetadata(), capabilities)
 
     options = ModelEvaluationOptions(
-        outputs={"energy_ensemble": ModelOutput(per_atom=False)}
+        outputs={"energy_ensemble": ModelOutput(sample_kind=["system"])}
     )
 
     result = atomistic([system, system], options, check_consistency=True)
@@ -104,7 +104,9 @@ def test_features_model(system, get_capabilities):
     capabilities = get_capabilities("features")
     atomistic = MetatensorAtomisticModel(model.eval(), ModelMetadata(), capabilities)
 
-    options = ModelEvaluationOptions(outputs={"features": ModelOutput(per_atom=False)})
+    options = ModelEvaluationOptions(
+        outputs={"features": ModelOutput(sample_kind=["system"])}
+    )
 
     result = atomistic([system, system], options, check_consistency=True)
     assert "features" in result

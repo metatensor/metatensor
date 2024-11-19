@@ -190,8 +190,10 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...     ) -> Dict[str, TensorMap]:
     ...         results: Dict[str, TensorMap] = {}
     ...         if "energy" in outputs:
-    ...             if outputs["energy"].per_atom:
-    ...                 raise NotImplementedError("per atom energy is not implemented")
+    ...             if outputs["energy"].sample_kind != ["system"]:
+    ...                 raise NotImplementedError(
+    ...                     "only per-system energy is implemented"
+    ...                 )
     ...
     ...             dtype = systems[0].positions.dtype
     ...             energies = torch.zeros(len(systems), 1, dtype=dtype)
@@ -237,7 +239,7 @@ class MetatensorAtomisticModel(torch.nn.Module):
     ...         "energy": ModelOutput(
     ...             quantity="energy",
     ...             unit="eV",
-    ...             per_atom=False,
+    ...             sample_kind=["system"],
     ...             explicit_gradients=[],
     ...         ),
     ...     },
@@ -672,9 +674,11 @@ def _check_inputs(
                     f"with respect to '{parameter}'"
                 )
 
-        if requested.per_atom and not possible.per_atom:
+        # requested.system_kind only has one element by design
+        if requested.system_kind[0] not in possible.system_kind:
             raise ValueError(
-                f"this model can not compute '{name}' per atom, only globally"
+                f"this model can not compute '{name}' per {requested.system_kind[0]}, "
+                f"only per {possible.system_kind}"
             )
 
     selected_atoms = options.selected_atoms

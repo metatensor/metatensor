@@ -188,11 +188,18 @@ def _validate_atomic_samples(
     block = value.block_by_id(0)
 
     # Check if the samples names are as expected based on whether the output is
-    # per-atom or global
-    if request.per_atom:
-        expected_samples_names = ["system", "atom"]
-    else:
+    # per-system, per-atom, per-pair, etc.
+    if request.sample_kind == ["system"]:
         expected_samples_names = ["system"]
+    elif request.sample_kind == ["atom"]:
+        expected_samples_names = ["system", "atom"]
+    elif request.sample_kind == ["pair"]:
+        expected_samples_names = ["system", "atom_1", "atom_2"]
+    else:
+        raise ValueError(
+            f"invalid sample_kind for '{name}' output: expected one of "
+            f"['system'], ['atom'], ['pair'], got {request.sample_kind}"
+        )
 
     if block.samples.names != expected_samples_names:
         raise ValueError(
@@ -201,7 +208,22 @@ def _validate_atomic_samples(
         )
 
     # Check if the samples match the systems and selected_atoms
-    if request.per_atom:
+    if request.sample_kind == ["system"]:
+        expected_samples = Labels(
+            "system", torch.arange(len(systems), device=device).reshape(-1, 1)
+        )
+        if selected_atoms is not None:
+            selected_systems = Labels(
+                "system", torch.unique(selected_atoms.column("system")).reshape(-1, 1)
+            )
+            expected_samples = expected_samples.intersection(selected_systems)
+        if len(expected_samples.union(block.samples)) != len(expected_samples):
+            raise ValueError(
+                f"invalid samples entries for '{name}' output, they do not match the "
+                f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
+            )
+
+    elif request.sample_kind == ["atom"]:
         expected_values: List[List[int]] = []
         for s, system in enumerate(systems):
             for a in range(len(system)):
@@ -211,20 +233,57 @@ def _validate_atomic_samples(
         )
         if selected_atoms is not None:
             expected_samples = expected_samples.intersection(selected_atoms)
-    else:
-        expected_samples = Labels(
-            "system", torch.arange(len(systems), device=device).reshape(-1, 1)
+        if len(expected_samples.union(block.samples)) != len(expected_samples):
+            raise ValueError(
+                f"invalid samples entries for '{name}' output, they do not match the "
+                f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
+            )
+
+    elif request.sample_kind == ["pair"]:
+        # this one is a bit more complicated, because not all pairs might be present
+        # due to the cutoff of the neighbor list. The condition that we check here
+        # is that there are no extra [system, atom] pairs in the output, where `atom`
+        # will be taken to be atom_1 and atom_2 in turn.
+
+        # get all allowed [system, atom] pairs
+        allowed_values: List[List[int]] = []
+        for s, system in enumerate(systems):
+            for a in range(len(system)):
+                allowed_values.append([s, a])
+        allowed_samples = Labels(
+            ["system", "atom"], torch.tensor(allowed_values, device=device)
         )
         if selected_atoms is not None:
-            selected_systems = Labels(
-                "system", torch.unique(selected_atoms.column("system")).reshape(-1, 1)
-            )
-            expected_samples = expected_samples.intersection(selected_systems)
+            allowed_samples = allowed_samples.intersection(selected_atoms)
+        allowed_sys_atom = allowed_samples.values[:, [0, 1]]
+        allowed_sys_atom_list: List[List[int]] = allowed_sys_atom.tolist()
 
-    if len(expected_samples.union(block.samples)) != len(expected_samples):
+        # check [system, atom_1]
+        actual_sys_atom_1 = block.samples.values[:, [0, 1]]
+        actual_sys_atom_1_list: List[List[int]] = actual_sys_atom_1.tolist()
+        for sys_and_atom in actual_sys_atom_1_list:
+            if sys_and_atom not in allowed_sys_atom_list:
+                raise ValueError(
+                    f"invalid samples entries for '{name}' output: "
+                    f"unexpected [system, atom_1] pair {sys_and_atom} "
+                    "in the output"
+                )
+
+        # check [system, atom_2]
+        actual_sys_atom_2 = block.samples.values[:, [0, 2]]
+        actual_sys_atom_2_list: List[List[int]] = actual_sys_atom_2.tolist()
+        for sys_and_atom in actual_sys_atom_2_list:
+            if sys_and_atom not in allowed_sys_atom_list:
+                raise ValueError(
+                    f"invalid samples entries for '{name}' output: "
+                    f"unexpected [system, atom_2] pair {sys_and_atom} "
+                    "in the output"
+                )
+
+    else:
         raise ValueError(
-            f"invalid samples entries for '{name}' output, they do not match the "
-            f"`systems` and `selected_atoms`. Expected samples:\n{expected_samples}"
+            f"invalid sample_kind for '{name}' output: expected one of "
+            f"['system'], ['atom'], ['pair'], got {request.sample_kind}"
         )
 
 
