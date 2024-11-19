@@ -1381,14 +1381,14 @@ def load_labels(path: str) -> Labels:
     """
 
 
-def save(path: str, data: Union[TensorMap, Labels]):
+def save(path: str, data: Union[TensorMap, TensorBlock, Labels]):
     """
-    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to the
-    given file at the given ``path``.
+    Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`,
+    or :py:class:`Labels`) to the given file at the given ``path``.
 
-    If the file already exists, it is overwritten. When saving a :py:class:`TensorMap`,
-    the file extension should be ``.npz``; and when saving :py:class:`Labels` it should
-    be ``.npy``
+    If the file already exists, it is overwritten. When saving a :py:class:`TensorMap`
+    or :py:class:`TensorBlock`, the file extension should be ``.npz``; and when
+    saving :py:class:`Labels` it should be ``.npy``
 
     :param path: path of the file where to save the data
     :param data: data to serialize and save
@@ -1422,11 +1422,11 @@ def load_labels_buffer(buffer: torch.Tensor) -> Labels:
     """
 
 
-def save_buffer(data: Union[TensorMap, Labels]) -> torch.Tensor:
+def save_buffer(data: Union[TensorMap, TensorBlock, Labels]) -> torch.Tensor:
     """
-    Save the given data (either :py:class:`TensorMap` or :py:class:`Labels`) to an
-    in-memory buffer, represented as 1-dimensional :py:class:`torch.Tensor` of
-    ``uint8``.
+    Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`,
+    or :py:class:`Labels`) to an in-memory buffer, represented as 1-dimensional
+    :py:class:`torch.Tensor` of ``uint8``.
 
     :param data: data to serialize and save
     """
