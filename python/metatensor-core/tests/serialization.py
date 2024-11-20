@@ -198,12 +198,10 @@ def test_save_pathlib(tmpdir, tensor):
     # does not have .npz ending and causes warning
     tmpfile = Path("serialize-test")
 
-    with pytest.warns() as record:
-        with tmpdir.as_cwd():
-            metatensor.save(tmpfile, tensor)
-
     expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
-    assert str(record[0].message) == expected
+    with tmpdir.as_cwd():
+        with pytest.warns(UserWarning, match=expected):
+            metatensor.save(tmpfile, tensor)
 
     tmpfile = "serialize-test.npz"
 
