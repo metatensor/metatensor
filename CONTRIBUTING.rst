@@ -1,12 +1,12 @@
 Contribution via pull requests are always welcome. Source code is available from
 `Github`_. Before submitting a pull request, please open an issue to discuss
-your changes. Use only the `master` branch as the target branch when submitting a pull request (PR).
+your changes. Use only the `main` branch as the target branch when submitting a pull request (PR).
 
 .. _`Github` : https://github.com/metatensor/metatensor
 
 Interactions with the metatensor projects must follow our `code of conduct`_.
 
-.. _code of conduct: https://github.com/metatensor/metatensor/blob/master/CODE_OF_CONDUCT.md
+.. _code of conduct: https://github.com/metatensor/metatensor/blob/main/CODE_OF_CONDUCT.md
 
 Required tools
 --------------
@@ -69,11 +69,11 @@ repository on github, and then clone it locally:
     git clone <insert/your/fork/url/here>
     cd metatensor
 
-    # setup the local repository so that the master branch tracks changes in
-    # the main repository
+    # setup the local repository so that the main branch tracks changes in
+    # the original repository
     git remote add upstream https://github.com/metatensor/metatensor
     git fetch upstream
-    git branch master --set-upstream-to=upstream/master
+    git branch main --set-upstream-to=upstream/main
 
 Once you get the code locally, you will want to run the tests to check
 everything is working as intended. See the next section on this subject.

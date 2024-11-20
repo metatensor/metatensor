@@ -30,4 +30,4 @@ with the code!
 
 .. _COSMO laboratory: https://www.epfl.ch/labs/cosmo/
 .. _EPFL: https://www.epfl.ch/
-.. _LICENSE: https://github.com/metatensor/metatensor/blob/master/LICENSE
+.. _LICENSE: https://github.com/metatensor/metatensor/blob/main/LICENSE

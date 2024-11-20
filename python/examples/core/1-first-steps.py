@@ -20,10 +20,10 @@ below:
 
     ..
 
-        The data was generated with `rascaline`_, a package to compute atomistic
+        The data was generated with `featomic`_, a package to compute atomistic
         representations for machine learning applications.
 
-        .. _rascaline: https://luthaf.fr/rascaline/latest/index.html
+        .. _featomic: https://metatensor.github.io/featomic/latest/index.html
 
         .. literalinclude:: spherical-expansion.py.example
             :language: python

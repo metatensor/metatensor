@@ -43,7 +43,7 @@ dimensions you'll encounter when working with atomistic data are the following:
   atomic types (or atomic elements) in a structure, the resulting data is
   sparse, containing implicit zeros if a given type is not present in a
   structure. This is the case of the ``center_type`` and various
-  ``neighbor_type`` key dimensions produced by `rascaline`_.
+  ``neighbor_type`` key dimensions produced by `featomic`_.
 - **symmetry markers**: Another use case for metatensor is to store and
   manipulate equivariant data, i.e. data that transforms in a known, specific
   way when the corresponding atomic structure is transformed. This is typically
@@ -53,10 +53,10 @@ dimensions you'll encounter when working with atomistic data are the following:
   manipulate the data corresponding to different spherical harmonics (or
   generally different irreducible representations of the symmetry group)
   separately. This is the case of the ``o3_lambda`` key dimension produced by
-  `rascaline`_: different blocks will contain the :math:`\lambda = 1` and
+  `featomic`_: different blocks will contain the :math:`\lambda = 1` and
   :math:`\lambda = 2` parts of an equivariant representation.
 
-.. _rascaline: https://github.com/Luthaf/rascaline/
+.. _featomic: https://github.com/metatensor/featomic
 
 .. _concept-Labels:
 

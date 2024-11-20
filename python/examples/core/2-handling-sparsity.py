@@ -17,10 +17,10 @@ we need from a file. The code used to generate this file can be found below:
 
     ..
 
-        The data was generated with `rascaline`_, a package to compute atomistic
+        The data was generated with `featomic`_, a package to compute atomistic
         representations for machine learning applications.
 
-        .. _rascaline: https://luthaf.fr/rascaline/latest/index.html
+        .. _featomic: https://metatensor.github.io/featomic/latest/index.html
 
         .. literalinclude:: radial-spectrum.py.example
             :language: python
