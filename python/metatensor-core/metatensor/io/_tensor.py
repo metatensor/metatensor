@@ -149,25 +149,30 @@ def _save_tensor(
 ):
     assert isinstance(tensor, TensorMap)
 
-    if isinstance(file, (str, pathlib.Path)):
-        if not file.endswith(".npz"):
-            file += ".npz"
-            warnings.warn(
-                message=f"adding '.npz' extension, the file will be saved at '{file}'",
-                stacklevel=1,
-            )
-
     if use_numpy:
         all_entries = _tensor_to_dict(tensor)
         np.savez(file, **all_entries)
     else:
         lib = _get_library()
-        if isinstance(file, (str, pathlib.Path)):
-            if isinstance(file, str):
-                path = file.encode("utf8")
-            elif isinstance(file, pathlib.Path):
-                path = bytes(file)
-
+        if isinstance(file, str):
+            if not file.endswith(".npz"):
+                file += ".npz"
+                warnings.warn(
+                    message="adding '.npz' extension,"
+                    f" the file will be saved at '{file}'",
+                    stacklevel=1,
+                )
+            path = file.encode("utf8")
+            lib.mts_tensormap_save(path, tensor._ptr)
+        elif isinstance(file, pathlib.Path):
+            if not file.name.endswith(".npz"):
+                file = file.with_name(file.name + ".npz")
+                warnings.warn(
+                    message="adding '.npz' extension,"
+                    f" the file will be saved at '{file.name}'",
+                    stacklevel=1,
+                )
+            path = bytes(file)
             lib.mts_tensormap_save(path, tensor._ptr)
         else:
             # assume we have a file-like object

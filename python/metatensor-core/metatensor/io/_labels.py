@@ -77,21 +77,26 @@ def _save_labels(
     """
     assert isinstance(labels, Labels)
 
-    if isinstance(file, (str, pathlib.Path)):
+    lib = _get_library()
+    if isinstance(file, str):
         if not file.endswith(".npy"):
-            file += ".npy"
+            file += ".npz"
             warnings.warn(
-                message=f"adding '.npy' extension, the file will be saved at '{file}'",
+                message="adding '.npy' extension,"
+                f" the file will be saved at '{file}'",
                 stacklevel=1,
             )
-
-    lib = _get_library()
-    if isinstance(file, (str, pathlib.Path)):
-        if isinstance(file, str):
-            path = file.encode("utf8")
-        elif isinstance(file, pathlib.Path):
-            path = bytes(file)
-
+        path = file.encode("utf8")
+        lib.mts_labels_save(path, labels._labels)
+    elif isinstance(file, pathlib.Path):
+        if not file.name.endswith(".npy"):
+            file = file.with_name(file.name + ".npy")
+            warnings.warn(
+                message="adding '.npy' extension,"
+                f" the file will be saved at '{file.name}'",
+                stacklevel=1,
+            )
+        path = bytes(file)
         lib.mts_labels_save(path, labels._labels)
     else:
         # assume we have a file-like object

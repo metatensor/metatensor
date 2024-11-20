@@ -188,25 +188,30 @@ def _save_block(
 ):
     assert isinstance(block, TensorBlock)
 
-    if isinstance(file, (str, pathlib.Path)):
-        if not file.endswith(".npz"):
-            file += ".npz"
-            warnings.warn(
-                message=f"adding '.npz' extension, the file will be saved at '{file}'",
-                stacklevel=1,
-            )
-
     if use_numpy:
         all_entries = _block_to_dict(block, prefix="", is_gradient=False)
         np.savez(file, **all_entries)
     else:
         lib = _get_library()
-        if isinstance(file, (str, pathlib.Path)):
-            if isinstance(file, str):
-                path = file.encode("utf8")
-            elif isinstance(file, pathlib.Path):
-                path = bytes(file)
-
+        if isinstance(file, str):
+            if not file.endswith(".npz"):
+                file += ".npz"
+                warnings.warn(
+                    message="adding '.npz' extension,"
+                    f" the file will be saved at '{file}'",
+                    stacklevel=1,
+                )
+            path = file.encode("utf8")
+            lib.mts_block_save(path, block._ptr)
+        elif isinstance(file, pathlib.Path):
+            if not file.name.endswith(".npz"):
+                file = file.with_name(file.name + ".npz")
+                warnings.warn(
+                    message="adding '.npz' extension,"
+                    f" the file will be saved at '{file.name}'",
+                    stacklevel=1,
+                )
+            path = bytes(file)
             lib.mts_block_save(path, block._ptr)
         else:
             # assume we have a file-like object
