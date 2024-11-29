@@ -21,6 +21,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Custom data stored in `System` is now stored as `TensorMap` instead of
   `TensorBlock`. This allow for more kinds of data to be stored.
+- `System` can now be serialized and saved to a file using
+  `metatensor.torch.atomistic.save` and
+  `metatensor.torch.atomistic.load_system`. For the initial implementation,
+  these functions are only accessible from Python.
 
 ## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
 

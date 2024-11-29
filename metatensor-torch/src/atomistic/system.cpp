@@ -861,10 +861,14 @@ TorchTensorMap SystemHolder::get_data(std::string name) const {
         );
     }
 
-    TORCH_WARN_ONCE(
-        "custom data '", name, "' is experimental, please contact metatensor's ",
-        "developers to add this data as a member of the `System` class"
-    );
+    static std::unordered_set<std::string> ALREADY_WARNED = {};
+    if (ALREADY_WARNED.insert(name).second) {
+        TORCH_WARN(
+            "custom data '", name, "' is experimental, please contact metatensor's ",
+            "developers to add this data as a member of the `System` class"
+        );
+    }
+
     return it->second;
 }
 
