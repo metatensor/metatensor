@@ -47,7 +47,7 @@ class System:
             should be given in row-major order). Systems that are not periodic along
             one or more directions should set the corresponding cell vectors to 0.
 
-        :param pbc: 1D tensor of boolean values, indicating which dimensions are
+        :param pbc: tensor containing 3 boolean values, indicating which dimensions are
             periodic along each axis, in the same order as the cell vectors.
         """
 
