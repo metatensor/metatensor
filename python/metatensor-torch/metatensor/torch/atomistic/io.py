@@ -1,5 +1,6 @@
 import io
 import os
+import zipfile
 from pathlib import Path
 from typing import Union
 
@@ -25,9 +26,6 @@ def save(path: Union[str, Path], data: System) -> None:
     :param data: The System object to save.
     """
 
-    if not isinstance(data, torch.ScriptObject):
-        raise ValueError("`data` must be a scripted object.")
-
     if _is_system(data):
         _save_system(path, data)
     else:
@@ -52,33 +50,41 @@ def load(path: Union[str, Path]) -> System:
 
 
 def _is_system_npz(path: Union[str, Path]) -> bool:
-    try:
-        data = np.load(path, allow_pickle=True)
-        data["positions"]
-        data["cell"]
-        data["types"]
-        data["neighbor_lists"]
-        return True
-    except Exception:
-        return False
+    zipf = zipfile.ZipFile(path, "r")
+    required_files = ["positions.npy", "cell.npy", "types.npy", "pbc.npy"]
+    for file in required_files:
+        if file not in zipf.namelist():
+            return False
+    return True
 
 
 def _load_system(path: Union[str, Path]) -> System:
-    data = np.load(path, allow_pickle=True)
-    positions = torch.from_numpy(data["positions"])
-    cell = torch.from_numpy(data["cell"])
-    types = torch.from_numpy(data["types"])
-    pbc = torch.from_numpy(data["pbc"])
+    with zipfile.ZipFile(path, "r") as zipf:
+        positions = torch.from_numpy(np.load(zipf.open("positions.npy")))
+        cell = torch.from_numpy(np.load(zipf.open("cell.npy")))
+        types = torch.from_numpy(np.load(zipf.open("types.npy")))
+        pbc = torch.from_numpy(np.load(zipf.open("pbc.npy")))
 
-    neighbor_list_dict = np.load(io.BytesIO(data["neighbor_lists"]), allow_pickle=True)
-    neighbor_list_dict = {
-        key: torch.from_numpy(value) for key, value in neighbor_list_dict.items()
-    }
+        neighbor_list_options_list = []
+        neighbor_lists = []
+        for nl_idx in range(len(zipf.namelist())):
+            if f"neighbor_lists/{nl_idx}/options.json" in zipf.namelist():
+                nl_options = NeighborListOptions.from_json(
+                    zipf.read(f"neighbor_lists/{nl_idx}/options.json")
+                )
+                neighbor_list_options_list.append(nl_options)
+                numpy_buffer = np.load(zipf.open(f"neighbor_lists/{nl_idx}/data.npy"))
+                tensor_buffer = torch.from_numpy(numpy_buffer)
+                neighbor_list = load_block_buffer(tensor_buffer)
+                neighbor_lists.append(neighbor_list)
 
-    extra_data_dict = np.load(io.BytesIO(data["extra_data"]), allow_pickle=True)
-    extra_data_dict = {
-        key: torch.from_numpy(value) for key, value in extra_data_dict.items()
-    }
+        extra_data_dict = {}
+        for data_name in zipf.namelist():
+            if "extra_data/" in data_name:
+                key = os.path.basename(data_name).replace(".npy", "")
+                numpy_buffer = np.load(zipf.open(data_name))
+                tensor_buffer = torch.from_numpy(numpy_buffer)
+                extra_data_dict[key] = load_block_buffer(tensor_buffer)
 
     system = System(
         positions=positions,
@@ -87,25 +93,18 @@ def _load_system(path: Union[str, Path]) -> System:
         pbc=pbc,
     )
 
-    for nl_key, nl in neighbor_list_dict.items():
-        cutoff, full_list, strict = nl_key.split("-")
-        cutoff = float(cutoff)
-        full_list = full_list == "True"
-        strict = strict == "True"
-        nl_options = NeighborListOptions(
-            cutoff=cutoff, full_list=full_list, strict=strict
-        )
-        nl = load_block_buffer(nl)
+    for nl_options, nl in zip(neighbor_list_options_list, neighbor_lists):
         system.add_neighbor_list(nl_options, nl)
 
     for key, value in extra_data_dict.items():
-        value = load_block_buffer(value)
         system.add_data(key, value)
 
     return system
 
 
 def _is_system(data: torch.ScriptObject) -> bool:
+    if not isinstance(data, torch.ScriptObject):
+        return False
     try:
         data.positions
         data.cell
@@ -117,32 +116,30 @@ def _is_system(data: torch.ScriptObject) -> bool:
 
 
 def _save_system(path: Union[str, Path], system: System) -> None:
-    neighbor_lists_buffer = io.BytesIO()
-    neighbor_list_dict = {}
-    for nl_options in system.known_neighbor_lists():
-        nl = system.get_neighbor_list(nl_options)
-        nl_key = f"{nl_options.cutoff}-{nl_options.full_list}-{nl_options.strict}"
-        tensor_buffer = metatensor_torch_save_buffer(nl)
-        numpy_buffer = tensor_buffer.numpy()
-        neighbor_list_dict[nl_key] = numpy_buffer
-    np.savez(neighbor_lists_buffer, **neighbor_list_dict)
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for nl_idx, nl_options in enumerate(system.known_neighbor_lists()):
+            zipf.writestr(f"neighbor_lists/{nl_idx}/options.json", nl_options.to_json())
+            nl = system.get_neighbor_list(nl_options)
+            tensor_buffer = metatensor_torch_save_buffer(nl)
+            numpy_buffer = tensor_buffer.numpy()
+            nl_buffer = io.BytesIO()
+            np.save(nl_buffer, numpy_buffer)
+            nl_buffer.seek(0)
+            zipf.writestr(f"neighbor_lists/{nl_idx}/data.npy", nl_buffer.read())
 
-    extra_data_buffer = io.BytesIO()
-    extra_data_dict = {}
-    for key in system.known_data():
-        data = system.get_data(key)
-        tensor_buffer = metatensor_torch_save_buffer(data)
-        numpy_buffer = tensor_buffer.numpy()
-        extra_data_dict[key] = numpy_buffer
-    np.savez(extra_data_buffer, **extra_data_dict)
+        for key in system.known_data():
+            data = system.get_data(key)
+            tensor_buffer = metatensor_torch_save_buffer(data)
+            numpy_buffer = tensor_buffer.numpy()
+            data_buffer = io.BytesIO()
+            np.save(data_buffer, numpy_buffer)
+            data_buffer.seek(0)
+            zipf.writestr(f"extra_data/{key}.npy", data_buffer.read())
 
-    system_dict = {
-        "positions": system.positions.numpy(),
-        "cell": system.cell.numpy(),
-        "types": system.types.numpy(),
-        "pbc": system.pbc.numpy(),
-        "neighbor_lists": neighbor_lists_buffer.getvalue(),
-        "extra_data": extra_data_buffer.getvalue(),
-    }
-
-    np.savez(path, **system_dict)
+        for tensor_name in ["positions", "cell", "types", "pbc"]:
+            tensor = getattr(system, tensor_name)
+            numpy_array = tensor.numpy()
+            buffer = io.BytesIO()
+            np.save(buffer, numpy_array)
+            buffer.seek(0)
+            zipf.writestr(f"{tensor_name}.npy", buffer.read())
