@@ -116,7 +116,7 @@ def _is_system(data: torch.ScriptObject) -> bool:
 
 
 def _save_system(path: Union[str, Path], system: System) -> None:
-    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(path, "w") as zipf:
         for nl_idx, nl_options in enumerate(system.known_neighbor_lists()):
             zipf.writestr(f"neighbor_lists/{nl_idx}/options.json", nl_options.to_json())
             nl = system.get_neighbor_list(nl_options)
