@@ -51,9 +51,10 @@ def load(path: Union[str, Path]) -> System:
 
 def _is_system_npz(path: Union[str, Path]) -> bool:
     zipf = zipfile.ZipFile(path, "r")
+    all_zip_files = zipf.namelist()
     required_files = ["positions.npy", "cell.npy", "types.npy", "pbc.npy"]
     for file in required_files:
-        if file not in zipf.namelist():
+        if file not in all_zip_files:
             return False
     return True
 
