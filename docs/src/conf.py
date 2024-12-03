@@ -71,7 +71,7 @@ CObject._toc_entry_name = _toc_entry_name
 # -- Project information -----------------------------------------------------
 
 project = "metatensor"
-author = ", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines())
+author = "the metatensor developers"
 copyright = f"{datetime.now().date().year}, {author}"
 
 

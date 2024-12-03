@@ -16,6 +16,7 @@ class System:
         types: torch.Tensor,
         positions: torch.Tensor,
         cell: torch.Tensor,
+        pbc: torch.Tensor,
     ):
         """
         You can create a :py:class:`System` with ``types``, ``positions`` and ``cell``
@@ -43,8 +44,11 @@ class System:
         :param cell: 2D tensor of shape (3, 3), describing the bounding box/unit cell of
             the system. Each row should be one of the bounding box vector; and columns
             should contain the x, y, and z components of these vectors (i.e. the cell
-            should be given in row-major order). Systems are assumed to obey periodic
-            boundary conditions, non-periodic systems should set the cell to 0.
+            should be given in row-major order). Systems that are not periodic along
+            one or more directions should set the corresponding cell vectors to 0.
+
+        :param pbc: tensor containing 3 boolean values, indicating which dimensions are
+            periodic along each axis, in the same order as the cell vectors.
         """
 
     def __len__(self) -> int:
@@ -63,6 +67,10 @@ class System:
     @property
     def cell(self) -> torch.Tensor:
         """Tensor of floating point values containing bounding box/cell of the system"""
+
+    @property
+    def pbc(self) -> torch.Tensor:
+        """Tensor of boolean values indicating which dimensions are periodic"""
 
     @property
     def device(self) -> torch.device:

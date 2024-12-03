@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  rust-tests:
+  tests:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / Torch ${{ matrix.torch-version }}${{ matrix.extra-name }}
     container: ${{ matrix.container }}
