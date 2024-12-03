@@ -1,5 +1,5 @@
-import io
 import os
+import warnings
 import zipfile
 from pathlib import Path
 from typing import Union
@@ -59,6 +59,13 @@ def _is_system_npz(path: Union[str, Path]) -> bool:
 
 
 def _load_system(path: Union[str, Path]) -> System:
+    # we filter a warning related to the fact that numpy arrays from buffers
+    # are not writable, while torch would like arrays to be writable when
+    # converting them to tensors; this is ok because we then clone the tensor
+    warnings.filterwarnings(
+        "ignore", category=UserWarning, message="The given NumPy array is not writable"
+    )
+
     with zipfile.ZipFile(path, "r") as zipf:
         positions = torch.from_numpy(np.load(zipf.open("positions.npy")))
         cell = torch.from_numpy(np.load(zipf.open("cell.npy")))
@@ -73,17 +80,23 @@ def _load_system(path: Union[str, Path]) -> System:
                     zipf.read(f"neighbor_lists/{nl_idx}/options.json")
                 )
                 neighbor_list_options_list.append(nl_options)
-                numpy_buffer = np.load(zipf.open(f"neighbor_lists/{nl_idx}/data.npy"))
-                tensor_buffer = torch.from_numpy(numpy_buffer)
+                numpy_buffer = np.frombuffer(
+                    zipf.read(f"neighbor_lists/{nl_idx}/data.mta"), dtype=np.uint8
+                )
+                tensor_buffer = torch.from_numpy(
+                    numpy_buffer
+                ).clone()  # make it writable
                 neighbor_list = load_block_buffer(tensor_buffer)
                 neighbor_lists.append(neighbor_list)
 
         extra_data_dict = {}
         for data_name in zipf.namelist():
             if "extra_data/" in data_name:
-                key = os.path.basename(data_name).replace(".npy", "")
-                numpy_buffer = np.load(zipf.open(data_name))
-                tensor_buffer = torch.from_numpy(numpy_buffer)
+                key = os.path.basename(data_name).replace(".mta", "")
+                numpy_buffer = np.frombuffer(zipf.read(data_name), dtype=np.uint8)
+                tensor_buffer = torch.from_numpy(
+                    numpy_buffer
+                ).clone()  # make it writable
                 extra_data_dict[key] = load_block_buffer(tensor_buffer)
 
     system = System(
@@ -121,16 +134,13 @@ def _save_system(path: Union[str, Path], system: System) -> None:
             zipf.writestr(f"neighbor_lists/{nl_idx}/options.json", nl_options.to_json())
             nl = system.get_neighbor_list(nl_options)
             tensor_buffer = metatensor_torch_save_buffer(nl)
-            numpy_buffer = tensor_buffer.numpy()
-            with zipf.open(f"neighbor_lists/{nl_idx}/data.npy", "w") as fd:
-                np.save(fd, numpy_buffer)
-
+            zipf.writestr(
+                f"neighbor_lists/{nl_idx}/data.mta", tensor_buffer.numpy().tobytes()
+            )
         for key in system.known_data():
             data = system.get_data(key)
             tensor_buffer = metatensor_torch_save_buffer(data)
-            numpy_buffer = tensor_buffer.numpy()
-            with zipf.open(f"extra_data/{key}.npy", "w") as fd:
-                np.save(fd, numpy_buffer)
+            zipf.writestr(f"extra_data/{key}.mta", tensor_buffer.numpy().tobytes())
 
         for tensor_name in ["positions", "cell", "types", "pbc"]:
             tensor = getattr(system, tensor_name)
