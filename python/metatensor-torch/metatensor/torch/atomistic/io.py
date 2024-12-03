@@ -20,7 +20,6 @@ def save(path: Union[str, Path], data: System) -> None:
     """Save a System object to a file.
 
     The provided System must contain float64 data and be on the CPU device.
-    Neighbor list requestors will not be saved.
 
     :param path: The path to save the System object to.
     :param data: The System object to save.
@@ -123,24 +122,18 @@ def _save_system(path: Union[str, Path], system: System) -> None:
             nl = system.get_neighbor_list(nl_options)
             tensor_buffer = metatensor_torch_save_buffer(nl)
             numpy_buffer = tensor_buffer.numpy()
-            nl_buffer = io.BytesIO()
-            np.save(nl_buffer, numpy_buffer)
-            nl_buffer.seek(0)
-            zipf.writestr(f"neighbor_lists/{nl_idx}/data.npy", nl_buffer.read())
+            with zipf.open(f"neighbor_lists/{nl_idx}/data.npy", "w") as fd:
+                np.save(fd, numpy_buffer)
 
         for key in system.known_data():
             data = system.get_data(key)
             tensor_buffer = metatensor_torch_save_buffer(data)
             numpy_buffer = tensor_buffer.numpy()
-            data_buffer = io.BytesIO()
-            np.save(data_buffer, numpy_buffer)
-            data_buffer.seek(0)
-            zipf.writestr(f"extra_data/{key}.npy", data_buffer.read())
+            with zipf.open(f"extra_data/{key}.npy", "w") as fd:
+                np.save(fd, numpy_buffer)
 
         for tensor_name in ["positions", "cell", "types", "pbc"]:
             tensor = getattr(system, tensor_name)
             numpy_array = tensor.numpy()
-            buffer = io.BytesIO()
-            np.save(buffer, numpy_array)
-            buffer.seek(0)
-            zipf.writestr(f"{tensor_name}.npy", buffer.read())
+            with zipf.open(f"{tensor_name}.npy", "w") as fd:
+                np.save(fd, numpy_array)
