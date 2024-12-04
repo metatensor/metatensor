@@ -35,7 +35,7 @@ foreach(line ${CARGO_TOML_CONTENT})
 endforeach()
 
 include(cmake/dev-versions.cmake)
-create_development_version("${METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_FULL_VERSION)
+create_development_version("${METATENSOR_VERSION}" METATENSOR_FULL_VERSION "metatensor-core-v")
 message(STATUS "Building metatensor-core v${METATENSOR_FULL_VERSION}")
 
 # strip any -dev/-rc suffix on the version since project(VERSION) does not support it
