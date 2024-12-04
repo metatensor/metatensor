@@ -3,7 +3,7 @@ include CMakeLists.txt
 include AUTHORS
 include LICENSE
 
-include n_commits_since_last_tag
+include git_version_info
 
 include metatensor-torch-*.tar.gz
 
