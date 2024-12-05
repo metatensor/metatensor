@@ -153,14 +153,14 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
           # add the right python version for each torch version
-          - {torch-version: '1.12', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '1.13', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.3',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.4',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.5',  python-version: '3.12', cibw-python: 'cp312-*'}
+          - {torch-version: '1.12', cibw-python: 'cp310-*'}
+          - {torch-version: '1.13', cibw-python: 'cp310-*'}
+          - {torch-version: '2.0', cibw-python: 'cp311-*'}
+          - {torch-version: '2.1', cibw-python: 'cp311-*'}
+          - {torch-version: '2.2', cibw-python: 'cp312-*'}
+          - {torch-version: '2.3', cibw-python: 'cp312-*'}
+          - {torch-version: '2.4', cibw-python: 'cp312-*'}
+          - {torch-version: '2.5', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,7 +175,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.12
 
       - name: install dependencies
         run: python -m pip install cibuildwheel
