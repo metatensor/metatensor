@@ -44,7 +44,7 @@ jobs:
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-12
+            os: macos-13
             rust-target: x86_64-apple-darwin
             cibw-arch: x86_64
           - name: arm64 macOS
