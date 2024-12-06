@@ -14,13 +14,13 @@ The code is organized in multiple modules, each in a separate directory:
 - ``metatensor/`` contains the Rust interface to metatensor, using the C API
   defined in ``metatensor-core``, as well as the corresponding tests and
   examples.
-- ``python/metatensor-core/`` contains the Python interface to the core
+- ``python/metatensor_core/`` contains the Python interface to the core
   metatensor types, and the corresponding tests;
-- ``python/metatensor-operations/`` contains a set of pure Python functions to
+- ``python/metatensor_operations/`` contains a set of pure Python functions to
   manipulate data in metatensor format, and the corresponding tests;
-- ``python/metatensor-learn/`` contains pure Python helpers to define machine
+- ``python/metatensor_learn/`` contains pure Python helpers to define machine
   learning models, with API inspired by scikit-learn and PyTorch;
-- ``python/metatensor-torch/`` contains the Python interface for the TorchScript
+- ``python/metatensor_torch/`` contains the Python interface for the TorchScript
   version of metatensor, and the corresponding tests;
 - ``python/metatensor/`` contains a small Python package re-exporting everything
   from ``metatensor-core`` and ``metatensor-operations``. This is the main
@@ -109,7 +109,7 @@ pip and other standard Python tools.
 
 This Python module re-export a native Python interface built on top of the C
 API. The C API is accessed using the standard Python `ctypes`_ module. The
-functions declaration in ``python/metatensor-core/metatensor/core/_c_api.py``
+functions declaration in ``python/metatensor_core/metatensor/core/_c_api.py``
 are generated from the ``metatensor.h`` header when running
 ``./scripts/update-declarations.sh``.
 
@@ -128,7 +128,7 @@ At the same time, this code is also used from ``metatensor-torch``, using the
 metatensor types exposed in this module and operating only on torch data. This
 is achieved by re-importing the code from ``metatensor-operations`` in a new
 module ``metatensor.torch.operations``. See the comments in
-``python/metatensor-torch/metatensor/torch/operations.py`` for more information.
+``python/metatensor_torch/metatensor/torch/operations.py`` for more information.
 
 ``metatensor-learn``
 -------------------------

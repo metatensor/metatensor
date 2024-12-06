@@ -237,7 +237,7 @@ def generate_declarations():
     outpath = os.path.join(
         ROOT,
         "python",
-        "metatensor-core",
+        "metatensor_core",
         "metatensor",
         "_c_api.py",
     )
