@@ -5,7 +5,6 @@
 # This also allows to only depend on torch/cmake when building the wheel and not the
 # sdist
 import os
-import uuid
 
 from setuptools import build_meta
 
@@ -25,11 +24,7 @@ if FORCED_METATENSOR_CORE_VERSION is not None:
 
 elif not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
     # we are building from a git checkout
-
-    # add a random uuid to the file url to prevent pip from using a cached
-    # wheel for metatensor-core, and force it to re-build from scratch
-    uuid = uuid.uuid4()
-    METATENSOR_CORE_DEP = f"metatensor-core @ file://{METATENSOR_CORE}?{uuid}"
+    METATENSOR_CORE_DEP = f"metatensor-core @ file://{METATENSOR_CORE}"
 else:
     # we are building from a sdist
     METATENSOR_CORE_DEP = "metatensor-core >=0.1.0,<0.2.0"

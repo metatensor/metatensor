@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import uuid
 
 import packaging.version
 from setuptools import setup
@@ -136,12 +135,8 @@ if __name__ == "__main__":
 
     if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_OPERATIONS):
         # we are building from a git checkout or full repo archive
-
-        # add a random uuid to the file url to prevent pip from using a cached
-        # wheel for metatensor-core, and force it to re-build from scratch
-        uuid = uuid.uuid4()
         install_requires.append(
-            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}?{uuid}"
+            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}"
         )
     else:
         # we are building from a sdist/installing from a wheel
