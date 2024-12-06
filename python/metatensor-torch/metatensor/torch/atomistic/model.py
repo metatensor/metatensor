@@ -488,11 +488,15 @@ class MetatensorAtomisticModel(torch.nn.Module):
     def save(self, file: Union[str, Path], collect_extensions: Optional[str] = None):
         """Save this model to a file that can then be loaded by simulation engine.
 
+        The model will be saved with `requires_grad=False` for all parameters.
+
         :param file: where to save the model. This can be a path or a file-like object.
         :param collect_extensions: if not None, all currently loaded PyTorch extension
             will be collected in this directory. If this directory already exists, it
             is removed and re-created.
         """
+        for parameter in self.parameters():
+            parameter.requires_grad = False
         module = self.eval()
         if os.environ.get("PYTORCH_JIT") == "0":
             raise RuntimeError(
