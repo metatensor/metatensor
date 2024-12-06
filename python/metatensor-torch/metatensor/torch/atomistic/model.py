@@ -493,6 +493,8 @@ class MetatensorAtomisticModel(torch.nn.Module):
             will be collected in this directory. If this directory already exists, it
             is removed and re-created.
         """
+        for parameter in self.parameters():
+            parameter.requires_grad = False
         module = self.eval()
         if os.environ.get("PYTORCH_JIT") == "0":
             raise RuntimeError(
