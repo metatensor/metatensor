@@ -84,7 +84,7 @@ TORCH_LIBRARY(metatensor, m) {
     // setting them to something useful here.
     //
     // Whenever this file is changed, please also reproduce the changes in
-    // python/metatensor-torch/metatensor/torch/documentation.py, and include the
+    // python/metatensor_torch/metatensor/torch/documentation.py, and include the
     // docstring over there
     const std::string DOCSTRING;
 

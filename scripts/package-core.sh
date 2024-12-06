@@ -48,5 +48,4 @@ cargo generate-lockfile --manifest-path "$ARCHIVE_NAME/Cargo.toml"
 tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 
-rm -f "$ROOT_DIR"/python/metatensor-core/metatensor-core-cxx-*.tar.gz
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$OUTPUT_DIR/"

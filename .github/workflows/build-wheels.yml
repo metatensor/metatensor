@@ -84,7 +84,7 @@ jobs:
         run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-core wheel
-        run: python -m cibuildwheel python/metatensor-core
+        run: python -m cibuildwheel python/metatensor_core
         env:
           CIBW_BUILD: cp311-*
           CIBW_SKIP: "*musllinux*"
@@ -189,7 +189,7 @@ jobs:
         run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-torch wheel
-        run: python -m cibuildwheel python/metatensor-torch
+        run: python -m cibuildwheel python/metatensor_torch
         env:
           CIBW_BUILD: ${{ matrix.cibw-python}}
           CIBW_SKIP: "*musllinux*"
@@ -311,16 +311,16 @@ jobs:
         run: python -m pip install wheel build twine
 
       - name: build metatensor-core sdist
-        run: python -m build python/metatensor-core --sdist --outdir=dist/
+        run: python -m build python/metatensor_core --sdist --outdir=dist/
 
       - name: build metatensor-operations sdist and wheel
-        run: python -m build python/metatensor-operations --outdir=dist/
+        run: python -m build python/metatensor_operations --outdir=dist/
 
       - name: build metatensor-learn sdist and wheel
-        run: python -m build python/metatensor-learn --outdir=dist/
+        run: python -m build python/metatensor_learn --outdir=dist/
 
       - name: build metatensor-torch sdist
-        run: python -m build python/metatensor-torch --sdist --outdir=dist/
+        run: python -m build python/metatensor_torch --sdist --outdir=dist/
 
       - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/
