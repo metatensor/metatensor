@@ -353,7 +353,9 @@ TORCH_LIBRARY(metatensor, m) {
             [](const std::string& data) -> NeighborListOptions {
                 return NeighborListOptionsHolder::from_json(data);
             }
-        );
+        )
+        .def("to_json", &NeighborListOptionsHolder::to_json)
+        .def_static("from_json", &NeighborListOptionsHolder::from_json);
 
 
     m.class_<SystemHolder>("System")

@@ -43,6 +43,7 @@ atomistic systems as input of a machine learning model with
     systems
     models/index
     ase
+    serialization
 
 
 C++ API reference
