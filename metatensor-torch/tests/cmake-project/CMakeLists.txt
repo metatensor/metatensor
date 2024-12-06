@@ -21,7 +21,7 @@ else()
     # in the same way we update the metatensor-torch version
     include(../../cmake/dev-versions.cmake)
     set(REQUIRED_METATENSOR_TORCH_VERSION "0.6.1")
-    create_development_version("${REQUIRED_METATENSOR_TORCH_VERSION}" "metatensor-torch-v" METATENSOR_TORCH_FULL_VERSION)
+    create_development_version("${REQUIRED_METATENSOR_TORCH_VERSION}" METATENSOR_TORCH_FULL_VERSION "metatensor-torch-v")
     string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_TORCH_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 
     # find metatensor_torch with find_package

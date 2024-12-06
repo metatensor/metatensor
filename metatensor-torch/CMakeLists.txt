@@ -18,7 +18,7 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION METATENSOR_TORCH_VERSION)
 string(STRIP ${METATENSOR_TORCH_VERSION} METATENSOR_TORCH_VERSION)
 
 include(cmake/dev-versions.cmake)
-create_development_version("${METATENSOR_TORCH_VERSION}" "metatensor-torch-v" METATENSOR_TORCH_FULL_VERSION)
+create_development_version("${METATENSOR_TORCH_VERSION}" METATENSOR_TORCH_FULL_VERSION "metatensor-torch-v")
 message(STATUS "Building metatensor-torch v${METATENSOR_TORCH_FULL_VERSION}")
 
 # strip any -dev/-rc suffix on the version since project(VERSION) does not support it
@@ -77,7 +77,7 @@ if (NOT "$ENV{METATENSOR_NO_LOCAL_DEPS}" STREQUAL "1")
     # If building a dev version, we also need to update the
     # REQUIRED_METATENSOR_VERSION in the same way we update the metatensor-torch
     # version
-    create_development_version("${REQUIRED_METATENSOR_VERSION}" "metatensor-core-v" METATENSOR_CORE_FULL_VERSION)
+    create_development_version("${REQUIRED_METATENSOR_VERSION}" METATENSOR_CORE_FULL_VERSION "metatensor-core-v")
 else()
     set(METATENSOR_CORE_FULL_VERSION ${REQUIRED_METATENSOR_VERSION})
 endif()
