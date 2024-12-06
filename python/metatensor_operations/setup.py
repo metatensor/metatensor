@@ -9,12 +9,9 @@ from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor_core")
-METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor_operations")
-METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor_torch")
-METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor_learn")
+METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor_core"))
 
-METATENSOR_VERSION = "0.2.0"
+METATENSOR_OPERATIONS_VERSION = "0.3.0"
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -27,8 +24,8 @@ class bdist_egg_disabled(bdist_egg):
     def run(self):
         sys.exit(
             "Aborting implicit building of eggs.\nUse `pip install .` or "
-            "`python -m build --wheel . && pip install dist/metatensor-*.whl` "
-            "to install from source."
+            "`python -m build --wheel . && pip install "
+            "dist/metatensor_operations-*.whl` to install from source."
         )
 
 
@@ -39,50 +36,62 @@ class sdist_git_version(sdist):
     """
 
     def run(self):
-        with open("n_commits_since_last_tag", "w") as fd:
-            fd.write(str(n_commits_since_last_tag()))
+        n_commits, git_hash = git_version_info()
+        with open("git_version_info", "w") as fd:
+            fd.write(f"{n_commits}\n{git_hash}\n")
 
         # run original sdist
         super().run()
 
-        os.unlink("n_commits_since_last_tag")
+        os.unlink("git_version_info")
 
 
-def n_commits_since_last_tag():
+def git_version_info():
     """
     If git is available and we are building from a checkout, get the number of commits
-    since the last tag. Otherwise, this always returns 0.
+    since the last tag & full hash of the code. Otherwise, this always returns (0, "").
     """
-    script = os.path.join(ROOT, "scripts", "n-commits-since-last-tag.py")
-    if not os.path.exists(script):
-        return 0
+    TAG_PREFIX = "metatensor-operations-v"
 
-    TAG_PREFIX = "metatensor-python-v"
-    output = subprocess.run(
-        [sys.executable, script, TAG_PREFIX],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        check=True,
-        encoding="utf8",
-    )
-
-    if output.stderr:
-        print(output.stderr, file=sys.stderr)
-        return 0
+    if os.path.exists("git_version_info"):
+        # we are building from a sdist, without git available, but the git
+        # version was recorded in the `git_version_info` file
+        with open("git_version_info") as fd:
+            n_commits = int(fd.readline().strip())
+            git_hash = fd.readline().strip()
     else:
-        return int(output.stdout)
+        script = os.path.join(ROOT, "..", "..", "scripts", "git-version-info.py")
+        assert os.path.exists(script)
+
+        output = subprocess.run(
+            [sys.executable, script, TAG_PREFIX],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            encoding="utf8",
+        )
+
+        if output.returncode != 0:
+            raise Exception(
+                "failed to get git version info.\n"
+                f"stdout: {output.stdout}\n"
+                f"stderr: {output.stderr}\n"
+            )
+        elif output.stderr:
+            print(output.stderr, file=sys.stderr)
+            n_commits = 0
+            git_hash = ""
+        else:
+            lines = output.stdout.splitlines()
+            n_commits = int(lines[0].strip())
+            git_hash = lines[1].strip()
+
+    return n_commits, git_hash
 
 
 def create_version_number(version):
     version = packaging.version.parse(version)
 
-    if os.path.exists("n_commits_since_last_tag"):
-        # we are building from a sdist, without git available, but the git
-        # version was recorded in the `n_commits_since_last_tag` file
-        with open("n_commits_since_last_tag") as fd:
-            n_commits = int(fd.read().strip())
-    else:
-        n_commits = n_commits_since_last_tag()
+    n_commits, git_hash = git_version_info()
 
     if n_commits != 0:
         # if we have commits since the last tag, this mean we are in a pre-release of
@@ -103,45 +112,36 @@ def create_version_number(version):
         version._version = version._version._replace(release=release)
         version._version = version._version._replace(pre=pre)
         version._version = version._version._replace(dev=("dev", n_commits))
+        version._version = version._version._replace(local=(git_hash,))
 
     return str(version)
 
 
 if __name__ == "__main__":
+    with open(os.path.join(ROOT, "AUTHORS")) as fd:
+        authors = fd.read().splitlines()
+
+    if authors[0].startswith(".."):
+        # handle "raw" symlink files (on Windows or from full repo tarball)
+        with open(os.path.join(ROOT, authors[0])) as fd:
+            authors = fd.read().splitlines()
+
     install_requires = []
-    extras_require = {}
 
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
 
     if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
-        # we are building from a git checkout
-        assert os.path.exists(METATENSOR_OPERATIONS)
-        assert os.path.exists(METATENSOR_TORCH)
-        assert os.path.exists(METATENSOR_LEARN)
-
-        install_requires.append(
-            f"metatensor-core @ file://{METATENSOR_CORE}",
-        )
-        install_requires.append(
-            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}",
-        )
-        install_requires.append(
-            f"metatensor-learn @ file://{METATENSOR_LEARN}",
-        )
-        extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}"
+        # we are building from a git checkout or full repo archive
+        install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core")
-        install_requires.append("metatensor-operations")
-        install_requires.append("metatensor-learn")
-        extras_require["torch"] = "metatensor-torch"
+        install_requires.append("metatensor-core >=0.1.10,<0.2.0")
 
     setup(
-        version=create_version_number(METATENSOR_VERSION),
-        author=", ".join(open(os.path.join(ROOT, "AUTHORS")).read().splitlines()),
+        version=create_version_number(METATENSOR_OPERATIONS_VERSION),
+        author=", ".join(authors),
         install_requires=install_requires,
-        extras_require=extras_require,
         cmdclass={
             "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
             "sdist": sdist_git_version,

@@ -9,14 +9,14 @@ TMP_DIR="$1"
 rm -rf "$TMP_DIR"/dist
 
 # check building sdist from a checkout, and wheel from the sdist
-python -m build python/metatensor-core --outdir "$TMP_DIR"/dist
+python -m build python/metatensor_core --outdir "$TMP_DIR"/dist
 
 # get the version of metatensor-core we just built
 METATENSOR_CORE_VERSION=$(basename "$(find "$TMP_DIR"/dist -name "metatensor-core-*.tar.gz")" | cut -d - -f 3)
 METATENSOR_CORE_VERSION=${METATENSOR_CORE_VERSION%.tar.gz}
 
-python -m build python/metatensor-operations --outdir "$TMP_DIR"/dist
-python -m build python/metatensor-learn --outdir "$TMP_DIR"/dist
+python -m build python/metatensor_operations --outdir "$TMP_DIR"/dist
+python -m build python/metatensor_learn --outdir "$TMP_DIR"/dist
 python -m build . --outdir "$TMP_DIR"/dist
 
 # for metatensor-torch, we need a pre-built version of metatensor-core, so
@@ -46,4 +46,4 @@ export METATENSOR_TORCH_BUILD_WITH_METATENSOR_CORE_VERSION="$METATENSOR_CORE_VER
 
 # build metatensor-torch, using metatensor-core from `PIP_EXTRA_INDEX_URL`
 # for the sdist => wheel build.
-python -m build python/metatensor-torch --outdir "$TMP_DIR/dist"
+python -m build python/metatensor_torch --outdir "$TMP_DIR/dist"

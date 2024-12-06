@@ -44,7 +44,7 @@ jobs:
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-12
+            os: macos-13
             rust-target: x86_64-apple-darwin
             cibw-arch: x86_64
           - name: arm64 macOS
@@ -84,7 +84,7 @@ jobs:
         run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-core wheel
-        run: python -m cibuildwheel python/metatensor-core
+        run: python -m cibuildwheel python/metatensor_core
         env:
           CIBW_BUILD: cp311-*
           CIBW_SKIP: "*musllinux*"
@@ -153,14 +153,14 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
           # add the right python version for each torch version
-          - {torch-version: '1.12', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '1.13', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.3',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.4',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.5',  python-version: '3.12', cibw-python: 'cp312-*'}
+          - {torch-version: '1.12', cibw-python: 'cp310-*'}
+          - {torch-version: '1.13', cibw-python: 'cp310-*'}
+          - {torch-version: '2.0', cibw-python: 'cp311-*'}
+          - {torch-version: '2.1', cibw-python: 'cp311-*'}
+          - {torch-version: '2.2', cibw-python: 'cp312-*'}
+          - {torch-version: '2.3', cibw-python: 'cp312-*'}
+          - {torch-version: '2.4', cibw-python: 'cp312-*'}
+          - {torch-version: '2.5', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,7 +175,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.12
 
       - name: install dependencies
         run: python -m pip install cibuildwheel
@@ -189,7 +189,7 @@ jobs:
         run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-torch wheel
-        run: python -m cibuildwheel python/metatensor-torch
+        run: python -m cibuildwheel python/metatensor_torch
         env:
           CIBW_BUILD: ${{ matrix.cibw-python}}
           CIBW_SKIP: "*musllinux*"
@@ -311,16 +311,16 @@ jobs:
         run: python -m pip install wheel build twine
 
       - name: build metatensor-core sdist
-        run: python -m build python/metatensor-core --sdist --outdir=dist/
+        run: python -m build python/metatensor_core --sdist --outdir=dist/
 
       - name: build metatensor-operations sdist and wheel
-        run: python -m build python/metatensor-operations --outdir=dist/
+        run: python -m build python/metatensor_operations --outdir=dist/
 
       - name: build metatensor-learn sdist and wheel
-        run: python -m build python/metatensor-learn --outdir=dist/
+        run: python -m build python/metatensor_learn --outdir=dist/
 
       - name: build metatensor-torch sdist
-        run: python -m build python/metatensor-torch --sdist --outdir=dist/
+        run: python -m build python/metatensor_torch --sdist --outdir=dist/
 
       - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/

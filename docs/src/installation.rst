@@ -320,16 +320,16 @@ Rust using `rustup`_ or the package manager of your operating system.
 
             git clone https://github.com/metatensor/metatensor
             cd metatensor
-            pip install ./python/metatensor-core
-            pip install ./python/metatensor-operations
-            pip install ./python/metatensor-learn
-            pip install ./python/metatensor-torch
+            pip install ./python/metatensor_core
+            pip install ./python/metatensor_operations
+            pip install ./python/metatensor_learn
+            pip install ./python/metatensor_torch
 
             # alternatively, the same thing in a single command
-            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-core
-            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-operations
-            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-learn
-            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-torch
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor_core
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor_operations
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor_learn
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor_torch
 
 
     .. tab-item:: C and C++
@@ -390,10 +390,10 @@ Rust using `rustup`_ or the package manager of your operating system.
 
             git clone https://github.com/metatensor/metatensor
             cd metatensor
-            pip install ./python/metatensor-torch
+            pip install ./python/metatensor_torch
 
             # alternatively, the same thing in a single command
-            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor-torch
+            pip install git+https://github.com/metatensor/metatensor#subdirectory=python/metatensor_torch
 
 
     .. tab-item:: TorchScript C++
