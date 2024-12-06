@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import uuid
 
 import packaging.version
 from setuptools import setup
@@ -10,10 +9,10 @@ from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor-core")
-METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor-operations")
-METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor-torch")
-METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor-learn")
+METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor_core")
+METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor_operations")
+METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor_torch")
+METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor_learn")
 
 METATENSOR_VERSION = "0.2.0"
 
@@ -121,19 +120,16 @@ if __name__ == "__main__":
         assert os.path.exists(METATENSOR_TORCH)
         assert os.path.exists(METATENSOR_LEARN)
 
-        # add a random uuid to the file url to prevent pip from using a cached
-        # wheel for metatensor-core, and force it to re-build from scratch
-        uuid = uuid.uuid4()
         install_requires.append(
-            f"metatensor-core @ file://{METATENSOR_CORE}?{uuid}",
+            f"metatensor-core @ file://{METATENSOR_CORE}",
         )
         install_requires.append(
-            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}?{uuid}",
+            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}",
         )
         install_requires.append(
-            f"metatensor-learn @ file://{METATENSOR_LEARN}?{uuid}",
+            f"metatensor-learn @ file://{METATENSOR_LEARN}",
         )
-        extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}?{uuid}"
+        extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}"
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("metatensor-core")

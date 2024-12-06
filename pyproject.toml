@@ -80,3 +80,13 @@ known-first-party = ["metatensor"]
 
 [tool.ruff.format]
 docstring-code-format = true
+
+### ======================================================================== ###
+
+[tool.uv.pip]
+reinstall-package = [
+    "metatensor-core",
+    "metatensor-torch",
+    "metatensor-operations",
+    "metatensor-learn"
+]
