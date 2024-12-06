@@ -31,5 +31,4 @@ tar cf "$ARCHIVE_NAME".tar "$ARCHIVE_NAME"
 
 gzip -9 "$ARCHIVE_NAME".tar
 
-rm -f "$ROOT_DIR"/python/metatensor-torch/metatensor-torch-cxx-*.tar.gz
 cp "$ARCHIVE_NAME".tar.gz "$OUTPUT_DIR/"
