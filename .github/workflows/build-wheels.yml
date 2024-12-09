@@ -24,9 +24,6 @@ concurrency:
   group: python-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-env:
-  METATENSOR_NO_LOCAL_DEPS: "1"
-
 
 jobs:
   build-core-wheels:
@@ -297,6 +294,8 @@ jobs:
   build-others:
     name: Build other wheels/sdists
     runs-on: ubuntu-22.04
+    env:
+      METATENSOR_NO_LOCAL_DEPS: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -427,3 +426,79 @@ jobs:
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-build-external:
+    # This checks building the wheels with external libraries. This setup is
+    # mainly used for the conda packages metatensor-*-python, which use the
+    # libmetatensor-* conda packages to provide the native code.
+    runs-on: ${{ matrix.os }}
+    name: External libraries / ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcpu.zip
+          - os: macos-14
+            rust-target: aarch64-apple-darwin
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.5.1.zip
+          - os: windows-2019
+            rust-target: x86_64-pc-windows-msvc
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.5.1%2Bcpu.zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: ${{ matrix.rust-target }}
+
+      - name: setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: setup environment
+        run: |
+          pip install build
+          echo "CMAKE_PREFIX_PATH=${RUNNER_TEMP//\\//}/usr" >> "$GITHUB_ENV"
+
+      - name: setup libtorch
+        run: |
+          curl --output libtorch.zip ${{ matrix.libtorch-url }}
+          unzip -q libtorch.zip -d $CMAKE_PREFIX_PATH/
+          mv $CMAKE_PREFIX_PATH/libtorch/* $CMAKE_PREFIX_PATH/
+
+      - name: build libmetatensor
+        run: |
+          cmake -B build-metatensor-core -S metatensor-core -DMETATENSOR_INSTALL_BOTH_STATIC_SHARED=OFF -DCMAKE_INSTALL_PREFIX=$CMAKE_PREFIX_PATH -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-metatensor-core --config Debug
+          cmake --install build-metatensor-core --config Debug
+
+      - name: build libmetatensor-torch
+        run: |
+          cmake -B build-metatensor-torch -S metatensor-torch -DCMAKE_INSTALL_PREFIX=$CMAKE_PREFIX_PATH -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-metatensor-torch --config Debug
+          cmake --install build-metatensor-torch --config Debug
+
+      - name: build metatensor-core wheels
+        run: |
+          python -m build python/metatensor_core --wheel --outdir=dist/
+          # check that the wheel is using an external library
+          unzip -l dist/metatensor_core*.whl | grep "_external.py"
+        env:
+          METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB: "ON"
+
+      - name: build metatensor-torch wheels
+        run: |
+          python -m build python/metatensor_torch --wheel --outdir=dist/
+          unzip -l dist/metatensor_torch*.whl | grep "_external.py"
+        env:
+          METATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB: "ON"
+          METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB: "ON"
