@@ -14,7 +14,7 @@ set(METATENSOR_TORCH_SOURCE_DIR "" CACHE PATH "Path to the sources of metatensor
 
 file(REMOVE ${CMAKE_INSTALL_PREFIX}/_external.py)
 
-set(REQUIRED_METATENSOR_TORCH_VERSION "0.6.1")
+set(REQUIRED_METATENSOR_TORCH_VERSION "0.6.2")
 if(${METATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB})
     # when building a source checkout, update version to include git information
     # this will not apply when building a sdist
