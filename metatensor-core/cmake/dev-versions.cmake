@@ -73,7 +73,7 @@ endfunction()
 # Take the version declared in the package, and increase the right number if we
 # are actually installing a developement version from after the latest git tag
 function(create_development_version _version_ _output_ _tag_prefix_)
-    git_version_info(_tag_prefix_ _n_commits_ _git_hash_)
+    git_version_info("${_tag_prefix_}" _n_commits_ _git_hash_)
 
     parse_version(${_version_} _major_ _minor_ _patch_ _rc_)
     if(${_n_commits_} STREQUAL "0")
