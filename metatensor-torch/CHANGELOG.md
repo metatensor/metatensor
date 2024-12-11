@@ -17,6 +17,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.2) - 2024-12-11
+
+### Fixed
+
+- Selecting from empty `Labels` no longer fails (#792)
+- Models are exported with `requires_grad=False` for all parameters, which
+  should make them faster when using autograd to compute forces and stress (#802)
+
 ## [Version 0.6.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.1) - 2024-11-7
 
 ### Fixed
