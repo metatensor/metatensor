@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
+
+### Fixed
+
+- Fixed an issue with Python wheels building, where the underlying C++ library
+  would get a different version from the Python library and fail to load.
+
 ## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.2) - 2024-12-11
 
 ### Fixed
