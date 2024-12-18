@@ -546,10 +546,38 @@ TorchTensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
 
 
 void TensorMapHolder::save(const std::string& path) const {
+    // check that device is CPU
+    if (this->keys()->values().device() != torch::kCPU) {
+        C10_THROW_ERROR(ValueError,
+            "cannot save TensorMap with device " + this->keys()->values().device().str() +
+            ", only CPU is supported"
+        );
+    }
+    // check that dtype is float64
+    if (this->scalar_type() != torch::kFloat64) {
+        C10_THROW_ERROR(ValueError,
+            "cannot save TensorMap with dtype " + scalar_type_name(this->scalar_type()) +
+            ", only float64 is supported"
+        );
+    }
     return metatensor::io::save(path, this->as_metatensor());
 }
 
 torch::Tensor TensorMapHolder::save_buffer() const {
+    // check that device is CPU
+    if (this->keys()->values().device() != torch::kCPU) {
+        C10_THROW_ERROR(ValueError,
+            "cannot save TensorMap with device " + this->keys()->values().device().str() +
+            ", only CPU is supported"
+        );
+    }
+    // check that dtype is float64
+    if (this->scalar_type() != torch::kFloat64) {
+        C10_THROW_ERROR(ValueError,
+            "cannot save TensorMap with dtype " + scalar_type_name(this->scalar_type()) +
+            ", only float64 is supported"
+        );
+    }
     auto buffer = metatensor::io::save_buffer(this->as_metatensor());
     // move the buffer to the heap so it can escape this function
     // `torch::from_blob` does not take ownership of the data,
