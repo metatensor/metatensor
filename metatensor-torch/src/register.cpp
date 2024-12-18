@@ -384,7 +384,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def("known_neighbor_lists", &SystemHolder::known_neighbor_lists)
         .def("add_data", &SystemHolder::add_data, DOCSTRING,
-            {torch::arg("name"), torch::arg("data"), torch::arg("override") = false}
+            {torch::arg("name"), torch::arg("tensor"), torch::arg("override") = false}
         )
         .def("get_data", &SystemHolder::get_data, DOCSTRING,
             {torch::arg("name")}

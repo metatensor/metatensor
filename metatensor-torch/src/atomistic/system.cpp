@@ -810,7 +810,7 @@ static auto INVALID_DATA_NAMES = std::unordered_set<std::string>{
     "neighbors", "neighbor"
 };
 
-void SystemHolder::add_data(std::string name, TorchTensorBlock values, bool override) {
+void SystemHolder::add_data(std::string name, TorchTensorMap tensor, bool override) {
     if (!valid_ident(name)) {
         C10_THROW_ERROR(ValueError,
             "custom data name '" + name + "' is invalid: only [a-z A-Z 0-9 _-] are accepted"
@@ -829,26 +829,25 @@ void SystemHolder::add_data(std::string name, TorchTensorBlock values, bool over
         );
     }
 
-    const auto& values_tensor = values->values();
-    if (values_tensor.device() != this->device()) {
+    if (tensor->device() != this->device()) {
         C10_THROW_ERROR(ValueError,
-            "device (" + values_tensor.device().str() + ") of the custom data "
+            "device (" + tensor->device().str() + ") of the custom data "
             "'" + name + "' does not match this system device (" + this->device().str() +")"
         );
     }
 
-    if (values_tensor.scalar_type() != this->scalar_type()) {
+    if (tensor->scalar_type() != this->scalar_type()) {
         C10_THROW_ERROR(ValueError,
-            "dtype (" + scalar_type_name(values_tensor.scalar_type()) + ") of " +
+            "dtype (" + scalar_type_name(tensor->scalar_type()) + ") of " +
             "custom data '" + name + "' does not match this system " +
             "dtype (" + scalar_type_name(this->scalar_type()) +")"
         );
     }
 
-    data_.insert_or_assign(std::move(name), std::move(values));
+    data_.insert_or_assign(std::move(name), std::move(tensor));
 }
 
-TorchTensorBlock SystemHolder::get_data(std::string name) const {
+TorchTensorMap SystemHolder::get_data(std::string name) const {
     if (INVALID_DATA_NAMES.find(string_lower(name)) != INVALID_DATA_NAMES.end()) {
         C10_THROW_ERROR(ValueError,
             "custom data can not be named '" + name + "'"
