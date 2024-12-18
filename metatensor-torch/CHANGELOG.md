@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Changed
+
+- Custom data stored in `System` is now stored as `TensorMap` instead of
+  `TensorBlock`. This allow for more kinds of data to be stored.
+
 ## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
 
 ### Fixed
