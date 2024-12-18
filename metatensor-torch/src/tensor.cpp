@@ -546,6 +546,13 @@ TorchTensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
 
 
 void TensorMapHolder::save(const std::string& path) const {
+    // check that dtype is float64
+    if (this->scalar_type() != torch::kFloat64) {
+        C10_THROW_ERROR(ValueError,
+            "cannot save TensorMap with dtype " + scalar_type_name(this->scalar_type()) +
+            ", only float64 is supported"
+        );
+    }
     return metatensor::io::save(path, this->as_metatensor());
 }
 
