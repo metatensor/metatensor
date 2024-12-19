@@ -29,5 +29,8 @@ zip = {version = "0.6", default-features = false, features = ["deflate"]}
 cbindgen = { version = "0.27", default-features = false }
 
 [dev-dependencies]
-which = "6"
 lazy_static = "1"
+which = "7"
+
+# home MSRV is now 1.81
+home = "=0.5.9"

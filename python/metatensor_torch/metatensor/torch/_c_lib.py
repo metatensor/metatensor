@@ -3,8 +3,9 @@ import importlib
 import os
 import sys
 
-import metatensor
 import torch
+
+import metatensor
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION
 from .utils import parse_version, version_compatible

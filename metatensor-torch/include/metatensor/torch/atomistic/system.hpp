@@ -8,6 +8,7 @@
 
 #include <metatensor.hpp>
 
+#include "metatensor/torch/tensor.hpp"
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/exports.h"
 
@@ -56,7 +57,7 @@ public:
         return full_list_;
     }
 
-    /// Should the list guarantee that *only* atoms within the cutoff are 
+    /// Should the list guarantee that *only* atoms within the cutoff are
     // included (strict) or possibly also include pairs beyond the cutoff (non-strict)
     bool strict() const {
         return strict_;
@@ -256,13 +257,13 @@ public:
     /// input, and moved into a field of `SystemHolder` later.
     ///
     /// @param name name of the data
-    /// @param values values of the data
+    /// @param tensor the data to store
     /// @param override if true, allow this function to override existing data
     ///                 with the same name
-    void add_data(std::string name, TorchTensorBlock values, bool override=false);
+    void add_data(std::string name, TorchTensorMap tensor, bool override=false);
 
     /// Retrieve custom data stored in this System, or throw an error.
-    TorchTensorBlock get_data(std::string name) const;
+    TorchTensorMap get_data(std::string name) const;
 
     /// Get the list of data registered with this `System`
     std::vector<std::string> known_data() const;
@@ -292,7 +293,7 @@ private:
     torch::Tensor pbc_;
 
     std::map<NeighborListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
-    std::unordered_map<std::string, TorchTensorBlock> data_;
+    std::unordered_map<std::string, TorchTensorMap> data_;
 };
 
 }
