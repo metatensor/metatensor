@@ -7,7 +7,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_remove_everything():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     assert set(tensor.block(0).gradients_list()) == set(["strain", "positions"])
 
@@ -16,7 +16,7 @@ def test_remove_everything():
 
 
 def test_remove_subset():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     assert set(tensor.block(0).gradients_list()) == set(["strain", "positions"])
 

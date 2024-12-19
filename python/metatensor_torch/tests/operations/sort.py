@@ -20,7 +20,7 @@ def test_sort():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     sorted_tensor = metatensor.torch.sort(tensor)

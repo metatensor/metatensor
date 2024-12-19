@@ -17,7 +17,7 @@ def test_empty_like():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     empty_tensor = metatensor.torch.empty_like(tensor)

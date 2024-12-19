@@ -17,7 +17,7 @@ def test_zeros_like():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     zero_tensor = metatensor.torch.zeros_like(tensor)

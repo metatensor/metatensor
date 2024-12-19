@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 
-def transform_metatensor_npz(path):
+def transform_metatensor_(path):
     data = dict(np.load(path))
 
     if "blocks/0/values/data" not in data:
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         print(f"usage: {sys.argv[0]} <file> <file> <file>")
 
     for path in sys.argv[1:]:
-        data = transform_metatensor_npz(path)
+        data = transform_metatensor_(path)
         if data is not None:
             shutil.copyfile(path, path + ".bak")
             np.savez(path, **data)
