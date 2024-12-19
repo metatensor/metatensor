@@ -16,7 +16,7 @@ ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 
 sphinx_gallery_conf = {
     "filename_pattern": ".*",
-    "copyfile_regex": r".*\.(example|npz|xyz)",
+    "copyfile_regex": r".*\.(example|mts|xyz)",
     "examples_dirs": [
         os.path.join(ROOT, "python", "examples", "core"),
         os.path.join(ROOT, "python", "examples", "learn"),

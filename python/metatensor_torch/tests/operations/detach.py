@@ -19,7 +19,7 @@ def test_detach():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     tensor = metatensor.torch.requires_grad(tensor)

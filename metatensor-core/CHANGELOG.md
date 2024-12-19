@@ -17,6 +17,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
+
 ### metatensor-core Julia
 
 #### Added

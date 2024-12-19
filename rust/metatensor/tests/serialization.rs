@@ -3,7 +3,7 @@ mod tensor {
 
     use metatensor::TensorMap;
 
-    const DATA_PATH: &str = "../../metatensor-core/tests/data.npz";
+    const DATA_PATH: &str = "../../metatensor-core/tests/data.mts";
 
     #[test]
     fn load_file() {
@@ -71,7 +71,7 @@ mod block {
     use std::io::Read;
     use metatensor::{TensorBlock, TensorBlockRef};
 
-    const DATA_PATH: &str = "../../metatensor-core/tests/block.npz";
+    const DATA_PATH: &str = "../../metatensor-core/tests/block.mts";
 
     #[test]
     fn load_file() {
@@ -135,7 +135,7 @@ mod labels {
     use std::io::Read;
     use metatensor::Labels;
 
-    const DATA_PATH: &str = "../../metatensor-core/tests/keys.npy";
+    const DATA_PATH: &str = "../../metatensor-core/tests/keys.mts";
 
     #[test]
     fn load_file() {

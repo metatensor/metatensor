@@ -21,7 +21,7 @@ use super::mts_create_array_callback_t;
 /// The memory allocated by this function should be released using
 /// `mts_tensormap_free`.
 ///
-/// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+/// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
 /// without compression (storage method is STORED), where each file is stored as
 /// a `.npy` array. Both the ZIP and NPY format are well documented:
 ///
@@ -203,7 +203,8 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 
 /// Save a tensor map to the file at the given path.
 ///
-/// If the file already exists, it is overwritten.
+/// If the file already exists, it is overwritten. The recomended file extension
+/// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
 /// @param tensor tensor map to save to the file

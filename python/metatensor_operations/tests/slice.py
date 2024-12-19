@@ -28,12 +28,12 @@ EXAMPLES_ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
 
 @pytest.fixture
 def block_with_grad() -> TensorBlock:
-    tensor = metatensor.load(os.path.join(EXAMPLES_ROOT, "core", "radial-spectrum.npz"))
+    tensor = metatensor.load(os.path.join(EXAMPLES_ROOT, "core", "radial-spectrum.mts"))
     return tensor.block(4)
 
 

@@ -16,7 +16,7 @@ def test_subtract():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     difference_tensor = metatensor.torch.subtract(tensor, tensor)

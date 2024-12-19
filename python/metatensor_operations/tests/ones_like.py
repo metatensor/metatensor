@@ -10,7 +10,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_ones_like():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     ones_tensor = metatensor.ones_like(tensor)
     ones_tensor_positions = metatensor.ones_like(tensor, gradients="positions")
 
@@ -31,7 +31,7 @@ def test_ones_like():
 
 
 def test_ones_like_error():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     message = "requested gradient 'err' in 'ones_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):

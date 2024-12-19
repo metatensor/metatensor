@@ -17,7 +17,7 @@ def test_dot():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     dot_tensor = metatensor.torch.dot(tensor, metatensor.torch.remove_gradients(tensor))

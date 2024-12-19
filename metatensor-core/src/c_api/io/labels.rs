@@ -14,9 +14,6 @@ use super::super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust}
 
 /// Load labels from the file at the given path.
 ///
-/// Labels are stored using numpy's NPY format, so the file will typically use
-/// the `.npy` extension.
-///
 /// This function allocates memory which must be released `mts_labels_free` when
 /// you don't need it anymore.
 ///
@@ -128,7 +125,8 @@ pub unsafe extern fn mts_labels_load_buffer(
 
 /// Save labels to the file at the given path.
 ///
-/// If the file already exists, it is overwritten.
+/// If the file already exists, it is overwritten. The recomended file extension
+/// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
 /// @param labels Labels to save to the file

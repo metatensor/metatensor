@@ -873,9 +873,6 @@ struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap
 /**
  * Load labels from the file at the given path.
  *
- * Labels are stored using numpy's NPY format, so the file will typically use
- * the `.npy` extension.
- *
  * This function allocates memory which must be released `mts_labels_free` when
  * you don't need it anymore.
  *
@@ -907,7 +904,8 @@ mts_status_t mts_labels_load_buffer(const uint8_t *buffer,
 /**
  * Save labels to the file at the given path.
  *
- * If the file already exists, it is overwritten.
+ * If the file already exists, it is overwritten. The recomended file extension
+ * when saving data is `.mts`, to prevent confusion with generic `.npz` files.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
  * @param labels Labels to save to the file
@@ -1000,7 +998,8 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
 /**
  * Save a tensor block to the file at the given path.
  *
- * If the file already exists, it is overwritten.
+ * If the file already exists, it is overwritten. The recomended file extension
+ * when saving data is `.mts`, to prevent confusion with generic `.npz` files.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
  * @param block tensor block to save to the file
@@ -1053,7 +1052,7 @@ mts_status_t mts_block_save_buffer(uint8_t **buffer,
  * The memory allocated by this function should be released using
  * `mts_tensormap_free`.
  *
- * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+ * `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
  * without compression (storage method is STORED), where each file is stored as
  * a `.npy` array. Both the ZIP and NPY format are well documented:
  *
@@ -1122,7 +1121,8 @@ struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
 /**
  * Save a tensor map to the file at the given path.
  *
- * If the file already exists, it is overwritten.
+ * If the file already exists, it is overwritten. The recomended file extension
+ * when saving data is `.mts`, to prevent confusion with generic `.npz` files.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
  * @param tensor tensor map to save to the file

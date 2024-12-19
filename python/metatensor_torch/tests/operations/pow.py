@@ -16,7 +16,7 @@ def test_pow():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     power_tensor = metatensor.torch.pow(tensor, 2.0)

@@ -13,7 +13,7 @@ required.
 Like in the :ref:`previous tutorial <core-tutorial-first-steps>`, we will load the data
 we need from a file. The code used to generate this file can be found below:
 
-.. details:: Show the code used to generate the :file:`radial-spectrum.npz` file
+.. details:: Show the code used to generate the :file:`radial-spectrum.mts` file
 
     ..
 
@@ -90,7 +90,7 @@ plt.show()
 # ``neighbor_type`` indicating the species of the neighboring atoms (atom :math:`j`
 # in the equations)
 
-radial_spectrum = metatensor.load("radial-spectrum.npz")
+radial_spectrum = metatensor.load("radial-spectrum.mts")
 
 print(radial_spectrum)
 
