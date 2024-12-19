@@ -15,7 +15,7 @@ To this end, we will need some data in metatensor format, which for the sake of
 simplicity will be loaded from a file. The code used to generate this file can be found
 below:
 
-.. details:: Show the code used to generate the :download:`spherical-expansion.npz`
+.. details:: Show the code used to generate the :download:`spherical-expansion.mts`
              file, or use the link to download it
 
     ..
@@ -71,7 +71,7 @@ plt.show()
 
 # sphinx_gallery_thumbnail_path = '../static/images/TensorMap.*'
 
-tensor = metatensor.load("spherical-expansion.npz")
+tensor = metatensor.load("spherical-expansion.mts")
 print(type(tensor))
 
 # %%

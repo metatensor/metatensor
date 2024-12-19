@@ -1356,7 +1356,7 @@ def load(path: str) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given path.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a
+    :py:class:`TensorMap` are serialized using numpy's ``.`` format, i.e. a
     ZIP file without compression (storage method is ``STORED``), where each file
     is stored as a ``.npy`` array. See the C API documentation for more
     information on the format.
@@ -1387,7 +1387,7 @@ def save(path: str, data: Union[TensorMap, TensorBlock, Labels]):
     or :py:class:`Labels`) to the given file at the given ``path``.
 
     If the file already exists, it is overwritten. When saving a :py:class:`TensorMap`
-    or :py:class:`TensorBlock`, the file extension should be ``.npz``; and when
+    or :py:class:`TensorBlock`, the file extension should be ``.``; and when
     saving :py:class:`Labels` it should be ``.npy``
 
     :param path: path of the file where to save the data

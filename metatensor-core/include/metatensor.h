@@ -1053,7 +1053,7 @@ mts_status_t mts_block_save_buffer(uint8_t **buffer,
  * The memory allocated by this function should be released using
  * `mts_tensormap_free`.
  *
- * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+ * `TensorMap` are serialized using the `.mts` format, i.e. a ZIP file
  * without compression (storage method is STORED), where each file is stored as
  * a `.npy` array. Both the ZIP and NPY format are well documented:
  *

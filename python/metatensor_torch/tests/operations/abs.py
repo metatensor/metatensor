@@ -17,7 +17,7 @@ def test_abs():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     abs_tensor = metatensor.torch.abs(tensor)

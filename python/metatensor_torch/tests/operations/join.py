@@ -17,7 +17,7 @@ def test_join():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     joined_tensor = metatensor.torch.join([tensor, tensor], axis="properties")
