@@ -121,6 +121,18 @@ def test_save(tmpdir, tensor_path):
     saved = tensor.save_buffer()
     assert torch.all(buffer == saved)
 
+    tensor_f32 = tensor.to(torch.float32)
+    with pytest.raises(ValueError, match="only float64 is supported"):
+        metatensor.torch.save_buffer(tensor_f32)
+    with pytest.raises(ValueError, match="only float64 is supported"):
+        metatensor.torch.save(tmpfile, tensor_f32)
+
+    tensor_meta = tensor.to(torch.device("meta"))
+    with pytest.raises(ValueError, match="only CPU is supported"):
+        metatensor.torch.save_buffer(tensor_meta)
+    with pytest.raises(ValueError, match="only CPU is supported"):
+        metatensor.torch.save(tmpfile, tensor_meta)
+
 
 def test_pickle(tmpdir, tensor_path):
     tensor = metatensor.torch.load(tensor_path)
@@ -190,6 +202,18 @@ def test_save_block(tmpdir, block_path):
 
     saved = tensor.save_buffer()
     assert torch.all(buffer == saved)
+
+    block_f32 = block.to(torch.float32)
+    with pytest.raises(ValueError, match="only float64 is supported"):
+        metatensor.torch.save_buffer(block_f32)
+    with pytest.raises(ValueError, match="only float64 is supported"):
+        metatensor.torch.save(tmpfile, block_f32)
+
+    block_meta = block.to(torch.device("meta"))
+    with pytest.raises(ValueError, match="only CPU is supported"):
+        metatensor.torch.save_buffer(block_meta)
+    with pytest.raises(ValueError, match="only CPU is supported"):
+        metatensor.torch.save(tmpfile, block_meta)
 
 
 def test_pickle_block(tmpdir, block_path):
