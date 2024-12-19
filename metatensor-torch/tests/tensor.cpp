@@ -175,8 +175,8 @@ TEST_CASE("TensorMap") {
 
 TEST_CASE("TensorMap serialization") {
     SECTION("loading file") {
-        // DATA_NPZ is defined by cmake and expand to the path of tests/data.npz
-        auto tensor = metatensor_torch::load(DATA_NPZ);
+        // DATA_MTS is defined by cmake and expand to the path of tests/data.mts
+        auto tensor = metatensor_torch::load(DATA_MTS);
 
         auto keys = tensor->keys();
         CHECK(keys->names().size() == 4);

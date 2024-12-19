@@ -17,7 +17,7 @@ def test_random_uniform_like():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     random_tensor = metatensor.torch.random_uniform_like(tensor)

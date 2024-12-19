@@ -23,7 +23,7 @@ def check_operation(reduce_over_samples):
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
 

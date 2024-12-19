@@ -10,8 +10,8 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_sum_samples_block():
-    tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
-    tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
     bl1 = tensor_ps[0]
 
     # check both passing a list and a single string for sample_names
