@@ -15,7 +15,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_detach():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     # just checking that everything runs fine with numpy
     tensor = metatensor.detach(tensor)
