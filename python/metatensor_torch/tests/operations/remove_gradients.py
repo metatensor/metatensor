@@ -19,7 +19,7 @@ def test_remove_gradients():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
 

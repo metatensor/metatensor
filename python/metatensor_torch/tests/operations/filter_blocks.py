@@ -20,7 +20,7 @@ def test_filter_blocks():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     tensor = tensor.keys_to_properties("neighbor_1_type")

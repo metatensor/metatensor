@@ -235,7 +235,7 @@ def test_parent_keepalive():
         "..",
         "metatensor-core",
         "tests",
-        "data.npz",
+        "data.mts",
     )
     tensor = metatensor.io.load_custom_array(path.encode("utf8"), create_test_array)
 

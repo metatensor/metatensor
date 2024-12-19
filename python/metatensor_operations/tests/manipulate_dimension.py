@@ -13,12 +13,12 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor():
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 @pytest.fixture
 def tensor_with_components_and_gradients():
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
 
 @pytest.fixture

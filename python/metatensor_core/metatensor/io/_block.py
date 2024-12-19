@@ -13,7 +13,7 @@ from .._c_lib import _get_library
 from ..block import TensorBlock
 from ..data.array import ArrayWrapper, _is_numpy_array, _is_torch_array
 from ..utils import catch_exceptions
-from ._labels import _labels_from_npz, _labels_to_npz
+from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 
 
@@ -74,7 +74,7 @@ def load_block(
         numpy.
     """
     if use_numpy:
-        return _block_from_npz(file)
+        return _block_from_mts(file)
     else:
         if isinstance(file, (str, pathlib.Path)):
             return load_block_custom_array(file, create_numpy_array)
@@ -96,7 +96,7 @@ def load_block_buffer(
     :param use_numpy: should we use numpy or the native implementation?
     """
     if use_numpy:
-        return _block_from_npz(io.BytesIO(buffer))
+        return _block_from_mts(io.BytesIO(buffer))
     else:
         return load_block_buffer_custom_array(buffer, create_numpy_array)
     pass
@@ -190,24 +190,30 @@ def _save_block(
 
     if use_numpy:
         all_entries = _block_to_dict(block, prefix="", is_gradient=False)
-        np.savez(file, **all_entries)
+        if not hasattr(file, "write"):
+            # prevent numpy from adding a .npz extension by opening the file ourself
+            with open(file, "wb") as fd:
+                np.savez(fd, **all_entries)
+        else:
+            np.savez(file, **all_entries)
+
     else:
         lib = _get_library()
         if isinstance(file, str):
-            if not file.endswith(".npz"):
-                file += ".npz"
+            if not file.endswith(".mts"):
+                file += ".mts"
                 warnings.warn(
-                    message="adding '.npz' extension,"
+                    message="adding '.mts' extension,"
                     f" the file will be saved at '{file}'",
                     stacklevel=1,
                 )
             path = file.encode("utf8")
             lib.mts_block_save(path, block._ptr)
         elif isinstance(file, pathlib.Path):
-            if not file.name.endswith(".npz"):
-                file = file.with_name(file.name + ".npz")
+            if not file.name.endswith(".mts"):
+                file = file.with_name(file.name + ".mts")
                 warnings.warn(
-                    message="adding '.npz' extension,"
+                    message="adding '.mts' extension,"
                     f" the file will be saved at '{file.name}'",
                     stacklevel=1,
                 )
@@ -232,12 +238,12 @@ def _save_block_buffer_raw(block: TensorBlock) -> ctypes.Array:
 def _block_to_dict(block, prefix, is_gradient):
     result = {}
     result[f"{prefix}values"] = _array_to_numpy(block.values)
-    result[f"{prefix}samples"] = _labels_to_npz(block.samples)
+    result[f"{prefix}samples"] = _labels_to_mts(block.samples)
     for i, component in enumerate(block.components):
-        result[f"{prefix}components/{i}"] = _labels_to_npz(component)
+        result[f"{prefix}components/{i}"] = _labels_to_mts(component)
 
     if not is_gradient:
-        result[f"{prefix}properties"] = _labels_to_npz(block.properties)
+        result[f"{prefix}properties"] = _labels_to_mts(block.properties)
 
     for parameter, gradient in block.gradients():
         result.update(
@@ -260,13 +266,13 @@ def _array_to_numpy(array):
         raise ValueError("unknown array type passed to `metatensor.save`")
 
 
-def _single_block_from_npz(prefix, dictionary, properties):
+def _single_block_from_mts(prefix, dictionary, properties):
     values = dictionary[f"{prefix}values"]
 
-    samples = _labels_from_npz(dictionary[f"{prefix}samples"])
+    samples = _labels_from_mts(dictionary[f"{prefix}samples"])
     components = []
     for i in range(len(values.shape) - 2):
-        components.append(_labels_from_npz(dictionary[f"{prefix}components/{i}"]))
+        components.append(_labels_from_mts(dictionary[f"{prefix}components/{i}"]))
 
     block = TensorBlock(values, samples, components, properties)
 
@@ -279,7 +285,7 @@ def _single_block_from_npz(prefix, dictionary, properties):
             parameters.add(parameter)
 
     for parameter in parameters:
-        gradient = _single_block_from_npz(
+        gradient = _single_block_from_mts(
             f"{prefix}gradients/{parameter}/",
             dictionary,
             properties,
@@ -289,8 +295,8 @@ def _single_block_from_npz(prefix, dictionary, properties):
     return block
 
 
-def _block_from_npz(file):
+def _block_from_mts(file):
     dictionary = np.load(file)
 
-    properties = _labels_from_npz(dictionary["properties"])
-    return _single_block_from_npz("", dictionary, properties)
+    properties = _labels_from_mts(dictionary["properties"])
+    return _single_block_from_mts("", dictionary, properties)

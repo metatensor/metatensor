@@ -7,7 +7,7 @@ use super::{realloc_vec, create_ndarray};
 
 /// Load the serialized tensor map from the given path.
 ///
-/// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+/// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
 /// without compression (storage method is STORED), where each file is stored as
 /// a `.npy` array. Both the ZIP and NPY format are well documented:
 ///
@@ -73,10 +73,11 @@ pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
 
 /// Save the given tensor to a file.
 ///
-/// If the file already exists, it is overwritten.
+/// If the file already exists, it is overwritten. The recomended file extension
+/// when saving data is `.mts`, to prevent confusion with generic `.npz`.
 ///
-/// The format used is documented in the [`load`] function, and is based on
-/// numpy's NPZ format (i.e. zip archive containing NPY files).
+/// The format used is documented in the [`load`] function, and consists of a
+/// zip archive containing NPY files.
 pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(), Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");

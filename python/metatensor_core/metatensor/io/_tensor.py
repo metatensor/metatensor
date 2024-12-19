@@ -12,10 +12,10 @@ from ..tensor import TensorMap
 from ._block import (
     CreateArrayCallback,
     _block_to_dict,
-    _single_block_from_npz,
+    _single_block_from_mts,
     create_numpy_array,
 )
-from ._labels import _labels_from_npz, _labels_to_npz
+from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 
 
@@ -23,7 +23,7 @@ def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap
     """
     Load a previously saved :py:class:`TensorMap` from the given file.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a ZIP file
+    :py:class:`TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
     without compression (storage method is ``STORED``), where each file is stored as a
     ``.npy`` array. See the C API documentation for more information on the format.
 
@@ -36,7 +36,7 @@ def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap
         numpy.
     """
     if use_numpy:
-        return _tensor_from_npz(file)
+        return _tensor_from_mts(file)
     else:
         if isinstance(file, (str, pathlib.Path)):
             return load_custom_array(file, create_numpy_array)
@@ -58,7 +58,7 @@ def load_buffer(
     :param use_numpy: should we use numpy or the native implementation?
     """
     if use_numpy:
-        return _tensor_from_npz(io.BytesIO(buffer))
+        return _tensor_from_mts(io.BytesIO(buffer))
     else:
         return load_buffer_custom_array(buffer, create_numpy_array)
 
@@ -151,24 +151,29 @@ def _save_tensor(
 
     if use_numpy:
         all_entries = _tensor_to_dict(tensor)
-        np.savez(file, **all_entries)
+        if not hasattr(file, "write"):
+            # prevent numpy from adding a .npz extension by opening the file ourself
+            with open(file, "wb") as fd:
+                np.savez(fd, **all_entries)
+        else:
+            np.savez(file, **all_entries)
     else:
         lib = _get_library()
         if isinstance(file, str):
-            if not file.endswith(".npz"):
-                file += ".npz"
+            if not file.endswith(".mts"):
+                file += ".mts"
                 warnings.warn(
-                    message="adding '.npz' extension,"
+                    message="adding '.mts' extension,"
                     f" the file will be saved at '{file}'",
                     stacklevel=1,
                 )
             path = file.encode("utf8")
             lib.mts_tensormap_save(path, tensor._ptr)
         elif isinstance(file, pathlib.Path):
-            if not file.name.endswith(".npz"):
-                file = file.with_name(file.name + ".npz")
+            if not file.name.endswith(".mts"):
+                file = file.with_name(file.name + ".mts")
                 warnings.warn(
-                    message="adding '.npz' extension,"
+                    message="adding '.mts' extension,"
                     f" the file will be saved at '{file.name}'",
                     stacklevel=1,
                 )
@@ -192,7 +197,7 @@ def _save_tensor_buffer_raw(tensor: TensorMap) -> ctypes.Array:
 
 def _tensor_to_dict(tensor_map):
     result = {
-        "keys": _labels_to_npz(tensor_map.keys),
+        "keys": _labels_to_mts(tensor_map.keys),
     }
 
     for block_i, block in enumerate(tensor_map.blocks()):
@@ -202,17 +207,17 @@ def _tensor_to_dict(tensor_map):
     return result
 
 
-def _tensor_from_npz(file):
+def _tensor_from_mts(file):
     dictionary = np.load(file)
 
-    keys = _labels_from_npz(dictionary["keys"])
+    keys = _labels_from_mts(dictionary["keys"])
     blocks = []
 
     for block_i in range(len(keys)):
         prefix = f"blocks/{block_i}/"
-        properties = _labels_from_npz(dictionary[f"{prefix}properties"])
+        properties = _labels_from_mts(dictionary[f"{prefix}properties"])
 
-        block = _single_block_from_npz(prefix, dictionary, properties)
+        block = _single_block_from_mts(prefix, dictionary, properties)
         blocks.append(block)
 
     return TensorMap(keys, blocks)

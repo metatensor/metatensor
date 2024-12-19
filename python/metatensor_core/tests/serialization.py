@@ -46,7 +46,7 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
         "..",
         "metatensor-core",
         "tests",
-        "data.npz",
+        "data.mts",
     )
 
     if memory_buffer:
@@ -96,7 +96,7 @@ def test_load_deflate(use_numpy):
         "metatensor_operations",
         "tests",
         "data",
-        "qm7-power-spectrum.npz",
+        "qm7-power-spectrum.mts",
     )
 
     tensor = metatensor.load(path, use_numpy=use_numpy)
@@ -127,7 +127,7 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             file = io.BytesIO(buffer)
 
         else:
-            file = "serialize-test.npz"
+            file = "serialize-test.mts"
             if standalone_fn:
                 metatensor.save(file, tensor, use_numpy=use_numpy)
             else:
@@ -137,22 +137,22 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
 
     assert len(data.keys()) == 29
 
-    assert _npz_labels(data["keys"]) == tensor.keys
+    assert _mts_labels(data["keys"]) == tensor.keys
     for i, block in enumerate(tensor.blocks()):
         prefix = f"blocks/{i}"
 
         np.testing.assert_equal(data[f"{prefix}/values"], block.values)
-        assert _npz_labels(data[f"{prefix}/samples"]) == block.samples
-        assert _npz_labels(data[f"{prefix}/components/0"]) == block.components[0]
-        assert _npz_labels(data[f"{prefix}/properties"]) == block.properties
+        assert _mts_labels(data[f"{prefix}/samples"]) == block.samples
+        assert _mts_labels(data[f"{prefix}/components/0"]) == block.components[0]
+        assert _mts_labels(data[f"{prefix}/properties"]) == block.properties
 
         for parameter in block.gradients_list():
             gradient = block.gradient(parameter)
             prefix = f"blocks/{i}/gradients/{parameter}"
 
             np.testing.assert_equal(data[f"{prefix}/values"], gradient.values)
-            assert _npz_labels(data[f"{prefix}/samples"]) == gradient.samples
-            assert _npz_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
+            assert _mts_labels(data[f"{prefix}/samples"]) == gradient.samples
+            assert _mts_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
 
 
 @pytest.mark.parametrize("use_numpy_save", (True, False))
@@ -165,7 +165,7 @@ def test_save_load_zero_length_block(
     does not raise an error, when using combinations of use_numpy for save and
     load
     """
-    file = "serialize-test-zero-len-block.npz"
+    file = "serialize-test-zero-len-block.mts"
 
     with tmpdir.as_cwd():
         metatensor.save(file, tensor_zero_len_block, use_numpy=use_numpy_save)
@@ -173,17 +173,17 @@ def test_save_load_zero_length_block(
 
 
 def test_save_warning_errors(tmpdir, tensor):
-    # does not have .npz ending and causes warning
+    # does not have .mts ending and causes warning
     tmpfile = "serialize-test"
 
     with pytest.warns() as record:
         with tmpdir.as_cwd():
             metatensor.save(tmpfile, tensor)
 
-    expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    expected = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
     assert str(record[0].message) == expected
 
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     message = (
         "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap', "
@@ -195,15 +195,15 @@ def test_save_warning_errors(tmpdir, tensor):
 
 
 def test_save_pathlib(tmpdir, tensor):
-    # does not have .npz ending and causes warning
+    # does not have .mts ending and causes warning
     tmpfile = Path("serialize-test")
 
-    expected = f"adding '.npz' extension, the file will be saved at '{tmpfile}.npz'"
+    expected = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
     with tmpdir.as_cwd():
         with pytest.warns(UserWarning, match=expected):
             metatensor.save(tmpfile, tensor)
 
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     message = (
         "`data` must be one of 'Labels', 'TensorBlock' or 'TensorMap', "
@@ -277,7 +277,7 @@ def test_nested_gradients(tmpdir, use_numpy):
     block.add_gradient("grad", grad)
     tensor = TensorMap(Labels.single(), [block])
 
-    tmpfile = "grad-grad-test.npz"
+    tmpfile = "grad-grad-test.mts"
 
     with tmpdir.as_cwd():
         metatensor.save(tmpfile, tensor, use_numpy=use_numpy)
@@ -288,8 +288,8 @@ def test_nested_gradients(tmpdir, use_numpy):
         # load back with metatensor
         loaded = metatensor.load(tmpfile)
 
-    assert _npz_labels(data["keys"]) == tensor.keys
-    assert _npz_labels(data["keys"]) == loaded.keys
+    assert _mts_labels(data["keys"]) == tensor.keys
+    assert _mts_labels(data["keys"]) == loaded.keys
 
     for i, (key, block) in enumerate(tensor.items()):
         loaded_block = loaded.block(key)
@@ -298,10 +298,10 @@ def test_nested_gradients(tmpdir, use_numpy):
         np.testing.assert_equal(data[f"{prefix}/values"], block.values)
         np.testing.assert_equal(block.values, loaded_block.values)
 
-        assert _npz_labels(data[f"{prefix}/samples"]) == block.samples
+        assert _mts_labels(data[f"{prefix}/samples"]) == block.samples
         assert block.samples == loaded_block.samples
 
-        assert _npz_labels(data[f"{prefix}/properties"]) == block.properties
+        assert _mts_labels(data[f"{prefix}/properties"]) == block.properties
         assert block.properties == loaded_block.properties
 
         assert block.gradients_list() == loaded_block.gradients_list()
@@ -313,7 +313,7 @@ def test_nested_gradients(tmpdir, use_numpy):
             np.testing.assert_equal(data[f"{grad_prefix}/values"], gradient.values)
             np.testing.assert_equal(gradient.values, loaded_gradient.values)
 
-            assert _npz_labels(data[f"{grad_prefix}/samples"]) == gradient.samples
+            assert _mts_labels(data[f"{grad_prefix}/samples"]) == gradient.samples
             assert gradient.samples == loaded_gradient.samples
 
             assert gradient.components == loaded_gradient.components
@@ -331,7 +331,7 @@ def test_nested_gradients(tmpdir, use_numpy):
                 np.testing.assert_equal(grad_grad.values, loaded_grad_grad.values)
 
                 assert (
-                    _npz_labels(data[f"{grad_grad_prefix}/samples"])
+                    _mts_labels(data[f"{grad_grad_prefix}/samples"])
                     == grad_grad.samples
                 )
 
@@ -344,7 +344,7 @@ def test_nested_gradients(tmpdir, use_numpy):
                 assert grad_grad.properties == loaded_grad_grad.properties
 
 
-def _npz_labels(data):
+def _mts_labels(data):
     names = data.dtype.names
     return Labels(names=names, values=data.view(dtype=np.int32).reshape(-1, len(names)))
 
@@ -359,7 +359,7 @@ def test_load_labels(memory_buffer, standalone_fn):
         "..",
         "metatensor-core",
         "tests",
-        "keys.npy",
+        "keys.mts",
     )
 
     if memory_buffer:
@@ -404,7 +404,7 @@ def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
 
             file = io.BytesIO(buffer)
         else:
-            file = "serialize-test.npy"
+            file = "serialize-test.mts"
             if standalone_fn:
                 metatensor.save(file, labels)
             else:
@@ -412,7 +412,7 @@ def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
 
         data = np.load(file)
 
-    assert _npz_labels(data) == labels
+    assert _mts_labels(data) == labels
 
 
 @pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
@@ -443,14 +443,14 @@ def test_wrong_load_error():
         "use `load_labels` to load Labels"
     )
     with pytest.raises(MetatensorError, match=message):
-        metatensor.load(os.path.join(data_root, "keys.npy"))
+        metatensor.load(os.path.join(data_root, "keys.mts"))
 
     message = (
         "serialization format error: unable to load a TensorMap from buffer, "
         "use `load_labels_buffer` to load Labels"
     )
     with pytest.raises(MetatensorError, match=message):
-        with open(os.path.join(data_root, "keys.npy"), "rb") as fd:
+        with open(os.path.join(data_root, "keys.mts"), "rb") as fd:
             buffer = fd.read()
 
         metatensor.load(io.BytesIO(buffer))
@@ -460,14 +460,14 @@ def test_wrong_load_error():
         "use `load` to load TensorMap: start does not match magic string"
     )
     with pytest.raises(MetatensorError, match=message):
-        metatensor.load_labels(os.path.join(data_root, "data.npz"))
+        metatensor.load_labels(os.path.join(data_root, "data.mts"))
 
     message = (
         "serialization format error: unable to load Labels from buffer, "
         "use `load_buffer` to load TensorMap: start does not match magic string"
     )
     with pytest.raises(MetatensorError, match=message):
-        with open(os.path.join(data_root, "data.npz"), "rb") as fd:
+        with open(os.path.join(data_root, "data.mts"), "rb") as fd:
             buffer = fd.read()
 
         metatensor.load_labels(io.BytesIO(buffer))
@@ -484,7 +484,7 @@ def test_load_block(use_numpy, memory_buffer, standalone_fn):
         "..",
         "metatensor-core",
         "tests",
-        "block.npz",
+        "block.mts",
     )
 
     if memory_buffer:
@@ -529,7 +529,7 @@ def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
             file = io.BytesIO(buffer)
 
         else:
-            file = "serialize-test.npz"
+            file = "serialize-test.mts"
             if standalone_fn:
                 metatensor.save(file, block, use_numpy=use_numpy)
             else:
@@ -540,14 +540,14 @@ def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
     assert len(data.keys()) == 7
 
     np.testing.assert_equal(data["values"], block.values)
-    assert _npz_labels(data["samples"]) == block.samples
-    assert _npz_labels(data["components/0"]) == block.components[0]
-    assert _npz_labels(data["properties"]) == block.properties
+    assert _mts_labels(data["samples"]) == block.samples
+    assert _mts_labels(data["components/0"]) == block.components[0]
+    assert _mts_labels(data["properties"]) == block.properties
 
     for parameter in block.gradients_list():
         gradient = block.gradient(parameter)
         prefix = f"gradients/{parameter}"
 
         np.testing.assert_equal(data[f"{prefix}/values"], gradient.values)
-        assert _npz_labels(data[f"{prefix}/samples"]) == gradient.samples
-        assert _npz_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
+        assert _mts_labels(data[f"{prefix}/samples"]) == gradient.samples
+        assert _mts_labels(data[f"{prefix}/components/0"]) == gradient.components[0]

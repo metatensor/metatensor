@@ -16,7 +16,7 @@ def test_equal():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     assert metatensor.torch.equal(tensor, tensor)

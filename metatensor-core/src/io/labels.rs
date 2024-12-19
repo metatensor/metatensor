@@ -66,7 +66,8 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 /// Write `Labels` to the writer using numpy's NPY format.
 ///
 /// See [`read_npy_labels`] for more information on how `Labels` are stored to
-/// files.
+/// files. The recomended file extension when saving data is `.mts`, to prevent
+/// confusion with generic `.npz` files.
 pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result<(), Error> {
     let mut type_descriptor = Vec::new();
     for name in labels.names() {

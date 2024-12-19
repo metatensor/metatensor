@@ -22,7 +22,7 @@ DATA_ROOT = os.path.join(
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     tensor = tensor.to(arrays="torch")
     tensor = metatensor.remove_gradients(tensor)
     return tensor

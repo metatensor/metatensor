@@ -16,7 +16,7 @@ def test_allclose():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
 

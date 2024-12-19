@@ -79,19 +79,19 @@ def _save_labels(
 
     lib = _get_library()
     if isinstance(file, str):
-        if not file.endswith(".npy"):
-            file += ".npz"
+        if not file.endswith(".mts"):
+            file += ".mts"
             warnings.warn(
-                message=f"adding '.npy' extension, the file will be saved at '{file}'",
+                message=f"adding '.mts' extension, the file will be saved at '{file}'",
                 stacklevel=1,
             )
         path = file.encode("utf8")
         lib.mts_labels_save(path, labels._labels)
     elif isinstance(file, pathlib.Path):
-        if not file.name.endswith(".npy"):
-            file = file.with_name(file.name + ".npy")
+        if not file.name.endswith(".mts"):
+            file = file.with_name(file.name + ".mts")
             warnings.warn(
-                message="adding '.npy' extension,"
+                message="adding '.mts' extension,"
                 f" the file will be saved at '{file.name}'",
                 stacklevel=1,
             )
@@ -113,11 +113,11 @@ def _save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
     return _save_buffer_raw(lib.mts_labels_save_buffer, labels._labels)
 
 
-def _labels_from_npz(data):
+def _labels_from_mts(data):
     names = data.dtype.names
     return Labels(names=names, values=data.view(dtype=np.int32).reshape(-1, len(names)))
 
 
-def _labels_to_npz(labels):
+def _labels_to_mts(labels):
     dtype = [(name, np.int32) for name in labels.names]
     return labels.values.view(dtype=dtype).reshape((labels.values.shape[0],))

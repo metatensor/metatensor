@@ -218,29 +218,29 @@ TEST_CASE("TensorMap") {
 
 TEST_CASE("TensorMap serialization") {
     SECTION("loading file") {
-        // DATA_NPZ is defined by cmake and expand to the path of
-        // `tests/data.npz`
-        auto tensor = TensorMap::load(TEST_DATA_NPZ_PATH);
+        // DATA_MTS is defined by cmake and expand to the path of
+        // `tests/data.mts`
+        auto tensor = TensorMap::load(TEST_DATA_MTS_PATH);
         check_loaded_tensor(tensor);
 
-        tensor = metatensor::io::load(TEST_DATA_NPZ_PATH);
+        tensor = metatensor::io::load(TEST_DATA_MTS_PATH);
         check_loaded_tensor(tensor);
     }
 
     SECTION("loading file with custom array creation") {
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 0);
-        auto tensor = TensorMap::load(TEST_DATA_NPZ_PATH, custom_create_array);
+        auto tensor = TensorMap::load(TEST_DATA_MTS_PATH, custom_create_array);
         // 27 blocks, one array for values, one array for gradients
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
 
         CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
-        tensor = metatensor::io::load(TEST_DATA_NPZ_PATH, custom_create_array);
+        tensor = metatensor::io::load(TEST_DATA_MTS_PATH, custom_create_array);
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
     }
 
     SECTION("Load/Save with buffers") {
         // read the whole file into a buffer
-        std::ifstream file(TEST_DATA_NPZ_PATH, std::ios::binary);
+        std::ifstream file(TEST_DATA_MTS_PATH, std::ios::binary);
         std::ostringstream string_stream;
         string_stream << file.rdbuf();
         auto buffer = string_stream.str();

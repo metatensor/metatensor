@@ -23,8 +23,8 @@ one can do with them.
 
     .. TODO add tutorial explaining the difference in more details and link to it here
 
-The code used to generate :download:`spherical-expansion.npz` is in :ref:`the first
-tutorial <core-tutorial-first-steps>`, and the code for :download:`radial-spectrum.npz`
+The code used to generate :download:`spherical-expansion.mts` is in :ref:`the first
+tutorial <core-tutorial-first-steps>`, and the code for :download:`radial-spectrum.mts`
 is shown :ref:`in the second <core-tutorial-sparsity>`. Notice how in both cases, the
 data was computed with ``gradients=["positions"]``, meaning the gradients with respect
 to atomic positions are included.
@@ -53,7 +53,7 @@ from metatensor import TensorBlock, TensorMap
 
 # sphinx_gallery_thumbnail_path = '../static/images/TensorBlock-Gradients.*'
 
-radial_spectrum = metatensor.load("radial-spectrum.npz")
+radial_spectrum = metatensor.load("radial-spectrum.mts")
 print(radial_spectrum)
 
 # %%
@@ -155,7 +155,7 @@ print(gradient.values)
 # Let's load such an example, the spherical expansion from the :ref:`first steps
 # tutorial <core-tutorial-first-steps>`:
 
-spherical_expansion = metatensor.load("spherical-expansion.npz")
+spherical_expansion = metatensor.load("spherical-expansion.mts")
 print(spherical_expansion)
 
 # %%

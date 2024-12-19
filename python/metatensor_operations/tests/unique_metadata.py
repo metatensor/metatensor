@@ -10,7 +10,7 @@ from . import _tests_utils
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
-TEST_FILE = "qm7-spherical-expansion.npz"
+TEST_FILE = "qm7-spherical-expansion.mts"
 
 
 @pytest.fixture

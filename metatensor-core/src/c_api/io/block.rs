@@ -175,7 +175,8 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 
 /// Save a tensor block to the file at the given path.
 ///
-/// If the file already exists, it is overwritten.
+/// If the file already exists, it is overwritten. The recomended file extension
+/// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
 /// @param block tensor block to save to the file

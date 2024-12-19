@@ -16,7 +16,7 @@ def test_multiply():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     product_tensor = metatensor.torch.multiply(tensor, tensor)

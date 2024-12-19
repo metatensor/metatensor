@@ -21,7 +21,7 @@ def tensor_path():
         "..",
         "metatensor-core",
         "tests",
-        "data.npz",
+        "data.mts",
     )
 
 
@@ -34,7 +34,7 @@ def block_path():
         "..",
         "metatensor-core",
         "tests",
-        "block.npz",
+        "block.mts",
     )
 
 
@@ -47,7 +47,7 @@ def labels_path():
         "..",
         "metatensor-core",
         "tests",
-        "keys.npy",
+        "keys.mts",
     )
 
 
@@ -96,7 +96,7 @@ def test_load(tensor_path):
 
 def test_save(tmpdir, tensor_path):
     """Check that we can save and load a tensor to a file"""
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     tensor = _tests_utils.tensor(dtype=torch.float64)
 
@@ -136,7 +136,7 @@ def test_save(tmpdir, tensor_path):
 
 def test_pickle(tmpdir, tensor_path):
     tensor = metatensor.torch.load(tensor_path)
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     with tmpdir.as_cwd():
         torch.save(tensor, tmpfile)
@@ -156,7 +156,7 @@ def test_save_load_zero_length_block(tmpdir):
     tensor_zero_len_block = _tests_utils.tensor_zero_len_block()
 
     with tmpdir.as_cwd():
-        file = "serialize-test-zero-len-block.npz"
+        file = "serialize-test-zero-len-block.mts"
         metatensor.torch.save(file, tensor_zero_len_block)
         metatensor.torch.load(file)
 
@@ -180,7 +180,7 @@ def test_load_block(block_path):
 
 def test_save_block(tmpdir, block_path):
     """Check that we can save and load a tensor to a file"""
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     block = _tests_utils.tensor(dtype=torch.float64).block(2)
 
@@ -218,7 +218,7 @@ def test_save_block(tmpdir, block_path):
 
 def test_pickle_block(tmpdir, block_path):
     block = metatensor.torch.load_block(block_path)
-    tmpfile = "serialize-test.npz"
+    tmpfile = "serialize-test.mts"
 
     with tmpdir.as_cwd():
         torch.save(block, tmpfile)
@@ -250,7 +250,7 @@ def test_load_labels(labels_path):
 
 def test_save_labels(tmpdir, labels_path):
     """Check that we can save and load a tensor to a file"""
-    tmpfile = "serialize-test.npy"
+    tmpfile = "serialize-test.mts"
 
     labels = _tests_utils.tensor(dtype=torch.float64).keys
 
@@ -276,7 +276,7 @@ def test_save_labels(tmpdir, labels_path):
 
 def test_pickle_labels(tmpdir, labels_path):
     labels = metatensor.torch.load_labels(labels_path)
-    tmpfile = "serialize-test.npy"
+    tmpfile = "serialize-test.mts"
 
     with tmpdir.as_cwd():
         torch.save(labels, tmpfile)

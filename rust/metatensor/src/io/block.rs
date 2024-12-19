@@ -39,7 +39,8 @@ pub fn load_block_buffer(buffer: &[u8]) -> Result<TensorBlock, Error> {
 
 /// Save the given `block` to a file.
 ///
-/// If the file already exists, it is overwritten.
+/// If the file already exists, it is overwritten. The recomended file extension
+/// when saving data is `.mts`, to prevent confusion with generic `.npz`.
 pub fn save_block(path: impl AsRef<std::path::Path>, block: TensorBlockRef) -> Result<(), Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");

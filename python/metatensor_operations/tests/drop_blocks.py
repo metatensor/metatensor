@@ -12,7 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 def test_drop_all(tensor):
