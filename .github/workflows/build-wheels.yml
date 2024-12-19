@@ -19,11 +19,12 @@ on:
     # check the build once a week on mondays
     - cron: '0 10 * * 1'
 
-
 concurrency:
   group: python-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  pull-requests: write
 
 jobs:
   build-core-wheels:
@@ -374,6 +375,12 @@ jobs:
           path: |
             wheels/*
             wheels/cxx/*
+
+      - name: Comment with download link
+        uses: PicoCentauri/comment-artifact@v1
+        with:
+          name: wheels
+          description: ⚙️ Download wheels for this pull-request
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')

@@ -11,6 +11,9 @@ concurrency:
   group: docs-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  pull-requests: write
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-20.04
@@ -42,6 +45,12 @@ jobs:
           name: docs
           path: docs/build/html/*
           overwrite: true  # only keep the latest version of the documentation
+
+      - name: Comment with download link
+        uses: PicoCentauri/comment-artifact@v1
+        with:
+          name: docs
+          description: 📚 Download documentation for this pull-request
 
       - name: put documentation in the website
         run: |
