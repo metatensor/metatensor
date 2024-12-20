@@ -3,7 +3,7 @@ import torch
 from packaging import version
 
 import metatensor.torch
-from metatensor.torch import Labels, TensorBlock
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import NeighborListOptions, System
 
 from .. import _tests_utils
@@ -112,14 +112,15 @@ def test_system(types, positions, cell, pbc, neighbors):
 
 
 def test_custom_data(system):
-    data = TensorBlock(
+    block = TensorBlock(
         values=torch.zeros(3, 10),
         samples=Labels.range("foo", 3),
         components=[],
         properties=Labels.range("distance", 10),
     )
+    tensor = TensorMap(Labels.single(), [block])
 
-    system.add_data("data-name", data)
+    system.add_data("data-name", tensor)
     message = (
         "custom data 'data-name' is experimental, please contact metatensor's "
         "developers to add this data as a member of the `System` class"
@@ -127,7 +128,7 @@ def test_custom_data(system):
     with pytest.warns(UserWarning, match=message):
         stored_data = system.get_data("data-name")
 
-    assert metatensor.torch.equal_block(stored_data, data)
+    assert metatensor.torch.equal(stored_data, tensor)
     # should only warn once
     _ = system.get_data("data-name")
 
@@ -137,22 +138,22 @@ def test_custom_data(system):
         "custom data name 'not this' is invalid: only \\[a-z A-Z 0-9 _-\\] are accepted"
     )
     with pytest.raises(ValueError, match=message):
-        system.add_data("not this", data)
+        system.add_data("not this", tensor)
 
     message = "custom data can not be named 'positions'"
     with pytest.raises(ValueError, match=message):
-        system.add_data("positions", data)
+        system.add_data("positions", tensor)
 
     message = "custom data 'data-name' is already present in this system"
     with pytest.raises(ValueError, match=message):
-        system.add_data("data-name", data)
+        system.add_data("data-name", tensor)
 
-    new_data = data.copy()
-    new_data.values[:] = 12
+    new_tensor = tensor.copy()
+    new_tensor.block().values[:] = 12
     # this should work
-    system.add_data("data-name", new_data, override=True)
+    system.add_data("data-name", new_tensor, override=True)
 
-    assert metatensor.torch.equal_block(system.get_data("data-name"), new_data)
+    assert metatensor.torch.equal(system.get_data("data-name"), new_tensor)
 
 
 def test_data_validation(types, positions, cell, pbc):
@@ -469,7 +470,9 @@ def test_neighbors_validation(system):
 def test_to(system, neighbors):
     options = NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
     system.add_neighbor_list(options, neighbors)
-    system.add_data("test-data", neighbors)
+
+    block = neighbors
+    system.add_data("test-data", TensorMap(Labels.single(), [block]))
 
     assert system.device.type == torch.device("cpu").type
     if version.parse(torch.__version__) >= version.parse("2.1"):
