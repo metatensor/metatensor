@@ -34,6 +34,7 @@ else:
     register_autograd_neighbors = torch.ops.metatensor.register_autograd_neighbors
     unit_conversion_factor = torch.ops.metatensor.unit_conversion_factor
 
+from .io import load_system, save  # noqa: F401
 from .model import (  # noqa: F401
     MetatensorAtomisticModel,
     ModelInterface,

@@ -5,9 +5,8 @@ import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-import vesin
-
 import torch
+import vesin
 from torch.profiler import record_function
 
 from .. import Labels, TensorBlock, TensorMap

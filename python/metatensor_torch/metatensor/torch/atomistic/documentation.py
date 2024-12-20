@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 import torch
 
-from ..documentation import Labels, TensorBlock
+from ..documentation import Labels, TensorBlock, TensorMap
 
 
 class System:
@@ -144,7 +144,7 @@ class System:
         Get all the neighbors lists options registered with this :py:class:`System`
         """
 
-    def add_data(self, name: str, data: TensorBlock, override: bool = False):
+    def add_data(self, name: str, tensor: TensorMap, override: bool = False):
         """
         Add custom data to this system, stored as :py:class:`TensorBlock`.
 
@@ -152,12 +152,12 @@ class System:
         and moved into a field of ``System`` later.
 
         :param name: name of the custom data
-        :param data: values of the custom data
+        :param tensor: the data to store
         :param override: if ``True``, allow this function to override existing data with
             the same name
         """
 
-    def get_data(self, name: str) -> TensorBlock:
+    def get_data(self, name: str) -> TensorMap:
         """
         Retrieve custom data stored in this System with the given ``name``, or throw
         an error if no data can be found.
