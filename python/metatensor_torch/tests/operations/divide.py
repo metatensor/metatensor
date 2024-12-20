@@ -16,7 +16,7 @@ def test_divide():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     quotient_tensor = metatensor.torch.divide(tensor, tensor)

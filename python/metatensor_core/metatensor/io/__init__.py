@@ -40,7 +40,7 @@ def save(
     Save the given data (one of :py:class:`TensorMap`, :py:class:`TensorBlock`, or
     :py:class:`Labels`) to the given ``file``.
 
-    :py:class:`TensorMap` are serialized using numpy's ``.npz`` format, i.e. a ZIP file
+    :py:class:`TensorMap` are serialized using the ``.mts`` format, i.e. a ZIP file
     without compression (storage method is ``STORED``), where each file is stored as a
     ``.npy`` array. See the C API documentation for more information on the format.
 

@@ -964,7 +964,7 @@ namespace io {
     ///
     /// If the file exists, it will be overwritten.
     ///
-    /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+    /// `TensorMap` are serialized using the `.mts` format, i.e. a ZIP file
     /// without compression (storage method is `STORED`), where each file is
     /// stored as a `.npy` array. See the C API documentation for more
     /// information on the format.
@@ -1029,7 +1029,7 @@ namespace io {
      *
      * \endverbatim
      *
-     * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+     * `TensorMap` are serialized using the `.mts` format, i.e. a ZIP file
      * without compression (storage method is `STORED`), where each file is
      * stored as a `.npy` array. See the C API documentation for more
      * information on the format.

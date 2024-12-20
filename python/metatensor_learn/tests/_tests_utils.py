@@ -150,9 +150,9 @@ def generate_data(sample_indices):
         # Save to disk
         if not os.path.exists(f"{A}"):
             os.mkdir(f"{A}")
-        metatensor.save(f"{A}/input.npz", input_A)
-        metatensor.save(f"{A}/output.npz", output_A)
-        metatensor.save(f"{A}/auxiliary.npz", auxiliary_A)
+        metatensor.save(f"{A}/input.mts", input_A)
+        metatensor.save(f"{A}/output.mts", output_A)
+        metatensor.save(f"{A}/auxiliary.mts", auxiliary_A)
 
     return inputs, outputs, auxiliaries
 
@@ -162,7 +162,7 @@ def load_tensor_map(sample_index: int, filename: str):
     Loads a TensorMap for a given sample indexed by `sample_index` from disk and
     converts it to a torch tensor.
     """
-    path = os.path.join(f"{sample_index}/{filename}.npz")
+    path = os.path.join(f"{sample_index}/{filename}.mts")
 
     tensor = metatensor.io.load_custom_array(
         path, create_array=metatensor.io.create_torch_array

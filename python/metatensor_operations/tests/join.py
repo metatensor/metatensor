@@ -13,7 +13,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     msg = (
         "Tensor must have at least one gradient. When no gradients are present certain "
@@ -27,7 +27,7 @@ def tensor():
 @pytest.fixture
 def components_tensor():
     components_tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.npz")
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts")
     )
 
     # Test if Tensormaps have at least one gradient. This avoids dropping gradient
