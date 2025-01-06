@@ -49,8 +49,7 @@ jobs:
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
-            # TODO: add a 32-bit windows builder?
+            os: windows-2022
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
     steps:
@@ -108,13 +107,13 @@ jobs:
       matrix:
         torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5']
         arch: ['arm64', 'x86_64']
-        os: ['ubuntu-22.04', 'macos-13', 'macos-14', 'windows-2019']
+        os: ['ubuntu-22.04', 'macos-13', 'macos-14', 'windows-2022']
         exclude:
           # remove mismatched arch for macOS
           - {os: macos-14, arch: x86_64}
           - {os: macos-13, arch: arm64}
           # no arm64-windows build
-          - {os: windows-2019, arch: arm64}
+          - {os: windows-2022, arch: arm64}
           # arch arm64 on macos is only supported for torch >= 2.0
           - {os: macos-14, arch: arm64, torch-version: '1.12'}
           - {os: macos-14, arch: arm64, torch-version: '1.13'}
@@ -145,7 +144,7 @@ jobs:
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
+            os: windows-2022
             arch: x86_64
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
@@ -238,7 +237,7 @@ jobs:
             os: macos-14
             arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
+            os: windows-2022
             arch: x86_64
     steps:
       - uses: actions/checkout@v4
@@ -445,7 +444,7 @@ jobs:
           - os: macos-14
             rust-target: aarch64-apple-darwin
             libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.5.1.zip
-          - os: windows-2019
+          - os: windows-2022
             rust-target: x86_64-pc-windows-msvc
             libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.5.1%2Bcpu.zip
     steps:

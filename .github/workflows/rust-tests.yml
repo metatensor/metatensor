@@ -66,16 +66,16 @@ jobs:
             cc: clang
             cmake-generator: Unix Makefiles
 
-          - os: windows-2019
+          - os: windows-2022
             rust-version: stable
             rust-target: x86_64-pc-windows-msvc
             cargo-build-flags: --features=rayon
             extra-name: " / MSVC"
             cxx: cl.exe
             cc: cl.exe
-            cmake-generator: Visual Studio 16 2019
+            cmake-generator: Visual Studio 17 2022
 
-          - os: windows-2019
+          - os: windows-2022
             rust-version: stable
             rust-target: x86_64-pc-windows-gnu
             cargo-build-flags: --features=rayon
@@ -128,11 +128,11 @@ jobs:
           cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
       - name: check the code can be compiled as a standalone crate
-        if: matrix.os != 'windows-2019'
+        if: matrix.os != 'windows-2022'
         run: |
           ./scripts/package-core.sh rust/metatensor-sys/
           cd rust/metatensor-sys
-          cargo package --allow-dirty
+          cargo package --target ${{ matrix.rust-target }} --allow-dirty
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:

@@ -28,7 +28,7 @@ jobs:
             julia-version: "1.9"
 
           # TODO
-          # - os: windows-2019
+          # - os: windows-2022
           #   julia-version: "1.9"
     steps:
       - uses: actions/checkout@v4
