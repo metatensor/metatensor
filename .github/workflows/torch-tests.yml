@@ -37,7 +37,7 @@ jobs:
             python-version: "3.12"
             cargo-test-flags: --release
 
-          - os: windows-2019
+          - os: windows-2022
             torch-version: 2.2.*
             python-version: "3.12"
             cargo-test-flags: --release
