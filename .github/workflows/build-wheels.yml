@@ -19,12 +19,11 @@ on:
     # check the build once a week on mondays
     - cron: '0 10 * * 1'
 
+
 concurrency:
   group: python-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-permissions:
-  pull-requests: write
 
 jobs:
   build-core-wheels:
@@ -346,6 +345,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Download metatensor-core wheels
         uses: actions/download-artifact@v4
