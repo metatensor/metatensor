@@ -379,7 +379,7 @@ jobs:
         uses: PicoCentauri/comment-artifact@v1
         with:
           name: wheels
-          description: ⚙️ Download wheels for this pull-request
+          description: ⚙️ Download Python wheels for this pull-request (you can install these with pip)
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
