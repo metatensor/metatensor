@@ -165,9 +165,9 @@ class ArrayWrapper:
         self._shape = ctypes.ARRAY(c_uintptr_t, len(array.shape))(*array.shape)
 
         if _is_numpy_array(array):
-            array_origin = _origin_numpy()
+            mts_array_origin = _MTS_ARRAY_ORIGIN_NUMPY
         elif _is_torch_array(array):
-            array_origin = _origin_pytorch()
+            mts_array_origin = _MTS_ARRAY_ORIGIN_PYTORCH
         else:
             raise ValueError(f"unknown array type: {type(array)}")
 
@@ -177,26 +177,18 @@ class ArrayWrapper:
             ctypes.pointer(self._get_py_object()), ctypes.c_void_p
         )
 
-        @catch_exceptions
-        def mts_array_origin(this, origin):
-            origin[0] = array_origin
+        mts_array.origin = mts_array_origin
+        mts_array.data = _MTS_ARRAY_DATA
 
-        # use storage.XXX.__class__ to get the right type for all functions
-        mts_array.origin = mts_array.origin.__class__(mts_array_origin)
+        mts_array.shape = _MTS_ARRAY_SHAPE
+        mts_array.reshape = _MTS_ARRAY_RESHAPE
+        mts_array.swap_axes = _MTS_ARRAY_SWAP_AXES
 
-        mts_array.data = mts_array.data.__class__(_mts_array_data)
+        mts_array.create = _MTS_ARRAY_CREATE
+        mts_array.copy = _MTS_ARRAY_COPY
+        mts_array.destroy = _MTS_ARRAY_DESTROY
 
-        mts_array.shape = mts_array.shape.__class__(_mts_array_shape)
-        mts_array.reshape = mts_array.reshape.__class__(_mts_array_reshape)
-        mts_array.swap_axes = mts_array.swap_axes.__class__(_mts_array_swap_axes)
-
-        mts_array.create = mts_array.create.__class__(_mts_array_create)
-        mts_array.copy = mts_array.copy.__class__(_mts_array_copy)
-        mts_array.destroy = mts_array.destroy.__class__(_mts_array_destroy)
-
-        mts_array.move_samples_from = mts_array.move_samples_from.__class__(
-            _mts_array_move_samples_from
-        )
+        mts_array.move_samples_from = _MTS_ARRAY_MOVE_SAMPLES_FROM
 
         self._mts_array = mts_array
 
@@ -345,3 +337,37 @@ def _mts_array_move_samples_from(
 
     properties = slice(property_start, property_end)
     output[output_samples, ..., properties] = input[input_samples, ..., :]
+
+
+def _cast_to_ctype_functype(function, field_name):
+    for name, klass in mts_array_t._fields_:
+        if name == field_name:
+            return klass(function)
+
+    raise ValueError(f"no field named {field_name} in mts_array_t")
+
+
+_MTS_ARRAY_DATA = _cast_to_ctype_functype(_mts_array_data, "data")
+_MTS_ARRAY_SHAPE = _cast_to_ctype_functype(_mts_array_shape, "shape")
+_MTS_ARRAY_RESHAPE = _cast_to_ctype_functype(_mts_array_reshape, "reshape")
+_MTS_ARRAY_SWAP_AXES = _cast_to_ctype_functype(_mts_array_swap_axes, "swap_axes")
+_MTS_ARRAY_CREATE = _cast_to_ctype_functype(_mts_array_create, "create")
+_MTS_ARRAY_COPY = _cast_to_ctype_functype(_mts_array_copy, "copy")
+_MTS_ARRAY_DESTROY = _cast_to_ctype_functype(_mts_array_destroy, "destroy")
+_MTS_ARRAY_MOVE_SAMPLES_FROM = _cast_to_ctype_functype(
+    _mts_array_move_samples_from, "move_samples_from"
+)
+
+
+@catch_exceptions
+def mts_array_origin_numpy(this, origin):
+    origin[0] = _origin_numpy()
+
+
+@catch_exceptions
+def mts_array_origin_pytorch(this, origin):
+    origin[0] = _origin_pytorch()
+
+
+_MTS_ARRAY_ORIGIN_NUMPY = _cast_to_ctype_functype(mts_array_origin_numpy, "origin")
+_MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "origin")
