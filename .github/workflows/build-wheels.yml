@@ -345,6 +345,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Download metatensor-core wheels
         uses: actions/download-artifact@v4
@@ -373,6 +374,12 @@ jobs:
           path: |
             wheels/*
             wheels/cxx/*
+
+      - name: Comment with download link
+        uses: PicoCentauri/comment-artifact@v1
+        with:
+          name: wheels
+          description: ⚙️ Download Python wheels for this pull-request (you can install these with pip)
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
