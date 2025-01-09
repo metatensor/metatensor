@@ -108,6 +108,7 @@ class TensorBlock:
         for i, component in enumerate(components):
             components_array[i] = component._as_mts_labels_t()
 
+        original_values = values
         values = ArrayWrapper(values)
 
         self._actual_ptr = self._lib.mts_block(
@@ -119,7 +120,10 @@ class TensorBlock:
         )
         _check_pointer(self._actual_ptr)
 
-        if not data.array_device_is_cpu(self.values):
+        self._cached_dtype = data.array_dtype(original_values)
+        self._cached_device = data.array_device(original_values)
+
+        if not data.array_device_is_cpu(original_values):
             warnings.warn(
                 "Values and labels for this block are on different devices: "
                 f"labels are always on CPU, and values are on device '{self.device}'. "
@@ -140,6 +144,8 @@ class TensorBlock:
         obj._lib = _get_library()
         obj._gradient_parameters = []
         obj._actual_ptr = ptr
+        obj._cached_dtype = None
+        obj._cached_device = None
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from being garbage-collected & removing this block
         obj._parent = parent
@@ -490,7 +496,9 @@ class TensorBlock:
         Get the dtype of all the values and gradient arrays stored inside this
         :py:class:`TensorBlock`.
         """
-        return data.array_dtype(self.values)
+        if self._cached_dtype is None:
+            self._cached_dtype = data.array_dtype(self.values)
+        return self._cached_dtype
 
     @property
     def device(self) -> Device:
@@ -498,7 +506,9 @@ class TensorBlock:
         Get the device of all the values and gradient arrays stored inside this
         :py:class:`TensorBlock`.
         """
-        return data.array_device(self.values)
+        if self._cached_device is None:
+            self._cached_device = data.array_device(self.values)
+        return self._cached_device
 
     def to(self, *args, **kwargs) -> "TensorBlock":
         """
