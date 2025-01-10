@@ -13,7 +13,7 @@ DATA_ROOT = path.join(path.dirname(__file__), "data")
 
 
 def tensor():
-    tensor = metatensor.load(path.join(DATA_ROOT, "qm7-power-spectrum.npz"))
+    tensor = metatensor.load(path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     msg = (
         "Tensor must have at least one gradient. When no gradients are present certain "

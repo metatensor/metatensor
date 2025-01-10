@@ -180,18 +180,18 @@ TEST_CASE("Blocks") {
 
 TEST_CASE("Serialization") {
     SECTION("loading file") {
-        // TEST_BLOCK_NPZ_PATH is defined by cmake and expand to the path of
-        // `tests/block.npz`
-        auto block = TensorBlock::load(TEST_BLOCK_NPZ_PATH);
+        // TEST_BLOCK_MTS_PATH is defined by cmake and expand to the path of
+        // `tests/block.mts`
+        auto block = TensorBlock::load(TEST_BLOCK_MTS_PATH);
         check_loaded_block(block);
 
-        block = metatensor::io::load_block(TEST_BLOCK_NPZ_PATH);
+        block = metatensor::io::load_block(TEST_BLOCK_MTS_PATH);
         check_loaded_block(block);
     }
 
     SECTION("Load/Save with buffers") {
         // read the whole file into a buffer
-        std::ifstream file(TEST_BLOCK_NPZ_PATH, std::ios::binary);
+        std::ifstream file(TEST_BLOCK_MTS_PATH, std::ios::binary);
         std::ostringstream string_stream;
         string_stream << file.rdbuf();
         auto buffer = string_stream.str();

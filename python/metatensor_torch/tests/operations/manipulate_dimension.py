@@ -19,7 +19,7 @@ def get_tensor_map():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     keys = metatensor.torch.Labels.range("block", 2)

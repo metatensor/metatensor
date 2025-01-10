@@ -27,4 +27,4 @@ calculator = SphericalExpansion(
 
 descriptor = calculator.compute(co2, gradients=["positions"])
 
-metatensor.save("spherical-expansion.npz", descriptor)
+metatensor.save("spherical-expansion.mts", descriptor)

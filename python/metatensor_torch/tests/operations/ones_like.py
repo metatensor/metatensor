@@ -17,7 +17,7 @@ def test_ones_like():
             "metatensor_operations",
             "tests",
             "data",
-            "qm7-power-spectrum.npz",
+            "qm7-power-spectrum.mts",
         )
     )
     ones_tensor = metatensor.torch.ones_like(tensor)
