@@ -157,11 +157,18 @@ class DeviceWarning(RuntimeWarning):
     """
 
 
+# We keep wrappers of Python arrays alive by storing a reference to them in this
+# dictionary. Each value is stored under the `id(value)` key, which makes sure no two
+# values have the same key.
+_KNOWN_ARRAY_WRAPPERS = {}
+
+
 class ArrayWrapper:
     """Small wrapper making Python arrays compatible with ``mts_array_t``."""
 
     def __init__(self, array):
         self.array = array
+
         self._shape = ctypes.ARRAY(c_uintptr_t, len(array.shape))(*array.shape)
 
         if _is_numpy_array(array):
@@ -171,11 +178,13 @@ class ArrayWrapper:
         else:
             raise ValueError(f"unknown array type: {type(array)}")
 
+        global _KNOWN_ARRAY_WRAPPERS
+        _KNOWN_ARRAY_WRAPPERS[id(self)] = self
+
         mts_array = mts_array_t()
-        # `mts_array_t::ptr` is a pointer to the PyObject `self`
-        mts_array.ptr = ctypes.cast(
-            ctypes.pointer(self._get_py_object()), ctypes.c_void_p
-        )
+        # we use id(self) as the C API user-data "pointer", since we can use it together
+        # with `_KNOWN_ARRAY_WRAPPERS` to recover the corresponding Python object.
+        mts_array.ptr = id(self)
 
         mts_array.origin = mts_array_origin
         mts_array.data = _MTS_ARRAY_DATA
@@ -192,35 +201,16 @@ class ArrayWrapper:
 
         self._mts_array = mts_array
 
-    def _get_py_object(self):
-        # this seems to be the only way to get a PyObject* from Python
-        # cf https://groups.google.com/g/dev-python/c/QRRqVC7gkf4
-        return ctypes.cast(id(self), ctypes.py_object)
-
     def into_mts_array(self):
         """
         Get an mts_array_t instance for the wrapper array.
-
-        This function increase the Python-side reference count to the wrapper to
-        ensure the wrapper and arrays are kept alive. The reference count is
-        reduced again when calling `mts_array_t::destroy` (which will typically
-        be done by the Rust side of the code).
         """
-        # The returned array is keeping a reference to this python object, we
-        # need to tell Python so that it does not garbage-collect the wrapper
-        ctypes.pythonapi.Py_IncRef(self._get_py_object())
-
         return self._mts_array
-
-
-def _object_from_ptr(ptr):
-    """Extract the Python object from a pointer to the PyObject"""
-    return ctypes.cast(ptr, ctypes.POINTER(ctypes.py_object)).contents.value
 
 
 @catch_exceptions
 def _mts_array_data(this, data):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     if _is_numpy_array(wrapper.array):
         array = wrapper.array
@@ -252,7 +242,7 @@ def _mts_array_data(this, data):
 
 @catch_exceptions
 def _mts_array_shape(this, shape_ptr, shape_count):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape_ptr[0] = wrapper._shape
     shape_count[0] = len(wrapper._shape)
@@ -260,7 +250,7 @@ def _mts_array_shape(this, shape_ptr, shape_count):
 
 @catch_exceptions
 def _mts_array_reshape(this, shape_ptr, shape_count):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
     for i in range(shape_count):
@@ -272,7 +262,7 @@ def _mts_array_reshape(this, shape_ptr, shape_count):
 
 @catch_exceptions
 def _mts_array_swap_axes(this, axis_1, axis_2):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
     wrapper.array = wrapper.array.swapaxes(axis_1, axis_2)
 
     shape = wrapper.array.shape
@@ -281,7 +271,7 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
 
 @catch_exceptions
 def _mts_array_create(this, shape_ptr, shape_count, new_array):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
     for i in range(shape_count):
@@ -299,7 +289,7 @@ def _mts_array_create(this, shape_ptr, shape_count, new_array):
 
 @catch_exceptions
 def _mts_array_copy(this, new_array):
-    wrapper = _object_from_ptr(this)
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     if _is_numpy_array(wrapper.array):
         array = wrapper.array.copy()
@@ -312,9 +302,7 @@ def _mts_array_copy(this, new_array):
 
 @catch_exceptions
 def _mts_array_destroy(this):
-    wrapper = _object_from_ptr(this)
-    # remove the additional reference to the wrapper, added in `into_mts_array``
-    ctypes.pythonapi.Py_DecRef(wrapper._get_py_object())
+    del _KNOWN_ARRAY_WRAPPERS[this]
 
 
 @catch_exceptions
@@ -326,8 +314,8 @@ def _mts_array_move_samples_from(
     property_start,
     property_end,
 ):
-    output = _object_from_ptr(this).array
-    input = _object_from_ptr(input).array
+    output = _KNOWN_ARRAY_WRAPPERS[this].array
+    input = _KNOWN_ARRAY_WRAPPERS[input].array
 
     input_samples = []
     output_samples = []
