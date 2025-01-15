@@ -310,7 +310,7 @@ class Labels:
         self._lib = _get_library()
         self._labels = _create_new_labels(self._lib, names, values)
         self._names = names
-        self._values = LabelsValues(self)
+        self._cached_values = None
 
     @staticmethod
     def single() -> "Labels":
@@ -372,7 +372,7 @@ class Labels:
             names.append(labels.names[i].decode("utf8"))
         obj._names = names
 
-        obj._values = LabelsValues(obj)
+        obj._cached_values = None
 
         return obj
 
@@ -405,11 +405,11 @@ class Labels:
 
     def __len__(self) -> int:
         """number of entries in these labels"""
-        return self._values.shape[0]
+        return self.values.shape[0]
 
     def __iter__(self):
         for i in range(len(self)):
-            yield LabelsEntry(self._names, self._values[i, :])
+            yield LabelsEntry(self._names, self.values[i, :])
 
     @overload
     def __getitem__(self, dimension: str) -> np.ndarray:
@@ -459,8 +459,8 @@ class Labels:
 
         return (
             self._names == other._names
-            and self._values.shape == other._values.shape
-            and bool(np.all(self._values == other._values))
+            and self.values.shape == other.values.shape
+            and bool(np.all(self.values == other.values))
         )
 
     def __ne__(self, other: "Labels") -> bool:
@@ -559,7 +559,10 @@ class Labels:
         values associated with each dimensions of the :py:class:`Labels`, stored
         as 2-dimensional tensor of 32-bit integers
         """
-        return self._values
+        if self._cached_values is None:
+            self._cached_values = LabelsValues(self)
+
+        return self._cached_values
 
     def append(self, name: str, values: np.ndarray) -> "Labels":
         """Append a new dimension to the end of the :py:class:`Labels`.
@@ -1000,7 +1003,7 @@ class Labels:
         """
         return _print_labels(
             self._names,
-            self._values,
+            self.values,
             max_entries=max_entries,
             indent=indent,
         )
@@ -1013,7 +1016,7 @@ class Labels:
 
             :py:func:`Labels.__getitem__` as the main way to use this function
         """
-        return LabelsEntry(self._names, self._values[index, :])
+        return LabelsEntry(self._names, self.values[index, :])
 
     def column(self, dimension: str) -> np.ndarray:
         """
@@ -1067,7 +1070,7 @@ class Labels:
         obj._lib = _get_library()
         obj._labels = None
         obj._names = names
-        obj._values = values
+        obj._cached_values = values
 
         return obj
 
@@ -1082,7 +1085,7 @@ class Labels:
 
     def to_owned(self) -> "Labels":
         """convert a view to owned labels, which implement the full API"""
-        labels = _create_new_labels(self._lib, self._names, self._values)
+        labels = _create_new_labels(self._lib, self._names, self.values)
         return Labels._from_mts_labels_t(labels)
 
 
