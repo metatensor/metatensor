@@ -15,10 +15,10 @@ pub struct TensorBlockRefMut<'a> {
 }
 
 // SAFETY: Send is fine since TensorBlockRefMut does not implement Drop
-unsafe impl<'a> Send for TensorBlockRefMut<'a> {}
+unsafe impl Send for TensorBlockRefMut<'_> {}
 // SAFETY: Sync is fine since there is no internal mutability in TensorBlockRefMut
 // (all mutations still require a `&mut TensorBlockRefMut`)
-unsafe impl<'a> Sync for TensorBlockRefMut<'a> {}
+unsafe impl Sync for TensorBlockRefMut<'_> {}
 
 /// All the basic data in a `TensorBlockRefMut` as a struct with separate fields.
 ///
@@ -220,14 +220,14 @@ impl<'a> Iterator for GradientsMutIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for GradientsMutIter<'a> {
+impl ExactSizeIterator for GradientsMutIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.parameters.len()
     }
 }
 
-impl<'a> FusedIterator for GradientsMutIter<'a> {}
+impl FusedIterator for GradientsMutIter<'_> {}
 
 #[cfg(test)]
 mod tests {

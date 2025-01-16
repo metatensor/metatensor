@@ -517,14 +517,14 @@ impl<'a> Iterator for LabelsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for LabelsIter<'a> {
+impl ExactSizeIterator for LabelsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.chunks.len()
     }
 }
 
-impl<'a> FusedIterator for LabelsIter<'a> {}
+impl FusedIterator for LabelsIter<'_> {}
 
 impl<'a> IntoIterator for &'a Labels {
     type IntoIter = LabelsIter<'a>;
@@ -556,7 +556,7 @@ impl<'a> rayon::iter::ParallelIterator for LabelsParIter<'a> {
 }
 
 #[cfg(feature = "rayon")]
-impl<'a> rayon::iter::IndexedParallelIterator for LabelsParIter<'a> {
+impl rayon::iter::IndexedParallelIterator for LabelsParIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.chunks.len()
@@ -598,7 +598,7 @@ impl<'a, const N: usize> Iterator for LabelsFixedSizeIter<'a, N> {
     }
 }
 
-impl<'a, const N: usize> ExactSizeIterator for LabelsFixedSizeIter<'a, N> {
+impl<const N: usize> ExactSizeIterator for LabelsFixedSizeIter<'_, N> {
     #[inline]
     fn len(&self) -> usize {
         self.values.len() / N

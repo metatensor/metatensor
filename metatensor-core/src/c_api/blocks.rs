@@ -219,27 +219,6 @@ pub unsafe extern fn mts_block_labels(
     })
 }
 
-fn _get_gradient<'a>(
-    block: &'a mut TensorBlock,
-    parameter: &str
-) -> Result<&'a mut TensorBlock, Error> {
-    let gradient_block =
-        if let Some((first, rest)) = parameter.split_once('/') {
-            _get_gradient(
-                block.gradient_mut(first).ok_or_else(|| Error::InvalidParameter(format!(
-                    "can not find gradients with respect to '{}' in this block", first
-                )))?,
-                rest
-            )?
-        } else {
-            block.gradient_mut(parameter).ok_or_else(|| Error::InvalidParameter(format!(
-                "can not find gradients with respect to '{}' in this block", parameter
-            )))?
-        };
-
-    Ok(gradient_block)
-}
-
 
 /// Get one of the gradients in this `block`.
 ///
