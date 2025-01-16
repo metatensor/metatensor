@@ -40,14 +40,15 @@ fn check_data_and_labels(
 
     if shape.len() != components.len() + 2 {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array has {} dimensions, but we have {} separate labels",
-            context, shape.len(), components.len() + 2
+            "{}: the array has {} dimensions, but we have {} separate labels \
+            (1 for samples, {} for components and 1 for properties)",
+            context, shape.len(), components.len() + 2, components.len()
         )));
     }
 
     if shape[0] != samples.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 0 is {} but we have {} sample labels",
+            "{}: the array shape along axis 0 is {} but we have {} sample label entries",
             context, shape[0], samples.count()
         )));
     }
@@ -76,7 +77,7 @@ fn check_data_and_labels(
 
     if shape[axis] != properties.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis {} is {} but we have {} properties labels",
+            "{}: the array shape along axis {} is {} but we have {} property label entries",
             context, axis, shape[axis], properties.count()
         )));
     }
@@ -363,7 +364,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 0 is 3 but we have 4 sample labels"
+            along axis 0 is 3 but we have 4 sample label entries"
         );
 
         let values = TestArray::new(vec![4, 9]);
@@ -371,7 +372,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 1 is 9 but we have 7 properties labels"
+            along axis 1 is 9 but we have 7 property label entries"
         );
 
         let values = TestArray::new(vec![4, 1, 7]);
@@ -379,7 +380,8 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has \
-            3 dimensions, but we have 2 separate labels"
+            3 dimensions, but we have 2 separate labels (1 for samples, 0 \
+            for components and 1 for properties)"
         );
     }
 
@@ -406,7 +408,8 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has 3 \
-            dimensions, but we have 4 separate labels"
+            dimensions, but we have 4 separate labels (1 for samples, 2 for \
+            components and 1 for properties)"
         );
 
         let values = TestArray::new(vec![3, 4, 4, 2]);
