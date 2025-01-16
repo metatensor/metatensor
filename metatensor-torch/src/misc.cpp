@@ -40,56 +40,56 @@ mts_status_t metatensor_torch::details::create_torch_array(
 
 /******************************************************************************/
 
-TorchTensorMap metatensor_torch::load(const std::string& path) {
+TensorMap metatensor_torch::load(const std::string& path) {
     return TensorMapHolder::load(path);
 }
 
-TorchTensorMap metatensor_torch::load_buffer(torch::Tensor buffer) {
+TensorMap metatensor_torch::load_buffer(torch::Tensor buffer) {
     return TensorMapHolder::load_buffer(buffer);
 }
 
 
-void metatensor_torch::save(const std::string& path, TorchTensorMap tensor) {
+void metatensor_torch::save(const std::string& path, TensorMap tensor) {
     tensor->save(path);
 }
 
-torch::Tensor metatensor_torch::save_buffer(TorchTensorMap tensor) {
+torch::Tensor metatensor_torch::save_buffer(TensorMap tensor) {
     return tensor->save_buffer();
 }
 
 /******************************************************************************/
 
-TorchTensorBlock metatensor_torch::load_block(const std::string& path) {
+TensorBlock metatensor_torch::load_block(const std::string& path) {
     return TensorBlockHolder::load(path);
 }
 
-TorchTensorBlock metatensor_torch::load_block_buffer(torch::Tensor buffer) {
+TensorBlock metatensor_torch::load_block_buffer(torch::Tensor buffer) {
     return TensorBlockHolder::load_buffer(buffer);
 }
 
 
-void metatensor_torch::save(const std::string& path, TorchTensorBlock block) {
+void metatensor_torch::save(const std::string& path, TensorBlock block) {
     block->save(path);
 }
 
-torch::Tensor metatensor_torch::save_buffer(TorchTensorBlock block) {
+torch::Tensor metatensor_torch::save_buffer(TensorBlock block) {
     return block->save_buffer();
 }
 
 /******************************************************************************/
 
-TorchLabels metatensor_torch::load_labels(const std::string& path) {
+Labels metatensor_torch::load_labels(const std::string& path) {
     return LabelsHolder::load(path);
 }
 
-TorchLabels metatensor_torch::load_labels_buffer(torch::Tensor buffer) {
+Labels metatensor_torch::load_labels_buffer(torch::Tensor buffer) {
     return LabelsHolder::load_buffer(buffer);
 }
 
-void metatensor_torch::save(const std::string& path, TorchLabels labels) {
+void metatensor_torch::save(const std::string& path, Labels labels) {
     labels->save(path);
 }
 
-torch::Tensor metatensor_torch::save_buffer(TorchLabels labels) {
+torch::Tensor metatensor_torch::save_buffer(Labels labels) {
     return labels->save_buffer();
 }

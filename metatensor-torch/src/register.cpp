@@ -11,14 +11,14 @@
 using namespace metatensor_torch;
 
 
-static TorchLabelsEntry labels_entry(const TorchLabels& self, int64_t index) {
+static LabelsEntry labels_entry(const Labels& self, int64_t index) {
     return torch::make_intrusive<LabelsEntryHolder>(self, index);
 }
 
 // this function can not be implemented as a member of LabelsHolder, since it
-// needs to receive a `TorchLabels` to give it to the `LabelsEntryHolder`
+// needs to receive a `Labels` to give it to the `LabelsEntryHolder`
 // constructor.
-static torch::IValue labels_getitem(const TorchLabels& self, torch::IValue index) {
+static torch::IValue labels_getitem(const Labels& self, torch::IValue index) {
     if (index.isInt()) {
         return labels_entry(self, index.toInt());
     } else if (index.isString()) {
@@ -96,11 +96,11 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__getitem__", &LabelsEntryHolder::getitem, DOCSTRING,
             {torch::arg("index")}
         )
-        .def("__eq__", [](const TorchLabelsEntry& self, const TorchLabelsEntry& other){ return *self == *other; },
+        .def("__eq__", [](const LabelsEntry& self, const LabelsEntry& other){ return *self == *other; },
             DOCSTRING,
             {torch::arg("other")}
         )
-        .def("__ne__", [](const TorchLabelsEntry& self, const TorchLabelsEntry& other){ return *self != *other; },
+        .def("__ne__", [](const LabelsEntry& self, const LabelsEntry& other){ return *self != *other; },
             DOCSTRING,
             {torch::arg("other")}
         )
@@ -118,16 +118,16 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__str__", &LabelsHolder::str)
         .def("__repr__", &LabelsHolder::repr)
         .def("__len__", &LabelsHolder::count)
-        .def("__contains__", [](const TorchLabels& self, torch::IValue entry) {
+        .def("__contains__", [](const Labels& self, torch::IValue entry) {
                 return self->position(entry).has_value();
             }, DOCSTRING,
             {torch::arg("entry")}
         )
-        .def("__eq__", [](const TorchLabels& self, const TorchLabels& other){ return *self == *other; },
+        .def("__eq__", [](const Labels& self, const Labels& other){ return *self == *other; },
             DOCSTRING,
             {torch::arg("other")}
         )
-        .def("__ne__", [](const TorchLabels& self, const TorchLabels& other){ return *self != *other; },
+        .def("__ne__", [](const Labels& self, const Labels& other){ return *self != *other; },
             DOCSTRING,
             {torch::arg("other")}
         )
@@ -141,7 +141,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_static("load_buffer", &LabelsHolder::load_buffer)
         .def("entry", labels_entry, DOCSTRING, {torch::arg("index")})
         .def("column", &LabelsHolder::column, DOCSTRING, {torch::arg("dimension")})
-        .def("view", [](const TorchLabels& self, torch::IValue names) {
+        .def("view", [](const Labels& self, torch::IValue names) {
             auto names_vector = metatensor_torch::details::normalize_names(std::move(names), "names");
             return LabelsHolder::view(self, std::move(names_vector));
         }, DOCSTRING, {torch::arg("names")})
@@ -153,7 +153,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
         .def("to",
-            static_cast<TorchLabels (LabelsHolder::*)(torch::IValue) const>(&LabelsHolder::to),
+            static_cast<Labels (LabelsHolder::*)(torch::IValue) const>(&LabelsHolder::to),
             DOCSTRING, {torch::arg("device")}
         )
         .def_property("device", &LabelsHolder::device)
@@ -172,7 +172,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("select", &LabelsHolder::select, DOCSTRING, {torch::arg("selection")})
         .def_pickle(
             // __getstate__
-            [](const TorchLabels& self){ return self->save_buffer(); },
+            [](const Labels& self){ return self->save_buffer(); },
             // __setstate__
             [](torch::Tensor buffer){ return metatensor_torch::load_labels_buffer(buffer); }
         );
@@ -180,7 +180,7 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<TensorBlockHolder>("TensorBlock")
         .def(
-            torch::init<torch::Tensor, TorchLabels, std::vector<TorchLabels>, TorchLabels>(), DOCSTRING,
+            torch::init<torch::Tensor, Labels, std::vector<Labels>, Labels>(), DOCSTRING,
             {torch::arg("values"), torch::arg("samples"), torch::arg("components"), torch::arg("properties")}
         )
         .def("__repr__", &TensorBlockHolder::repr)
@@ -219,19 +219,19 @@ TORCH_LIBRARY(metatensor, m) {
         .def_static("load_buffer", &TensorBlockHolder::load_buffer)
         .def_pickle(
             // __getstate__
-            [](const TorchTensorBlock& self){ return self->save_buffer(); },
+            [](const TensorBlock& self){ return self->save_buffer(); },
             // __setstate__
             [](torch::Tensor buffer){ return metatensor_torch::load_block_buffer(buffer); }
         );
 
     m.class_<TensorMapHolder>("TensorMap")
         .def(
-            torch::init<TorchLabels, std::vector<TorchTensorBlock>>(), DOCSTRING,
+            torch::init<Labels, std::vector<TensorBlock>>(), DOCSTRING,
             {torch::arg("keys"), torch::arg("blocks")}
         )
-        .def("__len__", [](const TorchTensorMap& self){ return self->keys()->count(); })
-        .def("__repr__", [](const TorchTensorMap& self){ return self->print(-1); })
-        .def("__str__", [](const TorchTensorMap& self){ return self->print(4); })
+        .def("__len__", [](const TensorMap& self){ return self->keys()->count(); })
+        .def("__repr__", [](const TensorMap& self){ return self->print(-1); })
+        .def("__str__", [](const TensorMap& self){ return self->print(4); })
         .def("__getitem__", &TensorMapHolder::block_torch, DOCSTRING,
             {torch::arg("selection")}
         )
@@ -283,7 +283,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def_pickle(
             // __getstate__
-            [](const TorchTensorMap& self){ return self->save_buffer(); },
+            [](const TensorMap& self){ return self->save_buffer(); },
             // __setstate__
             [](torch::Tensor buffer){ return metatensor_torch::load_buffer(buffer); }
         );
@@ -492,7 +492,7 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init<
                 std::string,
                 torch::Dict<std::string, ModelOutput>,
-                torch::optional<TorchLabels>
+                torch::optional<Labels>
             >(),
             DOCSTRING, {
                 torch::arg("length_unit") = "",

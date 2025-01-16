@@ -14,34 +14,37 @@ namespace metatensor_torch {
 
 class TensorBlockHolder;
 /// TorchScript will always manipulate `TensorBlockHolder` through a `torch::intrusive_ptr`
-using TorchTensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
+using TensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
+
+// for backward compatibility, to remove later
+using TorchTensorBlock = TensorBlock;
 
 /// Wrapper around `metatensor::TensorBlock` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
-/// `torch::intrusive_ptr<TensorBlockHolder>` (i.e. `TorchTensorBlock`) instead
+/// `torch::intrusive_ptr<TensorBlockHolder>` (i.e. `TensorBlock`) instead
 /// of instances of `TensorBlockHolder`.
 class METATENSOR_TORCH_EXPORT TensorBlockHolder: public torch::CustomClassHolder {
 public:
     /// Create a new TensorBlockHolder with the given data and metadata
     TensorBlockHolder(
         torch::Tensor data,
-        TorchLabels samples,
-        std::vector<TorchLabels> components,
-        TorchLabels properties
+        Labels samples,
+        std::vector<Labels> components,
+        Labels properties
     );
 
     /// Create a torch TensorBlockHolder from a pre-existing
     /// `metatensor::TensorBlock`.
     ///
-    /// If the block is a view inside another `TorchTensorBlock` or
-    /// `TorchTensorMap`, then `parent` should point to the corresponding
+    /// If the block is a view inside another `TensorBlock` or
+    /// `TensorMap`, then `parent` should point to the corresponding
     /// object, making sure a reference to it is kept around.
     TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent);
 
     /// Make a copy of this `TensorBlockHolder`, including all the data
     /// contained inside
-    TorchTensorBlock copy() const;
+    TensorBlock copy() const;
 
     /// Get a view in the values in this block
     torch::Tensor values() const;
@@ -49,13 +52,13 @@ public:
     /// Get the labels in this block associated with either `"values"` or one
     /// gradient (by setting `values_gradients` to the gradient parameter); in
     /// the given `axis`.
-    TorchLabels labels(uintptr_t axis) const;
+    Labels labels(uintptr_t axis) const;
 
     /// Access the sample `Labels` for this block.
     ///
     /// The entries in these labels describe the first dimension of the
     /// `values()` array.
-    TorchLabels samples() const {
+    Labels samples() const {
         return this->labels(0);
     }
 
@@ -73,10 +76,10 @@ public:
     ///
     /// The entries in these labels describe intermediate dimensions of the
     /// `values()` array.
-    std::vector<TorchLabels> components() const {
+    std::vector<Labels> components() const {
         auto shape = this->block_.values_shape();
 
-        auto result = std::vector<TorchLabels>();
+        auto result = std::vector<Labels>();
         for (size_t i=1; i<shape.size() - 1; i++) {
             result.emplace_back(this->labels(i));
         }
@@ -89,7 +92,7 @@ public:
     /// The entries in these labels describe the last dimension of the
     /// `values()` array. The properties are guaranteed to be the same for
     /// values and gradients in the same block.
-    TorchLabels properties() const {
+    Labels properties() const {
         auto shape = this->block_.values_shape();
         return this->labels(shape.size() - 1);
     }
@@ -98,17 +101,17 @@ public:
     ///
     /// @param parameter add gradients with respect to this `parameter` (e.g.
     ///                 `"positions"`, `"cell"`, ...)
-    /// @param gradient a `TorchTensorBlock` whose values contain the gradients
+    /// @param gradient a `TensorBlock` whose values contain the gradients
     ///                 with respect to the `parameter`. The labels of the
-    ///                 gradient `TorchTensorBlock` should be organized as
+    ///                 gradient `TensorBlock` should be organized as
     ///                 follows: its `samples` must contain `"sample"` as the
     ///                 first label, which establishes a correspondence with the
-    ///                 `samples` of the original `TorchTensorBlock`; its
+    ///                 `samples` of the original `TensorBlock`; its
     ///                 components must contain at least the same components as
-    ///                 the original `TorchTensorBlock`, with any additional
+    ///                 the original `TensorBlock`, with any additional
     ///                 component coming before those; its properties must match
-    ///                 those of the original `TorchTensorBlock`.
-    void add_gradient(const std::string& parameter, TorchTensorBlock gradient);
+    ///                 those of the original `TensorBlock`.
+    void add_gradient(const std::string& parameter, TensorBlock gradient);
 
     /// Get a list of all gradients defined in this block.
     std::vector<std::string> gradients_list() const {
@@ -119,10 +122,10 @@ public:
     bool has_gradient(const std::string& parameter) const;
 
     /// Get a gradient from this TensorBlock
-    static TorchTensorBlock gradient(TorchTensorBlock self, const std::string& parameter);
+    static TensorBlock gradient(TensorBlock self, const std::string& parameter);
 
     /// Get a all gradients and associated parameters in this block
-    static std::vector<std::tuple<std::string, TorchTensorBlock>> gradients(TorchTensorBlock self);
+    static std::vector<std::tuple<std::string, TensorBlock>> gradients(TensorBlock self);
 
     /// Get the device for the values stored in this `TensorBlock`
     torch::Device device() const {
@@ -135,7 +138,7 @@ public:
     }
 
     /// Move all arrays in this block to the given `dtype` and `device`.
-    TorchTensorBlock to(
+    TensorBlock to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
         torch::optional<torch::Device> device = torch::nullopt
     ) const;
@@ -148,7 +151,7 @@ public:
     /// `arrays` is left as a keyword argument since it is mainly here for
     /// compatibility with the pure Python backend, and only `"torch"` is
     /// supported.
-    TorchTensorBlock to_positional(
+    TensorBlock to_positional(
         torch::IValue positional_1,
         torch::IValue positional_2,
         torch::optional<torch::Dtype> dtype,
@@ -165,11 +168,11 @@ public:
     }
 
     /// Load a serialized TensorBlock from the given path
-    static TorchTensorBlock load(const std::string& path);
+    static TensorBlock load(const std::string& path);
 
     /// Load a serialized TensorBlock from an in-memory buffer (represented as a
     /// `torch::Tensor` of bytes)
-    static TorchTensorBlock load_buffer(torch::Tensor buffer);
+    static TensorBlock load_buffer(torch::Tensor buffer);
 
     /// Serialize and save a TensorBlock to the given path
     void save(const std::string& path) const;

@@ -196,7 +196,7 @@ public:
     ModelEvaluationOptionsHolder(
         std::string length_unit,
         torch::Dict<std::string, ModelOutput> outputs,
-        torch::optional<TorchLabels> selected_atoms
+        torch::optional<Labels> selected_atoms
     );
 
     ~ModelEvaluationOptionsHolder() override = default;
@@ -215,12 +215,12 @@ public:
     /// to `None`, run the calculation on all atoms. If this is a set of
     /// `Labels`, it will have two dimensions named `"system"` and `"atom"`,
     /// containing the 0-based indices of all the atoms in the selected subset.
-    torch::optional<TorchLabels> get_selected_atoms() const {
+    torch::optional<Labels> get_selected_atoms() const {
         return selected_atoms_;
     }
 
     /// Setter for `selected_atoms`
-    void set_selected_atoms(torch::optional<TorchLabels> selected_atoms);
+    void set_selected_atoms(torch::optional<Labels> selected_atoms);
 
     /// Serialize a `ModelEvaluationOptions` to a JSON string.
     std::string to_json() const;
@@ -229,7 +229,7 @@ public:
 
 private:
     std::string length_unit_;
-    torch::optional<TorchLabels> selected_atoms_ = torch::nullopt;
+    torch::optional<Labels> selected_atoms_ = torch::nullopt;
 };
 
 

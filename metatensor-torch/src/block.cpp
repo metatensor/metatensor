@@ -12,7 +12,7 @@
 using namespace metatensor_torch;
 
 
-static std::vector<metatensor::Labels> components_from_torch(const std::vector<TorchLabels>& components) {
+static std::vector<metatensor::Labels> components_from_torch(const std::vector<Labels>& components) {
     auto result = std::vector<metatensor::Labels>();
     for (const auto& component: components) {
         result.push_back(component->as_metatensor());
@@ -22,9 +22,9 @@ static std::vector<metatensor::Labels> components_from_torch(const std::vector<T
 
 TensorBlockHolder::TensorBlockHolder(
     torch::Tensor data,
-    TorchLabels samples,
-    std::vector<TorchLabels> components,
-    TorchLabels properties
+    Labels samples,
+    std::vector<Labels> components,
+    Labels properties
 ):
     TensorBlockHolder(
         metatensor::TensorBlock(
@@ -72,11 +72,11 @@ TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, std::string 
     parent_(std::move(parent))
 {}
 
-TorchTensorBlock TensorBlockHolder::copy() const {
+TensorBlock TensorBlockHolder::copy() const {
     return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
 }
 
-TorchTensorBlock TensorBlockHolder::to(
+TensorBlock TensorBlockHolder::to(
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device
 ) const {
@@ -109,7 +109,7 @@ TorchTensorBlock TensorBlockHolder::to(
     return block;
 }
 
-TorchTensorBlock TensorBlockHolder::to_positional(
+TensorBlock TensorBlockHolder::to_positional(
     torch::IValue positional_1,
     torch::IValue positional_2,
     torch::optional<torch::Dtype> dtype,
@@ -165,14 +165,14 @@ void TensorBlockHolder::set_values(const torch::Tensor& new_values) {
         );
     }
 
-TorchLabels TensorBlockHolder::labels(uintptr_t axis) const {
+Labels TensorBlockHolder::labels(uintptr_t axis) const {
     return torch::make_intrusive<LabelsHolder>(block_.labels(axis));
 }
 
 
-void TensorBlockHolder::add_gradient(const std::string& parameter, TorchTensorBlock gradient) {
+void TensorBlockHolder::add_gradient(const std::string& parameter, TensorBlock gradient) {
     // we need to move the tensor block in `add_gradient`, but we can not move
-    // out of the `torch::intrusive_ptr` in `TorchTensorBlock`. So we create a
+    // out of the `torch::intrusive_ptr` in `TensorBlock`. So we create a
     // new temporary block, increasing the reference count to the values and
     // metadata of gradient.
     auto gradient_block = metatensor::TensorBlock(
@@ -205,7 +205,7 @@ bool TensorBlockHolder::has_gradient(const std::string& parameter) const {
     return it != std::end(list);
 }
 
-TorchTensorBlock TensorBlockHolder::gradient(TorchTensorBlock self, const std::string& parameter) {
+TensorBlock TensorBlockHolder::gradient(TensorBlock self, const std::string& parameter) {
     // handle recursive gradients
     std::string gradient_parameter;
     if (!self->parameter_.empty()) {
@@ -217,8 +217,8 @@ TorchTensorBlock TensorBlockHolder::gradient(TorchTensorBlock self, const std::s
     return torch::make_intrusive<TensorBlockHolder>(self->block_.gradient(parameter), gradient_parameter, self);
 }
 
-std::vector<std::tuple<std::string, TorchTensorBlock>> TensorBlockHolder::gradients(TorchTensorBlock self) {
-    auto result = std::vector<std::tuple<std::string, TorchTensorBlock>>();
+std::vector<std::tuple<std::string, TensorBlock>> TensorBlockHolder::gradients(TensorBlock self) {
+    auto result = std::vector<std::tuple<std::string, TensorBlock>>();
     for (const auto& parameter: self->gradients_list()) {
         result.emplace_back(parameter, TensorBlockHolder::gradient(self, parameter));
     }
@@ -295,7 +295,7 @@ std::string TensorBlockHolder::repr() const {
     return output.str();
 }
 
-TorchTensorBlock TensorBlockHolder::load(const std::string& path) {
+TensorBlock TensorBlockHolder::load(const std::string& path) {
     return torch::make_intrusive<TensorBlockHolder>(
         TensorBlockHolder(
             metatensor::io::load_block(path, details::create_torch_array),
@@ -304,7 +304,7 @@ TorchTensorBlock TensorBlockHolder::load(const std::string& path) {
     );
 }
 
-TorchTensorBlock TensorBlockHolder::load_buffer(torch::Tensor buffer) {
+TensorBlock TensorBlockHolder::load_buffer(torch::Tensor buffer) {
     if (buffer.scalar_type() != torch::kUInt8) {
         C10_THROW_ERROR(ValueError,
             "`buffer` must be a tensor of uint8, not " +

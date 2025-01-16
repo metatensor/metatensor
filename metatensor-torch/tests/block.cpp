@@ -49,7 +49,7 @@ TEST_CASE("Blocks") {
         auto block = torch::make_intrusive<TensorBlockHolder>(
             torch::full({3, 2}, 11.0),
             LabelsHolder::create({"s"}, {{0}, {2}, {1}}),
-            std::vector<TorchLabels>{},
+            std::vector<Labels>{},
             LabelsHolder::create({"p"}, {{0}, {1}})
         );
 
@@ -58,7 +58,7 @@ TEST_CASE("Blocks") {
         block->add_gradient("g", torch::make_intrusive<TensorBlockHolder>(
             torch::full({1, 3, 2}, 1.0),
             LabelsHolder::create({"sample", "g"}, {{0, 1}}),
-            std::vector<TorchLabels>{LabelsHolder::create({"c"}, {{0}, {1}, {2}})},
+            std::vector<Labels>{LabelsHolder::create({"c"}, {{0}, {1}, {2}})},
             block->properties()
         ));
 
@@ -84,7 +84,7 @@ TEST_CASE("Blocks") {
             TensorBlockHolder(
                 torch::full({3, 2}, 11.0),
                 LabelsHolder::create({"s"}, {{0}, {2}, {1}})->to(torch::kMeta),
-                std::vector<TorchLabels>{},
+                std::vector<Labels>{},
                 LabelsHolder::create({"p"}, {{0}, {1}})
             ),
             Catch::StartsWith(

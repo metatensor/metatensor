@@ -6,7 +6,7 @@ using namespace metatensor_torch;
 
 #include <catch.hpp>
 
-static TorchTensorMap test_tensor_map();
+static TensorMap test_tensor_map();
 
 TEST_CASE("TensorMap") {
     SECTION("keys") {
@@ -207,10 +207,10 @@ TEST_CASE("TensorMap serialization") {
 }
 
 
-TorchTensorMap test_tensor_map() {
-    auto blocks = std::vector<TorchTensorBlock>();
+TensorMap test_tensor_map() {
+    auto blocks = std::vector<TensorBlock>();
 
-    auto components = std::vector<TorchLabels>();
+    auto components = std::vector<Labels>();
     components.emplace_back(LabelsHolder::create({"component"}, {{0}}));
 
     auto block_1 = torch::make_intrusive<TensorBlockHolder>(
@@ -245,7 +245,7 @@ TorchTensorMap test_tensor_map() {
 
     blocks.emplace_back(std::move(block_2));
 
-    components = std::vector<TorchLabels>();
+    components = std::vector<Labels>();
     components.emplace_back(LabelsHolder::create({"component"}, {{0}, {1}, {2}}));
     auto block_3 = torch::make_intrusive<TensorBlockHolder>(
         torch::full({4, 3, 1}, 3.0),

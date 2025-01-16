@@ -26,6 +26,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `metatensor.torch.atomistic.load_system`. For the initial implementation,
   these functions are only accessible from Python.
 
+- `metatensor_torch::TorchLabels` is now `metatensor_torch::Labels`; and
+  similarly for `metatensor_torch::TensorBlock` and similarly for
+  `metatensor_torch::TensorMap`. We temporarily provide type aliases for
+  backward compatibilty.
+
 ## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
 
 ### Fixed

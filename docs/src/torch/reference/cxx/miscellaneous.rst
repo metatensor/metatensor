@@ -30,9 +30,9 @@ Version number
 ``TensorMap`` Serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: metatensor_torch::save(const std::string &path, TorchTensorMap tensor)
+.. doxygenfunction:: metatensor_torch::save(const std::string &path, TensorMap tensor)
 
-.. doxygenfunction:: metatensor_torch::save_buffer(TorchTensorMap tensor)
+.. doxygenfunction:: metatensor_torch::save_buffer(TensorMap tensor)
 
 .. doxygenfunction:: metatensor_torch::load
 
@@ -43,9 +43,9 @@ Version number
 ``TensorBlock`` Serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: metatensor_torch::save(const std::string &path, TorchTensorBlock block)
+.. doxygenfunction:: metatensor_torch::save(const std::string &path, TensorBlock block)
 
-.. doxygenfunction:: metatensor_torch::save_buffer(TorchTensorBlock block)
+.. doxygenfunction:: metatensor_torch::save_buffer(TensorBlock block)
 
 .. doxygenfunction:: metatensor_torch::load_block
 
@@ -55,9 +55,9 @@ Version number
 ``Labels`` Serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: metatensor_torch::save(const std::string &path, TorchLabels labels)
+.. doxygenfunction:: metatensor_torch::save(const std::string &path, Labels labels)
 
-.. doxygenfunction:: metatensor_torch::save_buffer(TorchLabels labels)
+.. doxygenfunction:: metatensor_torch::save_buffer(Labels labels)
 
 .. doxygenfunction:: metatensor_torch::load_labels
 
