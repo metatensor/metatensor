@@ -173,9 +173,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             for name, output in additional_outputs.items():
                 assert isinstance(name, str)
                 assert isinstance(output, torch.ScriptObject)
-                assert (
-                    "explicit_gradients_setter" in output._method_names()
-                ), "outputs must be ModelOutput instances"
+                assert "explicit_gradients_setter" in output._method_names(), (
+                    "outputs must be ModelOutput instances"
+                )
 
             self._additional_output_requests = additional_outputs
 

@@ -82,8 +82,7 @@ def _save_labels(
         if not file.endswith(".npy"):
             file += ".npz"
             warnings.warn(
-                message="adding '.npy' extension,"
-                f" the file will be saved at '{file}'",
+                message=f"adding '.npy' extension, the file will be saved at '{file}'",
                 stacklevel=1,
             )
         path = file.encode("utf8")

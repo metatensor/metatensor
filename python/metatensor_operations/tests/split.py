@@ -215,7 +215,7 @@ def test_split_errors():
     with pytest.raises(ValueError, match=message):
         metatensor.split(tensor, axis="buongiorno!", selections=selections)
 
-    message = "`selections` must be a list, " "not <class 'metatensor.labels.Labels'>"
+    message = "`selections` must be a list, not <class 'metatensor.labels.Labels'>"
     with pytest.raises(TypeError, match=message):
         metatensor.split(tensor, axis="samples", selections=selections[0])
 

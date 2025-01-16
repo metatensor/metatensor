@@ -49,9 +49,9 @@ def test_module_map(tensor, out_properties):
     for i, item in enumerate(tensor.items()):
         key, block = item
         module = modules[i]
-        assert (
-            tensor_module.get_module(key) is module
-        ), "modules should be initialized in the same order as keys"
+        assert tensor_module.get_module(key) is module, (
+            "modules should be initialized in the same order as keys"
+        )
 
         ref_values = module(block.values)
         out_block = out_tensor.block(key)
