@@ -65,9 +65,7 @@ def namedtuple(typename, field_names):
             raise TypeError(f"Expected {num_fields} arguments, got {len(result)}")
         return result
 
-    _make.__func__.__doc__ = (
-        f"Make a new {typename} object from a sequence " "or iterable"
-    )
+    _make.__func__.__doc__ = f"Make a new {typename} object from a sequence or iterable"
 
     def _replace(self, /, **kwds):
         result = self._make(_map(kwds.pop, field_names, self))
