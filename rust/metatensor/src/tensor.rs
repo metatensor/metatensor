@@ -479,14 +479,14 @@ impl<'a> Iterator for TensorMapIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for TensorMapIter<'a> {
+impl ExactSizeIterator for TensorMapIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
 
-impl<'a> FusedIterator for TensorMapIter<'a> {}
+impl FusedIterator for TensorMapIter<'_> {}
 
 impl<'a> IntoIterator for &'a TensorMap {
     type Item = (&'a [LabelValue], TensorBlockRef<'a>);
@@ -519,14 +519,14 @@ impl<'a> Iterator for TensorMapIterMut<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for TensorMapIterMut<'a> {
+impl ExactSizeIterator for TensorMapIterMut<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
 
-impl<'a> FusedIterator for TensorMapIterMut<'a> {}
+impl FusedIterator for TensorMapIterMut<'_> {}
 
 impl<'a> IntoIterator for &'a mut TensorMap {
     type Item = (&'a [LabelValue], TensorBlockRefMut<'a>);
@@ -560,7 +560,7 @@ impl<'a> rayon::iter::ParallelIterator for TensorMapParIter<'a> {
 }
 
 #[cfg(feature = "rayon")]
-impl<'a> rayon::iter::IndexedParallelIterator for TensorMapParIter<'a> {
+impl rayon::iter::IndexedParallelIterator for TensorMapParIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inner.len()
@@ -599,7 +599,7 @@ impl<'a> rayon::iter::ParallelIterator for TensorMapParIterMut<'a> {
 }
 
 #[cfg(feature = "rayon")]
-impl<'a> rayon::iter::IndexedParallelIterator for TensorMapParIterMut<'a> {
+impl rayon::iter::IndexedParallelIterator for TensorMapParIterMut<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inner.len()
