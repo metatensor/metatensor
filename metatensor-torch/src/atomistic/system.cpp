@@ -165,7 +165,7 @@ torch::Tensor NeighborsAutograd::forward(
     torch::autograd::AutogradContext* ctx,
     torch::Tensor positions,
     torch::Tensor cell,
-    TorchTensorBlock neighbors,
+    TensorBlock neighbors,
     bool check_consistency
 ) {
     auto distances = neighbors->values();
@@ -290,7 +290,7 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
 
 void metatensor_torch::register_autograd_neighbors(
     System system,
-    TorchTensorBlock neighbors,
+    TensorBlock neighbors,
     bool check_consistency
 ) {
     auto distances = neighbors->values();
@@ -689,7 +689,7 @@ System SystemHolder::to_positional(
 }
 
 
-void SystemHolder::add_neighbor_list(NeighborListOptions options, TorchTensorBlock neighbors) {
+void SystemHolder::add_neighbor_list(NeighborListOptions options, TensorBlock neighbors) {
     // check the structure of the NL
     auto samples_names = neighbors->samples()->names();
     if (samples_names.size() != 5 ||
@@ -757,7 +757,7 @@ void SystemHolder::add_neighbor_list(NeighborListOptions options, TorchTensorBlo
     neighbors_.emplace(std::move(options), std::move(neighbors));
 }
 
-TorchTensorBlock SystemHolder::get_neighbor_list(NeighborListOptions options) const {
+TensorBlock SystemHolder::get_neighbor_list(NeighborListOptions options) const {
     auto it = neighbors_.find(options);
     if (it == neighbors_.end()) {
         C10_THROW_ERROR(ValueError,
@@ -810,7 +810,7 @@ static auto INVALID_DATA_NAMES = std::unordered_set<std::string>{
     "neighbors", "neighbor"
 };
 
-void SystemHolder::add_data(std::string name, TorchTensorMap tensor, bool override) {
+void SystemHolder::add_data(std::string name, TensorMap tensor, bool override) {
     if (!valid_ident(name)) {
         C10_THROW_ERROR(ValueError,
             "custom data name '" + name + "' is invalid: only [a-z A-Z 0-9 _-] are accepted"
@@ -847,7 +847,7 @@ void SystemHolder::add_data(std::string name, TorchTensorMap tensor, bool overri
     data_.insert_or_assign(std::move(name), std::move(tensor));
 }
 
-TorchTensorMap SystemHolder::get_data(std::string name) const {
+TensorMap SystemHolder::get_data(std::string name) const {
     if (INVALID_DATA_NAMES.find(string_lower(name)) != INVALID_DATA_NAMES.end()) {
         C10_THROW_ERROR(ValueError,
             "custom data can not be named '" + name + "'"

@@ -139,7 +139,7 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     labels_->set_user_data(std::move(user_data));
 }
 
-TorchLabels LabelsHolder::create(
+Labels LabelsHolder::create(
     std::vector<std::string> names,
     const std::vector<std::initializer_list<int32_t>>& values
 ) {
@@ -154,7 +154,7 @@ LabelsHolder::LabelsHolder(std::vector<std::string> names, torch::Tensor values,
     labels_(torch::nullopt)
 {}
 
-TorchLabels LabelsHolder::view(const TorchLabels& labels, std::vector<std::string> names) {
+Labels LabelsHolder::view(const Labels& labels, std::vector<std::string> names) {
     if (names.empty()) {
         C10_THROW_ERROR(ValueError,
             "can not index Labels with an empty list of dimension names"
@@ -221,14 +221,14 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
 }
 
 
-TorchLabels LabelsHolder::single() {
+Labels LabelsHolder::single() {
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
     auto values = torch::tensor({0}, options).reshape({1, 1});
     return torch::make_intrusive<LabelsHolder>("_", std::move(values));
 }
 
 
-TorchLabels LabelsHolder::empty(torch::IValue names_ivalue) {
+Labels LabelsHolder::empty(torch::IValue names_ivalue) {
     auto names = details::normalize_names(names_ivalue, "empty");
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
     auto values = torch::tensor(std::vector<int>(), options).reshape({0, static_cast<int64_t>(names.size())});
@@ -236,7 +236,7 @@ TorchLabels LabelsHolder::empty(torch::IValue names_ivalue) {
 }
 
 
-TorchLabels LabelsHolder::range(std::string name, int64_t end) {
+Labels LabelsHolder::range(std::string name, int64_t end) {
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
     auto values = torch::arange(end, options).reshape({end, 1});
     return torch::make_intrusive<LabelsHolder>(name, std::move(values));
@@ -265,7 +265,7 @@ const metatensor::Labels& LabelsHolder::as_metatensor() const {
     return labels_.value();
 }
 
-TorchLabels LabelsHolder::to_owned() const {
+Labels LabelsHolder::to_owned() const {
     if (labels_.has_value()) {
         return torch::make_intrusive<LabelsHolder>(*this);
     } else {
@@ -273,12 +273,12 @@ TorchLabels LabelsHolder::to_owned() const {
     }
 }
 
-TorchLabels LabelsHolder::append(std::string name, torch::Tensor values) const {
+Labels LabelsHolder::append(std::string name, torch::Tensor values) const {
     return this->insert(this->size(), std::move(name), std::move(values));
 }
 
 
-TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
+Labels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
     auto new_names = this->names();
 
     auto it = std::begin(new_names) + index;
@@ -309,7 +309,7 @@ TorchLabels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor 
 }
 
 
-TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
+Labels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
     auto names = this->names();
 
     if (dimensions_indexes.size() != names.size()) {
@@ -342,7 +342,7 @@ TorchLabels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const
 }
 
 
-TorchLabels LabelsHolder::remove(std::string name) const {
+Labels LabelsHolder::remove(std::string name) const {
     auto new_names = this->names();
 
     auto it = std::find(std::begin(new_names), std::end(new_names), name);
@@ -365,7 +365,7 @@ TorchLabels LabelsHolder::remove(std::string name) const {
 }
 
 
-TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) const {
+Labels LabelsHolder::rename(std::string old_name, std::string new_name) const {
     auto new_names = this->names();
 
     auto it = std::find(std::begin(new_names), std::end(new_names), old_name);
@@ -381,7 +381,7 @@ TorchLabels LabelsHolder::rename(std::string old_name, std::string new_name) con
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), this->values());
 }
 
-TorchLabels LabelsHolder::to(torch::IValue device_ivalue) const {
+Labels LabelsHolder::to(torch::IValue device_ivalue) const {
     auto device = this->device();
     if (device_ivalue.isNone()) {
         // nothing to do
@@ -397,7 +397,7 @@ TorchLabels LabelsHolder::to(torch::IValue device_ivalue) const {
     return this->to(device);
 }
 
-TorchLabels LabelsHolder::to(torch::Device device) const {
+Labels LabelsHolder::to(torch::Device device) const {
     if (device == values_.device()) {
         // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
@@ -490,7 +490,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     }
 }
 
-TorchLabels LabelsHolder::set_union(const TorchLabels& other) const {
+Labels LabelsHolder::set_union(const Labels& other) const {
     if (!labels_.has_value() || !other->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,
             "can not call this function on Labels view, call to_owned first"
@@ -509,7 +509,7 @@ TorchLabels LabelsHolder::set_union(const TorchLabels& other) const {
     return result.to(device);
 }
 
-std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const TorchLabels& other) const {
+std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const Labels& other) const {
     if (!labels_.has_value() || !other->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,
             "can not call this function on Labels view, call to_owned first"
@@ -536,14 +536,14 @@ std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_ma
         second_mapping.size(0)
     ));
 
-    return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
+    return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         result.to(device),
         first_mapping.to(device),
         second_mapping.to(device)
     );
 }
 
-TorchLabels LabelsHolder::set_intersection(const TorchLabels& other) const {
+Labels LabelsHolder::set_intersection(const Labels& other) const {
     if (!labels_.has_value() || !other->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,
             "can not call this function on Labels view, call to_owned first"
@@ -562,7 +562,7 @@ TorchLabels LabelsHolder::set_intersection(const TorchLabels& other) const {
     return result.to(device);
 }
 
-std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const TorchLabels& other) const {
+std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const Labels& other) const {
     if (!labels_.has_value() || !other->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,
             "can not call this function on Labels view, call to_owned first"
@@ -589,14 +589,14 @@ std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection
         second_mapping.size(0)
     ));
 
-    return std::make_tuple<TorchLabels, torch::Tensor, torch::Tensor>(
+    return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         result.to(device),
         first_mapping.to(device),
         second_mapping.to(device)
     );
 }
 
-torch::Tensor LabelsHolder::select(const TorchLabels& selection) const {
+torch::Tensor LabelsHolder::select(const Labels& selection) const {
     if (!labels_.has_value() || !selection->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,
             "can not call this function on Labels view, call to_owned first"
@@ -799,14 +799,14 @@ std::string LabelsHolder::repr() const {
 }
 
 
-TorchLabels LabelsHolder::load(const std::string& path) {
+Labels LabelsHolder::load(const std::string& path) {
     return torch::make_intrusive<LabelsHolder>(
         LabelsHolder(metatensor::io::load_labels(path))
     );
 }
 
 
-TorchLabels LabelsHolder::load_buffer(torch::Tensor buffer) {
+Labels LabelsHolder::load_buffer(torch::Tensor buffer) {
     if (buffer.scalar_type() != torch::kUInt8) {
         C10_THROW_ERROR(ValueError,
             "`buffer` must be a tensor of uint8, not " +
@@ -857,7 +857,7 @@ torch::Tensor LabelsHolder::save_buffer() const {
 
 /******************************************************************************/
 
-LabelsEntryHolder::LabelsEntryHolder(TorchLabels labels, int64_t index):
+LabelsEntryHolder::LabelsEntryHolder(Labels labels, int64_t index):
     labels_(std::move(labels))
 {
     auto size = labels_->values().size(0);

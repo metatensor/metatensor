@@ -283,7 +283,7 @@ ModelCapabilities ModelCapabilitiesHolder::from_json(std::string_view json) {
 
 /******************************************************************************/
 
-static void check_selected_atoms(const torch::optional<TorchLabels>& selected_atoms) {
+static void check_selected_atoms(const torch::optional<Labels>& selected_atoms) {
     if (selected_atoms) {
         if (selected_atoms.value()->names() != std::vector<std::string>{"system", "atom"}) {
             std::ostringstream oss;
@@ -309,7 +309,7 @@ void ModelEvaluationOptionsHolder::set_length_unit(std::string unit) {
 ModelEvaluationOptionsHolder::ModelEvaluationOptionsHolder(
     std::string length_unit_,
     torch::Dict<std::string, ModelOutput> outputs_,
-    torch::optional<TorchLabels> selected_atoms
+    torch::optional<Labels> selected_atoms
 ):
     outputs(outputs_),
     selected_atoms_(std::move(selected_atoms))
@@ -319,7 +319,7 @@ ModelEvaluationOptionsHolder::ModelEvaluationOptionsHolder(
 }
 
 
-void ModelEvaluationOptionsHolder::set_selected_atoms(torch::optional<TorchLabels> selected_atoms) {
+void ModelEvaluationOptionsHolder::set_selected_atoms(torch::optional<Labels> selected_atoms) {
     check_selected_atoms(selected_atoms);
     selected_atoms_ = std::move(selected_atoms);
 }
