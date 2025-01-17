@@ -17,6 +17,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added a new `filter_keys` function in `metatensor-operations`
 
 ## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.0) - 2024-10-29
 
