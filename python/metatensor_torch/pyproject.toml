@@ -34,9 +34,8 @@ changelog = "https://docs.metatensor.org/latest/torch/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=68",
+    "setuptools >=75",
     "packaging >=23",
-    "wheel >=0.41",
     "cmake",
 ]
 
