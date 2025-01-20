@@ -12,7 +12,7 @@ from ._backend import (
 
 
 @torch_jit_script
-def filter_keys(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
+def filter_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
     """
     Returns a :py:class:`TensorMap` with the blocks filtered according to the
     :py:class:`Labels` key selection passed in ``keys``.

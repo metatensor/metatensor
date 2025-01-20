@@ -16,12 +16,12 @@ def tensor() -> TensorMap:
 
 
 def test_keep_all(tensor):
-    full_tensor = metatensor.filter_keys(tensor, tensor.keys)
+    full_tensor = metatensor.filter_blocks(tensor, tensor.keys)
     assert metatensor.equal(tensor, full_tensor)
 
 
 def test_keep_none(tensor):
-    tensor = metatensor.filter_keys(tensor, Labels.empty(tensor.keys.names))
+    tensor = metatensor.filter_blocks(tensor, Labels.empty(tensor.keys.names))
     empty_tensor = TensorMap(keys=Labels.empty(tensor.keys.names), blocks=[])
     assert metatensor.equal(tensor, empty_tensor)
 
@@ -30,7 +30,7 @@ def test_keep_selection(tensor):
     assert np.unique(tensor.keys["center_type"]).tolist() == [1, 6, 8]
 
     keys_to_keep = Labels("center_type", np.array([[1]]))
-    new_tensor = metatensor.filter_keys(tensor, keys_to_keep)
+    new_tensor = metatensor.filter_blocks(tensor, keys_to_keep)
 
     assert np.unique(new_tensor.keys["center_type"]).tolist() == [1]
 
@@ -50,7 +50,7 @@ def test_keep_two_random_keys(tensor):
     ref_blocks = [tensor[key].copy() for key in keys_to_keep]
     ref_tensor = TensorMap(keys_to_keep, ref_blocks)
 
-    new_tensor = metatensor.filter_keys(tensor, keys_to_keep)
+    new_tensor = metatensor.filter_blocks(tensor, keys_to_keep)
     assert metatensor.equal(new_tensor, ref_tensor)
 
 
@@ -63,7 +63,7 @@ def test_larger_filter(tensor):
             [np.array([[1000] * len(tensor.keys.names)]), tensor.keys.values], axis=0
         ),
     )
-    test_filter = metatensor.filter_keys(tensor, key_to_filter)
+    test_filter = metatensor.filter_blocks(tensor, key_to_filter)
 
     assert metatensor.equal(test_filter, tensor)
 
@@ -82,10 +82,10 @@ def test_copy_flag(tensor):
     )
 
     # Drop blocks with copy=True flag
-    new_tensor_copied = metatensor.drop_blocks(tensor, keys_to_keep, copy=True)
+    new_tensor_copied = metatensor.filter_blocks(tensor, keys_to_keep, copy=True)
 
     # Drop blocks with copy=False flag
-    new_tensor_not_copied = metatensor.drop_blocks(tensor, keys_to_keep, copy=False)
+    new_tensor_not_copied = metatensor.filter_blocks(tensor, keys_to_keep, copy=False)
 
     # Check that the resulting tensor are equal whether or not they are copied
     assert metatensor.equal(new_tensor_copied, new_tensor_not_copied)

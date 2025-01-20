@@ -28,7 +28,7 @@ from .equal_metadata import (  # noqa
     equal_metadata_raise,
     equal_metadata_block_raise,
 )
-from .filter_keys import filter_keys  # noqa
+from .filter_blocks import filter_blocks  # noqa
 from .is_contiguous import (  # noqa: F401
     is_contiguous,
     is_contiguous_block,
