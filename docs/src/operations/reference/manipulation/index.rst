@@ -6,6 +6,7 @@ Manipulation operations
 
     detach() <detach>
     drop_blocks() <drop-blocks>
+    filter_blocks() <filter-blocks>
     join() <join>
     make_contiguous() <make-contiguous>
     manipulate dimension <manipulate-dimension>
