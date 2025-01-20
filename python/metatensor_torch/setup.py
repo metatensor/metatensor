@@ -6,9 +6,9 @@ import sys
 import packaging.version
 from setuptools import Extension, setup
 from setuptools.command.bdist_egg import bdist_egg
+from setuptools.command.bdist_wheel import bdist_wheel
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
-from wheel.bdist_wheel import bdist_wheel
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
@@ -258,11 +258,11 @@ if __name__ == "__main__":
         # except only applying when importing torch from a build-isolation virtual
         # environment created by pip (`python -m build` does not seems to suffer from
         # this).
-        import wheel
+        import packaging
 
         pip_virtualenv = os.path.realpath(
             os.path.join(
-                os.path.dirname(wheel.__file__),
+                os.path.dirname(packaging.__file__),
                 "..",
                 "..",
                 "..",
