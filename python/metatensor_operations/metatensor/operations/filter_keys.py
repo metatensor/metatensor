@@ -14,10 +14,8 @@ from ._backend import (
 @torch_jit_script
 def filter_keys(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMap:
     """
-    Returns a :py:class:`TensorMap` with the key filtered according to the
-    :py:class:`Labels` passed in ``keys``. :py:class:`TensorMap`. The keys are given
-    by a :py:class:`Labels`. The names of the filter must be a selection of the names of
-    the tensor, filtering names that are not included is not allowed.
+    Returns a :py:class:`TensorMap` with the blocks filtered according to the
+    :py:class:`Labels` key selection passed in ``keys``.
 
     :param tensor: the :py:class:`TensorMap` from which the keys will be selected.
     :param keys: the :py:class:`Labels` containing the keys indexing blocks to
