@@ -21,7 +21,7 @@ def filter_keys(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
 
     :param tensor: the :py:class:`TensorMap` from which the keys will be selected.
 
-    :param keys: the :py:class:`Labels` containing the list of pairs keys-values to
+    :param keys: the :py:class:`Labels` containing the keys indexing blocks to
         retain from the tensor :py:class:`TensorMap`.
 
     :param copy: if :py:obj:`True`, the returned :py:class:`TensorMap` is constructed by
