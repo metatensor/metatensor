@@ -48,6 +48,7 @@ jobs:
 
       - name: Comment with download link
         uses: PicoCentauri/comment-artifact@v1
+        if: github.event.pull_request.head.repo.fork == false
         with:
           name: docs
           description: 📚 Download documentation for this pull-request
