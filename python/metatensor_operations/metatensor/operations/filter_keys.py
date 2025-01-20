@@ -20,7 +20,6 @@ def filter_keys(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
     the tensor, filtering names that are not included is not allowed.
 
     :param tensor: the :py:class:`TensorMap` from which the keys will be selected.
-
     :param keys: the :py:class:`Labels` containing the keys indexing blocks to
         retain from the tensor :py:class:`TensorMap`.
 
