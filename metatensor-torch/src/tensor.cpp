@@ -560,7 +560,8 @@ void TensorMapHolder::save(const std::string& path) const {
             ", only float64 is supported"
         );
     }
-    return metatensor::io::save(path, this->as_metatensor());
+
+    metatensor::io::save(path, this->as_metatensor());
 }
 
 torch::Tensor TensorMapHolder::save_buffer() const {

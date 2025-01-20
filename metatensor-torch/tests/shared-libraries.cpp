@@ -1,10 +1,8 @@
-#include <iostream>
-
-#include <catch.hpp>
-
 #include <metatensor/torch.hpp>
 
 #include "../src/internal/shared_libraries.cpp"
+
+#include <catch.hpp>
 
 
 TEST_CASE("List shared libraries") {

@@ -43,13 +43,16 @@ static void save_ivalue(const std::string& path, torch::IValue data) {
     if (data.isCustomClass()) {
         if (custom_class_is<TensorMapHolder>(data)) {
             auto tensor = data.toCustomClass<TensorMapHolder>();
-            return metatensor_torch::save(path, tensor);
+            metatensor_torch::save(path, tensor);
+            return;
         } else if (custom_class_is<TensorBlockHolder>(data)) {
             auto block = data.toCustomClass<TensorBlockHolder>();
-            return metatensor_torch::save(path, block);
+            metatensor_torch::save(path, block);
+            return;
         } else if (custom_class_is<LabelsHolder>(data)) {
             auto labels = data.toCustomClass<LabelsHolder>();
-            return metatensor_torch::save(path, labels);
+            metatensor_torch::save(path, labels);
+            return;
         }
     }
 

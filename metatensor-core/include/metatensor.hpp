@@ -254,8 +254,8 @@ public:
 
         this->data_ = std::move(other.data_);
         this->shape_ = std::move(other.shape_);
-        this->is_const_ = std::move(other.is_const_);
-        this->owned_data_ = std::move(other.owned_data_);
+        this->is_const_ = other.is_const_;
+        this->owned_data_ = other.owned_data_;
         this->deleter_ = std::move(other.deleter_);
 
         other.data_ = nullptr;
@@ -369,7 +369,7 @@ private:
     ///
     /// This allows creating an array (and in particular a set of Labels) with
     /// `NDArray({{1, 2}, {3, 4}, {5, 6}}, 2)`
-    NDArray(std::vector<std::initializer_list<T>> data, size_t size):
+    NDArray(const std::vector<std::initializer_list<T>>& data, size_t size):
         data_(nullptr),
         shape_({data.size(), size}),
         is_const_(false),
@@ -1643,7 +1643,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!
@@ -2118,7 +2118,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!
@@ -2531,7 +2531,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!
