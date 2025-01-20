@@ -55,8 +55,8 @@ TensorBlockHolder::TensorBlockHolder(
     }
     if (values_device != this->properties()->values().device()) {
         C10_THROW_ERROR(ValueError,
-                "cannot create TensorBlock: values and properties must be on the same device, "
-                "got " + values_device.str() + " and " + this->properties()->values().device().str()
+            "cannot create TensorBlock: values and properties must be on the same device, "
+            "got " + values_device.str() + " and " + this->properties()->values().device().str()
         );
     }
 }
@@ -159,16 +159,15 @@ torch::Tensor TensorBlockHolder::values() const {
 }
 
 void TensorBlockHolder::set_values(const torch::Tensor& new_values) {
-        throw std::runtime_error(
-            "Direct assignment to `values` is not possible. "
-            "Please use block.values[:] = new_values instead."
-        );
-    }
+    throw std::runtime_error(
+        "Direct assignment to `values` is not possible. "
+        "Please use block.values[:] = new_values instead."
+    );
+}
 
 Labels TensorBlockHolder::labels(uintptr_t axis) const {
     return torch::make_intrusive<LabelsHolder>(block_.labels(axis));
 }
-
 
 void TensorBlockHolder::add_gradient(const std::string& parameter, TensorBlock gradient) {
     // we need to move the tensor block in `add_gradient`, but we can not move
@@ -345,7 +344,8 @@ void TensorBlockHolder::save(const std::string& path) const {
             ", only float64 is supported"
         );
     }
-    return metatensor::io::save(path, this->as_metatensor());
+
+    metatensor::io::save(path, this->as_metatensor());
 }
 
 torch::Tensor TensorBlockHolder::save_buffer() const {

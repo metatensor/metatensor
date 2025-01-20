@@ -248,14 +248,14 @@ std::vector<torch::Tensor> NeighborsAutograd::backward(
     torch::autograd::AutogradContext* ctx,
     std::vector<torch::Tensor> outputs_grad
 ) {
-    auto distances_grad = outputs_grad[0];
+    const auto& distances_grad = outputs_grad[0];
 
-    auto saved_variables = ctx->get_saved_variables();
-    auto positions = saved_variables[0];
-    auto cell = saved_variables[1];
+    const auto& saved_variables = ctx->get_saved_variables();
+    const auto& positions = saved_variables[0];
+    const auto& cell = saved_variables[1];
 
-    auto distances = saved_variables[2];
-    auto samples = saved_variables[3];
+    const auto& distances = saved_variables[2];
+    const auto& samples = saved_variables[3];
 
     auto positions_grad = torch::Tensor();
     if (positions.requires_grad()) {

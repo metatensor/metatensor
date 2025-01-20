@@ -830,7 +830,7 @@ Labels LabelsHolder::load_buffer(torch::Tensor buffer) {
 
 
 void LabelsHolder::save(const std::string& path) const {
-    return metatensor::io::save(path, this->as_metatensor());
+    metatensor::io::save(path, this->as_metatensor());
 }
 
 torch::Tensor LabelsHolder::save_buffer() const {
