@@ -157,55 +157,53 @@ class DeviceWarning(RuntimeWarning):
     """
 
 
+class ArrayWrapper:
+    """Store together some Python array and it's shape as C-compatible data"""
+
+    __slots__ = ["array", "c_shape"]
+
+    def __init__(self, array, c_shape):
+        self.array = array
+        self.c_shape = c_shape
+
+
 # We keep wrappers of Python arrays alive by storing a reference to them in this
 # dictionary. Each value is stored under the `id(value)` key, which makes sure no two
 # values have the same key.
 _KNOWN_ARRAY_WRAPPERS = {}
 
+# cache array types by array length, since creating the type everytime is a bit slow
+_POSSIBLE_C_SHAPE_TYPES = [ctypes.ARRAY(c_uintptr_t, N) for N in range(64)]
 
-class ArrayWrapper:
-    """Small wrapper making Python arrays compatible with ``mts_array_t``."""
 
-    def __init__(self, array):
-        self.array = array
+def create_mts_array(array):
+    """
+    Create a ``mts_array_t`` corresponding to the given ``array``, which should be
+    either :py:class:`torch.Tensor` or :py:class:`numpy.ndarray`.
+    """
+    c_shape = _POSSIBLE_C_SHAPE_TYPES[len(array.shape)]()
+    c_shape[:] = array.shape
 
-        self._shape = ctypes.ARRAY(c_uintptr_t, len(array.shape))(*array.shape)
+    wrapper = ArrayWrapper(array, c_shape)
 
-        if _is_numpy_array(array):
-            mts_array_origin = _MTS_ARRAY_ORIGIN_NUMPY
-        elif _is_torch_array(array):
-            mts_array_origin = _MTS_ARRAY_ORIGIN_PYTORCH
-        else:
-            raise ValueError(f"unknown array type: {type(array)}")
+    if _is_numpy_array(array):
+        mts_array_origin = _MTS_ARRAY_ORIGIN_NUMPY
+    elif _is_torch_array(array):
+        mts_array_origin = _MTS_ARRAY_ORIGIN_PYTORCH
+    else:
+        raise ValueError(f"unknown array type: {type(array)}")
 
-        global _KNOWN_ARRAY_WRAPPERS
-        _KNOWN_ARRAY_WRAPPERS[id(self)] = self
+    global _KNOWN_ARRAY_WRAPPERS
+    _KNOWN_ARRAY_WRAPPERS[id(wrapper)] = wrapper
 
-        mts_array = mts_array_t()
-        # we use id(self) as the C API user-data "pointer", since we can use it together
-        # with `_KNOWN_ARRAY_WRAPPERS` to recover the corresponding Python object.
-        mts_array.ptr = id(self)
+    mts_array = mts_array_t.from_buffer_copy(_DEFAULT_MTS_ARRAY)
 
-        mts_array.origin = mts_array_origin
-        mts_array.data = _MTS_ARRAY_DATA
+    # we use id(wrapper) as the C API user-data "pointer", since we can use it together
+    # with `_KNOWN_ARRAY_WRAPPERS` to recover the corresponding Python object.
+    mts_array.ptr = id(wrapper)
+    mts_array.origin = mts_array_origin
 
-        mts_array.shape = _MTS_ARRAY_SHAPE
-        mts_array.reshape = _MTS_ARRAY_RESHAPE
-        mts_array.swap_axes = _MTS_ARRAY_SWAP_AXES
-
-        mts_array.create = _MTS_ARRAY_CREATE
-        mts_array.copy = _MTS_ARRAY_COPY
-        mts_array.destroy = _MTS_ARRAY_DESTROY
-
-        mts_array.move_samples_from = _MTS_ARRAY_MOVE_SAMPLES_FROM
-
-        self._mts_array = mts_array
-
-    def into_mts_array(self):
-        """
-        Get an mts_array_t instance for the wrapper array.
-        """
-        return self._mts_array
+    return mts_array
 
 
 @catch_exceptions
@@ -244,8 +242,8 @@ def _mts_array_data(this, data):
 def _mts_array_shape(this, shape_ptr, shape_count):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
-    shape_ptr[0] = wrapper._shape
-    shape_count[0] = len(wrapper._shape)
+    shape_ptr[0] = wrapper.c_shape
+    shape_count[0] = len(wrapper.c_shape)
 
 
 @catch_exceptions
@@ -257,7 +255,8 @@ def _mts_array_reshape(this, shape_ptr, shape_count):
         shape.append(shape_ptr[i])
 
     wrapper.array = wrapper.array.reshape(shape)
-    wrapper._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
+    wrapper.c_shape = _POSSIBLE_C_SHAPE_TYPES[len(shape)]()
+    wrapper.c_shape[:] = shape
 
 
 @catch_exceptions
@@ -266,7 +265,8 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
     wrapper.array = wrapper.array.swapaxes(axis_1, axis_2)
 
     shape = wrapper.array.shape
-    wrapper._shape = ctypes.ARRAY(c_uintptr_t, len(shape))(*shape)
+    wrapper.c_shape = _POSSIBLE_C_SHAPE_TYPES[len(shape)]()
+    wrapper.c_shape[:] = shape
 
 
 @catch_exceptions
@@ -283,8 +283,7 @@ def _mts_array_create(this, shape_ptr, shape_count, new_array):
     elif _is_torch_array(wrapper.array):
         array = torch.zeros(shape, dtype=dtype, device=wrapper.array.device)
 
-    new_wrapper = ArrayWrapper(array)
-    new_array[0] = new_wrapper.into_mts_array()
+    new_array[0] = create_mts_array(array)
 
 
 @catch_exceptions
@@ -296,8 +295,7 @@ def _mts_array_copy(this, new_array):
     elif _is_torch_array(wrapper.array):
         array = wrapper.array.clone()
 
-    new_wrapper = ArrayWrapper(array)
-    new_array[0] = new_wrapper.into_mts_array()
+    new_array[0] = create_mts_array(array)
 
 
 @catch_exceptions
@@ -359,3 +357,20 @@ def mts_array_origin_pytorch(this, origin):
 
 _MTS_ARRAY_ORIGIN_NUMPY = _cast_to_ctype_functype(mts_array_origin_numpy, "origin")
 _MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "origin")
+
+
+# The default value for all Python-provided `mts_array_t`. Only the first two members
+# will change, having a pre-allocated instance will make it faster to create new ones
+# with `mts_array_t.from_buffer_copy`.
+_DEFAULT_MTS_ARRAY = mts_array_t(
+    ptr=0,
+    origin=_cast_to_ctype_functype(lambda u: u, "origin"),
+    data=_MTS_ARRAY_DATA,
+    shape=_MTS_ARRAY_SHAPE,
+    reshape=_MTS_ARRAY_RESHAPE,
+    swap_axes=_MTS_ARRAY_SWAP_AXES,
+    create=_MTS_ARRAY_CREATE,
+    copy=_MTS_ARRAY_COPY,
+    destroy=_MTS_ARRAY_DESTROY,
+    move_samples_from=_MTS_ARRAY_MOVE_SAMPLES_FROM,
+)
