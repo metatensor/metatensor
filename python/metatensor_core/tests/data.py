@@ -28,11 +28,10 @@ def free_mts_array(array):
     array.destroy(array.ptr)
 
 
-class ArrayWrapperMixin:
+class MtsArrayMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         assert id(metatensor.data.mts_array_to_python_array(mts_array)) == id(array)
 
@@ -43,8 +42,7 @@ class ArrayWrapperMixin:
 
     def test_shape(self):
         array = self.create_array((2, 3, 4))
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         assert _get_shape(mts_array, self) == [2, 3, 4]
 
@@ -58,8 +56,7 @@ class ArrayWrapperMixin:
 
     def test_swap_axes(self):
         array = self.create_array((2, 3, 18, 23))
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         mts_array.swap_axes(mts_array.ptr, 1, 3)
         assert _get_shape(mts_array, self) == [2, 23, 18, 3]
@@ -70,8 +67,7 @@ class ArrayWrapperMixin:
         array = self.create_array((2, 3))
         array_ref = weakref.ref(array)
 
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         new_mts_array = mts_array_t()
         new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
@@ -86,7 +82,6 @@ class ArrayWrapperMixin:
         assert_equal(new_array, np.zeros((18, 4)))
 
         del array
-        del wrapper
         gc.collect()
 
         # there is still one reference to the array through mts_array
@@ -104,8 +99,7 @@ class ArrayWrapperMixin:
         array = self.create_array((2, 3, 4))
         array[1, :, :] = 3
         array[1, 2, :] = 5
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         copy = mts_array_t()
         status = mts_array.copy(mts_array.ptr, copy)
@@ -122,13 +116,11 @@ class ArrayWrapperMixin:
     def test_move_samples_from(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
-        wrapper = metatensor.data.ArrayWrapper(array)
-        mts_array = wrapper.into_mts_array()
+        mts_array = metatensor.data.create_mts_array(array)
 
         other = self.create_array((1, 3, 4))
         other[:] = 2.0
-        wrapper_other = metatensor.data.ArrayWrapper(other)
-        mts_array_other = wrapper_other.into_mts_array()
+        mts_array_other = metatensor.data.create_mts_array(other)
 
         move = mts_sample_mapping_t(input=0, output=1)
         move_array = ctypes.ARRAY(mts_sample_mapping_t, 1)(move)
@@ -163,7 +155,7 @@ class ArrayWrapperMixin:
         free_mts_array(mts_array_other)
 
 
-class TestNumpyData(ArrayWrapperMixin):
+class TestNumpyData(MtsArrayMixin):
     def expected_origin(self):
         return "metatensor.data.array.numpy"
 
@@ -176,7 +168,7 @@ class TestNumpyData(ArrayWrapperMixin):
 
 if HAS_TORCH:
 
-    class TestTorchData(ArrayWrapperMixin):
+    class TestTorchData(MtsArrayMixin):
         def expected_origin(self):
             return "metatensor.data.array.torch"
 
@@ -209,20 +201,24 @@ metatensor.data.register_external_data_wrapper(
 
 
 @metatensor.utils.catch_exceptions
+def get_test_origin(this, origin):
+    origin[0] = TEST_ORIGIN
+
+
+GET_TEST_ORIGIN = metatensor.data.array._cast_to_ctype_functype(
+    get_test_origin, "origin"
+)
+
+
+@metatensor.utils.catch_exceptions
 def create_test_array(shape_ptr, shape_count, array):
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
     data = np.zeros(shape)
-    wrapper = metatensor.data.array.ArrayWrapper(data)
-    mts_array = wrapper.into_mts_array()
-
-    @metatensor.utils.catch_exceptions
-    def test_origin(this, origin):
-        origin[0] = TEST_ORIGIN
-
-    mts_array.origin = mts_array.origin.__class__(test_origin)
+    mts_array = metatensor.data.create_mts_array(data)
+    mts_array.origin = GET_TEST_ORIGIN
 
     array[0] = mts_array
 

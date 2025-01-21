@@ -10,10 +10,10 @@ from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from .data import (
     Array,
-    ArrayWrapper,
     Device,
     DeviceWarning,
     DType,
+    create_mts_array,
     mts_array_to_python_array,
 )
 from .labels import Labels
@@ -108,11 +108,9 @@ class TensorBlock:
         for i, component in enumerate(components):
             components_array[i] = component._as_mts_labels_t()
 
-        original_values = values
-        values = ArrayWrapper(values)
-
+        mts_array = create_mts_array(values)
         self._actual_ptr = self._lib.mts_block(
-            values.into_mts_array(),
+            mts_array,
             samples._as_mts_labels_t(),
             components_array,
             len(components_array),
@@ -120,10 +118,10 @@ class TensorBlock:
         )
         _check_pointer(self._actual_ptr)
 
-        self._cached_dtype = data.array_dtype(original_values)
-        self._cached_device = data.array_device(original_values)
+        self._cached_dtype = data.array_dtype(values)
+        self._cached_device = data.array_device(values)
 
-        if not data.array_device_is_cpu(original_values):
+        if not data.array_device_is_cpu(values):
             warnings.warn(
                 "Values and labels for this block are on different devices: "
                 f"labels are always on CPU, and values are on device '{self.device}'. "
