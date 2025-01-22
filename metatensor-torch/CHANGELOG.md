@@ -17,19 +17,24 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.7.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.0) - 2025-01-22
+
 ### Changed
 
 - Custom data stored in `System` is now stored as `TensorMap` instead of
   `TensorBlock`. This allow for more kinds of data to be stored.
-- `System` can now be serialized and saved to a file using
-  `metatensor.torch.atomistic.save` and
-  `metatensor.torch.atomistic.load_system`. For the initial implementation,
-  these functions are only accessible from Python.
 
 - `metatensor_torch::TorchLabels` is now `metatensor_torch::Labels`; and
   similarly for `metatensor_torch::TensorBlock` and similarly for
   `metatensor_torch::TensorMap`. We temporarily provide type aliases for
   backward compatibilty.
+
+### Added
+
+- `System` can now be serialized and saved to a file using
+  `metatensor.torch.atomistic.save` and
+  `metatensor.torch.atomistic.load_system`. For the initial implementation,
+  these functions are only accessible from Python.
 
 ## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
 
