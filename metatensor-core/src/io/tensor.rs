@@ -83,15 +83,6 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     let path = String::from("keys.npy");
     let keys = load_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
 
-    if archive.by_name("blocks/0/values/data.npy").is_ok() {
-        return Err(Error::Serialization(
-            "trying to load a file in the old metatensor format, please convert \
-            it to the new format first using the script at \
-            https://github.com/metatensor/metatensor/blob/main/python/scripts/convert-metatensor-mts.py
-            ".into()
-        ));
-    }
-
     let mut blocks = Vec::new();
     for block_i in 0..keys.count() {
         blocks.push(read_single_block(
