@@ -122,7 +122,7 @@ def test_default_invariant_keys(equivariant_tensor):
     f = EquivariantLinear(
         in_keys=x.keys,
         in_features=[len(x.block(key).properties) for key in x.keys],
-        out_features=[len(x.block(key).properties) - 3 for key in x.keys],
+        out_features=[len(x.block(key).properties) + 3 for key in x.keys],
         bias=True,  # this should only bias the invariant blocks
         dtype=torch.float64,
     )
