@@ -127,7 +127,7 @@ class sdist_generate_data(sdist):
     """
     Create a sdist with an additional generated files:
         - `git_version_info`
-        - `metatensor-core-cxx-*.tar.gz`
+        - `metatensor-torch-cxx-*.tar.gz`
     """
 
     def run(self):
@@ -141,7 +141,7 @@ class sdist_generate_data(sdist):
         super().run()
 
         os.unlink("git_version_info")
-        for path in glob.glob("metatensor-core-cxx-*.tar.gz"):
+        for path in glob.glob("metatensor-torch-cxx-*.tar.gz"):
             os.unlink(path)
 
 

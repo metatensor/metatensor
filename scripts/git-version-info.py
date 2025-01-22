@@ -132,8 +132,8 @@ if __name__ == "__main__":
 
     if result.returncode != 0 or not os.path.samefile(result.stdout.strip(), ROOT):
         warn_and_exit(
-            "the git root is not featomic repository, if you are trying to build "
-            "featomic from source please use a git checkout"
+            "the git root is not metatensor repository, if you are trying to build "
+            "metatensor from source please use a git checkout"
         )
 
     print(n_commits_since_last_tag(tag_prefix))
