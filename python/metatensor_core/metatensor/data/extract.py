@@ -6,7 +6,12 @@ import numpy as np
 from .._c_api import c_uintptr_t, mts_array_t, mts_data_origin_t
 from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
-from .array import _object_from_ptr, _origin_numpy, _origin_pytorch, _register_origin
+from .array import (
+    _KNOWN_ARRAY_WRAPPERS,
+    _origin_numpy,
+    _origin_pytorch,
+    _register_origin,
+)
 
 
 try:
@@ -77,7 +82,7 @@ def mts_array_to_python_array(mts_array, parent=None):
     """
     origin = data_origin(mts_array)
     if _is_python_origin(origin):
-        return _object_from_ptr(mts_array.ptr).array
+        return _KNOWN_ARRAY_WRAPPERS[mts_array.ptr].array
     elif origin in _ADDITIONAL_ORIGINS:
         return _ADDITIONAL_ORIGINS[origin](mts_array, parent=parent)
     else:

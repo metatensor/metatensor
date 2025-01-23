@@ -11,7 +11,7 @@ import numpy as np
 from .._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t
 from .._c_lib import _get_library
 from ..block import TensorBlock
-from ..data.array import ArrayWrapper, _is_numpy_array, _is_torch_array
+from ..data.array import _is_numpy_array, _is_torch_array, create_mts_array
 from ..utils import catch_exceptions
 from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
@@ -36,8 +36,7 @@ def create_numpy_array(shape_ptr, shape_count, array):
         shape.append(shape_ptr[i])
 
     data = np.empty(shape, dtype=np.float64)
-    wrapper = ArrayWrapper(data)
-    array[0] = wrapper.into_mts_array()
+    array[0] = create_mts_array(data)
 
 
 @catch_exceptions
@@ -55,8 +54,7 @@ def create_torch_array(shape_ptr, shape_count, array):
         shape.append(shape_ptr[i])
 
     data = torch.empty(shape, dtype=torch.float64, device="cpu")
-    wrapper = ArrayWrapper(data)
-    array[0] = wrapper.into_mts_array()
+    array[0] = create_mts_array(data)
 
 
 def load_block(
