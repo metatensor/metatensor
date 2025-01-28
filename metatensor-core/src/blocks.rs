@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
+use crate::labels::LabelValue;
 use crate::utils::ConstCString;
 use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
@@ -230,12 +231,37 @@ impl TensorBlock {
             )));
         }
 
-        let max_sample = self.samples.count();
-        for sample in &*gradient.samples {
-            if sample[0].isize() < 0 || sample[0].usize() >= max_sample {
+        if gradient.samples.count() > 0 {
+            let mut min_sample_value = LabelValue::new(0);
+            let mut max_sample_value = LabelValue::new(0);
+            if gradient.samples.is_sorted() {
+                // only check the first and last entry
+                min_sample_value = gradient.samples[0][0];
+                let last = gradient.samples.count() - 1;
+                max_sample_value = gradient.samples[last][0];
+            } else {
+                // check everything
+                for sample in &*gradient.samples {
+                    let sample_value = sample[0];
+                    if sample_value < min_sample_value {
+                        min_sample_value = sample_value;
+                    } else if sample_value > max_sample_value {
+                        max_sample_value = sample_value;
+                    }
+                }
+            }
+
+            if min_sample_value.i32() < 0 {
                 return Err(Error::InvalidParameter(format!(
-                    "invalid value for the 'sample' in gradient samples: we got \
-                    {}, but the values contain {} samples", sample[0], max_sample
+                    "invalid value for the 'sample' dimension in gradient samples: \
+                    all values should be positive, but we got {}", min_sample_value
+                )));
+            }
+
+            if max_sample_value.usize() >= self.samples.count() {
+                return Err(Error::InvalidParameter(format!(
+                    "invalid value for the 'sample' dimension in gradient samples: we got \
+                    {}, but the values contain {} samples", max_sample_value, self.samples.count()
                 )));
             }
         }
