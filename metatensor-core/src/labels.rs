@@ -379,7 +379,11 @@ impl Labels {
     pub fn iter(&self) -> Iter {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
-            chunks: self.values.chunks_exact(self.names.len())
+            ptr: self.values.as_ptr(),
+            cur: 0,
+            len: self.count(),
+            chunk_len: self.size(),
+            phantom: std::marker::PhantomData,
         };
     }
 
@@ -548,20 +552,46 @@ impl Labels {
 
 /// iterator over `Labels` entries
 pub struct Iter<'a> {
-    chunks: std::slice::ChunksExact<'a, LabelValue>,
+    /// start of the labels values
+    ptr: *const LabelValue,
+    /// Current entry index
+    cur: usize,
+    /// number of entries
+    len: usize,
+    /// size of an entry/the labels
+    chunk_len: usize,
+    phantom: std::marker::PhantomData<&'a LabelValue>,
 }
 
 impl<'a> Iterator for Iter<'a> {
     type Item = &'a [LabelValue];
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.chunks.next()
+        if self.cur < self.len {
+            unsafe {
+                // SAFETY: this should be in-bounds
+                let data = self.ptr.add(self.cur * self.chunk_len);
+                self.cur += 1;
+                // SAFETY: the pointer should be valid for 'a
+                Some(std::slice::from_raw_parts(data, self.chunk_len))
+            }
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len - self.cur;
+        return (remaining, Some(remaining));
     }
 }
 
 impl ExactSizeIterator for Iter<'_> {
+    #[inline]
     fn len(&self) -> usize {
-        self.chunks.len()
+        self.len
     }
 }
 
@@ -575,6 +605,8 @@ impl<'a> IntoIterator for &'a Labels {
 
 impl std::ops::Index<usize> for Labels {
     type Output = [LabelValue];
+
+    #[inline]
     fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
