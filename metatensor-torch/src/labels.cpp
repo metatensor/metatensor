@@ -13,16 +13,18 @@ using namespace metatensor_torch;
 /// Check that `values` is a `shape_length`-dimensional array of 32-bit
 /// integers, or convert it to be so.
 static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_length, const std::string& context) {
-    if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
-        C10_THROW_ERROR(ValueError,
-            context + " must be an Tensor of 32-bit integers"
-       );
-    }
+    if (values.numel() > 0) {   
+        if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
+            C10_THROW_ERROR(ValueError,
+                context + " must be a Tensor of 32-bit integers"
+        );
+        }
 
     if (values.sizes().size() != shape_length) {
         C10_THROW_ERROR(ValueError,
             context + " must be a " + std::to_string(shape_length) + "D Tensor"
         );
+    }
     }
 
     return values.to(torch::kI32);
@@ -119,10 +121,12 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     values_(normalize_int32_tensor(values, 2, "Labels values")),
     labels_(torch::nullopt)
 {
-    if (values_.sizes()[1] != names_.size()) {
-        C10_THROW_ERROR(ValueError,
-            "invalid Labels: the names must have an entry for each column of the array"
-        );
+    if (values_.numel() > 0) {
+        if (values_.sizes()[1] != names_.size()) {
+            C10_THROW_ERROR(ValueError,
+                "invalid Labels: the names must have an entry for each column of the array"
+            );
+        }
     }
 
     labels_ = metatensor::Labels(
