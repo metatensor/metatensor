@@ -65,7 +65,7 @@ def test_constructor_errors():
     with pytest.raises(RuntimeError, match=message):
         _ = Labels(names="test", values=(3, 4))
 
-    message = "Labels values must be an Tensor of 32-bit integers"
+    message = "Labels values must be a Tensor of 32-bit integers"
     with pytest.raises(ValueError, match=message):
         _ = Labels(names="test", values=torch.Tensor([[0, 0], [0, 1]]))
 
