@@ -18,7 +18,7 @@ static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_l
             C10_THROW_ERROR(ValueError,
                 context + " must be a Tensor of 32-bit integers"
         );
-        }
+    }
 
     if (values.sizes().size() != shape_length) {
         C10_THROW_ERROR(ValueError,
@@ -121,12 +121,10 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     values_(normalize_int32_tensor(values, 2, "Labels values")),
     labels_(torch::nullopt)
 {
-    if (values_.numel() > 0) {
-        if (values_.sizes()[1] != names_.size()) {
-            C10_THROW_ERROR(ValueError,
-                "invalid Labels: the names must have an entry for each column of the array"
-            );
-        }
+    if (values_.sizes()[1] != names_.size()) {
+        C10_THROW_ERROR(ValueError,
+            "invalid Labels: the names must have an entry for each column of the array"
+        );
     }
 
     labels_ = metatensor::Labels(
