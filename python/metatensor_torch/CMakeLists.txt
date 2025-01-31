@@ -62,4 +62,18 @@ else()
     message(STATUS "Using internal metatensor-torch from ${METATENSOR_TORCH_SOURCE_DIR}")
 
     add_subdirectory("${METATENSOR_TORCH_SOURCE_DIR}" metatensor-torch)
+
+    if (LINUX)
+        set_target_properties(
+            # when loading the libraries from a Python installation,
+            # $ORIGIN/../../../lib is where libmetatensor.so will be, and
+            # $ORIGIN/../../../../torch/lib is where libtorch.so will be.
+            metatensor_torch PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH};$ORIGIN/../../../lib;$ORIGIN/../../../../torch/lib"
+        )
+    elseif(APPLE)
+        set_target_properties(
+            # same as above, but `$ORIGIN` is `@loader_path` on macOS
+            metatensor_torch PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path/../../../lib;@loader_path/../../../../torch/lib"
+        )
+    endif()
 endif()
