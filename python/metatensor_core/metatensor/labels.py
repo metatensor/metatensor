@@ -282,8 +282,8 @@ class Labels:
             raise ValueError("`values` must be a numpy ndarray")
 
         if len(values) == 0:
-            # Empty labels
-            values = np.empty(values.shape, dtype=np.int32)
+            # Explicitly define empty labels
+            values = np.empty((0, len(names)), dtype=np.int32)
         if len(values.shape) != 2:
             # make sure the array is 2D
             raise ValueError("`values` must be a 2D array")
@@ -331,7 +331,7 @@ class Labels:
                       is transformed into a list with one element, i.e.
                       ``names="a"`` is the same as ``names=["a"]``.
         """
-        return Labels(names=names, values=np.array([]))
+        return Labels(names=names, values=np.empty((0, len(names))))
 
     @staticmethod
     def range(name: str, end: int) -> "Labels":
