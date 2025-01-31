@@ -101,7 +101,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5']
+        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5', '2.6']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-22.04', 'ubuntu-22.04-arm', 'macos-13', 'macos-14', 'windows-2022']
         exclude:
@@ -118,6 +118,7 @@ jobs:
           - {os: macos-13, arch: x86_64, torch-version: '2.3'}
           - {os: macos-13, arch: x86_64, torch-version: '2.4'}
           - {os: macos-13, arch: x86_64, torch-version: '2.5'}
+          - {os: macos-13, arch: x86_64, torch-version: '2.6'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
@@ -145,7 +146,7 @@ jobs:
             arch: x86_64
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
-          # add the right python version for each torch version
+          # add the right python version image for each torch version
           - {torch-version: '1.12', cibw-python: 'cp310-*'}
           - {torch-version: '1.13', cibw-python: 'cp310-*'}
           - {torch-version: '2.0', cibw-python: 'cp311-*'}
@@ -154,6 +155,19 @@ jobs:
           - {torch-version: '2.3', cibw-python: 'cp312-*'}
           - {torch-version: '2.4', cibw-python: 'cp312-*'}
           - {torch-version: '2.5', cibw-python: 'cp312-*'}
+          - {torch-version: '2.6', cibw-python: 'cp312-*'}
+          # set the right manylinux image to use
+          - {torch-version: '1.12', manylinux-version: "2014"}
+          - {torch-version: '1.13', manylinux-version: "2014"}
+          - {torch-version: '2.0', manylinux-version: "2014"}
+          - {torch-version: '2.1', manylinux-version: "2014"}
+          - {torch-version: '2.2', manylinux-version: "2014"}
+          - {torch-version: '2.3', manylinux-version: "2014"}
+          - {torch-version: '2.4', manylinux-version: "2014"}
+          - {torch-version: '2.5', manylinux-version: "2014"}
+          # only torch >+ 2.6 on arm64-linux needs the newer manylinux
+          - {torch-version: '2.6', arch: arm64, manylinux-version: "_2_28"}
+          - {torch-version: '2.6', arch: x86_64, manylinux-version: "2014"}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,7 +189,10 @@ jobs:
 
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
-        run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
+        run: |
+          docker buildx build \
+              -t rustc-manylinux${{ matrix.manylinux-version }}_${{ matrix.cibw-arch }} \
+              python/scripts/rustc-manylinux${{ matrix.manylinux-version }}_${{ matrix.cibw-arch }}
 
       - name: build metatensor-torch wheel
         run: python -m cibuildwheel python/metatensor_torch
@@ -184,8 +201,8 @@ jobs:
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw-arch }}
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2014_x86_64
-          CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux2014_aarch64
+          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux${{ matrix.manylinux-version }}_x86_64
+          CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux${{ matrix.manylinux-version }}_aarch64
           # METATENSOR_NO_LOCAL_DEPS is set to 1 when building a tag of
           # metatensor-torch, which will force to use the version of
           # metatensor-core already released on PyPI. Otherwise, this will use
@@ -441,13 +458,13 @@ jobs:
         include:
           - os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.6.0%2Bcpu.zip
           - os: macos-14
             rust-target: aarch64-apple-darwin
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.5.1.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.6.0.zip
           - os: windows-2022
             rust-target: x86_64-pc-windows-msvc
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.5.1%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.6.0%2Bcpu.zip
     steps:
       - uses: actions/checkout@v4
         with:

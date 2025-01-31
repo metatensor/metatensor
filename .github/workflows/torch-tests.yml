@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            torch-version: 1.12.*
+            torch-version: "1.12"
             python-version: "3.10"
             cargo-test-flags: --release
             do-valgrind: true
@@ -27,18 +27,18 @@ jobs:
           - os: ubuntu-20.04
             container: ubuntu:20.04
             extra-name: ", cmake 3.16"
-            torch-version: 2.5.*
+            torch-version: "2.6"
             python-version: "3.12"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-14
-            torch-version: 2.5.*
+            torch-version: "2.6"
             python-version: "3.12"
             cargo-test-flags: --release
 
           - os: windows-2022
-            torch-version: 2.2.*
+            torch-version: "2.6"
             python-version: "3.12"
             cargo-test-flags: --release
     steps:
