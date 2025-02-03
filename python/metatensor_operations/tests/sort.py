@@ -163,6 +163,20 @@ def tensor_with_empty_block_sorted():
     return TensorMap(keys, [block_2, block_3, block_1])
 
 
+def tensor_with_single_empty_block():
+    return TensorMap(
+        Labels.single(),
+        [
+            TensorBlock(
+                samples=Labels.empty(["_"]),
+                components=[],
+                properties=Labels.single(),
+                values=np.empty((0, 1)),
+            )
+        ],
+    )
+
+
 @pytest.fixture
 def tensor_sorted_ascending():
     """
@@ -377,6 +391,8 @@ def test_sort_empty_block(tensor_with_empty_block, tensor_with_empty_block_sorte
         metatensor.sort_block(tensor_with_empty_block.block(2)),
         tensor_with_empty_block_sorted.block(1),
     )
+    # Check that this command does not raise an error
+    metatensor.sort(tensor_with_single_empty_block())
 
 
 def test_raise_error(tensor, tensor_sorted_ascending):
