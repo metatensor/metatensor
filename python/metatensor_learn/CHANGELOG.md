@@ -17,6 +17,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.3.1) - 2025-02-03
+
+### Fixed
+
+- Indexing inside a `Dataset` is now O(1) instead of O(N) (#790)
+- Fixed a bug with the default `invariant_keys` in `metatensor.learn.nn` modules (#785)
+
+
 ## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.3.0) - 2024-10-30
 
 ### Added
