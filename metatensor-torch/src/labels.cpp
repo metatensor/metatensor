@@ -15,7 +15,7 @@ using namespace metatensor_torch;
 static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_length, const std::string& context) {
     // if the tensor is empty, make sure the shape is (0, len(sample_names))
     if (!values.numel()) {
-        values = torch::empty(values.sizes(), torch::TensorOptions().dtype(torch::kInt32));
+        values = torch::empty(values.sizes(), torch::TensorOptions().dtype(torch::kInt32).device(values.device()));
     }
 
     if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
