@@ -38,8 +38,7 @@ TEST_CASE("Labels") {
         CHECK(empty->size() == 0);
         CHECK(empty->count() == 0);
 
-        // TODO
-        // CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
+        CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
     }
 
     SECTION("position") {
