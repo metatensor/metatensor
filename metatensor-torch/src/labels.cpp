@@ -13,10 +13,15 @@ using namespace metatensor_torch;
 /// Check that `values` is a `shape_length`-dimensional array of 32-bit
 /// integers, or convert it to be so.
 static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_length, const std::string& context) {
+    // if the tensor is empty, make sure the shape is (0, len(sample_names))
+    if (!values.numel()) {
+        values = torch::empty(values.sizes(), torch::TensorOptions().dtype(torch::kInt32).device(values.device()));
+    }
+
     if (!torch::can_cast(values.scalar_type(), torch::kI32)) {
         C10_THROW_ERROR(ValueError,
-            context + " must be an Tensor of 32-bit integers"
-       );
+            context + " must be a Tensor of 32-bit integers"
+        );
     }
 
     if (values.sizes().size() != shape_length) {
