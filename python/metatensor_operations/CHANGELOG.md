@@ -17,9 +17,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.1) - 2025-02-04
+
 ### Added
 
-- Added a new `filter_blocks` function to remove some blocks from a TensorMap according to a selection
+- Added a new `filter_blocks` function to remove some blocks from a TensorMap
+  according to a selection (#823)
+
+### Fixed
+
+- Fixed the `sort` function when dealing with empty blocks (#840)
 
 ## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.0) - 2024-10-29
 
