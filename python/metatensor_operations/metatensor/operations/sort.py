@@ -9,6 +9,7 @@ from ._backend import (
     torch_jit_is_scripting,
     torch_jit_script,
 )
+from .zeros_like import zeros_like_block
 
 
 def _sort_single_gradient_block(
@@ -100,7 +101,7 @@ def _sort_single_block(
     Sorts a single TensorBlock without the user input checking and sorting of gradients
     """
     if len(block) == 0:
-        return block
+        return zeros_like_block(block)
 
     sample_names = block.samples.names
     sample_values = block.samples.values
