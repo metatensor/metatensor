@@ -100,7 +100,6 @@ TEST_CASE("Set operations") {
         auto second_mapping = std::vector<int64_t>(second.count());
 
         auto intersection = first.set_intersection(second, first_mapping, second_mapping);
-
         CHECK(intersection.size() == 2);
         CHECK(intersection.names()[0] == std::string("aa"));
         CHECK(intersection.names()[1] == std::string("bb"));
@@ -115,6 +114,42 @@ TEST_CASE("Set operations") {
 
         expected = std::vector<int64_t>{-1, 0, -1};
         CHECK(second_mapping == expected);
+    }
+
+    SECTION("difference") {
+        auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto mapping = std::vector<int64_t>(first.count());
+
+        auto difference = first.set_difference(second, mapping);
+        CHECK(difference.size() == 2);
+        CHECK(difference.names()[0] == std::string("aa"));
+        CHECK(difference.names()[1] == std::string("bb"));
+
+        CHECK(difference.count() == 1);
+        CHECK(difference.values()(0, 0) == 0);
+        CHECK(difference.values()(0, 1) == 1);
+
+        auto expected = std::vector<int64_t>{0, -1};
+        CHECK(mapping == expected);
+
+        mapping.resize(second.count());
+        difference = second.set_difference(first, mapping);
+
+        CHECK(difference.size() == 2);
+        CHECK(difference.names()[0] == std::string("aa"));
+        CHECK(difference.names()[1] == std::string("bb"));
+
+        CHECK(difference.count() == 2);
+        CHECK(difference.values()(0, 0) == 2);
+        CHECK(difference.values()(0, 1) == 3);
+
+        CHECK(difference.values()(1, 0) == 4);
+        CHECK(difference.values()(1, 1) == 5);
+
+        expected = std::vector<int64_t>{0, -1, 1};
+        CHECK(mapping == expected);
     }
 
     SECTION("select") {
