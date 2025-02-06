@@ -17,6 +17,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-core C
+
+#### Added
+
+- `mts_labels_difference` for finding the set difference between two `mts_labels_t`
+
 ## [Version 0.1.12](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.12) - 2025-02-17
 
 ### Changed

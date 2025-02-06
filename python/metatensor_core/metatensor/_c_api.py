@@ -151,6 +151,15 @@ def setup_functions(lib):
     ]
     lib.mts_labels_intersection.restype = _check_status
 
+    lib.mts_labels_difference.argtypes = [
+        mts_labels_t,
+        mts_labels_t,
+        POINTER(mts_labels_t),
+        POINTER(ctypes.c_int64),
+        c_uintptr_t,
+    ]
+    lib.mts_labels_difference.restype = _check_status
+
     lib.mts_labels_select.argtypes = [
         mts_labels_t,
         mts_labels_t,

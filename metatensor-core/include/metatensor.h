@@ -448,6 +448,35 @@ mts_status_t mts_labels_intersection(struct mts_labels_t first,
                                      uintptr_t second_mapping_count);
 
 /**
+ * Take the difference of two `mts_labels_t`.
+ *
+ * If requested, this function can also give the positions in the difference
+ * where each entry of the input `mts_labels_t` ended up.
+ *
+ * This function allocates memory for `result` which must be released
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param first first set of labels
+ * @param second second set of labels
+ * @param result empty labels, on output will contain the union of `first` and
+ *        `second`
+ * @param first_mapping if you want the mapping from the positions of entries
+ *        in `first` to the positions in `result`, this should be a pointer to
+ *        an array containing `first.count` elements, to be filled by this
+ *        function. Otherwise it should be a `NULL` pointer. If an entry in
+ *        `first` is not used in `result`, the mapping will be set to -1.
+ * @param first_mapping_count number of elements in the `first_mapping` array
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_difference(struct mts_labels_t first,
+                                   struct mts_labels_t second,
+                                   struct mts_labels_t *result,
+                                   int64_t *first_mapping,
+                                   uintptr_t first_mapping_count);
+
+/**
  * Select entries in the `labels` that match the `selection`.
  *
  * The selection's names must be a subset of the name of the `labels` names.

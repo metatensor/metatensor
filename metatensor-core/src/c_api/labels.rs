@@ -526,6 +526,64 @@ pub unsafe extern fn mts_labels_intersection(
     })
 }
 
+/// Take the difference of two `mts_labels_t`.
+///
+/// If requested, this function can also give the positions in the difference
+/// where each entry of the input `mts_labels_t` ended up.
+///
+/// This function allocates memory for `result` which must be released
+/// `mts_labels_free` when you don't need it anymore.
+///
+/// @param first first set of labels
+/// @param second second set of labels
+/// @param result empty labels, on output will contain the union of `first` and
+///        `second`
+/// @param first_mapping if you want the mapping from the positions of entries
+///        in `first` to the positions in `result`, this should be a pointer to
+///        an array containing `first.count` elements, to be filled by this
+///        function. Otherwise it should be a `NULL` pointer. If an entry in
+///        `first` is not used in `result`, the mapping will be set to -1.
+/// @param first_mapping_count number of elements in the `first_mapping` array
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern fn mts_labels_difference(
+    first: mts_labels_t,
+    second: mts_labels_t,
+    result: *mut mts_labels_t,
+    first_mapping: *mut i64,
+    first_mapping_count: usize,
+) -> mts_status_t {
+    let unwind_wrapper = std::panic::AssertUnwindSafe(result);
+    catch_unwind(|| {
+        let (first_mapping, _) = labels_set_common(
+            "difference",
+            &first,
+            &second,
+            first_mapping,
+            first_mapping_count,
+            std::ptr::null_mut(),
+            0
+        )?;
+
+        let first = &*first.internal_ptr_.cast::<Labels>();
+        let second = &*second.internal_ptr_.cast::<Labels>();
+
+        let result_rust = first.difference(
+            second,
+            first_mapping,
+        )?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = rust_to_mts_labels(Arc::new(result_rust));
+
+        Ok(())
+    })
+}
+
 /// Select entries in the `labels` that match the `selection`.
 ///
 /// The selection's names must be a subset of the name of the `labels` names.
