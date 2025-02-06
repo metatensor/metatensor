@@ -19,7 +19,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
-- `Labels::difference` for finding the set difference between two labels (#710).
+- `Labels::difference` for finding the set difference between two labels (#710)
 
 ### metatensor-core Julia
 
