@@ -117,6 +117,27 @@ TEST_CASE("Set operations") {
         CHECK(second_mapping == expected);
     }
 
+    SECTION("difference") {
+        auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
+        auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
+
+        auto first_mapping = std::vector<int64_t>(first.count());
+
+        auto difference = first.set_difference(second, first_mapping);
+
+        CHECK(difference.size() == 4);
+        CHECK(difference.names()[0] == std::string("aa"));
+        CHECK(difference.names()[1] == std::string("bb"));
+
+        CHECK(difference.count() == 2);
+        const auto& values = difference.values();
+        CHECK(values(0, 0) == 0);
+        CHECK(values(0, 1) == 1);
+
+        auto expected = std::vector<int64_t>{0, -1};
+        CHECK(first_mapping == expected);
+    }
+
     SECTION("select") {
         // selection with a subset of names
         auto labels = Labels({"aa", "bb"}, {{1, 1}, {1, 2}, {3, 2}, {2, 1}});
