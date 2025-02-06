@@ -469,7 +469,7 @@ pub unsafe extern fn mts_labels_union(
 ///
 /// @param first first set of labels
 /// @param second second set of labels
-/// @param result empty labels, on output will contain the union of `first` and
+/// @param result empty labels, on output will contain the intersection of `first` and
 ///        `second`
 /// @param first_mapping if you want the mapping from the positions of entries
 ///        in `first` to the positions in `result`, this should be a pointer to
