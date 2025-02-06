@@ -596,6 +596,25 @@ std::tuple<TorchLabels, torch::Tensor, torch::Tensor> LabelsHolder::intersection
     );
 }
 
+Labels LabelsHolder::difference(const Labels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in `Labels.difference`: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
+    auto result = LabelsHolder(labels_->difference(other->labels_.value()));
+    return result.to(device);
+}
+
 torch::Tensor LabelsHolder::select(const TorchLabels& selection) const {
     if (!labels_.has_value() || !selection->labels_.has_value()) {
         C10_THROW_ERROR(ValueError,

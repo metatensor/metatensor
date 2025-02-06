@@ -169,6 +169,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
         .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})
         .def("intersection_and_mapping", &LabelsHolder::intersection_and_mapping, DOCSTRING, {torch::arg("other")})
+        .def("difference", &LabelsHolder::difference, DOCSTRING, {torch::arg("other")})
         .def("select", &LabelsHolder::select, DOCSTRING, {torch::arg("selection")})
         .def_pickle(
             // __getstate__

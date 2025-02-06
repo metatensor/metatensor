@@ -18,6 +18,19 @@
 
 #include "metatensor.h"
 
+/**
+ * Take the difference.
+ * 
+ * More docs.
+ */
+mts_status_t mts_labels_difference(
+  struct mts_labels_t first,
+  struct mts_labels_t second,
+  struct mts_labels_t *result
+) {
+  result = &first;
+}
+
 /// This file contains the C++ API to metatensor, manually built on top of the C
 /// API defined in `metatensor.h`. This API uses the standard C++ library where
 /// convenient, but also allow to drop back to the C API if required, by
@@ -1499,6 +1512,22 @@ public:
             first_mapping_count,
             second_mapping,
             second_mapping_count
+        ));
+
+        return Labels(result);
+    }
+
+    /// Take the difference of these `Labels` with `other`.
+    ///
+    /// More docs.
+    Labels difference(const Labels& other) const {
+        mts_labels_t result;
+        std::memset(&result, 0, sizeof(result));
+
+        details::check_status(mts_labels_difference(
+            this->labels_,
+            other.labels_,
+            &result
         ));
 
         return Labels(result);
