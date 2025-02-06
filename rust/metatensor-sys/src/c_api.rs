@@ -383,6 +383,14 @@ extern "C" {
         second_mapping_count: usize,
     ) -> mts_status_t;
     #[must_use]
+    pub fn mts_labels_difference(
+        first: mts_labels_t,
+        second: mts_labels_t,
+        result: *mut mts_labels_t,
+        first_mapping: *mut i64,
+        first_mapping_count: usize,
+    ) -> mts_status_t;
+    #[must_use]
     pub fn mts_labels_select(
         labels: mts_labels_t,
         selection: mts_labels_t,
