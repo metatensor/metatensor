@@ -404,6 +404,20 @@ def test_intersection():
     assert np.all(second_mapping == np.array([-1, 0, -1]))
 
 
+def test_difference():
+    first = Labels(["aa", "bb"], np.array([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], np.array([[2, 3], [1, 2], [4, 5]]))
+
+    intersection = first.difference(second)
+    assert intersection.names == ["aa", "bb"]
+    assert np.all(intersection.values == np.array([[0, 1]]))
+
+    intersection_2, mapping = first.difference_and_mapping(second)
+
+    assert intersection == intersection_2
+    assert np.all(mapping == np.array([0, -1]))
+
+
 def test_values_reference():
     # see https://github.com/metatensor/metatensor/issues/293
     data = [0, 1, 2, 3, 4, 5]
