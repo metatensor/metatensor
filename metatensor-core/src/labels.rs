@@ -1,17 +1,17 @@
 #![allow(clippy::default_trait_access, clippy::module_name_repetitions)]
-use std::sync::RwLock;
-use std::ffi::CString;
 use std::collections::BTreeSet;
+use std::ffi::CString;
 use std::os::raw::c_void;
+use std::sync::RwLock;
 
-use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
+use hashbrown::HashMap;
 
 use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 
-use crate::Error;
 use crate::utils::ConstCString;
+use crate::Error;
 
 /// A single value inside a label. This is represented as a 32-bit signed
 /// integer, with a couple of helper function to get its value as usize/isize.
@@ -129,7 +129,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
 #[derive(Debug)]
 struct UserData {
     ptr: *mut c_void,
-    delete: Option<unsafe extern fn(*mut c_void)>,
+    delete: Option<unsafe extern "C" fn(*mut c_void)>,
 }
 
 impl UserData {
@@ -188,7 +188,6 @@ impl PartialEq for Labels {
 
 impl Eq for Labels {}
 
-
 impl std::fmt::Debug for Labels {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Labels{{")?;
@@ -198,7 +197,7 @@ impl std::fmt::Debug for Labels {
         for values in self {
             write!(f, "    ")?;
             for (value, width) in values.iter().zip(&widths) {
-                write!(f, "{:^width$}  ", value.isize(), width=width)?;
+                write!(f, "{:^width$}  ", value.isize(), width = width)?;
             }
             writeln!(f)?;
         }
@@ -234,7 +233,10 @@ impl Labels {
     /// This is identical to [`Labels::new`] except that the rows are not
     /// checked for uniqueness, but instead the caller must ensure that rows are
     /// unique.
-    pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<impl Into<LabelValue>>) -> Result<Labels, Error> {
+    pub unsafe fn new_unchecked_uniqueness(
+        names: &[&str],
+        values: Vec<impl Into<LabelValue>>,
+    ) -> Result<Labels, Error> {
         let values = values.into_iter().map(Into::into).collect();
         if cfg!(debug_assertions) {
             return Labels::new_impl(names, values, true);
@@ -245,11 +247,16 @@ impl Labels {
 
     /// Actual implementation of both [`Labels::new`] and
     /// [`Labels::new_unchecked_uniqueness`]
-    fn new_impl(names: &[&str], values: Vec<LabelValue>, check_unique: bool) -> Result<Labels, Error> {
+    fn new_impl(
+        names: &[&str],
+        values: Vec<LabelValue>,
+        check_unique: bool,
+    ) -> Result<Labels, Error> {
         for name in names {
             if !is_valid_label_name(name) {
                 return Err(Error::InvalidParameter(format!(
-                    "all labels names must be valid identifiers, '{}' is not", name
+                    "all labels names must be valid identifiers, '{}' is not",
+                    name
                 )));
             }
         }
@@ -258,12 +265,14 @@ impl Labels {
         for name in names {
             if !unique_names.insert(name) {
                 return Err(Error::InvalidParameter(format!(
-                    "labels names must be unique, got '{}' multiple times", name
+                    "labels names must be unique, got '{}' multiple times",
+                    name
                 )));
             }
         }
 
-        let names = names.iter()
+        let names = names
+            .iter()
             .map(|&s| ConstCString::new(CString::new(s).expect("invalid C string")))
             .collect::<Vec<_>>();
 
@@ -285,7 +294,11 @@ impl Labels {
             vec_ref.sort_unstable();
             if let Some(identical) = vec_ref.windows(2).position(|w| w[0] == w[1]) {
                 let entry = vec_ref[identical];
-                let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+                let entry_display = entry
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 return Err(Error::InvalidParameter(format!(
                     "can not have the same label entry multiple time: [{}] is already present",
                     entry_display
@@ -334,7 +347,7 @@ impl Labels {
     pub fn set_user_data(
         &self,
         user_data: *mut c_void,
-        user_data_delete: Option<unsafe extern fn(*mut c_void)>,
+        user_data_delete: Option<unsafe extern "C" fn(*mut c_void)>,
     ) {
         let mut guard = self.user_data.write().expect("poisoned lock");
         *guard = UserData {
@@ -359,27 +372,34 @@ impl Labels {
 
     /// Check whether the given `label` is part of this set of labels
     pub fn contains(&self, label: &[LabelValue]) -> bool {
-        let positions = self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+        let positions = self
+            .positions
+            .get_or_init(|| init_positions(&self.values, self.size()));
         positions.contains_key(label)
     }
 
     /// Get the position (i.e. row index) of the given label in the full labels
     /// array, or None.
     pub fn position(&self, value: &[LabelValue]) -> Option<usize> {
-        assert!(value.len() == self.size(), "invalid size of index in Labels::position");
+        assert!(
+            value.len() == self.size(),
+            "invalid size of index in Labels::position"
+        );
 
         return self.get_or_init_positions().get(value).copied();
     }
 
     fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, AHashHasher> {
-        return self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+        return self
+            .positions
+            .get_or_init(|| init_positions(&self.values, self.size()));
     }
 
     /// Iterate over the entries in these Labels
     pub fn iter(&self) -> Iter {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
-            chunks: self.values.chunks_exact(self.names.len())
+            chunks: self.values.chunks_exact(self.names.len()),
         };
     }
 
@@ -388,10 +408,15 @@ impl Labels {
     ///
     /// Mapping will be computed only if slices are not empty.
     #[allow(clippy::needless_range_loop)]
-    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+    pub fn union(
+        &self,
+        other: &Labels,
+        first_mapping: &mut [i64],
+        second_mapping: &mut [i64],
+    ) -> Result<Labels, Error> {
         if self.names != other.names {
             return Err(Error::InvalidParameter(
-                "can not take the union of these Labels, they have different names".into()
+                "can not take the union of these Labels, they have different names".into(),
             ));
         }
 
@@ -407,7 +432,11 @@ impl Labels {
         }
 
         for (i, labels_entry) in other.iter().enumerate() {
-            let labels_entry = labels_entry.iter().copied().map(Into::into).collect::<LabelsEntry>();
+            let labels_entry = labels_entry
+                .iter()
+                .copied()
+                .map(Into::into)
+                .collect::<LabelsEntry>();
 
             let new_position = positions.len();
             let index = match positions.raw_entry_mut().from_key(&labels_entry) {
@@ -438,10 +467,15 @@ impl Labels {
     /// output.
     ///
     /// Mapping will be computed only if slices are not empty.
-    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+    pub fn intersection(
+        &self,
+        other: &Labels,
+        first_mapping: &mut [i64],
+        second_mapping: &mut [i64],
+    ) -> Result<Labels, Error> {
         if self.names != other.names {
             return Err(Error::InvalidParameter(
-                "can not take the intersection of these Labels, they have different names".into()
+                "can not take the intersection of these Labels, they have different names".into(),
             ));
         }
 
@@ -474,6 +508,51 @@ impl Labels {
 
                 if !second_indexes.is_empty() {
                     second_indexes[position] = new_position;
+                }
+
+                new_position += 1;
+            }
+        }
+
+        return Ok(Labels {
+            names: self.names.clone(),
+            values,
+            positions: OnceCell::new(),
+            user_data: RwLock::new(UserData::null()),
+        });
+    }
+
+    /// Compute the difference of two labels, and optionally the mapping from
+    /// the position of entries in the inputs to positions of entries in the
+    /// output.
+    ///
+    /// Mapping will be computed only if slices are not empty.
+    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Labels, Error> {
+        if self.names != other.names {
+            return Err(Error::InvalidParameter(
+                "can not take the difference of these Labels, they have different names".into(),
+            ));
+        }
+
+        if !first_mapping.is_empty() {
+            assert!(first_mapping.len() == self.count());
+            first_mapping.fill(-1);
+        }
+
+        let mut values = Vec::new();
+        let mut new_position = 0;
+
+        // Loop through the elements of the first set
+        for (i, entry) in self.iter().enumerate() {
+            //  Check whether the entry is an element of the second set
+            if !other.contains(entry) {
+                // If they are not present, append the values to the set difference
+                values.extend_from_slice(entry);
+
+                // Fill the first mapping with the position of the element in the set difference
+                // The second mapping is trivially filled with -1
+                if !first_mapping.is_empty() {
+                    first_mapping[i] = new_position;
                 }
 
                 new_position += 1;
@@ -521,7 +600,8 @@ impl Labels {
                     Some(index) => index,
                     None => {
                         return Err(Error::InvalidParameter(format!(
-                            "'{}' in selection is not part of these Labels", name.as_str()
+                            "'{}' in selection is not part of these Labels",
+                            name.as_str()
                         )))
                     }
                 };
@@ -590,24 +670,28 @@ mod tests {
 
     #[test]
     fn valid_names() {
-        let e = Labels::new(&["not an ident"], Vec::<i32>::new()).err().unwrap();
-        assert_eq!(e.to_string(), "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not");
+        let e = Labels::new(&["not an ident"], Vec::<i32>::new())
+            .err()
+            .unwrap();
+        assert_eq!(
+            e.to_string(),
+            "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not"
+        );
 
-        let e = Labels::new(&["not", "there", "not"], Vec::<i32>::new()).err().unwrap();
-        assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
+        let e = Labels::new(&["not", "there", "not"], Vec::<i32>::new())
+            .err()
+            .unwrap();
+        assert_eq!(
+            e.to_string(),
+            "invalid parameter: labels names must be unique, got 'not' multiple times"
+        );
     }
 
     #[test]
     fn union() {
-        let first = Labels::new(
-            &["aa", "bb"],
-            vec![0, 1, /**/ 1, 2]
-        ).unwrap();
+        let first = Labels::new(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
 
-        let second = Labels::new(
-            &["aa", "bb"],
-            vec![2, 3, /**/ 1, 2, /**/ 4, 5]
-        ).unwrap();
+        let second = Labels::new(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
 
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; second.count()];
@@ -648,20 +732,16 @@ mod tests {
 
     #[test]
     fn intersection() {
-        let first = Labels::new(
-            &["aa", "bb"],
-            vec![0, 1, /**/ 1, 2]
-        ).unwrap();
+        let first = Labels::new(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
 
-        let second = Labels::new(
-            &["aa", "bb"],
-            vec![2, 3, /**/ 1, 2, /**/ 4, 5]
-        ).unwrap();
+        let second = Labels::new(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
 
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; second.count()];
 
-        let intersection = first.intersection(&second, first_mapping, second_mapping).unwrap();
+        let intersection = first
+            .intersection(&second, first_mapping, second_mapping)
+            .unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
         assert_eq!(intersection.values, &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0]);
@@ -670,7 +750,9 @@ mod tests {
         let first_mapping = &mut vec![0; second.count()];
         let second_mapping = &mut vec![0; first.count()];
 
-        let intersection = second.intersection(&first, first_mapping, second_mapping).unwrap();
+        let intersection = second
+            .intersection(&first, first_mapping, second_mapping)
+            .unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
         assert_eq!(intersection.values, &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0, -1]);
@@ -688,11 +770,50 @@ mod tests {
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
-        let intersection = first.intersection(&empty, first_mapping, second_mapping).unwrap();
+        let intersection = first
+            .intersection(&empty, first_mapping, second_mapping)
+            .unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
         assert_eq!(intersection.count(), 0);
         assert_eq!(first_mapping, &[-1, -1]);
         assert_eq!(second_mapping, &[]);
+    }
+
+    #[test]
+    fn difference() {
+        let first = Labels::new(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
+        let second = Labels::new(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
+
+        let first_mapping = &mut vec![0; first.count()];
+
+        let difference = first.difference(&second, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.values, &[0, 1]);
+        assert_eq!(first_mapping, &[0, -1]);
+
+        let first_mapping = &mut vec![0; second.count()];
+        let second_mapping = &mut vec![0; first.count()];
+
+        let difference = second.difference(&first, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.values, &[2, 3, /**/ 4, 5]);
+        assert_eq!(first_mapping, &[0, -1, 1]);
+
+        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
+        let err = first.difference(&labels, &mut []).unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "invalid parameter: can not take the difference of these Labels, they have different names"
+        );
+
+        // Take the difference with an empty set of labels
+        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
+        let first_mapping = &mut vec![0; first.count()];
+
+        let difference = first.difference(&empty, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.count(), first.count());
+        assert_eq!(first_mapping, &[0, 1]);
     }
 
     #[test]
