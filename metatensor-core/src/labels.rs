@@ -782,7 +782,7 @@ mod tests {
         assert_eq!(union.names(), ["aa", "bb"]);
         assert_eq!(union.values, &[0, 1, 1, 2]);
         assert_eq!(first_mapping, &[0, 1]);
-        assert_eq!(second_mapping, &[]);
+        assert_eq!(second_mapping, &Vec::<i64>::new());
     }
 
     #[test]
@@ -831,7 +831,7 @@ mod tests {
         assert_eq!(intersection.names(), ["aa", "bb"]);
         assert_eq!(intersection.count(), 0);
         assert_eq!(first_mapping, &[-1, -1]);
-        assert_eq!(second_mapping, &[]);
+        assert_eq!(second_mapping, &Vec::<i64>::new());
     }
 
     #[test]

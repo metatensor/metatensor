@@ -14,6 +14,9 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 - :c:func:`mts_tensormap_keys_to_samples`: move entries from keys to sample labels
 - :c:func:`mts_tensormap_keys_to_properties`: move entries from keys to properties labels
 - :c:func:`mts_tensormap_components_to_properties`: move entries from component labels to properties labels
+- :c:func:`mts_tensormap_set_info`: set or update the info value associated with a key for a tensor map
+- :c:func:`mts_tensormap_get_info`: get the info value associated with a key for a tensor map
+- :c:func:`mts_tensormap_info_keys`: get all the keys defined in the info of a tensor map
 
 
 --------------------------------------------------------------------------------
@@ -35,3 +38,9 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 .. doxygenfunction:: mts_tensormap_keys_to_properties
 
 .. doxygenfunction:: mts_tensormap_components_to_properties
+
+.. doxygenfunction:: mts_tensormap_set_info
+
+.. doxygenfunction:: mts_tensormap_get_info
+
+.. doxygenfunction:: mts_tensormap_info_keys
