@@ -1,8 +1,10 @@
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::sync::Arc;
+use std::ffi::CString;
 
 use zip::{ZipArchive, ZipWriter};
 
+use crate::utils::ConstCString;
 use crate::{TensorMap, Error, mts_array_t};
 
 use super::PathOrBuffer;
@@ -43,37 +45,7 @@ pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
 /// `create_array` callback, and filled by this function with the corresponding
 /// data.
 ///
-/// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
-/// without compression (storage method is STORED), where each file is stored as
-/// a `.npy` array. Both the ZIP and NPY format are well documented:
-///
-/// - ZIP: <https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT>
-/// - NPY: <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html>
-///
-/// We add other restriction on top of these formats when saving/loading data.
-/// First, `Labels` instances are saved as structured array, see the `labels`
-/// module for more information. Only 32-bit integers are supported for Labels,
-/// and only 64-bit floats are supported for data (values and gradients).
-///
-/// Second, the path of the files in the archive also carry meaning. The keys of
-/// the `TensorMap` are stored in `/keys.npy`, and then different blocks are
-/// stored as
-///
-/// ```bash
-/// /  blocks / <block_id>  / samples.npy
-///                         / components  / 0.npy
-///                                       / <...>.npy
-///                                       / <n_components>.npy
-///                         / properties.npy
-///                         / values.npy
-///
-///                         # optional sections for gradients, one by parameter
-///                         /   gradients / <parameter> / samples.npy
-///                                                     /   components  / 0.npy
-///                                                                     / <...>.npy
-///                                                                     / <n_components>.npy
-///                                                     /   values.npy
-/// ```
+/// See the C API documentation for more information on the file format.
 pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     where R: std::io::Read + std::io::Seek,
           F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
@@ -93,15 +65,33 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
         )?,);
     }
 
-    return TensorMap::new(Arc::new(keys), blocks);
+    let mut tensor = TensorMap::new(Arc::new(keys), blocks)?;
+
+    // Load info.json, if it exists
+    let path = String::from("info.json");
+    if archive.index_for_name(&path).is_some() {
+        let mut info_file = archive.by_name(&path).map_err(|e| (path, e))?;
+
+        let mut info = String::new();
+        info_file.read_to_string(&mut info)?;
+        let info = jzon::parse(&info).map_err(|e| Error::Serialization(e.to_string()))?;
+        let info = info.as_object().ok_or_else(|| Error::Serialization("'info.json' should contain an object".into()))?;
+
+        for (key, value) in info.iter() {
+            let value = value.as_str().ok_or_else(|| Error::Serialization("values in 'info.json' should be strings".into()))?;
+            tensor.add_info(key, ConstCString::new(CString::new(value).expect("value in 'info.json' should not contain a NUL byte")));
+        }
+    }
+
+    return Ok(tensor);
 }
 
 
 /// Save the given tensor to a file (or any other writer).
 ///
-/// The format used is documented in the [`load`] function, and consists of a
-/// zip archive containing NPY files. The recomended file extension when saving
-/// data is `.mts`, to prevent confusion with generic `.npz` files.
+/// The format consists of a zip archive containing NPY files and one JSON file
+/// for the global metadata. The recomended file extension when saving data is
+/// `.mts`, to prevent confusion with generic `.npz` files.
 pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);
 
@@ -116,6 +106,16 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
 
     for (block_i, block) in tensor.blocks().iter().enumerate() {
         write_single_block(&mut archive, &format!("blocks/{}/", block_i), true, block)?;
+    }
+
+    let mut info = jzon::JsonValue::new_object();
+    for (key, value) in tensor.info() {
+        info[key] = jzon::JsonValue::from(value.as_str());
+    }
+    if !info.is_empty() {
+        let path = String::from("info.json");
+        archive.start_file(&path, options).map_err(|e| (path, e))?;
+        info.write_pretty(&mut archive, 2)?;
     }
 
     archive.finish().map_err(|e| ("<root>".into(), e))?;

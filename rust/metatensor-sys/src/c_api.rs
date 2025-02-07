@@ -414,6 +414,24 @@ extern "C" {
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     #[must_use]
+    pub fn mts_tensormap_set_info(
+        tensor: *mut mts_tensormap_t,
+        key: *const ::std::os::raw::c_char,
+        value: *const ::std::os::raw::c_char,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_get_info(
+        tensor: *const mts_tensormap_t,
+        key: *const ::std::os::raw::c_char,
+        value: *mut *const ::std::os::raw::c_char,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_info_keys(
+        tensor: *const mts_tensormap_t,
+        keys: *mut *const *const ::std::os::raw::c_char,
+        keys_count: *mut usize,
+    ) -> mts_status_t;
+    #[must_use]
     pub fn mts_labels_load(
         path: *const ::std::os::raw::c_char,
         labels: *mut mts_labels_t,

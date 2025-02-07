@@ -922,6 +922,54 @@ struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap
                                                       bool sort_samples);
 
 /**
+ * Set or update the info (i.e. global metadata) for `key` to `value` for this
+ * tensor map.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param key string key of the entry we are trying to set
+ * @param value content of the info field
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_set_info(struct mts_tensormap_t *tensor,
+                                    const char *key,
+                                    const char *value);
+
+/**
+ * Get the info (i.e. global metadata) `value` associated with `key` for this
+ * tensor map.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param key string key of the entry we are trying to access
+ * @param value will be set to content of the info field, or `NULL` if the key
+ *             does not exist.
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_get_info(const struct mts_tensormap_t *tensor,
+                                    const char *key,
+                                    const char **value);
+
+/**
+ * Get the list of currently set info keys for this tensor map.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param keys will be set to point to an array of C strings
+ * @param keys_count the number of entries in the `keys` array
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_info_keys(const struct mts_tensormap_t *tensor,
+                                     const char *const **keys,
+                                     uintptr_t *keys_count);
+
+/**
  * Load labels from the file at the given path.
  *
  * This function allocates memory which must be released `mts_labels_free` when
@@ -1134,6 +1182,9 @@ mts_status_t mts_block_save_buffer(uint8_t **buffer,
  *                                                                     / <n_components>.npy
  *                                                     /   data.npy
  * ```
+ *
+ * Finally, the info (i.e. global metadata) of the `TensorMap` is stored inside
+ * the `info.json` file, unless empty.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
  * @param create_array callback function that will be used to create data
