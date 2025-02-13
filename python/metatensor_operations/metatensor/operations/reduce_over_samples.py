@@ -536,7 +536,7 @@ def mean_over_samples_block(
     """
 
     return _reduce_over_samples_block(
-        block=block, sample_names=sample_names, reduction="sum"
+        block=block, sample_names=sample_names, reduction="mean"
     )
 
 
