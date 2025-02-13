@@ -28,18 +28,18 @@ jobs:
             container: ubuntu:20.04
             extra-name: ", cmake 3.16"
             torch-version: "2.6"
-            python-version: "3.12"
+            python-version: "3.13"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-14
             torch-version: "2.6"
-            python-version: "3.12"
+            python-version: "3.13"
             cargo-test-flags: --release
 
           - os: windows-2022
             torch-version: "2.6"
-            python-version: "3.12"
+            python-version: "3.13"
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
