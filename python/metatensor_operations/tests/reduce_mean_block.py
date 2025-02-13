@@ -13,10 +13,8 @@ def test_mean_samples_block():
     tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
-    block_se = tensor_se[0]
     block_ps = tensor_ps[0]
     # check both passing a list and a single string for sample_names
-    reduce_block_se = metatensor.mean_over_samples_block(block_se, sample_names="atom")
     reduce_block_ps = metatensor.mean_over_samples_block(
         block_ps, sample_names=["atom"]
     )
@@ -70,7 +68,7 @@ def test_mean_samples_block():
 
     # The TensorBlock with key=(8,8,8) has nothing to be averaged over
 
-    for ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
+    for _ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
         reduced_block = metatensor.mean_over_samples_block(bl2, sample_names="atom")
         assert np.all(np.mean(bl2.values[:4], axis=0) == reduced_block.values[0])
         assert np.allclose(
