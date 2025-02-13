@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 import metatensor
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -17,11 +17,11 @@ def test_mean_samples_block():
     block_ps = tensor_ps[0]
     # check both passing a list and a single string for sample_names
     reduce_block_se = metatensor.mean_over_samples_block(block_se, sample_names="atom")
-    reduce_block_ps = metatensor.mean_over_samples_block(block_ps, sample_names=["atom"])
-
-    assert np.all(
-        np.mean(block_ps.values[:4], axis=0) == reduce_block_ps.values[0]
+    reduce_block_ps = metatensor.mean_over_samples_block(
+        block_ps, sample_names=["atom"]
     )
+
+    assert np.all(np.mean(block_ps.values[:4], axis=0) == reduce_block_ps.values[0])
 
     assert np.allclose(
         np.mean(block_ps.values[4:10], axis=0),
@@ -29,13 +29,9 @@ def test_mean_samples_block():
         rtol=1e-13,
     )
 
-    assert np.all(
-        np.mean(block_ps.values[22:26], axis=0) == reduce_block_ps.values[5]
-    )
+    assert np.all(np.mean(block_ps.values[22:26], axis=0) == reduce_block_ps.values[5])
 
-    assert np.all(
-        np.mean(block_ps.values[38:46], axis=0) == reduce_block_ps.values[8]
-    )
+    assert np.all(np.mean(block_ps.values[38:46], axis=0) == reduce_block_ps.values[8])
 
     assert np.allclose(
         np.mean(block_ps.values[46:], axis=0),
@@ -76,9 +72,7 @@ def test_mean_samples_block():
 
     for ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
         reduced_block = metatensor.mean_over_samples_block(bl2, sample_names="atom")
-        assert np.all(
-            np.mean(bl2.values[:4], axis=0) == reduced_block.values[0]
-        )
+        assert np.all(np.mean(bl2.values[:4], axis=0) == reduced_block.values[0])
         assert np.allclose(
             np.mean(bl2.values[26:32], axis=0),
             reduced_block.values[6],
@@ -130,9 +124,15 @@ def test_reduction_block_two_samples():
         properties=Labels(["p"], np.array([[0], [1], [5]])),
     )
 
-    reduce_block_12 = metatensor.mean_over_samples_block(block_1, sample_names=["samples3"])
-    reduce_block_23 = metatensor.mean_over_samples_block(block_1, sample_names="samples1")
-    reduce_block_2 = metatensor.mean_over_samples_block(block_1, sample_names=["samples1", "samples3"])
+    reduce_block_12 = metatensor.mean_over_samples_block(
+        block_1, sample_names=["samples3"]
+    )
+    reduce_block_23 = metatensor.mean_over_samples_block(
+        block_1, sample_names="samples1"
+    )
+    reduce_block_2 = metatensor.mean_over_samples_block(
+        block_1, sample_names=["samples1", "samples3"]
+    )
 
     assert np.allclose(
         np.mean(block_1.values[:3], axis=0),
@@ -140,16 +140,12 @@ def test_reduction_block_two_samples():
         rtol=1e-13,
     )
 
-    assert np.all(
-        np.mean(block_1.values[3:5], axis=0) == reduce_block_12.values[1]
-    )
+    assert np.all(np.mean(block_1.values[3:5], axis=0) == reduce_block_12.values[1])
     assert np.all(block_1.values[5] == reduce_block_12.values[4])
     assert np.all(block_1.values[6] == reduce_block_12.values[3])
     assert np.all(block_1.values[7] == reduce_block_12.values[2])
 
-    assert np.all(
-        np.mean(block_1.values[[0, 7]], axis=0) == reduce_block_23.values[0]
-    )
+    assert np.all(np.mean(block_1.values[[0, 7]], axis=0) == reduce_block_23.values[0])
     assert np.allclose(
         np.mean(block_1.values[[3, 5, 6]], axis=0),
         reduce_block_23.values[4],
@@ -161,12 +157,9 @@ def test_reduction_block_two_samples():
     assert np.all(block_1.values[4] == reduce_block_23.values[3])
 
     assert np.all(
-        np.mean(block_1.values[[0, 1, 2, 7]], axis=0)
-        == reduce_block_2.values[0]
+        np.mean(block_1.values[[0, 1, 2, 7]], axis=0) == reduce_block_2.values[0]
     )
-    assert np.all(
-        np.mean(block_1.values[3:7], axis=0) == reduce_block_2.values[1]
-    )
+    assert np.all(np.mean(block_1.values[3:7], axis=0) == reduce_block_2.values[1])
 
     # check metadata
     assert reduce_block_12.properties == block_1.properties
