@@ -1,9 +1,7 @@
-import ctypes.util
 import hashlib
 import os
 import shutil
 import site
-import subprocess
 import sys
 
 import torch
@@ -26,13 +24,23 @@ def _featomic_deps_path():
     import featomic
 
     if sys.platform.startswith("linux"):
-        # add libgomp on linux, which is added by cibuildwheel
-        lib_name = ctypes.util.find_library("gomp")
-        all_library_paths = subprocess.check_output(["ldconfig", "-p"]).decode()
-        for line in all_library_paths.splitlines():
-            if lib_name in line:
-                gomp_dependency = [line.split()[-1]]
-                break
+        site_packages = site.getsitepackages()
+        libs_list = []
+        for prefix in site_packages:
+            if os.path.exists(os.path.join(prefix, "featomic")):
+                correct_prefix = prefix
+                libs_list += os.listdir(os.path.join(prefix, "featomic_torch.libs"))
+        if len(libs_list) == 0:
+            raise RuntimeError("No libgomp shared library found in featomic_torch.libs")
+        if len(libs_list) > 1:
+            raise RuntimeError(
+                "Multiple libgomp shared libraries found in "
+                f"featomic_torch.libs: {libs_list}"
+            )
+        libgomp_path = libs_list[0]
+        gomp_dependency = [
+            os.path.join(correct_prefix, "featomic_torch.libs", libgomp_path)
+        ]
     else:
         gomp_dependency = []
 
