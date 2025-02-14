@@ -1,7 +1,10 @@
+import ctypes.util
 import hashlib
 import os
 import shutil
 import site
+import subprocess
+import sys
 
 import torch
 
@@ -19,17 +22,28 @@ def _rascaline_lib_path():
     return [rascaline._c_lib._lib_path()]
 
 
-def _featomic_lib_path():
+def _featomic_deps_path():
     import featomic
 
-    return [featomic._c_lib._lib_path()]
+    if sys.platform.startswith("linux"):
+        # add libgomp on linux, which is added by cibuildwheel
+        lib_name = ctypes.util.find_library("gomp")
+        all_library_paths = subprocess.check_output(["ldconfig", "-p"]).decode()
+        for line in all_library_paths.splitlines():
+            if lib_name in line:
+                gomp_dependency = [line.split()[-1]]
+                break
+    else:
+        gomp_dependency = []
+
+    return gomp_dependency + [featomic._c_lib._lib_path()]
 
 
 # Manual definition of which TorchScript extensions have their own dependencies. The
 # dependencies should be returned in the order they need to be loaded.
 EXTENSIONS_WITH_DEPENDENCIES = {
     "rascaline_torch": _rascaline_lib_path,
-    "featomic_torch": _featomic_lib_path,
+    "featomic_torch": _featomic_deps_path,
 }
 
 
