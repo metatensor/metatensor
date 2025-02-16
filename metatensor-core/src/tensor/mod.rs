@@ -127,7 +127,7 @@ impl TensorMap {
         if blocks.len() != keys.count() {
             return Err(Error::InvalidParameter(format!(
                 "expected the same number of blocks as the number of \
-                entries in the keys ({}) when creating a tensor, got {}",
+                entries in the keys ({}) when creating a `TensorMap`, got {}",
                 keys.count(), blocks.len()
             )))
         }
