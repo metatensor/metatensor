@@ -42,8 +42,8 @@ def _featomic_deps_path():
             )
         if len(libs_list) > 1:
             raise RuntimeError(
-                "Multiple libgomp shared libraries found in "
-                f"featomic_torch.libs: {libs_list}"
+                "Multiple libgomp shared libraries found in featomic_torch.libs: "
+                f"{libs_list}. Try to re-install in a fresh environment."
             )
         libgomp_path = libs_list[0]
         gomp_dependency = [
