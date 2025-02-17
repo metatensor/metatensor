@@ -3,6 +3,7 @@ import os
 import shutil
 import site
 import sys
+import warnings
 
 import torch
 
@@ -24,14 +25,21 @@ def _featomic_deps_path():
     import featomic
 
     if sys.platform.startswith("linux"):
+        # on Linux, also return the path to the libgomp shared library, which is
+        # added as a dependency by cibuildwheel
         site_packages = site.getsitepackages()
         libs_list = []
         for prefix in site_packages:
+            # find where featomic is and look inside the `featomic_torch.libs` directory
             if os.path.exists(os.path.join(prefix, "featomic")):
                 correct_prefix = prefix
                 libs_list += os.listdir(os.path.join(prefix, "featomic_torch.libs"))
         if len(libs_list) == 0:
-            raise RuntimeError("No libgomp shared library found in featomic_torch.libs")
+            warnings.warn(
+                "No libgomp shared library found in `featomic_torch.libs`. "
+                "This may cause issues when loading and running the model.",
+                stacklevel=2,
+            )
         if len(libs_list) > 1:
             raise RuntimeError(
                 "Multiple libgomp shared libraries found in "
