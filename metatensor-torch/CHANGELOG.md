@@ -17,6 +17,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.7.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.1) - 2025-02-17
+
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
+
+### Added
+
+- Support for Python 3.13 and PyTorch 2.6
+
+
 ## [Version 0.7.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.0) - 2025-01-22
 
 ### Changed
