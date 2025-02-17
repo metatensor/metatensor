@@ -17,15 +17,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
-### Changed
-
-- The default extension for file serialization is now `.mts` instead of `.npz`
-
 ### metatensor-core Julia
 
 #### Added
 
 - the Julia bindings to metatensor-core in the Metatensor.jl package
+
+## [Version 0.1.12](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.12) - 2025-02-17
+
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
 
 ## [Version 0.1.11](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.11) - 2024-10-23
 
