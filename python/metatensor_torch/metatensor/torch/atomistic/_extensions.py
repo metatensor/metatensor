@@ -2,6 +2,8 @@ import hashlib
 import os
 import shutil
 import site
+import sys
+import warnings
 
 import torch
 
@@ -19,17 +21,45 @@ def _rascaline_lib_path():
     return [rascaline._c_lib._lib_path()]
 
 
-def _featomic_lib_path():
+def _featomic_deps_path():
     import featomic
 
-    return [featomic._c_lib._lib_path()]
+    if sys.platform.startswith("linux"):
+        # on Linux, also return the path to the libgomp shared library, which is
+        # added as a dependency by cibuildwheel
+        site_packages = site.getsitepackages()
+        libs_list = []
+        for prefix in site_packages:
+            # find where featomic is and look inside the `featomic_torch.libs` directory
+            if os.path.exists(os.path.join(prefix, "featomic")):
+                correct_prefix = prefix
+                libs_list += os.listdir(os.path.join(prefix, "featomic_torch.libs"))
+        if len(libs_list) == 0:
+            warnings.warn(
+                "No libgomp shared library found in `featomic_torch.libs`. "
+                "This may cause issues when loading and running the model.",
+                stacklevel=2,
+            )
+        if len(libs_list) > 1:
+            raise RuntimeError(
+                "Multiple libgomp shared libraries found in featomic_torch.libs: "
+                f"{libs_list}. Try to re-install in a fresh environment."
+            )
+        libgomp_path = libs_list[0]
+        gomp_dependency = [
+            os.path.join(correct_prefix, "featomic_torch.libs", libgomp_path)
+        ]
+    else:
+        gomp_dependency = []
+
+    return gomp_dependency + [featomic._c_lib._lib_path()]
 
 
 # Manual definition of which TorchScript extensions have their own dependencies. The
 # dependencies should be returned in the order they need to be loaded.
 EXTENSIONS_WITH_DEPENDENCIES = {
     "rascaline_torch": _rascaline_lib_path,
-    "featomic_torch": _featomic_lib_path,
+    "featomic_torch": _featomic_deps_path,
 }
 
 
