@@ -34,7 +34,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 
 [build-system]
 requires = [
-    "setuptools >=71",
+    "setuptools >=75",
     "packaging >=23",
 ]
 build-backend = "setuptools.build_meta"
