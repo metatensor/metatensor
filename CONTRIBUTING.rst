@@ -171,7 +171,7 @@ behavior of tests:
   it makes the tests run quite a bit slower;
 - ``METATENSOR_TESTS_TORCH_VERSION`` allow you to run the tests against a
   specific PyTorch version instead of the latest one. For example, setting it to
-  ``METATENSOR_TESTS_TORCH_VERSION=1.13.*`` will run the tests against PyTorch
+  ``METATENSOR_TESTS_TORCH_VERSION=1.13`` will run the tests against PyTorch
   1.13;
 - ``PIP_EXTRA_INDEX_URL`` can be used to pull PyTorch (or other dependencies)
   from a different index. This can be useful on Linux if you have issues with
