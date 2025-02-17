@@ -32,8 +32,10 @@ def _featomic_deps_path():
         for prefix in site_packages:
             # find where featomic is and look inside the `featomic_torch.libs` directory
             if os.path.exists(os.path.join(prefix, "featomic")):
-                correct_prefix = prefix
-                libs_list += os.listdir(os.path.join(prefix, "featomic_torch.libs"))
+                libs_dir = os.path.join(prefix, "featomic_torch.libs")
+                if os.path.exists(libs_dir):
+                    correct_prefix = prefix
+                    libs_list += os.listdir(libs_dir)
         if len(libs_list) == 0:
             warnings.warn(
                 "No libgomp shared library found in `featomic_torch.libs`. "
