@@ -47,10 +47,13 @@ def _featomic_deps_path():
                 "Multiple libgomp shared libraries found in featomic_torch.libs: "
                 f"{libs_list}. Try to re-install in a fresh environment."
             )
-        libgomp_path = libs_list[0]
-        gomp_dependency = [
-            os.path.join(correct_prefix, "featomic_torch.libs", libgomp_path)
-        ]
+        if len(libs_list) == 1:
+            libgomp_path = libs_list[0]
+            gomp_dependency = [
+                os.path.join(correct_prefix, "featomic_torch.libs", libgomp_path)
+            ]
+        else:
+            gomp_dependency = []
     else:
         gomp_dependency = []
 
