@@ -17,6 +17,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.7.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.2) - 2025-02-18
+
+### Fixed
+
+- Fixed a bug with the custom TorchScript extensions when using `featomic-torch`
+
 ## [Version 0.7.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.1) - 2025-02-17
 
 ### Changed
