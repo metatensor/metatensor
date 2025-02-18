@@ -17,6 +17,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.2) - 2025-02-18
+
+### Fixed
+
+- `mean_over_samples` was not computing the correct mean
+
+
 ## [Version 0.3.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.1) - 2025-02-04
 
 ### Added
