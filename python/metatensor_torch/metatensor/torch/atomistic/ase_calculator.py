@@ -295,7 +295,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
         calculate_energies = "energies" in properties
         calculate_forces = "forces" in properties or "stress" in properties
-        calculate_stress = "stress" in properties or "forces" in properties
+        calculate_stress = (
+            "stress" in properties or "forces" in properties
+        ) and atoms.pbc.all()
         if "stresses" in properties:
             raise NotImplementedError("'stresses' are not implemented yet")
 
