@@ -295,7 +295,18 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         )
         calculate_energies = "energies" in properties
         calculate_forces = "forces" in properties or "stress" in properties
-        calculate_stress = "stress" in properties or "forces" in properties
+        calculate_stress = "stress" in properties
+        if calculate_stress and not atoms.pbc.all():
+            warnings.warn(
+                "stress requested but likely to be wrong, since the system is not "
+                "periodic in all directions",
+                stacklevel=2,
+            )
+        if "forces" in properties and atoms.pbc.all():
+            # we have PBCs, and, since the user/integrator requested forces, we will run
+            # backward anyway, so let's do the stress as well for free (this saves
+            # another forward-backward call later if the stress is requested)
+            calculate_stress = True
         if "stresses" in properties:
             raise NotImplementedError("'stresses' are not implemented yet")
 
