@@ -512,54 +512,51 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
             cutoff=options.engine_cutoff(engine_length_unit="angstrom"),
         )
 
-    # The pair selection code here below avoids a relatively slow loop over
-    # all pairs to improve performance
-    reject_condition = (
-        # we want a half neighbor list, so drop all duplicated neighbors
-        (nl_j < nl_i)
-        | (
-            (nl_i == nl_j)
-            & (
-                # only create pairs with the same atom twice if the pair spans more
-                # than one unit cell
-                ((nl_S[:, 0] == 0) & (nl_S[:, 1] == 0) & (nl_S[:, 2] == 0))
-                |
-                # When creating pairs between an atom and one of its periodic images,
-                # the code generates multiple redundant pairs
-                # (e.g. with shifts 0 1 1 and 0 -1 -1); and we want to only keep one of
-                # these. We keep the pair in the positive half plane of shifts.
-                (
-                    (nl_S.sum(axis=1) < 0)
-                    | (
-                        (nl_S.sum(axis=1) == 0)
-                        & ((nl_S[:, 2] < 0) | ((nl_S[:, 2] == 0) & (nl_S[:, 1] < 0)))
+    if not options.full_list:
+        # The pair selection code here below avoids a relatively slow loop over
+        # all pairs to improve performance
+        reject_condition = (
+            # we want a half neighbor list, so drop all duplicated neighbors
+            (nl_j < nl_i)
+            | (
+                (nl_i == nl_j)
+                & (
+                    # only create pairs with the same atom twice if the pair spans more
+                    # than one unit cell
+                    ((nl_S[:, 0] == 0) & (nl_S[:, 1] == 0) & (nl_S[:, 2] == 0))
+                    |
+                    # When creating pairs between an atom and one of its periodic
+                    # images, the code generates multiple redundant pairs
+                    # (e.g. with shifts 0 1 1 and 0 -1 -1); and we want to only keep one
+                    # of these. We keep the pair in the positive half plane of shifts.
+                    (
+                        (nl_S.sum(axis=1) < 0)
+                        | (
+                            (nl_S.sum(axis=1) == 0)
+                            & (
+                                (nl_S[:, 2] < 0)
+                                | ((nl_S[:, 2] == 0) & (nl_S[:, 1] < 0))
+                            )
+                        )
                     )
                 )
             )
         )
-    )
-    selected = np.logical_not(reject_condition)
-    n_pairs = np.sum(selected)
+        selected = np.logical_not(reject_condition)
+        nl_i = nl_i[selected]
+        nl_j = nl_j[selected]
+        nl_S = nl_S[selected]
+        nl_D = nl_D[selected]
 
-    if options.full_list:
-        distances = np.empty((2 * n_pairs, 3), dtype=np.float64)
-        samples = np.empty((2 * n_pairs, 5), dtype=np.int32)
-    else:
-        distances = np.empty((n_pairs, 3), dtype=np.float64)
-        samples = np.empty((n_pairs, 5), dtype=np.int32)
+    n_pairs = len(nl_i)
+    distances = np.empty((n_pairs, 3), dtype=np.float64)
+    samples = np.empty((n_pairs, 5), dtype=np.int32)
 
-    samples[:n_pairs, 0] = nl_i[selected]
-    samples[:n_pairs, 1] = nl_j[selected]
-    samples[:n_pairs, 2:] = nl_S[selected]
+    samples[:n_pairs, 0] = nl_i
+    samples[:n_pairs, 1] = nl_j
+    samples[:n_pairs, 2:] = nl_S
 
-    distances[:n_pairs] = nl_D[selected]
-
-    if options.full_list:
-        samples[n_pairs:, 0] = nl_j[selected]
-        samples[n_pairs:, 1] = nl_i[selected]
-        samples[n_pairs:, 2:] = -nl_S[selected]
-
-        distances[n_pairs:] = -nl_D[selected]
+    distances[:n_pairs] = nl_D
 
     distances = torch.from_numpy(distances).to(dtype=dtype).to(device=device)
     return TensorBlock(
