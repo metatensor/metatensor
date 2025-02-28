@@ -548,17 +548,9 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
         nl_S = nl_S[selected]
         nl_D = nl_D[selected]
 
-    n_pairs = len(nl_i)
-    distances = np.empty((n_pairs, 3), dtype=np.float64)
-    samples = np.empty((n_pairs, 5), dtype=np.int32)
+    samples = np.concatenate([nl_i[:, None], nl_j[:, None], nl_S], axis=1)
+    distances = torch.from_numpy(nl_D).to(dtype=dtype).to(device=device)
 
-    samples[:n_pairs, 0] = nl_i
-    samples[:n_pairs, 1] = nl_j
-    samples[:n_pairs, 2:] = nl_S
-
-    distances[:n_pairs] = nl_D
-
-    distances = torch.from_numpy(distances).to(dtype=dtype).to(device=device)
     return TensorBlock(
         values=distances.reshape(-1, 3, 1),
         samples=Labels(
