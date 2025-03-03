@@ -170,6 +170,9 @@ pub struct Labels {
     names: Vec<ConstCString>,
     /// Values of the labels, as a linearized 2D array in row-major order
     values: Vec<LabelValue>,
+    /// Whether the entries of the labels (i.e. the rows of the 2D array) are
+    /// sorted in lexicographical order
+    sorted: bool,
     /// Store the position of all the known labels, for faster access later.
     /// This is lazily initialized whenever a function requires access to the
     /// positions of different entries, allowing to skip the construction of the
@@ -272,6 +275,7 @@ impl Labels {
             return Ok(Labels {
                 names: Vec::new(),
                 values: Vec::new(),
+                sorted: true,
                 positions: Default::default(),
                 user_data: RwLock::new(UserData::null()),
             });
@@ -281,10 +285,10 @@ impl Labels {
         assert!(values.len() % size == 0);
 
         if check_unique {
-            let mut vec_ref = values.chunks_exact(size).collect::<Vec<_>>();
-            vec_ref.sort_unstable();
-            if let Some(identical) = vec_ref.windows(2).position(|w| w[0] == w[1]) {
-                let entry = vec_ref[identical];
+            let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
+            entries.sort_unstable();
+            if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
+                let entry = entries[identical];
                 let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 return Err(Error::InvalidParameter(format!(
                     "can not have the same label entry multiple time: [{}] is already present",
@@ -293,9 +297,11 @@ impl Labels {
             }
         }
 
+        let sorted = is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(size));
         Ok(Labels {
             names: names,
             values: values,
+            sorted: sorted,
             positions: OnceCell::new(),
             user_data: RwLock::new(UserData::null()),
         })
@@ -315,6 +321,11 @@ impl Labels {
     /// C-compatible (null terminated) strings
     pub fn c_names(&self) -> &[ConstCString] {
         &self.names
+    }
+
+    /// Check whether entries in these Labels are sorted in lexicographic order
+    pub fn is_sorted(&self) -> bool {
+        self.sorted
     }
 
     /// Get the registered user data (this will be NULL if no data was
@@ -379,7 +390,11 @@ impl Labels {
     pub fn iter(&self) -> Iter {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
-            chunks: self.values.chunks_exact(self.names.len())
+            ptr: self.values.as_ptr(),
+            cur: 0,
+            len: self.count(),
+            chunk_len: self.size(),
+            phantom: std::marker::PhantomData,
         };
     }
 
@@ -425,9 +440,11 @@ impl Labels {
             }
         }
 
+        let sorted = is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()));
         return Ok(Labels {
             names: self.names.clone(),
             values,
+            sorted: sorted,
             positions: OnceCell::with_value(positions),
             user_data: RwLock::new(UserData::null()),
         });
@@ -480,9 +497,20 @@ impl Labels {
             }
         }
 
+        let sorted = if first.is_sorted() {
+            // if the input was sorted, the output will be as well, since we
+            // can only remove entries
+            true
+        } else {
+            // we need to check, since the removed entries could be the ones out
+            // of order
+            is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()))
+        };
+
         return Ok(Labels {
             names: self.names.clone(),
             values,
+            sorted: sorted,
             positions: OnceCell::new(),
             user_data: RwLock::new(UserData::null()),
         });
@@ -548,20 +576,46 @@ impl Labels {
 
 /// iterator over `Labels` entries
 pub struct Iter<'a> {
-    chunks: std::slice::ChunksExact<'a, LabelValue>,
+    /// start of the labels values
+    ptr: *const LabelValue,
+    /// Current entry index
+    cur: usize,
+    /// number of entries
+    len: usize,
+    /// size of an entry/the labels
+    chunk_len: usize,
+    phantom: std::marker::PhantomData<&'a LabelValue>,
 }
 
 impl<'a> Iterator for Iter<'a> {
     type Item = &'a [LabelValue];
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.chunks.next()
+        if self.cur < self.len {
+            unsafe {
+                // SAFETY: this should be in-bounds
+                let data = self.ptr.add(self.cur * self.chunk_len);
+                self.cur += 1;
+                // SAFETY: the pointer should be valid for 'a
+                Some(std::slice::from_raw_parts(data, self.chunk_len))
+            }
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len - self.cur;
+        return (remaining, Some(remaining));
     }
 }
 
 impl ExactSizeIterator for Iter<'_> {
+    #[inline]
     fn len(&self) -> usize {
-        self.chunks.len()
+        self.len
     }
 }
 
@@ -575,6 +629,8 @@ impl<'a> IntoIterator for &'a Labels {
 
 impl std::ops::Index<usize> for Labels {
     type Output = [LabelValue];
+
+    #[inline]
     fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
@@ -595,6 +651,21 @@ mod tests {
 
         let e = Labels::new(&["not", "there", "not"], Vec::<i32>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
+    }
+
+    #[test]
+    fn sorted() {
+        let labels = Labels::new(&["aa", "bb"],
+            vec![0, 1, /**/ 1, 2]
+        ).unwrap();
+
+        assert!(labels.is_sorted());
+
+        let labels = Labels::new(&["aa", "bb"],
+            vec![0, 1, /**/ 1, 2, /**/ 0, 2]
+        ).unwrap();
+
+        assert!(!labels.is_sorted());
     }
 
     #[test]
