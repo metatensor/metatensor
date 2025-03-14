@@ -58,11 +58,49 @@ def _featomic_deps_path():
     return deps_path
 
 
+def _sphericart_deps_path():
+    import sphericart
+
+    deps_path = [sphericart._c_lib._lib_path()]
+
+    # add libgomp shared library, which is added by cibuildwheel
+    if sys.platform.startswith("linux"):
+        libs_list = []
+
+        for prefix in site.getsitepackages():
+            # find where sphericart is and look for `sphericart_torch.libs` directory
+            if os.path.exists(os.path.join(prefix, "sphericart")):
+                libs_dir = os.path.join(prefix, "sphericart_torch.libs")
+                if os.path.exists(libs_dir):
+                    correct_prefix = prefix
+                    libs_list += os.listdir(libs_dir)
+
+        if len(libs_list) == 0:
+            warnings.warn(
+                "No libgomp shared library found in `sphericart_torch.libs`. "
+                "This may cause issues when loading and running the model.",
+                stacklevel=2,
+            )
+        elif len(libs_list) > 1:
+            raise RuntimeError(
+                "Multiple libgomp shared libraries found in sphericart_torch.libs: "
+                f"{libs_list}. Try to re-install in a fresh environment."
+            )
+        else:  # len(libs_list) == 1
+            libgomp_path = libs_list[0]
+            deps_path.insert(
+                0, os.path.join(correct_prefix, "sphericart_torch.libs", libgomp_path)
+            )
+
+    return deps_path
+
+
 # Manual definition of which TorchScript extensions have their own dependencies. The
 # dependencies should be returned in the order they need to be loaded.
 EXTENSIONS_WITH_DEPENDENCIES = {
     "rascaline_torch": _rascaline_lib_path,
     "featomic_torch": _featomic_deps_path,
+    "sphericart_torch": _sphericart_deps_path,
 }
 
 
