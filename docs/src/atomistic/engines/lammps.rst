@@ -67,6 +67,12 @@ After what you can configure the build and compile the code:
     # the `lmp` binary in `lammps-metatensor/build/lmp` without installation
     cmake --build . --target install # or `make install`
 
+By default, this code will try to find the metatensor libraries on your system
+and use them. If cmake can not find the libraries, it will download and build
+them as part of the main LAMMPS build. If you want, you can control this
+behavior by adding `-DDOWNLOAD_METATENSOR=ON` to the cmake options to always
+force a download or `-DDOWNLOAD_METATENSOR=OFF` to prevent any download.
+
 .. _rustup: https://rustup.rs
 .. _LAMMPS' CMake build system: https://docs.lammps.org/Build_cmake.html
 
