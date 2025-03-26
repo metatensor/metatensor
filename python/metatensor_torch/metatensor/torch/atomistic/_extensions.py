@@ -1,3 +1,4 @@
+import glob
 import hashlib
 import os
 import shutil
@@ -26,73 +27,54 @@ def _featomic_deps_path():
 
     deps_path = [featomic._c_lib._lib_path()]
 
-    # add libgomp shared library, which is added by cibuildwheel
-    if sys.platform.startswith("linux"):
-        libs_list = []
-
-        for prefix in site.getsitepackages():
-            # find where featomic is and look for `featomic_torch.libs` directory
-            if os.path.exists(os.path.join(prefix, "featomic")):
-                libs_dir = os.path.join(prefix, "featomic_torch.libs")
-                if os.path.exists(libs_dir):
-                    correct_prefix = prefix
-                    libs_list += os.listdir(libs_dir)
-
-        if len(libs_list) == 0:
-            warnings.warn(
-                "No libgomp shared library found in `featomic_torch.libs`. "
-                "This may cause issues when loading and running the model.",
-                stacklevel=2,
-            )
-        elif len(libs_list) > 1:
-            raise RuntimeError(
-                "Multiple libgomp shared libraries found in featomic_torch.libs: "
-                f"{libs_list}. Try to re-install in a fresh environment."
-            )
-        else:  # len(libs_list) == 1
-            libgomp_path = libs_list[0]
-            deps_path.insert(
-                0, os.path.join(correct_prefix, "featomic_torch.libs", libgomp_path)
-            )
+    libgomp_path = _find_openmp_dep("featomic_torch.libs")
+    if libgomp_path is not None:
+        deps_path.insert(0, libgomp_path)
 
     return deps_path
 
 
 def _sphericart_deps_path():
-    import sphericart
+    deps_path = []
 
-    deps_path = [sphericart._c_lib._lib_path()]
+    libgomp_path = _find_openmp_dep("sphericart_torch.libs")
+    if libgomp_path is not None:
+        deps_path.append(libgomp_path)
 
-    # add libgomp shared library, which is added by cibuildwheel
+    return deps_path
+
+
+def _find_openmp_dep(search_dir):
+    """
+    When building code that uses OpenMP on linux, we typically dynamically link to
+    libgomp. `cibuildwheel` then copies ``libgomp.so`` to
+    ``<wheel_name>.libs/libgomp-<hash>.so``, so we need to find and add this shared
+    library to the extensions dependencies.
+    """
     if sys.platform.startswith("linux"):
         libs_list = []
 
         for prefix in site.getsitepackages():
-            # find where sphericart is and look for `sphericart_torch.libs` directory
-            if os.path.exists(os.path.join(prefix, "sphericart")):
-                libs_dir = os.path.join(prefix, "sphericart_torch.libs")
-                if os.path.exists(libs_dir):
-                    correct_prefix = prefix
-                    libs_list += os.listdir(libs_dir)
+            libs_dir = os.path.join(prefix, search_dir)
+            if os.path.exists(libs_dir):
+                libs_list = glob.glob(os.path.join(libs_dir, "libgomp-*.so*"))
+                if len(libs_list) != 0:
+                    # found it!
+                    break
 
         if len(libs_list) == 0:
             warnings.warn(
-                "No libgomp shared library found in `sphericart_torch.libs`. "
+                f"No libgomp shared library found in '{search_dir}'. "
                 "This may cause issues when loading and running the model.",
                 stacklevel=2,
             )
         elif len(libs_list) > 1:
             raise RuntimeError(
-                "Multiple libgomp shared libraries found in sphericart_torch.libs: "
+                f"Multiple libgomp shared libraries found in '{search_dir}': "
                 f"{libs_list}. Try to re-install in a fresh environment."
             )
         else:  # len(libs_list) == 1
-            libgomp_path = libs_list[0]
-            deps_path.insert(
-                0, os.path.join(correct_prefix, "sphericart_torch.libs", libgomp_path)
-            )
-
-    return deps_path
+            return libs_list[0]
 
 
 # Manual definition of which TorchScript extensions have their own dependencies. The
