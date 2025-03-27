@@ -35,11 +35,23 @@ def _featomic_deps_path():
 
 
 def _sphericart_deps_path():
+    import sphericart.torch
+
     deps_path = []
 
     libgomp_path = _find_openmp_dep("sphericart_torch.libs")
     if libgomp_path is not None:
         deps_path.append(libgomp_path)
+
+    if sys.platform.startswith("linux"):
+        # sphericart uses a separate library to get the CUDA stream corresponding to a
+        # tensor, see https://github.com/lab-cosmo/sphericart/pull/164
+        sphericart_torch_path = sphericart.torch._lib_path()
+        lib_dir = os.path.dirname(sphericart_torch_path)
+
+        cuda_stream_lib = os.path.join(lib_dir, "libsphericart_torch_cuda_stream.so")
+        if os.path.exists(cuda_stream_lib):
+            deps_path.append(cuda_stream_lib)
 
     return deps_path
 
