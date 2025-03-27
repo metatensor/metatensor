@@ -103,7 +103,8 @@ def _collect_extensions(extensions_path):
     extensions = []
     extensions_deps = []
     for library in torch.ops.loaded_libraries:
-        if library == METATENSOR_TORCH_LIB_PATH:
+        assert os.path.exists(library)
+        if os.path.samefile(library, METATENSOR_TORCH_LIB_PATH):
             continue
 
         path = _copy_extension(library, extensions_path)
