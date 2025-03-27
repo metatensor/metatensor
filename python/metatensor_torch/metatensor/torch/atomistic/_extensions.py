@@ -120,20 +120,35 @@ def _collect_extensions(extensions_path):
     return extensions, extensions_deps
 
 
-def _copy_extension(full_path, extensions_path):
-    site_packages = site.getsitepackages()
+def _copy_extension(full_path, extensions_dir):
+    full_path = os.path.realpath(full_path)
+
+    prefixes = site.getsitepackages()
     if site.ENABLE_USER_SITE:
-        site_packages.append(site.getusersitepackages())
+        prefixes.append(site.getusersitepackages())
+
+    # this also takes care of extensions installed directly in the same prefix as
+    # Python, for example when installing a standalone libmetatensor_torch with conda.
+    prefixes.append(sys.prefix)
 
     path = full_path
-    for prefix in site_packages:
-        # Remove any site-package prefix
+    for prefix in prefixes:
+        prefix = os.path.realpath(prefix)
+        assert os.path.isabs(prefix)
+
+        # Remove any local prefix
         if path.startswith(prefix):
             path = os.path.relpath(path, prefix)
             break
 
-    if extensions_path is not None:
-        collect_path = os.path.join(extensions_path, path)
+    if extensions_dir is not None:
+        collect_path = os.path.realpath(os.path.join(extensions_dir, path))
+        if collect_path == path:
+            raise RuntimeError(
+                f"extensions directory '{extensions_dir}' would overwrite files, "
+                "you should set it to a local path instead"
+            )
+
         if os.path.exists(collect_path):
             raise RuntimeError(
                 f"more than one extension would be collected at {collect_path}"
