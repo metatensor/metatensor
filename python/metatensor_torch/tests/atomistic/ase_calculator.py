@@ -132,7 +132,7 @@ def test_get_properties(model, atoms):
     assert np.all(properties["stress"] == atoms.get_stress())
 
 
-def test_selected_atoms(tmpdir, model, atoms):
+def test_run_model(tmpdir, model, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
         sigma=SIGMA, epsilon=EPSILON, rc=CUTOFF, ro=CUTOFF, smooth=False
@@ -153,6 +153,11 @@ def test_selected_atoms(tmpdir, model, atoms):
         ["system", "atom"],
         torch.tensor([[0, a] for a in range(len(atoms)) if a % 2 == 1]),
     )
+
+    # check overall prediction
+    requested = {"energy": ModelOutput(per_atom=False)}
+    outputs = calculator.run_model(atoms, outputs=requested)
+    assert np.allclose(ref.get_potential_energy(), outputs["energy"].block().values)
 
     # check per atom energy
     requested = {"energy": ModelOutput(per_atom=True)}
@@ -176,6 +181,13 @@ def test_selected_atoms(tmpdir, model, atoms):
 
     expected = ref.get_potential_energy()
     assert np.allclose(expected, first_energies + second_energies)
+
+    # check batched prediction
+    requested = {"energy": ModelOutput(per_atom=False)}
+    outputs = calculator.run_model([atoms, atoms], outputs=requested)
+    assert np.allclose(
+        ref.get_potential_energy(), outputs["energy"].block().values[[0]]
+    )
 
 
 def test_compute_energy(tmpdir, model, atoms):

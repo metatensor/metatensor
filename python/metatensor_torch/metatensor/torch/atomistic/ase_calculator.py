@@ -210,7 +210,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
     def run_model(
         self,
-        atoms: ase.Atoms,
+        atoms: Union[ase.Atoms, List[ase.Atoms]],
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
@@ -228,26 +228,34 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         All the parameters have the same meaning as the corresponding ones in
         :py:meth:`metatensor.torch.atomistic.ModelInterface.forward`.
 
-        :param atoms: system on which to run the model
+        :param atoms: :py:class:`ase.Atoms`, or list of :py:class:`ase.Atoms`, on which
+            to run the model
         :param outputs: outputs of the model that should be predicted
         :param selected_atoms: subset of atoms on which to run the calculation
         """
-        types, positions, cell, pbc = _ase_to_torch_data(
-            atoms=atoms, dtype=self._dtype, device=self._device
-        )
-        system = System(types, positions, cell, pbc)
+        if isinstance(atoms, ase.Atoms):
+            atoms_list = [atoms]
+        else:
+            atoms_list = atoms
 
-        # Compute the neighbors lists requested by the model using ASE NL
-        for options in self._model.requested_neighbor_lists():
-            neighbors = _compute_ase_neighbors(
-                atoms, options, dtype=self._dtype, device=self._device
+        systems = []
+        for atoms in atoms_list:
+            types, positions, cell, pbc = _ase_to_torch_data(
+                atoms=atoms, dtype=self._dtype, device=self._device
             )
-            register_autograd_neighbors(
-                system,
-                neighbors,
-                check_consistency=self.parameters["check_consistency"],
-            )
-            system.add_neighbor_list(options, neighbors)
+            system = System(types, positions, cell, pbc)
+            # Compute the neighbors lists requested by the model
+            for options in self._model.requested_neighbor_lists():
+                neighbors = _compute_ase_neighbors(
+                    atoms, options, dtype=self._dtype, device=self._device
+                )
+                register_autograd_neighbors(
+                    system,
+                    neighbors,
+                    check_consistency=self.parameters["check_consistency"],
+                )
+                system.add_neighbor_list(options, neighbors)
+            systems.append(system)
 
         options = ModelEvaluationOptions(
             length_unit="angstrom",
@@ -255,7 +263,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             selected_atoms=selected_atoms,
         )
         return self._model(
-            systems=[system],
+            systems=systems,
             options=options,
             check_consistency=self.parameters["check_consistency"],
         )

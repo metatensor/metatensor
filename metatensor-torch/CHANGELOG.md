@@ -6,6 +6,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Changed
+
+- `MetatensorCalculator.run_model()` now supports batching across multiple `ase.Atoms`
+  objects
+
 <!-- Possible sections for each package:
 
 #### Added
