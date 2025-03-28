@@ -424,6 +424,87 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             for name in self._additional_output_requests:
                 self.additional_outputs[name] = outputs[name]
 
+    def compute_energy(
+        self,
+        atoms: Union[ase.Atoms, List[ase.Atoms]],
+        compute_forces_and_stresses: bool = False,
+    ) -> Dict[str, List[Union[float, np.ndarray]]]:
+        """
+        Compute the energy of the given ``atoms``.
+
+        Energies are computed in eV, forces in eV/Å, and stresses in eV/Å^3.
+
+        :param atoms: :py:class:`ase.Atoms`, or list of :py:class:`ase.Atoms`, on which
+            to run the model
+        :param compute_forces_and_stresses: if ``True``, the model will also compute
+            forces and stresses. IMPORTANT: stresses will only be computed if all
+            provided systems have periodic boundary conditions in all directions.
+        """
+        if "energy" not in self._model.capabilities().outputs:
+            raise ValueError("this model does not support energy computation")
+
+        outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
+
+        if isinstance(atoms, ase.Atoms):
+            atoms_list = [atoms]
+        else:
+            atoms_list = atoms
+
+        systems = []
+        if compute_forces_and_stresses:
+            strains = []
+        for atoms in atoms_list:
+            types, positions, cell, pbc = _ase_to_torch_data(
+                atoms=atoms, dtype=self._dtype, device=self._device
+            )
+            if compute_forces_and_stresses:
+                positions.requires_grad_(True)
+                strain = torch.eye(
+                    3, requires_grad=True, device=self._device, dtype=self._dtype
+                )
+                positions = positions @ strain
+                positions.retain_grad()
+                cell = cell @ strain
+                strains.append(strain)
+            system = System(types, positions, cell, pbc)
+            # Compute the neighbors lists requested by the model
+            for options in self._model.requested_neighbor_lists():
+                neighbors = _compute_ase_neighbors(
+                    atoms, options, dtype=self._dtype, device=self._device
+                )
+                register_autograd_neighbors(
+                    system,
+                    neighbors,
+                    check_consistency=self.parameters["check_consistency"],
+                )
+                system.add_neighbor_list(options, neighbors)
+            systems.append(system)
+
+        options = ModelEvaluationOptions(
+            length_unit="angstrom",
+            outputs=outputs,
+        )
+        energies = self._model(
+            systems=systems,
+            options=options,
+            check_consistency=self.parameters["check_consistency"],
+        )["energy"]
+
+        results_as_numpy_arrays = {
+            "energy": energies.block().values.detach().cpu().numpy().flatten().tolist()
+        }
+        if compute_forces_and_stresses:
+            energies.block().values.sum().backward()
+            results_as_numpy_arrays["forces"] = [
+                -system.positions.grad.cpu().numpy() for system in systems
+            ]
+            if all(atoms.pbc.all() for atoms in atoms_list):
+                results_as_numpy_arrays["stress"] = [
+                    strain.grad.cpu().numpy() / atoms.cell.volume
+                    for strain, atoms in zip(strains, atoms_list)
+                ]
+        return results_as_numpy_arrays
+
 
 def _find_best_device(devices: List[str]) -> torch.device:
     """
