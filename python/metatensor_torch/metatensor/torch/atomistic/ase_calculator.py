@@ -428,11 +428,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         self,
         atoms: Union[ase.Atoms, List[ase.Atoms]],
         compute_forces_and_stresses: bool = False,
-    ) -> Dict[str, List[Union[float, np.ndarray]]]:
+    ) -> Dict[str, Union[Union[float, np.ndarray], List[Union[float, np.ndarray]]]]:
         """
         Compute the energy of the given ``atoms``.
 
-        Energies are computed in eV, forces in eV/Å, and stresses in eV/Å^3.
+        Energies are computed in eV, forces in eV/Å, and stresses in 3x3 tensor format
+        and in units of eV/Å^3.
 
         :param atoms: :py:class:`ase.Atoms`, or list of :py:class:`ase.Atoms`, on which
             to run the model
@@ -447,8 +448,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         if isinstance(atoms, ase.Atoms):
             atoms_list = [atoms]
+            was_single = True
         else:
             atoms_list = atoms
+            was_single = False
 
         systems = []
         if compute_forces_and_stresses:
@@ -503,6 +506,9 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     strain.grad.cpu().numpy() / atoms.cell.volume
                     for strain, atoms in zip(strains, atoms_list)
                 ]
+        if was_single:
+            for key, value in results_as_numpy_arrays.items():
+                results_as_numpy_arrays[key] = value[0]
         return results_as_numpy_arrays
 
 
