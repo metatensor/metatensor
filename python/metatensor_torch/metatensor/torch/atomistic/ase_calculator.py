@@ -440,6 +440,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         :param compute_forces_and_stresses: if ``True``, the model will also compute
             forces and stresses. IMPORTANT: stresses will only be computed if all
             provided systems have periodic boundary conditions in all directions.
+
+        :return: A dictionary with the computed properties. The dictionary will contain
+            the ``energy`` as a float, and, if requested, the ``forces`` and ``stress``
+            as numpy arrays. In case of a list of :py:class:`ase.Atoms`, the dictionary
+            values will instead be lists of the corresponding properties, in the same
+            format.
         """
         if "energy" not in self._model.capabilities().outputs:
             raise ValueError("this model does not support energy computation")
