@@ -6,16 +6,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Added
-
-- Added `MetatensorCalculator.compute_energy()` to provide batched calculation of
-  energies, forces and stresses (#880).
-
-### Changed
-
-- `MetatensorCalculator.run_model()` now supports batching across multiple
-  `ase.Atoms` objects (#879).
-
 <!-- Possible sections for each package:
 
 ### Added
@@ -26,6 +16,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Removed
 -->
+
+## [Version 0.7.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.4) - 2025-03-28
+
+### Added
+
+- Added `MetatensorCalculator.compute_energy()` to provide batched calculation of
+  energies, forces and stresses (#880).
+
+### Changed
+
+- `MetatensorCalculator.run_model()` now supports batching across multiple
+  `ase.Atoms` objects (#879).
 
 ## [Version 0.7.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.3) - 2025-02-19
 
