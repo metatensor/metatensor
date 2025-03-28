@@ -497,7 +497,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             "energy": energies.block().values.detach().cpu().numpy().flatten().tolist()
         }
         if compute_forces_and_stresses:
-            energies.block().values.sum().backward()
+            energy_tensor = energies.block().values
+            energy_tensor.backward(torch.ones_like(energy_tensor))
             results_as_numpy_arrays["forces"] = [
                 -system.positions.grad.cpu().numpy() for system in systems
             ]
