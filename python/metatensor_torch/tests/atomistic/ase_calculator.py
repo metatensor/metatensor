@@ -26,6 +26,7 @@ from metatensor.torch.atomistic import (
 from metatensor.torch.atomistic.ase_calculator import (
     MetatensorCalculator,
     _compute_ase_neighbors,
+    _full_3x3_to_voigt_6_stress,
 )
 
 from .. import _tests_utils
@@ -187,6 +188,47 @@ def test_run_model(tmpdir, model, atoms):
     assert np.allclose(
         ref.get_potential_energy(), outputs["energy"].block().values[[0]]
     )
+
+
+def test_compute_energy(tmpdir, model, atoms):
+    ref = atoms.copy()
+    ref.calc = ase.calculators.lj.LennardJones(
+        sigma=SIGMA, epsilon=EPSILON, rc=CUTOFF, ro=CUTOFF, smooth=False
+    )
+
+    path = os.path.join(tmpdir, "exported-model.pt")
+    model.save(path)
+    calculator = MetatensorCalculator(path, check_consistency=True)
+
+    energy = calculator.compute_energy(atoms)["energy"]
+    assert np.allclose(ref.get_potential_energy(), energy)
+
+    results = calculator.compute_energy(atoms, compute_forces_and_stresses=True)
+    assert np.allclose(ref.get_potential_energy(), results["energy"])
+    assert np.allclose(ref.get_forces(), results["forces"])
+    assert np.allclose(ref.get_stress(), _full_3x3_to_voigt_6_stress(results["stress"]))
+
+    energies = calculator.compute_energy([atoms, atoms])["energy"]
+    assert np.allclose(ref.get_potential_energy(), energies[0])
+    assert np.allclose(ref.get_potential_energy(), energies[1])
+
+    results = calculator.compute_energy(
+        [atoms, atoms], compute_forces_and_stresses=True
+    )
+    assert np.allclose(ref.get_potential_energy(), results["energy"][0])
+    assert np.allclose(ref.get_potential_energy(), results["energy"][1])
+    assert np.allclose(ref.get_forces(), results["forces"][0])
+    assert np.allclose(ref.get_forces(), results["forces"][1])
+    assert np.allclose(
+        ref.get_stress(), _full_3x3_to_voigt_6_stress(results["stress"][0])
+    )
+    assert np.allclose(
+        ref.get_stress(), _full_3x3_to_voigt_6_stress(results["stress"][1])
+    )
+
+    atoms_no_pbc = atoms.copy()
+    atoms_no_pbc.pbc = [False, False, False]
+    assert "stress" not in calculator.compute_energy(atoms_no_pbc)
 
 
 def test_serialize_ase(tmpdir, model, atoms):
