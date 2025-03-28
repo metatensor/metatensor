@@ -9,8 +9,6 @@ import torch
 import vesin
 from torch.profiler import record_function
 
-import metatensor.torch
-
 from .. import Labels, TensorBlock, TensorMap
 from . import (
     MetatensorAtomisticModel,
@@ -215,7 +213,6 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         atoms: Union[ase.Atoms, List[ase.Atoms]],
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
-        compute_forces_and_stresses: bool = False,
     ) -> Dict[str, TensorMap]:
         """
         Run the model on the given ``atoms``, computing the requested ``outputs`` and
@@ -235,43 +232,17 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             to run the model
         :param outputs: outputs of the model that should be predicted
         :param selected_atoms: subset of atoms on which to run the calculation
-        :param compute_forces_and_stresses: if ``True`` and if the ``energy`` output is
-            requested, the model will also compute forces and stresses. IMPORTANT:
-            stresses will only be computed for fully periodic systems
         """
         if isinstance(atoms, ase.Atoms):
             atoms_list = [atoms]
         else:
             atoms_list = atoms
 
-        if compute_forces_and_stresses and selected_atoms is not None:
-            raise ValueError(
-                "selected_atoms and compute_forces_and_stresses can not be used "
-                "at the same time"
-            )
-
-        # understand whether we need to do a backward pass
-        if "energy" in outputs and compute_forces_and_stresses:
-            do_backward = True
-        else:
-            do_backward = False
-
         systems = []
-        if do_backward:
-            strains = []
         for atoms in atoms_list:
             types, positions, cell, pbc = _ase_to_torch_data(
                 atoms=atoms, dtype=self._dtype, device=self._device
             )
-            if do_backward:
-                positions.requires_grad_(True)
-                strain = torch.eye(
-                    3, requires_grad=True, device=self._device, dtype=self._dtype
-                )
-                positions = positions @ strain
-                positions.retain_grad()
-                cell = cell @ strain
-                strains.append(strain)
             system = System(types, positions, cell, pbc)
             # Compute the neighbors lists requested by the model
             for options in self._model.requested_neighbor_lists():
@@ -291,93 +262,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             outputs=outputs,
             selected_atoms=selected_atoms,
         )
-        results = self._model(
+        return self._model(
             systems=systems,
             options=options,
             check_consistency=self.parameters["check_consistency"],
         )
-
-        if do_backward:
-            results["energy"].block().values.sum().backward()
-            all_forces = torch.concatenate(
-                [-system.positions.grad for system in systems]
-            )
-            num_stresses = sum(1 for system in systems if system.pbc.all())
-            if num_stresses > 0:
-                all_stresses = torch.stack(
-                    [
-                        strain.grad / atoms.cell.volume
-                        for strain, atoms in zip(strains, atoms_list)
-                        if atoms.pbc.all()
-                    ]
-                )
-            # here, it might be tempting to register forces and stresses as gradients
-            # of the energy in the corresponding TensorBlock, but the transformation
-            # between position/strain gradients and forces/stresses might not be trivial
-            # for everyone
-            results["forces"] = TensorMap(
-                keys=results["energy"].keys,
-                blocks=[
-                    TensorBlock(
-                        values=all_forces.reshape(-1, 3, 1),
-                        samples=Labels(
-                            names=["system", "atom"],
-                            values=torch.concatenate(
-                                [
-                                    torch.stack(
-                                        [
-                                            torch.full(
-                                                (len(system.positions),),
-                                                i,
-                                                dtype=torch.int32,
-                                                device=self._device,
-                                            ),
-                                            torch.arange(
-                                                len(system.positions),
-                                                dtype=torch.int32,
-                                                device=self._device,
-                                            ),
-                                        ],
-                                        dim=1,
-                                    )
-                                    for i, system in enumerate(systems)
-                                ]
-                            ),
-                        ),
-                        components=[Labels.range("xyz", 3).to(device=self._device)],
-                        properties=Labels.single(),
-                    )
-                ],
-            )
-            if num_stresses > 0:
-                results["stress"] = TensorMap(
-                    keys=results["energy"].keys,
-                    blocks=[
-                        TensorBlock(
-                            values=all_stresses.reshape(-1, 3, 3, 1),
-                            samples=Labels(
-                                names=results["energy"].block().samples.names,
-                                values=torch.tensor(
-                                    [
-                                        [i]
-                                        for i, atoms in enumerate(atoms_list)
-                                        if atoms.pbc.all()
-                                    ],
-                                    dtype=torch.int32,
-                                    device=self._device,
-                                ),
-                            ),
-                            components=[
-                                Labels.range("xyz_1", 3).to(device=self._device),
-                                Labels.range("xyz_2", 3).to(device=self._device),
-                            ],
-                            properties=Labels.single(),
-                        )
-                    ],
-                )
-            results["energy"] = metatensor.torch.detach(results["energy"])
-
-        return results
 
     def calculate(
         self,
