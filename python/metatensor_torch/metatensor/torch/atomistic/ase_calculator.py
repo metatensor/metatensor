@@ -9,6 +9,8 @@ import torch
 import vesin
 from torch.profiler import record_function
 
+import metatensor.torch
+
 from .. import Labels, TensorBlock, TensorMap
 from . import (
     MetatensorAtomisticModel,
@@ -242,6 +244,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         else:
             atoms_list = atoms
 
+        if compute_forces_and_stresses and selected_atoms is not None:
+            raise ValueError(
+                "selected_atoms and compute_forces_and_stresses can not be used "
+                "at the same time"
+            )
+
         # understand whether we need to do a backward pass
         if "energy" in outputs and compute_forces_and_stresses:
             do_backward = True
@@ -294,13 +302,15 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             all_forces = torch.concatenate(
                 [-system.positions.grad for system in systems]
             )
-            all_stresses = torch.stack(
-                [
-                    strain.grad / atoms.cell.volume
-                    for strain, atoms in zip(strains, atoms_list)
-                    if atoms.pbc.all()
-                ]
-            )
+            num_stresses = sum(1 for system in systems if system.pbc.all())
+            if num_stresses > 0:
+                all_stresses = torch.stack(
+                    [
+                        strain.grad / atoms.cell.volume
+                        for strain, atoms in zip(strains, atoms_list)
+                        if atoms.pbc.all()
+                    ]
+                )
             # here, it might be tempting to register forces and stresses as gradients
             # of the energy in the corresponding TensorBlock, but the transformation
             # between position/strain gradients and forces/stresses might not be trivial
@@ -314,19 +324,24 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                             names=["system", "atom"],
                             values=torch.concatenate(
                                 [
-                                    torch.full(
-                                        (len(system.positions),),
-                                        i,
-                                        dtype=torch.int32,
-                                        device=self._device,
-                                    ),
-                                    torch.arange(
-                                        len(system.positions),
-                                        dtype=torch.int32,
-                                        device=self._device,
-                                    ),
+                                    torch.stack(
+                                        [
+                                            torch.full(
+                                                (len(system.positions),),
+                                                i,
+                                                dtype=torch.int32,
+                                                device=self._device,
+                                            ),
+                                            torch.arange(
+                                                len(system.positions),
+                                                dtype=torch.int32,
+                                                device=self._device,
+                                            ),
+                                        ],
+                                        dim=1,
+                                    )
+                                    for i, system in enumerate(systems)
                                 ]
-                                for i, system in enumerate(systems)
                             ),
                         ),
                         components=[Labels.range("xyz", 3).to(device=self._device)],
@@ -334,31 +349,33 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     )
                 ],
             )
-            results["stress"] = TensorMap(
-                keys=results["energy"].keys,
-                blocks=[
-                    TensorBlock(
-                        values=all_stresses.reshape(-1, 3, 3, 1),
-                        samples=Labels(
-                            names=results["energy"].block().samples.names,
-                            values=torch.tensor(
-                                [
-                                    i
-                                    for i, atoms in enumerate(atoms_list)
-                                    if atoms.pbc.all()
-                                ],
-                                dtype=torch.int32,
-                                device=self._device,
+            if num_stresses > 0:
+                results["stress"] = TensorMap(
+                    keys=results["energy"].keys,
+                    blocks=[
+                        TensorBlock(
+                            values=all_stresses.reshape(-1, 3, 3, 1),
+                            samples=Labels(
+                                names=results["energy"].block().samples.names,
+                                values=torch.tensor(
+                                    [
+                                        [i]
+                                        for i, atoms in enumerate(atoms_list)
+                                        if atoms.pbc.all()
+                                    ],
+                                    dtype=torch.int32,
+                                    device=self._device,
+                                ),
                             ),
-                        ),
-                        components=[
-                            Labels.range("xyz_1", 3).to(device=self._device),
-                            Labels.range("xyz_2", 3).to(device=self._device),
-                        ],
-                        properties=Labels.single(),
-                    )
-                ],
-            )
+                            components=[
+                                Labels.range("xyz_1", 3).to(device=self._device),
+                                Labels.range("xyz_2", 3).to(device=self._device),
+                            ],
+                            properties=Labels.single(),
+                        )
+                    ],
+                )
+            results["energy"] = metatensor.torch.detach(results["energy"])
 
         return results
 

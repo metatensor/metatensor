@@ -176,6 +176,51 @@ def test_selected_atoms(tmpdir, model, atoms):
     expected = ref.get_potential_energy()
     assert np.allclose(expected, first_energies + second_energies)
 
+    # test multiple atoms objects
+    outputs = calculator.run_model(
+        [atoms, atoms],
+        outputs=requested,
+    )
+    assert np.allclose(
+        outputs["energy"].block().values.numpy()[[0]].reshape(-1), expected
+    )
+    assert np.allclose(
+        outputs["energy"].block().values.numpy()[[1]].reshape(-1), expected
+    )
+
+    # test with forces and stresses
+    outputs = calculator.run_model(
+        [atoms, atoms],
+        outputs=requested,
+        compute_forces_and_stresses=True,
+    )
+    assert np.allclose(
+        outputs["energy"].block().values.numpy()[[0]].reshape(-1), expected
+    )
+    assert np.allclose(
+        outputs["energy"].block().values.numpy()[[1]].reshape(-1), expected
+    )
+    assert outputs["forces"].block().values.shape == (2 * len(atoms), 3, 1)
+    assert outputs["stress"].block().values.shape == (2, 3, 3, 1)
+
+    atoms_without_pbc = atoms.copy()
+    atoms_without_pbc.pbc = [False, True, True]
+    outputs = calculator.run_model(
+        [atoms_without_pbc, atoms_without_pbc],
+        outputs=requested,
+        compute_forces_and_stresses=True,
+    )
+    assert outputs["forces"].block().values.shape == (2 * len(atoms), 3, 1)
+    assert "stress" not in outputs  # no PBC, no stress
+
+    outputs = calculator.run_model(
+        [atoms_without_pbc, atoms],
+        outputs=requested,
+        compute_forces_and_stresses=True,
+    )
+    assert outputs["forces"].block().values.shape == (2 * len(atoms), 3, 1)
+    assert outputs["stress"].block().values.shape == (1, 3, 3, 1)
+
 
 def test_serialize_ase(tmpdir, model, atoms):
     # Run some tests with a different dtype
