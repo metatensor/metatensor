@@ -6,7 +6,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Changed
+#### Added
+
+- Added `MetatensorCalculator.compute_energy()` to provide batched calculation of
+  energies, forces and stresses
+
+#### Changed
 
 - `MetatensorCalculator.run_model()` now supports batching across multiple `ase.Atoms`
   objects
