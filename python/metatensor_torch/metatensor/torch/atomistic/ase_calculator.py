@@ -651,7 +651,7 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
         nl_D = nl_D[selected]
 
     samples = np.concatenate([nl_i[:, None], nl_j[:, None], nl_S], axis=1)
-    distances = torch.from_numpy(nl_D).to(dtype=dtype).to(device=device)
+    distances = torch.from_numpy(nl_D).to(dtype=dtype, device=device)
 
     return TensorBlock(
         values=distances.reshape(-1, 3, 1),
@@ -663,7 +663,7 @@ def _compute_ase_neighbors(atoms, options, dtype, device):
                 "cell_shift_b",
                 "cell_shift_c",
             ],
-            values=torch.from_numpy(samples),
+            values=torch.from_numpy(samples).to(dtype=torch.int32, device=device),
         ).to(device=device),
         components=[Labels.range("xyz", 3).to(device)],
         properties=Labels.range("distance", 1).to(device),
