@@ -100,8 +100,8 @@ def test_gradient_errors(block):
     )
 
     message = (
-        "invalid parameter: invalid value for the 'sample' in gradient samples: "
-        "we got -3, but the values contain 3 samples"
+        "invalid parameter: invalid value for the 'sample' dimension "
+        "in gradient samples: all values should be positive, but we got -3"
     )
     with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
@@ -115,8 +115,8 @@ def test_gradient_errors(block):
     )
 
     message = (
-        "invalid parameter: invalid value for the 'sample' in gradient samples: "
-        "we got 42, but the values contain 3 samples"
+        "invalid parameter: invalid value for the 'sample' dimension "
+        "in gradient samples: we got 42, but the values contain 3 samples"
     )
     with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
