@@ -186,6 +186,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         # so we pretend to be able to compute all properties ASE knows about.
         self.implemented_properties = ALL_ASE_PROPERTIES
 
+        self._model_has_energy_uncertainty = (
+            "energy_uncertainty" in self._model.capabilities().outputs
+        )
+
     def todict(self):
         if "model_path" not in self.parameters:
             raise RuntimeError(
@@ -321,6 +325,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         with record_function("ASECalculator::prepare_inputs"):
             outputs = _ase_properties_to_metatensor_outputs(properties)
             outputs.update(self._additional_output_requests)
+            if calculate_energy and self._model_has_energy_uncertainty:
+                outputs["energy_uncertainty"] = _get_energy_uncertainty_output()
 
             capabilities = self._model.capabilities()
             for name in outputs.keys():
@@ -396,6 +402,20 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             assert len(energy.block().gradients_list()) == 0
             energy = energy.block().values
             assert energy.shape == (1, 1)
+
+        with record_function("ASECalculator::warn_uncertainty"):
+            if calculate_energy and self._model_has_energy_uncertainty:
+                uncertainty = outputs["energy_uncertainty"].block().values
+                assert uncertainty.shape == (1, 1)
+                uncertainty = uncertainty.detach().cpu().numpy()[0, 0]
+                if uncertainty / len(atoms) > 0.1:
+                    # 100 meV/atom, which is more than 2 kcal/mol, means that this
+                    # prediction is not chemically accurate
+                    warnings.warn(
+                        "the model's energy uncertainty is larger than 100 meV/atom; "
+                        "this prediction is not chemically accurate",
+                        stacklevel=2,
+                    )
 
         with record_function("ASECalculator::run_backward"):
             if do_backward:
@@ -708,4 +728,13 @@ def _full_3x3_to_voigt_6_stress(stress):
             (stress[0, 2] + stress[2, 0]) / 2.0,
             (stress[0, 1] + stress[1, 0]) / 2.0,
         ]
+    )
+
+
+def _get_energy_uncertainty_output():
+    return ModelOutput(
+        quantity="energy",
+        unit="eV",
+        per_atom=False,
+        explicit_gradients=[],
     )

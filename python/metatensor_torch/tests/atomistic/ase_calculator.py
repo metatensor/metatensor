@@ -132,6 +132,18 @@ def test_get_properties(model, atoms):
     assert np.all(properties["stress"] == atoms.get_stress())
 
 
+def test_accuracy_warning(model, atoms):
+    # our dummy model artificially gives a high uncertainty for large structures
+    big_atoms = atoms * (2, 2, 2)
+    big_atoms.calc = MetatensorCalculator(model, check_consistency=True)
+
+    with pytest.warns(
+        UserWarning,
+        match="this prediction is not chemically accurate",
+    ):
+        big_atoms.get_forces()
+
+
 def test_run_model(tmpdir, model, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
