@@ -57,10 +57,29 @@ class BaseAtomisticModel(torch.nn.Module):
         assert selected_atoms is None
 
         block = TensorBlock(
-            values=torch.tensor([[0.0, 1.0, 2.0]] * len(systems), dtype=torch.float64),
+            values=torch.tensor(
+                [
+                    (
+                        [0.0]
+                        if self.output_name == "energy_uncertainty"
+                        else [0.0, 1.0, 2.0]
+                    )
+                ]
+                * len(systems),
+                dtype=torch.float64,
+            ),
             samples=Labels("system", torch.arange(len(systems)).reshape(-1, 1)),
             components=[],
-            properties=Labels("energy", torch.tensor([[0], [1], [2]])),
+            properties=Labels(
+                "energy",
+                torch.tensor(
+                    (
+                        [[0]]
+                        if self.output_name == "energy_uncertainty"
+                        else [[0], [1], [2]]
+                    )
+                ),
+            ),
         )
         return {self.output_name: TensorMap(Labels("_", torch.tensor([[0]])), [block])}
 
@@ -70,6 +89,13 @@ class EnergyEnsembleModel(BaseAtomisticModel):
 
     def __init__(self):
         super().__init__("energy_ensemble")
+
+
+class EnergyUncertaintyModel(BaseAtomisticModel):
+    """A metatensor atomistic model returning an energy ensemble"""
+
+    def __init__(self):
+        super().__init__("energy_uncertainty")
 
 
 class FeaturesModel(BaseAtomisticModel):
@@ -97,6 +123,25 @@ def test_energy_ensemble_model(system, get_capabilities):
     assert list(ensemble.block().values.shape) == [2, 3]
     assert ensemble.block().samples.names == ["system"]
     assert ensemble.block().properties.names == ["energy"]
+
+
+def test_energy_uncertainty_model(system, get_capabilities):
+    model = EnergyUncertaintyModel()
+    capabilities = get_capabilities("energy_uncertainty")
+    atomistic = MetatensorAtomisticModel(model.eval(), ModelMetadata(), capabilities)
+
+    options = ModelEvaluationOptions(
+        outputs={"energy_uncertainty": ModelOutput(per_atom=False)}
+    )
+
+    result = atomistic([system, system], options, check_consistency=True)
+    assert "energy_uncertainty" in result
+
+    uncertainty = result["energy_uncertainty"]
+    assert uncertainty.keys == Labels("_", torch.tensor([[0]]))
+    assert list(uncertainty.block().values.shape) == [2, 1]
+    assert uncertainty.block().samples.names == ["system"]
+    assert uncertainty.block().properties.names == ["energy"]
 
 
 def test_features_model(system, get_capabilities):
