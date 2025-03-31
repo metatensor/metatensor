@@ -89,7 +89,6 @@ def _check_energy_like(
         message = "`Labels('energy', [[0], ..., [n]])`"
 
     if energy_block.properties != expected_properties:
-        print(energy_block.properties)
         raise ValueError(f"invalid properties for '{name}' output: expected {message}")
 
     for parameter, gradient in energy_block.gradients():
