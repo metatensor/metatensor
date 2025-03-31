@@ -191,6 +191,8 @@ Energy ensemble gradients
 The gradient metadata for energy ensemble is the same as for the ``energy``
 output (see :ref:`energy-output-gradients`).
 
+.. _energy-uncertainty-output:
+
 Energy uncertainty
 ------------------
 
