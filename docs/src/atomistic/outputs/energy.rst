@@ -194,7 +194,7 @@ output (see :ref:`energy-output-gradients`).
 Energy uncertainty
 ------------------
 
-The ``"energy_ensemble"`` key in the model outputs is associated with the uncertainty on
+The ``"energy_uncertainty"`` key in the model outputs is associated with the uncertainty on
 the ``energy``, corresponding to the expected standard deviation of the predictions when
 compared to the ground truth.
 
