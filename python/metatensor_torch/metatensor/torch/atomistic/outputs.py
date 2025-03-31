@@ -60,7 +60,7 @@ def _check_energy_like(
     selected_atoms: Optional[Labels],
 ):
     """
-    Check either "energy" or "energy_ensemble" output metadata
+    Check the output metadata of energy related outputs
     """
     assert name in ["energy", "energy_ensemble", "energy_uncertainty"]
 
