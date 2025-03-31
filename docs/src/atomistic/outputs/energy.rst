@@ -224,4 +224,4 @@ The energy uncertainty must have the following metadata:
     - same as :ref:`energy-output`
     - same as :ref:`energy-output`
 
-Currently, no simulation engines can use the ``"energy_ensemble"`` output.
+Currently, no simulation engines can use the ``"energy_uncertainty`` output.
