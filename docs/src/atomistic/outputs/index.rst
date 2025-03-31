@@ -28,7 +28,7 @@ Physical quantities
 The first set of standardized outputs in metatensor atomistic models are
 physical quantities, i.e. quantities with a well-defined physical meaning.
 
-.. grid:: 1 2 2 2
+.. grid:: 1 3 3 3
 
     .. grid-item-card:: Energy
       :link: energy-output
@@ -48,6 +48,15 @@ physical quantities, i.e. quantities with a well-defined physical meaning.
 
       An ensemble of multiple potential energies predictions, when running
       multiple models simultaneously.
+
+    .. grid-item-card:: Energy uncertainty
+      :link: energy-uncertainty-output
+      :link-type: ref
+
+      .. image:: /../static/images/energy-uncertainty-output.png
+
+      The uncertainty on the potential energies, useful to quantify the confidence of
+      the model.
 
 
 Machine learning outputs
