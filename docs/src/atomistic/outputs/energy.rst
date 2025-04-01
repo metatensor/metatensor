@@ -191,10 +191,12 @@ Energy ensemble gradients
 The gradient metadata for energy ensemble is the same as for the ``energy``
 output (see :ref:`energy-output-gradients`).
 
+.. _energy-uncertainty-output:
+
 Energy uncertainty
 ------------------
 
-The ``"energy_ensemble"`` key in the model outputs is associated with the uncertainty on
+The ``"energy_uncertainty"`` key in the model outputs is associated with the uncertainty on
 the ``energy``, corresponding to the expected standard deviation of the predictions when
 compared to the ground truth.
 
@@ -224,4 +226,4 @@ The energy uncertainty must have the following metadata:
     - same as :ref:`energy-output`
     - same as :ref:`energy-output`
 
-Currently, no simulation engines can use the ``"energy_ensemble"`` output.
+Currently, no simulation engines can use the ``"energy_uncertainty`` output.

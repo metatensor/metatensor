@@ -60,7 +60,7 @@ def _check_energy_like(
     selected_atoms: Optional[Labels],
 ):
     """
-    Check either "energy" or "energy_ensemble" output metadata
+    Check the output metadata of energy related outputs
     """
     assert name in ["energy", "energy_ensemble", "energy_uncertainty"]
 
@@ -89,7 +89,6 @@ def _check_energy_like(
         message = "`Labels('energy', [[0], ..., [n]])`"
 
     if energy_block.properties != expected_properties:
-        print(energy_block.properties)
         raise ValueError(f"invalid properties for '{name}' output: expected {message}")
 
     for parameter, gradient in energy_block.gradients():
