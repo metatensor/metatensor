@@ -393,16 +393,24 @@ class MetatensorAtomisticModel(torch.nn.Module):
                     expected_dtype=self._model_dtype,
                 )
 
-        for system in systems:
+        with record_function("MetatensorAtomisticModel::check_atomic_types"):
             # always (i.e. even if check_consistency=False) check that the atomic types
             # of the system match the one the model supports
-            all_types = torch.unique(system.types)
-            for atom_type in all_types:
-                if atom_type not in self._capabilities.atomic_types:
-                    raise ValueError(
-                        "this model does not support the atomic type "
-                        f"'{atom_type.item()}' which is present in the input systems"
-                    )
+            all_types = torch.cat([system.types for system in systems])
+            unsupported_mask = torch.logical_not(
+                torch.isin(
+                    all_types,
+                    torch.tensor(
+                        self._capabilities.atomic_types, device=all_types.device
+                    ),
+                )
+            )
+            if torch.any(unsupported_mask):
+                atom_type = all_types[unsupported_mask][0]
+                raise ValueError(
+                    "this model does not support the atomic type "
+                    f"'{atom_type.item()}' which is present in the input systems"
+                )
 
         # convert systems from engine to model units
         with record_function("MetatensorAtomisticModel::convert_units_input"):
