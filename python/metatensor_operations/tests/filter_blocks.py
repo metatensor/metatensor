@@ -17,6 +17,8 @@ def tensor() -> TensorMap:
 
 def test_keep_all(tensor):
     full_tensor = metatensor.filter_blocks(tensor, tensor.keys)
+
+    assert tensor.keys == full_tensor.keys
     assert metatensor.equal(tensor, full_tensor)
 
 
@@ -51,6 +53,7 @@ def test_keep_two_random_keys(tensor):
     ref_tensor = TensorMap(keys_to_keep, ref_blocks)
 
     new_tensor = metatensor.filter_blocks(tensor, keys_to_keep)
+    assert ref_tensor.keys == new_tensor.keys
     assert metatensor.equal(new_tensor, ref_tensor)
 
 
@@ -65,6 +68,7 @@ def test_larger_filter(tensor):
     )
     test_filter = metatensor.filter_blocks(tensor, key_to_filter)
 
+    assert test_filter.keys == tensor.keys
     assert metatensor.equal(test_filter, tensor)
 
 
@@ -88,6 +92,7 @@ def test_copy_flag(tensor):
     new_tensor_not_copied = metatensor.filter_blocks(tensor, keys_to_keep, copy=False)
 
     # Check that the resulting tensor are equal whether or not they are copied
+    assert new_tensor_copied.keys == new_tensor_not_copied.keys
     assert metatensor.equal(new_tensor_copied, new_tensor_not_copied)
 
     # Now modify the original tensor's block values in place
