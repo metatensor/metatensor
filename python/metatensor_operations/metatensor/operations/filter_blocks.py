@@ -47,7 +47,6 @@ def filter_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> Tensor
     new_blocks: List[TensorBlock] = []
     new_keys_values = []
     for i in to_keep_indices:
-
         new_keys_values.append(tensor_keys.entry(i).values)
         block = tensor[i]
 
