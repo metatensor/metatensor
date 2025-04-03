@@ -4,11 +4,13 @@ from typing import Dict, List, Optional
 
 import pytest
 import torch
+from packaging import version
 
 from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
     MetatensorAtomisticModel,
     ModelCapabilities,
+    ModelEvaluationOptions,
     ModelMetadata,
     ModelOutput,
     NeighborListOptions,
@@ -29,16 +31,16 @@ class MinimalModel(torch.nn.Module):
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
-        if "dummy" in outputs:
+        if "tests::dummy::long_name" in outputs:
             block = TensorBlock(
-                values=torch.tensor([[0.0]]),
+                values=torch.tensor([[0.0]], dtype=torch.float64),
                 samples=Labels("s", torch.tensor([[0]])),
                 components=torch.jit.annotate(List[Labels], []),
                 properties=Labels("p", torch.tensor([[0]])),
             )
             tensor = TensorMap(Labels("_", torch.tensor([[0]])), [block])
             return {
-                "dummy": tensor,
+                "tests::dummy::long_name": tensor,
             }
         else:
             return {}
@@ -61,7 +63,7 @@ def model():
         atomic_types=[1, 2, 3],
         interaction_range=4.3,
         outputs={
-            "tests::dummy::long": ModelOutput(
+            "tests::dummy::long_name": ModelOutput(
                 quantity="",
                 unit="",
                 per_atom=False,
@@ -407,3 +409,51 @@ def test_read_metadata(tmpdir):
     extracted_metadata = read_model_metadata(str(tmpdir / "model.pt"))
 
     assert str(extracted_metadata) == str(metadata)
+
+
+@pytest.mark.parametrize("n_systems", [0, 1, 8])
+def test_predictions(model, tmp_path, n_systems):
+    os.chdir(tmp_path)
+    model.save("export.pt")
+    model_loaded = load_atomistic_model("export.pt")
+
+    system = System(
+        positions=torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float64),
+        types=torch.tensor([1]),
+        cell=torch.tensor(
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=torch.float64
+        ),
+        pbc=torch.tensor([True, True, True]),
+    )
+    requested_neighbor_lists = model_loaded.requested_neighbor_lists()
+    for requested_neighbor_list in requested_neighbor_lists:
+        system.add_neighbor_list(
+            requested_neighbor_list,
+            TensorBlock(
+                values=torch.empty(0, 3, 1, dtype=torch.float64),
+                samples=Labels(
+                    [
+                        "first_atom",
+                        "second_atom",
+                        "cell_shift_a",
+                        "cell_shift_b",
+                        "cell_shift_c",
+                    ],
+                    torch.empty(0, 5, dtype=torch.int32),
+                ),
+                components=[Labels.range("xyz", 3)],
+                properties=Labels.range("distance", 1),
+            ),
+        )
+    systems = [system] * n_systems
+
+    outputs = {
+        "tests::dummy::long_name": ModelOutput(quantity="", unit="", per_atom=False)
+    }
+    evaluation_options = ModelEvaluationOptions(length_unit="angstrom", outputs=outputs)
+
+    result = model_loaded(systems, evaluation_options, check_consistency=True)
+    assert "tests::dummy::long_name" in result
+    assert isinstance(result["tests::dummy::long_name"], torch.ScriptObject)
+    if version.parse(torch.__version__) >= version.parse("2.1"):
+        assert result["tests::dummy::long_name"]._type().name() == "TensorMap"
