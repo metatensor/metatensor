@@ -31,7 +31,7 @@ class MinimalModel(torch.nn.Module):
         outputs: Dict[str, ModelOutput],
         selected_atoms: Optional[Labels] = None,
     ) -> Dict[str, TensorMap]:
-        if "tests::dummy::long" in outputs:
+        if "tests::dummy::long_name" in outputs:
             block = TensorBlock(
                 values=torch.tensor([[0.0]], dtype=torch.float64),
                 samples=Labels("s", torch.tensor([[0]])),
@@ -40,7 +40,7 @@ class MinimalModel(torch.nn.Module):
             )
             tensor = TensorMap(Labels("_", torch.tensor([[0]])), [block])
             return {
-                "tests::dummy::long": tensor,
+                "tests::dummy::long_name": tensor,
             }
         else:
             return {}
@@ -63,7 +63,7 @@ def model():
         atomic_types=[1, 2, 3],
         interaction_range=4.3,
         outputs={
-            "tests::dummy::long": ModelOutput(
+            "tests::dummy::long_name": ModelOutput(
                 quantity="",
                 unit="",
                 per_atom=False,
@@ -411,7 +411,7 @@ def test_read_metadata(tmpdir):
     assert str(extracted_metadata) == str(metadata)
 
 
-@pytest.mark.parametrize("n_systems", [0, 1, 2, 3])
+@pytest.mark.parametrize("n_systems", [0, 1, 8])
 def test_predictions(model, tmp_path, n_systems):
     os.chdir(tmp_path)
     model.save("export.pt")
@@ -447,11 +447,13 @@ def test_predictions(model, tmp_path, n_systems):
         )
     systems = [system] * n_systems
 
-    outputs = {"tests::dummy::long": ModelOutput(quantity="", unit="", per_atom=False)}
+    outputs = {
+        "tests::dummy::long_name": ModelOutput(quantity="", unit="", per_atom=False)
+    }
     evaluation_options = ModelEvaluationOptions(length_unit="angstrom", outputs=outputs)
 
     result = model_loaded(systems, evaluation_options, check_consistency=True)
-    assert "tests::dummy::long" in result
-    assert isinstance(result["tests::dummy::long"], torch.ScriptObject)
+    assert "tests::dummy::long_name" in result
+    assert isinstance(result["tests::dummy::long_name"], torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert result["tests::dummy::long"]._type().name() == "TensorMap"
+        assert result["tests::dummy::long_name"]._type().name() == "TensorMap"
