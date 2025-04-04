@@ -160,7 +160,7 @@ def test_run_model(tmpdir, model, atoms):
     assert np.allclose(ref.get_potential_energy(), outputs["energy"].block().values)
 
     # check per atom energy
-    requested = {"energy": ModelOutput(per_atom=True)}
+    requested = {"energy": ModelOutput(sample_kind=["atom"])}
     outputs = calculator.run_model(atoms, outputs=requested, selected_atoms=first_half)
     first_energies = outputs["energy"].block().values.numpy().reshape(-1)
 
@@ -172,7 +172,7 @@ def test_run_model(tmpdir, model, atoms):
     assert np.allclose(expected[second_mask], second_energies)
 
     # check total energy
-    requested = {"energy": ModelOutput(per_atom=False)}
+    requested = {"energy": ModelOutput(sample_kind=["system"])}
     outputs = calculator.run_model(atoms, outputs=requested, selected_atoms=first_half)
     first_energies = outputs["energy"].block().values.numpy().reshape(-1)
 
@@ -452,7 +452,7 @@ class MultipleOutputModel(torch.nn.Module):
     ) -> Dict[str, TensorMap]:
         results = {}
         for name, requested in outputs.items():
-            assert not requested.per_atom
+            assert requested.sample_kind == ["system"]
 
             block = TensorBlock(
                 values=torch.tensor([[0.0]], dtype=torch.float64),
@@ -469,9 +469,9 @@ class MultipleOutputModel(torch.nn.Module):
 def test_additional_outputs(atoms):
     capabilities = ModelCapabilities(
         outputs={
-            "energy": ModelOutput(per_atom=False),
-            "test::test": ModelOutput(per_atom=False),
-            "another::one": ModelOutput(per_atom=False),
+            "energy": ModelOutput(sample_kind=["system"]),
+            "test::test": ModelOutput(sample_kind=["system"]),
+            "another::one": ModelOutput(sample_kind=["system"]),
         },
         atomic_types=[28],
         interaction_range=0.0,
@@ -491,8 +491,8 @@ def test_additional_outputs(atoms):
         model,
         check_consistency=True,
         additional_outputs={
-            "test::test": ModelOutput(per_atom=False),
-            "another::one": ModelOutput(per_atom=False),
+            "test::test": ModelOutput(sample_kind=["system"]),
+            "another::one": ModelOutput(sample_kind=["system"]),
         },
     )
     assert atoms.get_potential_energy() == 0.0

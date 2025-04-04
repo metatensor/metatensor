@@ -72,7 +72,7 @@ static nlohmann::json model_output_to_json(const ModelOutputHolder& self) {
     result["class"] = "ModelOutput";
     result["quantity"] = self.quantity();
     result["unit"] = self.unit();
-    result["per_atom"] = self.per_atom;
+    result["sample_kind"] = self.sample_kind;
     result["explicit_gradients"] = self.explicit_gradients;
 
     return result;
@@ -110,11 +110,13 @@ static ModelOutput model_output_from_json(const nlohmann::json& data) {
         result->set_unit(data["unit"]);
     }
 
-    if (data.contains("per_atom")) {
-        if (!data["per_atom"].is_boolean()) {
-            throw std::runtime_error("'per_atom' in JSON for ModelOutput must be a boolean");
+    if (data.contains("sample_kind")) {
+        for (const auto& kind: data["sample_kind"]) {
+            if (!kind.is_string()) {
+                throw std::runtime_error("'sample_kind' in JSON for ModelOutput must be an array of strings");
+            }
         }
-        result->per_atom = data["per_atom"];
+        result->sample_kind = data["sample_kind"];
     }
 
     if (data.contains("explicit_gradients")) {

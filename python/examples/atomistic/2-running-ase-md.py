@@ -102,8 +102,8 @@ class HarmonicModel(torch.nn.Module):
         if selected_atoms is not None:
             raise NotImplementedError("selected_atoms is not implemented")
 
-        if outputs["energy"].per_atom:
-            raise NotImplementedError("per atom energy is not implemented")
+        if outputs["energy"].sample_kind != ["system"]:
+            raise NotImplementedError("only per-system energy is implemented")
 
         # compute the energy for each system by adding together the energy for each atom
         energy = torch.zeros((len(systems), 1), dtype=systems[0].positions.dtype)
@@ -185,7 +185,7 @@ model = HarmonicModel(
 
 capabilities = ModelCapabilities(
     outputs={
-        "energy": ModelOutput(quantity="energy", unit="eV", per_atom=False),
+        "energy": ModelOutput(quantity="energy", unit="eV", sample_kind=["system"]),
     },
     atomic_types=[6],
     interaction_range=0.0,

@@ -251,7 +251,7 @@ class ModelOutput:
         self,
         quantity: str = "",
         unit: str = "",
-        per_atom: bool = False,
+        sample_kind: List[str] = ["system"],  # noqa B006
         explicit_gradients: List[str] = [],  # noqa B006
     ):
         pass
@@ -275,8 +275,8 @@ class ModelOutput:
         The list of possible units is available :ref:`here <known-quantities-units>`.
         """
 
-    per_atom: bool
-    """Is the output defined per-atom or for the overall structure"""
+    sample_kind: List[str]
+    """The kind of samples this output is computed for (e.g. atom, pair, system)"""
 
     explicit_gradients: List[str]
     """

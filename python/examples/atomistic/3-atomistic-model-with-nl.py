@@ -276,7 +276,7 @@ neighbor_shifts = neighbors.samples.view(
 #
 # The model below is a simplified version of a `more complex Lennard-Jones model
 # <https://github.com/Luthaf/metatensor-lj-test/blob/main/src/metatensor_lj_test/pure.py>`_.
-# The linked version also implements ``per_atom`` energies as well as atom selection
+# The linked version also implements per-atom energies as well as atom selection
 # using the ``selected_atoms`` parameter of the ``forward()`` method. In this model, we
 # shift the energy by its value at the ``cutoff``. This will break the conservativeness
 # of the potential, which is unproblematic in here because we use a large cutoff and
@@ -328,8 +328,8 @@ class LennardJonesModel(torch.nn.Module):
         if selected_atoms is not None:
             raise NotImplementedError("selected_atoms is not implemented")
 
-        if outputs["energy"].per_atom:
-            raise NotImplementedError("per atom energy is not implemented")
+        if outputs["energy"].sample_kind != ["system"]:
+            raise NotImplementedError("only per-system energy is implemented")
 
         # Initialize device so we can access it outside of the for loop
         device = torch.device("cpu")
@@ -392,7 +392,7 @@ model = LennardJonesModel(
 
 capabilities = ModelCapabilities(
     outputs={
-        "energy": ModelOutput(quantity="energy", unit="kJ/mol", per_atom=False),
+        "energy": ModelOutput(quantity="energy", unit="kJ/mol", sample_kind=["system"]),
     },
     atomic_types=[18],
     interaction_range=5.0,

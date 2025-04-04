@@ -66,7 +66,7 @@ def model():
             "tests::dummy::long_name": ModelOutput(
                 quantity="",
                 unit="",
-                per_atom=False,
+                sample_kind=["system"],
                 explicit_gradients=[],
             ),
         },
@@ -91,7 +91,7 @@ def model_energy_nounit():
             "energy": ModelOutput(
                 quantity="",
                 unit="",
-                per_atom=False,
+                sample_kind=["system"],
                 explicit_gradients=[],
             ),
         },

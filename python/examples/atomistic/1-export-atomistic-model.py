@@ -101,8 +101,8 @@ class SingleAtomEnergy(torch.nn.Module):
         if selected_atoms is not None:
             raise NotImplementedError("selected_atoms is not implemented")
 
-        if outputs["energy"].per_atom:
-            raise NotImplementedError("per atom energy is not implemented")
+        if outputs["energy"].sample_kind != ["system"]:
+            raise NotImplementedError("only per-system energy is implemented")
 
         # compute the energy for each system by adding together the energy for each atom
         energy = torch.zeros((len(systems), 1), dtype=systems[0].positions.dtype)
@@ -179,12 +179,13 @@ metadata = ModelMetadata(
 # are the things that this model can do? First we'll need to define which outputs our
 # model can handle: there is only one, called ``"energy"``, which correspond to the
 # physical quantity of energies (``quantity="energy"``). This energy is returned in
-# electronvolt (``units="eV"``); and with the code above it can not be computed
-# per-atom, only for the full structure (``per_atom=False``).
+# electronvolt (``units="eV"``); and with the code above it can only be computed
+# for the full structures (``sample_kind=["system"]``), as opposed to per-atom or
+# per-pair.
 
 
 outputs = {
-    "energy": ModelOutput(quantity="energy", unit="eV", per_atom=False),
+    "energy": ModelOutput(quantity="energy", unit="eV", sample_kind=["system"]),
 }
 
 # %%

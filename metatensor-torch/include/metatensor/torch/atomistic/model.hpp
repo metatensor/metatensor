@@ -49,10 +49,10 @@ public:
     ModelOutputHolder(
         std::string quantity,
         std::string unit,
-        bool per_atom_,
+        std::vector<std::string> sample_kind_,
         std::vector<std::string> explicit_gradients_
     ):
-        per_atom(per_atom_),
+        sample_kind(sample_kind_),
         explicit_gradients(std::move(explicit_gradients_))
     {
         this->set_quantity(std::move(quantity));
@@ -78,8 +78,10 @@ public:
     /// set the unit of the output
     void set_unit(std::string unit);
 
-    /// is the output defined per-atom or for the overall structure
-    bool per_atom = false;
+    /// the sample kind(s) of the output. For example, this could be "system" for
+    /// a single output for the whole system, or "atom" for an output for each
+    /// atom.
+    std::vector<std::string> sample_kind;
 
     /// Which gradients should be computed eagerly and stored inside the output
     /// `TensorMap`

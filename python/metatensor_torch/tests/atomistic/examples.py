@@ -40,7 +40,7 @@ def test_export_atomistic_model(tmp_path):
     )
 
     outputs = {
-        "energy": ModelOutput(quantity="energy", unit="eV", per_atom=False),
+        "energy": ModelOutput(quantity="energy", unit="eV", sample_kind=["system"]),
     }
 
     # run bare model
