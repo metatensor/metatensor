@@ -49,6 +49,15 @@ physical quantities, i.e. quantities with a well-defined physical meaning.
       An ensemble of multiple potential energies predictions, when running
       multiple models simultaneously.
 
+    .. grid-item-card:: Energy uncertainty
+      :link: energy-uncertainty-output
+      :link-type: ref
+
+      .. image:: /../static/images/energy-uncertainty-output.png
+
+      The uncertainty on the potential energies, useful to quantify the confidence of
+      the model.
+
 
 Machine learning outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^

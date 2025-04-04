@@ -43,7 +43,7 @@ def _check_outputs(
                 f"the model did not produce the '{name}' output, which was requested"
             )
 
-        if name in ["energy", "energy_ensemble"]:
+        if name in ["energy", "energy_ensemble", "energy_uncertainty"]:
             _check_energy_like(name, value, systems, request, selected_atoms)
         elif name == "features":
             _check_features(value, systems, request, selected_atoms)
@@ -60,9 +60,9 @@ def _check_energy_like(
     selected_atoms: Optional[Labels],
 ):
     """
-    Check either "energy" or "energy_ensemble" output metadata
+    Check the output metadata of energy related outputs
     """
-    assert name in ["energy", "energy_ensemble"]
+    assert name in ["energy", "energy_ensemble", "energy_uncertainty"]
 
     # Ensure the output contains a single block with the expected key
     _validate_single_block(name, value)
@@ -77,7 +77,7 @@ def _check_energy_like(
     _validate_no_components(name, energy_block)
 
     # The only difference between energy & energy_ensemble is in the properties
-    if name == "energy":
+    if name == "energy" or name == "energy_uncertainty":
         expected_properties = Labels("energy", torch.tensor([[0]], device=device))
         message = "`Labels('energy', [[0]])`"
     else:

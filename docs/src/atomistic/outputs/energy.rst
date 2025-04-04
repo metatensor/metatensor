@@ -173,10 +173,57 @@ Energy ensembles must have the following metadata:
       ``"energy"``, with entries ranging from 0 to the number of members of the
       ensemble minus one.
 
-Currently, no simulation engines can use the ``"energy_ensemble"`` output.
+The following simulation engines can use the ``"energy_ensemble"`` output:
+
+.. grid:: 1 1 1 1
+
+  .. grid-item-card::
+    :text-align: center
+    :padding: 1
+    :link: engine-ipi
+    :link-type: ref
+
+    |ipi-logo|
 
 Energy ensemble gradients
 -------------------------
 
 The gradient metadata for energy ensemble is the same as for the ``energy``
 output (see :ref:`energy-output-gradients`).
+
+.. _energy-uncertainty-output:
+
+Energy uncertainty
+------------------
+
+The ``"energy_uncertainty"`` key in the model outputs is associated with the uncertainty on
+the ``energy``, corresponding to the expected standard deviation of the predictions when
+compared to the ground truth.
+
+The energy uncertainty must have the following metadata:
+
+.. list-table:: Metadata for energy uncertainty output
+  :widths: 2 3 7
+  :header-rows: 1
+
+  * - Metadata
+    - Names
+    - Description
+
+  * - keys
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - samples
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - components
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+  * - properties
+    - same as :ref:`energy-output`
+    - same as :ref:`energy-output`
+
+Currently, no simulation engines can use the ``"energy_uncertainty`` output.
