@@ -49,7 +49,7 @@ jobs:
           toolchain: stable
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+        uses: mozilla-actions/sccache-action@v0.0.9
         with:
           version: "v0.8.1"
 
