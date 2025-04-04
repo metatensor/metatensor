@@ -1,6 +1,6 @@
 [package]
 name = "metatensor-core"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
 publish = false
 rust-version = "1.74"
@@ -20,7 +20,11 @@ indexmap = "2"
 once_cell = "1"
 smallvec = {version = "1", features = ["union"]}
 
-# implementation of the NPZ serialization format
+# this is part of the standard library and stable since rust 1.84,
+# we can remove it when our MSRV is at least 1.84
+is_sorted = "0.1"
+
+# implementation of the MTS serialization format
 byteorder = {version = "1"}
 num-traits = {version = "0.2", default-features = false}
 zip = {version = "0.6", default-features = false, features = ["deflate"]}
@@ -29,5 +33,8 @@ zip = {version = "0.6", default-features = false, features = ["deflate"]}
 cbindgen = { version = "0.27", default-features = false }
 
 [dev-dependencies]
-which = "6"
 lazy_static = "1"
+which = "7"
+
+# home MSRV is now 1.81
+home = "=0.5.9"

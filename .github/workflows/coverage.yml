@@ -20,7 +20,7 @@ jobs:
       - name: setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: install python dependencies
         run: |
@@ -34,7 +34,7 @@ jobs:
           key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.7
         with:
           version: "v0.8.1"
 
@@ -57,7 +57,7 @@ jobs:
             coverage xml
 
       - name: upload to codecov.io
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
           files: coverage.xml

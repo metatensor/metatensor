@@ -134,7 +134,7 @@ def funcdecl_to_ctypes(type):
     restype = type_to_ctypes(type.type)
     args = [type_to_ctypes(t.type) for t in type.args.params]
 
-    return f'CFUNCTYPE({restype}, {", ".join(args)})'
+    return f"CFUNCTYPE({restype}, {', '.join(args)})"
 
 
 def type_to_ctypes(type):
@@ -237,7 +237,7 @@ def generate_declarations():
     outpath = os.path.join(
         ROOT,
         "python",
-        "metatensor-core",
+        "metatensor_core",
         "metatensor",
         "_c_api.py",
     )

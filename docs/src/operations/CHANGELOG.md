@@ -1,1 +1,1 @@
-../../../python/metatensor-operations/CHANGELOG.md
+../../../python/metatensor_operations/CHANGELOG.md

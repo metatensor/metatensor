@@ -25,4 +25,4 @@ calculator = SoapRadialSpectrum(
 
 descriptor = calculator.compute(atoms, gradients=["positions"])
 
-metatensor.save("radial-spectrum.npz", descriptor)
+metatensor.save("radial-spectrum.mts", descriptor)

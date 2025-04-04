@@ -8,14 +8,85 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 <!-- Possible sections for each package:
 
-#### Added
+### Added
 
-#### Fixed
+### Fixed
 
-#### Changed
+### Changed
 
-#### Removed
+### Removed
 -->
+
+## [Version 0.7.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.4) - 2025-03-28
+
+### Added
+
+- Added `MetatensorCalculator.compute_energy()` to provide batched calculation of
+  energies, forces and stresses (#880).
+
+### Changed
+
+- `MetatensorCalculator.run_model()` now supports batching across multiple
+  `ase.Atoms` objects (#879).
+
+## [Version 0.7.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.3) - 2025-02-19
+
+### Changed
+
+- The `MetatensorCalculator` for ASE now only computes the stress if the system is
+  periodic in all directions
+
+
+## [Version 0.7.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.2) - 2025-02-18
+
+### Fixed
+
+- Fixed a bug with the custom TorchScript extensions when using `featomic-torch`
+
+## [Version 0.7.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.1) - 2025-02-17
+
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
+
+### Added
+
+- Support for Python 3.13 and PyTorch 2.6
+
+
+## [Version 0.7.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.0) - 2025-01-22
+
+### Changed
+
+- Custom data stored in `System` is now stored as `TensorMap` instead of
+  `TensorBlock`. This allow for more kinds of data to be stored.
+
+- `metatensor_torch::TorchLabels` is now `metatensor_torch::Labels`; and
+  similarly for `metatensor_torch::TensorBlock` and similarly for
+  `metatensor_torch::TensorMap`. We temporarily provide type aliases for
+  backward compatibilty.
+
+### Added
+
+- `System` can now be serialized and saved to a file using
+  `metatensor.torch.atomistic.save` and
+  `metatensor.torch.atomistic.load_system`. For the initial implementation,
+  these functions are only accessible from Python.
+
+## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.3) - 2024-12-11
+
+### Fixed
+
+- Fixed an issue with Python wheels building, where the underlying C++ library
+  would get a different version from the Python library and fail to load.
+
+## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.2) - 2024-12-11
+
+### Fixed
+
+- Selecting from empty `Labels` no longer fails (#792)
+- Models are exported with `requires_grad=False` for all parameters, which
+  should make them faster when using autograd to compute forces and stress (#802)
 
 ## [Version 0.6.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.6.1) - 2024-11-7
 

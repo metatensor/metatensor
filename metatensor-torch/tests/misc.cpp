@@ -1,6 +1,6 @@
-#include <catch.hpp>
-
 #include "metatensor/torch.hpp"
+
+#include <catch.hpp>
 
 
 TEST_CASE("Version macros") {

@@ -3,12 +3,12 @@ Labels
 
 .. autoclass:: metatensor.Labels
     :members:
-    :undoc-members:
+    :special-members: __len__, __getitem__, __contains__, __eq__, __ne__
 
 
 .. autoclass:: metatensor.labels.LabelsEntry
     :members:
-    :undoc-members:
+    :special-members: __len__, __getitem__, __eq__, __ne__
 
 
 .. autoclass:: metatensor.labels.LabelsValues()

@@ -34,7 +34,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 
 [build-system]
 requires = [
-    "setuptools >=68",
+    "setuptools >=75",
     "packaging >=23",
 ]
 build-backend = "setuptools.build_meta"
@@ -48,10 +48,10 @@ packages = []
 [tool.coverage.paths]
 # path remapping for coverage. `coverage` will map path matching the second
 # string to the first string.
-core = ["python/metatensor-core/", ".tox/*/lib/python*/site-packages/"]
-torch = ["python/metatensor-torch/", ".tox/*/lib/python*/site-packages/"]
-operations = ["python/metatensor-operations/", ".tox/*/lib/python*/site-packages/"]
-learn = ["python/metatensor-learn/", ".tox/*/lib/python*/site-packages/"]
+core = ["python/metatensor_core/", ".tox/*/lib/python*/site-packages/"]
+torch = ["python/metatensor_torch/", ".tox/*/lib/python*/site-packages/"]
+operations = ["python/metatensor_operations/", ".tox/*/lib/python*/site-packages/"]
+learn = ["python/metatensor_learn/", ".tox/*/lib/python*/site-packages/"]
 
 [tool.coverage.report]
 show_missing = true
@@ -77,6 +77,17 @@ ignore = ["B018", "B904"]
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["metatensor"]
+known-third-party = ["torch"]
 
 [tool.ruff.format]
 docstring-code-format = true
+
+### ======================================================================== ###
+
+[tool.uv.pip]
+reinstall-package = [
+    "metatensor-core",
+    "metatensor-torch",
+    "metatensor-operations",
+    "metatensor-learn"
+]

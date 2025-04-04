@@ -55,8 +55,9 @@ pub fn load_block<R, F>(reader: R, create_array: F) -> Result<TensorBlock, Error
 
 /// Save the given block to a file (or any other writer).
 ///
-/// The format used is documented in the [`load`] function, and is based on
-/// numpy's NPZ format (i.e. zip archive containing NPY files).
+/// The format used is documented in the [`load`] function, and consists of a
+/// zip archive containing NPY files. The recomended file extension when saving
+/// data is `.mts`, to prevent confusion with generic `.npz` files.
 pub fn save_block<W: std::io::Write + std::io::Seek>(writer: W, block: &TensorBlock) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);
     write_single_block(&mut archive, "", true, block)?;

@@ -24,9 +24,6 @@ concurrency:
   group: python-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-env:
-  METATENSOR_NO_LOCAL_DEPS: "1"
-
 
 jobs:
   build-core-wheels:
@@ -40,11 +37,11 @@ jobs:
             rust-target: x86_64-unknown-linux-gnu
             cibw-arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-12
+            os: macos-13
             rust-target: x86_64-apple-darwin
             cibw-arch: x86_64
           - name: arm64 macOS
@@ -52,8 +49,7 @@ jobs:
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
-            # TODO: add a 32-bit windows builder?
+            os: windows-2022
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
     steps:
@@ -70,21 +66,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: install dependencies
         run: python -m pip install cibuildwheel twine
 
-      - name: Set up QEMU for docker
-        if: matrix.os == 'ubuntu-22.04'
-        uses: docker/setup-qemu-action@v3
-
       - name: build manylinux with rust docker image
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
         run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-core wheel
-        run: python -m cibuildwheel python/metatensor-core
+        run: python -m cibuildwheel python/metatensor_core
         env:
           CIBW_BUILD: cp311-*
           CIBW_SKIP: "*musllinux*"
@@ -109,15 +101,16 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5']
+        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5', '2.6']
         arch: ['arm64', 'x86_64']
-        os: ['ubuntu-22.04', 'macos-13', 'macos-14', 'windows-2019']
+        os: ['ubuntu-22.04', 'ubuntu-22.04-arm', 'macos-13', 'macos-14', 'windows-2022']
         exclude:
-          # remove mismatched arch for macOS
-          - {os: macos-14, arch: x86_64}
+          # remove mismatched arch-os combinations
           - {os: macos-13, arch: arm64}
-          # no arm64-windows build
-          - {os: windows-2019, arch: arm64}
+          - {os: windows-2022, arch: arm64}
+          - {os: ubuntu-22.04, arch: arm64}
+          - {os: macos-14, arch: x86_64}
+          - {os: ubuntu-22.04-arm, arch: x86_64}
           # arch arm64 on macos is only supported for torch >= 2.0
           - {os: macos-14, arch: arm64, torch-version: '1.12'}
           - {os: macos-14, arch: arm64, torch-version: '1.13'}
@@ -125,6 +118,7 @@ jobs:
           - {os: macos-13, arch: x86_64, torch-version: '2.3'}
           - {os: macos-13, arch: x86_64, torch-version: '2.4'}
           - {os: macos-13, arch: x86_64, torch-version: '2.5'}
+          - {os: macos-13, arch: x86_64, torch-version: '2.6'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
@@ -133,7 +127,7 @@ jobs:
             rust-target: x86_64-unknown-linux-gnu
             cibw-arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
             arch: arm64
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
@@ -148,19 +142,32 @@ jobs:
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
+            os: windows-2022
             arch: x86_64
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
-          # add the right python version for each torch version
-          - {torch-version: '1.12', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '1.13', python-version: '3.10', cibw-python: 'cp310-*'}
-          - {torch-version: '2.0',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.1',  python-version: '3.11', cibw-python: 'cp311-*'}
-          - {torch-version: '2.2',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.3',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.4',  python-version: '3.12', cibw-python: 'cp312-*'}
-          - {torch-version: '2.5',  python-version: '3.12', cibw-python: 'cp312-*'}
+          # add the right python version image for each torch version
+          - {torch-version: '1.12', cibw-python: 'cp310-*'}
+          - {torch-version: '1.13', cibw-python: 'cp310-*'}
+          - {torch-version: '2.0', cibw-python: 'cp311-*'}
+          - {torch-version: '2.1', cibw-python: 'cp311-*'}
+          - {torch-version: '2.2', cibw-python: 'cp312-*'}
+          - {torch-version: '2.3', cibw-python: 'cp312-*'}
+          - {torch-version: '2.4', cibw-python: 'cp312-*'}
+          - {torch-version: '2.5', cibw-python: 'cp312-*'}
+          - {torch-version: '2.6', cibw-python: 'cp312-*'}
+          # set the right manylinux image to use
+          - {torch-version: '1.12', manylinux-version: "2014"}
+          - {torch-version: '1.13', manylinux-version: "2014"}
+          - {torch-version: '2.0', manylinux-version: "2014"}
+          - {torch-version: '2.1', manylinux-version: "2014"}
+          - {torch-version: '2.2', manylinux-version: "2014"}
+          - {torch-version: '2.3', manylinux-version: "2014"}
+          - {torch-version: '2.4', manylinux-version: "2014"}
+          - {torch-version: '2.5', manylinux-version: "2014"}
+          # only torch >+ 2.6 on arm64-linux needs the newer manylinux
+          - {torch-version: '2.6', arch: arm64, manylinux-version: "_2_28"}
+          - {torch-version: '2.6', arch: x86_64, manylinux-version: "2014"}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,28 +182,27 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: install dependencies
         run: python -m pip install cibuildwheel
 
-      - name: Set up QEMU for docker
-        if: matrix.os == 'ubuntu-22.04'
-        uses: docker/setup-qemu-action@v3
-
       - name: build manylinux with rust docker image
-        if: matrix.os == 'ubuntu-22.04'
-        run: docker buildx build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
+        if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
+        run: |
+          docker buildx build \
+              -t rustc-manylinux${{ matrix.manylinux-version }}_${{ matrix.cibw-arch }} \
+              python/scripts/rustc-manylinux${{ matrix.manylinux-version }}_${{ matrix.cibw-arch }}
 
       - name: build metatensor-torch wheel
-        run: python -m cibuildwheel python/metatensor-torch
+        run: python -m cibuildwheel python/metatensor_torch
         env:
           CIBW_BUILD: ${{ matrix.cibw-python}}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw-arch }}
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux2014_x86_64
-          CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux2014_aarch64
+          CIBW_MANYLINUX_X86_64_IMAGE: rustc-manylinux${{ matrix.manylinux-version }}_x86_64
+          CIBW_MANYLINUX_AARCH64_IMAGE: rustc-manylinux${{ matrix.manylinux-version }}_aarch64
           # METATENSOR_NO_LOCAL_DEPS is set to 1 when building a tag of
           # metatensor-torch, which will force to use the version of
           # metatensor-core already released on PyPI. Otherwise, this will use
@@ -232,7 +238,7 @@ jobs:
             os: ubuntu-22.04
             arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
             arch: arm64
           - name: x86_64 macOS
             os: macos-13
@@ -241,7 +247,7 @@ jobs:
             os: macos-14
             arch: arm64
           - name: x86_64 Windows
-            os: windows-2019
+            os: windows-2022
             arch: x86_64
     steps:
       - uses: actions/checkout@v4
@@ -256,7 +262,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: install dependencies
         run: python -m pip install twine wheel
@@ -297,6 +303,8 @@ jobs:
   build-others:
     name: Build other wheels/sdists
     runs-on: ubuntu-22.04
+    env:
+      METATENSOR_NO_LOCAL_DEPS: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -305,22 +313,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: install dependencies
         run: python -m pip install wheel build twine
 
       - name: build metatensor-core sdist
-        run: python -m build python/metatensor-core --sdist --outdir=dist/
+        run: python -m build python/metatensor_core --sdist --outdir=dist/
 
       - name: build metatensor-operations sdist and wheel
-        run: python -m build python/metatensor-operations --outdir=dist/
+        run: python -m build python/metatensor_operations --outdir=dist/
 
       - name: build metatensor-learn sdist and wheel
-        run: python -m build python/metatensor-learn --outdir=dist/
+        run: python -m build python/metatensor_learn --outdir=dist/
 
       - name: build metatensor-torch sdist
-        run: python -m build python/metatensor-torch --sdist --outdir=dist/
+        run: python -m build python/metatensor_torch --sdist --outdir=dist/
 
       - name: build metatensor sdist and wheel
         run: python -m build . --outdir=dist/
@@ -347,6 +355,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Download metatensor-core wheels
         uses: actions/download-artifact@v4
@@ -375,6 +384,13 @@ jobs:
           path: |
             wheels/*
             wheels/cxx/*
+
+      - name: Comment with download link
+        uses: PicoCentauri/comment-artifact@v1
+        if: github.event.pull_request.head.repo.fork == false
+        with:
+          name: wheels
+          description: ⚙️ Download Python wheels for this pull-request (you can install these with pip)
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
@@ -427,3 +443,79 @@ jobs:
           prerelease: ${{ contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-build-external:
+    # This checks building the wheels with external libraries. This setup is
+    # mainly used for the conda packages metatensor-*-python, which use the
+    # libmetatensor-* conda packages to provide the native code.
+    runs-on: ${{ matrix.os }}
+    name: External libraries / ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.6.0%2Bcpu.zip
+          - os: macos-14
+            rust-target: aarch64-apple-darwin
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.6.0.zip
+          - os: windows-2022
+            rust-target: x86_64-pc-windows-msvc
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.6.0%2Bcpu.zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: ${{ matrix.rust-target }}
+
+      - name: setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: setup environment
+        run: |
+          pip install build
+          echo "CMAKE_PREFIX_PATH=${RUNNER_TEMP//\\//}/usr" >> "$GITHUB_ENV"
+
+      - name: setup libtorch
+        run: |
+          curl --output libtorch.zip ${{ matrix.libtorch-url }}
+          unzip -q libtorch.zip -d $CMAKE_PREFIX_PATH/
+          mv $CMAKE_PREFIX_PATH/libtorch/* $CMAKE_PREFIX_PATH/
+
+      - name: build libmetatensor
+        run: |
+          cmake -B build-metatensor-core -S metatensor-core -DMETATENSOR_INSTALL_BOTH_STATIC_SHARED=OFF -DCMAKE_INSTALL_PREFIX=$CMAKE_PREFIX_PATH -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-metatensor-core --config Debug
+          cmake --install build-metatensor-core --config Debug
+
+      - name: build libmetatensor-torch
+        run: |
+          cmake -B build-metatensor-torch -S metatensor-torch -DCMAKE_INSTALL_PREFIX=$CMAKE_PREFIX_PATH -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-metatensor-torch --config Debug
+          cmake --install build-metatensor-torch --config Debug
+
+      - name: build metatensor-core wheels
+        run: |
+          python -m build python/metatensor_core --wheel --outdir=dist/
+          # check that the wheel is using an external library
+          unzip -l dist/metatensor_core*.whl | grep "_external.py"
+        env:
+          METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB: "ON"
+
+      - name: build metatensor-torch wheels
+        run: |
+          python -m build python/metatensor_torch --wheel --outdir=dist/
+          unzip -l dist/metatensor_torch*.whl | grep "_external.py"
+        env:
+          METATENSOR_TORCH_PYTHON_USE_EXTERNAL_LIB: "ON"
+          METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB: "ON"

@@ -8,6 +8,7 @@
 
 #include <metatensor.hpp>
 
+#include "metatensor/torch/tensor.hpp"
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/exports.h"
 
@@ -56,7 +57,7 @@ public:
         return full_list_;
     }
 
-    /// Should the list guarantee that *only* atoms within the cutoff are 
+    /// Should the list guarantee that *only* atoms within the cutoff are
     // included (strict) or possibly also include pairs beyond the cutoff (non-strict)
     bool strict() const {
         return strict_;
@@ -116,7 +117,7 @@ public:
         torch::autograd::AutogradContext* ctx,
         torch::Tensor positions,
         torch::Tensor cell,
-        TorchTensorBlock neighbors,
+        TensorBlock neighbors,
         bool check_consistency
     );
 
@@ -139,7 +140,7 @@ public:
 /// checks in case the data in neighbors does not follow what's expected.
 METATENSOR_TORCH_EXPORT void register_autograd_neighbors(
     System system,
-    TorchTensorBlock neighbors,
+    TensorBlock neighbors,
     bool check_consistency
 );
 
@@ -241,11 +242,11 @@ public:
     /// The neighbors values must contain the distance vector from the first to
     /// the second atom, i.e. `positions[second_atom] - positions[first_atom] +
     /// cell_shift_a * cell_a + cell_shift_b * cell_b + cell_shift_c * cell_c`.
-    void add_neighbor_list(NeighborListOptions options, TorchTensorBlock neighbors);
+    void add_neighbor_list(NeighborListOptions options, TensorBlock neighbors);
 
     /// Retrieve a previously stored neighbor list with the given options, or
     /// throw an error if no such neighbor list exists.
-    TorchTensorBlock get_neighbor_list(NeighborListOptions options) const;
+    TensorBlock get_neighbor_list(NeighborListOptions options) const;
 
     /// Get the options for all neighbor lists registered with this `System`
     std::vector<NeighborListOptions> known_neighbor_lists() const;
@@ -256,13 +257,13 @@ public:
     /// input, and moved into a field of `SystemHolder` later.
     ///
     /// @param name name of the data
-    /// @param values values of the data
+    /// @param tensor the data to store
     /// @param override if true, allow this function to override existing data
     ///                 with the same name
-    void add_data(std::string name, TorchTensorBlock values, bool override=false);
+    void add_data(std::string name, TensorMap tensor, bool override=false);
 
     /// Retrieve custom data stored in this System, or throw an error.
-    TorchTensorBlock get_data(std::string name) const;
+    TensorMap get_data(std::string name) const;
 
     /// Get the list of data registered with this `System`
     std::vector<std::string> known_data() const;
@@ -291,8 +292,8 @@ private:
     torch::Tensor cell_;
     torch::Tensor pbc_;
 
-    std::map<NeighborListOptions, TorchTensorBlock, nl_options_compare> neighbors_;
-    std::unordered_map<std::string, TorchTensorBlock> data_;
+    std::map<NeighborListOptions, TensorBlock, nl_options_compare> neighbors_;
+    std::unordered_map<std::string, TensorMap> data_;
 };
 
 }

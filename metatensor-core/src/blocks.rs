@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
+use crate::labels::LabelValue;
 use crate::utils::ConstCString;
 use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
@@ -40,14 +41,15 @@ fn check_data_and_labels(
 
     if shape.len() != components.len() + 2 {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array has {} dimensions, but we have {} separate labels",
-            context, shape.len(), components.len() + 2
+            "{}: the array has {} dimensions, but we have {} separate labels \
+            (1 for samples, {} for components and 1 for properties)",
+            context, shape.len(), components.len() + 2, components.len()
         )));
     }
 
     if shape[0] != samples.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 0 is {} but we have {} sample labels",
+            "{}: the array shape along axis 0 is {} but we have {} sample label entries",
             context, shape[0], samples.count()
         )));
     }
@@ -76,7 +78,7 @@ fn check_data_and_labels(
 
     if shape[axis] != properties.count() {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis {} is {} but we have {} properties labels",
+            "{}: the array shape along axis {} is {} but we have {} property label entries",
             context, axis, shape[axis], properties.count()
         )));
     }
@@ -229,12 +231,37 @@ impl TensorBlock {
             )));
         }
 
-        let max_sample = self.samples.count();
-        for sample in &*gradient.samples {
-            if sample[0].isize() < 0 || sample[0].usize() >= max_sample {
+        if gradient.samples.count() > 0 {
+            let mut min_sample_value = LabelValue::new(0);
+            let mut max_sample_value = LabelValue::new(0);
+            if gradient.samples.is_sorted() {
+                // only check the first and last entry
+                min_sample_value = gradient.samples[0][0];
+                let last = gradient.samples.count() - 1;
+                max_sample_value = gradient.samples[last][0];
+            } else {
+                // check everything
+                for sample in &*gradient.samples {
+                    let sample_value = sample[0];
+                    if sample_value < min_sample_value {
+                        min_sample_value = sample_value;
+                    } else if sample_value > max_sample_value {
+                        max_sample_value = sample_value;
+                    }
+                }
+            }
+
+            if min_sample_value.i32() < 0 {
                 return Err(Error::InvalidParameter(format!(
-                    "invalid value for the 'sample' in gradient samples: we got \
-                    {}, but the values contain {} samples", sample[0], max_sample
+                    "invalid value for the 'sample' dimension in gradient samples: \
+                    all values should be positive, but we got {}", min_sample_value
+                )));
+            }
+
+            if max_sample_value.usize() >= self.samples.count() {
+                return Err(Error::InvalidParameter(format!(
+                    "invalid value for the 'sample' dimension in gradient samples: we got \
+                    {}, but the values contain {} samples", max_sample_value, self.samples.count()
                 )));
             }
         }
@@ -363,7 +390,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 0 is 3 but we have 4 sample labels"
+            along axis 0 is 3 but we have 4 sample label entries"
         );
 
         let values = TestArray::new(vec![4, 9]);
@@ -371,7 +398,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array shape \
-            along axis 1 is 9 but we have 7 properties labels"
+            along axis 1 is 9 but we have 7 property label entries"
         );
 
         let values = TestArray::new(vec![4, 1, 7]);
@@ -379,7 +406,8 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has \
-            3 dimensions, but we have 2 separate labels"
+            3 dimensions, but we have 2 separate labels (1 for samples, 0 \
+            for components and 1 for properties)"
         );
     }
 
@@ -406,7 +434,8 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: the array has 3 \
-            dimensions, but we have 4 separate labels"
+            dimensions, but we have 4 separate labels (1 for samples, 2 for \
+            components and 1 for properties)"
         );
 
         let values = TestArray::new(vec![3, 4, 4, 2]);

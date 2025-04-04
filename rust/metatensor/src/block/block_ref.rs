@@ -17,9 +17,9 @@ pub struct TensorBlockRef<'a> {
 }
 
 // SAFETY: Send is fine since TensorBlockRef does not implement Drop
-unsafe impl<'a> Send for TensorBlockRef<'a> {}
+unsafe impl Send for TensorBlockRef<'_> {}
 // SAFETY: Sync is fine since there is no internal mutability in TensorBlockRef
-unsafe impl<'a> Sync for TensorBlockRef<'a> {}
+unsafe impl Sync for TensorBlockRef<'_> {}
 
 /// All the basic data in a `TensorBlockRef` as a struct with separate fields.
 ///
@@ -176,10 +176,6 @@ impl<'a> TensorBlockRef<'a> {
     }
 
     /// Get the full list of gradients in this block
-
-    // SAFETY: we can return strings with the `'a` lifetime (instead of
-    // `'self`), because there is no way to also get a mutable reference
-    // to the gradient parameters at the same time.
     #[inline]
     pub fn gradient_list(&self) -> Vec<&'a str> {
         let mut parameters_ptr = std::ptr::null();
@@ -196,6 +192,9 @@ impl<'a> TensorBlockRef<'a> {
             return Vec::new();
         } else {
             assert!(!parameters_ptr.is_null());
+            // SAFETY: we can return strings with the `'a` lifetime (instead of
+            // `'self`), because there is no way to also get a mutable reference
+            // to the gradient parameters at the same time.
             unsafe {
                 let parameters = std::slice::from_raw_parts(parameters_ptr, parameters_count);
                 return parameters.iter()
@@ -207,11 +206,10 @@ impl<'a> TensorBlockRef<'a> {
 
     /// Get the data and metadata for the gradient with respect to the given
     /// parameter in this block, if it exists.
-
-    // SAFETY: we can return a TensorBlockRef with lifetime `'a` (instead of
-    // `'self`) for the same reasons as in the `values` function.
     #[inline]
     pub fn gradient(&self, parameter: &str) -> Option<TensorBlockRef<'a>> {
+        // SAFETY: we can return a TensorBlockRef with lifetime `'a` (instead of
+        // `'self`) for the same reasons as in the `values` function.
         let parameter = CString::new(parameter).expect("invalid C string");
 
         block_gradient(self.as_ptr(), &parameter)
@@ -291,14 +289,14 @@ impl<'a> Iterator for GradientsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for GradientsIter<'a> {
+impl ExactSizeIterator for GradientsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.parameters.len()
     }
 }
 
-impl<'a> FusedIterator for GradientsIter<'a> {}
+impl FusedIterator for GradientsIter<'_> {}
 
 #[cfg(test)]
 mod tests {

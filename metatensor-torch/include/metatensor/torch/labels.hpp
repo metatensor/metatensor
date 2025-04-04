@@ -13,11 +13,17 @@ namespace metatensor_torch {
 
 class LabelsHolder;
 /// TorchScript will always manipulate `LabelsHolder` through a `torch::intrusive_ptr`
-using TorchLabels = torch::intrusive_ptr<LabelsHolder>;
+using Labels = torch::intrusive_ptr<LabelsHolder>;
+
+// for backward compatibility, to remove later
+using TorchLabels = Labels;
 
 class LabelsEntryHolder;
 /// TorchScript will always manipulate `LabelsEntryHolder` through a `torch::intrusive_ptr`
-using TorchLabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
+using LabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
+
+// for backward compatibility, to remove later
+using TorchLabelsEntry = LabelsEntry;
 
 namespace details {
     /// Transform a torch::IValue containing either a single string, a list of
@@ -29,7 +35,7 @@ namespace details {
 /// Wrapper around `metatensor::Labels` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
-/// `torch::intrusive_ptr<LabelsHolder>` (i.e. `TorchLabels`) instead of
+/// `torch::intrusive_ptr<LabelsHolder>` (i.e. `Labels`) instead of
 /// instances of `LabelsHolder`.
 ///
 /// The main difference with `metatensor::Labels` is that the values of the
@@ -47,23 +53,23 @@ public:
 
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
-    static TorchLabels create(
+    static Labels create(
         std::vector<std::string> names,
         const std::vector<std::initializer_list<int32_t>>& values
     );
 
     /// Get a view of `labels` corresponding to only the given columns names
-    static TorchLabels view(const TorchLabels& labels, std::vector<std::string> names);
+    static Labels view(const Labels& labels, std::vector<std::string> names);
 
     /// Create Labels with a single entry, and a single dimension named `"_"`
-    static TorchLabels single();
+    static Labels single();
 
     /// Create Labels with the given dimension names and zero entries
-    static TorchLabels empty(torch::IValue names);
+    static Labels empty(torch::IValue names);
 
     /// Create Labels with a single dimension with the given name and values in
     /// the [0, stop) range
-    static TorchLabels range(std::string name, int64_t end);
+    static Labels range(std::string name, int64_t end);
 
     /// Create a `LabelsHolder` from a pre-existing `metatensor::Labels`
     explicit LabelsHolder(metatensor::Labels labels);
@@ -80,21 +86,21 @@ public:
 
     /// Create new `Labels` with a new dimension with the given `name` and
     /// `values` added to the end of the dimensions list.
-    TorchLabels append(std::string name, torch::Tensor values) const;
+    Labels append(std::string name, torch::Tensor values) const;
 
     /// Create new `Labels` with a new dimension with the given `name` and
     /// `values` before `index`.
-    TorchLabels insert(int64_t index, std::string name, torch::Tensor values) const;
+    Labels insert(int64_t index, std::string name, torch::Tensor values) const;
 
     /// Create new `Labels` with permuted dimensions
-    TorchLabels permute(std::vector<int64_t> dimensions_indexes) const;
+    Labels permute(std::vector<int64_t> dimensions_indexes) const;
 
     /// Create new `Labels` with `name` removed from the dimensions list
-    TorchLabels remove(std::string name) const;
+    Labels remove(std::string name) const;
 
     /// Create new `Labels` with `old_name` renamed to `new_name` in the
     /// dimensions list
-    TorchLabels rename(std::string old_name, std::string new_name) const;
+    Labels rename(std::string old_name, std::string new_name) const;
 
     /// Get the current device for these `Labels`
     torch::Device device() const {
@@ -102,10 +108,10 @@ public:
     }
 
     /// Move the values for these Labels to the given `device`
-    TorchLabels to(torch::IValue device) const;
+    Labels to(torch::IValue device) const;
 
     /// Move the values for these Labels to the given `device`
-    TorchLabels to(torch::Device device) const;
+    Labels to(torch::Device device) const;
 
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.
@@ -161,23 +167,23 @@ public:
     // A view is created by the `view` function (also `__getitem__` in Python),
     // and does not have a corresponding `metatensor::Labels` (`labels_` is
     // `nullopt`)
-    TorchLabels to_owned() const;
+    Labels to_owned() const;
 
     /// Get the union of `this` and `other`
-    TorchLabels set_union(const TorchLabels& other) const;
+    Labels set_union(const Labels& other) const;
 
     /// Get the union of `this` and `other`, as well as the mapping from
     /// positions of entries in the input to the position of entries in the
     /// output.
-    std::tuple<TorchLabels, torch::Tensor, torch::Tensor> union_and_mapping(const TorchLabels& other) const;
+    std::tuple<Labels, torch::Tensor, torch::Tensor> union_and_mapping(const Labels& other) const;
 
     /// Get the intersection of `this` and `other`
-    TorchLabels set_intersection(const TorchLabels& other) const;
+    Labels set_intersection(const Labels& other) const;
 
     /// Get the intersection of `this` and `other`, as well as the mapping from
     /// positions of entries in the input to the position of entries in the
     /// output.
-    std::tuple<TorchLabels, torch::Tensor, torch::Tensor> intersection_and_mapping(const TorchLabels& other) const;
+    std::tuple<Labels, torch::Tensor, torch::Tensor> intersection_and_mapping(const Labels& other) const;
 
     /// Select entries in these `Labels` that match the `selection`.
     ///
@@ -186,14 +192,14 @@ public:
     /// All entries in these `Labels` that match one of the entry in the
     /// `selection` for all the selection's dimension will be picked. Any entry
     /// in the `selection` but not in these `Labels` will be ignored.
-    torch::Tensor select(const TorchLabels& selection) const;
+    torch::Tensor select(const Labels& selection) const;
 
     /// Load serialized Labels from the given path
-    static TorchLabels load(const std::string& path);
+    static Labels load(const std::string& path);
 
     /// Load serialized Labels from an in-memory buffer (represented as a
     /// `torch::Tensor` of bytes)
-    static TorchLabels load_buffer(torch::Tensor buffer);
+    static Labels load_buffer(torch::Tensor buffer);
 
     /// Serialize and save Labels to the given path
     void save(const std::string& path) const;
@@ -258,12 +264,12 @@ inline bool operator!=(const metatensor::Labels& lhs, const LabelsHolder& rhs) {
 }
 
 
-/// A single entry inside a `TorchLabels`
+/// A single entry inside a `Labels`
 class METATENSOR_TORCH_EXPORT LabelsEntryHolder: public torch::CustomClassHolder {
 public:
     /// Create a new `LabelsEntryHolder` corresponding to the entry at the given
     /// `index` in the given `labels`
-    LabelsEntryHolder(TorchLabels labels, int64_t index);
+    LabelsEntryHolder(Labels labels, int64_t index);
 
     /// Get the names of the dimensions/columns of these Labels
     std::vector<std::string> names() const {
@@ -307,7 +313,7 @@ public:
 private:
     torch::Tensor values_;
 
-    TorchLabels labels_;
+    Labels labels_;
 };
 
 

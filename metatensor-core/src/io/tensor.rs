@@ -43,7 +43,7 @@ pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
 /// `create_array` callback, and filled by this function with the corresponding
 /// data.
 ///
-/// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+/// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
 /// without compression (storage method is STORED), where each file is stored as
 /// a `.npy` array. Both the ZIP and NPY format are well documented:
 ///
@@ -83,15 +83,6 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     let path = String::from("keys.npy");
     let keys = load_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
 
-    if archive.by_name("blocks/0/values/data.npy").is_ok() {
-        return Err(Error::Serialization(
-            "trying to load a file in the old metatensor format, please convert \
-            it to the new format first using the script at \
-            https://github.com/metatensor/metatensor/blob/main/python/scripts/convert-metatensor-npz.py
-            ".into()
-        ));
-    }
-
     let mut blocks = Vec::new();
     for block_i in 0..keys.count() {
         blocks.push(read_single_block(
@@ -108,8 +99,9 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
 
 /// Save the given tensor to a file (or any other writer).
 ///
-/// The format used is documented in the [`load`] function, and is based on
-/// numpy's NPZ format (i.e. zip archive containing NPY files).
+/// The format used is documented in the [`load`] function, and consists of a
+/// zip archive containing NPY files. The recomended file extension when saving
+/// data is `.mts`, to prevent confusion with generic `.npz` files.
 pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);
 

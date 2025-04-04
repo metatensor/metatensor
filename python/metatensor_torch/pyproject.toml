@@ -1,0 +1,58 @@
+[project]
+name = "metatensor-torch"
+dynamic = ["version", "authors", "dependencies"]
+requires-python = ">=3.9"
+
+readme = "README.rst"
+license = {text = "BSD-3-Clause"}
+description = "TorchScript bindings for metatensor"
+
+keywords = ["machine learning", "molecular modeling", "torch"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+homepage = "https://docs.metatensor.org/latest/"
+documentation = "https://docs.metatensor.org/latest/"
+repository = "https://github.com/metatensor/metatensor"
+changelog = "https://docs.metatensor.org/latest/torch/CHANGELOG.html"
+
+### ======================================================================== ###
+[build-system]
+requires = [
+    "setuptools >=75",
+    "packaging >=23",
+    "cmake",
+]
+
+# use a custom build backend to :
+# - add a dependency on the right version of metatensor-core
+# - only depend on torch/cmake when building the wheel and not the sdist
+build-backend = "backend"
+backend-path = ["build-backend"]
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["metatensor*"]
+namespaces = true
+
+### ======================================================================== ###
+[tool.pytest.ini_options]
+python_files = ["*.py"]
+testpaths = ["tests"]

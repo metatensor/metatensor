@@ -254,8 +254,8 @@ public:
 
         this->data_ = std::move(other.data_);
         this->shape_ = std::move(other.shape_);
-        this->is_const_ = std::move(other.is_const_);
-        this->owned_data_ = std::move(other.owned_data_);
+        this->is_const_ = other.is_const_;
+        this->owned_data_ = other.owned_data_;
         this->deleter_ = std::move(other.deleter_);
 
         other.data_ = nullptr;
@@ -369,7 +369,7 @@ private:
     ///
     /// This allows creating an array (and in particular a set of Labels) with
     /// `NDArray({{1, 2}, {3, 4}, {5, 6}}, 2)`
-    NDArray(std::vector<std::initializer_list<T>> data, size_t size):
+    NDArray(const std::vector<std::initializer_list<T>>& data, size_t size):
         data_(nullptr),
         shape_({data.size(), size}),
         is_const_(false),
@@ -962,9 +962,11 @@ namespace details {
 namespace io {
     /// Save a `TensorMap` to the file at `path`.
     ///
-    /// If the file exists, it will be overwritten.
+    /// If the file exists, it will be overwritten. The recomended file
+    /// extension when saving data is `.mts`, to prevent confusion with generic
+    /// `.npz` files.
     ///
-    /// `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+    /// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
     /// without compression (storage method is `STORED`), where each file is
     /// stored as a `.npy` array. See the C API documentation for more
     /// information on the format.
@@ -984,7 +986,9 @@ namespace io {
 
     /// Save a `TensorBlock` to the file at `path`.
     ///
-    /// If the file exists, it will be overwritten.
+    /// If the file exists, it will be overwritten. The recomended file
+    /// extension when saving data is `.mts`, to prevent confusion with generic
+    /// `.npz` files.
     void save(const std::string& path, const TensorBlock& block);
 
     /// Save a `TensorBlock` to an in-memory buffer.
@@ -1001,7 +1005,9 @@ namespace io {
 
     /// Save `Labels` to the file at `path`.
     ///
-    /// If the file exists, it will be overwritten.
+    /// If the file exists, it will be overwritten. The recomended file
+    /// extension when saving data is `.mts`, to prevent confusion with generic
+    /// `.npz` files.
     void save(const std::string& path, const Labels& labels);
 
     /// Save `Labels` to an in-memory buffer.
@@ -1029,7 +1035,7 @@ namespace io {
      *
      * \endverbatim
      *
-     * `TensorMap` are serialized using numpy's `.npz` format, i.e. a ZIP file
+     * `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
      * without compression (storage method is `STORED`), where each file is
      * stored as a `.npy` array. See the C API documentation for more
      * information on the format.
@@ -1643,7 +1649,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!
@@ -2118,7 +2124,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!
@@ -2531,7 +2537,7 @@ public:
      * \endverbatim
      */
     void save(const std::string& path) const {
-        return metatensor::io::save(path, *this);
+        metatensor::io::save(path, *this);
     }
 
     /*!

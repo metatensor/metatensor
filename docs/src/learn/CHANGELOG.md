@@ -1,1 +1,1 @@
-../../../python/metatensor-learn/CHANGELOG.md
+../../../python/metatensor_learn/CHANGELOG.md

@@ -236,16 +236,16 @@ TEST_CASE("Serialization") {
     SECTION("loading file") {
         // TEST_KEYS_NPY_PATH is defined by cmake and expand to the path of
         // `tests/keys.npy`
-        auto labels = Labels::load(TEST_KEYS_NPY_PATH);
+        auto labels = Labels::load(TEST_KEYS_MTS_PATH);
         check_loaded_labels(labels);
 
-        labels = metatensor::io::load_labels(TEST_KEYS_NPY_PATH);
+        labels = metatensor::io::load_labels(TEST_KEYS_MTS_PATH);
         check_loaded_labels(labels);
     }
 
     SECTION("Load/Save with buffers") {
         // read the whole file into a buffer
-        std::ifstream file(TEST_KEYS_NPY_PATH, std::ios::binary);
+        std::ifstream file(TEST_KEYS_MTS_PATH, std::ios::binary);
         std::ostringstream string_stream;
         string_stream << file.rdbuf();
         auto buffer = string_stream.str();

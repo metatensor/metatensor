@@ -22,10 +22,10 @@ The overall sources of truth for version numbers are:
 - the ``VERSION`` file in ``metatensor-torch/`` for ``metatensor-torch`` C++ and
   Python API.
 - the ``METATENSOR_OPERATIONS_VERSION`` variable in
-  ``python/metatensor-operations/setup.py`` for the ``metatensor-operations``
+  ``python/metatensor_operations/setup.py`` for the ``metatensor-operations``
   Python package.
 - the ``METATENSOR_LEARN_VERSION`` variable in
-  ``python/metatensor-learn/setup.py`` for the ``metatensor-learn``
+  ``python/metatensor_learn/setup.py`` for the ``metatensor-learn``
   Python package.
 - the ``METATENSOR_VERSION`` variable in ``setup.py`` for the ``metatensor``
   Python package.

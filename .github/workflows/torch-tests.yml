@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  rust-tests:
+  tests:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / Torch ${{ matrix.torch-version }}${{ matrix.extra-name }}
     container: ${{ matrix.container }}
@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            torch-version: 1.12.*
+            torch-version: "1.12"
             python-version: "3.10"
             cargo-test-flags: --release
             do-valgrind: true
@@ -27,19 +27,19 @@ jobs:
           - os: ubuntu-20.04
             container: ubuntu:20.04
             extra-name: ", cmake 3.16"
-            torch-version: 2.5.*
-            python-version: "3.12"
+            torch-version: "2.6"
+            python-version: "3.13"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-14
-            torch-version: 2.5.*
-            python-version: "3.12"
+            torch-version: "2.6"
+            python-version: "3.13"
             cargo-test-flags: --release
 
-          - os: windows-2019
-            torch-version: 2.2.*
-            python-version: "3.12"
+          - os: windows-2022
+            torch-version: "2.6"
+            python-version: "3.13"
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
@@ -75,7 +75,7 @@ jobs:
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.7
         with:
           version: "v0.8.1"
 

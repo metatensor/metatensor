@@ -28,7 +28,7 @@ jobs:
             julia-version: "1.9"
 
           # TODO
-          # - os: windows-2019
+          # - os: windows-2022
           #   julia-version: "1.9"
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
           toolchain: stable
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.7
         with:
           version: "v0.8.1"
 
