@@ -28,7 +28,7 @@ Physical quantities
 The first set of standardized outputs in metatensor atomistic models are
 physical quantities, i.e. quantities with a well-defined physical meaning.
 
-.. grid:: 1 3 3 3
+.. grid:: 1 2 2 2
 
     .. grid-item-card:: Energy
       :link: energy-output
