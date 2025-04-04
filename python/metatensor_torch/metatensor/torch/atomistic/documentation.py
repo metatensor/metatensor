@@ -251,7 +251,7 @@ class ModelOutput:
         self,
         quantity: str = "",
         unit: str = "",
-        sample_kind: List[str] = [],  # noqa B006
+        sample_kind: List[str] = ["system"],  # noqa B006
         explicit_gradients: List[str] = [],  # noqa B006
     ):
         pass
