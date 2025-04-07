@@ -121,8 +121,13 @@ def test_exported_model(tmpdir, model, model_different_units, atoms):
     check_against_ase_lj(atoms, MetatensorCalculator(path, check_consistency=True))
 
 
-def test_get_properties(model, atoms):
-    atoms.calc = MetatensorCalculator(model, check_consistency=True)
+@pytest.mark.parametrize("non_conservative_forces", [True, False])
+def test_get_properties(model, atoms, non_conservative_forces):
+    atoms.calc = MetatensorCalculator(
+        model,
+        check_consistency=True,
+        use_non_conservative_forces=non_conservative_forces,
+    )
 
     properties = atoms.get_properties(["energy", "energies", "forces", "stress"])
 
@@ -201,7 +206,8 @@ def test_run_model(tmpdir, model, atoms):
     assert "non_conservative_forces" in outputs
 
 
-def test_compute_energy(tmpdir, model, atoms):
+@pytest.mark.parametrize("non_conservative_forces", [True, False])
+def test_compute_energy(tmpdir, model, atoms, non_conservative_forces):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
         sigma=SIGMA, epsilon=EPSILON, rc=CUTOFF, ro=CUTOFF, smooth=False
@@ -209,14 +215,19 @@ def test_compute_energy(tmpdir, model, atoms):
 
     path = os.path.join(tmpdir, "exported-model.pt")
     model.save(path)
-    calculator = MetatensorCalculator(path, check_consistency=True)
+    calculator = MetatensorCalculator(
+        path,
+        check_consistency=True,
+        use_non_conservative_forces=non_conservative_forces,
+    )
 
     energy = calculator.compute_energy(atoms)["energy"]
     assert np.allclose(ref.get_potential_energy(), energy)
 
     results = calculator.compute_energy(atoms, compute_forces_and_stresses=True)
     assert np.allclose(ref.get_potential_energy(), results["energy"])
-    assert np.allclose(ref.get_forces(), results["forces"])
+    if not non_conservative_forces:
+        assert np.allclose(ref.get_forces(), results["forces"])
     assert np.allclose(ref.get_stress(), _full_3x3_to_voigt_6_stress(results["stress"]))
 
     energies = calculator.compute_energy([atoms, atoms])["energy"]
@@ -228,8 +239,9 @@ def test_compute_energy(tmpdir, model, atoms):
     )
     assert np.allclose(ref.get_potential_energy(), results["energy"][0])
     assert np.allclose(ref.get_potential_energy(), results["energy"][1])
-    assert np.allclose(ref.get_forces(), results["forces"][0])
-    assert np.allclose(ref.get_forces(), results["forces"][1])
+    if not non_conservative_forces:
+        assert np.allclose(ref.get_forces(), results["forces"][0])
+        assert np.allclose(ref.get_forces(), results["forces"][1])
     assert np.allclose(
         ref.get_stress(), _full_3x3_to_voigt_6_stress(results["stress"][0])
     )

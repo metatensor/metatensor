@@ -79,6 +79,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         extensions_directory=None,
         check_consistency=False,
         device=None,
+        use_non_conservative_forces=False,
     ):
         """
         :param model: model to use for the calculation. This can be a file path, a
@@ -181,6 +182,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         self._device = device
         self._model = model.to(device=self._device)
+        self._use_non_conservative_forces = use_non_conservative_forces
 
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
@@ -319,7 +321,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             raise NotImplementedError("'stresses' are not implemented yet")
 
         with record_function("ASECalculator::prepare_inputs"):
-            outputs = _ase_properties_to_metatensor_outputs(properties)
+            outputs = self._ase_properties_to_metatensor_outputs(properties)
             outputs.update(self._additional_output_requests)
 
             capabilities = self._model.capabilities()
@@ -335,7 +337,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             )
 
             do_backward = False
-            if calculate_forces:
+            if calculate_forces and not self._use_non_conservative_forces:
                 do_backward = True
                 positions.requires_grad_(True)
 
@@ -417,7 +419,13 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["energy"] = energy_values.numpy()[0, 0]
 
             if calculate_forces:
-                forces_values = -system.positions.grad.reshape(-1, 3)
+                if self._use_non_conservative_forces:
+                    forces_values = (
+                        outputs["non_conservative_forces"].block().values.detach()
+                    )
+                else:
+                    forces_values = -system.positions.grad
+                forces_values = forces_values.reshape(-1, 3)
                 forces_values = forces_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["forces"] = forces_values.numpy()
 
@@ -459,6 +467,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             raise ValueError("this model does not support energy computation")
 
         outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
+        if self._use_non_conservative_forces:
+            outputs["non_conservative_forces"] = ModelOutput(
+                quantity="forces", unit="eV/Angstrom", per_atom=True
+            )
 
         if isinstance(atoms, ase.Atoms):
             atoms_list = [atoms]
@@ -475,7 +487,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 atoms=atoms, dtype=self._dtype, device=self._device
             )
             if compute_forces_and_stresses:
-                positions.requires_grad_(True)
+                if not self._use_non_conservative_forces:
+                    positions.requires_grad_(True)
                 strain = torch.eye(
                     3, requires_grad=True, device=self._device, dtype=self._dtype
                 )
@@ -501,11 +514,12 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             length_unit="angstrom",
             outputs=outputs,
         )
-        energies = self._model(
+        predictions = self._model(
             systems=systems,
             options=options,
             check_consistency=self.parameters["check_consistency"],
-        )["energy"]
+        )
+        energies = predictions["energy"]
 
         results_as_numpy_arrays = {
             "energy": energies.block().values.detach().cpu().numpy().flatten().tolist()
@@ -513,9 +527,19 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         if compute_forces_and_stresses:
             energy_tensor = energies.block().values
             energy_tensor.backward(torch.ones_like(energy_tensor))
-            results_as_numpy_arrays["forces"] = [
-                -system.positions.grad.cpu().numpy() for system in systems
-            ]
+            if self._use_non_conservative_forces:
+                results_as_numpy_arrays["forces"] = (
+                    predictions["non_conservative_forces"]
+                    .block()
+                    .values.squeeze(-1)
+                    .detach()
+                    .cpu()
+                    .numpy()
+                )
+            else:
+                results_as_numpy_arrays["forces"] = [
+                    -system.positions.grad.cpu().numpy() for system in systems
+                ]
             if all(atoms.pbc.all() for atoms in atoms_list):
                 results_as_numpy_arrays["stress"] = [
                     strain.grad.cpu().numpy() / atoms.cell.volume
@@ -525,6 +549,40 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             for key, value in results_as_numpy_arrays.items():
                 results_as_numpy_arrays[key] = value[0]
         return results_as_numpy_arrays
+
+    def _ase_properties_to_metatensor_outputs(self, properties):
+        energy_properties = []
+        for p in properties:
+            if p in ["energy", "energies", "forces", "stress", "stresses"]:
+                energy_properties.append(p)
+            else:
+                raise PropertyNotImplementedError(
+                    f"property '{p}' it not yet supported by this calculator, "
+                    "even if it might be supported by the model"
+                )
+
+        output = ModelOutput()
+        output.quantity = "energy"
+        output.unit = "ev"
+        output.explicit_gradients = []
+
+        if "energies" in properties or "stresses" in properties:
+            output.per_atom = True
+        else:
+            output.per_atom = False
+
+        if "stresses" in properties:
+            output.explicit_gradients = ["cell"]
+
+        metatensor_outputs = {"energy": output}
+        if "forces" in properties and self._use_non_conservative_forces:
+            output = ModelOutput()
+            output.quantity = "forces"
+            output.unit = "eV/Angstrom"
+            output.per_atom = True
+            metatensor_outputs["non_conservative_forces"] = output
+
+        return metatensor_outputs
 
 
 def _find_best_device(devices: List[str]) -> torch.device:
@@ -568,33 +626,6 @@ def _find_best_device(devices: List[str]) -> torch.device:
         stacklevel=2,
     )
     return torch.device("cpu")
-
-
-def _ase_properties_to_metatensor_outputs(properties):
-    energy_properties = []
-    for p in properties:
-        if p in ["energy", "energies", "forces", "stress", "stresses"]:
-            energy_properties.append(p)
-        else:
-            raise PropertyNotImplementedError(
-                f"property '{p}' it not yet supported by this calculator, "
-                "even if it might be supported by the model"
-            )
-
-    output = ModelOutput()
-    output.quantity = "energy"
-    output.unit = "ev"
-    output.explicit_gradients = []
-
-    if "energies" in properties or "stresses" in properties:
-        output.per_atom = True
-    else:
-        output.per_atom = False
-
-    if "stresses" in properties:
-        output.explicit_gradients = ["cell"]
-
-    return {"energy": output}
 
 
 def _compute_ase_neighbors(atoms, options, dtype, device):

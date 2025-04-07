@@ -1017,6 +1017,12 @@ struct Quantity {
                 valid_units.emplace_back(it.first.original());
             }
 
+            std::cout << "unit: " << unit << std::endl;
+            std::cout << "valid units: ";
+            for (const auto& it: valid_units) {
+                std::cout << it << " ";
+            }
+
             C10_THROW_ERROR(ValueError,
                 "unknown unit '" + original_unit + "' for " + name + ", "
                 "only [" + torch::str(valid_units) + "] are supported"
@@ -1071,10 +1077,9 @@ static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
     }}},
     {"forces", Quantity{/* name */ "forces", /* baseline */ "eV/Angstrom", {
         {"eV/Angstrom", 1.0},
-        {"Hartree/Bohr", 1.8897261258369282},
     }, {
         // alternative names
-        {"eV/Angstrom", "eV/A"},
+        {"eV/A", "eV/Angstrom"},
     }}},
 };
 
