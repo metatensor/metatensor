@@ -139,7 +139,8 @@ std::unordered_set<std::string> KNOWN_OUTPUTS = {
     "energy",
     "energy_ensemble",
     "energy_uncertainty",
-    "features"
+    "features",
+    "non_conservative_forces"
 };
 
 void ModelCapabilitiesHolder::set_outputs(torch::Dict<std::string, ModelOutput> outputs) {
@@ -1067,6 +1068,13 @@ static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
         // alternative names
         {"J", "Joule"},
         {"Ry", "Rydberg"},
+    }}},
+    {"forces", Quantity{/* name */ "forces", /* baseline */ "eV/Angstrom", {
+        {"eV/Angstrom", 1.0},
+        {"Hartree/Bohr", 1.8897261258369282},
+    }, {
+        // alternative names
+        {"eV/Angstrom", "eV/A"},
     }}},
 };
 

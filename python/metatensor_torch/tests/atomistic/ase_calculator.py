@@ -189,6 +189,17 @@ def test_run_model(tmpdir, model, atoms):
         ref.get_potential_energy(), outputs["energy"].block().values[[0]]
     )
 
+    # check non-conservative forces
+    requested = {
+        "energy": ModelOutput(per_atom=False),
+        "non_conservative_forces": ModelOutput(per_atom=True),
+    }
+    outputs = calculator.run_model([atoms, atoms], outputs=requested)
+    assert np.allclose(
+        ref.get_potential_energy(), outputs["energy"].block().values[[0]]
+    )
+    assert "non_conservative_forces" in outputs
+
 
 def test_compute_energy(tmpdir, model, atoms):
     ref = atoms.copy()
