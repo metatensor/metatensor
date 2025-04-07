@@ -8,8 +8,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
-- `energy_uncertainty` and `non_conservative_forces` are now possible outputs for
-  atomistic models
+- `energy_uncertainty`, `non_conservative_forces` and `non_conservative_stress` are now
+  possible outputs for atomistic models
 
 - The ASE calculator now supports non-conservative forces through the
   ``use_non_conservative_forces`` flag.

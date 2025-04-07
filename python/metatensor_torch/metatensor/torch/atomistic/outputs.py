@@ -49,6 +49,8 @@ def _check_outputs(
             _check_features(value, systems, request, selected_atoms)
         elif name == "non_conservative_forces":
             _check_non_conservative_forces(value, systems, request, selected_atoms)
+        elif name == "non_conservative_stress":
+            _check_non_conservative_stress(value, systems, request)
         else:
             # this is a non-standard output, there is nothing to check
             continue
@@ -215,6 +217,49 @@ def _check_non_conservative_forces(
         raise ValueError(
             "invalid gradients for 'non_conservative_forces' output: "
             f"expected no gradients, found {forces_block.gradients_list()}"
+        )
+
+
+def _check_non_conservative_stress(
+    value: TensorMap,
+    systems: List[System],
+    request: ModelOutput,
+):
+    """
+    Check output metadata for the non-conservative stress.
+    """
+    # Ensure the output contains a single block with the expected key
+    _validate_single_block("non_conservative_stress", value)
+
+    # Check samples values from systems
+    _validate_atomic_samples(
+        "non_conservative_stress", value, systems, request, selected_atoms=None
+    )
+
+    stress_block = value.block_by_id(0)
+
+    # Check that the block has correct "Cartesian-form" components
+    if len(stress_block.components) != 2:
+        raise ValueError(
+            "invalid components for 'non_conservative_stress' output: "
+            f"expected two components, got {len(stress_block.components)}"
+        )
+    expected_components = [
+        Labels("xyz_1", torch.tensor([[0], [1], [2]], device=value.device)),
+        Labels("xyz_2", torch.tensor([[0], [1], [2]], device=value.device)),
+    ]
+    for expected, actual in zip(expected_components, stress_block.components):
+        if expected != actual:
+            raise ValueError(
+                f"invalid components for 'non_conservative_stress' output: "
+                f"expected {expected}, got {actual}"
+            )
+
+    # Should not have any gradients
+    if len(stress_block.gradients_list()) > 0:
+        raise ValueError(
+            "invalid gradients for 'non_conservative_stress' output: "
+            f"expected no gradients, found {stress_block.gradients_list()}"
         )
 
 
