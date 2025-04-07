@@ -8,7 +8,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
-- `energy_uncertainty` is now a possible output for atomistic models
+- `energy_uncertainty` and `non_conservative_forces` are now possible outputs for
+  atomistic models
 
 <!-- Possible sections for each package:
 

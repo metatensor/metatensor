@@ -58,6 +58,14 @@ physical quantities, i.e. quantities with a well-defined physical meaning.
       The uncertainty on the potential energies, useful to quantify the confidence of
       the model.
 
+    .. grid-item-card:: Non-conservative forces
+      :link: non-conservative-forces-output
+      :link-type: ref
+
+      .. image:: /../static/images/non-conservative-forces-output.png
+
+      Forces directly predicted by the model, not derived from the potential energy.
+
 
 Machine learning outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^
