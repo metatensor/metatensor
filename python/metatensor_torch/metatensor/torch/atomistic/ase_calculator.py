@@ -79,7 +79,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         extensions_directory=None,
         check_consistency=False,
         device=None,
-        use_non_conservative_forces=False,
+        non_conservative=False,
     ):
         """
         :param model: model to use for the calculation. This can be a file path, a
@@ -99,10 +99,10 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             running, defaults to False.
         :param device: torch device to use for the calculation. If ``None``, we will try
             the options in the model's ``supported_device`` in order.
-        :param use_non_conservative_forces: if ``True``, the model will be asked to
-            compute non-conservative forces. This can afford a speed-up, potentially
-            at the expense of physical correctness, especially in molecular dynamics
-            simulations.
+        :param non_conservative: if ``True``, the model will be asked to
+            compute non-conservative forces and stresses. This can afford a speed-up,
+            potentially at the expense of physical correctness (especially in molecular
+            dynamics simulations).
         """
         super().__init__()
 
@@ -186,7 +186,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         self._device = device
         self._model = model.to(device=self._device)
-        self._use_non_conservative_forces = use_non_conservative_forces
+        self._non_conservative = non_conservative
 
         # We do our own check to verify if a property is implemented in `calculate()`,
         # so we pretend to be able to compute all properties ASE knows about.
@@ -341,11 +341,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             )
 
             do_backward = False
-            if calculate_forces and not self._use_non_conservative_forces:
+            if calculate_forces and not self._non_conservative:
                 do_backward = True
                 positions.requires_grad_(True)
 
-            if calculate_stress:
+            if calculate_stress and not self._non_conservative:
                 do_backward = True
 
                 strain = torch.eye(
@@ -423,7 +423,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["energy"] = energy_values.numpy()[0, 0]
 
             if calculate_forces:
-                if self._use_non_conservative_forces:
+                if self._non_conservative:
                     forces_values = (
                         outputs["non_conservative_forces"].block().values.detach()
                     )
@@ -434,7 +434,13 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 self.results["forces"] = forces_values.numpy()
 
             if calculate_stress:
-                stress_values = strain.grad.reshape(3, 3) / atoms.cell.volume
+                if self._non_conservative:
+                    stress_values = (
+                        outputs["non_conservative_stress"].block().values.detach()
+                    )
+                else:
+                    stress_values = strain.grad / atoms.cell.volume
+                stress_values = stress_values.reshape(3, 3)
                 stress_values = stress_values.to(device="cpu").to(dtype=torch.float64)
                 self.results["stress"] = _full_3x3_to_voigt_6_stress(
                     stress_values.numpy()
@@ -470,18 +476,22 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         if "energy" not in self._model.capabilities().outputs:
             raise ValueError("this model does not support energy computation")
 
-        outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
-        if self._use_non_conservative_forces:
-            outputs["non_conservative_forces"] = ModelOutput(
-                quantity="forces", unit="eV/Angstrom", per_atom=True
-            )
-
         if isinstance(atoms, ase.Atoms):
             atoms_list = [atoms]
             was_single = True
         else:
             atoms_list = atoms
             was_single = False
+
+        outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
+        if self._non_conservative:
+            outputs["non_conservative_forces"] = ModelOutput(
+                quantity="forces", unit="eV/Angstrom", per_atom=True
+            )
+            if all(atoms.pbc.all() for atoms in atoms_list):
+                outputs["non_conservative_stress"] = ModelOutput(
+                    quantity="stress", unit="eV/Angstrom^3", per_atom=False
+                )
 
         systems = []
         if compute_forces_and_stresses:
@@ -490,9 +500,8 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             types, positions, cell, pbc = _ase_to_torch_data(
                 atoms=atoms, dtype=self._dtype, device=self._device
             )
-            if compute_forces_and_stresses:
-                if not self._use_non_conservative_forces:
-                    positions.requires_grad_(True)
+            if compute_forces_and_stresses and not self._non_conservative:
+                positions.requires_grad_(True)
                 strain = torch.eye(
                     3, requires_grad=True, device=self._device, dtype=self._dtype
                 )
@@ -529,9 +538,7 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             "energy": energies.block().values.detach().cpu().numpy().flatten().tolist()
         }
         if compute_forces_and_stresses:
-            energy_tensor = energies.block().values
-            energy_tensor.backward(torch.ones_like(energy_tensor))
-            if self._use_non_conservative_forces:
+            if self._non_conservative:
                 results_as_numpy_arrays["forces"] = (
                     predictions["non_conservative_forces"]
                     .block()
@@ -540,15 +547,35 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     .cpu()
                     .numpy()
                 )
+                # all the forces are concatenated in a single array, so we need to
+                # split them into the original systems
+                split_sizes = [len(system) for system in systems]
+                split_indices = np.cumsum(split_sizes[:-1])
+                results_as_numpy_arrays["forces"] = np.split(
+                    results_as_numpy_arrays["forces"], split_indices, axis=0
+                )
+
+                if all(atoms.pbc.all() for atoms in atoms_list):
+                    results_as_numpy_arrays["stress"] = [
+                        s
+                        for s in predictions["non_conservative_stress"]
+                        .block()
+                        .values.squeeze(-1)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    ]
             else:
+                energy_tensor = energies.block().values
+                energy_tensor.backward(torch.ones_like(energy_tensor))
                 results_as_numpy_arrays["forces"] = [
                     -system.positions.grad.cpu().numpy() for system in systems
                 ]
-            if all(atoms.pbc.all() for atoms in atoms_list):
-                results_as_numpy_arrays["stress"] = [
-                    strain.grad.cpu().numpy() / atoms.cell.volume
-                    for strain, atoms in zip(strains, atoms_list)
-                ]
+                if all(atoms.pbc.all() for atoms in atoms_list):
+                    results_as_numpy_arrays["stress"] = [
+                        strain.grad.cpu().numpy() / atoms.cell.volume
+                        for strain, atoms in zip(strains, atoms_list)
+                    ]
         if was_single:
             for key, value in results_as_numpy_arrays.items():
                 results_as_numpy_arrays[key] = value[0]
@@ -579,12 +606,14 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             output.explicit_gradients = ["cell"]
 
         metatensor_outputs = {"energy": output}
-        if "forces" in properties and self._use_non_conservative_forces:
-            output = ModelOutput()
-            output.quantity = "forces"
-            output.unit = "eV/Angstrom"
-            output.per_atom = True
-            metatensor_outputs["non_conservative_forces"] = output
+        if "forces" in properties and self._non_conservative:
+            metatensor_outputs["non_conservative_forces"] = ModelOutput(
+                quantity="forces", unit="eV/Angstrom", per_atom=True
+            )
+        if "stress" in properties and self._non_conservative:
+            metatensor_outputs["non_conservative_stress"] = ModelOutput(
+                quantity="stress", unit="eV/Angstrom^3", per_atom=False
+            )
 
         return metatensor_outputs
 
