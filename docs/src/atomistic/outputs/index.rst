@@ -20,6 +20,7 @@ to these pages.
 
   energy
   features
+  non_conservative
 
 
 Physical quantities
