@@ -18,17 +18,16 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            torch-version: "1.12"
-            python-version: "3.10"
+          - os: ubuntu-22.04
+            torch-version: "2.6"
+            python-version: "3.13"
             cargo-test-flags: --release
             do-valgrind: true
 
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             container: ubuntu:20.04
             extra-name: ", cmake 3.16"
-            torch-version: "2.6"
-            python-version: "3.13"
+            torch-version: "1.12"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
@@ -47,7 +46,10 @@ jobs:
         run: |
           apt update
           apt install -y software-properties-common
-          apt install -y cmake make gcc g++ git curl
+          add-apt-repository ppa:deadsnakes/ppa
+          apt install -y cmake make gcc g++ git curl python3.10 python3.10-venv
+
+          update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
 
       - uses: actions/checkout@v4
         with:
@@ -64,6 +66,7 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: setup Python
+        if: matrix.container != 'ubuntu:20.04'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}

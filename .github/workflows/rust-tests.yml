@@ -26,7 +26,7 @@ jobs:
       matrix:
         include:
           # test without any feature (i.e shared build)
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             extra-name: ", no features"
@@ -35,7 +35,7 @@ jobs:
             cmake-generator: Unix Makefiles
 
           # test with all features (i.e static build + ndarray)
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             cargo-test-flags: --release --all-features
@@ -47,7 +47,7 @@ jobs:
 
           # check the build on a stock Ubuntu 20.04, which uses cmake 3.16, and
           # with our minimal supported rust version
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             rust-version: 1.74
             container: ubuntu:20.04
             rust-target: x86_64-unknown-linux-gnu
@@ -136,7 +136,7 @@ jobs:
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: check C API declarations
     steps:
       - uses: actions/checkout@v4
@@ -172,7 +172,7 @@ jobs:
 
   # make sure no debug print stays in the code
   check-debug-prints:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: check leftover debug print
 
     steps:

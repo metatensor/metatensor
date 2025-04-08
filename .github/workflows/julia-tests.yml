@@ -18,10 +18,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             julia-version: "1.6"
 
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             julia-version: "1.9"
 
           - os: macos-14

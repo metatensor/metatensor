@@ -35,7 +35,7 @@ fn find_python() -> PathBuf {
     }
 
     // try python3
-    let python = which::which("python3").expect("could not find python");
+    let python = which::which("python3").expect("failed to run `which python3`");
     let output = Command::new(&python)
         .arg("-c")
         .arg("import sys; print(sys.version_info.major)")
