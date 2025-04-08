@@ -63,23 +63,19 @@ physical quantities, i.e. quantities with a well-defined physical meaning.
       :link: non-conservative-forces-output
       :link-type: ref
 
-      .. image:: /../static/images/non-conservative-forces-output.png
+      .. image:: /../static/images/nc-forces-output.png
 
-      Forces directly predicted by the model, not derived from the potential energy.
-      These are generally faster than forces computed from the potential energy by
-      backpropagation. However, they must be used with care
-      (see https://arxiv.org/abs/2412.11569).
+      Forces directly predicted by the model, not derived from the potential
+      energy.
 
     .. grid-item-card:: Non-conservative stress
       :link: non-conservative-stress-output
       :link-type: ref
 
-      .. image:: /../static/images/non-conservative-stress-output.png
+      .. image:: /../static/images/nc-stress-output.png
 
-      Stress directly predicted by the model, not derived from the potential energy.
-      This generally faster than computing the stress from the potential energy by
-      backpropagation. However, these predictions must be used with care
-      (see https://arxiv.org/abs/2412.11569).
+      Stress directly predicted by the model, not derived from the potential
+      energy.
 
 
 Machine learning outputs

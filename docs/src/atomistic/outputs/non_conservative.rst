@@ -3,8 +3,10 @@
 Non-conservative forces
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Non-conservative forces are forces that are not calculated as the negative gradient
-of the potential energy.
+Non-conservative forces are forces that are not calculated as the negative
+gradient of the potential energy. These are generally faster than forces
+computed from the potential energy by backpropagation. However, these
+predictions must be used with care, see https://arxiv.org/abs/2412.11569.
 
 In metatensor atomistic models, they are associated with the
 ``"non_conservative_forces"`` key in the model outputs,
@@ -70,7 +72,9 @@ Non-conservative stress
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The "non-conservative stress" is a stress tensor that is not calculated using
-derivatives of the potential energy.
+derivatives of the potential energy. This is generally faster than computing the
+stress from the potential energy by backpropagation. However, these predictions
+must be used with care, see https://arxiv.org/abs/2412.11569.
 
 In metatensor atomistic models, it is associated with the ``"non_conservative_stress"``
 key in the model outputs, and must adhere to the following metadata:
