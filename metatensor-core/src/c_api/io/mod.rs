@@ -18,7 +18,7 @@ mod tensor;
 /// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
 /// the data pointer and write to it.
 #[allow(non_camel_case_types)]
-type mts_create_array_callback_t = unsafe extern fn(
+type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,
     shape_count: usize,
     array: *mut mts_array_t,
@@ -34,7 +34,7 @@ type mts_create_array_callback_t = unsafe extern fn(
 /// `realloc`, with an additional parameter `user_data` that can be used to hold
 /// custom data.
 #[allow(non_camel_case_types)]
-type mts_realloc_buffer_t = Option<unsafe extern fn(
+type mts_realloc_buffer_t = Option<unsafe extern "C" fn(
     user_data: *mut c_void,
     ptr: *mut u8,
     new_size: usize
@@ -47,7 +47,7 @@ struct ExternalBuffer {
     len: usize,
 
     realloc_user_data: *mut c_void,
-    realloc: unsafe extern fn(*mut c_void, *mut u8, usize) -> *mut u8,
+    realloc: unsafe extern "C" fn(*mut c_void, *mut u8, usize) -> *mut u8,
 
     current: u64,
 }

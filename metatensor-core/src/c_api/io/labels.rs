@@ -23,7 +23,7 @@ use super::super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust}
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_load(
+pub unsafe extern "C" fn mts_labels_load(
     path: *const c_char,
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
@@ -76,7 +76,7 @@ pub unsafe extern fn mts_labels_load(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_load_buffer(
+pub unsafe extern "C" fn mts_labels_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
     labels: *mut mts_labels_t,
@@ -135,7 +135,7 @@ pub unsafe extern fn mts_labels_load_buffer(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_save(
+pub unsafe extern "C" fn mts_labels_save(
     path: *const c_char,
     labels: mts_labels_t,
 ) -> mts_status_t {
@@ -186,7 +186,7 @@ pub unsafe extern fn mts_labels_save(
 ///          message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn mts_labels_save_buffer(
+pub unsafe extern "C" fn mts_labels_save_buffer(
     buffer: *mut *mut u8,
     buffer_count: *mut usize,
     realloc_user_data: *mut c_void,

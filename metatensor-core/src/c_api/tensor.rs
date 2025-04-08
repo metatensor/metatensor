@@ -59,7 +59,7 @@ impl std::ops::DerefMut for mts_tensormap_t {
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap(
+pub unsafe extern "C" fn mts_tensormap(
     keys: mts_labels_t,
     blocks: *mut *mut mts_block_t,
     blocks_count: usize,
@@ -87,7 +87,7 @@ pub unsafe extern fn mts_tensormap(
                 *block_ptr = std::ptr::null_mut();
                 blocks_vec.push(block);
             }
-        };
+        }
 
         let keys = mts_labels_to_rust(&keys)?;
         let tensor = TensorMap::new(keys, blocks_vec)?;
@@ -118,7 +118,7 @@ pub unsafe extern fn mts_tensormap(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts_status_t {
+pub unsafe extern "C" fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts_status_t {
     catch_unwind(|| {
         if !tensor.is_null() {
             std::mem::drop(mts_tensormap_t::from_boxed_raw(tensor));
@@ -139,7 +139,7 @@ pub unsafe extern fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts_sta
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_copy(
+pub unsafe extern "C" fn mts_tensormap_copy(
     tensor: *const mts_tensormap_t,
 ) -> *mut mts_tensormap_t {
     let mut result = std::ptr::null_mut();
@@ -176,7 +176,7 @@ pub unsafe extern fn mts_tensormap_copy(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_keys(
+pub unsafe extern "C" fn mts_tensormap_keys(
     tensor: *const mts_tensormap_t,
     keys: *mut mts_labels_t,
 ) -> mts_status_t {
@@ -210,7 +210,7 @@ pub unsafe extern fn mts_tensormap_keys(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_block_by_id(
+pub unsafe extern "C" fn mts_tensormap_block_by_id(
     tensor: *mut mts_tensormap_t,
     block: *mut *mut mts_block_t,
     index: usize,
@@ -256,7 +256,7 @@ pub unsafe extern fn mts_tensormap_block_by_id(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_blocks_matching(
+pub unsafe extern "C" fn mts_tensormap_blocks_matching(
     tensor: *const mts_tensormap_t,
     block_indexes: *mut usize,
 	count: *mut usize,
@@ -329,7 +329,7 @@ pub unsafe extern fn mts_tensormap_blocks_matching(
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_keys_to_properties(
+pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,
@@ -372,7 +372,7 @@ pub unsafe extern fn mts_tensormap_keys_to_properties(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_components_to_properties(
+pub unsafe extern "C" fn mts_tensormap_components_to_properties(
     tensor: *mut mts_tensormap_t,
     dimensions: *const *const c_char,
     dimensions_count: usize,
@@ -437,7 +437,7 @@ pub unsafe extern fn mts_tensormap_components_to_properties(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_tensormap_keys_to_samples(
+pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,

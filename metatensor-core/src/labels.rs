@@ -129,7 +129,7 @@ pub fn is_valid_label_name(name: &str) -> bool {
 #[derive(Debug)]
 struct UserData {
     ptr: *mut c_void,
-    delete: Option<unsafe extern fn(*mut c_void)>,
+    delete: Option<unsafe extern "C" fn(*mut c_void)>,
 }
 
 impl UserData {
@@ -345,7 +345,7 @@ impl Labels {
     pub fn set_user_data(
         &self,
         user_data: *mut c_void,
-        user_data_delete: Option<unsafe extern fn(*mut c_void)>,
+        user_data_delete: Option<unsafe extern "C" fn(*mut c_void)>,
     ) {
         let mut guard = self.user_data.write().expect("poisoned lock");
         *guard = UserData {
