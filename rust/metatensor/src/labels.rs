@@ -388,6 +388,41 @@ impl Labels {
         }
     }
 
+    /// Take the set difference of `self` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// difference where each entry of `self` ended up.
+    ///
+    /// If `mapping` is `Some`, it should contain a slice of length
+    /// `self.count()` that will be filled by with the position of the entries
+    /// in `self` in the difference. If an entry is not used in the difference,
+    ///  the mapping for this entry will be set to `-1`.
+    #[inline]
+    pub fn difference(
+        &self,
+        other: &Labels,
+        mapping: Option<&mut [i64]>,
+    ) -> Result<Labels, Error> {
+        let mut output = mts_labels_t::null();
+        let (mapping, mapping_count) = if let Some(m) = mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        unsafe {
+            check_status(crate::c_api::mts_labels_difference(
+                self.raw,
+                other.raw,
+                &mut output,
+                mapping,
+                mapping_count,
+            ))?;
+
+            return Ok(Labels::from_raw(output));
+        }
+    }
+
     /// Iterate over the entries in this set of labels
     #[inline]
     pub fn iter(&self) -> LabelsIter<'_> {
@@ -889,6 +924,20 @@ mod tests {
 
         assert_eq!(first_mapping, [-1, 0]);
         assert_eq!(second_mapping, [-1, 0, -1]);
+    }
+
+    #[test]
+    fn difference() {
+        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+
+        let mut mapping = vec![0_i64; first.count()];
+        let union = first.difference(&second, Some(&mut mapping)).unwrap();
+
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values(), [0, 1]);
+
+        assert_eq!(mapping, [0, -1]);
     }
 
     #[test]
