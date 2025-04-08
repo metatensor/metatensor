@@ -49,9 +49,9 @@ jobs:
           toolchain: stable
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+        uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.8.1"
+          version: "v0.10.0"
 
       - name: setup MSVC command prompt
         uses: ilammy/msvc-dev-cmd@v1
