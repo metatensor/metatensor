@@ -428,6 +428,39 @@ def test_intersection():
     assert second_mapping.device == torch.device("meta")
 
 
+def test_difference():
+    first = Labels(["aa", "bb"], torch.tensor([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], torch.tensor([[2, 3], [1, 2], [4, 5]]))
+
+    difference = first.difference(second)
+    assert difference.names == ["aa", "bb"]
+    assert torch.all(difference.values == torch.tensor([[0, 1]]))
+
+    difference_2, mapping = first.difference_and_mapping(second)
+
+    assert difference == difference_2
+    assert torch.all(mapping == torch.LongTensor([0, -1]))
+
+    # check that difference preserves devices
+    first = first.to("meta")
+
+    message = "device mismatch in `Labels.difference`: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.difference(second)
+
+    message = "device mismatch in `Labels.difference_and_mapping`: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.difference_and_mapping(second)
+
+    second = second.to("meta")
+    difference = first.difference(second)
+    assert difference.values.device == torch.device("meta")
+
+    difference, mapping = first.difference_and_mapping(second)
+    assert difference.values.device == torch.device("meta")
+    assert mapping.device == torch.device("meta")
+
+
 def test_dimensions_manipulation():
     label = Labels("foo", torch.tensor([[42]]))
 

@@ -577,6 +577,27 @@ class Labels:
             used in the output, the mapping for them is set to ``-1``.
         """
 
+    def difference(self, other: "Labels") -> "Labels":
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` ends up in the difference, you can
+        use :py:meth:`Labels.difference_and_mapping`.
+        """
+
+    def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", torch.Tensor]:
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the difference where each entry of
+        the input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the intersection, and a :py:class:`torch.Tensor`
+            containing the position in the intersection of the entries from ``self``. If
+            entries in ``self`` are not used in the output, the mapping for these is set
+            to ``-1``.
+        """
+
     def select(self, selection: "Labels") -> torch.Tensor:
         """
         Select entries in these :py:class:`Labels` that match the ``selection``.

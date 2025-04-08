@@ -14,7 +14,7 @@ using namespace metatensor_torch;
 /// integers, or convert it to be so.
 static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_length, const std::string& context) {
     // if the tensor is empty, make sure the shape is (0, len(sample_names))
-    if (!values.numel()) {
+    if (values.numel() == 0) {
         values = torch::empty(values.sizes(), torch::TensorOptions().dtype(torch::kInt32).device(values.device()));
     }
 
@@ -598,6 +598,55 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
         result.to(device),
         first_mapping.to(device),
         second_mapping.to(device)
+    );
+}
+
+Labels LabelsHolder::set_difference(const Labels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in `Labels.difference`: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
+    auto result = LabelsHolder(labels_->set_difference(other->labels_.value()));
+    return result.to(device);
+}
+
+std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Labels& other) const {
+    if (!labels_.has_value() || !other->labels_.has_value()) {
+        C10_THROW_ERROR(ValueError,
+            "can not call this function on Labels view, call to_owned first"
+        );
+    }
+
+    auto device = this->values_.device();
+    if (device != other->values_.device()) {
+        C10_THROW_ERROR(ValueError,
+            "device mismatch in `Labels.difference_and_mapping`: got '" + device.str() +
+            "' and '" + other->values_.device().str() + "'"
+        );
+    }
+
+    auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
+    auto mapping = torch::zeros({this->count()}, options);
+
+    auto result = LabelsHolder(labels_->set_difference(
+        other->labels_.value(),
+        mapping.data_ptr<int64_t>(),
+        mapping.size(0)
+    ));
+
+    return std::make_tuple<Labels, torch::Tensor>(
+        result.to(device),
+        mapping.to(device)
     );
 }
 
