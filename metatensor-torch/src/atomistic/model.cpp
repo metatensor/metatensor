@@ -1045,7 +1045,7 @@ struct Quantity {
     }
 };
 
-static std::unordered_map<std::string, Quantity> KNOWN_QUANTITIES = {
+static std::map<std::string, Quantity> KNOWN_QUANTITIES = {
     {"length", Quantity{/* name */ "length", /* baseline */ "Angstrom", {
         {"Angstrom", 1.0},
         {"Bohr", 1.8897261258369282},
