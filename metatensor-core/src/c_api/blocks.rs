@@ -69,7 +69,7 @@ impl mts_block_t {
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_block(
+pub unsafe extern "C" fn mts_block(
     data: mts_array_t,
     samples: mts_labels_t,
     components: *const mts_labels_t,
@@ -119,7 +119,7 @@ pub unsafe extern fn mts_block(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_free(
+pub unsafe extern "C" fn mts_block_free(
     block: *mut mts_block_t,
 ) -> mts_status_t {
     catch_unwind(|| {
@@ -142,7 +142,7 @@ pub unsafe extern fn mts_block_free(
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_copy(
+pub unsafe extern "C" fn mts_block_copy(
     block: *const mts_block_t,
 ) -> *mut mts_block_t {
     let mut result = std::ptr::null_mut();
@@ -181,7 +181,7 @@ pub unsafe extern fn mts_block_copy(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_labels(
+pub unsafe extern "C" fn mts_block_labels(
     block: *const mts_block_t,
     axis: usize,
     labels: *mut mts_labels_t,
@@ -236,7 +236,7 @@ pub unsafe extern fn mts_block_labels(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
 ///          message.
 #[no_mangle]
-pub unsafe extern fn mts_block_gradient(
+pub unsafe extern "C" fn mts_block_gradient(
     block: *mut mts_block_t,
     parameter: *const c_char,
     gradient: *mut *mut mts_block_t
@@ -267,7 +267,7 @@ pub unsafe extern fn mts_block_gradient(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_data(
+pub unsafe extern "C" fn mts_block_data(
     block: *mut mts_block_t,
     data: *mut mts_array_t,
 ) -> mts_status_t {
@@ -302,7 +302,7 @@ pub unsafe extern fn mts_block_data(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_add_gradient(
+pub unsafe extern "C" fn mts_block_add_gradient(
     block: *mut mts_block_t,
     parameter: *const c_char,
     gradient: *mut mts_block_t,
@@ -332,7 +332,7 @@ pub unsafe extern fn mts_block_add_gradient(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_gradients_list(
+pub unsafe extern "C" fn mts_block_gradients_list(
     block: *const mts_block_t,
     parameters: *mut *const *const c_char,
     parameters_count: *mut usize

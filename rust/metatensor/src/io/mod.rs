@@ -17,7 +17,7 @@ pub use self::labels::{load_labels, load_labels_buffer, save_labels, save_labels
 
 
 /// Implementation of realloc for `Vec<u8>`, used in `save_buffer`
-unsafe extern fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: usize) -> *mut u8 {
+unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: usize) -> *mut u8 {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
@@ -39,7 +39,7 @@ unsafe extern fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size: us
 }
 
 /// callback used to create `ndarray::ArrayD` when loading a `TensorMap`
-unsafe extern fn create_ndarray(
+unsafe extern "C" fn create_ndarray(
     shape_ptr: *const usize,
     shape_count: usize,
     c_array: *mut mts_array_t,

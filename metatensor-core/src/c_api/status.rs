@@ -102,7 +102,7 @@ macro_rules! check_pointers_non_null {
 ///
 /// @returns the last error message, as a NULL-terminated string
 #[no_mangle]
-pub unsafe extern fn mts_last_error() -> *const c_char {
+pub unsafe extern "C" fn mts_last_error() -> *const c_char {
     let mut result = std::ptr::null();
     let wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {

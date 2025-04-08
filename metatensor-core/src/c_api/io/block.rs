@@ -33,7 +33,7 @@ use super::mts_create_array_callback_t;
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_load(
+pub unsafe extern "C" fn mts_block_load(
     path: *const c_char,
     create_array: mts_create_array_callback_t,
 ) -> *mut mts_block_t {
@@ -98,7 +98,7 @@ pub unsafe extern fn mts_block_load(
 ///          in case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_load_buffer(
+pub unsafe extern "C" fn mts_block_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
     create_array: mts_create_array_callback_t,
@@ -185,7 +185,7 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_block_save(
+pub unsafe extern "C" fn mts_block_save(
     path: *const c_char,
     block: *const mts_block_t,
 ) -> mts_status_t {
@@ -227,7 +227,7 @@ pub unsafe extern fn mts_block_save(
 ///          message.
 #[no_mangle]
 #[allow(clippy::cast_possible_truncation)]
-pub unsafe extern fn mts_block_save_buffer(
+pub unsafe extern "C" fn mts_block_save_buffer(
     buffer: *mut *mut u8,
     buffer_count: *mut usize,
     realloc_user_data: *mut c_void,

@@ -106,7 +106,7 @@ pub(super) static RUST_DATA_ORIGIN: Lazy<mts_data_origin_t> = Lazy::new(|| {
 });
 
 /// Implementation of `mts_array_t.origin` using `Box<dyn Array>`
-unsafe extern fn rust_array_origin(
+unsafe extern "C" fn rust_array_origin(
     array: *const c_void,
     origin: *mut mts_data_origin_t
 ) -> mts_status_t {
@@ -117,7 +117,7 @@ unsafe extern fn rust_array_origin(
 }
 
 /// Implementation of `mts_array_t.shape` using `Box<dyn Array>`
-unsafe extern fn rust_array_shape(
+unsafe extern "C" fn rust_array_shape(
     array: *const c_void,
     shape: *mut *const usize,
     shape_count: *mut usize,
@@ -134,7 +134,7 @@ unsafe extern fn rust_array_shape(
 
 /// Implementation of `mts_array_t.reshape` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_reshape(
+unsafe extern "C" fn rust_array_reshape(
     array: *mut c_void,
     shape: *const usize,
     shape_count: usize,
@@ -151,7 +151,7 @@ unsafe extern fn rust_array_reshape(
 
 /// Implementation of `mts_array_t.swap_axes` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_swap_axes(
+unsafe extern "C" fn rust_array_swap_axes(
     array: *mut c_void,
     axis_1: usize,
     axis_2: usize,
@@ -165,7 +165,7 @@ unsafe extern fn rust_array_swap_axes(
 
 /// Implementation of `mts_array_t.create` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_create(
+unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
@@ -185,7 +185,7 @@ unsafe extern fn rust_array_create(
 }
 
 /// Implementation of `mts_array_t.data` for `Box<dyn Array>`
-unsafe extern fn rust_array_data(
+unsafe extern "C" fn rust_array_data(
     array: *mut c_void,
     data: *mut *mut f64,
 ) -> mts_status_t {
@@ -198,7 +198,7 @@ unsafe extern fn rust_array_data(
 
 
 /// Implementation of `mts_array_t.copy` using `Box<dyn Array>`
-unsafe extern fn rust_array_copy(
+unsafe extern "C" fn rust_array_copy(
     array: *const c_void,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
@@ -210,7 +210,7 @@ unsafe extern fn rust_array_copy(
 }
 
 /// Implementation of `mts_array_t.destroy` for `Box<dyn Array>`
-unsafe extern fn rust_array_destroy(
+unsafe extern "C" fn rust_array_destroy(
     array: *mut c_void,
 ) {
     if !array.is_null() {
@@ -222,7 +222,7 @@ unsafe extern fn rust_array_destroy(
 
 /// Implementation of `mts_array_t.move_sample` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_move_samples_from(
+unsafe extern "C" fn rust_array_move_samples_from(
     output: *mut c_void,
     input: *const c_void,
     samples: *const mts_sample_mapping_t,

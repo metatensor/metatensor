@@ -156,7 +156,7 @@ unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error
 ///          error message.
 #[no_mangle]
 #[allow(clippy::cast_possible_wrap)]
-pub unsafe extern fn mts_labels_position(
+pub unsafe extern "C" fn mts_labels_position(
     labels: mts_labels_t,
     values: *const i32,
     values_count: usize,
@@ -203,7 +203,7 @@ pub unsafe extern fn mts_labels_position(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_create(
+pub unsafe extern "C" fn mts_labels_create(
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
@@ -240,10 +240,10 @@ pub unsafe extern fn mts_labels_create(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_set_user_data(
+pub unsafe extern "C" fn mts_labels_set_user_data(
     labels: mts_labels_t,
     user_data: *mut c_void,
-    user_data_delete: Option<unsafe extern fn(*mut c_void)>
+    user_data_delete: Option<unsafe extern "C" fn(*mut c_void)>
 ) -> mts_status_t {
     catch_unwind(|| {
         if !labels.is_rust() {
@@ -271,7 +271,7 @@ pub unsafe extern fn mts_labels_set_user_data(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_user_data(
+pub unsafe extern "C" fn mts_labels_user_data(
     labels: mts_labels_t,
     user_data: *mut *mut c_void,
 ) -> mts_status_t {
@@ -306,7 +306,7 @@ pub unsafe extern fn mts_labels_user_data(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_clone(
+pub unsafe extern "C" fn mts_labels_clone(
     labels: mts_labels_t,
     clone: *mut mts_labels_t,
 ) -> mts_status_t {
@@ -420,7 +420,7 @@ unsafe fn labels_set_common<'a>(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_union(
+pub unsafe extern "C" fn mts_labels_union(
     first: mts_labels_t,
     second: mts_labels_t,
     result: *mut mts_labels_t,
@@ -487,7 +487,7 @@ pub unsafe extern fn mts_labels_union(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_intersection(
+pub unsafe extern "C" fn mts_labels_intersection(
     first: mts_labels_t,
     second: mts_labels_t,
     result: *mut mts_labels_t,
@@ -546,7 +546,7 @@ pub unsafe extern fn mts_labels_intersection(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_select(
+pub unsafe extern "C" fn mts_labels_select(
     labels: mts_labels_t,
     selection: mts_labels_t,
     selected: *mut i64,
@@ -594,7 +594,7 @@ pub unsafe extern fn mts_labels_select(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_free(
+pub unsafe extern "C" fn mts_labels_free(
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
