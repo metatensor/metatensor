@@ -47,6 +47,10 @@ def _check_outputs(
             _check_energy_like(name, value, systems, request, selected_atoms)
         elif name == "features":
             _check_features(value, systems, request, selected_atoms)
+        elif name == "non_conservative_forces":
+            _check_non_conservative_forces(value, systems, request, selected_atoms)
+        elif name == "non_conservative_stress":
+            _check_non_conservative_stress(value, systems, request)
         else:
             # this is a non-standard output, there is nothing to check
             continue
@@ -60,7 +64,7 @@ def _check_energy_like(
     selected_atoms: Optional[Labels],
 ):
     """
-    Check the output metadata of energy related outputs
+    Check the output metadata of energy-related outputs
     """
     assert name in ["energy", "energy_ensemble", "energy_uncertainty"]
 
@@ -171,6 +175,91 @@ def _check_features(
         raise ValueError(
             "invalid gradients for 'features' output: it should not have any explicit",
             "gradients. all gradient calculations should be done using autograd",
+        )
+
+
+def _check_non_conservative_forces(
+    value: TensorMap,
+    systems: List[System],
+    request: ModelOutput,
+    selected_atoms: Optional[Labels],
+):
+    """
+    Check output metadata for non-conservative forces.
+    """
+    # Ensure the output contains a single block with the expected key
+    _validate_single_block("non_conservative_forces", value)
+
+    # Check samples values from systems & selected_atoms
+    _validate_atomic_samples(
+        "non_conservative_forces", value, systems, request, selected_atoms
+    )
+
+    forces_block = value.block_by_id(0)
+
+    # Check that the block has correct "Cartesian-form" components
+    if len(forces_block.components) != 1:
+        raise ValueError(
+            "invalid components for 'non_conservative_forces' output: "
+            "expected one component"
+        )
+    expected_component = Labels(
+        "xyz", torch.tensor([[0], [1], [2]], device=value.device)
+    )
+    if forces_block.components[0] != expected_component:
+        raise ValueError(
+            f"invalid components for 'non_conservative_forces' output: "
+            f"expected {expected_component}, got {forces_block.components[0]}"
+        )
+
+    # Should not have any gradients
+    if len(forces_block.gradients_list()) > 0:
+        raise ValueError(
+            "invalid gradients for 'non_conservative_forces' output: "
+            f"expected no gradients, found {forces_block.gradients_list()}"
+        )
+
+
+def _check_non_conservative_stress(
+    value: TensorMap,
+    systems: List[System],
+    request: ModelOutput,
+):
+    """
+    Check output metadata for the non-conservative stress.
+    """
+    # Ensure the output contains a single block with the expected key
+    _validate_single_block("non_conservative_stress", value)
+
+    # Check samples values from systems
+    _validate_atomic_samples(
+        "non_conservative_stress", value, systems, request, selected_atoms=None
+    )
+
+    stress_block = value.block_by_id(0)
+
+    # Check that the block has correct "Cartesian-form" components
+    if len(stress_block.components) != 2:
+        raise ValueError(
+            "invalid components for 'non_conservative_stress' output: "
+            f"expected two components, got {len(stress_block.components)}"
+        )
+    expected_components = [
+        Labels("xyz_1", torch.tensor([[0], [1], [2]], device=value.device)),
+        Labels("xyz_2", torch.tensor([[0], [1], [2]], device=value.device)),
+    ]
+    for expected, actual in zip(expected_components, stress_block.components):
+        if expected != actual:
+            raise ValueError(
+                f"invalid components for 'non_conservative_stress' output: "
+                f"expected {expected}, got {actual}"
+            )
+
+    # Should not have any gradients
+    if len(stress_block.gradients_list()) > 0:
+        raise ValueError(
+            "invalid gradients for 'non_conservative_stress' output: "
+            f"expected no gradients, found {stress_block.gradients_list()}"
         )
 
 

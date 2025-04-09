@@ -109,7 +109,7 @@ TEST_CASE("Models metadata") {
         struct WarningHandler: public torch::WarningHandler {
             virtual ~WarningHandler() override = default;
             void process(const torch::Warning& warning) override {
-                CHECK(warning.msg() == "unknown quantity 'unknown', only [energy length] are supported");
+                CHECK(warning.msg() == "unknown quantity 'unknown', only [energy forces length stress] are supported");
             }
         };
 

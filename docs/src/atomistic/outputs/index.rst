@@ -20,6 +20,7 @@ to these pages.
 
   energy
   features
+  non_conservative
 
 
 Physical quantities
@@ -57,6 +58,24 @@ physical quantities, i.e. quantities with a well-defined physical meaning.
 
       The uncertainty on the potential energies, useful to quantify the confidence of
       the model.
+
+    .. grid-item-card:: Non-conservative forces
+      :link: non-conservative-forces-output
+      :link-type: ref
+
+      .. image:: /../static/images/nc-forces-output.png
+
+      Forces directly predicted by the model, not derived from the potential
+      energy.
+
+    .. grid-item-card:: Non-conservative stress
+      :link: non-conservative-stress-output
+      :link-type: ref
+
+      .. image:: /../static/images/nc-stress-output.png
+
+      Stress directly predicted by the model, not derived from the potential
+      energy.
 
 
 Machine learning outputs
