@@ -398,13 +398,13 @@ class MetatensorAtomisticModel(torch.nn.Module):
             # of the system match the one the model supports
             if len(systems) > 0:
                 all_types = torch.cat([system.types for system in systems])
+                supported_types = torch.tensor(
+                    self._capabilities.atomic_types,
+                    device=all_types.device,
+                    dtype=all_types.dtype,
+                )
                 unsupported_mask = torch.logical_not(
-                    torch.isin(
-                        all_types,
-                        torch.tensor(
-                            self._capabilities.atomic_types, device=all_types.device
-                        ),
-                    )
+                    torch.isin(all_types, supported_types)
                 )
                 if torch.any(unsupported_mask):
                     atom_type = all_types[unsupported_mask][0]
