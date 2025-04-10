@@ -186,20 +186,6 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         self._device = device
         self._model = model.to(device=self._device)
-
-        if non_conservative:
-            if "non_conservative_forces" not in model.capabilities().outputs:
-                raise ValueError(
-                    "`non_conservative=True` was requested, but the model does not "
-                    "support non-conservative forces"
-                )
-            if "non_conservative_stress" not in model.capabilities().outputs:
-                warnings.warn(
-                    "`non_conservative=True` was requested, but the model does not "
-                    "support non-conservative stress; this calculator can only be "
-                    "used in fixed-cell calculations",
-                    stacklevel=2,
-                )
         self._non_conservative = non_conservative
 
         # We do our own check to verify if a property is implemented in `calculate()`,
@@ -276,6 +262,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                 )
                 system.add_neighbor_list(options, neighbors)
             systems.append(system)
+
+        available_outputs = self._model.capabilities().outputs
+        for key in outputs:
+            if key not in available_outputs:
+                raise ValueError(f"this model does not support '{key}' output")
 
         options = ModelEvaluationOptions(
             length_unit="angstrom",
@@ -487,9 +478,6 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             values will instead be lists of the corresponding properties, in the same
             format.
         """
-        if "energy" not in self._model.capabilities().outputs:
-            raise ValueError("this model does not support energy computation")
-
         if isinstance(atoms, ase.Atoms):
             atoms_list = [atoms]
             was_single = True
@@ -497,15 +485,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             atoms_list = atoms
             was_single = False
 
-        outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
-        if self._non_conservative:
-            outputs["non_conservative_forces"] = ModelOutput(
-                quantity="force", unit="eV/Angstrom", per_atom=True
-            )
-            if all(atoms.pbc.all() for atoms in atoms_list):
-                outputs["non_conservative_stress"] = ModelOutput(
-                    quantity="pressure", unit="eV/Angstrom^3", per_atom=False
-                )
+        properties = ["energy"]
+        if compute_forces_and_stresses:
+            properties.append("forces")
+            properties.append("stress")
+        outputs = self._ase_properties_to_metatensor_outputs(properties)
 
         systems = []
         if compute_forces_and_stresses:
@@ -606,10 +590,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
                     "even if it might be supported by the model"
                 )
 
-        output = ModelOutput()
-        output.quantity = "energy"
-        output.unit = "ev"
-        output.explicit_gradients = []
+        output = ModelOutput(
+            quantity="energy",
+            unit="ev",
+            explicit_gradients=[],
+        )
 
         if "energies" in properties or "stresses" in properties:
             output.per_atom = True
@@ -622,12 +607,25 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         metatensor_outputs = {"energy": output}
         if "forces" in properties and self._non_conservative:
             metatensor_outputs["non_conservative_forces"] = ModelOutput(
-                quantity="force", unit="eV/Angstrom", per_atom=True
+                quantity="force",
+                unit="eV/Angstrom",
+                per_atom=True,
             )
         if "stress" in properties and self._non_conservative:
             metatensor_outputs["non_conservative_stress"] = ModelOutput(
-                quantity="pressure", unit="eV/Angstrom^3", per_atom=False
+                quantity="pressure",
+                unit="eV/Angstrom^3",
+                per_atom=False,
             )
+        if "stresses" in properties and self._non_conservative:
+            raise NotImplementedError(
+                "non conservative, per-atom stress is not yet implemented"
+            )
+
+        available_outputs = self._model.capabilities().outputs
+        for key in metatensor_outputs:
+            if key not in available_outputs:
+                raise ValueError(f"this model does not support '{key}' output")
 
         return metatensor_outputs
 
