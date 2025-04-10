@@ -6,17 +6,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Added
-
-- `Labels.difference` and `Labels.difference_and_mapping` for finding the set
-  difference between two `Labels`
-
-- `energy_uncertainty`, `non_conservative_forces` and `non_conservative_stress` are now
-  possible outputs for atomistic models
-
-- The ASE calculator can now use `non_conservative_forces` and `non_conservative_stress`
-  outputs, which are selected with the `non_conservative` flag
-
 <!-- Possible sections for each package:
 
 ### Added
@@ -27,6 +16,19 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Removed
 -->
+
+## [Version 0.7.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.5) - 2025-04-10
+
+### Added
+
+- `Labels.difference` and `Labels.difference_and_mapping` for finding the set
+  difference between two `Labels`
+
+- `energy_uncertainty`, `non_conservative_forces` and `non_conservative_stress` are now
+  possible outputs for atomistic models
+
+- The ASE calculator can now use `non_conservative_forces` and `non_conservative_stress`
+  outputs, which are selected with the `non_conservative` flag
 
 ## [Version 0.7.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.4) - 2025-03-28
 
