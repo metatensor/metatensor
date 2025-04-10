@@ -60,8 +60,8 @@ set(PROJECT_VERSION ${METATENSOR_FULL_VERSION})
 option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
 option(METATENSOR_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
 
-set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
-set(EXTRA_RUST_FLAGS "" CACHE STRING "Flags used to build rust code")
+set(RUST_BUILD_TARGET "${RUST_BUILD_TARGET}" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
+set(EXTRA_RUST_FLAGS "${EXTRA_RUST_FLAGS}" CACHE STRING "Flags used to build rust code")
 
 include(GNUInstallDirs)
 
