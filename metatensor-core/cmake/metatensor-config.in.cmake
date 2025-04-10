@@ -31,7 +31,7 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
         message(FATAL_ERROR "could not find metatensor library at '${METATENSOR_SHARED_LOCATION}', please re-install metatensor")
     endif()
 
-    add_library(metatensor::shared SHARED IMPORTED GLOBAL)
+    add_library(metatensor::shared SHARED IMPORTED)
     set_target_properties(metatensor::shared PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
         INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
@@ -58,7 +58,7 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
         message(FATAL_ERROR "could not find metatensor library at '${METATENSOR_STATIC_LOCATION}', please re-install metatensor")
     endif()
 
-    add_library(metatensor::static STATIC IMPORTED GLOBAL)
+    add_library(metatensor::static STATIC IMPORTED)
     set_target_properties(metatensor::static PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
         INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
@@ -69,10 +69,12 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
     target_compile_features(metatensor::static INTERFACE cxx_std_11)
 endif()
 
-
-# Export either the shared or static library as the metatensor target
-if (@BUILD_SHARED_LIBS@)
-    add_library(metatensor ALIAS metatensor::shared)
-else()
-    add_library(metatensor ALIAS metatensor::static)
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
+    # Export either the shared or static library as the metatensor target
+    # This requires cmake 3.18+ to use ALIAS for non-GLOBAL IMPORTED targets
+    if (@BUILD_SHARED_LIBS@)
+        add_library(metatensor ALIAS metatensor::shared)
+    else()
+        add_library(metatensor ALIAS metatensor::static)
+    endif()
 endif()
