@@ -152,6 +152,14 @@ function mts_labels_intersection(first::mts_labels_t, second::mts_labels_t, resu
     )
 end
 
+function mts_labels_difference(first::mts_labels_t, second::mts_labels_t, result::Ptr{mts_labels_t}, first_mapping::Ptr{Int64}, first_mapping_count::UIntptr)
+    ccall((:mts_labels_difference, libmetatensor), 
+        mts_status_t,
+        (mts_labels_t, mts_labels_t, Ptr{mts_labels_t}, Ptr{Int64}, UIntptr,),
+        first, second, result, first_mapping, first_mapping_count
+    )
+end
+
 function mts_labels_select(labels::mts_labels_t, selection::mts_labels_t, selected::Ptr{Int64}, selected_count::Ptr{UIntptr})
     ccall((:mts_labels_select, libmetatensor), 
         mts_status_t,

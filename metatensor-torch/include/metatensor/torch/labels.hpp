@@ -185,6 +185,14 @@ public:
     /// output.
     std::tuple<Labels, torch::Tensor, torch::Tensor> intersection_and_mapping(const Labels& other) const;
 
+    /// Get the set difference of `this` and `other`
+    Labels set_difference(const Labels& other) const;
+
+    /// Get the set difference of `this` and `other`, as well as the mapping
+    /// from positions of entries in the `this` to the position of entries in
+    /// the output.
+    std::tuple<Labels, torch::Tensor> difference_and_mapping(const Labels& other) const;
+
     /// Select entries in these `Labels` that match the `selection`.
     ///
     /// The selection's names must be a subset of the names of these labels.

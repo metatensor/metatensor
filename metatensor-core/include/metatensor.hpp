@@ -1557,6 +1557,70 @@ public:
         );
     }
 
+    /// Take the difference of these `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// difference where each entry of the input `Labels` ended up.
+    ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
+    ///
+    /// @param other the `Labels` we want to take the difference with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the difference, this
+    ///        should be a pointer to an array containing `this->count()`
+    ///        elements, to be filled by this function. Otherwise it should be a
+    ///        `nullptr`. If an entry in `this` is not used in the difference,
+    ///        the mapping will be set to -1.
+    /// @param first_mapping_count number of elements in `first_mapping`
+    Labels set_difference(
+        const Labels& other,
+        int64_t* first_mapping = nullptr,
+        size_t first_mapping_count = 0
+    ) const {
+        mts_labels_t result;
+        std::memset(&result, 0, sizeof(result));
+
+        details::check_status(mts_labels_difference(
+            labels_,
+            other.labels_,
+            &result,
+            first_mapping,
+            first_mapping_count
+        ));
+
+        return Labels(result);
+    }
+
+    /// Take the difference of this `Labels` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// difference where each entry of the input `Labels` ended up.
+    ///
+    /// No user data pointer is registered with the output, even if the inputs
+    /// have some.
+    ///
+    /// @param other the `Labels` we want to take the difference with
+    /// @param first_mapping if you want the mapping from the positions of
+    ///        entries in `this` to the positions in the difference, this
+    ///        should be a vector containing `this->count()` elements, to be
+    ///        filled by this function. Otherwise it should be an empty vector.
+    ///        If an entry in `this` is not used in the difference, the
+    ///        mapping will be set to -1.
+    Labels set_difference(const Labels& other, std::vector<int64_t>& first_mapping) const {
+        auto* first_mapping_ptr = first_mapping.data();
+        auto first_mapping_count = first_mapping.size();
+        if (first_mapping_count == 0) {
+            first_mapping_ptr = nullptr;
+        }
+
+        return this->set_difference(
+            other,
+            first_mapping_ptr,
+            first_mapping_count
+        );
+    }
+
     /// Select entries in these `Labels` that match the `selection`.
     ///
     /// The selection's names must be a subset of the names of these labels.

@@ -422,7 +422,7 @@ impl Labels {
         }
 
         for (i, labels_entry) in other.iter().enumerate() {
-            let labels_entry = labels_entry.iter().copied().map(Into::into).collect::<LabelsEntry>();
+            let labels_entry = labels_entry.iter().copied().collect::<LabelsEntry>();
 
             let new_position = positions.len();
             let index = match positions.raw_entry_mut().from_key(&labels_entry) {
@@ -498,6 +498,62 @@ impl Labels {
         }
 
         let sorted = if first.is_sorted() {
+            // if the input was sorted, the output will be as well, since we
+            // can only remove entries
+            true
+        } else {
+            // we need to check, since the removed entries could be the ones out
+            // of order
+            is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()))
+        };
+
+        return Ok(Labels {
+            names: self.names.clone(),
+            values,
+            sorted: sorted,
+            positions: OnceCell::new(),
+            user_data: RwLock::new(UserData::null()),
+        });
+    }
+
+    /// Compute the difference of two labels, and optionally the mapping from
+    /// the position of entries in the inputs to positions of entries in the
+    /// output.
+    ///
+    /// Mapping will be computed only if slices are not empty.
+    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Labels, Error> {
+        if self.names != other.names {
+            return Err(Error::InvalidParameter(
+                "can not take the difference of these Labels, they have different names".into(),
+            ));
+        }
+
+        if !first_mapping.is_empty() {
+            assert!(first_mapping.len() == self.count());
+            first_mapping.fill(-1);
+        }
+
+        let mut values = Vec::new();
+        let mut new_position = 0;
+
+        // Loop through the elements of the first set
+        for (i, entry) in self.iter().enumerate() {
+            // Check whether the entry is an element of the second set
+            if !other.contains(entry) {
+                // If they are not present, append the values to the set difference
+                values.extend_from_slice(entry);
+
+                // Fill the first mapping with the position of the element in
+                // the set difference.
+                if !first_mapping.is_empty() {
+                    first_mapping[i] = new_position;
+                }
+
+                new_position += 1;
+            }
+        }
+
+        let sorted = if self.is_sorted() {
             // if the input was sorted, the output will be as well, since we
             // can only remove entries
             true
@@ -764,6 +820,42 @@ mod tests {
         assert_eq!(intersection.count(), 0);
         assert_eq!(first_mapping, &[-1, -1]);
         assert_eq!(second_mapping, &[]);
+    }
+
+    #[test]
+    fn difference() {
+        let first = Labels::new(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
+        let second = Labels::new(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
+
+        let first_mapping = &mut vec![0; first.count()];
+
+        let difference = first.difference(&second, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.values, &[0, 1]);
+        assert_eq!(first_mapping, &[0, -1]);
+
+        let first_mapping = &mut vec![0; second.count()];
+
+        let difference = second.difference(&first, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.values, &[2, 3, /**/ 4, 5]);
+        assert_eq!(first_mapping, &[0, -1, 1]);
+
+        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
+        let err = first.difference(&labels, &mut []).unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "invalid parameter: can not take the difference of these Labels, they have different names"
+        );
+
+        // Take the difference with an empty set of labels
+        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
+        let first_mapping = &mut vec![0; first.count()];
+
+        let difference = first.difference(&empty, first_mapping).unwrap();
+        assert_eq!(difference.names(), ["aa", "bb"]);
+        assert_eq!(difference.count(), first.count());
+        assert_eq!(first_mapping, &[0, 1]);
     }
 
     #[test]

@@ -486,11 +486,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         outputs = {"energy": ModelOutput(quantity="energy", unit="eV")}
         if self._non_conservative:
             outputs["non_conservative_forces"] = ModelOutput(
-                quantity="forces", unit="eV/Angstrom", per_atom=True
+                quantity="force", unit="eV/Angstrom", per_atom=True
             )
             if all(atoms.pbc.all() for atoms in atoms_list):
                 outputs["non_conservative_stress"] = ModelOutput(
-                    quantity="stress", unit="eV/Angstrom^3", per_atom=False
+                    quantity="pressure", unit="eV/Angstrom^3", per_atom=False
                 )
 
         systems = []
@@ -608,11 +608,11 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
         metatensor_outputs = {"energy": output}
         if "forces" in properties and self._non_conservative:
             metatensor_outputs["non_conservative_forces"] = ModelOutput(
-                quantity="forces", unit="eV/Angstrom", per_atom=True
+                quantity="force", unit="eV/Angstrom", per_atom=True
             )
         if "stress" in properties and self._non_conservative:
             metatensor_outputs["non_conservative_stress"] = ModelOutput(
-                quantity="stress", unit="eV/Angstrom^3", per_atom=False
+                quantity="pressure", unit="eV/Angstrom^3", per_atom=False
             )
 
         return metatensor_outputs

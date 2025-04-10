@@ -15,6 +15,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- `Labels.difference` for finding the set difference between two `Labels`
+
 ## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.0) - 2024-09-24
 
 ### Changed

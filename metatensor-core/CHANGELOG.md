@@ -17,11 +17,24 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
-### metatensor-core Julia
+### metatensor-core C
 
 #### Added
 
-- the Julia bindings to metatensor-core in the Metatensor.jl package
+- `mts_labels_difference` for finding the set difference between two `mts_labels_t`
+
+### metatensor-core C++
+
+#### Added
+
+- `Labels::set_difference` for finding the set difference between two `Labels`
+
+### metatensor-core Python
+
+#### Added
+
+- `Labels.difference` and `Labels.difference_and_mapping` for finding the set
+  difference between two `Labels`
 
 ## [Version 0.1.12](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.12) - 2025-02-17
 
