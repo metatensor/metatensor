@@ -63,7 +63,7 @@ The following simulation engines can use the ``"non_conservative_forces"`` outpu
 
     |ase-logo|
 
-    (using :py:meth:`run_model`)
+    (using the ``non_conservative`` flag or :py:meth:`run_model`)
 
 
 .. _non-conservative-stress-output:
@@ -124,4 +124,4 @@ The following simulation engines can use the ``"non_conservative_stress"`` outpu
 
     |ase-logo|
 
-    (using :py:meth:`run_model`)
+    (using the ``non_conservative`` flag or :py:meth:`run_model`)
