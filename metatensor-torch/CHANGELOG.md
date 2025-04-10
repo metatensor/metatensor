@@ -15,7 +15,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   possible outputs for atomistic models
 
 - The ASE calculator can now use `non_conservative_forces` and `non_conservative_stress`
-  thanks to its new `non_conservative` flag
+  outputs, which are selected with the `non_conservative` flag
 
 <!-- Possible sections for each package:
 

@@ -186,6 +186,20 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
 
         self._device = device
         self._model = model.to(device=self._device)
+
+        if non_conservative:
+            if "non_conservative_forces" not in model.capabilities().outputs:
+                raise ValueError(
+                    "`non_conservative=True` was requested, but the model does not "
+                    "support non-conservative forces"
+                )
+            if "non_conservative_stress" not in model.capabilities().outputs:
+                warnings.warn(
+                    "`non_conservative=True` was requested, but the model does not "
+                    "support non-conservative stress; this calculator can only be "
+                    "used in fixed-cell calculations",
+                    stacklevel=2,
+                )
         self._non_conservative = non_conservative
 
         # We do our own check to verify if a property is implemented in `calculate()`,
