@@ -1070,13 +1070,13 @@ static std::map<std::string, Quantity> KNOWN_QUANTITIES = {
         {"J", "Joule"},
         {"Ry", "Rydberg"},
     }}},
-    {"forces", Quantity{/* name */ "forces", /* baseline */ "eV/Angstrom", {
+    {"force", Quantity{/* name */ "force", /* baseline */ "eV/Angstrom", {
         {"eV/Angstrom", 1.0},
     }, {
         // alternative names
         {"eV/A", "eV/Angstrom"},
     }}},
-    {"stress", Quantity{/* name */ "stress", /* baseline */ "eV/Angstrom^3", {
+    {"pressure", Quantity{/* name */ "pressure", /* baseline */ "eV/Angstrom^3", {
         {"eV/Angstrom^3", 1.0},
     }, {
         // alternative names
