@@ -109,7 +109,7 @@ The simplest possible TensorBlock is represented below, and contains three thing
 
 The samples store information about **what objects** the data represents, while
 properties store information about **how** these objects are represented.
-A few of examples for clarity:
+A few examples for clarity:
 
 - if we are storing the energy of a list of systems in a TensorBlock, the
   samples would contain only a single ``"system"`` dimension, and multiple
