@@ -4,7 +4,7 @@ dynamic = ["version", "authors"]
 requires-python = ">=3.9"
 
 readme = "README.rst"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 description = "Python bindings for metatensor"
 
 dependencies = ["numpy"]
@@ -13,7 +13,6 @@ keywords = ["machine learning", "molecular modeling"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -36,7 +35,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=75",
+    "setuptools >=77",
     "packaging >=23",
     "cmake",
 ]
