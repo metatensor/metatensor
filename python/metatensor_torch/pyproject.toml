@@ -4,14 +4,13 @@ dynamic = ["version", "authors", "dependencies"]
 requires-python = ">=3.9"
 
 readme = "README.rst"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 description = "TorchScript bindings for metatensor"
 
 keywords = ["machine learning", "molecular modeling", "torch"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -34,7 +33,7 @@ changelog = "https://docs.metatensor.org/latest/torch/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=75",
+    "setuptools >=77",
     "packaging >=23",
     "cmake",
 ]
