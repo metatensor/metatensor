@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.14](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.14) - 2025-04-11
+
+### Fixed
+
+- The `metatensor::shared` and `metatensor::static` targets in CMake are no longer
+  global, allowing multiple calls to `find_package(metatensor)`
+
 ## [Version 0.1.13](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.13) - 2025-04-10
 
 ### metatensor-core C
