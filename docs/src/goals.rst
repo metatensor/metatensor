@@ -65,7 +65,7 @@ the metatensor ecosystem!
     - `featomic <https://github.com/metatensor/featomic/>`_: a library computing
       physics-inspired representations of atomic systems, the computed
       representations are given in metatensor format;
-    - `torch_spex <https://github.com/lab-cosmo/torch_spex/>`_: pure PyTorch
+    - `torch-spex <https://github.com/lab-cosmo/torch-spex/>`_: pure PyTorch
       implementation of spherical expansion representation, with GPU and
       learnable representations support, which outputs to metatensor format;
     - `metatrain <https://github.com/lab-cosmo/metatrain/>`_: an
@@ -82,14 +82,14 @@ Defining custom models
 The second objective of metatensor is to provide functionalities to be a tool
 for developing new models. While it is possible to use metatensor to only
 exchange data between libraries (and immediately convert everything to
-library-specific formats); we also provide tools to operate directly on
+library-specific formats), we also provide tools to operate directly on
 metatensor data. This enable models to handle sparse data and have low memory
 consumption; as well as keeping rich metadata around for easier debugging and
 understanding of the model behavior.
 
 One part of these tools is the set of low-level :ref:`operations
 <metatensor-operations>` we provide as part of the Python interface to
-metatensor. By using combining multiple operations, you can build custom machine
+metatensor. By combining multiple operations, you can build custom machine
 learning models, using data and representations coming from arbitrary
 metatensor-compatible libraires in the ecosystem. Using these operations allow
 you to keep your data in metatensor format across the whole ML pipeline;
