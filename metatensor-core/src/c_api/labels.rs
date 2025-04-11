@@ -548,7 +548,7 @@ pub unsafe extern "C" fn mts_labels_intersection(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_labels_difference(
+pub unsafe extern "C" fn mts_labels_difference(
     first: mts_labels_t,
     second: mts_labels_t,
     result: *mut mts_labels_t,
