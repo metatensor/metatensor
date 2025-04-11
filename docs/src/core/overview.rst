@@ -82,13 +82,13 @@ metadata in metatensor, i.e. all the metadata associated with a given
     right) of a :py:class:`TensorBlock`.
 
 
-A set of :py:class:`Labels` can be seen as a two dimensional array of integers,
+A set of :py:class:`Labels` can be seen as a two-dimensional array of integers,
 where each row corresponds to an entry in the data, and each column is a
 *dimension*, which is named. For example, in the illustration above, the set of
-Labels on the left has two dimensions (``structure`` and ``center``), and 10
+Labels on the left has two dimensions (``system`` and ``atom``), and 10
 entries (10 rows); while the Labels on the right has four dimensions and 8
 entries. Depending on the language you use, :py:class:`Labels` entries and
-dimensions' names can be accessed and manipulated in different ways, please
+dimensions' names can be accessed and manipulated in different ways. Please
 refer to the corresponding :ref:`API documentation <python-api-core>` for
 more information.
 
@@ -108,19 +108,19 @@ The simplest possible TensorBlock is represented below, and contains three thing
   stored as a set of :py:class:`Labels`.
 
 The samples store information about **what objects** the data represents, while
-properties store information about **how** these objects are represented. Taking
-a couple of examples for clarity:
+properties store information about **how** these objects are represented.
+A few examples for clarity:
 
 - if we are storing the energy of a list of systems in a TensorBlock, the
   samples would contain only a single ``"system"`` dimension, and multiple
-  entries — one per structure — going from 0 to ``len(systems)``. The
+  entries — one per structure — going from ``0`` to ``len(systems) - 1``. The
   properties would contain a single ``"energy"`` dimension with a single entry,
-  which value does not carry information;
-- if we are storing increasing powers of the bond lengths between pairs of atom
+  whose value does not carry information;
+- if we are storing increasing powers of the bond lengths between pairs of atoms
   in a structure (:math:`(r_{ij})^k` for :math:`k \in [1, n]`), the samples
   would contain the index of the ``"first_atom"`` (:math:`i`) and the
   ``"second_atom"`` (:math:`j`); while the properties would contain the value of
-  ``"k"``. The data array would contain the values of :math:`(r_{ij})^k`.
+  ``"k"``. The data array would contain the values of :math:`(r_{ij})^k`;
 - if we are storing an atom-centered machine learning representation, the
   samples would contain the index of the atom ``"atom"`` and the index of the
   corresponding ``"system"``; while the properties would contain information
@@ -136,15 +136,15 @@ described by the ``i``:superscript:`th` entry of the samples and the
     :width: 300px
     :align: center
 
-    Illustration of the simplest possible :py:class:`TensorBlock`: a two
-    dimensional data array, and two :py:class:`Labels` describing these two
-    axis. The metadata associated with the first axis (rows) describes
+    Illustration of the simplest possible :py:class:`TensorBlock`: a
+    two-dimensional data array, and two :py:class:`Labels` describing these two
+    axes. The metadata associated with the first axis (rows) describes
     **samples**, while the metadata associated with the second axis (columns)
     describes **properties**.
 
 In addition to all this metadata, metatensor also carries around some data. This
 data can be stored in various arrays types, all integrated with metatensor.
-Metatensor then manipulate these arrays in an opaque way, without knowing what's
+Metatensor then manipulates these arrays in an opaque way, without knowing what's
 inside. This allows to integrate metatensor with multiple third-party libraries
 and ecosystems, for example having the data live on GPU, or using memory-mapped
 data arrays.
@@ -155,12 +155,12 @@ data arrays.
 
     - `Numpy's ndarray`_ from Python,
     - `PyTorch's Tensor`_ from Python and C++, including full support for
-      autograd and different device (data living on CPU memory, GPU memory, …),
+      autograd and different devices (data living on CPU memory, GPU memory, …),
     - `Rust's ndarray`_ from Rust, more specifically ``ndarray::ArrayD<f64>``,
     - A very bare-bone N-dimensional array in metatensor C++ API:
       :cpp:class:`metatensor::SimpleDataArray`
 
-    It is possible to integrate new array types with metatensor, look into the
+    It is possible to integrate new array types with metatensor. Look into the
     :py:func:`metatensor.data.register_external_data_wrapper` function in Python, the
     :c:struct:`mts_array_t` struct in C, the :cpp:class:`metatensor::DataArrayBase`
     abstract base class in C++, and the `metatensor::Array`_ trait in Rust.
@@ -211,7 +211,7 @@ data for the :math:`x/y/z` direction of the gradient, associated with a
 **component** :py:class:`Labels`. Getting back to the example where we store
 energy in the :py:class:`TensorBlock` values, the gradient (i.e. the negative of
 the forces) samples describe with respect to which atom position we are taking
-gradient, and the component :py:class:`Labels` allow to find the :math:`x/y/z`
+gradient, and the component :py:class:`Labels` allows finding the :math:`x/y/z`
 component of the forces.
 
 .. figure:: ../../static/images/TensorBlock-Components.*
@@ -244,4 +244,4 @@ harmonics :math:`m` as components. This impacts metadata associated with
 - when values in a :py:class:`TensorBlock` have components, and gradient with
   respect to some parameter would add more components, the resulting gradient
   components will contain first the new, gradient-specific components, and then
-  all of the components already present in the values.
+  all the components already present in the values.
