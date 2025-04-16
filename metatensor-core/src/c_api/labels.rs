@@ -104,7 +104,7 @@ unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error
             return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
         }
 
-        let labels = Labels::new(&[], Vec::<i32>::new()).expect("invalid empty labels");
+        let labels = Labels::new(&[], Vec::<LabelValue>::new()).expect("invalid empty labels");
         return Ok(Arc::new(labels));
     }
 
