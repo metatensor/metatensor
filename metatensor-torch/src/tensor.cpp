@@ -6,7 +6,7 @@
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/misc.hpp"
 
-#include "internal/utils.hpp"
+#include "./utils.hpp"
 
 using namespace metatensor_torch;
 

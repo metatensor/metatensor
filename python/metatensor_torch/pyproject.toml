@@ -55,3 +55,14 @@ namespaces = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    # ignore a bunch of internal warnings with Python 3.12 and PyTorch
+    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    # metatensor.torch.atomistic deprecation
+    "ignore:importing from metatensor.torch.atomistic is deprecated and will be removed in the next release",
+    "ignore:importing from metatensor.torch.atomistic.ase_calculator is deprecated and will be removed in the next release",
+    "ignore:importing from metatensor.torch.atomistic.io is deprecated and will be removed in the next release",
+]

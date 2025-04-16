@@ -323,7 +323,7 @@ if __name__ == "__main__":
         # otherwise we are building a sdist
         torch_version = ">= 2.1"
 
-    install_requires = [f"torch {torch_version}", "vesin"]
+    install_requires = [f"torch {torch_version}", "metatomic ==0.1.0.rc1"]
 
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
