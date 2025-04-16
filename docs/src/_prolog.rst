@@ -43,25 +43,3 @@
     :width: 16px
     :height: 16px
     :alt: Python
-
-.. simulation engines logos
-
-.. |ase-logo| image:: /../static/images/logo-ase.*
-    :height: 54px
-    :alt: ASE
-
-.. |ipi-logo| image:: /../static/images/logo-ipi.*
-    :height: 48px
-    :alt: i-PI
-
-.. |lammps-logo| image:: /../static/images/logo-lammps-large.*
-    :height: 44px
-    :alt: LAMMPS
-
-.. |plumed-logo| image:: /../static/images/logo-plumed.*
-    :height: 75px
-    :alt: PLUMED
-
-.. |chemiscope-logo| image:: /../static/images/logo-chemiscope.*
-    :height: 75px
-    :alt: Chemiscope
