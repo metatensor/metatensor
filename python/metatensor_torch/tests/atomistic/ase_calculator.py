@@ -281,7 +281,7 @@ def test_serialize_ase(tmpdir, model, atoms):
 
     message = (
         "can not save metatensor model in ASE `todict`, please initialize "
-        "`MetatensorCalculator` with a path to a saved model file if you need to use "
+        "`MetatomicCalculator` with a path to a saved model file if you need to use "
         "`todict"
     )
     with pytest.raises(RuntimeError, match=message):
