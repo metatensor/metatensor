@@ -65,4 +65,6 @@ filterwarnings = [
     "ignore:importing from metatensor.torch.atomistic is deprecated and will be removed in the next release",
     "ignore:importing from metatensor.torch.atomistic.ase_calculator is deprecated and will be removed in the next release",
     "ignore:importing from metatensor.torch.atomistic.io is deprecated and will be removed in the next release",
+    "ignore:'MetatensorAtomisticModel' was renamed to 'AtomisticModel', please update your imports",
+    "ignore:'MetatensorCalculator' was renamed to 'MetatomicCalculator', please update your imports",
 ]

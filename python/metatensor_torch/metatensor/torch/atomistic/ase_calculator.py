@@ -3,7 +3,7 @@ import warnings
 
 def __getattr__(name):
     from metatomic.torch.ase_calculator import (  # noqa: F401
-        MetatensorCalculator,
+        MetatomicCalculator,
         _compute_ase_neighbors,
         _full_3x3_to_voigt_6_stress,
     )
@@ -15,6 +15,14 @@ def __getattr__(name):
         " instead.",
         stacklevel=2,
     )
+
+    if name == "MetatensorCalculator":
+        warnings.warn(
+            "'MetatensorCalculator' was renamed to 'MetatomicCalculator', "
+            "please update your imports.",
+            stacklevel=2,
+        )
+        return MetatomicCalculator
 
     if name in locals():
         return locals()[name]

@@ -34,7 +34,7 @@ def __getattr__(name):
         )
 
     from metatomic.torch import (  # noqa: F401
-        MetatensorAtomisticModel,
+        AtomisticModel,
         ModelInterface,
         is_atomistic_model,
         load_atomistic_model,
@@ -48,6 +48,14 @@ def __getattr__(name):
         f"import {name!r} from metatomic.torch instead.",
         stacklevel=2,
     )
+
+    if name == "MetatensorAtomisticModel":
+        warnings.warn(
+            "'MetatensorAtomisticModel' was renamed to 'AtomisticModel', "
+            "please update your imports.",
+            stacklevel=2,
+        )
+        return AtomisticModel
 
     if name in locals():
         return locals()[name]
