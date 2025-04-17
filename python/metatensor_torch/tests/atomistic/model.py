@@ -108,7 +108,7 @@ def test_save(model, tmp_path):
     model.save("export.pt")
 
     with zipfile.ZipFile("export.pt") as file:
-        assert "export/extra/metatensor-version" in file.namelist()
+        assert "export/extra/metatomic-version" in file.namelist()
         assert "export/extra/torch-version" in file.namelist()
 
     check_atomistic_model("export.pt")
@@ -121,7 +121,7 @@ def test_recreate(model, tmp_path):
     model_loaded.save("export_new.pt")
 
     with zipfile.ZipFile("export_new.pt") as file:
-        assert "export_new/extra/metatensor-version" in file.namelist()
+        assert "export_new/extra/metatomic-version" in file.namelist()
         assert "export_new/extra/torch-version" in file.namelist()
 
     check_atomistic_model("export_new.pt")
