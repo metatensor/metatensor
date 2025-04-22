@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -26,8 +25,7 @@ def test_requires_grad():
     tensor = metatensor.torch.requires_grad(tensor)
 
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     for block in tensor:
         assert block.values.requires_grad
@@ -35,8 +33,7 @@ def test_requires_grad():
     tensor = metatensor.torch.requires_grad(tensor, False)
 
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     for block in tensor:
         assert not block.values.requires_grad

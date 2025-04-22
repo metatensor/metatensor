@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -24,8 +23,7 @@ def test_abs():
 
     # check output type
     assert isinstance(abs_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert abs_tensor._type().name() == "TensorMap"
+    assert abs_tensor._type().name() == "TensorMap"
 
     # check metadata
     assert metatensor.torch.equal_metadata(abs_tensor, tensor)

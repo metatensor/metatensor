@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pytest
 import torch
-from packaging import version
 
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
@@ -37,10 +36,7 @@ keys: key_1  key_2
         2      3"""
     assert expected == str(tensor)
     assert expected == tensor.print(6)
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(tensor) == expected
+    assert repr(tensor) == expected
 
 
 def test_print_large(large_tensor):
@@ -79,9 +75,7 @@ keys: key_1  key_2
         2      5
         3      5"""
 
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(large_tensor) == expected
+    assert repr(large_tensor) == expected
 
 
 def test_labels_names(tensor):
@@ -510,12 +504,10 @@ def test_different_dtype(meta_tensor):
 
 def test_to(tensor):
     assert tensor.device.type == torch.device("cpu").type
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(tensor, torch.float32)
+    check_dtype(tensor, torch.float32)
 
     converted = tensor.to(dtype=torch.float64)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(converted, torch.float64)
+    check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
     if _tests_utils.can_use_mps_backend():

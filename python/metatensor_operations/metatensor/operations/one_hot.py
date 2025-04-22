@@ -72,7 +72,5 @@ def one_hot(labels: Labels, dimension: Labels):
             )
         indices[i] = position
 
-    one_hot_array = _dispatch.eye_like(dimension.values, len(dimension))[
-        _dispatch.to_index_array(indices)
-    ]
+    one_hot_array = _dispatch.eye_like(dimension.values, len(dimension))[indices]
     return one_hot_array

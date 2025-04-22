@@ -40,7 +40,7 @@ def _abs_block(block: TensorBlock) -> TensorBlock:
         # The sign_values have the same dimensions as that of the block.values.
         # Reshape the sign_values to allow multiplication with gradient.values
         new_grad = gradient.values[:] * sign_values[
-            _dispatch.to_index_array(gradient.samples.column("sample"))
+            gradient.samples.column("sample")
         ].reshape([-1] + [1] * diff_components + _shape)
 
         gradient = TensorBlock(

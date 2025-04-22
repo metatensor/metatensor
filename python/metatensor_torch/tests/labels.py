@@ -2,7 +2,6 @@ from typing import Any, List, Optional, Tuple, Union
 
 import pytest
 import torch
-from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, LabelsEntry
@@ -20,7 +19,7 @@ def test_constructor():
     assert torch.all(labels.values == torch.Tensor([[0, 0], [0, 1]]))
 
     # positional arguments + names is a list
-    labels = Labels(["c"], torch.LongTensor([[0], [2], [-1]]))
+    labels = Labels(["c"], torch.tensor([[0], [2], [-1]]))
     assert labels.names == ["c"]
     assert torch.all(labels.values == torch.Tensor([[0], [2], [-1]]))
 
@@ -137,10 +136,7 @@ def test_repr():
 
     expected = "Labels(\n    aaa  bbb\n     1    2\n     3    4\n)"
     assert str(labels) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(labels) == expected
+    assert repr(labels) == expected
 
     expected = "LabelsEntry(aaa=1, bbb=2)"
     assert str(labels[0]) == expected
@@ -365,8 +361,8 @@ def test_union():
     union_2, first_mapping, second_mapping = first.union_and_mapping(second)
 
     assert union == union_2
-    assert torch.all(first_mapping == torch.LongTensor([0, 1]))
-    assert torch.all(second_mapping == torch.LongTensor([2, 1, 3]))
+    assert torch.all(first_mapping == torch.tensor([0, 1]))
+    assert torch.all(second_mapping == torch.tensor([2, 1, 3]))
 
     # check that union preserves devices
     first = first.to("meta")
@@ -402,8 +398,8 @@ def test_intersection():
     )
 
     assert intersection == intersection_2
-    assert torch.all(first_mapping == torch.LongTensor([-1, 0]))
-    assert torch.all(second_mapping == torch.LongTensor([-1, 0, -1]))
+    assert torch.all(first_mapping == torch.tensor([-1, 0]))
+    assert torch.all(second_mapping == torch.tensor([-1, 0, -1]))
 
     # check that intersection preserves devices
     first = first.to("meta")
@@ -439,7 +435,7 @@ def test_difference():
     difference_2, mapping = first.difference_and_mapping(second)
 
     assert difference == difference_2
-    assert torch.all(mapping == torch.LongTensor([0, -1]))
+    assert torch.all(mapping == torch.tensor([0, -1]))
 
     # check that difference preserves devices
     first = first.to("meta")

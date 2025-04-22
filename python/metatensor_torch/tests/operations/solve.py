@@ -1,7 +1,6 @@
 import io
 
 import torch
-from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -34,8 +33,7 @@ def test_solve():
 
     # check output type
     assert isinstance(solution_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert solution_tensor._type().name() == "TensorMap"
+    assert solution_tensor._type().name() == "TensorMap"
 
     # check content
     expected_solution = TensorMap(

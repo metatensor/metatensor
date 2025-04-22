@@ -1,6 +1,5 @@
 from typing import List, Union
 
-from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
@@ -38,9 +37,9 @@ def _pow_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
         values_grad = (
             constant
             * gradient_values
-            * block.values[
-                _dispatch.to_index_array(gradient_samples_to_values_samples)
-            ].reshape([-1] + [1] * diff_components + _shape)
+            * block.values[gradient_samples_to_values_samples].reshape(
+                [-1] + [1] * diff_components + _shape
+            )
             ** (constant - 1)
         )
 

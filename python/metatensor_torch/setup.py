@@ -321,7 +321,7 @@ if __name__ == "__main__":
         torch_version = f"== {torch_v_major}.{torch_v_minor}.*"
     except ImportError:
         # otherwise we are building a sdist
-        torch_version = ">= 1.12"
+        torch_version = ">= 2.1"
 
     install_requires = [f"torch {torch_version}", "vesin"]
 

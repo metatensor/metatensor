@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -23,8 +22,7 @@ def test_join():
     joined_tensor = metatensor.torch.join([tensor, tensor], axis="properties")
 
     assert isinstance(joined_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert joined_tensor._type().name() == "TensorMap"
+    assert joined_tensor._type().name() == "TensorMap"
 
     # test keys
     assert joined_tensor.keys == tensor.keys

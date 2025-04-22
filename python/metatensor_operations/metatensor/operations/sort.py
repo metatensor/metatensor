@@ -55,9 +55,7 @@ def _sort_single_gradient_block(
         # adapt sample column in gradient samples to the one of the sorted values of
         # the gradient_block the gradient is attached to
         sample_values = _dispatch.copy(sample_values)
-        sample_values[:, 0] = sorted_idx_inverse[
-            _dispatch.to_index_array(sample_values[:, 0])
-        ]
+        sample_values[:, 0] = sorted_idx_inverse[sample_values[:, 0]]
 
         # sort the samples in gradient regularly moving the rows considering all columns
         sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)

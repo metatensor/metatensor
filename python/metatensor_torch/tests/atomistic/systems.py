@@ -1,6 +1,5 @@
 import pytest
 import torch
-from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -68,9 +67,7 @@ def test_system(types, positions, cell, pbc, neighbors):
 
     expected = "System with 8 atoms, periodic cell: [12, 0, 0, 0, 12.3, 0, 0, 0, 10]"
     assert str(system) == expected
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(system) == expected
+    assert repr(system) == expected
 
     system = System(
         types,
@@ -80,9 +77,7 @@ def test_system(types, positions, cell, pbc, neighbors):
     )
     expected = "System with 8 atoms, non periodic"
     assert str(system) == expected
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(system) == expected
+    assert repr(system) == expected
 
     options = NeighborListOptions(cutoff=3.5, full_list=False, strict=True)
     system.add_neighbor_list(options, neighbors)
@@ -475,12 +470,10 @@ def test_to(system, neighbors):
     system.add_data("test-data", TensorMap(Labels.single(), [block]))
 
     assert system.device.type == torch.device("cpu").type
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(system, torch.float32)
+    check_dtype(system, torch.float32)
 
     converted = system.to(dtype=torch.float64)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(converted, torch.float64)
+    check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
     if _tests_utils.can_use_mps_backend():

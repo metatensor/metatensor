@@ -75,7 +75,7 @@ def _slice_block(
                 sample_column = sample_column.copy()
 
             # Create a samples filter for the Gradient TensorBlock
-            grad_samples_mask = mask[_dispatch.to_index_array(sample_column)]
+            grad_samples_mask = mask[sample_column]
 
             new_grad_samples_values = _dispatch.mask(
                 gradient.samples.values, 0, grad_samples_mask
@@ -85,7 +85,7 @@ def _slice_block(
                 # update the "sample" column of the gradient samples
                 # to refer to the new samples
                 new_grad_samples_values[:, 0] = sample_map[
-                    _dispatch.to_index_array(new_grad_samples_values[:, 0])
+                    new_grad_samples_values[:, 0]
                 ]
 
                 new_grad_samples = Labels(

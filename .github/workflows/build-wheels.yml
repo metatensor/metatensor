@@ -101,7 +101,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['1.12', '1.13', '2.0', '2.1', '2.2', '2.3', '2.4', '2.5', '2.6']
+        torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-22.04', 'ubuntu-22.04-arm', 'macos-13', 'macos-14', 'windows-2022']
         exclude:
@@ -111,9 +111,6 @@ jobs:
           - {os: ubuntu-22.04, arch: arm64}
           - {os: macos-14, arch: x86_64}
           - {os: ubuntu-22.04-arm, arch: x86_64}
-          # arch arm64 on macos is only supported for torch >= 2.0
-          - {os: macos-14, arch: arm64, torch-version: '1.12'}
-          - {os: macos-14, arch: arm64, torch-version: '1.13'}
           # arch x86_64 on macos is only supported for torch <2.3
           - {os: macos-13, arch: x86_64, torch-version: '2.3'}
           - {os: macos-13, arch: x86_64, torch-version: '2.4'}
@@ -147,9 +144,6 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
           # add the right python version image for each torch version
-          - {torch-version: '1.12', cibw-python: 'cp310-*'}
-          - {torch-version: '1.13', cibw-python: 'cp310-*'}
-          - {torch-version: '2.0', cibw-python: 'cp311-*'}
           - {torch-version: '2.1', cibw-python: 'cp311-*'}
           - {torch-version: '2.2', cibw-python: 'cp312-*'}
           - {torch-version: '2.3', cibw-python: 'cp312-*'}
@@ -157,9 +151,6 @@ jobs:
           - {torch-version: '2.5', cibw-python: 'cp312-*'}
           - {torch-version: '2.6', cibw-python: 'cp312-*'}
           # set the right manylinux image to use
-          - {torch-version: '1.12', manylinux-version: "2014"}
-          - {torch-version: '1.13', manylinux-version: "2014"}
-          - {torch-version: '2.0', manylinux-version: "2014"}
           - {torch-version: '2.1', manylinux-version: "2014"}
           - {torch-version: '2.2', manylinux-version: "2014"}
           - {torch-version: '2.3', manylinux-version: "2014"}
