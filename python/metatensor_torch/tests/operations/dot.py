@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -24,8 +23,7 @@ def test_dot():
 
     # right output type
     assert isinstance(dot_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert dot_tensor._type().name() == "TensorMap"
+    assert dot_tensor._type().name() == "TensorMap"
 
     # right metadata
     for key in tensor.keys:

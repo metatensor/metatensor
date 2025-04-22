@@ -242,7 +242,7 @@ def _reduce_over_samples_block(
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
-        samples[:, 0] = index[_dispatch.to_index_array(samples[:, 0])]
+        samples[:, 0] = index[samples[:, 0]]
 
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
             samples[:, :], axis=0

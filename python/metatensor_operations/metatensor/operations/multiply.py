@@ -1,6 +1,5 @@
 from typing import List, Union
 
-from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
@@ -75,12 +74,10 @@ def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorB
 
         gradient_samples_to_values_samples_1 = gradient_1.samples.column("sample")
         gradient_samples_to_values_samples_2 = gradient_2.samples.column("sample")
-        gradient_values = block_1.values[
-            _dispatch.to_index_array(gradient_samples_to_values_samples_1)
-        ].reshape(
+        gradient_values = block_1.values[gradient_samples_to_values_samples_1].reshape(
             [-1] + [1] * diff_components + _shape
         ) * gradient_2.values + gradient_1.values * block_2.values[
-            _dispatch.to_index_array(gradient_samples_to_values_samples_2)
+            gradient_samples_to_values_samples_2
         ].reshape([-1] + [1] * diff_components + _shape)
 
         result_block.add_gradient(

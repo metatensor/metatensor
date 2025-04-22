@@ -3,7 +3,6 @@ import os
 
 import pytest
 import torch
-from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -27,8 +26,7 @@ def test_sort():
 
     # right output type
     assert isinstance(sorted_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sorted_tensor._type().name() == "TensorMap"
+    assert sorted_tensor._type().name() == "TensorMap"
 
 
 def test_save():

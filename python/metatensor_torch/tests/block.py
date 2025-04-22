@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 
 import pytest
 import torch
-from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, TensorBlock
@@ -100,10 +99,7 @@ def test_repr():
     gradients: ['g']
 """
     assert str(block) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(block) == expected
+    assert repr(block) == expected
 
     expected = """Gradient TensorBlock ('g')
     samples (3): ['sample', 'g']
@@ -112,10 +108,7 @@ def test_repr():
     gradients: None
 """
     assert str(block.gradient("g")) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(block.gradient("g")) == expected
+    assert repr(block.gradient("g")) == expected
 
 
 def test_copy():
@@ -284,14 +277,12 @@ def test_to():
     )
 
     assert block.device.type == torch.device("cpu").type
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(block, torch.float32)
-        check_dtype(block.gradient("g"), torch.float32)
+    check_dtype(block, torch.float32)
+    check_dtype(block.gradient("g"), torch.float32)
 
     converted = block.to(dtype=torch.float64)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(converted, torch.float64)
-        check_dtype(converted.gradient("g"), torch.float64)
+    check_dtype(converted, torch.float64)
+    check_dtype(converted.gradient("g"), torch.float64)
 
     devices = ["meta", torch.device("meta")]
     if _tests_utils.can_use_mps_backend():

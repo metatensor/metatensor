@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -24,16 +23,14 @@ def test_remove_gradients():
     )
 
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     assert set(tensor.block(0).gradients_list()) == set(["strain", "positions"])
 
     tensor = metatensor.torch.remove_gradients(tensor, ["positions"])
 
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     assert tensor.block(0).gradients_list() == ["strain"]
 

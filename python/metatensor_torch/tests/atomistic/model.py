@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 
 import pytest
 import torch
-from packaging import version
 
 from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import (
@@ -455,5 +454,4 @@ def test_predictions(model, tmp_path, n_systems):
     result = model_loaded(systems, evaluation_options, check_consistency=True)
     assert "tests::dummy::long_name" in result
     assert isinstance(result["tests::dummy::long_name"], torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert result["tests::dummy::long_name"]._type().name() == "TensorMap"
+    assert result["tests::dummy::long_name"]._type().name() == "TensorMap"

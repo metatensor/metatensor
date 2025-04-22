@@ -3,7 +3,6 @@ import os
 
 import pytest
 import torch
-from packaging import version
 
 import metatensor
 import metatensor.torch
@@ -33,11 +32,7 @@ def test_type_error(tensor_path):
         r"`metatensor.torch.add\(...\)` instead of `metatensor.add\(...\)`"
     )
     with pytest.raises(TypeError, match=error):
-        if version.parse(torch.__version__) >= version.parse("2.1"):
-            with pytest.warns(UserWarning, match=warning):
-                metatensor.add(tensor, tensor)
-        else:
-            # no warning before torch 2.1
+        with pytest.warns(UserWarning, match=warning):
             metatensor.add(tensor, tensor)
 
 

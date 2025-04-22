@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional
 
 import torch
-from packaging import version
 
 from metatensor.torch import Labels
 from metatensor.torch.atomistic import (
@@ -251,12 +250,7 @@ def test_with_extra_metadata(tmpdir):
 
     torch.save(metadata, str(tmpdir.join("metadata.pt")))
 
-    if version.parse(torch.__version__) >= version.parse("1.13"):
-        loaded_metadata = torch.load(
-            str(tmpdir.join("metadata.pt")), weights_only=False
-        )
-    else:
-        loaded_metadata = torch.load(str(tmpdir.join("metadata.pt")))
+    loaded_metadata = torch.load(str(tmpdir.join("metadata.pt")), weights_only=False)
 
     assert loaded_metadata.extra["number_of_parameters"] == "1000"
     assert loaded_metadata.extra["foo"] == "bar"

@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -24,8 +23,7 @@ def test_zeros_like():
 
     # right output type
     assert isinstance(zero_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert zero_tensor._type().name() == "TensorMap"
+    assert zero_tensor._type().name() == "TensorMap"
 
     # right metadata
     assert metatensor.torch.equal_metadata(zero_tensor, tensor)

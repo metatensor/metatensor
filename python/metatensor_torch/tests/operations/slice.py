@@ -1,7 +1,6 @@
 import io
 
 import torch
-from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels, TensorMap
@@ -25,11 +24,9 @@ def test_slice():
 
     # check type
     assert isinstance(sliced_tensor_samples, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sliced_tensor_samples._type().name() == "TensorMap"
+    assert sliced_tensor_samples._type().name() == "TensorMap"
     assert isinstance(sliced_tensor_properties, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sliced_tensor_properties._type().name() == "TensorMap"
+    assert sliced_tensor_properties._type().name() == "TensorMap"
 
     # check values
     assert torch.equal(sliced_tensor_samples.block().values, torch.tensor([[3, 4, 5]]))
@@ -51,11 +48,9 @@ def test_slice_block():
 
     # check type
     assert isinstance(sliced_block_samples, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sliced_block_samples._type().name() == "TensorBlock"
+    assert sliced_block_samples._type().name() == "TensorBlock"
     assert isinstance(sliced_block_properties, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sliced_block_properties._type().name() == "TensorBlock"
+    assert sliced_block_properties._type().name() == "TensorBlock"
 
     # check values
     assert torch.equal(sliced_block_samples.values, torch.tensor([[3, 4, 5]]))

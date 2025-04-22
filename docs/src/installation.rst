@@ -154,7 +154,7 @@ and use it will depend on the programming language you are using.
 
         We provide pre-compiled wheels on PyPI that are compatible with all the
         supported torch versions at the time of metatensor-torch release.
-        Currently PyTorch version 1.12 and above is supported.
+        Currently PyTorch version 2.1 and above is supported.
 
         If you want to use the code with an unsupported PyTorch version, or a
         new release of PyTorch which did not exist yet when we released
@@ -235,7 +235,7 @@ and use it will depend on the programming language you are using.
         - :ref:`the C++ interface <install-c>` of metatensor.
         - the C++ part of PyTorch, which you can install `on it's own
           <https://pytorch.org/get-started/locally/>`_. We are compatible with
-          libtorch version 1.12 or above. You can also use the same library as
+          libtorch version 2.1 or above. You can also use the same library as
           the Python version of torch by adding the output of the command below
           to ``CMAKE_PREFIX_PATH``:
 

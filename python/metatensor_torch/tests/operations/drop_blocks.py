@@ -2,7 +2,6 @@ import io
 import os
 
 import torch
-from packaging import version
 
 import metatensor.torch
 from metatensor.torch import Labels
@@ -36,8 +35,7 @@ def test_drop_blocks():
 
     # check type
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     # check remaining block
     expected_keys = Labels(names=["center_type"], values=torch.tensor([[6]]))

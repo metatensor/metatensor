@@ -3,7 +3,6 @@ import os
 
 import pytest
 import torch
-from packaging import version
 
 import metatensor.torch
 
@@ -33,8 +32,7 @@ def test_unique_metadata(tensor):
 
     # check type
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     # check label names
     assert unique_labels.names == ["system"]
@@ -48,8 +46,7 @@ def test_unique_metadata(tensor):
     )
 
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     assert unique_labels.names == ["atom"]
 
@@ -65,8 +62,7 @@ def test_unique_metadata_block(tensor):
 
     # check type
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     # check label names
     assert unique_labels.names == ["system"]
@@ -80,8 +76,7 @@ def test_unique_metadata_block(tensor):
     )
 
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     assert unique_labels.names == ["atom"]
 

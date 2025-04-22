@@ -50,13 +50,7 @@ def is_metatensor_class(value, typ):
         return True
     else:
         if _HAS_TORCH and isinstance(value, torch.ScriptObject):
-            if _version_at_least(torch.__version__, "2.1.0"):
-                # _type() is only working for torch >= 2.1
-                is_metatensor_torch_class = "metatensor" in str(value._type())
-            else:
-                # we don't know, it's fine
-                is_metatensor_torch_class = False
-
+            is_metatensor_torch_class = "metatensor" in str(value._type())
             if is_metatensor_torch_class:
                 warnings.warn(
                     "Trying to use code from ``metatensor.learn`` with objects from "

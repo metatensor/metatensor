@@ -1,6 +1,5 @@
 import pytest
 import torch
-from packaging import version
 
 from metatensor.torch.atomistic import (
     NeighborListOptions,
@@ -55,8 +54,7 @@ def test_neighbor_list_options():
         - hello
         - another one
 """
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert repr(options) == expected
+    assert repr(options) == expected
 
 
 @pytest.mark.skipif(not HAVE_ASE, reason="this tests requires ASE neighbor list")
