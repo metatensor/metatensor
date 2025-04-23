@@ -3,7 +3,7 @@ from typing import List, Union
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -121,14 +121,14 @@ def multiply(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(A, TensorMap):
+        if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
     blocks: List[TensorBlock] = []
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)
     else:
-        is_tensor_map = is_metatensor_class(B, TensorMap)
+        is_tensor_map = isinstance_metatensor(B, "TensorMap")
 
     if isinstance(B, (float, int)):
         B = float(B)

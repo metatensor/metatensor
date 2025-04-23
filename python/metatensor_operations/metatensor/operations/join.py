@@ -5,7 +5,7 @@ from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -353,7 +353,7 @@ def join(
             raise TypeError(f"`tensor` must be a list or a tuple, not {type(tensors)}")
 
         for tensor in tensors:
-            if not is_metatensor_class(tensor, TensorMap):
+            if not isinstance_metatensor(tensor, "TensorMap"):
                 raise TypeError(
                     "`tensors` elements must be metatensor TensorMap, "
                     f"not {type(tensor)}"

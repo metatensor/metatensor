@@ -7,7 +7,7 @@ from typing import List, Union
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -25,9 +25,9 @@ def _equal_metadata_impl(
     check: Union[List[str], str] = "all",
 ) -> str:
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor_1, TensorMap):
+        if not isinstance_metatensor(tensor_1, "TensorMap"):
             return f"`tensor_1` must be a metatensor TensorMap, not {type(tensor_1)}"
-        if not is_metatensor_class(tensor_2, TensorMap):
+        if not isinstance_metatensor(tensor_2, "TensorMap"):
             return f"`tensor_2` must be a metatensor TensorMap, not {type(tensor_2)}"
 
     message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
@@ -48,9 +48,9 @@ def _equal_metadata_block_impl(
     check: Union[List[str], str] = "all",
 ) -> str:
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(block_1, TensorBlock):
+        if not isinstance_metatensor(block_1, "TensorBlock"):
             return f"`block_1` must be a metatensor TensorBlock, not {type(block_1)}"
-        if not is_metatensor_class(block_2, TensorBlock):
+        if not isinstance_metatensor(block_2, "TensorBlock"):
             return f"`block_2` must be a metatensor TensorBlock, not {type(block_2)}"
 
     check_blocks_message = _check_blocks_impl(
