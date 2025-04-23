@@ -13,14 +13,14 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 # ==================================================================================== #
 
 
-# Step 1: create the `_classes` module as an empty module
+# Step 1: create the `_backend` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.learn._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
-# be made to the `metatensor/learn/_classes.py` file, which is used in non
+# be made to the `metatensor/learn/_backend.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
 module.__dict__["LabelsEntry"] = LabelsEntry
