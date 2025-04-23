@@ -1,7 +1,3 @@
-"""
-Module for finding unique metadata for TensorMaps and TensorBlocks
-"""
-
 from typing import List, Optional, Tuple, Union
 
 from . import _dispatch

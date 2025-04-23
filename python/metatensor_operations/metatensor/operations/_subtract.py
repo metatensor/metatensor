@@ -1,13 +1,13 @@
 from typing import Union
 
+from ._add import add
 from ._backend import (
     TensorMap,
     isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
-from .add import add
-from .multiply import multiply
+from ._multiply import multiply
 
 
 @torch_jit_script

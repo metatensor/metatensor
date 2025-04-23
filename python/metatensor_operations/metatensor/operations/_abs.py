@@ -1,8 +1,3 @@
-"""
-Module to find the absolute values of a :py:class:`TensorMap`, returning a new
-:py:class:`TensorMap`.
-"""
-
 from typing import List
 
 from . import _dispatch

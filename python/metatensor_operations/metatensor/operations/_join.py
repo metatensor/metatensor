@@ -9,8 +9,8 @@ from ._backend import (
     torch_jit_is_scripting,
     torch_jit_script,
 )
+from ._manipulate_dimension import remove_dimension
 from ._utils import _check_same_keys_raise
-from .manipulate_dimension import remove_dimension
 
 
 def _disjoint_tensor_labels(tensors: List[TensorMap], axis: str) -> bool:

@@ -1,7 +1,3 @@
-"""
-Module for checking equivalence in metadata between 2 TensorMaps
-"""
-
 from typing import List, Union
 
 from ._backend import (
