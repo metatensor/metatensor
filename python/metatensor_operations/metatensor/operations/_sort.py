@@ -9,7 +9,7 @@ from ._backend import (
     torch_jit_is_scripting,
     torch_jit_script,
 )
-from .zeros_like import zeros_like_block
+from ._zeros_like import zeros_like_block
 
 
 def _sort_single_gradient_block(

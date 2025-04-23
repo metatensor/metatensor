@@ -7,7 +7,7 @@ from ._backend import (
     torch_jit_is_scripting,
     torch_jit_script,
 )
-from .slice import SliceSelection, _check_slice_args, _slice_block
+from ._slice import SliceSelection, _check_slice_args, _slice_block
 
 
 def _split_block(
