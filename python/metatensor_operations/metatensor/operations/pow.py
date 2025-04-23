@@ -3,7 +3,7 @@ from typing import List, Union
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -76,7 +76,7 @@ def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(A, TensorMap):
+        if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
         if not isinstance(B, (float, int)):

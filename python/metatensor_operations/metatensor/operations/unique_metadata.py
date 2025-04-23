@@ -9,7 +9,7 @@ from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -164,7 +164,7 @@ def unique_metadata(
     """
     # Parse input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor, TensorMap):
+        if not isinstance_metatensor(tensor, "TensorMap"):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
@@ -224,7 +224,7 @@ def unique_metadata_block(
     """
     # Parse input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(block, TensorBlock):
+        if not isinstance_metatensor(block, "TensorBlock"):
             raise TypeError(
                 f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )

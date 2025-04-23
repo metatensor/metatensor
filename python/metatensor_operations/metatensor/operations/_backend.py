@@ -68,21 +68,25 @@ def _version_at_least(version, expected):
     return version >= expected
 
 
-def is_metatensor_class(value, typ):
-    assert typ in (Labels, TensorBlock, TensorMap)
+def isinstance_metatensor(value, typename):
+    assert typename in ("Labels", "TensorBlock", "TensorMap")
 
-    if isinstance(value, typ):
-        return True
+    if _HAS_TORCH and isinstance(value, torch.ScriptObject):
+        is_metatensor_torch_class = "metatensor" in str(value._type())
+        if is_metatensor_torch_class:
+            warnings.warn(
+                "Trying to use operations from metatensor with objects from "
+                "metatensor-torch, you should use the operation from "
+                "`metatensor.torch` as well, e.g. `metatensor.torch.add(...)` "
+                "instead of `metatensor.add(...)`",
+                stacklevel=2,
+            )
+
+    if typename == "Labels":
+        return isinstance(value, Labels)
+    elif typename == "TensorBlock":
+        return isinstance(value, TensorBlock)
+    elif typename == "TensorMap":
+        return isinstance(value, TensorMap)
     else:
-        if _HAS_TORCH and isinstance(value, torch.ScriptObject):
-            is_metatensor_torch_class = "metatensor" in str(value._type())
-            if is_metatensor_torch_class:
-                warnings.warn(
-                    "Trying to use operations from metatensor with objects from "
-                    "metatensor-torch, you should use the operation from "
-                    "`metatensor.torch` as well, e.g. `metatensor.torch.add(...)` "
-                    "instead of `metatensor.add(...)`",
-                    stacklevel=2,
-                )
-
         return False
