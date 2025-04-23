@@ -14,8 +14,13 @@ simple equivariance-preserving multi-layer perceptrons.
 import torch
 
 import metatensor.torch as mts
-# from metatensor.torch import TensorMap, TensorBlock, Labels
-# from metatensor.torch.learn.nn import EquivariantLinear, InvariantSiLU, Sequential
+from metatensor.torch import Labels, TensorBlock, TensorMap
+from metatensor.torch.learn.nn import (
+    EquivariantLinear,
+    InvariantReLU,
+    Sequential,
+)
+
 
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(42)
@@ -25,25 +30,336 @@ torch.manual_seed(42)
 # Equivariant architectures
 # -------------------------
 #
-# Many times targets of machine learning can be physical observables with certain
+# Often the targets of machine learning are physical observables with certain
 # symmetries. Many successful approaches to these learning tasks use
 # equivariance-preserving architectures to map equivariant features onto predictions of
 # an equivariant target.
 #
-#
-#
+# In this example we will demonstrate how to build an equivariance-preserving
+# multi-layer perceptron (MLP) on top of some equivariant features.
 #
 # Let's load the spherical expansion from the :ref:`first steps tutorial
-# <core-tutorial-first-steps>`: 
+# <core-tutorial-first-steps>`.
 spherical_expansion = mts.load("../core/spherical-expansion.mts")
 
 # metatensor-learn modules currently do not support TensorMaps with gradients
 spherical_expansion = mts.remove_gradients(spherical_expansion)
 print(spherical_expansion)
+print("Number of blocks in the spherical expansion:", len(spherical_expansion))
 
-# TODO!
+# %%
 #
-# use EquivariantLinear first and run training loop
+# As a reminder, these are the coefficients of the spherical-basis decompositions of a
+# smooth Gaussian density representation of 3D point cloud. In this case, the point
+# cloud is a set of decorated atomic positions.
 #
-# then construct a basic equivariant-MLP with Sequential and run training loop
+# The important part here is that these features are block sparse in angular momentum
+# channel (key dimension "o3_lambda"), with each block having a different behaviour
+# under rigid rotation by the SO(3) group.
 #
+# In general, blocks that are invariant under rotation (where o3_lambda == 0) can be
+# transformed in arbitrary (i.e. nonlinear) ways in the mapping from features to target,
+# while covariant blocks (where o3_lambda > 0) must be transformed in a way that
+# preserves the equivariance of the features. The simplest way to do this is to use only
+# linear transformations for the latter.
+#
+# Let's build some dummy target data: we will predict a global (i.e. per-system) rank-2
+# symmetric tensor, which decomposes into o3_lambda = [0, 2] angular momenta channels
+# when expressed in the spherical basis. An example of such a target in atomistic
+# machine learning is the electronic polarizability of a molecule.
+#
+# Our target will be block sparse with "o3_lambda" key dimensions equal to [0, 2], and
+# as this is a real- (not pseudo-) tensor, the inversion sigma ("o3_sigma") will be +1.
+target_tensormap = TensorMap(
+    keys=Labels(
+        ["o3_lambda", "o3_sigma"],
+        values=torch.tensor(
+            [
+                [0, 1],  # o3_lambda = 0, o3_sigma = +1
+                [2, 1],  # o3_lambda = 2, o3_sigma = +1
+            ],
+            dtype=torch.int64,
+        ),
+    ),
+    blocks=[
+        TensorBlock(
+            values=torch.randn(
+                (
+                    1,  # only one system
+                    1,  # m = [0]
+                    1,  # only one 'property' (the L=0 part of the polarizability)
+                ),
+                dtype=torch.float64,
+            ),
+            samples=Labels(
+                ["system"],
+                values=torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ),
+            components=[
+                Labels(
+                    ["o3_mu"],
+                    torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+                ),
+            ],
+            properties=Labels(
+                ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
+            ),
+        ),
+        TensorBlock(
+            values=torch.randn(
+                (
+                    1,  # only one system
+                    5,  # m = [-2, -1, 0, +1, +2]
+                    1,  # only one 'property' (the L=0 part of the polarizability)
+                ),
+                dtype=torch.float64,
+            ),
+            samples=Labels(
+                ["system"],
+                values=torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
+            ),
+            components=[
+                Labels(
+                    ["o3_mu"],
+                    torch.tensor([-2, -1, 0, 1, 2], dtype=torch.int64).reshape(-1, 1),
+                ),
+            ],
+            properties=Labels(
+                ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
+            ),
+        ),
+    ],
+)
+print(target_tensormap)
+
+# %%
+#
+# Filter the feature blocks to only keep the blocks with symmetries that match the
+# targettarget: as our target only contains o3_lambda = [0, 2] channels, we only need
+# these!
+spherical_expansion = mts.filter_blocks(spherical_expansion, target_tensormap.keys)
+print(spherical_expansion)
+print("Number of blocks in the filtered spherical expansion:", len(spherical_expansion))
+
+# %%
+#
+# Using equivariant convenience layers
+# ------------------------------------
+#
+# Now we can build the MLP. Our architecture will consist of separate "block models",
+# i.e. transformations with separate learnable weights for each block in the spherical
+# expansion. This is in contrast to the previous tutorial :ref:`nn modules basic
+# <learn-tutorial-nn-modules-basic>`, where we only had a single block in our features
+# and targets.
+#
+# Furthermore, as the features are a per-atom quantity, we will use some sparse tensor
+# operations to sum the contributions of all atoms in the system to give a per-sytem
+# prediction. For this we will use ``metatensor-operations``.
+#
+# First, let's build the MLP as just a simple linear layer. As stated before, only
+# linear transformations must be applied to covariant blocks, in this case those with
+# o3_lambda = 2, while nonlinear transformations can be applied to invariant blocks
+# where o3_lambda = 0. We will use the
+# :py:class:`~metatensor.torch.learn.nn.EquivariantLinear` module for this.
+in_keys = spherical_expansion.keys
+equi_linear = EquivariantLinear(
+    in_keys=in_keys,
+    in_features=[len(spherical_expansion[key].properties) for key in in_keys],
+    out_features=1,  # for all blocks
+)
+print(in_keys)
+print(equi_linear)
+
+# %%
+#
+# We can see by printing the archectecture of the ``EquivariantLinear`` module, that
+# there are 8 'Linear' layers, one for each block. In order to preserve equivariance, a
+# bias is always turned off for all covariant blocks. For invariant blocks, bias can be
+# switched on or off by passing the bool parameter ``bias`` when initializing
+# ``EquivariantLinear``.
+
+# Let's see what happens when we pass the features through the MLP.
+per_atom_predictions = equi_linear(spherical_expansion)
+print(per_atom_predictions)
+print(per_atom_predictions[0])
+
+# %%
+#
+# The output of the ``EquivariantLinear`` module are still per-atom and block sparse in
+# both "center_type" and "neighbor_type". To get the per-system prediction, we can
+# densify the prediction in these key dimensions by moving them to samples, then sum
+# over all sample dimensions except "system".
+per_atom_predictions = per_atom_predictions.keys_to_samples(
+    ["center_type", "neighbor_type"]
+)
+per_system_predictions = mts.sum_over_samples(
+    per_atom_predictions, ["atom", "center_type", "neighbor_type"]
+)
+assert mts.equal_metadata(per_system_predictions, target_tensormap)
+print(per_system_predictions, per_system_predictions[0])
+
+# %%
+#
+# As the 'model' that maps features to targets contains both the application of an MLP
+# and some extra transformations, we can wrap it all in a single torch module.
+
+
+class EquivariantMLP(torch.nn.Module):
+    """
+    A simple equivariant MLP that maps per-atom features to per-structure targets.
+    """
+
+    def __init__(self, mlp: torch.nn.Module):
+        super().__init__()
+        self.mlp = mlp
+
+    def forward(self, features: TensorMap) -> TensorMap:
+        # apply the multi-layer perceptron to the features
+        per_atom_predictions = self.mlp(features)
+
+        # densify the predictions in the "center_type" and "neighbor_type" key
+        # dimensions
+        per_atom_predictions = per_atom_predictions.keys_to_samples(
+            ["center_type", "neighbor_type"]
+        )
+
+        # sum over all sample dimensions except "system"
+        per_system_predictions = mts.sum_over_samples(
+            per_atom_predictions, ["atom", "center_type", "neighbor_type"]
+        )
+
+        return per_system_predictions
+
+
+# %%
+#
+# Now we will construct the loss function and run the training loop as we did in the
+# previous tutorial, :ref:`nn modules basic <learn-tutorial-nn-modules-basic>`.
+
+
+# define a custom loss function for TensorMaps that computes the squared error and
+# reduces by sum
+def squared_loss(input: TensorMap, target: TensorMap) -> torch.Tensor:
+    """
+    Computes the total squared error between the ``input`` and ``target`` TensorMaps.
+    """
+    # input and target should have equal metadata over all axes
+    assert mts.equal_metadata(input, target)
+
+    squared_loss = 0
+    for key in input.keys:
+        squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+
+    return squared_loss
+
+
+# construct a basic training loop. For simplicity do not use datasets or dataloaders.
+def training_loop(model, features, targets, loss_fn):
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    for epoch in range(301):
+        optimizer.zero_grad()
+
+        predictions = model(features)
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+        optimizer.step()
+
+        if epoch % 100 == 0:
+            print(f"epoch: {epoch}, loss: {loss}")
+
+
+loss_fn_mts = squared_loss
+model = EquivariantMLP(equi_linear)
+print("with NN = [EquivariantLinear]")
+training_loop(model, spherical_expansion, target_tensormap, loss_fn_mts)
+
+# %%
+#
+# Let's inspect the per-block losses using predictions from the trained model. Note that
+# the model is able to overfit the invariant target blocks, but not the covariant
+# blocks. This is to be expected, as the target data was generated with random numbers
+# and is not itself equivariant, making the learning task impossible.
+#
+# See also the atomistic cookbook example on rotational equivariance for a more detailed
+# discussion of this topic, linked at the end of this tutorial.
+print("per-block loss:")
+prediction = model(spherical_expansion)
+for key, block in prediction.items():
+    print(key, torch.sum((block.values - target_tensormap[key].values) ** 2))
+
+
+# %%
+#
+# Now let's consider a more complex nonlinear architecture. In the simplest case we are
+# restricted to linear layers for covariant blocks, but we can use nonlinear layers for
+# invariant blocks. In this case we will use the
+# :py:class:`~metatensor.torch.learn.nn.InvariantReLU` activation function. It has the
+# prefix "Invariant" as it only applies the activation function to invariant blocks
+# where o3_lambda = 0, and leaves the covariant blocks unchanged.
+
+# Let's build a new MLP with two linear layers and one activation function.
+hidden_layer_width = 64
+equi_mlp = Sequential(
+    in_keys,
+    EquivariantLinear(
+        in_keys=in_keys,
+        in_features=[len(spherical_expansion[key].properties) for key in in_keys],
+        out_features=hidden_layer_width,
+    ),
+    InvariantReLU(in_keys),  # could also use InvariantTanh, InvariantSiLU
+    EquivariantLinear(
+        in_keys=in_keys,
+        in_features=[hidden_layer_width for _ in in_keys],
+        out_features=1,  # for all blocks
+    ),
+)
+print(in_keys)
+print(equi_mlp)
+
+# %%
+#
+# Notice now that for invariant blocks, the 'block model' is a nonlinear MLP whereas for
+# invariant blocks it is the sequential application of two linear layers, wihtout bias.
+# Re-running the training loop with this new architecture:
+model = EquivariantMLP(equi_mlp)
+print("with NN = [EquivariantLinear, InvariantSiLU, EquivariantLinear]")
+training_loop(model, spherical_expansion, target_tensormap, loss_fn_mts)
+
+# %%
+#
+# with the trained model, let's see the per-block decomposition of the loss. As before,
+# the model can overfit the invariants, but not the covariants, as expected.
+print("per-block loss:")
+prediction = model(spherical_expansion)
+for key, block in prediction.items():
+    print(key, torch.sum((block.values - target_tensormap[key].values) ** 2))
+
+# %%
+#
+# Summary of Convenience layers
+# -------
+#
+# This tutorial has demonstrated how to build equivariance-preserving architectures
+# using the metatensor-learn convenience neural network modules. These modules, such as
+# ``EquivariantLinear`` and ``InvariantReLU`` are modified analogs of the standard
+# convenience layers, such as ``Linear`` and ``ReLU``.
+#
+# The key difference is that the invariant or covariant nature (via the "o3_lambda" key
+# dimension) of the input blocks are taken into account, and used to determine the
+# transformations applied to each block. For the convenience modules shown above
+
+# %%
+#
+# Other examples
+# --------------
+#
+# See the atomistic cookbook for an example on learning the polarizability using
+# ``EquivariantLinear`` applied to higher body order features:
+#
+# https://atomistic-cookbook.org/examples/polarizability/polarizability.html
+#
+# and those for checking the rotational equivariance of quantities in ``TensorMap``
+# format:
+#
+# https://atomistic-cookbook.org/examples/rotate-equivariants/rotate-equivariants.html

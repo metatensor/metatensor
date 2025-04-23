@@ -14,8 +14,9 @@ simple multi-layer perceptrons.
 import torch
 
 import metatensor.torch as mts
-from metatensor.torch import TensorMap, TensorBlock, Labels
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.learn.nn import Linear, ReLU, Sequential
+
 
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(42)
@@ -26,8 +27,8 @@ torch.manual_seed(42)
 # ---------------------------------------
 #
 # metatensor-learn's neural network modules are designed as
-# :py:class:`TensorMap`-compatible analogues to the torch API. 
-# 
+# :py:class:`TensorMap`-compatible analogues to the torch API.
+#
 # Let's first briefly cover torch's ``nn`` modules to see how they work.
 #
 # First, let's define a random tensor that we will treat as some intermediate
@@ -52,9 +53,9 @@ linear_torch = torch.nn.Linear(in_features, out_features, bias=True)
 # define a loss function
 loss_fn = torch.nn.MSELoss(reduction="sum")
 
+
 # construct a basic training loop. For simplicity do not use datasets or dataloaders.
 def training_loop(model, features, targets, loss_fn):
-
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     for epoch in range(1001):
         optimizer.zero_grad()
@@ -64,9 +65,10 @@ def training_loop(model, features, targets, loss_fn):
         loss = loss_fn(predictions, targets)
         loss.backward()
         optimizer.step()
-        
+
         if epoch % 100 == 0:
             print(f"epoch: {epoch}, loss: {loss}")
+
 
 print("with NN = [Linear]")
 training_loop(linear_torch, feature_tensor, target_tensor, loss_fn)
@@ -108,7 +110,7 @@ feature_tensormap = TensorMap(
             properties=Labels(
                 ["property"],
                 torch.arange(in_features).reshape(-1, 1),
-            )
+            ),
         ),
     ],
 )
@@ -126,7 +128,7 @@ target_tensormap = TensorMap(
             properties=Labels(
                 ["target"],
                 torch.arange(out_features).reshape(-1, 1),
-            )
+            ),
         ),
     ],
 )
@@ -154,6 +156,7 @@ linear_mts = Linear(
     bias=True,
 )
 
+
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
 def squared_loss(input: TensorMap, target: TensorMap) -> torch.Tensor:
@@ -168,6 +171,7 @@ def squared_loss(input: TensorMap, target: TensorMap) -> torch.Tensor:
         squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
 
     return squared_loss
+
 
 loss_fn_mts = squared_loss
 
