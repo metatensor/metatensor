@@ -19,6 +19,7 @@ import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.learn.nn import Linear, ModuleMap
 
+
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(42)
 
@@ -235,6 +236,7 @@ training_loop(custom_mmap, feature_tensormap, target_tensormap, loss_fn_mts)
 # combine application of the ``ModuleMap`` with the ``Linear`` convenience layer from
 # metatensor-learn, and the sparse addition operation from ``metatensor-operations`` to
 # build a complex architecture.
+
 
 class ResidualNetwork(torch.nn.Module):
     def __init__(
