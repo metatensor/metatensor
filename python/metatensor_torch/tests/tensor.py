@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, Optional, Tuple, Union
 
 import pytest
@@ -553,9 +554,16 @@ def test_to(tensor):
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
-@torch.jit.script
-def check_dtype(tensor: TensorMap, dtype: torch.dtype):
-    assert tensor.dtype == dtype
+if os.environ.get("PYTORCH_JIT") == "0":
+
+    def check_dtype(tensor: TensorMap, dtype: torch.dtype):
+        pass
+
+else:
+
+    @torch.jit.script
+    def check_dtype(tensor: TensorMap, dtype: torch.dtype):
+        assert tensor.dtype == dtype
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all

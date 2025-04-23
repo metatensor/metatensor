@@ -1,5 +1,7 @@
 import io
+import os
 
+import pytest
 import torch
 
 import metatensor.torch
@@ -57,6 +59,7 @@ def test_slice_block():
     assert torch.equal(sliced_block_properties.values, torch.tensor([[1], [4]]))
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.slice, buffer)

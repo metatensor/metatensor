@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 import torch
 
 import metatensor.torch
@@ -35,6 +36,7 @@ def test_remove_gradients():
     assert tensor.block(0).gradients_list() == ["strain"]
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.remove_gradients, buffer)

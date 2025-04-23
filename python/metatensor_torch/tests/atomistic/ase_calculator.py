@@ -32,6 +32,8 @@ from metatensor.torch.atomistic.ase_calculator import (
 from .. import _tests_utils
 
 
+PYTORCH_JIT_DISABLED = os.environ.get("PYTORCH_JIT") == "0"
+
 STR_TO_DTYPE = {
     "float32": torch.float32,
     "float64": torch.float64,
@@ -112,6 +114,7 @@ def test_torch_script_model(model, model_different_units, atoms):
     )
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_exported_model(tmpdir, model, model_different_units, atoms):
     path = os.path.join(tmpdir, "exported-model.pt")
     model.save(path)
@@ -137,6 +140,7 @@ def test_get_properties(model, atoms, non_conservative):
     assert np.all(properties["stress"] == atoms.get_stress())
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_run_model(tmpdir, model, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
@@ -218,6 +222,7 @@ def test_run_model(tmpdir, model, atoms):
 
 
 @pytest.mark.parametrize("non_conservative", [True, False])
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_compute_energy(tmpdir, model, atoms, non_conservative):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
@@ -267,6 +272,7 @@ def test_compute_energy(tmpdir, model, atoms, non_conservative):
     assert "stress" not in calculator.compute_energy(atoms_no_pbc)
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_serialize_ase(tmpdir, model, atoms):
     # Run some tests with a different dtype
     model._capabilities.dtype = "float32"
@@ -304,6 +310,7 @@ def test_serialize_ase(tmpdir, model, atoms):
         assert atoms.calc is not None
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_dtype_device(tmpdir, model, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(
@@ -340,6 +347,7 @@ def test_dtype_device(tmpdir, model, atoms):
         assert np.allclose(atoms.get_potential_energy(), expected)
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_model_with_extensions(tmpdir, atoms):
     ref = atoms.copy()
     ref.calc = ase.calculators.lj.LennardJones(

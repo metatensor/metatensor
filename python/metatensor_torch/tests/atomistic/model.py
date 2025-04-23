@@ -21,6 +21,9 @@ from metatensor.torch.atomistic import (
 )
 
 
+PYTORCH_JIT_DISABLED = os.environ.get("PYTORCH_JIT") == "0"
+
+
 class MinimalModel(torch.nn.Module):
     """The simplest possible metatensor atomistic model"""
 
@@ -102,6 +105,7 @@ def model_energy_nounit():
     return MetatensorAtomisticModel(model_energy_nounit, metadata, capabilities)
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_save(model, tmp_path):
     os.chdir(tmp_path)
     model.save("export.pt")
@@ -113,6 +117,7 @@ def test_save(model, tmp_path):
     check_atomistic_model("export.pt")
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_recreate(model, tmp_path):
     os.chdir(tmp_path)
     model.save("export.pt")
@@ -135,6 +140,7 @@ def test_training_mode():
         MetatensorAtomisticModel(model, ModelMetadata(), capabilities)
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_save_warning_length_unit(model):
     model._capabilities.length_unit = ""
     match = r"No length unit was provided for the model."
@@ -142,12 +148,14 @@ def test_save_warning_length_unit(model):
         model.save("export.pt")
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_save_warning_quantity(model_energy_nounit):
     match = r"No units were provided for output energy."
     with pytest.warns(UserWarning, match=match):
         model_energy_nounit.save("export.pt")
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_export(model, tmp_path):
     os.chdir(tmp_path)
     match = r"`export\(\)` is deprecated, use `save\(\)` instead"
@@ -208,6 +216,7 @@ class FullModel(torch.nn.Module):
         return result
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_requested_neighbor_lists(tmpdir):
     model = FullModel()
     model.train(False)
@@ -334,6 +343,7 @@ def test_bad_capabilities():
         ModelCapabilities(outputs={"not-a-standard::": ModelOutput()})
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_access_module(tmpdir):
     model = FullModel()
     model.train(False)
@@ -361,6 +371,7 @@ def test_access_module(tmpdir):
     loaded_atomistic.module.other
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_is_atomistic_model(tmpdir):
     model = FullModel()
     model.train(False)
@@ -386,6 +397,7 @@ def test_is_atomistic_model(tmpdir):
         is_atomistic_model(1.0)
 
 
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_read_metadata(tmpdir):
     model = FullModel()
     model.train(False)
@@ -411,6 +423,7 @@ def test_read_metadata(tmpdir):
 
 
 @pytest.mark.parametrize("n_systems", [0, 1, 8])
+@pytest.mark.skipif(PYTORCH_JIT_DISABLED, reason="requires TorchScript")
 def test_predictions(model, tmp_path, n_systems):
     os.chdir(tmp_path)
     model.save("export.pt")

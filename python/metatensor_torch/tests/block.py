@@ -1,3 +1,4 @@
+import os
 import re
 from typing import List, Optional, Tuple
 
@@ -329,9 +330,16 @@ def test_to():
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
-@torch.jit.script
-def check_dtype(block: TensorBlock, dtype: torch.dtype):
-    assert block.dtype == dtype
+if os.environ.get("PYTORCH_JIT") == "0":
+
+    def check_dtype(block: TensorBlock, dtype: torch.dtype):
+        pass
+
+else:
+
+    @torch.jit.script
+    def check_dtype(block: TensorBlock, dtype: torch.dtype):
+        assert block.dtype == dtype
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all

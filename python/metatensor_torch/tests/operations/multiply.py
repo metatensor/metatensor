@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 import torch
 
 import metatensor.torch
@@ -24,6 +25,7 @@ def test_multiply():
     assert torch.allclose(product_tensor.block(0).values, tensor.block(0).values ** 2)
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.multiply, buffer)

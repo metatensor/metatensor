@@ -1,5 +1,7 @@
 import io
+import os
 
+import pytest
 import torch
 
 import metatensor.torch
@@ -50,6 +52,7 @@ def test_solve():
     assert metatensor.torch.equal(solution_tensor, expected_solution)
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.solve, buffer)
