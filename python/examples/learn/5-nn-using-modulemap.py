@@ -1,14 +1,20 @@
 """
 .. _learn-tutorial-nn-using-modulemap:
 
-Using ModuleMap to build custom architectures
-=============================================
+Custom architectures with ``ModuleMap``
+=======================================
 
 .. py:currentmodule:: metatensor.torch.learn.nn
 
 This tutorial demonstrates how to build custom architectures compatible with
-``TensorMap`` by combining torch-native modules with metatensor-learn's ``ModuleMap``.
+``TensorMap`` objects by combining native ``torch.nn`` modules with metatensor-learn's
+``ModuleMap``.
 
+.. note::
+
+    Prior to this tutorial, it is recommended to read the tutorial on :ref:`using
+    convenience modules <learn-tutorial-nn-modules-basic>`, as this tutorial builds on
+    the concepts introduced there.
 """
 
 from typing import List
@@ -174,6 +180,10 @@ def training_loop(model, features, targets, loss_fn):
 
         predictions = model(features)
 
+        if isinstance(predictions, torch.ScriptObject):
+            # assume a TensorMap and check metadata is equivalent
+            assert mts.equal_metadata(predictions, targets)
+
         loss = loss_fn(predictions, targets)
         loss.backward()
         optimizer.step()
@@ -190,6 +200,9 @@ training_loop(linear_mmap, feature_tensormap, target_tensormap, loss_fn_mts)
 
 # %%
 #
+# More complex architectures
+# --------------------------
+
 # Defining more complicated architectures is a matter of building
 # ``torch.nn.Sequential`` objects for each block, and wrapping them into a single
 # ModuleMap.

@@ -1,14 +1,21 @@
 """
 .. _learn-tutorial-nn-modules-basic:
 
-Using neural network modules
-============================
+Convenience ``nn`` modules
+==========================
 
 .. py:currentmodule:: metatensor.torch.learn.nn
 
 This example demonstrates the use of convenience modules in metatensor-learn to build
 simple multi-layer perceptrons.
 
+.. note::
+
+    The convenience modules introduced in this tutorial are designed to be used to
+    prototype new architectures for simple models. To be build more complex models, it
+    is suggested that native ``torch.nn`` modules are wrapped in ``ModuleMap`` objects
+    instead. This is convered in the later tutorial :ref:`using module maps
+    <learn-tutorial-nn-using-modulemap>`.
 """
 
 import torch
@@ -23,13 +30,12 @@ torch.manual_seed(42)
 
 # %%
 #
-# A brief overview of native ``torch.nn``
-# ---------------------------------------
+# Introduction to native ``torch.nn`` modules
+# -------------------------------------------
 #
 # metatensor-learn's neural network modules are designed as
-# :py:class:`TensorMap`-compatible analogues to the torch API.
-#
-# Let's first briefly cover torch's ``nn`` modules to see how they work.
+# :py:class:`TensorMap`-compatible analogues to the torch API. Before this, it is
+# instructive to recap torch's native ``nn`` modules to see how they work.
 #
 # First, let's define a random tensor that we will treat as some intermediate
 # representation. We will build a multi-layer perceptron to transform this tensor into a
@@ -47,7 +53,7 @@ feature_tensor = torch.randn(n_samples, in_features)
 # define a dummy target
 target_tensor = torch.randn(n_samples, 1)
 
-# initialize the linear layer
+# initialize the torch linear layer
 linear_torch = torch.nn.Linear(in_features, out_features, bias=True)
 
 # define a loss function
@@ -62,6 +68,10 @@ def training_loop(model, features, targets, loss_fn):
 
         predictions = model(features)
 
+        if isinstance(predictions, torch.ScriptObject):
+            # assume a TensorMap and check metadata is equivalent
+            assert mts.equal_metadata(predictions, targets)
+
         loss = loss_fn(predictions, targets)
         loss.backward()
         optimizer.step()
@@ -73,7 +83,10 @@ def training_loop(model, features, targets, loss_fn):
 print("with NN = [Linear]")
 training_loop(linear_torch, feature_tensor, target_tensor, loss_fn)
 
-# now define a nonlinear multi-layer perceptron using ``torch.nn.Sequential``
+# %%
+#
+# Now run the training loop, this time with a nonlinear multi-layer perceptron using
+# ``torch.nn.Sequential``
 hidden_layer_width = 64
 mlp_torch = torch.nn.Sequential(
     torch.nn.Linear(in_features, hidden_layer_width),
@@ -92,10 +105,9 @@ training_loop(mlp_torch, feature_tensor, target_tensor, loss_fn)
 #
 # Now we're ready to see how the ``nn`` module in ``metatensor-learn`` works.
 #
-# First we need to create some dummy data, this time in :py:class:`TensorMap` format
-#
-# Starting simple, we will define a :py:class:`TensorMap` with a single
-# :py:class:`TensorBlock` containing the latent space features from above.
+# Create some dummy data, this time in :py:class:`TensorMap` format. Starting simple, we
+# will define a :py:class:`TensorMap` with only one :py:class:`TensorBlock`, containing
+# the latent space features from above.
 
 feature_tensormap = TensorMap(
     keys=Labels.single(),
@@ -179,8 +191,9 @@ loss_fn_mts = squared_loss
 print("with NN = [Linear]")
 training_loop(linear_mts, feature_tensormap, target_tensormap, loss_fn_mts)
 
-
-# now construct a nonlinear MLP instead. Here we use metatensor-learn's Sequential
+# %%
+#
+# Now construct a nonlinear MLP instead. Here we use metatensor-learn's Sequential
 # module, along with some nonlinear activation modules. We only need to pass the
 # properties metadata for the output layer, for the hidden layers, we can just pass the
 # layer dimension

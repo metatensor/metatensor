@@ -1,14 +1,19 @@
 """
 .. _learn-tutorial-nn-modules-equivariant:
 
-Using neural network modules
-============================
+Equivariance-preserving ``nn`` modules
+======================================
 
 .. py:currentmodule:: metatensor.torch.learn.nn
 
 This example demonstrates the use of convenience modules in metatensor-learn to build
 simple equivariance-preserving multi-layer perceptrons.
 
+.. note::
+
+    Prior to this tutorial, it is recommended to read the tutorial on :ref:`using
+    convenience modules <learn-tutorial-nn-modules-basic>`, as this tutorial builds on
+    the concepts introduced there.
 """
 
 import torch
@@ -27,8 +32,8 @@ torch.manual_seed(42)
 
 # %%
 #
-# Equivariant architectures
-# -------------------------
+# Introduction
+# ------------
 #
 # Often the targets of machine learning are physical observables with certain
 # symmetries. Many successful approaches to these learning tasks use
@@ -261,6 +266,10 @@ def training_loop(model, features, targets, loss_fn):
 
         predictions = model(features)
 
+        if isinstance(predictions, torch.ScriptObject):
+            # assume a TensorMap and check metadata is equivalent
+            assert mts.equal_metadata(predictions, targets)
+
         loss = loss_fn(predictions, targets)
         loss.backward()
         optimizer.step()
@@ -328,7 +337,7 @@ training_loop(model, spherical_expansion, target_tensormap, loss_fn_mts)
 
 # %%
 #
-# with the trained model, let's see the per-block decomposition of the loss. As before,
+# With the trained model, let's see the per-block decomposition of the loss. As before,
 # the model can overfit the invariants, but not the covariants, as expected.
 print("per-block loss:")
 prediction = model(spherical_expansion)
@@ -337,8 +346,8 @@ for key, block in prediction.items():
 
 # %%
 #
-# Summary of Convenience layers
-# -------
+# Conclusion
+# ----------
 #
 # This tutorial has demonstrated how to build equivariance-preserving architectures
 # using the metatensor-learn convenience neural network modules. These modules, such as
