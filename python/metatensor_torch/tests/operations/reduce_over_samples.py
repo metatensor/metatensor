@@ -83,6 +83,7 @@ def test_reduction_all_samples():
     assert torch.allclose(var_X[0].values, torch.var(X[0].values, correction=0, axis=0))
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.sum_over_samples, buffer)

@@ -1,5 +1,7 @@
 import io
+import os
 
+import pytest
 import torch
 
 import metatensor.torch
@@ -18,6 +20,7 @@ def test_one_hot():
     assert torch.all(one_hot_encoding == correct_encoding)
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.one_hot, buffer)

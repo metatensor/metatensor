@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import torch
 
@@ -511,9 +513,16 @@ def test_to(system, neighbors):
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
-@torch.jit.script
-def check_dtype(system: System, dtype: torch.dtype):
-    assert system.dtype == dtype
+if os.environ.get("PYTORCH_JIT") == "0":
+
+    def check_dtype(system: System, dtype: torch.dtype):
+        pass
+
+else:
+
+    @torch.jit.script
+    def check_dtype(system: System, dtype: torch.dtype):
+        assert system.dtype == dtype
 
 
 def test_partial_pbc():

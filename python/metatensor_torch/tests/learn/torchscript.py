@@ -4,6 +4,7 @@ whether or not the module is jit scripted and 2) can be saved and loaded.
 """
 
 import io
+import os
 
 import pytest
 import torch
@@ -26,6 +27,11 @@ from metatensor.torch.learn.nn import (
 )
 
 from ._tests_utils import random_single_block_no_components_tensor_map
+
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript"
+)
 
 
 @pytest.fixture

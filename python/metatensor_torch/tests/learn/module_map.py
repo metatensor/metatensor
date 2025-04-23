@@ -1,4 +1,5 @@
 import io
+import os
 
 import pytest
 import torch
@@ -127,6 +128,7 @@ def test_to_device(tensor, torch_script):
             assert label.device.type == device
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_torchscript(tensor):
     modules = []
     for key in tensor.keys:

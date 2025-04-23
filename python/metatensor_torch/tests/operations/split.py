@@ -1,4 +1,5 @@
 import io
+import os
 
 import pytest
 import torch
@@ -118,6 +119,7 @@ def test_split_block():
     assert torch.equal(split_blocks_properties[1].values, torch.tensor([[2], [5]]))
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
         torch.jit.save(metatensor.torch.split, buffer)
