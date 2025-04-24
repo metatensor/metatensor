@@ -115,39 +115,46 @@ def _reduce_over_samples_block(
 
     block_values = block.values
     other_shape = block_values.shape[1:]
-    values_result = _dispatch.zeros_like(
+    values_sum = _dispatch.zeros_like(
         block_values, shape=(new_samples.shape[0],) + other_shape
     )
 
     _dispatch.index_add(
-        values_result,
+        values_sum,
         block_values,
         index,
     )
 
-    # define values_mean for torchscript (won't be used unless there are gradients)
-    values_mean = _dispatch.empty_like(values_result, [0])
+    # pre-declare variables that we'll need to use outside of the if block below
+    values_mean = _dispatch.empty_like(values_sum, [0])
+    values_result = _dispatch.empty_like(values_sum, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
-        bincount = _dispatch.make_like(_dispatch.bincount(index), values_result)
+        bincount = _dispatch.make_like(_dispatch.bincount(index), values_sum)
         bincount = bincount.reshape((-1,) + (1,) * len(other_shape))
-        values_result = values_result / bincount
+        values_mean = values_sum / bincount
+
         if reduction == "std" or reduction == "var":
-            values_result_2 = _dispatch.zeros_like(
+            values_var = _dispatch.zeros_like(
                 block_values, shape=(new_samples.shape[0],) + other_shape
             )
+
             _dispatch.index_add(
-                values_result_2,
-                block_values**2,
+                values_var,
+                (block_values - values_mean[index]) ** 2,
                 index,
             )
-            values_result_2 = values_result_2 / bincount
-            # we need the mean values in the derivatives
-            if len(block.gradients_list()) > 0:
-                values_mean = _dispatch.copy(values_result)
-            values_result = values_result_2 - values_result**2
+            values_var = values_var / bincount
+
             if reduction == "std":
-                values_result = _dispatch.sqrt(values_result)
+                values_result = _dispatch.sqrt(values_var)
+            elif reduction == "var":
+                values_result = values_var
+
+        elif reduction == "mean":
+            values_result = values_mean
+    elif reduction == "sum":
+        values_result = values_sum
 
     # check if the reduce operation reduce all the samples
     if len(remaining_sample_names) == 0:
