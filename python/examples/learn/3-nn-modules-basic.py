@@ -18,15 +18,19 @@ simple multi-layer perceptrons.
     <learn-tutorial-nn-using-modulemap>`.
 """
 
+from typing import Union
+
 import torch
+from torch import Tensor
+from torch.nn import Module
 
 import metatensor.torch as mts
-from metatensor.torch import Labels, TensorBlock, TensorMap
+from metatensor.torch import Labels, TensorMap
 from metatensor.torch.learn.nn import Linear, ReLU, Sequential
 
 
-torch.set_default_dtype(torch.float64)
 torch.manual_seed(42)
+torch.set_default_dtype(torch.float64)
 
 # %%
 #
@@ -34,8 +38,9 @@ torch.manual_seed(42)
 # -------------------------------------------
 #
 # metatensor-learn's neural network modules are designed as
-# :py:class:`TensorMap`-compatible analogues to the torch API. Before this, it is
-# instructive to recap torch's native ``nn`` modules to see how they work.
+# :py:class:`TensorMap`-compatible analogues to the torch API. Before looking into the
+# ``metatensor-learn version``, it is instructive to recap torch's native ``nn`` modules
+# to see how they work.
 #
 # First, let's define a random tensor that we will treat as some intermediate
 # representation. We will build a multi-layer perceptron to transform this tensor into a
@@ -57,11 +62,17 @@ target_tensor = torch.randn(n_samples, 1)
 linear_torch = torch.nn.Linear(in_features, out_features, bias=True)
 
 # define a loss function
-loss_fn = torch.nn.MSELoss(reduction="sum")
+loss_fn_torch = torch.nn.MSELoss(reduction="sum")
 
 
 # construct a basic training loop. For simplicity do not use datasets or dataloaders.
-def training_loop(model, features, targets, loss_fn):
+def training_loop(
+    model: Module,
+    loss_fn: Module,
+    features: Union[Tensor, TensorMap],
+    targets: Union[Tensor, TensorMap],
+) -> None:
+    """A basic training loop for a model and loss function."""
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     for epoch in range(1001):
         optimizer.zero_grad()
@@ -81,7 +92,7 @@ def training_loop(model, features, targets, loss_fn):
 
 
 print("with NN = [Linear]")
-training_loop(linear_torch, feature_tensor, target_tensor, loss_fn)
+training_loop(linear_torch, loss_fn_torch, feature_tensor, target_tensor)
 
 # %%
 #
@@ -96,7 +107,7 @@ mlp_torch = torch.nn.Sequential(
 
 # run training again
 print("with NN = [Linear, ReLU, Linear]")
-training_loop(mlp_torch, feature_tensor, target_tensor, loss_fn)
+training_loop(mlp_torch, loss_fn_torch, feature_tensor, target_tensor)
 
 # %%
 #
@@ -111,43 +122,17 @@ training_loop(mlp_torch, feature_tensor, target_tensor, loss_fn)
 
 feature_tensormap = TensorMap(
     keys=Labels.single(),
-    blocks=[
-        TensorBlock(
-            values=feature_tensor,
-            samples=Labels(
-                ["sample"],
-                torch.arange(n_samples).reshape(-1, 1),
-            ),
-            components=[],
-            properties=Labels(
-                ["property"],
-                torch.arange(in_features).reshape(-1, 1),
-            ),
-        ),
-    ],
+    blocks=[mts.block_from_array(feature_tensor)],
 )
 
 target_tensormap = TensorMap(
     keys=Labels.single(),
-    blocks=[
-        TensorBlock(
-            values=target_tensor,
-            samples=Labels(
-                ["sample"],
-                torch.arange(n_samples).reshape(-1, 1),
-            ),
-            components=[],
-            properties=Labels(
-                ["target"],
-                torch.arange(out_features).reshape(-1, 1),
-            ),
-        ),
-    ],
+    blocks=[mts.block_from_array(target_tensor)],
 )
 
 # for supervised learning, inputs and labels must have the same metadata for all axes
 # except the properties dimension, as this is the dimension that is transformed by the
-# NN.
+# neural network.
 if mts.equal_metadata(
     feature_tensormap, target_tensormap, check=["samples", "components"]
 ):
@@ -171,25 +156,35 @@ linear_mts = Linear(
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
-def squared_loss(input: TensorMap, target: TensorMap) -> torch.Tensor:
+class TensorMapLoss(Module):
     """
-    Computes the total squared error between the ``input`` and ``target`` TensorMaps.
+    A custom loss function for TensorMaps that computes the squared error and reduces by
+    sum.
     """
-    # input and target should have equal metadata over all axes
-    assert mts.equal_metadata(input, target)
 
-    squared_loss = 0
-    for key in input.keys:
-        squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+    def __init__(self) -> None:
+        super().__init__()
 
-    return squared_loss
+    def forward(self, input: TensorMap, target: TensorMap) -> Tensor:
+        """
+        Computes the total squared error between the ``input`` and ``target``
+        TensorMaps.
+        """
+        # input and target should have equal metadata over all axes
+        assert mts.equal_metadata(input, target)
+
+        squared_loss = 0
+        for key in input.keys:
+            squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+
+        return squared_loss
 
 
-loss_fn_mts = squared_loss
+loss_fn_mts = TensorMapLoss()
 
 # run the training loop
 print("with NN = [Linear]")
-training_loop(linear_mts, feature_tensormap, target_tensormap, loss_fn_mts)
+training_loop(linear_mts, loss_fn_mts, feature_tensormap, target_tensormap)
 
 # %%
 #
@@ -217,4 +212,19 @@ mlp_mts = Sequential(
 
 # run the training loop
 print("with NN = [Linear, ReLU, Linear]")
-training_loop(mlp_mts, feature_tensormap, target_tensormap, loss_fn_mts)
+training_loop(mlp_mts, loss_fn_mts, feature_tensormap, target_tensormap)
+
+
+# %%
+#
+# Conclusion
+# ----------
+#
+# This tutorial introduced the convenience modules in metatensor-learn for building
+# simple neural networks. As we've seen, the API is similar to native ``torch.nn`` and
+# the ``TensorMap`` data type can be easily switched in place for torch Tensors in
+# existing training loops with minimal changes.
+#
+# Combined with other learning utilities to construct Datasets and Dataloaders,
+# metatensor-learn provides a powerful framework for building and training machine
+# learning models based on the TensorMap data format.

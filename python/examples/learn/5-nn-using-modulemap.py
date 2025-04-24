@@ -17,17 +17,19 @@ This tutorial demonstrates how to build custom architectures compatible with
     the concepts introduced there.
 """
 
-from typing import List
+from typing import List, Union
 
 import torch
+from torch import Tensor
+from torch.nn import Module
 
 import metatensor.torch as mts
-from metatensor.torch import Labels, TensorBlock, TensorMap
+from metatensor.torch import Labels, TensorMap
 from metatensor.torch.learn.nn import Linear, ModuleMap
 
 
-torch.set_default_dtype(torch.float64)
 torch.manual_seed(42)
+torch.set_default_dtype(torch.float64)
 
 
 # %%
@@ -61,18 +63,7 @@ out_features = [1, 2, 3]
 feature_tensormap = TensorMap(
     keys=Labels(["key"], torch.arange(len(out_features)).reshape(-1, 1)),
     blocks=[
-        TensorBlock(
-            values=torch.randn(n_samples, in_feats),
-            samples=Labels(
-                ["sample"],
-                torch.arange(n_samples).reshape(-1, 1),
-            ),
-            components=[],
-            properties=Labels(
-                ["property"],
-                torch.arange(in_feats, dtype=torch.int64).reshape(-1, 1),
-            ),
-        )
+        mts.block_from_array(torch.randn(n_samples, in_feats))
         for in_feats in in_features
     ],
 )
@@ -80,18 +71,7 @@ feature_tensormap = TensorMap(
 target_tensormap = TensorMap(
     keys=Labels(["key"], torch.arange(len(out_features)).reshape(-1, 1)),
     blocks=[
-        TensorBlock(
-            values=torch.randn(n_samples, out_feats),
-            samples=Labels(
-                ["sample"],
-                torch.arange(n_samples).reshape(-1, 1),
-            ),
-            components=[],
-            properties=Labels(
-                ["target"],
-                torch.arange(out_feats, dtype=torch.int64).reshape(-1, 1),
-            ),
-        )
+        mts.block_from_array(torch.randn(n_samples, out_feats))
         for out_feats in out_features
     ],
 )
@@ -158,22 +138,38 @@ print(prediction_subset.keys, prediction_subset.blocks())
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
-def squared_loss(input: TensorMap, target: TensorMap) -> torch.Tensor:
+class TensorMapLoss(Module):
     """
-    Computes the total squared error between the ``input`` and ``target`` TensorMaps.
+    A custom loss function for TensorMaps that computes the squared error and reduces by
+    sum.
     """
-    # input and target should have equal metadata over all axes
-    assert mts.equal_metadata(input, target)
 
-    squared_loss = 0
-    for key in input.keys:
-        squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+    def __init__(self) -> None:
+        super().__init__()
 
-    return squared_loss
+    def forward(self, input: TensorMap, target: TensorMap) -> Tensor:
+        """
+        Computes the total squared error between the ``input`` and ``target``
+        TensorMaps.
+        """
+        # input and target should have equal metadata over all axes
+        assert mts.equal_metadata(input, target)
+
+        squared_loss = 0
+        for key in input.keys:
+            squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+
+        return squared_loss
 
 
 # construct a basic training loop. For simplicity do not use datasets or dataloaders.
-def training_loop(model, features, targets, loss_fn):
+def training_loop(
+    model: Module,
+    loss_fn: Module,
+    features: Union[Tensor, TensorMap],
+    targets: Union[Tensor, TensorMap],
+) -> None:
+    """A basic training loop for a model and loss function."""
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     for epoch in range(501):
         optimizer.zero_grad()
@@ -192,10 +188,10 @@ def training_loop(model, features, targets, loss_fn):
             print(f"epoch: {epoch}, loss: {loss}")
 
 
-loss_fn_mts = squared_loss
+loss_fn_mts = TensorMapLoss()
 
 print("with NN = [Linear]")
-training_loop(linear_mmap, feature_tensormap, target_tensormap, loss_fn_mts)
+training_loop(linear_mmap, loss_fn_mts, feature_tensormap, target_tensormap)
 
 
 # %%
@@ -238,20 +234,20 @@ custom_mmap = ModuleMap(
 print(custom_mmap)
 
 print("with NN = [LayerNorm, Linear, ReLU, Linear, Tanh]")
-training_loop(custom_mmap, feature_tensormap, target_tensormap, loss_fn_mts)
+training_loop(custom_mmap, loss_fn_mts, feature_tensormap, target_tensormap)
 
 
 # %%
 #
-# ModuleMap can also be wrap in a torch module to allow for complex architectures. For
-# instance, we can be a "ResNet"-style neural network module that takes a ModuleMap and
-# applies it, then sums with some residual connections. To do the latter step, we can
-# combine application of the ``ModuleMap`` with the ``Linear`` convenience layer from
-# metatensor-learn, and the sparse addition operation from ``metatensor-operations`` to
-# build a complex architecture.
+# ModuleMap can also be wrapped in a ``torch.nn.Module`` to allow construction of
+# complex architectures. For instance, we can be a "ResNet"-style neural network module
+# that takes a ModuleMap and applies it, then sums with some residual connections. To do
+# the latter step, we can combine application of the ``ModuleMap`` with the ``Linear``
+# convenience layer from metatensor-learn, and the sparse addition operation from
+# ``metatensor-operations`` to build a complex architecture.
 
 
-class ResidualNetwork(torch.nn.Module):
+class ResidualNetwork(Module):
     def __init__(
         self,
         in_keys: Labels,
@@ -313,12 +309,12 @@ model = ResidualNetwork(
     out_properties=[block.properties for block in target_tensormap],
 )
 print("with NN = [LayerNorm, Linear, ReLU, Linear, Tanh] plus residual connections")
-training_loop(model, feature_tensormap, target_tensormap, loss_fn_mts)
+training_loop(model, loss_fn_mts, feature_tensormap, target_tensormap)
 
 # %%
 #
-# Summary
-# -------
+# Conclusion
+# ----------
 #
 # In this tutorial we have seen how to build custom architectures using ``ModuleMap``.
 # This allows for arbitrary architectures to be built, as long as the metadata is
