@@ -49,6 +49,30 @@ and use it will depend on the programming language you are using.
 
             pip install metatensor[torch]
 
+        **Conda**
+
+        All the packages are also available on the `conda-forge
+        <https://conda-forge.org/>`_ channel, however they are named slightly
+        differently. The main packages are ``metatensor`` (which installs the
+        Python packages ``metatensor-core``, ``metatensor-operations`` and
+        ``metatensor-learn``); and ``metatensor-torch``, which installs all the
+        previous packages as well as the ``metatensor-torch`` Python package.
+
+        .. code-block:: bash
+
+            conda install -c conda-forge metatensor
+            conda install -c conda-forge metatensor-torch
+
+        If you want more control, the individual conda packages can also be
+        installed with
+
+        .. code-block:: bash
+
+            conda install -c conda-forge python-metatensor-core
+            conda install -c conda-forge python-metatensor-operations
+            conda install -c conda-forge python-metatensor-learn
+            conda install -c conda-forge python-metatensor-torch
+
 
     .. tab-item:: C and C++
         :name: install-c
@@ -106,6 +130,16 @@ and use it will depend on the programming language you are using.
         |                                           | selected by ``BUILD_SHARED_LIBS`` will be     |                |
         |                                           | built.                                        |                |
         +-------------------------------------------+-----------------------------------------------+----------------+
+
+        **Conda**
+
+        We also provide pre-compiled versions of the C and C++ libraries on the
+        `conda-forge <https://conda-forge.org/>`_ channel. You can install these
+        with
+
+        .. code-block:: bash
+
+            conda install -c conda-forge libmetatensor
 
 
 
@@ -195,6 +229,19 @@ and use it will depend on the programming language you are using.
             listed at the end of the :ref:`install-torch-cxx` installation
             instructions.
 
+        **Conda**
+
+        You can install the same set of packages that ``pip install
+        metatensor[torch]`` would using the `conda-forge
+        <https://conda-forge.org/>`_ channel.
+
+        .. code-block:: bash
+
+            conda install -c conda-forge metatensor-torch
+
+        This will install ``python-metatensor-torch``,
+        ``python-metatensor-operations`` and ``python-metatensor-learn``
+
 
     .. tab-item:: TorchScript C++
         :name: install-torch-cxx
@@ -282,6 +329,16 @@ and use it will depend on the programming language you are using.
           available on the current machine. Since MKL is a completely optional
           dependency, you can silence the error by running cmake with the
           ``-DMKL_INCLUDE_DIR=/usr/include`` option.
+
+
+        **Conda**
+
+        We also provide pre-compiled versions of the library in the `conda-forge
+        <https://conda-forge.org/>`_ channel. You can install it with
+
+        .. code-block:: bash
+
+            conda install -c conda-forge libmetatensor-torch
 
 
 
