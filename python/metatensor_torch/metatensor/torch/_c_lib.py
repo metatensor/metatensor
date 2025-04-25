@@ -72,7 +72,9 @@ def _lib_path():
             "is not ABI compatible"
         )
     else:
-        all_versions = ", ".join(map(lambda version: f"v{version}", existing_versions))
+        all_versions = ", ".join(
+            map(lambda version: f"v{version}", sorted(existing_versions))
+        )
         raise ImportError(
             f"Trying to load metatensor-torch with torch v{torch.__version__}, "
             f"we found builds for torch {all_versions}; which are not ABI compatible.\n"
