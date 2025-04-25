@@ -17,6 +17,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.3) - 2025-04-25
+
+### Fixed
+
+- Changed the implementation of `std_over_samples` and `var_over_samples` to
+  reduce numerical noise issues when working with float32 (#908)
+- Make sure the filtered `TensorMap` has keys in the same order as the filter in
+  `filter_blocks` (#885)
+- Make the code compatible with metatensor-torch v0.7.6
+
 ## [Version 0.3.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.2) - 2025-02-18
 
 ### Fixed
