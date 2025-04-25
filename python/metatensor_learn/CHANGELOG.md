@@ -17,6 +17,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.3.2) - 2025-04-25
+
+- Make the code compatible with metatensor-torch v0.7.6
+
 ## [Version 0.3.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.3.1) - 2025-02-03
 
 ### Fixed
