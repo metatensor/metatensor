@@ -86,62 +86,25 @@ print("\nNumber of blocks in the spherical expansion:", len(spherical_expansion)
 # and as this is a real- (not pseudo-) tensor, the inversion sigma (``"o3_sigma"``) will
 # be +1.
 target_tensormap = TensorMap(
-    keys=Labels(
-        ["o3_lambda", "o3_sigma"],
-        values=torch.tensor(
-            [
-                [0, 1],  # o3_lambda = 0, o3_sigma = +1
-                [2, 1],  # o3_lambda = 2, o3_sigma = +1
-            ],
-            dtype=torch.int64,
-        ),
-    ),
+    keys=Labels(["o3_lambda", "o3_sigma"], torch.tensor([[0, 1], [2, 1]])),
     blocks=[
         TensorBlock(
-            values=torch.randn(
-                (
-                    1,  # only one system
-                    1,  # o3_mu = [0]
-                    1,  # only one 'property' (the L=0 part of the polarizability)
-                ),
-                dtype=torch.float64,
-            ),
-            samples=Labels(
-                ["system"],
-                values=torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-            ),
-            components=[
-                Labels(
-                    ["o3_mu"],
-                    torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-                ),
-            ],
-            properties=Labels(
-                ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
-            ),
+            values=torch.randn((1, 1, 1), dtype=torch.float64),
+            # only one system
+            samples=Labels(["system"], torch.tensor([[0]])),
+            # o3_mu = [0]
+            components=[Labels(["o3_mu"], torch.tensor([[0]]))],
+            # only one 'property' (the L=0 part of the polarizability)
+            properties=Labels(["_"], torch.tensor([[0]])),
         ),
         TensorBlock(
-            values=torch.randn(
-                (
-                    1,  # only one system
-                    5,  # o3_mu = [-2, -1, 0, +1, +2]
-                    1,  # only one 'property' (the L=0 part of the polarizability)
-                ),
-                dtype=torch.float64,
-            ),
-            samples=Labels(
-                ["system"],
-                values=torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-            ),
-            components=[
-                Labels(
-                    ["o3_mu"],
-                    torch.tensor([-2, -1, 0, 1, 2], dtype=torch.int64).reshape(-1, 1),
-                ),
-            ],
-            properties=Labels(
-                ["_"], torch.tensor([0], dtype=torch.int64).reshape(-1, 1)
-            ),
+            values=torch.randn((1, 5, 1), dtype=torch.float64),
+            # only one system
+            samples=Labels(["system"], torch.tensor([[0]])),
+            # o3_mu = [-2, -1, 0, +1, +2]
+            components=[Labels(["o3_mu"], torch.tensor([[-2], [-1], [0], [1], [2]]))],
+            # only one 'property' (the L=2 part of the polarizability)
+            properties=Labels(["_"], torch.tensor([[0]])),
         ),
     ],
 )
