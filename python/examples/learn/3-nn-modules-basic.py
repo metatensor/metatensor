@@ -12,17 +12,15 @@ simple multi-layer perceptrons.
 .. note::
 
     The convenience modules introduced in this tutorial are designed to be used to
-    prototype new architectures for simple models. To be build more complex models, it
-    is suggested that native ``torch.nn`` modules are wrapped in ``ModuleMap`` objects
-    instead. This is convered in the later tutorial :ref:`using module maps
+    prototype new architectures for simple models. If you already have a more complex
+    models, you can also wrap it in ``ModuleMap`` objects to make it compatible with
+    metatensor. This is covered in the later tutorial :ref:`using module maps
     <learn-tutorial-nn-using-modulemap>`.
 """
 
 from typing import Union
 
 import torch
-from torch import Tensor
-from torch.nn import Module
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorMap
@@ -65,12 +63,12 @@ linear_torch = torch.nn.Linear(in_features, out_features, bias=True)
 loss_fn_torch = torch.nn.MSELoss(reduction="sum")
 
 
-# construct a basic training loop. For simplicity do not use datasets or dataloaders.
+# construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: Module,
-    loss_fn: Module,
-    features: Union[Tensor, TensorMap],
-    targets: Union[Tensor, TensorMap],
+    model: torch.nn.Module,
+    loss_fn: torch.nn.Module,
+    features: Union[torch.Tensor, TensorMap],
+    targets: Union[torch.Tensor, TensorMap],
 ) -> None:
     """A basic training loop for a model and loss function."""
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -156,7 +154,7 @@ linear_mts = Linear(
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
-class TensorMapLoss(Module):
+class TensorMapLoss(torch.nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
     sum.
@@ -165,7 +163,7 @@ class TensorMapLoss(Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, input: TensorMap, target: TensorMap) -> Tensor:
+    def forward(self, input: TensorMap, target: TensorMap) -> torch.Tensor:
         """
         Computes the total squared error between the ``input`` and ``target``
         TensorMaps.
@@ -225,6 +223,7 @@ training_loop(mlp_mts, loss_fn_mts, feature_tensormap, target_tensormap)
 # the ``TensorMap`` data type can be easily switched in place for torch Tensors in
 # existing training loops with minimal changes.
 #
-# Combined with other learning utilities to construct Datasets and Dataloaders,
-# metatensor-learn provides a powerful framework for building and training machine
-# learning models based on the TensorMap data format.
+# Combined with other learning utilities to construct Datasets and Dataloaders, covered
+# in :ref:`basic <1-dataset-dataloader.py>` and :ref:`advanced <2-indexed-dataset.py>`
+# tutorials, metatensor-learn provides a powerful framework for building and training
+# machine learning models based on the TensorMap data format.

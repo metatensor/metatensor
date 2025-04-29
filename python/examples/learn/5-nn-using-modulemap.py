@@ -20,8 +20,6 @@ This tutorial demonstrates how to build custom architectures compatible with
 from typing import List, Union
 
 import torch
-from torch import Tensor
-from torch.nn import Module
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorMap
@@ -75,8 +73,8 @@ target_tensormap = TensorMap(
         for out_feats in out_features
     ],
 )
-print(feature_tensormap)
-print(target_tensormap)
+print("features:", feature_tensormap)
+print("target:", target_tensormap)
 
 # %%
 #
@@ -111,10 +109,10 @@ print(linear_mmap)
 # %%
 #
 # ``ModuleMap`` automatically handles the forward pass for each block indexed by the
-# ``in_keys`` used to intialize it. In the case of a set of features with a subset of
-# the blocks, the forward pass will only be applied to the blocks that are present in
-# the input. The output will be a new ``TensorMap`` with the same keys as the input,
-# with the correct output meatdata.
+# ``in_keys`` used to intialize it. In the case where the input contains more
+# keys/blocks than what's given as ``in_keys`, the forward pass will only be applied to
+# the blocks that are present in the input. The output will be a new ``TensorMap`` with
+# the same keys as the input, with the correct output meatdata.
 
 # apply the ModuleMap to the whole feature tensor map
 prediction_full = linear_mmap(feature_tensormap)
@@ -138,7 +136,7 @@ print(prediction_subset.keys, prediction_subset.blocks())
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
-class TensorMapLoss(Module):
+class TensorMapLoss(torch.nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
     sum.
@@ -147,7 +145,7 @@ class TensorMapLoss(Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, input: TensorMap, target: TensorMap) -> Tensor:
+    def forward(self, input: TensorMap, target: TensorMap) -> torch.Tensor:
         """
         Computes the total squared error between the ``input`` and ``target``
         TensorMaps.
@@ -162,12 +160,12 @@ class TensorMapLoss(Module):
         return squared_loss
 
 
-# construct a basic training loop. For simplicity do not use datasets or dataloaders.
+# construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: Module,
-    loss_fn: Module,
-    features: Union[Tensor, TensorMap],
-    targets: Union[Tensor, TensorMap],
+    model: torch.nn.Module,
+    loss_fn: torch.nn.Module,
+    features: Union[torch.Tensor, TensorMap],
+    targets: Union[torch.Tensor, TensorMap],
 ) -> None:
     """A basic training loop for a model and loss function."""
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -239,15 +237,18 @@ training_loop(custom_mmap, loss_fn_mts, feature_tensormap, target_tensormap)
 
 # %%
 #
-# ModuleMap can also be wrapped in a ``torch.nn.Module`` to allow construction of
-# complex architectures. For instance, we can be a "ResNet"-style neural network module
-# that takes a ModuleMap and applies it, then sums with some residual connections. To do
-# the latter step, we can combine application of the ``ModuleMap`` with the ``Linear``
-# convenience layer from metatensor-learn, and the sparse addition operation from
-# ``metatensor-operations`` to build a complex architecture.
+# ModuleMap can also be wrapped in a ``torch.nn.torch.nn.Module`` to allow construction
+# of complex architectures. For instance, we can be a "ResNet"-style neural network
+# module that takes a ModuleMap and applies it, then sums with some residual
+# connections. Wikipedia has a good summary and diagram of this architectural motif,
+# see: https://en.wikipedia.org/wiki/Residual_neural_network .
+#
+# To do the latter step, we can combine application of the ``ModuleMap`` with the
+# ``Linear`` convenience layer from metatensor-learn, and the sparse addition operation
+# from ``metatensor-operations`` to build a complex architecture.
 
 
-class ResidualNetwork(Module):
+class ResidualNetwork(torch.nn.Module):
     def __init__(
         self,
         in_keys: Labels,

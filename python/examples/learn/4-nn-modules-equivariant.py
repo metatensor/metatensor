@@ -17,8 +17,6 @@ simple equivariance-preserving multi-layer perceptrons.
 """
 
 import torch
-from torch import Tensor
-from torch.nn import Module
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -147,12 +145,13 @@ target_tensormap = TensorMap(
         ),
     ],
 )
-print(target_tensormap)
+print(target_tensormap, target_tensormap[0])
 
 # %%
 #
 # Filter the feature blocks to only keep the blocks with symmetries that match the
-# target: as our target only contains o3_lambda = [0, 2] channels, we only need these!
+# target: as our target only contains ``o3_lambda = [0, 2]`` channels, we only need
+# these!
 spherical_expansion = mts.filter_blocks(spherical_expansion, target_tensormap.keys)
 print(spherical_expansion)
 print(
@@ -176,8 +175,8 @@ print(
 #
 # Starting simple, let's define the neural network as just a simple linear layer. As
 # stated before, only linear transformations must be applied to covariant blocks, in
-# this case those with o3_lambda = 2, while nonlinear transformations can be applied to
-# invariant blocks where o3_lambda = 0. We will use the
+# this case those with ``o3_lambda = 2``, while nonlinear transformations can be applied
+# to invariant blocks where ``o3_lambda = 0``. We will use the
 # :py:class:`~metatensor.torch.learn.nn.EquivariantLinear` module for this.
 in_keys = spherical_expansion.keys
 equi_linear = EquivariantLinear(
@@ -191,7 +190,7 @@ print(equi_linear)
 # %%
 #
 # We can see by printing the archectecture of the ``EquivariantLinear`` module, that
-# there are 8 'Linear' layers, one for each block. In order to preserve equivariance, a
+# there are 8 'Linear' layers, one for each block. In order to preserve equivariance,
 # bias is always turned off for all covariant blocks. For invariant blocks, bias can be
 # switched on or off by passing the bool parameter ``bias`` when initializing
 # ``EquivariantLinear``.
@@ -223,12 +222,12 @@ print(per_system_predictions, per_system_predictions[0])
 # module.
 
 
-class EquivariantMLP(Module):
+class EquivariantMLP(torch.nn.Module):
     """
     A simple equivariant MLP that maps per-atom features to per-structure targets.
     """
 
-    def __init__(self, mlp: Module):
+    def __init__(self, mlp: torch.nn.Module):
         super().__init__()
         self.mlp = mlp
 
@@ -258,7 +257,7 @@ class EquivariantMLP(Module):
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by sum
-class TensorMapLoss(Module):
+class TensorMapLoss(torch.nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
     sum.
@@ -267,7 +266,7 @@ class TensorMapLoss(Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, input: TensorMap, target: TensorMap) -> Tensor:
+    def forward(self, input: TensorMap, target: TensorMap) -> torch.Tensor:
         """
         Computes the total squared error between the ``input`` and ``target``
         TensorMaps.
@@ -282,11 +281,10 @@ class TensorMapLoss(Module):
         return squared_loss
 
 
-# construct a basic training loop. For simplicity do not use datasets or dataloaders.
-# construct a basic training loop. For simplicity do not use datasets or dataloaders.
+# construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: Module,
-    loss_fn: Module,
+    model: torch.nn.Module,
+    loss_fn: torch.nn.Module,
     features: TensorMap,
     targets: TensorMap,
 ) -> None:
@@ -336,7 +334,7 @@ for key, block in prediction.items():
 #
 # We will use the :py:class:`~metatensor.torch.learn.nn.InvariantReLU` activation
 # function. It has the prefix "Invariant" as it only applies the activation function to
-# invariant blocks where o3_lambda = 0, and leaves the covariant blocks unchanged.
+# invariant blocks where ``o3_lambda = 0``, and leaves the covariant blocks unchanged.
 
 # Let's build a new MLP with two linear layers and one activation function.
 hidden_layer_width = 64
