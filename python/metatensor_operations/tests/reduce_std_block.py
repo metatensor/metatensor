@@ -234,3 +234,22 @@ def get_XdX(block, gradient, der_index):
         idx = gradient.samples[ig][0]
         XdX.append(block.values[idx] * gradient.values[ig])
     return np.stack(XdX)
+
+
+def test_issue_902():
+    block_f64 = metatensor.block_from_array(
+        np.array(
+            [[-0.27714047], [-0.27715549], [-0.27721998], [-0.27707845]],
+            dtype=np.float64,
+        )
+    )
+    reduced = metatensor.std_over_samples_block(
+        block_f64, sample_names=block_f64.samples.names
+    )
+    assert not np.isnan(reduced.values)
+
+    block_f32 = block_f64.to(dtype=np.float32)
+    reduced = metatensor.std_over_samples_block(
+        block_f32, sample_names=block_f32.samples.names
+    )
+    assert not np.isnan(reduced.values)

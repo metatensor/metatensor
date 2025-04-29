@@ -68,6 +68,10 @@ def _version_at_least(version, expected):
     return version >= expected
 
 
+# Warning: this function (as all functions in this module) is part of the public API of
+# metatensor-operations, updating it means that new versions of metatensor-torch will
+# not be able to work with old versions of metatensor-operations, so any update should
+# be treated as a breaking change.
 def isinstance_metatensor(value, typename):
     assert typename in ("Labels", "TensorBlock", "TensorMap")
 
