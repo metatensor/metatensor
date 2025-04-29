@@ -224,6 +224,7 @@ training_loop(mlp_mts, loss_fn_mts, feature_tensormap, target_tensormap)
 # existing training loops with minimal changes.
 #
 # Combined with other learning utilities to construct Datasets and Dataloaders, covered
-# in :ref:`basic <1-dataset-dataloader.py>` and :ref:`advanced <2-indexed-dataset.py>`
-# tutorials, metatensor-learn provides a powerful framework for building and training
-# machine learning models based on the TensorMap data format.
+# in :ref:`basic <learn-tutorial-dataset-dataloader>` and :ref:`advanced
+# <learn-tutorial-indexed-dataset-dataloader>` tutorials, metatensor-learn provides a
+# powerful framework for building and training machine learning models based on the
+# TensorMap data format.
