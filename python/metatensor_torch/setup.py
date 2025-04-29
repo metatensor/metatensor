@@ -70,6 +70,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",

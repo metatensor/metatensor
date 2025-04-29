@@ -53,6 +53,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DMETATENSOR_CORE_SOURCE_DIR={METATENSOR_CORE_SRC}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
