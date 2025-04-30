@@ -4,6 +4,11 @@ from .._c_api import c_uintptr_t
 from ..status import _save_exception
 
 
+def _resize_array(array, new_size):
+    ctypes.resize(array, ctypes.sizeof(array._type_) * new_size)
+    return (array._type_ * new_size).from_address(ctypes.addressof(array))
+
+
 def _save_buffer_raw(mts_function, data) -> ctypes.Array:
     def realloc(buffer, _ptr, new_size):
         try:
@@ -12,8 +17,7 @@ def _save_buffer_raw(mts_function, data) -> ctypes.Array:
             buffer = buffer.contents.value
 
             # resize the buffer to grow it
-            ctypes.resize(buffer, new_size)
-            buffer._length_ = new_size
+            buffer = _resize_array(buffer, new_size)
 
             return ctypes.addressof(buffer)
         except Exception as e:
@@ -49,7 +53,6 @@ def _save_buffer_raw(mts_function, data) -> ctypes.Array:
 
     # remove extra data from the buffer, resizing it to the number of written bytes
     # (stored in buffer_size by the mts_function)
-    ctypes.resize(buffer, buffer_size.value)
-    buffer._length_ = buffer_size.value
+    buffer = _resize_array(buffer, buffer_size.value)
 
     return buffer

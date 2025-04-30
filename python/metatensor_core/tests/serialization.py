@@ -155,6 +155,15 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             assert _mts_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
 
 
+def test_save_buffer(tensor):
+    # check that we can save/load without going through a file
+    buffer = tensor.save_buffer()
+    assert isinstance(buffer, memoryview)
+    loaded = TensorMap.load_buffer(buffer)
+
+    assert loaded.keys == tensor.keys
+
+
 @pytest.mark.parametrize("use_numpy_save", (True, False))
 @pytest.mark.parametrize("use_numpy_load", (True, False))
 def test_save_load_zero_length_block(
@@ -415,6 +424,15 @@ def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
     assert _mts_labels(data) == labels
 
 
+def test_save_labels_buffer(labels):
+    # check that we can save/load without going through a file
+    buffer = labels.save_buffer()
+    assert isinstance(buffer, memoryview)
+    loaded = Labels.load_buffer(buffer)
+
+    assert labels == loaded
+
+
 @pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
 def test_pickle_labels(protocol, tmpdir, labels):
     """
@@ -551,3 +569,15 @@ def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
         np.testing.assert_equal(data[f"{prefix}/values"], gradient.values)
         assert _mts_labels(data[f"{prefix}/samples"]) == gradient.samples
         assert _mts_labels(data[f"{prefix}/components/0"]) == gradient.components[0]
+
+
+def test_save_block_buffer(block):
+    # check that we can save/load without going through a file
+    buffer = block.save_buffer()
+    assert isinstance(buffer, memoryview)
+    loaded = TensorBlock.load_buffer(buffer)
+
+    np.testing.assert_equal(loaded.values, block.values)
+    assert loaded.samples == block.samples
+    assert loaded.components[0] == block.components[0]
+    assert loaded.properties == block.properties
