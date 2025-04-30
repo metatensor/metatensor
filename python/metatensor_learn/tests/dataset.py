@@ -7,12 +7,11 @@ import re
 import numpy as np
 import pytest
 
+import metatensor as mts
+from metatensor import TensorMap
+
 
 torch = pytest.importorskip("torch")
-
-
-import metatensor  # noqa: E402
-from metatensor import TensorMap  # noqa: E402
 from metatensor.learn.data import Dataset, IndexedDataset  # noqa: E402
 
 from . import _tests_utils  # noqa: E402
@@ -203,10 +202,7 @@ def test_dataset_callable_invalid_callable():
     Tests that passing a data fields as a callable that is invalid with a
     specific sample idx raises the appropriate error.
     """
-    dataset = Dataset(
-        c=lambda y: metatensor.load(f"path/to/{y}"),
-        size=1,
-    )
+    dataset = Dataset(c=lambda y: mts.load(f"path/to/{y}"), size=1)
 
     message = "Error loading data field 'c' at sample index 0"
     with pytest.raises(ValueError, match=message):
@@ -219,8 +215,7 @@ def test_indexed_dataset_invalid_callable():
     specific sample ID raises the appropriate error.
     """
     dataset = IndexedDataset(
-        c=lambda y: metatensor.load(f"path/to/{y}"),
-        sample_id=["cat", "dog"],
+        c=lambda y: mts.load(f"path/to/{y}"), sample_id=["cat", "dog"]
     )
 
     message = "Error loading data field 'c' for sample 'cat'"

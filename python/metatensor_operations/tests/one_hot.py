@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels
 
 
@@ -23,7 +23,7 @@ def test_ordinary_usage():
         ],
         dtype=np.int32,
     )
-    one_hot_encoding = metatensor.one_hot(original_labels, possible_labels)
+    one_hot_encoding = mts.one_hot(original_labels, possible_labels)
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
 
 
@@ -45,7 +45,7 @@ def test_additional_value():
         ],
         dtype=np.int32,
     )
-    one_hot_encoding = metatensor.one_hot(original_labels, possible_labels)
+    one_hot_encoding = mts.one_hot(original_labels, possible_labels)
     np.testing.assert_allclose(one_hot_encoding, correct_encoding)
 
 
@@ -60,7 +60,7 @@ def test_multiple_names():
         values=np.array([[0, 6], [1, 1]]),
     )
     with pytest.raises(ValueError, match="only one label dimension can be extracted"):
-        metatensor.one_hot(original_labels, possible_labels)
+        mts.one_hot(original_labels, possible_labels)
 
 
 def test_wrong_name():
@@ -73,7 +73,7 @@ def test_wrong_name():
 
     message = "'not_present' not found in the dimensions of these Labels"
     with pytest.raises(ValueError, match=message):
-        metatensor.one_hot(original_labels, possible_labels)
+        mts.one_hot(original_labels, possible_labels)
 
 
 def test_missing_value():
@@ -87,4 +87,4 @@ def test_missing_value():
 
     message = "type=6 is present in the labels, but was not found in the dimension"
     with pytest.raises(ValueError, match=message):
-        metatensor.one_hot(original_labels, possible_labels)
+        mts.one_hot(original_labels, possible_labels)

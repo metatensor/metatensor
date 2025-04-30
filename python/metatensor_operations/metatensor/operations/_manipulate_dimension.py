@@ -43,16 +43,17 @@ def insert_dimension(
     --------
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
+    >>> from metatensor import Labels, TensorMap
     >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["foo"], np.array([[0]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["foo"], np.array([[0]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 blocks
     keys: foo
            0
-    >>> metatensor.insert_dimension(
+    >>> mts.insert_dimension(
     ...     tensor,
     ...     axis="keys",
     ...     index=0,
@@ -148,16 +149,17 @@ def append_dimension(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
+    >>> from metatensor import Labels, TensorMap
     >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["foo"], np.array([[0]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["foo"], np.array([[0]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 blocks
     keys: foo
            0
-    >>> metatensor.append_dimension(
+    >>> mts.append_dimension(
     ...     tensor,
     ...     axis="keys",
     ...     name="bar",
@@ -207,11 +209,12 @@ def permute_dimensions(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
+    >>> from metatensor import Labels, TensorMap
     >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 blocks
     keys: foo  bar  baz
@@ -219,7 +222,7 @@ def permute_dimensions(
 
     Move the last (second) dimension to the first position.
 
-    >>> metatensor.permute_dimensions(tensor, axis="keys", dimensions_indexes=[2, 0, 1])
+    >>> mts.permute_dimensions(tensor, axis="keys", dimensions_indexes=[2, 0, 1])
     TensorMap with 1 blocks
     keys: baz  foo  bar
            3   42   10
@@ -286,16 +289,17 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
+    >>> from metatensor import Labels, TensorMap
     >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["key", "extra"], np.array([[0, 0]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["key", "extra"], np.array([[0, 0]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 blocks
     keys: key  extra
            0     0
-    >>> metatensor.remove_dimension(tensor, axis="keys", name="extra")
+    >>> mts.remove_dimension(tensor, axis="keys", name="extra")
     TensorMap with 1 blocks
     keys: key
            0
@@ -303,17 +307,17 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     Removing a dimension can only be performed if the resulting :py:class:`Labels` will
     contain unique entries.
 
-    >>> from metatensor import MetatensorError
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["key", "extra"], np.array([[0, 0], [0, 1]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block.copy(), block.copy()])
+    >>> from metatensor import Labels, TensorMap, MetatensorError
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["key", "extra"], np.array([[0, 0], [0, 1]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block.copy(), block.copy()])
     >>> tensor
     TensorMap with 2 blocks
     keys: key  extra
            0     0
            0     1
     >>> try:
-    ...     metatensor.remove_dimension(tensor, axis="keys", name="extra")
+    ...     mts.remove_dimension(tensor, axis="keys", name="extra")
     ... except MetatensorError as e:
     ...     print(e)
     invalid parameter: can not have the same label entry multiple time: [0] is already present
@@ -374,16 +378,17 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
+    >>> from metatensor import Labels, TensorMap
     >>> values = np.array([[1, 2], [3, 4]])
-    >>> block = metatensor.block_from_array(values)
-    >>> keys = metatensor.Labels(["foo"], np.array([[0]]))
-    >>> tensor = metatensor.TensorMap(keys=keys, blocks=[block])
+    >>> block = mts.block_from_array(values)
+    >>> keys = Labels(["foo"], np.array([[0]]))
+    >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 blocks
     keys: foo
            0
-    >>> metatensor.rename_dimension(tensor, axis="keys", old="foo", new="bar")
+    >>> mts.rename_dimension(tensor, axis="keys", old="foo", new="bar")
     TensorMap with 1 blocks
     keys: bar
            0

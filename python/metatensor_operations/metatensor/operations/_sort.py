@@ -169,7 +169,7 @@ def sort_block(
     :return: sorted tensor block
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
@@ -184,22 +184,20 @@ def sort_block(
         properties (3): ['n', 'l']
         gradients: None
     >>> # sorting axes one by one
-    >>> block_sorted_stepwise = metatensor.sort_block(block, axes=["properties"])
+    >>> block_sorted_stepwise = mts.sort_block(block, axes=["properties"])
     >>> # properties (last dimension of the array) are sorted
     >>> block_sorted_stepwise.values
     array([[2, 0, 1],
            [5, 3, 4],
            [8, 6, 7]])
-    >>> block_sorted_stepwise = metatensor.sort_block(
-    ...     block_sorted_stepwise, axes=["samples"]
-    ... )
+    >>> block_sorted_stepwise = mts.sort_block(block_sorted_stepwise, axes=["samples"])
     >>> # samples (first dimension of the array) are sorted
     >>> block_sorted_stepwise.values
     array([[5, 3, 4],
            [8, 6, 7],
            [2, 0, 1]])
     >>> # sorting both samples and properties at the same time
-    >>> sorted_block = metatensor.sort_block(block)
+    >>> sorted_block = mts.sort_block(block)
     >>> bool(np.all(sorted_block.values == block_sorted_stepwise.values))
     True
     >>> # This function can also sort gradients:
@@ -212,7 +210,7 @@ def sort_block(
     ...         properties=sorted_block.properties,
     ...     ),
     ... )
-    >>> sorted_grad_block = metatensor.sort_block(sorted_block)
+    >>> sorted_grad_block = mts.sort_block(sorted_block)
     >>> sorted_grad_block.gradient("g").samples == Labels.range("sample", 3)
     True
     >>> sorted_grad_block.gradient("g").properties == sorted_block.properties
@@ -289,7 +287,7 @@ def sort(
     :return: sorted tensor map
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> block_1 = TensorBlock(
     ...     values=np.arange(9).reshape(3, 3),
@@ -306,7 +304,7 @@ def sort(
     >>> tensor = TensorMap(
     ...     keys=Labels(["types"], np.array([[1], [0]])), blocks=[block_2, block_1]
     ... )
-    >>> metatensor.sort(tensor, axes="keys")
+    >>> mts.sort(tensor, axes="keys")
     TensorMap with 2 blocks
     keys: types
             0

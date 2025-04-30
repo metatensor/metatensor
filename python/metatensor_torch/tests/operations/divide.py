@@ -4,11 +4,11 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_divide():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,8 +20,8 @@ def test_divide():
             "qm7-power-spectrum.mts",
         )
     )
-    quotient_tensor = metatensor.torch.divide(tensor, tensor)
-    assert metatensor.torch.equal_metadata(quotient_tensor, tensor)
+    quotient_tensor = mts.divide(tensor, tensor)
+    assert mts.equal_metadata(quotient_tensor, tensor)
     assert torch.allclose(
         torch.nan_to_num(quotient_tensor.block(0).values, 1.0),  # replace nan with 1.0
         torch.ones_like(quotient_tensor.block(0).values),
@@ -31,6 +31,6 @@ def test_divide():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.divide, buffer)
+        torch.jit.save(mts.divide, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

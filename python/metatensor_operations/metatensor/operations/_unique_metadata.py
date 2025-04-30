@@ -89,7 +89,7 @@ def unique_metadata(
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(5, 3),
     ...     samples=Labels(
@@ -101,11 +101,7 @@ def unique_metadata(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block.copy()])
-    >>> unique_systems = metatensor.unique_metadata(
-    ...     tensor,
-    ...     axis="samples",
-    ...     names=["system"],
-    ... )
+    >>> unique_systems = mts.unique_metadata(tensor, axis="samples", names=["system"])
     >>> unique_systems
     Labels(
         system
@@ -129,7 +125,7 @@ def unique_metadata(
     ... )
     >>> block.add_gradient("positions", gradient)
     >>> tensor = TensorMap(keys, [block])
-    >>> metatensor.unique_metadata(
+    >>> mts.unique_metadata(
     ...     tensor,
     ...     axis="samples",
     ...     names=["system", "atom"],

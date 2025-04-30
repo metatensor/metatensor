@@ -3,14 +3,15 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
+from metatensor import Labels
 
 
 torch = pytest.importorskip("torch")
 
 from metatensor.learn.nn.equivariant_transformation import (  # noqa: E402
-    EquivariantTransformation,  # noqa: E402
-)  # noqa:E402
+    EquivariantTransformation,
+)
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 
@@ -22,9 +23,9 @@ DATA_ROOT = os.path.join(
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     tensor = tensor.to(arrays="torch")
-    tensor = metatensor.remove_gradients(tensor)
+    tensor = mts.remove_gradients(tensor)
     return tensor
 
 
@@ -76,7 +77,7 @@ def test_equivariance(tensor, wigner_d_real):
         x.keys,
         in_features,
         out_properties=[x.block(key).properties for key in x.keys],
-        invariant_keys=metatensor.Labels(
+        invariant_keys=Labels(
             ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
         ),
     )
@@ -85,4 +86,4 @@ def test_equivariance(tensor, wigner_d_real):
     Rfx = wigner_d_real.transform_tensormap_o3(f(x))  # R . f(x)
     fRx = f(Rx)  # f(R . x)
 
-    assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+    assert mts.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)

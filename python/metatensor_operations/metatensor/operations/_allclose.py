@@ -248,7 +248,7 @@ def allclose_raise(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock
 
     Create simple block, with one py:obj:`np.nan` value.
@@ -311,7 +311,7 @@ def allclose_raise(
     If this is executed yourself, you will see a nested exception explaining that the
     ``values`` of the two blocks are not `allclose`.
 
-    >>> allclose_raise(tensor_1, tensor_2)
+    >>> mts.allclose_raise(tensor_1, tensor_2)
     Traceback (most recent call last):
         ...
     metatensor.operations._utils.NotEqualError: blocks for key (key=0) are different: \
@@ -364,6 +364,7 @@ def allclose_block(
     Examples
     --------
     >>> import numpy as np
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock
 
     Create simple block
@@ -414,7 +415,7 @@ def allclose_block(
     because the default ``rtol`` is ``1e-13``, and the difference in the first value
     between the two blocks is ``1e-5``.
 
-    >>> allclose_block(block_1, block_2)
+    >>> mts.allclose_block(block_1, block_2)
     False
 
     Calling :py:func:`metatensor.allclose_block()` with the optional argument
@@ -458,7 +459,7 @@ def allclose_block_raise(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock
 
     Create simple block
@@ -510,7 +511,7 @@ def allclose_block_raise(
     :py:func:`metatensor.NotEqualError` because the properties of the two blocks are not
     `equal`.
 
-    >>> allclose_block_raise(block_1, block_2)
+    >>> mts.allclose_block_raise(block_1, block_2)
     Traceback (most recent call last):
         ...
     metatensor.operations._utils.NotEqualError: inputs to 'allclose' should have the \

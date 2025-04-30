@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -115,27 +115,27 @@ def generate_data(sample_indices):
     index A = {0, ..., 99}
     """
     input = tensor(sample_indices)
-    output = metatensor.ones_like(input)
-    auxiliary = metatensor.zeros_like(input)
+    output = mts.ones_like(input)
+    auxiliary = mts.zeros_like(input)
 
     # Slice to per-structure TensorMaps
     inputs, outputs, auxiliaries = [], [], []
     for A in sample_indices:
-        input_A = metatensor.slice(
+        input_A = mts.slice(
             input,
             "samples",
             selection=Labels(
                 names=["sample_index"], values=np.array([A]).reshape(-1, 1)
             ),
         )
-        output_A = metatensor.slice(
+        output_A = mts.slice(
             output,
             "samples",
             selection=Labels(
                 names=["sample_index"], values=np.array([A]).reshape(-1, 1)
             ),
         )
-        auxiliary_A = metatensor.slice(
+        auxiliary_A = mts.slice(
             auxiliary,
             "samples",
             selection=Labels(
@@ -150,9 +150,9 @@ def generate_data(sample_indices):
         # Save to disk
         if not os.path.exists(f"{A}"):
             os.mkdir(f"{A}")
-        metatensor.save(f"{A}/input.mts", input_A)
-        metatensor.save(f"{A}/output.mts", output_A)
-        metatensor.save(f"{A}/auxiliary.mts", auxiliary_A)
+        mts.save(f"{A}/input.mts", input_A)
+        mts.save(f"{A}/output.mts", output_A)
+        mts.save(f"{A}/auxiliary.mts", auxiliary_A)
 
     return inputs, outputs, auxiliaries
 
@@ -164,9 +164,7 @@ def load_tensor_map(sample_index: int, filename: str):
     """
     path = os.path.join(f"{sample_index}/{filename}.mts")
 
-    tensor = metatensor.io.load_custom_array(
-        path, create_array=metatensor.io.create_torch_array
-    )
+    tensor = mts.io.load_custom_array(path, create_array=mts.io.create_torch_array)
     return tensor
 
 

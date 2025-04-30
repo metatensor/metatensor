@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, NotEqualError, TensorBlock, TensorMap
 
 
@@ -12,12 +12,12 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def test_tensor_map_1() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 @pytest.fixture
 def test_tensor_map_2() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
 
 @pytest.fixture
@@ -121,39 +121,39 @@ def tensor_map() -> TensorMap:
 
 def test_self(test_tensor_map_1):
     """check if the metadata of the same tensor are equal"""
-    assert metatensor.equal_metadata(test_tensor_map_1, test_tensor_map_1)
+    assert mts.equal_metadata(test_tensor_map_1, test_tensor_map_1)
 
 
 def test_self_raise(test_tensor_map_1):
     """check no error raise the metadata of the same tensor are equal"""
-    metatensor.equal_metadata_raise(test_tensor_map_1, test_tensor_map_1)
+    mts.equal_metadata_raise(test_tensor_map_1, test_tensor_map_1)
 
 
 def test_self_block(test_tensor_block_1):
     """check if the metadata of the same tensor are equal"""
-    assert metatensor.equal_metadata_block(test_tensor_block_1, test_tensor_block_1)
+    assert mts.equal_metadata_block(test_tensor_block_1, test_tensor_block_1)
 
 
 def test_self_block_raise(test_tensor_block_1):
     """check no error raise if the metadata of the same tensor are equal"""
-    metatensor.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_1)
+    mts.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_1)
 
 
 def test_two_tensors(test_tensor_map_1, test_tensor_map_2):
     """check if the metadata of two tensor maps are equal"""
-    assert not metatensor.equal_metadata(test_tensor_map_1, test_tensor_map_2)
+    assert not mts.equal_metadata(test_tensor_map_1, test_tensor_map_2)
 
 
 def test_two_tensors_raise(test_tensor_map_1, test_tensor_map_2):
     """check error raise if the metadata of two tensor maps are equal"""
     error_message = "should have the same keys names"
     with pytest.raises(NotEqualError, match=error_message):
-        metatensor.equal_metadata_raise(test_tensor_map_1, test_tensor_map_2)
+        mts.equal_metadata_raise(test_tensor_map_1, test_tensor_map_2)
 
 
 def test_two_tensors_block(test_tensor_block_1, test_tensor_block_2):
     """check if the metadata of two tensor maps are equal"""
-    assert not metatensor.equal_metadata_block(test_tensor_block_1, test_tensor_block_2)
+    assert not mts.equal_metadata_block(test_tensor_block_1, test_tensor_block_2)
 
 
 def test_two_tensors_block_raise(test_tensor_block_1, test_tensor_block_2):
@@ -162,7 +162,7 @@ def test_two_tensors_block_raise(test_tensor_block_1, test_tensor_block_2):
         "inputs to 'equal_metadata_block_raise' have a different number of components"
     )
     with pytest.raises(NotEqualError, match=error_message):
-        metatensor.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_2)
+        mts.equal_metadata_block_raise(test_tensor_block_1, test_tensor_block_2)
 
 
 def test_after_drop(test_tensor_map_1):
@@ -170,8 +170,8 @@ def test_after_drop(test_tensor_map_1):
     new_key = Labels(
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
-    new_tensor = metatensor.drop_blocks(test_tensor_map_1, new_key)
-    assert not metatensor.equal_metadata(test_tensor_map_1, new_tensor)
+    new_tensor = mts.drop_blocks(test_tensor_map_1, new_key)
+    assert not mts.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_after_drop_raise(test_tensor_map_1):
@@ -179,10 +179,10 @@ def test_after_drop_raise(test_tensor_map_1):
     new_key = Labels(
         test_tensor_map_1.keys.names, np.array([tuple(test_tensor_map_1.keys[0])])
     )
-    new_tensor = metatensor.drop_blocks(test_tensor_map_1, new_key)
+    new_tensor = mts.drop_blocks(test_tensor_map_1, new_key)
     error_message = "should have the same number of blocks, got 17 and 16"
     with pytest.raises(NotEqualError, match=error_message):
-        metatensor.equal_metadata_raise(test_tensor_map_1, new_tensor)
+        mts.equal_metadata_raise(test_tensor_map_1, new_tensor)
 
 
 def test_single_nonexisting_meta(test_tensor_map_1):
@@ -195,7 +195,7 @@ def test_single_nonexisting_meta(test_tensor_map_1):
     )
 
     with pytest.raises(ValueError, match=error_message):
-        metatensor.equal_metadata_raise(
+        mts.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[wrong_meta],
@@ -204,7 +204,7 @@ def test_single_nonexisting_meta(test_tensor_map_1):
     # wrong metadata key with another correct one
     correct_meta = "properties"
     with pytest.raises(ValueError, match=error_message):
-        metatensor.equal_metadata_raise(
+        mts.equal_metadata_raise(
             tensor_1=test_tensor_map_1,
             tensor_2=test_tensor_map_1,
             check=[correct_meta, wrong_meta],
@@ -220,7 +220,7 @@ def test_single_nonexisting_meta_block(test_tensor_block_1):
         "'samples', 'properties' and 'components'"
     )
     with pytest.raises(ValueError, match=error_message):
-        metatensor.equal_metadata_block_raise(
+        mts.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_1,
             check=[wrong_meta],
@@ -229,7 +229,7 @@ def test_single_nonexisting_meta_block(test_tensor_block_1):
     # wrong metadata key with another correct one
     correct_meta = "properties"
     with pytest.raises(ValueError, match=error_message):
-        metatensor.equal_metadata_block_raise(
+        mts.equal_metadata_block_raise(
             block_1=test_tensor_block_1,
             block_2=test_tensor_block_1,
             check=[correct_meta, wrong_meta],
@@ -242,7 +242,7 @@ def test_key_order(test_tensor_map_1):
     new_keys = Labels(keys.names, keys.values[::-1])
     new_blocks = [test_tensor_map_1[key].copy() for key in new_keys]
     new_tensor = TensorMap(keys=new_keys, blocks=new_blocks)
-    assert metatensor.equal_metadata(test_tensor_map_1, new_tensor)
+    assert mts.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_samples_order(test_tensor_map_1):
@@ -270,7 +270,7 @@ def test_samples_order(test_tensor_map_1):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=test_tensor_map_1.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(test_tensor_map_1, new_tensor)
+    assert not mts.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_samples_order_block(test_tensor_block_1):
@@ -294,7 +294,7 @@ def test_samples_order_block(test_tensor_block_1):
             ),
         )
 
-    assert not metatensor.equal_metadata_block(test_tensor_block_1, new_block)
+    assert not mts.equal_metadata_block(test_tensor_block_1, new_block)
 
 
 def test_properties_order(test_tensor_map_1):
@@ -322,7 +322,7 @@ def test_properties_order(test_tensor_map_1):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=test_tensor_map_1.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(test_tensor_map_1, new_tensor)
+    assert not mts.equal_metadata(test_tensor_map_1, new_tensor)
 
 
 def test_properties_order_block(test_tensor_block_1):
@@ -346,7 +346,7 @@ def test_properties_order_block(test_tensor_block_1):
             ),
         )
 
-    assert not metatensor.equal_metadata_block(test_tensor_block_1, new_block)
+    assert not mts.equal_metadata_block(test_tensor_block_1, new_block)
 
 
 def test_components_order(tensor_map):
@@ -374,7 +374,7 @@ def test_components_order(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(tensor_map, new_tensor)
+    assert not mts.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_sample(tensor_map):
@@ -404,7 +404,7 @@ def test_remove_last_sample(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(tensor_map, new_tensor)
+    assert not mts.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_property(tensor_map):
@@ -431,7 +431,7 @@ def test_remove_last_property(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(tensor_map, new_tensor)
+    assert not mts.equal_metadata(tensor_map, new_tensor)
 
 
 def test_remove_last_component(tensor_map):
@@ -465,4 +465,4 @@ def test_remove_last_component(tensor_map):
         new_blocks.append(new_block)
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
-    assert not metatensor.equal_metadata(tensor_map, new_tensor)
+    assert not mts.equal_metadata(tensor_map, new_tensor)

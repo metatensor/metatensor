@@ -5,12 +5,13 @@ Module for testing the custom collate functions in :py:module:`collate`.
 import numpy as np
 import pytest
 
+import metatensor as mts
+from metatensor import Labels, TensorBlock, TensorMap
+
 
 torch = pytest.importorskip("torch")
 
-import metatensor  # noqa: E402
 import metatensor.torch  # noqa: E402
-from metatensor import Labels, TensorBlock, TensorMap  # noqa: E402
 from metatensor.learn.data import (  # noqa: E402
     DataLoader,
     Dataset,
@@ -127,7 +128,7 @@ def test_group_and_join_tensormaps():
             )
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_torch_tensormaps():
@@ -201,7 +202,7 @@ def test_group_and_join_torch_tensormaps():
             )
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_tensormaps_different_keys_error():
@@ -249,7 +250,7 @@ def test_group_and_join_tensormaps_different_keys_error():
     )
     batch_idxs = [0, 2]  # i.e. batch size 2
     message = "inputs to 'join' should have the same keys"
-    with pytest.raises(metatensor.NotEqualError, match=message):
+    with pytest.raises(mts.NotEqualError, match=message):
         group_and_join([dset[i] for i in batch_idxs])
 
 
@@ -321,7 +322,7 @@ def test_group_and_join_tensormaps_different_keys_union():
             ),
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_script_object():

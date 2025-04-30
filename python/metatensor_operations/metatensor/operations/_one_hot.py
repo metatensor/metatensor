@@ -28,7 +28,7 @@ def one_hot(labels: Labels, dimension: Labels):
         everywhere else
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels
 
     >>> # Let's say we have 6 atoms, whose chemical identities
@@ -41,7 +41,7 @@ def one_hot(labels: Labels, dimension: Labels):
     >>> # including, for example, also O:
     >>> possible_labels = Labels(names=["types"], values=np.array([[1], [6], [8]]))
     >>> # Get the one-hot encoded labels:
-    >>> one_hot_encoding = metatensor.one_hot(original_labels, possible_labels)
+    >>> one_hot_encoding = mts.one_hot(original_labels, possible_labels)
     >>> print(one_hot_encoding)
     [[0 1 0]
      [1 0 0]

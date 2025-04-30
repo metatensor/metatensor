@@ -89,7 +89,7 @@ def empty_like(
         option is only relevant for torch.
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
 
@@ -132,7 +132,7 @@ def empty_like(
     Then we use ``empty_like`` to create a :py:class:`TensorMap` with the same
     metadata as ``tensor``, but with all values uninitialized.
 
-    >>> tensor_empty = metatensor.empty_like(tensor)
+    >>> tensor_empty = mts.empty_like(tensor)
     >>> print(tensor_empty.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -143,7 +143,7 @@ def empty_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_empty = metatensor.empty_like(tensor, gradients="alpha")
+    >>> tensor_empty = mts.empty_like(tensor, gradients="alpha")
     >>> print(tensor_empty.block(0).gradients_list())
     ['alpha']
     """

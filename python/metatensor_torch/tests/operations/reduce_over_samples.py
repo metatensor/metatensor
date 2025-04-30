@@ -6,7 +6,7 @@ import pytest
 import torch
 from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
@@ -14,7 +14,7 @@ TORCH_VERSION = version.parse(torch.__version__)
 
 
 def check_operation(reduce_over_samples):
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -44,10 +44,10 @@ def check_operation(reduce_over_samples):
     ),
 )
 def test_reduce_over_samples():
-    check_operation(metatensor.torch.sum_over_samples)
-    check_operation(metatensor.torch.mean_over_samples)
-    check_operation(metatensor.torch.std_over_samples)
-    check_operation(metatensor.torch.var_over_samples)
+    check_operation(mts.sum_over_samples)
+    check_operation(mts.mean_over_samples)
+    check_operation(mts.std_over_samples)
+    check_operation(mts.var_over_samples)
 
 
 def test_reduction_all_samples():
@@ -67,15 +67,15 @@ def test_reduction_all_samples():
     keys = Labels(names=["key_1", "key_2"], values=torch.tensor([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    sum_X = metatensor.torch.sum_over_samples(X, sample_names=["s"])
-    mean_X = metatensor.torch.mean_over_samples(X, sample_names=["s"])
-    var_X = metatensor.torch.var_over_samples(X, sample_names=["s"])
-    std_X = metatensor.torch.std_over_samples(X, sample_names=["s"])
+    sum_X = mts.sum_over_samples(X, sample_names=["s"])
+    mean_X = mts.mean_over_samples(X, sample_names=["s"])
+    var_X = mts.var_over_samples(X, sample_names=["s"])
+    std_X = mts.std_over_samples(X, sample_names=["s"])
 
     assert sum_X[0].samples == Labels.single()
-    assert metatensor.torch.equal_metadata(sum_X, mean_X)
-    assert metatensor.torch.equal_metadata(sum_X, std_X)
-    assert metatensor.torch.equal_metadata(mean_X, var_X)
+    assert mts.equal_metadata(sum_X, mean_X)
+    assert mts.equal_metadata(sum_X, std_X)
+    assert mts.equal_metadata(mean_X, var_X)
 
     assert torch.all(sum_X[0].values == torch.sum(X[0].values, axis=0))
     assert torch.all(mean_X[0].values == torch.mean(X[0].values, axis=0))
@@ -86,21 +86,21 @@ def test_reduction_all_samples():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.sum_over_samples, buffer)
+        torch.jit.save(mts.sum_over_samples, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.mean_over_samples, buffer)
+        torch.jit.save(mts.mean_over_samples, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.std_over_samples, buffer)
+        torch.jit.save(mts.std_over_samples, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.var_over_samples, buffer)
+        torch.jit.save(mts.var_over_samples, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

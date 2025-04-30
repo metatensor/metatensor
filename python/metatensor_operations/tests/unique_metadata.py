@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels
 
 from . import _tests_utils
@@ -25,13 +25,13 @@ def large_tensor():
 
 @pytest.fixture
 def real_tensor():
-    return metatensor.load(os.path.join(DATA_ROOT, TEST_FILE))
+    return mts.load(os.path.join(DATA_ROOT, TEST_FILE))
 
 
 def test_unique_metadata_block(large_tensor):
     # unique metadata along sample axis
     target_samples = Labels(names=["s"], values=np.array([0, 1, 3]).reshape(-1, 1))
-    actual_samples = metatensor.unique_metadata_block(
+    actual_samples = mts.unique_metadata_block(
         large_tensor.block(1),
         axis="samples",
         names="s",
@@ -41,7 +41,7 @@ def test_unique_metadata_block(large_tensor):
     # unique metadata of gradient along sample axis
     names = ["sample", "g"]
     target_samples = Labels(names=names, values=np.array([[0, -2], [0, 3], [2, -2]]))
-    actual_samples = metatensor.unique_metadata_block(
+    actual_samples = mts.unique_metadata_block(
         large_tensor.block(1),
         axis="samples",
         names=names,
@@ -52,7 +52,7 @@ def test_unique_metadata_block(large_tensor):
     # unique metadata along properties axis
     properties = [3, 4, 5]
     target_properties = Labels(names=["p"], values=np.array([[p] for p in properties]))
-    actual_properties = metatensor.unique_metadata_block(
+    actual_properties = mts.unique_metadata_block(
         large_tensor.block(1), axis="properties", names="p"
     )
     assert target_properties == actual_properties
@@ -60,7 +60,7 @@ def test_unique_metadata_block(large_tensor):
     # unique metadata of gradient along properties axis
     names = ["p"]
     target_properties = Labels(names=names, values=np.array([[3], [4], [5]]))
-    actual_properties = metatensor.unique_metadata_block(
+    actual_properties = mts.unique_metadata_block(
         large_tensor.block(1),
         axis="properties",
         names=names,
@@ -72,12 +72,12 @@ def test_unique_metadata_block(large_tensor):
 def test_empty_block(real_tensor):
     target_samples = Labels(names=["system"], values=np.empty((0, 1)))
     # slice block to be empty
-    sliced_block = metatensor.slice_block(
+    sliced_block = mts.slice_block(
         real_tensor.block(0),
         axis="samples",
         selection=Labels(names=["system"], values=np.array([[-1]])),
     )
-    actual_samples = metatensor.unique_metadata_block(
+    actual_samples = mts.unique_metadata_block(
         sliced_block,
         axis="samples",
         names="system",
@@ -86,12 +86,12 @@ def test_empty_block(real_tensor):
     assert len(actual_samples) == 0
 
     target_properties = Labels(names=["n"], values=np.empty((0, 1)))
-    sliced_block = metatensor.slice_block(
+    sliced_block = mts.slice_block(
         real_tensor.block(0),
         axis="properties",
         selection=Labels(names=["n"], values=np.array([[-1]])),
     )
-    actual_properties = metatensor.unique_metadata_block(
+    actual_properties = mts.unique_metadata_block(
         sliced_block,
         axis="properties",
         names="n",
@@ -106,10 +106,10 @@ def test_unique_metadata(tensor, large_tensor):
         names=["s"],
         values=np.array([0, 1, 2, 3, 4, 5, 6, 8]).reshape(-1, 1),
     )
-    actual_samples = metatensor.unique_metadata(tensor, "samples", "s")
+    actual_samples = mts.unique_metadata(tensor, "samples", "s")
     assert target_samples == actual_samples
 
-    actual_samples = metatensor.unique_metadata(large_tensor, "samples", "s")
+    actual_samples = mts.unique_metadata(large_tensor, "samples", "s")
     assert actual_samples == target_samples
 
     # unique metadata along samples for gradients
@@ -118,7 +118,7 @@ def test_unique_metadata(tensor, large_tensor):
         names=names,
         values=np.array([[0, -2], [0, 1], [0, 3], [1, -2], [2, -2], [2, 3], [3, 3]]),
     )
-    actual_samples = metatensor.unique_metadata(
+    actual_samples = mts.unique_metadata(
         tensor,
         axis="samples",
         names=names,
@@ -130,7 +130,7 @@ def test_unique_metadata(tensor, large_tensor):
     target_properties = Labels(
         names=["p"], values=np.array([0, 3, 4, 5]).reshape(-1, 1)
     )
-    actual_properties = metatensor.unique_metadata(
+    actual_properties = mts.unique_metadata(
         tensor,
         axis="properties",
         names=["p"],  # names passed as list
@@ -140,7 +140,7 @@ def test_unique_metadata(tensor, large_tensor):
     target_properties = Labels(
         names=["p"], values=np.array([0, 1, 2, 3, 4, 5, 6, 7]).reshape(-1, 1)
     )
-    actual_properties = metatensor.unique_metadata(
+    actual_properties = mts.unique_metadata(
         large_tensor,
         axis="properties",
         names=("p",),  # names passed as tuple
@@ -152,7 +152,7 @@ def test_unique_metadata(tensor, large_tensor):
         names=names,
         values=np.array([0, 3, 4, 5]).reshape(-1, 1),
     )
-    actual_properties = metatensor.unique_metadata(
+    actual_properties = mts.unique_metadata(
         tensor, axis="properties", names=names, gradient="g"
     )
     assert target_properties == actual_properties
@@ -164,18 +164,18 @@ def test_unique_metadata_block_errors(real_tensor):
         "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(real_tensor, "samples", ["system"])
+        mts.unique_metadata_block(real_tensor, "samples", ["system"])
 
     message = (
         "`tensor` must be a metatensor TensorMap, "
         "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata(real_tensor.block(0), "samples", ["system"])
+        mts.unique_metadata(real_tensor.block(0), "samples", ["system"])
 
     message = "`axis` must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(
+        mts.unique_metadata_block(
             real_tensor.block(0),
             axis=3.14,
             names=["system"],
@@ -183,7 +183,7 @@ def test_unique_metadata_block_errors(real_tensor):
 
     message = "`names` must be a list of strings, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(
+        mts.unique_metadata_block(
             real_tensor.block(0),
             axis="properties",
             names=3.14,
@@ -191,7 +191,7 @@ def test_unique_metadata_block_errors(real_tensor):
 
     message = "`names` elements must be a strings, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(
+        mts.unique_metadata_block(
             real_tensor.block(0),
             axis="properties",
             names=["system", 3.14],
@@ -199,7 +199,7 @@ def test_unique_metadata_block_errors(real_tensor):
 
     message = "`gradient` must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.unique_metadata_block(
+        mts.unique_metadata_block(
             real_tensor.block(0),
             axis="properties",
             names=["system"],
@@ -208,7 +208,7 @@ def test_unique_metadata_block_errors(real_tensor):
 
     message = "`axis` must be either 'samples' or 'properties', not 'ciao'"
     with pytest.raises(ValueError, match=message):
-        metatensor.unique_metadata_block(
+        mts.unique_metadata_block(
             real_tensor.block(0),
             axis="ciao",
             names=["system"],
@@ -216,4 +216,4 @@ def test_unique_metadata_block_errors(real_tensor):
 
     message = "'ciao' not found in the dimensions of these Labels"
     with pytest.raises(ValueError, match=message):
-        metatensor.unique_metadata(real_tensor, axis="samples", names=["ciao"])
+        mts.unique_metadata(real_tensor, axis="samples", names=["ciao"])

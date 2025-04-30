@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import _tests_utils
@@ -59,9 +59,9 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
 
     if standalone_fn:
         if memory_buffer:
-            tensor = metatensor.io.load_buffer(buffer, use_numpy=use_numpy)
+            tensor = mts.io.load_buffer(buffer, use_numpy=use_numpy)
         else:
-            tensor = metatensor.load(file, use_numpy=use_numpy)
+            tensor = mts.load(file, use_numpy=use_numpy)
     else:
         if memory_buffer:
             tensor = TensorMap.load_buffer(buffer, use_numpy=use_numpy)
@@ -99,7 +99,7 @@ def test_load_deflate(use_numpy):
         "qm7-power-spectrum.mts",
     )
 
-    tensor = metatensor.load(path, use_numpy=use_numpy)
+    tensor = mts.load(path, use_numpy=use_numpy)
 
     assert isinstance(tensor, TensorMap)
     assert tensor.keys.names == [
@@ -120,7 +120,7 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
     with tmpdir.as_cwd():
         if memory_buffer:
             if standalone_fn:
-                buffer = metatensor.io.save_buffer(tensor, use_numpy=use_numpy)
+                buffer = mts.io.save_buffer(tensor, use_numpy=use_numpy)
             else:
                 buffer = tensor.save_buffer(use_numpy=use_numpy)
 
@@ -129,7 +129,7 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
         else:
             file = "serialize-test.mts"
             if standalone_fn:
-                metatensor.save(file, tensor, use_numpy=use_numpy)
+                mts.save(file, tensor, use_numpy=use_numpy)
             else:
                 tensor.save(file, use_numpy=use_numpy)
 
@@ -168,8 +168,8 @@ def test_save_load_zero_length_block(
     file = "serialize-test-zero-len-block.mts"
 
     with tmpdir.as_cwd():
-        metatensor.save(file, tensor_zero_len_block, use_numpy=use_numpy_save)
-        metatensor.load(file, use_numpy=use_numpy_load)
+        mts.save(file, tensor_zero_len_block, use_numpy=use_numpy_save)
+        mts.load(file, use_numpy=use_numpy_load)
 
 
 def test_save_warning_errors(tmpdir, tensor):
@@ -178,7 +178,7 @@ def test_save_warning_errors(tmpdir, tensor):
 
     with pytest.warns() as record:
         with tmpdir.as_cwd():
-            metatensor.save(tmpfile, tensor)
+            mts.save(tmpfile, tensor)
 
     expected = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
     assert str(record[0].message) == expected
@@ -191,7 +191,7 @@ def test_save_warning_errors(tmpdir, tensor):
     )
     with pytest.raises(TypeError, match=message):
         with tmpdir.as_cwd():
-            metatensor.save(tmpfile, tensor.block(0).values)
+            mts.save(tmpfile, tensor.block(0).values)
 
 
 def test_save_pathlib(tmpdir, tensor):
@@ -201,7 +201,7 @@ def test_save_pathlib(tmpdir, tensor):
     expected = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
     with tmpdir.as_cwd():
         with pytest.warns(UserWarning, match=expected):
-            metatensor.save(tmpfile, tensor)
+            mts.save(tmpfile, tensor)
 
     tmpfile = "serialize-test.mts"
 
@@ -211,7 +211,7 @@ def test_save_pathlib(tmpdir, tensor):
     )
     with pytest.raises(TypeError, match=message):
         with tmpdir.as_cwd():
-            metatensor.save(tmpfile, tensor.block(0).values)
+            mts.save(tmpfile, tensor.block(0).values)
 
 
 @pytest.mark.parametrize("protocol", PICKLE_PROTOCOLS)
@@ -280,13 +280,13 @@ def test_nested_gradients(tmpdir, use_numpy):
     tmpfile = "grad-grad-test.mts"
 
     with tmpdir.as_cwd():
-        metatensor.save(tmpfile, tensor, use_numpy=use_numpy)
+        mts.save(tmpfile, tensor, use_numpy=use_numpy)
 
         # load back with numpy
         data = np.load(tmpfile)
 
         # load back with metatensor
-        loaded = metatensor.load(tmpfile)
+        loaded = mts.load(tmpfile)
 
     assert _mts_labels(data["keys"]) == tensor.keys
     assert _mts_labels(data["keys"]) == loaded.keys
@@ -372,9 +372,9 @@ def test_load_labels(memory_buffer, standalone_fn):
 
     if standalone_fn:
         if memory_buffer:
-            labels = metatensor.io.load_labels_buffer(buffer)
+            labels = mts.io.load_labels_buffer(buffer)
         else:
-            labels = metatensor.load_labels(file)
+            labels = mts.load_labels(file)
     else:
         if memory_buffer:
             labels = Labels.load_buffer(buffer)
@@ -398,7 +398,7 @@ def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
     with tmpdir.as_cwd():
         if memory_buffer:
             if standalone_fn:
-                buffer = metatensor.io.save_buffer(labels)
+                buffer = mts.io.save_buffer(labels)
             else:
                 buffer = labels.save_buffer()
 
@@ -406,7 +406,7 @@ def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
         else:
             file = "serialize-test.mts"
             if standalone_fn:
-                metatensor.save(file, labels)
+                mts.save(file, labels)
             else:
                 labels.save(file)
 
@@ -443,7 +443,7 @@ def test_wrong_load_error():
         "use `load_labels` to load Labels"
     )
     with pytest.raises(MetatensorError, match=message):
-        metatensor.load(os.path.join(data_root, "keys.mts"))
+        mts.load(os.path.join(data_root, "keys.mts"))
 
     message = (
         "serialization format error: unable to load a TensorMap from buffer, "
@@ -453,14 +453,14 @@ def test_wrong_load_error():
         with open(os.path.join(data_root, "keys.mts"), "rb") as fd:
             buffer = fd.read()
 
-        metatensor.load(io.BytesIO(buffer))
+        mts.load(io.BytesIO(buffer))
 
     message = (
         "serialization format error: unable to load Labels from '.*', "
         "use `load` to load TensorMap: start does not match magic string"
     )
     with pytest.raises(MetatensorError, match=message):
-        metatensor.load_labels(os.path.join(data_root, "data.mts"))
+        mts.load_labels(os.path.join(data_root, "data.mts"))
 
     message = (
         "serialization format error: unable to load Labels from buffer, "
@@ -470,7 +470,7 @@ def test_wrong_load_error():
         with open(os.path.join(data_root, "data.mts"), "rb") as fd:
             buffer = fd.read()
 
-        metatensor.load_labels(io.BytesIO(buffer))
+        mts.load_labels(io.BytesIO(buffer))
 
 
 @pytest.mark.parametrize("use_numpy", (True, False))
@@ -497,9 +497,9 @@ def test_load_block(use_numpy, memory_buffer, standalone_fn):
 
     if standalone_fn:
         if memory_buffer:
-            block = metatensor.io.load_block_buffer(buffer, use_numpy=use_numpy)
+            block = mts.io.load_block_buffer(buffer, use_numpy=use_numpy)
         else:
-            block = metatensor.load_block(file, use_numpy=use_numpy)
+            block = mts.load_block(file, use_numpy=use_numpy)
     else:
         if memory_buffer:
             block = TensorBlock.load_buffer(buffer, use_numpy=use_numpy)
@@ -522,7 +522,7 @@ def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
     with tmpdir.as_cwd():
         if memory_buffer:
             if standalone_fn:
-                buffer = metatensor.io.save_buffer(block, use_numpy=use_numpy)
+                buffer = mts.io.save_buffer(block, use_numpy=use_numpy)
             else:
                 buffer = block.save_buffer(use_numpy=use_numpy)
 
@@ -531,7 +531,7 @@ def test_save_block(use_numpy, memory_buffer, standalone_fn, tmpdir, block):
         else:
             file = "serialize-test.mts"
             if standalone_fn:
-                metatensor.save(file, block, use_numpy=use_numpy)
+                mts.save(file, block, use_numpy=use_numpy)
             else:
                 block.save(file, use_numpy=use_numpy)
 

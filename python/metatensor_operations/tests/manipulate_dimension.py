@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -13,12 +13,12 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor():
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 @pytest.fixture
 def tensor_with_components_and_gradients():
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def tensor_extra():
 
 def test_append_keys(tensor):
     values = np.arange(17)
-    new_tensor = metatensor.append_dimension(
+    new_tensor = mts.append_dimension(
         tensor,
         axis="keys",
         name="foo",
@@ -52,7 +52,7 @@ def test_append_keys(tensor):
 
 def test_append_samples(tensor_extra):
     values = np.array([42])
-    new_tensor = metatensor.append_dimension(
+    new_tensor = mts.append_dimension(
         tensor_extra,
         axis="samples",
         name="foo",
@@ -67,7 +67,7 @@ def test_append_samples(tensor_extra):
 
 def test_append_properties(tensor):
     values = np.arange(80)
-    new_tensor = metatensor.append_dimension(
+    new_tensor = mts.append_dimension(
         tensor,
         axis="properties",
         name="foo",
@@ -86,13 +86,13 @@ def test_append_properties(tensor):
 
 def test_append_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
-        metatensor.append_dimension(tensor, axis="foo", name="foo", values=10)
+        mts.append_dimension(tensor, axis="foo", name="foo", values=10)
 
 
 def test_insert_keys(tensor):
     values = np.arange(17)
     index = 0
-    new_tensor = metatensor.insert_dimension(
+    new_tensor = mts.insert_dimension(
         tensor,
         axis="keys",
         index=index,
@@ -107,7 +107,7 @@ def test_insert_keys(tensor):
 def test_insert_samples(tensor_extra):
     values = np.array([42])
     index = 0
-    new_tensor = metatensor.insert_dimension(
+    new_tensor = mts.insert_dimension(
         tensor_extra,
         axis="samples",
         index=index,
@@ -124,7 +124,7 @@ def test_insert_samples(tensor_extra):
 def test_insert_properties(tensor):
     values = np.arange(80)
     index = 0
-    new_tensor = metatensor.insert_dimension(
+    new_tensor = mts.insert_dimension(
         tensor,
         axis="properties",
         index=index,
@@ -144,12 +144,12 @@ def test_insert_properties(tensor):
 
 def test_insert_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
-        metatensor.insert_dimension(tensor, axis="foo", index=0, name="foo", values=10)
+        mts.insert_dimension(tensor, axis="foo", index=0, name="foo", values=10)
 
 
 def test_permute_keys(tensor):
     dimensions_indexes = [2, 0, 1]
-    new_tensor = metatensor.permute_dimensions(
+    new_tensor = mts.permute_dimensions(
         tensor, axis="keys", dimensions_indexes=dimensions_indexes
     )
 
@@ -163,7 +163,7 @@ def test_permute_keys(tensor):
 
 def test_permute_samples(tensor):
     dimensions_indexes = [1, 0]
-    new_tensor = metatensor.permute_dimensions(
+    new_tensor = mts.permute_dimensions(
         tensor, axis="samples", dimensions_indexes=dimensions_indexes
     )
 
@@ -184,7 +184,7 @@ def test_permute_samples(tensor):
 
 def test_permute_properties(tensor):
     dimensions_indexes = [2, 0, 1]
-    new_tensor = metatensor.permute_dimensions(
+    new_tensor = mts.permute_dimensions(
         tensor, axis="properties", dimensions_indexes=dimensions_indexes
     )
 
@@ -199,18 +199,18 @@ def test_permute_properties(tensor):
 
 def test_permute_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
-        metatensor.permute_dimensions(tensor, axis="foo", dimensions_indexes=[1])
+        mts.permute_dimensions(tensor, axis="foo", dimensions_indexes=[1])
 
 
 def test_rename_keys(tensor):
     old = tensor.keys.names[0]
 
-    new_tensor = metatensor.rename_dimension(tensor, axis="keys", old=old, new="foo")
+    new_tensor = mts.rename_dimension(tensor, axis="keys", old=old, new="foo")
     assert new_tensor.keys.names[0] == "foo"
 
 
 def test_rename_samples(tensor):
-    new_tensor = metatensor.rename_dimension(
+    new_tensor = mts.rename_dimension(
         tensor,
         axis="samples",
         old="system",
@@ -230,7 +230,7 @@ def test_rename_samples(tensor):
 def test_rename_properties(tensor):
     old = tensor.property_names[0]
 
-    new_tensor = metatensor.rename_dimension(
+    new_tensor = mts.rename_dimension(
         tensor,
         axis="properties",
         old=old,
@@ -244,7 +244,7 @@ def test_rename_properties(tensor):
 
 
 def test_rename_components(tensor_with_components_and_gradients):
-    new_tensor = metatensor.rename_dimension(
+    new_tensor = mts.rename_dimension(
         tensor_with_components_and_gradients,
         axis="components",
         old="o3_mu",
@@ -263,16 +263,16 @@ def test_rename_components(tensor_with_components_and_gradients):
 
 def test_rename_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
-        metatensor.rename_dimension(tensor, axis="foo", old="foo", new="foo")
+        mts.rename_dimension(tensor, axis="foo", old="foo", new="foo")
 
 
 def test_remove_keys(tensor_extra):
-    new_tensor = metatensor.remove_dimension(tensor_extra, axis="keys", name="extra")
+    new_tensor = mts.remove_dimension(tensor_extra, axis="keys", name="extra")
     assert new_tensor.keys.names == ["keys"]
 
 
 def test_remove_samples(tensor_extra):
-    new_tensor = metatensor.remove_dimension(
+    new_tensor = mts.remove_dimension(
         tensor_extra,
         axis="samples",
         name="extra",
@@ -281,7 +281,7 @@ def test_remove_samples(tensor_extra):
 
 
 def test_remove_properties(tensor_extra):
-    new_tensor = metatensor.remove_dimension(
+    new_tensor = mts.remove_dimension(
         tensor_extra,
         axis="properties",
         name="extra",
@@ -295,7 +295,7 @@ def test_remove_properties(tensor_extra):
 
 def test_remove_unknown_axis(tensor):
     with pytest.raises(ValueError, match="'foo' is not a valid axis."):
-        metatensor.remove_dimension(tensor, axis="foo", name="foo")
+        mts.remove_dimension(tensor, axis="foo", name="foo")
 
 
 def test_not_unique_after(tensor):
@@ -304,8 +304,8 @@ def test_not_unique_after(tensor):
         r"invalid parameter: can not have the same label entry multiple time: \[1, 1\] "
         r"is already present"
     )
-    with pytest.raises(metatensor.status.MetatensorError, match=match):
-        metatensor.remove_dimension(tensor, axis="keys", name="center_type")
+    with pytest.raises(mts.status.MetatensorError, match=match):
+        mts.remove_dimension(tensor, axis="keys", name="center_type")
 
 
 def test_insert_dimension_wrong_size(tensor):
@@ -316,7 +316,7 @@ def test_insert_dimension_wrong_size(tensor):
 
     message = "the new `values` contains 1 entries, but the Labels contains 52"
     with pytest.raises(ValueError, match=message):
-        metatensor.insert_dimension(
+        mts.insert_dimension(
             tensor,
             axis="samples",
             name="new_dimension",
@@ -324,7 +324,7 @@ def test_insert_dimension_wrong_size(tensor):
             index=0,
         )
 
-    metatensor.insert_dimension(
+    mts.insert_dimension(
         tensor,
         axis="samples",
         name="new_dimension",

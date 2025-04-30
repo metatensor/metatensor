@@ -89,7 +89,7 @@ def ones_like(
         option is only relevant for torch.
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
 
@@ -132,7 +132,7 @@ def ones_like(
     Then we use ``ones_like`` to create a :py:class:`TensorMap` with the same
     metadata as ``tensor``, but with all values set to 1.
 
-    >>> tensor_ones = metatensor.ones_like(tensor)
+    >>> tensor_ones = mts.ones_like(tensor)
     >>> print(tensor_ones.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -156,7 +156,7 @@ def ones_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_ones = metatensor.ones_like(tensor, gradients="alpha")
+    >>> tensor_ones = mts.ones_like(tensor, gradients="alpha")
     >>> print(tensor_ones.block(0).gradients_list())
     ['alpha']
     """

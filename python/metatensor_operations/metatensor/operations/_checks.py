@@ -48,27 +48,26 @@ class unsafe_enable_checks(_SetChecks):
     Checks are default enabled. Calling this function permanently enables all metatensor
     operations checks.
 
-    >>> import metatensor
-    >>> metatensor.unsafe_enable_checks()
+    >>> import metatensor as mts
+    >>> mts.unsafe_enable_checks()
     checks enabled
-    >>> print(metatensor.checks_enabled())
+    >>> print(mts.checks_enabled())
     True
 
     You can also use a compound statement to enable checks only temporarily. This can be
     useful in nested constructions.
 
-    >>> import metatensor
-    >>> print(metatensor.checks_enabled())
+    >>> print(mts.checks_enabled())
     True
-    >>> with metatensor.unsafe_disable_checks():
+    >>> with mts.unsafe_disable_checks():
     ...     # checks are disabled here
-    ...     print(metatensor.checks_enabled())
-    ...     with metatensor.unsafe_enable_checks():
+    ...     print(mts.checks_enabled())
+    ...     with mts.unsafe_enable_checks():
     ...         # checks enabled here again
-    ...         print(metatensor.checks_enabled())
+    ...         print(mts.checks_enabled())
     False
     True
-    >>> print(metatensor.checks_enabled())
+    >>> print(mts.checks_enabled())
     True
     """
 
@@ -81,21 +80,21 @@ class unsafe_disable_checks(_SetChecks):
 
     Calling this function permanently disables all metatensor operations checks.
 
-    >>> import metatensor
-    >>> metatensor.unsafe_disable_checks()
+    >>> import metatensor as mts
+    >>> mts.unsafe_disable_checks()
     checks disabled
-    >>> print(metatensor.checks_enabled())
+    >>> print(mts.checks_enabled())
     False
 
     You can also use a compound statement to disable checks only temporarily.
 
-    >>> metatensor.unsafe_enable_checks()
+    >>> mts.unsafe_enable_checks()
     checks enabled
-    >>> with metatensor.unsafe_disable_checks():
+    >>> with mts.unsafe_disable_checks():
     ...     # checks are disabled here
-    ...     print(metatensor.checks_enabled())
+    ...     print(mts.checks_enabled())
     False
-    >>> print(metatensor.checks_enabled())
+    >>> print(mts.checks_enabled())
     True
     """
 

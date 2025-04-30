@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock
 
 
@@ -10,14 +10,14 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_std_samples_block():
-    tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
-    tensor_se = metatensor.remove_gradients(tensor_se)
+    tensor_se = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor_se = mts.remove_gradients(tensor_se)
 
     bl1 = tensor_ps[0]
 
     # check both passing a list and a single string for sample_names
-    reduce_bl_ps = metatensor.std_over_samples_block(bl1, sample_names=["atom"])
+    reduce_bl_ps = mts.std_over_samples_block(bl1, sample_names=["atom"])
 
     assert np.allclose(
         np.std(bl1.values[:4], axis=0),
@@ -102,7 +102,7 @@ def test_std_samples_block():
     )
 
     # The TensorBlock with key=(8,8,8) has nothing to be averaged over
-    values = metatensor.std_over_samples_block(
+    values = mts.std_over_samples_block(
         tensor_ps.block(center_type=8, neighbor_1_type=8, neighbor_2_type=8),
         sample_names="atom",
     ).values
@@ -112,7 +112,7 @@ def test_std_samples_block():
     )
 
     for _ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
-        reduced_block = metatensor.std_over_samples_block(bl2, sample_names="atom")
+        reduced_block = mts.std_over_samples_block(bl2, sample_names="atom")
         assert np.allclose(
             np.std(bl2.values[:4], axis=0),
             reduced_block.values[0],
@@ -168,11 +168,9 @@ def test_reduction_block_two_samples():
         properties=Labels(["p"], np.array([[0], [1], [5]])),
     )
 
-    reduce_block_12 = metatensor.std_over_samples_block(block, sample_names=["s_3"])
-    reduce_block_23 = metatensor.std_over_samples_block(block, sample_names="s_1")
-    reduce_block_2 = metatensor.std_over_samples_block(
-        block, sample_names=["s_1", "s_3"]
-    )
+    reduce_block_12 = mts.std_over_samples_block(block, sample_names=["s_3"])
+    reduce_block_23 = mts.std_over_samples_block(block, sample_names="s_1")
+    reduce_block_2 = mts.std_over_samples_block(block, sample_names=["s_1", "s_3"])
 
     assert np.allclose(
         np.std(block.values[:3], axis=0),
@@ -237,19 +235,19 @@ def get_XdX(block, gradient, der_index):
 
 
 def test_issue_902():
-    block_f64 = metatensor.block_from_array(
+    block_f64 = mts.block_from_array(
         np.array(
             [[-0.27714047], [-0.27715549], [-0.27721998], [-0.27707845]],
             dtype=np.float64,
         )
     )
-    reduced = metatensor.std_over_samples_block(
+    reduced = mts.std_over_samples_block(
         block_f64, sample_names=block_f64.samples.names
     )
     assert not np.isnan(reduced.values)
 
     block_f32 = block_f64.to(dtype=np.float32)
-    reduced = metatensor.std_over_samples_block(
+    reduced = mts.std_over_samples_block(
         block_f32, sample_names=block_f32.samples.names
     )
     assert not np.isnan(reduced.values)

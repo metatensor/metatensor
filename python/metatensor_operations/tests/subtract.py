@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -53,13 +53,13 @@ def test_self_subtract_tensors_no_gradient():
     B = TensorMap(keys, [block_3, block_4])
     A_copy = A.copy()
     B_copy = B.copy()
-    tensor_sum = metatensor.subtract(A, B)
+    tensor_sum = mts.subtract(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
     # Check that the original tensors are not modified
-    assert metatensor.equal(A, A_copy)
-    assert metatensor.equal(B, B_copy)
+    assert mts.equal(A, A_copy)
+    assert mts.equal(B, B_copy)
 
 
 def test_self_subtract_tensors_gradient():
@@ -182,13 +182,13 @@ def test_self_subtract_tensors_gradient():
     B = TensorMap(keys, [block_3, block_4])
     A_copy = A.copy()
     B_copy = B.copy()
-    tensor_sum = metatensor.subtract(A, B)
+    tensor_sum = mts.subtract(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
     # Check that the original tensors are not modified
-    assert metatensor.equal(A, A_copy)
-    assert metatensor.equal(B, B_copy)
+    assert mts.equal(A, A_copy)
+    assert mts.equal(B, B_copy)
 
 
 def test_self_subtract_scalar_gradient():
@@ -264,10 +264,10 @@ def test_self_subtract_scalar_gradient():
     A = TensorMap(keys, [block_1, block_2])
     B = -5.1
 
-    tensor_sum = metatensor.subtract(A, B)
+    tensor_sum = mts.subtract(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
 
 
 def test_self_subtract_error():
@@ -282,11 +282,11 @@ def test_self_subtract_error():
 
     message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.subtract(np.ones((3, 4)), tensor)
+        keys = mts.subtract(np.ones((3, 4)), tensor)
 
     message = (
         "`B` must be a metatensor TensorMap or a scalar value, "
         "not <class 'numpy.ndarray'>"
     )
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.subtract(tensor, np.ones((3, 4)))
+        keys = mts.subtract(tensor, np.ones((3, 4)))
