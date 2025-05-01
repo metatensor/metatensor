@@ -89,7 +89,7 @@ def zeros_like(
         option is only relevant for torch.
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
 
@@ -132,7 +132,7 @@ def zeros_like(
     Then we use ``zeros_like`` to create a :py:class:`TensorMap` with
     the same metadata as ``tensor``, but with all values set to 0.
 
-    >>> tensor_zeros = metatensor.zeros_like(tensor)
+    >>> tensor_zeros = mts.zeros_like(tensor)
     >>> print(tensor_zeros.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -156,7 +156,7 @@ def zeros_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_zeros = metatensor.zeros_like(tensor, gradients="alpha")
+    >>> tensor_zeros = mts.zeros_like(tensor, gradients="alpha")
     >>> print(tensor_zeros.block(0).gradients_list())
     ['alpha']
     """

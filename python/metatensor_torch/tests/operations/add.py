@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import metatensor
-import metatensor.torch
+import metatensor.torch as mts
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def tensor_path():
 
 def test_type_error(tensor_path):
     # using operations from metatensor-core with type from metatensor-torch
-    tensor = metatensor.torch.load(tensor_path)
+    tensor = mts.load(tensor_path)
     error = "`A` must be a metatensor TensorMap, not <class 'torch.ScriptObject'>"
     warning = (
         "Trying to use operations from metatensor with objects from metatensor-torch, "
@@ -37,15 +37,15 @@ def test_type_error(tensor_path):
 
 
 def test_add(tensor_path):
-    tensor = metatensor.torch.load(tensor_path)
-    sum_tensor = metatensor.torch.add(tensor, tensor)
-    assert metatensor.torch.equal_metadata(sum_tensor, tensor)
-    assert metatensor.torch.allclose(sum_tensor, metatensor.torch.multiply(tensor, 2))
+    tensor = mts.load(tensor_path)
+    sum_tensor = mts.add(tensor, tensor)
+    assert mts.equal_metadata(sum_tensor, tensor)
+    assert mts.allclose(sum_tensor, mts.multiply(tensor, 2))
 
 
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.add, buffer)
+        torch.jit.save(mts.add, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -33,15 +33,15 @@ def test_reduction_all_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    sum_X = metatensor.sum_over_samples(X, sample_names=["s"])
-    mean_X = metatensor.mean_over_samples(X, sample_names=["s"])
-    var_X = metatensor.var_over_samples(X, sample_names=["s"])
-    std_X = metatensor.std_over_samples(X, sample_names=["s"])
+    sum_X = mts.sum_over_samples(X, sample_names=["s"])
+    mean_X = mts.mean_over_samples(X, sample_names=["s"])
+    var_X = mts.var_over_samples(X, sample_names=["s"])
+    std_X = mts.std_over_samples(X, sample_names=["s"])
 
     assert sum_X[0].samples == Labels.single()
-    assert metatensor.equal_metadata(sum_X, mean_X)
-    assert metatensor.equal_metadata(sum_X, std_X)
-    assert metatensor.equal_metadata(mean_X, var_X)
+    assert mts.equal_metadata(sum_X, mean_X)
+    assert mts.equal_metadata(sum_X, std_X)
+    assert mts.equal_metadata(mean_X, var_X)
 
     assert np.all(sum_X[0].values == np.sum(X[0].values, axis=0))
     assert np.all(mean_X[0].values == np.mean(X[0].values, axis=0))
@@ -51,15 +51,15 @@ def test_reduction_all_samples():
     if HAS_TORCH:
         X = X.to(arrays="torch")
 
-        sum_X = metatensor.sum_over_samples(X, sample_names=["s"])
-        mean_X = metatensor.mean_over_samples(X, sample_names=["s"])
-        var_X = metatensor.var_over_samples(X, sample_names=["s"])
-        std_X = metatensor.std_over_samples(X, sample_names=["s"])
+        sum_X = mts.sum_over_samples(X, sample_names=["s"])
+        mean_X = mts.mean_over_samples(X, sample_names=["s"])
+        var_X = mts.var_over_samples(X, sample_names=["s"])
+        std_X = mts.std_over_samples(X, sample_names=["s"])
 
         assert sum_X[0].samples == Labels.single()
-        assert metatensor.equal_metadata(sum_X, mean_X)
-        assert metatensor.equal_metadata(sum_X, std_X)
-        assert metatensor.equal_metadata(mean_X, var_X)
+        assert mts.equal_metadata(sum_X, mean_X)
+        assert mts.equal_metadata(sum_X, std_X)
+        assert mts.equal_metadata(mean_X, var_X)
 
         assert torch.all(sum_X[0].values == torch.sum(X[0].values, axis=0))
         assert torch.all(mean_X[0].values == torch.mean(X[0].values, axis=0))
@@ -89,15 +89,15 @@ def test_zeros_sample_block():
     tensor = TensorMap(Labels.single(), [block])
     result_tensor = TensorMap(Labels.single(), [result_block])
 
-    tensor_sum = metatensor.sum_over_samples(tensor, "s")
-    tensor_mean = metatensor.mean_over_samples(tensor, "s")
-    tensor_std = metatensor.std_over_samples(tensor, "s")
-    tensor_var = metatensor.var_over_samples(tensor, "s")
+    tensor_sum = mts.sum_over_samples(tensor, "s")
+    tensor_mean = mts.mean_over_samples(tensor, "s")
+    tensor_std = mts.std_over_samples(tensor, "s")
+    tensor_var = mts.var_over_samples(tensor, "s")
 
-    assert metatensor.equal(result_tensor, tensor_sum)
-    assert metatensor.equal(result_tensor, tensor_mean)
-    assert metatensor.equal(result_tensor, tensor_var)
-    assert metatensor.equal(result_tensor, tensor_std)
+    assert mts.equal(result_tensor, tensor_sum)
+    assert mts.equal(result_tensor, tensor_mean)
+    assert mts.equal(result_tensor, tensor_var)
+    assert mts.equal(result_tensor, tensor_std)
 
     block = TensorBlock(
         values=np.zeros([0, 1]),
@@ -116,15 +116,15 @@ def test_zeros_sample_block():
     tensor = TensorMap(Labels.single(), [block])
     result_tensor = TensorMap(Labels.single(), [result_block])
 
-    tensor_sum = metatensor.sum_over_samples(tensor, "s_1")
-    tensor_mean = metatensor.mean_over_samples(tensor, "s_1")
-    tensor_std = metatensor.std_over_samples(tensor, "s_1")
-    tensor_var = metatensor.var_over_samples(tensor, "s_1")
+    tensor_sum = mts.sum_over_samples(tensor, "s_1")
+    tensor_mean = mts.mean_over_samples(tensor, "s_1")
+    tensor_std = mts.std_over_samples(tensor, "s_1")
+    tensor_var = mts.var_over_samples(tensor, "s_1")
 
-    assert metatensor.equal(result_tensor, tensor_sum)
-    assert metatensor.equal(result_tensor, tensor_mean)
-    assert metatensor.equal(result_tensor, tensor_var)
-    assert metatensor.equal(result_tensor, tensor_std)
+    assert mts.equal(result_tensor, tensor_sum)
+    assert mts.equal(result_tensor, tensor_mean)
+    assert mts.equal(result_tensor, tensor_var)
+    assert mts.equal(result_tensor, tensor_std)
 
 
 def test_zeros_sample_block_gradient():
@@ -168,12 +168,12 @@ def test_zeros_sample_block_gradient():
     tensor = TensorMap(Labels.single(), [block])
     tensor_sum_result = TensorMap(Labels.single(), [sum_block])
 
-    tensor_sum = metatensor.sum_over_samples(tensor, "s_1")
-    tensor_mean = metatensor.mean_over_samples(tensor, "s_1")
-    tensor_std = metatensor.std_over_samples(tensor, "s_1")
-    tensor_var = metatensor.var_over_samples(tensor, "s_1")
+    tensor_sum = mts.sum_over_samples(tensor, "s_1")
+    tensor_mean = mts.mean_over_samples(tensor, "s_1")
+    tensor_std = mts.std_over_samples(tensor, "s_1")
+    tensor_var = mts.var_over_samples(tensor, "s_1")
 
-    assert metatensor.allclose(tensor_sum_result, tensor_sum, atol=1e-14)
-    assert metatensor.equal_metadata(tensor_sum, tensor_mean)
-    assert metatensor.equal_metadata(tensor_sum, tensor_var)
-    assert metatensor.equal_metadata(tensor_sum, tensor_std)
+    assert mts.allclose(tensor_sum_result, tensor_sum, atol=1e-14)
+    assert mts.equal_metadata(tensor_sum, tensor_mean)
+    assert mts.equal_metadata(tensor_sum, tensor_var)
+    assert mts.equal_metadata(tensor_sum, tensor_std)

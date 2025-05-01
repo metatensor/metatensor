@@ -94,13 +94,15 @@ def group_and_join(
 
         if name in fields_to_join:  # Join tensors if requested
             if isinstance(field[0], TensorMap):
-                # metatensor.TensorMap type
+                # metatensor.TensorMap
                 data.append(metatensor.join(field, axis="samples", **join_kwargs))
-            elif isinstance(field[0], torch.ScriptObject) and field[0]._has_method(
-                "keys_to_properties"
-            ):  # inferred metatensor.torch.TensorMap type
+            elif (
+                isinstance(field[0], torch.ScriptObject)
+                and field[0]._type().name() == "TensorMap"
+            ):
+                # metatensor.torch.TensorMap
                 data.append(metatensor.torch.join(field, axis="samples", **join_kwargs))
-            elif isinstance(field[0], torch.Tensor):  # torch.Tensor type
+            elif isinstance(field[0], torch.Tensor):
                 data.append(torch.vstack(field))
             else:
                 data.append(field)

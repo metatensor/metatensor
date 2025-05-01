@@ -96,7 +96,7 @@ def random_uniform_like(
         option is only relevant for torch.
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> np.random.seed(1)
 
@@ -140,7 +140,7 @@ def random_uniform_like(
     the same metadata as ``tensor``, but with all values randomly sampled from a
     uniform distribution.
 
-    >>> tensor_random = metatensor.random_uniform_like(tensor)
+    >>> tensor_random = mts.random_uniform_like(tensor)
     >>> print(tensor_random.block(0))
     TensorBlock
         samples (4): ['sample']
@@ -164,7 +164,7 @@ def random_uniform_like(
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.
 
-    >>> tensor_random = metatensor.random_uniform_like(tensor, gradients="alpha")
+    >>> tensor_random = mts.random_uniform_like(tensor, gradients="alpha")
     >>> print(tensor_random.block(0).gradients_list())
     ['alpha']
     """

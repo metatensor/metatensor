@@ -4,11 +4,11 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_dot():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,7 +20,7 @@ def test_dot():
             "qm7-power-spectrum.mts",
         )
     )
-    dot_tensor = metatensor.torch.dot(tensor, metatensor.torch.remove_gradients(tensor))
+    dot_tensor = mts.dot(tensor, mts.remove_gradients(tensor))
 
     # right output type
     assert isinstance(dot_tensor, torch.ScriptObject)
@@ -42,6 +42,6 @@ def test_dot():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.dot, buffer)
+        torch.jit.save(mts.dot, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

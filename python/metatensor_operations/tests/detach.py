@@ -1,6 +1,6 @@
 import os
 
-import metatensor
+import metatensor as mts
 
 
 try:
@@ -15,22 +15,22 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_detach():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     # just checking that everything runs fine with numpy
-    tensor = metatensor.detach(tensor)
+    tensor = mts.detach(tensor)
 
     if HAS_TORCH:
         tensor = tensor.to(arrays="torch")
-        tensor = metatensor.requires_grad(tensor)
+        tensor = mts.requires_grad(tensor)
 
         for block in tensor:
             assert block.values.requires_grad
 
-        output = metatensor.add(tensor, tensor)
+        output = mts.add(tensor, tensor)
         for block in output:
             assert block.values.requires_grad
 
-        detached = metatensor.detach(output)
+        detached = mts.detach(output)
         for block in detached:
             assert not block.values.requires_grad

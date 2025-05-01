@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -181,7 +181,7 @@ def tensor_with_single_empty_block():
 def tensor_sorted_ascending():
     """
     This is the `tensor` fixture sorted in ascending order how it should be returned
-    when applying metatensor.operations.sort with `descending=False` option.
+    when applying mts.operations.sort with `descending=False` option.
     """
     block_1 = TensorBlock(
         values=np.array(
@@ -267,7 +267,7 @@ def tensor_sorted_ascending():
 def tensor_sorted_descending():
     """
     This is the `tensor` fixture sorted in descending order how it should be returned
-    when applying metatensor.operations.sort with `descending=True` option.
+    when applying mts.operations.sort with `descending=True` option.
     """
     block_1 = TensorBlock(
         values=np.array(
@@ -357,42 +357,42 @@ def tensor_sorted_descending():
 
 
 def test_sort(tensor, tensor_sorted_ascending):
-    metatensor.allclose_block_raise(
-        metatensor.sort_block(tensor.block(0)), tensor_sorted_ascending.block(1)
+    mts.allclose_block_raise(
+        mts.sort_block(tensor.block(0)), tensor_sorted_ascending.block(1)
     )
-    metatensor.allclose_block_raise(
-        metatensor.sort_block(tensor.block(1)), tensor_sorted_ascending.block(0)
+    mts.allclose_block_raise(
+        mts.sort_block(tensor.block(1)), tensor_sorted_ascending.block(0)
     )
 
-    metatensor.allclose_raise(metatensor.sort(tensor), tensor_sorted_ascending)
+    mts.allclose_raise(mts.sort(tensor), tensor_sorted_ascending)
 
 
 def test_sort_descending(tensor, tensor_sorted_descending):
-    metatensor.allclose_block_raise(
+    mts.allclose_block_raise(
         tensor_sorted_descending.block(0),
-        metatensor.sort_block(tensor.block(0), descending=True),
+        mts.sort_block(tensor.block(0), descending=True),
     )
-    metatensor.allclose_block_raise(
+    mts.allclose_block_raise(
         tensor_sorted_descending.block(0),
-        metatensor.sort_block(tensor.block(0), descending=True),
+        mts.sort_block(tensor.block(0), descending=True),
     )
 
 
 def test_sort_empty_block(tensor_with_empty_block, tensor_with_empty_block_sorted):
-    metatensor.allclose_block_raise(
-        metatensor.sort_block(tensor_with_empty_block.block(0)),
+    mts.allclose_block_raise(
+        mts.sort_block(tensor_with_empty_block.block(0)),
         tensor_with_empty_block_sorted.block(2),
     )
-    metatensor.allclose_block_raise(
-        metatensor.sort_block(tensor_with_empty_block.block(1)),
+    mts.allclose_block_raise(
+        mts.sort_block(tensor_with_empty_block.block(1)),
         tensor_with_empty_block_sorted.block(0),
     )
-    metatensor.allclose_block_raise(
-        metatensor.sort_block(tensor_with_empty_block.block(2)),
+    mts.allclose_block_raise(
+        mts.sort_block(tensor_with_empty_block.block(2)),
         tensor_with_empty_block_sorted.block(1),
     )
     # Check that this command does not raise an error
-    metatensor.sort(tensor_with_single_empty_block())
+    mts.sort(tensor_with_single_empty_block())
 
 
 def test_raise_error(tensor, tensor_sorted_ascending):
@@ -400,10 +400,10 @@ def test_raise_error(tensor, tensor_sorted_ascending):
         "axes` must be one of 'samples', 'components' or 'properties', not 'error'"
     )
     with pytest.raises(ValueError, match=error_message):
-        metatensor.operations.sort(tensor, axes="error")
+        mts.operations.sort(tensor, axes="error")
 
     error_message = (
         "`axes` must be one of 'samples', 'components' or 'properties', not '5'"
     )
     with pytest.raises(ValueError, match=error_message):
-        metatensor.operations.sort(tensor, axes=[5])
+        mts.operations.sort(tensor, axes=[5])

@@ -79,7 +79,7 @@ def split(
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(11, 3),
     ...     samples=Labels(
@@ -91,7 +91,7 @@ def split(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
-    >>> splitted = metatensor.split(
+    >>> splitted = mts.split(
     ...     tensor,
     ...     axis="samples",
     ...     selections=[
@@ -191,7 +191,7 @@ def split_block(
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(11, 3),
     ...     samples=Labels(
@@ -201,7 +201,7 @@ def split_block(
     ...     components=[],
     ...     properties=Labels.range("properties", 3),
     ... )
-    >>> splitted = metatensor.split_block(
+    >>> splitted = mts.split_block(
     ...     block,
     ...     axis="samples",
     ...     selections=[

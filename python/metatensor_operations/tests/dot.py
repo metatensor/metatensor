@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -10,10 +10,10 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_self_dot_no_components():
-    tensor_1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
-    tensor_2 = metatensor.remove_gradients(tensor_1)
+    tensor_1 = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor_2 = mts.remove_gradients(tensor_1)
 
-    dot_tensor = metatensor.dot(tensor_1=tensor_1, tensor_2=tensor_2)
+    dot_tensor = mts.dot(tensor_1=tensor_1, tensor_2=tensor_2)
     assert tensor_1.keys == dot_tensor.keys
 
     for key, block_1 in tensor_1.items():
@@ -43,7 +43,7 @@ def test_self_dot_no_components():
 
 
 def test_self_dot_components():
-    tensor_1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_1 = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     tensor_2 = []
     n_samples = 42
@@ -65,7 +65,7 @@ def test_self_dot_components():
 
     tensor_2 = TensorMap(tensor_1.keys, tensor_2)
 
-    dot_tensor = metatensor.dot(tensor_1=tensor_1, tensor_2=tensor_2)
+    dot_tensor = mts.dot(tensor_1=tensor_1, tensor_2=tensor_2)
     assert tensor_1.keys == dot_tensor.keys
 
     for key, block_1 in tensor_1.items():

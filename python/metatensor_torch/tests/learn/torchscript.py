@@ -9,8 +9,8 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
-from metatensor.torch import allclose_raise
+import metatensor.torch as mts
+from metatensor.torch import Labels
 from metatensor.torch.learn.nn import (
     EquivariantLinear,
     EquivariantTransformation,
@@ -43,26 +43,26 @@ def tensor():
 @pytest.fixture
 def tensor_no_grad():
     """Returns a single block tensor map with no gradients"""
-    return metatensor.torch.remove_gradients(
+    return mts.remove_gradients(
         random_single_block_no_components_tensor_map().to(torch.float64)
     )
 
 
 def check_module_torch_script(module, tensor):
     """Tests output of module is invariant to torchscripting"""
-    ref_tensor = module(tensor)  # apply module
-    module_scripted = torch.jit.script(module)  # script
-    out_tensor = module_scripted(tensor)  # apply scripted
-    allclose_raise(ref_tensor, out_tensor)  # check same
+    ref_tensor = module(tensor)
+    module_scripted = torch.jit.script(module)
+    out_tensor = module_scripted(tensor)
+    mts.allclose_raise(ref_tensor, out_tensor)
 
 
 def check_module_save_load(module):
     """Tests save and load of module"""
-    module_scripted = torch.jit.script(module)  # script
+    module_scripted = torch.jit.script(module)
     with io.BytesIO() as buffer:
-        torch.jit.save(module_scripted, buffer)  # save
+        torch.jit.save(module_scripted, buffer)
         buffer.seek(0)
-        torch.jit.load(buffer)  # load
+        torch.jit.load(buffer)
 
 
 def test_linear(tensor):
@@ -84,10 +84,7 @@ def test_equivariant_linear(tensor):
         in_keys=tensor.keys,
         in_features=len(tensor[0].properties),
         out_features=5,
-        invariant_keys=metatensor.torch.Labels(
-            ["_"],
-            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-        ),
+        invariant_keys=Labels.single(),
         dtype=torch.float64,
     )
     check_module_torch_script(module, tensor)
@@ -105,10 +102,7 @@ def test_invariant_tanh(tensor_no_grad):
     """Tests module InvariantTanh"""
     module = InvariantTanh(
         in_keys=tensor_no_grad.keys,
-        invariant_keys=metatensor.torch.Labels(
-            ["_"],
-            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-        ),
+        invariant_keys=Labels.single(),
     )
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
@@ -125,10 +119,7 @@ def test_invariant_relu(tensor_no_grad):
     """Tests module InvariantReLU"""
     module = InvariantReLU(
         in_keys=tensor_no_grad.keys,
-        invariant_keys=metatensor.torch.Labels(
-            ["_"],
-            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-        ),
+        invariant_keys=Labels.single(),
     )
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
@@ -145,10 +136,7 @@ def test_invariant_silu(tensor_no_grad):
     """Tests module InvariantSiLU"""
     module = InvariantSiLU(
         in_keys=tensor_no_grad.keys,
-        invariant_keys=metatensor.torch.Labels(
-            ["_"],
-            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-        ),
+        invariant_keys=Labels.single(),
     )
     check_module_torch_script(module, tensor_no_grad)
     check_module_save_load(module)
@@ -170,10 +158,7 @@ def test_invariant_layer_norm(tensor_no_grad):
     module = InvariantLayerNorm(
         in_keys=tensor_no_grad.keys,
         in_features=len(tensor_no_grad[0].properties),
-        invariant_keys=metatensor.torch.Labels(
-            ["_"],
-            torch.tensor([0], dtype=torch.int64).reshape(-1, 1),
-        ),
+        invariant_keys=Labels.single(),
         dtype=torch.float64,
     )
     check_module_torch_script(module, tensor_no_grad)

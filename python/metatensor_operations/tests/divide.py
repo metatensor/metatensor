@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -48,13 +48,13 @@ def test_self_divide_tensors_no_gradient():
     A_copy = A.copy()
     B = TensorMap(keys, [block_3, block_4])
     B_copy = B.copy()
-    tensor_sum = metatensor.divide(A, B)
+    tensor_sum = mts.divide(A, B)
     tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
 
-    assert metatensor.equal(A, A_copy)
-    assert metatensor.equal(B, B_copy)
+    assert mts.equal(A, A_copy)
+    assert mts.equal(B, B_copy)
 
 
 def test_self_divide_tensors_gradient():
@@ -182,17 +182,17 @@ def test_self_divide_tensors_gradient():
     A_copy = A.copy()
     B = TensorMap(keys, [block_3, block_4])
     B_copy = B.copy()
-    tensor_sum = metatensor.divide(A, B)
+    tensor_sum = mts.divide(A, B)
     tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-    assert metatensor.allclose(
+    assert mts.allclose(
         tensor_result,
         tensor_sum,
         atol=1e-8,
     )
 
-    assert metatensor.equal(A, A_copy)
-    assert metatensor.equal(B, B_copy)
+    assert mts.equal(A, A_copy)
+    assert mts.equal(B, B_copy)
 
 
 def test_self_divide_scalar_gradient():
@@ -281,10 +281,10 @@ def test_self_divide_scalar_gradient():
     A = TensorMap(keys, [block_1, block_2])
     B = 5.1
 
-    tensor_sum = metatensor.divide(A, B)
+    tensor_sum = mts.divide(A, B)
     tensor_result = TensorMap(keys, [block_res1, block_res2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum, rtol=1e-8)
+    assert mts.allclose(tensor_result, tensor_sum, rtol=1e-8)
 
     def test_self_multiply_tensors_gradient_additional_components(self):
         block_1 = TensorBlock(
@@ -331,8 +331,8 @@ def test_self_divide_scalar_gradient():
         )
         block_result.add_gradient("g", block_result_grad)
         tensor_result = TensorMap(keys, [block_result])
-        quotient_tensor = metatensor.divide(tensor_1, tensor_2)
-        assert metatensor.equal(tensor_result, quotient_tensor)
+        quotient_tensor = mts.divide(tensor_1, tensor_2)
+        assert mts.equal(tensor_result, quotient_tensor)
 
 
 def test_self_divide_error():
@@ -347,11 +347,11 @@ def test_self_divide_error():
 
     message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.divide(np.ones((3, 4)), tensor)
+        mts.divide(np.ones((3, 4)), tensor)
 
     message = (
         "`B` must be a metatensor TensorMap or a scalar value, "
         "not <class 'numpy.ndarray'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.divide(tensor, np.ones((3, 4)))
+        mts.divide(tensor, np.ones((3, 4)))

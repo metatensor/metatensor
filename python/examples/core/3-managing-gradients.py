@@ -36,7 +36,7 @@ to atomic positions are included.
 # %%
 #
 
-import metatensor
+import metatensor as mts
 from metatensor import TensorBlock, TensorMap
 
 
@@ -53,7 +53,7 @@ from metatensor import TensorBlock, TensorMap
 
 # sphinx_gallery_thumbnail_path = '../static/images/TensorBlock-Gradients.*'
 
-radial_spectrum = metatensor.load("radial-spectrum.mts")
+radial_spectrum = mts.load("radial-spectrum.mts")
 print(radial_spectrum)
 
 # %%
@@ -155,7 +155,7 @@ print(gradient.values)
 # Let's load such an example, the spherical expansion from the :ref:`first steps
 # tutorial <core-tutorial-first-steps>`:
 
-spherical_expansion = metatensor.load("spherical-expansion.mts")
+spherical_expansion = mts.load("spherical-expansion.mts")
 print(spherical_expansion)
 
 # %%
@@ -312,5 +312,5 @@ print("square gradient:", squared_block.gradient("positions").values[:, 0])
 #         squared = metatensor.pow(radial_spectrum, 2)
 #
 
-squared_operations = metatensor.multiply(radial_spectrum, radial_spectrum)
-print(metatensor.equal(squared_operations, squared))
+squared_operations = mts.multiply(radial_spectrum, radial_spectrum)
+print(mts.equal(squared_operations, squared))

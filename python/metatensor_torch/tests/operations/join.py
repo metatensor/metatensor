@@ -4,11 +4,11 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_join():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,7 +20,7 @@ def test_join():
             "qm7-power-spectrum.mts",
         )
     )
-    joined_tensor = metatensor.torch.join([tensor, tensor], axis="properties")
+    joined_tensor = mts.join([tensor, tensor], axis="properties")
 
     assert isinstance(joined_tensor, torch.ScriptObject)
     assert joined_tensor._type().name() == "TensorMap"
@@ -44,6 +44,6 @@ def test_join():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.join, buffer)
+        torch.jit.save(mts.join, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

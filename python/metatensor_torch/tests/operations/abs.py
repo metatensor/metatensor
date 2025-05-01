@@ -4,11 +4,11 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_abs():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,14 +20,14 @@ def test_abs():
             "qm7-power-spectrum.mts",
         )
     )
-    abs_tensor = metatensor.torch.abs(tensor)
+    abs_tensor = mts.abs(tensor)
 
     # check output type
     assert isinstance(abs_tensor, torch.ScriptObject)
     assert abs_tensor._type().name() == "TensorMap"
 
     # check metadata
-    assert metatensor.torch.equal_metadata(abs_tensor, tensor)
+    assert mts.equal_metadata(abs_tensor, tensor)
 
     # check values
     for block in abs_tensor.blocks():
@@ -37,6 +37,6 @@ def test_abs():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.sum_over_samples, buffer)
+        torch.jit.save(mts.sum_over_samples, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

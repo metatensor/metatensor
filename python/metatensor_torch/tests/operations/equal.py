@@ -4,11 +4,11 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_equal():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,33 +20,33 @@ def test_equal():
             "qm7-power-spectrum.mts",
         )
     )
-    assert metatensor.torch.equal(tensor, tensor)
+    assert mts.equal(tensor, tensor)
 
-    metatensor.torch.equal_raise(tensor, tensor)
+    mts.equal_raise(tensor, tensor)
 
-    assert metatensor.torch.equal_block(tensor.block(0), tensor.block(0))
+    assert mts.equal_block(tensor.block(0), tensor.block(0))
 
-    metatensor.torch.equal_block_raise(tensor.block(0), tensor.block(0))
+    mts.equal_block_raise(tensor.block(0), tensor.block(0))
 
 
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.equal, buffer)
+        torch.jit.save(mts.equal, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.equal_raise, buffer)
+        torch.jit.save(mts.equal_raise, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.equal_block, buffer)
+        torch.jit.save(mts.equal_block, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.equal_block_raise, buffer)
+        torch.jit.save(mts.equal_block_raise, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

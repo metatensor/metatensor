@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import TensorBlock, TensorMap
 
 from . import _tests_utils
@@ -71,14 +71,14 @@ def tensor_complex_result():
 @pytest.mark.parametrize("gradients", (True, False))
 def test_abs(gradients):
     if not gradients:
-        tensor = metatensor.remove_gradients(tensor_complex())
-        tensor_result = metatensor.remove_gradients(tensor_complex_result())
+        tensor = mts.remove_gradients(tensor_complex())
+        tensor_result = mts.remove_gradients(tensor_complex_result())
     else:
         tensor = tensor_complex()
         tensor_result = tensor_complex_result()
 
-    tensor_abs = metatensor.abs(tensor)
-    metatensor.allclose_raise(tensor_abs, tensor_result)
+    tensor_abs = mts.abs(tensor)
+    mts.allclose_raise(tensor_abs, tensor_result)
 
     # Check the tensors haven't be modified in place
-    assert not metatensor.equal(tensor_abs, tensor)
+    assert not mts.equal(tensor_abs, tensor)

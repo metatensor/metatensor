@@ -46,14 +46,14 @@ changing from
 
 .. code-block:: python
 
-    import metatensor
+    import metatensor as mts
     from metatensor import TensorMap, TensorBlock, Labels
 
 to
 
 .. code-block:: python
 
-    import metatensor.torch as metatensor
+    import metatensor.torch as mts
     from metatensor.torch import TensorMap, TensorBlock, Labels
 
 should be 80% of the work required to make a model developed in Python with

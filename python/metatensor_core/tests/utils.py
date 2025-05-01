@@ -1,7 +1,7 @@
 import os
 
-import metatensor
+import metatensor as mts
 
 
 def test_cmake_prefix_path():
-    assert os.path.exists(metatensor.utils.cmake_prefix_path)
+    assert os.path.exists(mts.utils.cmake_prefix_path)

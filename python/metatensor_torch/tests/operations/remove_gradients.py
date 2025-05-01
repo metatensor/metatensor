@@ -4,13 +4,13 @@ import os
 import pytest
 import torch
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_remove_gradients():
     # this only runs basic checks functionality checks, and that the code produces
     # output with the right type
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -28,7 +28,7 @@ def test_remove_gradients():
 
     assert set(tensor.block(0).gradients_list()) == set(["strain", "positions"])
 
-    tensor = metatensor.torch.remove_gradients(tensor, ["positions"])
+    tensor = mts.remove_gradients(tensor, ["positions"])
 
     assert isinstance(tensor, torch.ScriptObject)
     assert tensor._type().name() == "TensorMap"
@@ -39,6 +39,6 @@ def test_remove_gradients():
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.remove_gradients, buffer)
+        torch.jit.save(mts.remove_gradients, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

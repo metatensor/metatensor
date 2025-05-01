@@ -1,6 +1,6 @@
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 from metatensor.operations import _dispatch
 
@@ -97,7 +97,7 @@ def cartesian_cubic(array) -> TensorMap:
     values = _dispatch.sum(array**3, axis=1)
     values_grad = 3 * array**2
 
-    block = metatensor.block_from_array(values.reshape(n_samples, 1))
+    block = mts.block_from_array(values.reshape(n_samples, 1))
     block.add_gradient(
         parameter="g",
         gradient=TensorBlock(
@@ -132,7 +132,7 @@ def cartesian_linear(array) -> TensorMap:
     values_grad[:, 1] = 2 * _dispatch.ones_like(array, (n_samples, 1))
     values_grad[:, 2] = 8 * _dispatch.ones_like(array, (n_samples, 1))
 
-    block = metatensor.block_from_array(values.reshape(-1, 1))
+    block = mts.block_from_array(values.reshape(-1, 1))
     block.add_gradient(
         parameter="g",
         gradient=TensorBlock(

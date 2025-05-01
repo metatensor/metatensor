@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -53,13 +53,13 @@ def test_self_multiply_tensors_nogradient():
     B = TensorMap(keys, [block_3, block_4])
     A_copy = A.copy()
     B_copy = B.copy()
-    tensor_sum = metatensor.multiply(A, B)
+    tensor_sum = mts.multiply(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
     # Check not modified in place
-    assert metatensor.allclose(A, A_copy)
-    assert metatensor.allclose(B, B_copy)
+    assert mts.allclose(A, A_copy)
+    assert mts.allclose(B, B_copy)
 
 
 def test_self_multiply_tensors_gradient():
@@ -180,13 +180,13 @@ def test_self_multiply_tensors_gradient():
     B = TensorMap(keys, [block_3, block_4])
     A_copy = A.copy()
     B_copy = B.copy()
-    tensor_sum = metatensor.multiply(A, B)
+    tensor_sum = mts.multiply(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
     # Check not modified in place
-    assert metatensor.equal(A, A_copy)
-    assert metatensor.equal(B, B_copy)
+    assert mts.equal(A, A_copy)
+    assert mts.equal(B, B_copy)
 
 
 def test_self_multiply_scalar_gradient():
@@ -268,10 +268,10 @@ def test_self_multiply_scalar_gradient():
     A = TensorMap(keys, [block_1, block_2])
     B = 5.1
 
-    tensor_sum = metatensor.multiply(A, B)
+    tensor_sum = mts.multiply(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
 
     def test_self_multiply_tensors_gradient_additional_components(self):
         block_1 = TensorBlock(
@@ -318,8 +318,8 @@ def test_self_multiply_scalar_gradient():
         )
         block_result.add_gradient("g", block_result_grad)
         tensor_result = TensorMap(keys, [block_result])
-        product_tensor = metatensor.multiply(tensor_1, tensor_2)
-        assert metatensor.equal(tensor_result, product_tensor)
+        product_tensor = mts.multiply(tensor_1, tensor_2)
+        assert mts.equal(tensor_result, product_tensor)
 
 
 def test_self_multiply_error():
@@ -334,11 +334,11 @@ def test_self_multiply_error():
 
     message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.multiply(np.ones((3, 4)), tensor)
+        keys = mts.multiply(np.ones((3, 4)), tensor)
 
     message = (
         "`B` must be a metatensor TensorMap or a scalar value, "
         "not <class 'numpy.ndarray'>"
     )
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.multiply(tensor, np.ones((3, 4)))
+        keys = mts.multiply(tensor, np.ones((3, 4)))
