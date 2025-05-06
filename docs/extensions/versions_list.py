@@ -44,7 +44,6 @@ class VersionList(SphinxDirective):
     :margin: 0 0 0 0\n"""
 
         for group_i, (version_short, group) in enumerate(grouped_versions.items()):
-
             if group_i < 3:
                 generated_content += f"""
     .. grid-item::
