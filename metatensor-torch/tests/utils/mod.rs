@@ -4,6 +4,7 @@
 #![allow(clippy::needless_return)]
 #![allow(dead_code)]
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -53,10 +54,9 @@ fn find_python() -> PathBuf {
     panic!("could not find Python 3")
 }
 
-
-/// Download PyTorch in a fresh Python virtualenv, and return the
-/// CMAKE_PREFIX_PATH for the corresponding libtorch
-pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
+/// Create a fresh Python virtualenv, to install dependencies we get from Python
+/// for the tests
+pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
     // create virtual env
     let status = Command::new(find_python())
         .arg("-m")
@@ -66,7 +66,6 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
         .expect("failed to run python");
     assert!(status.success(), "failed to run `python -m venv`");
 
-    // Use the virtual env python to update pip and install torch
     let mut python = build_dir;
     if cfg!(target_os = "windows") {
         python.extend(["Scripts", "python.exe"]);
@@ -74,6 +73,7 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
         python.extend(["bin", "python"]);
     }
 
+    // update pip in case the system uses a very old one
     let status = Command::new(&python)
         .arg("-m")
         .arg("pip")
@@ -84,8 +84,14 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
         .expect("failed to run python");
     assert!(status.success(), "failed to run `python -m pip install --upgrade pip`");
 
+    return python;
+}
+
+/// Download PyTorch in a Python virtualenv, and return the
+/// CMAKE_PREFIX_PATH for the corresponding libtorch
+pub fn setup_pytorch(python: &Path) -> PathBuf {
     let torch_version = std::env::var("METATENSOR_TESTS_TORCH_VERSION").unwrap_or("2.7".into());
-    let status = Command::new(&python)
+    let status = Command::new(python)
         .arg("-m")
         .arg("pip")
         .arg("install")
@@ -94,7 +100,7 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
         .expect("failed to run python");
     assert!(status.success(), "failed to run `python -m pip install torch`");
 
-    let output = Command::new(&python)
+    let output = Command::new(python)
         .arg("-c")
         .arg("import torch; print(torch.utils.cmake_prefix_path)")
         .output()
@@ -109,6 +115,52 @@ pub fn setup_pytorch(build_dir: PathBuf) -> PathBuf {
     }
 
     return prefix;
+}
+
+/// Install metatensor-torch using the given python
+pub fn setup_metatensor_torch(python: &Path) {
+    let source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+
+    let status = Command::new(python)
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("--upgrade")
+        .arg("cmake")
+        .arg("packaging")
+        .arg("setuptools")
+        .arg("numpy")
+        .status()
+        .expect("failed to run python");
+    assert!(status.success(), "failed to run `python -m pip install --upgrade cmake packaging setuptools numpy`");
+
+    let mut metatensor_core_python = source_dir.clone();
+    metatensor_core_python.extend(["..", "python", "metatensor_core"]);
+    let status = Command::new(python)
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("--no-deps")
+        .arg("--no-build-isolation")
+        .arg("--check-build-dependencies")
+        .arg(metatensor_core_python)
+        .status()
+        .expect("failed to run python");
+    assert!(status.success(), "failed to run `python -m pip install python/metatensor_core`");
+
+    let mut metatensor_torch_python = source_dir.clone();
+    metatensor_torch_python.extend(["..", "python", "metatensor_torch"]);
+    let status = Command::new(python)
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("--no-deps")
+        .arg("--no-build-isolation")
+        .arg("--check-build-dependencies")
+        .arg(metatensor_torch_python)
+        .status()
+        .expect("failed to run python");
+    assert!(status.success(), "failed to run `python -m pip install python/metatensor_torch`");
 }
 
 /// Build metatensor-core in `build_dir`, and return the installation prefix
