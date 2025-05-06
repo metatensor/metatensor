@@ -39,6 +39,7 @@ foreach(_file_ ${ALL_TESTS})
     add_executable(torch-${_name_} ${_file_})
     target_link_libraries(torch-${_name_} metatensor_torch catch)
     target_compile_definitions(torch-${_name_} PRIVATE "-DDATA_MTS=\"${CMAKE_CURRENT_SOURCE_DIR}/../../metatensor-core/tests/data.mts\"")
+    target_compile_definitions(torch-${_name_} PRIVATE "-DTEST_TORCH_SCRIPT_MODULE=\"${CMAKE_CURRENT_SOURCE_DIR}/test-module.pt\"")
 
     add_test(
         NAME torch-${_name_}
