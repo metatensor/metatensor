@@ -1,12 +1,13 @@
-Neural Network
-==============
-
-* :ref:`learn-nn-modules`
+Neural Network building blocks
+==============================
 
 .. _learn-nn-modules:
 
 Modules
 -------
+
+.. autoclass:: metatensor.learn.nn.Module
+   :members:
 
 .. autoclass:: metatensor.learn.nn.ModuleMap
    :members:

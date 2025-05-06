@@ -1,3 +1,4 @@
+from ._module import Module  # noqa: F401
 from .equivariant_transformation import EquivariantTransformation  # noqa: F401
 from .layer_norm import InvariantLayerNorm, LayerNorm  # noqa: F401
 from .linear import EquivariantLinear, Linear  # noqa: F401

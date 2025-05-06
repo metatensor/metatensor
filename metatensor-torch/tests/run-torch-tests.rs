@@ -19,12 +19,16 @@ fn run_torch_tests() {
 
     let torch_dep = deps_dir.join("torch");
     std::fs::create_dir_all(&torch_dep).expect("failed to create torch dep dir");
-    let pytorch_cmake_prefix = utils::setup_pytorch(torch_dep);
+    let python = utils::create_python_venv(torch_dep);
+    let pytorch_cmake_prefix = utils::setup_pytorch(&python);
+
+    // install metatensor-torch in the python virtualenv, it will be used to
+    // generate an example module
+    utils::setup_metatensor_torch(&python);
 
     // ====================================================================== //
     // build the metatensor-torch C++ tests and run them
-    let mut source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    source_dir.extend(["..", "metatensor-torch"]);
+    let source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
     // configure cmake for the tests
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
@@ -34,6 +38,7 @@ fn run_torch_tests() {
         metatensor_cmake_prefix.display(),
         pytorch_cmake_prefix.display()
     ));
+    cmake_config.arg(format!("-DPython_EXECUTABLE={}", python.display()));
     let status = cmake_config.status().expect("could not run cmake");
     assert!(status.success(), "failed to run torch tests cmake configuration");
 
