@@ -6,3 +6,4 @@
 #include "metatensor/torch/block.hpp"   // IWYU pragma: export
 #include "metatensor/torch/tensor.hpp"  // IWYU pragma: export
 #include "metatensor/torch/misc.hpp"    // IWYU pragma: export
+#include "metatensor/torch/module.hpp"   // IWYU pragma: export
