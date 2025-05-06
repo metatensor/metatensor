@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Changed
+
+- `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
+  argument, with the same meaning as in `torch.Tensor.to`.
+
 ## [Version 0.7.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.6) - 2025-04-25
 
 ### Added

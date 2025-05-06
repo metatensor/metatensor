@@ -82,12 +82,12 @@ def array_dtype(array) -> DType:
         raise TypeError(f"unknown array type: {type(array)}")
 
 
-def array_change_dtype(array, dtype: DType):
+def array_change_dtype(array, dtype: DType, non_blocking: bool):
     """Change the dtype of an array"""
     if _is_numpy_array(array):
         return array.astype(dtype)
     elif _is_torch_array(array):
-        return array.to(dtype=dtype)
+        return array.to(dtype=dtype, non_blocking=non_blocking)
     else:
         raise TypeError(f"unknown array type: {type(array)}")
 
@@ -112,14 +112,14 @@ def array_device_is_cpu(array) -> bool:
         raise TypeError(f"unknown array type: {type(array)}")
 
 
-def array_change_device(array, device: Device):
+def array_change_device(array, device: Device, non_blocking: bool):
     """Change the device of an array"""
     if _is_numpy_array(array):
         if device != "cpu":
             raise ValueError(f"can not move numpy array to non-cpu device: {device}")
         return array
     elif _is_torch_array(array):
-        return array.to(device=device)
+        return array.to(device=device, non_blocking=non_blocking)
     else:
         raise TypeError(f"unknown array type: {type(array)}")
 

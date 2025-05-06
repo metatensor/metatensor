@@ -507,7 +507,9 @@ def test_to(tensor):
     assert tensor.device.type == torch.device("cpu").type
     check_dtype(tensor, torch.float32)
 
-    converted = tensor.to(dtype=torch.float64)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = tensor.to(dtype=torch.float64, non_blocking=True)
     check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
@@ -521,7 +523,7 @@ def test_to(tensor):
         devices.append(torch.device("cuda"))
 
     for device in devices:
-        moved = tensor.to(device=device)
+        moved = tensor.to(device=device, non_blocking=True)
         assert moved.device.type == torch.device(device).type
 
     # this should run without error
