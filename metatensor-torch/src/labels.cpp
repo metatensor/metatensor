@@ -386,7 +386,7 @@ Labels LabelsHolder::rename(std::string old_name, std::string new_name) const {
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), this->values());
 }
 
-Labels LabelsHolder::to(torch::IValue device_ivalue) const {
+Labels LabelsHolder::to(torch::IValue device_ivalue, bool non_blocking) const {
     auto device = this->device();
     if (device_ivalue.isNone()) {
         // nothing to do
@@ -399,15 +399,15 @@ Labels LabelsHolder::to(torch::IValue device_ivalue) const {
             "'device' must be a string or a torch.device, got '" + device_ivalue.type()->str() + "' instead"
         );
     }
-    return this->to(device);
+    return this->to(device, non_blocking);
 }
 
-Labels LabelsHolder::to(torch::Device device) const {
+Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     if (device == values_.device()) {
         // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
     } else {
-        auto new_values = values_.to(device);
+        auto new_values = values_.to(device, non_blocking);
 
         // re-create new mts_labels_t and from them new metatensor::Labels with
         // the same names & values, but no user data. The user data will be

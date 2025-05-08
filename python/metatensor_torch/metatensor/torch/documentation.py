@@ -514,8 +514,12 @@ class Labels:
         )
         """
 
-    def to(self, device: Union[str, torch.device]) -> "Labels":
-        """move the values for these Labels to the given ``device``"""
+    def to(self, device: Union[str, torch.device], non_blocking=False) -> "Labels":
+        """
+        Move the values for these Labels to the given ``device``. If ``non_blocking`` is
+        ``True``, this tries to move the data asynchronously. See
+        :py:meth:`torch.Tensor.to` for more information.
+        """
 
     @property
     def device(self) -> torch.device:
@@ -945,6 +949,7 @@ class TensorBlock:
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
         arrays: Optional[str] = None,
+        non_blocking: bool = False,
     ) -> "TensorBlock":
         """
         Move all the arrays in this block (values, gradients and labels) to the given
@@ -954,9 +959,11 @@ class TensorBlock:
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This parameter is here for
-            compatibility with the pure Python API, can only be set  to ``"torch"`` or
-            ``None`` and does nothing.
+        :param Optional[str] arrays: new backend to use for the arrays. This parameter
+            is here for compatibility with the pure Python API, can only be set to
+            ``"torch"`` or ``None``, and does nothing.
+        :param bool non_blocking: If this is ``True``, the function tries to move the
+            data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
 
     @staticmethod
@@ -1345,6 +1352,7 @@ class TensorMap:
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
         arrays: Optional[str] = None,
+        non_blocking: bool = False,
     ) -> "TensorMap":
         """
         Move all the data (keys and blocks) in this :py:class:`TensorMap` to the given
@@ -1354,9 +1362,11 @@ class TensorMap:
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This parameter is here for
-            compatibility with the pure Python API, can only be set  to ``"torch"`` or
-            ``None`` and does nothing.
+        :param Optional[str] arrays: new backend to use for the arrays. This parameter
+            is here for compatibility with the pure Python API, can only be set  to
+            ``"torch"`` or ``None``, and does nothing.
+        :param bool non_blocking: If this is ``True``, the function tries to move the
+            data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
 
 

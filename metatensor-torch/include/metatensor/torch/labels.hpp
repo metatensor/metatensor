@@ -108,10 +108,10 @@ public:
     }
 
     /// Move the values for these Labels to the given `device`
-    Labels to(torch::IValue device) const;
+    Labels to(torch::IValue device, bool non_blocking = false) const;
 
     /// Move the values for these Labels to the given `device`
-    Labels to(torch::Device device) const;
+    Labels to(torch::Device device, bool non_blocking = false) const;
 
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.

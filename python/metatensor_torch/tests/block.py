@@ -281,7 +281,9 @@ def test_to():
     check_dtype(block, torch.float32)
     check_dtype(block.gradient("g"), torch.float32)
 
-    converted = block.to(dtype=torch.float64)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = block.to(dtype=torch.float64, non_blocking=True)
     check_dtype(converted, torch.float64)
     check_dtype(converted.gradient("g"), torch.float64)
 
@@ -296,7 +298,7 @@ def test_to():
         devices.append(torch.device("cuda"))
 
     for device in devices:
-        moved = block.to(device=device)
+        moved = block.to(device=device, non_blocking=True)
         assert moved.device.type == torch.device(device).type
         assert moved.gradient("g").device.type == torch.device(device).type
 

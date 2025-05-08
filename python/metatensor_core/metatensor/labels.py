@@ -741,12 +741,14 @@ class Labels:
 
         return Labels(names=names, values=self.values)
 
-    def to(self, device) -> "Labels":
+    def to(self, device, non_blocking=False) -> "Labels":
         """
-        Move the values for these Labels to the given ``device``.
+        Move the values for these Labels to the given ``device``. ``non_blocking`` is
+        ignored.
 
-        In the Python version of metatensor, this returns the original labels.
-        Defined for compatibility with the TorchScript version of metatensor.
+        In the Python version of metatensor, this returns the original labels without
+        change. This function is defined for compatibility with the TorchScript version
+        of metatensor.
         """
         return self
 

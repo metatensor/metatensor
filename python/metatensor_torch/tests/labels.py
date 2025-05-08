@@ -305,7 +305,9 @@ def test_to():
         assert labels.values.device.type == "cpu"
         assert labels.device.type == "cpu"
 
-        labels = labels.to(device)
+        # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+        # making sure the parameter is accepted by this function
+        labels = labels.to(device, non_blocking=True)
         assert labels.values.device.type == torch.device(device).type
         assert labels.device.type == torch.device(device).type
 

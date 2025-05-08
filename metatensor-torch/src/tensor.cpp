@@ -467,7 +467,8 @@ torch::Dtype TensorMapHolder::scalar_type() const {
 
 TensorMap TensorMapHolder::to(
     torch::optional<torch::Dtype> dtype,
-    torch::optional<torch::Device> device
+    torch::optional<torch::Device> device,
+    bool non_blocking
 ) const {
     auto new_blocks = std::vector<TensorBlock>();
     for (int64_t block_i=0; block_i<this->keys()->count(); block_i++) {
@@ -475,9 +476,9 @@ TensorMap TensorMapHolder::to(
         // with the different dtype/device
         auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(block_i);
         auto torch_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
-        new_blocks.emplace_back(torch_block->to(dtype, device));
+        new_blocks.emplace_back(torch_block->to(dtype, device, non_blocking));
     }
-    return torch::make_intrusive<TensorMapHolder>(this->keys()->to(device), new_blocks);
+    return torch::make_intrusive<TensorMapHolder>(this->keys()->to(device, non_blocking), new_blocks);
 }
 
 
@@ -486,7 +487,8 @@ TensorMap TensorMapHolder::to_positional(
     torch::IValue positional_2,
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device,
-    torch::optional<std::string> arrays
+    torch::optional<std::string> arrays,
+    bool non_blocking
 ) const {
     if (arrays.value_or("torch") != "torch") {
         C10_THROW_ERROR(ValueError,
@@ -502,7 +504,7 @@ TensorMap TensorMapHolder::to_positional(
         "`TensorMap.to`"
     );
 
-    return this->to(parsed_dtype, parsed_device);
+    return this->to(parsed_dtype, parsed_device, non_blocking);
 }
 
 

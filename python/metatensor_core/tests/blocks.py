@@ -417,13 +417,15 @@ def test_to():
     assert block.dtype == np.float64
     assert block.gradient("g").dtype == np.float64
 
-    converted = block.to(dtype=np.float32)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = block.to(dtype=np.float32, non_blocking=True)
     assert converted.dtype == np.float32
     assert converted.gradient("g").dtype == np.float32
 
     # check that the code handles both positional and keyword arguments
     device = "cpu"
-    moved = block.to(device, dtype=np.float32)
+    moved = block.to(device, dtype=np.float32, non_blocking=True)
     moved = block.to(np.float32, device)
     moved = block.to(np.float32, device=device)
     moved = block.to(device, np.float32)
@@ -464,7 +466,7 @@ def test_to():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                moved = block.to(device=device)
+                moved = block.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type
             assert moved.gradient("g").device.type == torch.device(device).type
