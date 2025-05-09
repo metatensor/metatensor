@@ -32,7 +32,7 @@ class LayerNorm(Module):
     The extra parameter :param mean: controls whether or not the mean over these
     dimensions is subtracted from the input tensor in the transformation.
 
-    Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
     Each parameter is passed as a single value of its expected type, which is used
@@ -43,7 +43,7 @@ class LayerNorm(Module):
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
     :mean bool: whether or not to subtract the mean over all dimensions except the
@@ -126,7 +126,7 @@ class InvariantLayerNorm(Module):
     The extra parameter :param mean: controls whether or not the mean over these
     dimensions is subtracted from the input tensor in the transformation.
 
-    Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
     Each parameter is passed as a single value of its expected type, which is used
@@ -137,7 +137,7 @@ class InvariantLayerNorm(Module):
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
     :param invariant_keys: a :py:class:`Labels` object that is used to select the
