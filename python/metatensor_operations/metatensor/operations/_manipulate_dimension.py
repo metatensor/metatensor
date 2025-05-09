@@ -12,6 +12,13 @@ def _check_axis(axis: str):
         )
 
 
+def _concat(values: Array, n: int, axis: int):
+    print(">>> DBG", values, values.shape, n)
+    if n == 0:
+        return _dispatch.empty_like(values, shape=(0,))
+    return _dispatch.concatenate([values] * n, axis=axis)
+
+
 @torch_jit_script
 def insert_dimension(
     tensor: TensorMap,
@@ -78,7 +85,7 @@ def insert_dimension(
 
     if axis == "keys":
         if values_was_int:
-            label_values = _dispatch.concatenate([values] * len(keys), axis=0)
+            label_values = _concat(values, len(keys), axis=0)
 
         keys = keys.insert(index=index, name=name, values=label_values)
 
@@ -89,13 +96,13 @@ def insert_dimension(
 
         if axis == "samples":
             if values_was_int:
-                label_values = _dispatch.concatenate([values] * len(samples), axis=0)
+                label_values = _concat(values, len(samples), axis=0)
 
             samples = samples.insert(index=index, name=name, values=label_values)
 
         elif axis == "properties":
             if values_was_int:
-                label_values = _dispatch.concatenate([values] * len(properties), axis=0)
+                label_values = _concat(values, len(properties), axis=0)
 
             properties = properties.insert(index=index, name=name, values=label_values)
 

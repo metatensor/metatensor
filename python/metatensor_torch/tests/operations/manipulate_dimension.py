@@ -67,6 +67,34 @@ def test_insert():
     assert new_tensor.property_names == ["new", "l", "n_1", "n_2"]
 
 
+def test_insert_dimension_on_empty_labels():
+    """https://github.com/metatensor/metatensor/issues/600"""
+
+    s = mts.Labels.empty(["a", "b"])
+    k = mts.Labels(names=["key"], values=torch.tensor([[0], [1]]))
+    b = mts.TensorBlock(
+        samples=s,
+        components=[],
+        properties=mts.Labels.single(),
+        values=torch.zeros((len(s), 1)),
+    )
+
+    t = mts.TensorMap(
+        keys=k,
+        blocks=[b, b],
+    )
+
+    for block in t:
+        assert block.samples.names == ["a", "b"]
+        assert block.samples.values.shape == (len(s), 2)
+
+    tt = mts.insert_dimension(t, axis="samples", name="d", index=2, values=42)
+
+    for block in tt:
+        assert block.samples.names == ["a", "b", "d"]
+        assert block.samples.values.shape == (len(s), 3)
+
+
 def test_permute():
     tensor = get_tensor_map()
 
