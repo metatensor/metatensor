@@ -68,13 +68,13 @@ def split(
     The operation is based on some specified groups of indices, along either the
     "samples" or "properties" ``axis``. The length of the returned list is equal to the
     number of :py:class:`Labels` objects passed in ``selections``. Each returned
-    :py:class`TensorMap` will have the same keys and number of blocks at the input
+    :py:class:`TensorMap` will have the same keys and number of blocks at the input
     ``tensor``, but with the dimensions of the blocks reduced to only contain the
     specified indices for the corresponding group.
 
     For example, to split a tensor along the ``"samples"`` axis, according to the
     ``"system"`` index, where system 0, 6, and 7 are in the first returned
-    :py:class`TensorMap`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
+    :py:class:`TensorMap`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
     third:
 
     >>> import numpy as np
@@ -179,14 +179,14 @@ def split_block(
     Splits an input :py:class:`TensorBlock` into multiple :py:class:`TensorBlock`
     objects based on some specified ``selections``, along either the ``"samples"`` or
     ``"properties"`` ``axis``. The length of the returned list is equal to the number of
-    selections passed in ``selections``. Each returned :py:class`TensorBlock` will have
+    selections passed in ``selections``. Each returned :py:class:`TensorBlock` will have
     the same keys and number of blocks at the input ``tensor``, but with the dimensions
     of the blocks reduced to only contain the specified indices for the corresponding
     group.
 
     For example, to split a block along the ``"samples"`` axis, according to the
     ``"system"`` index, where system 0, 6, and 7 are in the first returned
-    :py:class`TensorBlock`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
+    :py:class:`TensorBlock`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
     third:
 
     >>> import numpy as np
