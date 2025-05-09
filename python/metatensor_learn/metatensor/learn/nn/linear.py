@@ -17,7 +17,7 @@ class Linear(Module):
     Applies a linear transformation to each block of a :py:class:`TensorMap` passed to
     its forward method, indexed by :param in_keys:.
 
-    Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.Linear` documentation for a more detailed
     description of the other parameters.
 
     Each parameter is passed as a single value of its expected type, which is used
@@ -31,7 +31,7 @@ class Linear(Module):
     :param out_features: :py:class:`int` or :py:class:`lint` of :py:class:`int`, the
         number of output features for each block. If passed as a single value, the same
         feature size is taken for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
         provided.
@@ -97,7 +97,7 @@ class EquivariantLinear(Module):
     Applies a linear transformation to each block of a :py:class:`TensorMap` passed to
     its forward method, indexed by :param in_keys:.
 
-    Refer to the :py:class`torch.nn.Linear` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.Linear` documentation for a more detailed
     description of the other parameters.
 
     For :py:class:`EquivariantLinear`, by contrast to :py:class:`Linear`, the parameter
@@ -112,7 +112,7 @@ class EquivariantLinear(Module):
     :param out_features: :py:class:`int` or :py:class:`lint` of :py:class:`int`, the
         number of output features for each block. If passed as a single value, the same
         feature size is taken for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range. If provided, :param out_features: can be inferred and need not be
         provided.

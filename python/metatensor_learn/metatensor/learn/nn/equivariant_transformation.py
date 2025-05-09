@@ -27,7 +27,7 @@ class EquivariantTransformation(torch.nn.Module):
     :param in_features: :py:class:`list` of :py:class:`int`, the number of features in
         the input tensor for each block indexed by the keys in :param in_keys:. If
         passed as a single value, the same number of features is assumed for all blocks.
-    :param out_properties: :py:class:`list` of :py:class`Labels` (optional), the
+    :param out_properties: :py:class:`list` of :py:class:`Labels` (optional), the
         properties labels
         of the output. By default the output properties are relabeled using
         Labels.range.
