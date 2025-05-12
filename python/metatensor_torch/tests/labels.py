@@ -470,6 +470,9 @@ def test_dimensions_manipulation():
     with pytest.raises(ValueError, match="`values` must be a 1D tensor"):
         label.insert(0, name="bar", values=torch.tensor([[10]]))
 
+    with pytest.raises(IndexError, match="index 42 is out of bounds"):
+        label.insert(42, name="bar", values=torch.tensor([42]))
+
     # Labels.append
     new_label = label.append(name="bar", values=torch.tensor([10]))
     assert new_label.names == ["foo", "bar"]
