@@ -73,7 +73,7 @@ def n_commits_since_last_tag(tag_prefix):
 
 def git_hash_all_code():
     # make sure the index is up to date before doing `git diff-index`
-    run_subprocess(["git", "update-index", "-q", "--really-refresh"], check=False)
+    run_subprocess(["git", "update-index", "-q", "--really-refresh"])
 
     output = subprocess.run(
         ["git", "diff-index", "--quiet", "HEAD", "--"],
