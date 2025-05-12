@@ -94,6 +94,16 @@ def test_insert_dimension_on_empty_labels():
         assert block.samples.names == ["a", "b", "d"]
         assert block.samples.values.shape == (len(s), 3)
 
+    tt = mts.insert_dimension(t, axis="properties", name="d", index=0, values=42)
+
+    for block in tt:
+        assert block.properties.names == ["d", "_"]
+        assert block.properties.values.shape == (1, 2)
+
+    # RuntimeError from the TorchScript interpreter
+    with pytest.raises(RuntimeError, match="index 42 is out of bounds"):
+        mts.insert_dimension(t, axis="samples", name="d", index=42, values=42)
+
 
 def test_permute():
     tensor = get_tensor_map()
