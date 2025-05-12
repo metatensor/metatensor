@@ -13,7 +13,6 @@ def _check_axis(axis: str):
 
 
 def _concat(values: Array, n: int, axis: int):
-    print(">>> DBG", values, values.shape, n)
     if n == 0:
         return _dispatch.empty_like(values, shape=(0,))
     return _dispatch.concatenate([values] * n, axis=axis)
