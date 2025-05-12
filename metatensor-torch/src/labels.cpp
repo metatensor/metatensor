@@ -284,6 +284,13 @@ Labels LabelsHolder::append(std::string name, torch::Tensor values) const {
 
 
 Labels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
+    if (index < 0 or index > this->size()) {
+        C10_THROW_ERROR(
+            IndexError,
+            "index " + std::to_string(index) + " is out of bounds"
+        );
+    }
+
     auto new_names = this->names();
 
     auto it = std::begin(new_names) + index;
