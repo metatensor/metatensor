@@ -605,13 +605,13 @@ class MetatensorCalculator(ase.calculators.calculator.Calculator):
             output.explicit_gradients = ["cell"]
 
         metatensor_outputs = {"energy": output}
-        if "forces" in properties and self._non_conservative:
+        compute_forces_and_stresses = "forces" in properties or "stress" in properties
+        if compute_forces_and_stresses and self._non_conservative:
             metatensor_outputs["non_conservative_forces"] = ModelOutput(
                 quantity="force",
                 unit="eV/Angstrom",
                 per_atom=True,
             )
-        if "stress" in properties and self._non_conservative:
             metatensor_outputs["non_conservative_stress"] = ModelOutput(
                 quantity="pressure",
                 unit="eV/Angstrom^3",
