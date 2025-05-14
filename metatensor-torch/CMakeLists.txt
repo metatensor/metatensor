@@ -103,17 +103,19 @@ set(METATENSOR_TORCH_HEADERS
     "include/metatensor/torch/labels.hpp"
     "include/metatensor/torch/block.hpp"
     "include/metatensor/torch/tensor.hpp"
+    "include/metatensor/torch/module.hpp"
     "include/metatensor/torch/atomistic/system.hpp"
     "include/metatensor/torch/atomistic/model.hpp"
     "include/metatensor/torch.hpp"
 )
 
-set(METATENSOR_TORCH_SOURCE
+set(METATENSOR_TORCH_SOURCES
     "src/array.cpp"
     "src/labels.cpp"
     "src/block.cpp"
     "src/tensor.cpp"
     "src/misc.cpp"
+    "src/module.cpp"
     "src/atomistic/system.cpp"
     "src/atomistic/model.cpp"
     "src/internal/shared_libraries.cpp"
@@ -122,7 +124,7 @@ set(METATENSOR_TORCH_SOURCE
 
 add_library(metatensor_torch SHARED
     ${METATENSOR_TORCH_HEADERS}
-    ${METATENSOR_TORCH_SOURCE}
+    ${METATENSOR_TORCH_SOURCES}
 )
 
 set_target_properties(metatensor_torch PROPERTIES

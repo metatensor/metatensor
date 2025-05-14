@@ -31,12 +31,12 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 #    about
 #
 # To achieve this, we import the modules in a special mode with `importlib`, first
-# creating the `metatensor.torch.operations._classes` module, containing all metatensor
+# creating the `metatensor.torch.operations._backend` module, containing all metatensor
 # classes plus a `TORCH_SCRIPT_MODE` constant to change the code between Python and
 # TorchScript modes.
 #
 # We then import the code from `metatensor-operations` into a custom module
-# `metatensor.torch.operations`. When code in this module tries to `from ._classes
+# `metatensor.torch.operations`. When code in this module tries to `from ._backend
 # import ...`, the import is resolved to the values defined in the step above. This
 # allows to have the right type annotation on the functions.
 #
@@ -44,14 +44,14 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 # used in `metatensor`, and one in `metatensor.torch`.
 
 
-# Step 1: create the `_classes` module as an empty module
+# Step 1: create the `_backend` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.operations._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
-# be made to the `metatensor/operations/_classes.py` file, which is used in non
+# be made to the `metatensor/operations/_backend.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
