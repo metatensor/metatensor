@@ -28,7 +28,8 @@ fn check_torch_install() {
 
     let torch_dep = deps_dir.join("torch");
     std::fs::create_dir_all(&torch_dep).expect("failed to create torch dep dir");
-    let pytorch_cmake_prefix = utils::setup_pytorch(torch_dep);
+    let python = utils::create_python_venv(torch_dep);
+    let pytorch_cmake_prefix = utils::setup_pytorch(&python);
 
     let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
@@ -111,7 +112,8 @@ fn check_cmake_subdirectory() {
 
     let torch_dep = deps_dir.join("torch");
     std::fs::create_dir_all(&torch_dep).expect("failed to create torch dep dir");
-    let pytorch_cmake_prefix = utils::setup_pytorch(torch_dep);
+    let python = utils::create_python_venv(torch_dep);
+    let pytorch_cmake_prefix = utils::setup_pytorch(&python);
 
 
     let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
