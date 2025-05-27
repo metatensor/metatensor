@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -10,15 +10,15 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_std_samples_block():
-    tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
-    tensor_se = metatensor.remove_gradients(tensor_se)
+    tensor_se = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor_se = mts.remove_gradients(tensor_se)
 
     bl1 = tensor_ps[0]
 
     # check both passing a list and a single string for sample_names
-    reduce_tensor_se = metatensor.std_over_samples(tensor_se, sample_names="atom")
-    reduce_tensor_ps = metatensor.std_over_samples(tensor_ps, sample_names=["atom"])
+    reduce_tensor_se = mts.std_over_samples(tensor_se, sample_names="atom")
+    reduce_tensor_ps = mts.std_over_samples(tensor_ps, sample_names=["atom"])
 
     assert np.allclose(
         np.std(bl1.values[:4], axis=0),
@@ -170,9 +170,9 @@ def test_reduction_block_two_samples():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = metatensor.std_over_samples(X, sample_names=["s_3"])
-    reduce_X_23 = metatensor.std_over_samples(X, sample_names="s_1")
-    reduce_X_2 = metatensor.std_over_samples(X, sample_names=["s_1", "s_3"])
+    reduce_X_12 = mts.std_over_samples(X, sample_names=["s_3"])
+    reduce_X_23 = mts.std_over_samples(X, sample_names="s_1")
+    reduce_X_2 = mts.std_over_samples(X, sample_names=["s_1", "s_3"])
 
     assert np.allclose(
         np.std(X.block(0).values[:3], axis=0),
@@ -253,21 +253,21 @@ def test_reduction_of_one_element():
     keys = Labels(names=["key_1"], values=np.array([[0]]))
     X = TensorMap(keys, [block_1])
 
-    add_X = metatensor.sum_over_samples(X, sample_names=["s_1"])
-    mean_X = metatensor.mean_over_samples(X, sample_names=["s_1"])
-    var_X = metatensor.var_over_samples(X, sample_names=["s_1"])
-    std_X = metatensor.std_over_samples(X, sample_names=["s_1"])
+    add_X = mts.sum_over_samples(X, sample_names=["s_1"])
+    mean_X = mts.mean_over_samples(X, sample_names=["s_1"])
+    var_X = mts.var_over_samples(X, sample_names=["s_1"])
+    std_X = mts.std_over_samples(X, sample_names=["s_1"])
 
     # print(add_X[0])
     # print(X[0].values, add_X[0].values)
     assert np.all(X[0].values == add_X[0].values)
     assert np.all(X[0].values == mean_X[0].values)
-    assert metatensor.equal(add_X, mean_X)
-    assert metatensor.equal_metadata(add_X, var_X)
-    assert metatensor.equal_metadata(mean_X, std_X)
+    assert mts.equal(add_X, mean_X)
+    assert mts.equal_metadata(add_X, var_X)
+    assert mts.equal_metadata(mean_X, std_X)
 
     assert np.all(np.zeros((3, 3)) == std_X[0].values)
-    assert metatensor.equal(var_X, std_X)
+    assert mts.equal(var_X, std_X)
 
     # Gradients
     grad_sample_label = Labels(

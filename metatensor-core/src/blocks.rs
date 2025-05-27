@@ -374,7 +374,7 @@ mod tests {
     use super::*;
 
     fn example_labels(name: &str, count: i32) -> Arc<Labels> {
-        return Arc::new(Labels::new(&[name], (0..count).collect()).expect("invalid labels"));
+        return Arc::new(Labels::new_i32(&[name], (0..count).collect()).expect("invalid labels"));
     }
 
     #[test]
@@ -457,7 +457,7 @@ mod tests {
         );
 
         let values = TestArray::new(vec![3, 1, 2]);
-        let component = Arc::new(Labels::new(
+        let component = Arc::new(Labels::new_i32(
             &["component_1", "component_2"],
             vec![0, 1],
         ).expect("invalid labels"));
@@ -481,7 +481,7 @@ mod tests {
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
-            let gradient_samples = Arc::new(Labels::new(
+            let gradient_samples = Arc::new(Labels::new_i32(
                 &["sample", "foo"],
                 vec![0, 0, /**/ 1, 1, /**/ 3, -2],
             ).expect("invalid labels"));

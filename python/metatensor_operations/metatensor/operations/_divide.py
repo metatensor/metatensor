@@ -1,10 +1,9 @@
 from typing import List, Union
 
-from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -15,8 +14,8 @@ from ._utils import (
 )
 
 
-def _multiply_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
-    values = constant * block.values
+def _divide_block_constant(block: TensorBlock, constant: float) -> TensorBlock:
+    values = block.values / constant
 
     result_block = TensorBlock(
         values=values,
@@ -32,7 +31,7 @@ def _multiply_block_constant(block: TensorBlock, constant: float) -> TensorBlock
         result_block.add_gradient(
             parameter=parameter,
             gradient=TensorBlock(
-                values=gradient.values * constant,
+                values=gradient.values / constant,
                 samples=gradient.samples,
                 components=gradient.components,
                 properties=gradient.properties,
@@ -42,8 +41,8 @@ def _multiply_block_constant(block: TensorBlock, constant: float) -> TensorBlock
     return result_block
 
 
-def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
-    values = block_1.values * block_2.values
+def _divide_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
+    values = block_1.values / block_2.values
 
     result_block = TensorBlock(
         values=values,
@@ -75,12 +74,14 @@ def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorB
 
         gradient_samples_to_values_samples_1 = gradient_1.samples.column("sample")
         gradient_samples_to_values_samples_2 = gradient_2.samples.column("sample")
-        gradient_values = block_1.values[
-            _dispatch.to_index_array(gradient_samples_to_values_samples_1)
+        gradient_values = -block_1.values[gradient_samples_to_values_samples_1].reshape(
+            [-1] + [1] * diff_components + _shape
+        ) * gradient_2.values / block_2.values[
+            gradient_samples_to_values_samples_2
         ].reshape(
             [-1] + [1] * diff_components + _shape
-        ) * gradient_2.values + gradient_1.values * block_2.values[
-            _dispatch.to_index_array(gradient_samples_to_values_samples_2)
+        ) ** 2 + gradient_1.values / block_2.values[
+            gradient_samples_to_values_samples_2
         ].reshape([-1] + [1] * diff_components + _shape)
 
         result_block.add_gradient(
@@ -97,9 +98,13 @@ def _multiply_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorB
 
 
 @torch_jit_script
-def multiply(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
+def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
+    if not torch_jit_is_scripting():
+        if not isinstance_metatensor(A, "TensorMap"):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
     r"""Return a new :class:`TensorMap` with the values being the element-wise
-    multiplication of ``A`` and ``B``.
+    division of ``A`` and ``B``.
 
     If ``B`` is a :py:class:`TensorMap` it has to have the same metadata as ``A``.
 
@@ -108,42 +113,47 @@ def multiply(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
     *  ``B`` is a scalar then:
 
        .. math::
-            \nabla(A * B) = B * \nabla A
+            \nabla(A / B) =  \nabla A / B
 
     *  ``B`` is a :py:class:`TensorMap` with the same metadata of ``A``.
         The multiplication is performed with the rule of the derivatives:
 
        .. math::
-            \nabla(A * B) = B * \nabla A + A * \nabla B
+            \nabla(A / B) =(B*\nabla A-A*\nabla B)/B^2
 
-    :param A: First :py:class:`TensorMap` for the multiplication.
-    :param B: Second instance for the multiplication. Parameter can be a scalar
+    :param A: First :py:class:`TensorMap` for the division.
+    :param B: Second instance for the division. Parameter can be a scalar
             or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
             metadata of ``A``.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-    if not torch_jit_is_scripting():
-        if not is_metatensor_class(A, TensorMap):
-            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
     blocks: List[TensorBlock] = []
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)
     else:
-        is_tensor_map = is_metatensor_class(B, TensorMap)
+        is_tensor_map = isinstance_metatensor(B, "TensorMap")
 
     if isinstance(B, (float, int)):
         B = float(B)
         for block_A in A.blocks():
-            blocks.append(_multiply_block_constant(block=block_A, constant=B))
+            blocks.append(_divide_block_constant(block=block_A, constant=B))
     elif is_tensor_map:
-        _check_same_keys_raise(A, B, "multiply")
+        _check_same_keys_raise(A, B, "divide")
         for key, block_A in A.items():
-            block_B = B[key]
-            _check_blocks_raise(block_A, block_B, fname="multiply")
-            _check_same_gradients_raise(block_A, block_B, fname="multiply")
-            blocks.append(_multiply_block_block(block_1=block_A, block_2=block_B))
+            block_B = B.block(key)
+            _check_blocks_raise(
+                block_A,
+                block_B,
+                fname="divide",
+            )
+            _check_same_gradients_raise(
+                block_A,
+                block_B,
+                fname="divide",
+            )
+            blocks.append(_divide_block_block(block_1=block_A, block_2=block_B))
     else:
         if torch_jit_is_scripting():
             extra = ""

@@ -1,8 +1,8 @@
-Contribution via pull requests are always welcome. Source code is available from
-`Github`_. Before submitting a pull request, please open an issue to discuss
+Contributions via pull requests are always welcome. Source code is available from
+`GitHub`_. Before submitting a pull request, please open an issue to discuss
 your changes. Use only the `main` branch as the target branch when submitting a pull request (PR).
 
-.. _`Github` : https://github.com/metatensor/metatensor
+.. _`GitHub` : https://github.com/metatensor/metatensor
 
 Interactions with the metatensor projects must follow our `code of conduct`_.
 
@@ -22,13 +22,13 @@ on metatensor:
   1.74 to build metatensor.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
   We require a Python version of at least 3.9.
-- **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
+- **tox**: a Python test runner, see https://tox.readthedocs.io/en/latest/. You
   can install tox with ``pip install tox``.
 
 Additionally, you will need to install the following software, but you should
 not have to interact with them directly:
 
-- **cmake**: we need a cmake version of at least 3.10.
+- **CMake**: we need a CMake version of at least 3.10.
 - **a C++ compiler** we need a compiler supporting C++11. GCC >= 5, clang >= 3.7
   and MSVC >= 15 should all work, although MSVC is not yet tested continuously.
 
@@ -103,7 +103,7 @@ with:
     cd <path/to/metatensor/repo>
     cargo test  # or cargo test --release to run tests in release mode
 
-These are exactly the same tests that will be performed online in our Github CI
+These are exactly the same tests that will be performed online in our GitHub CI
 workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
@@ -137,7 +137,7 @@ should run:
 - ``--release`` to run tests in release mode (default is to run tests in debug mode)
 - ``-- <filter>`` to only run tests whose name contains filter, for example ``cargo test -- keys_to_properties``
 
-Also, you can run individual python tests using `tox`_ if you wish to run a
+Also, you can run individual Python tests using `tox`_ if you wish to run a
 subset of Python tests, for example:
 
 .. code-block:: bash

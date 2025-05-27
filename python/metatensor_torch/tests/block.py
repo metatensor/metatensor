@@ -1,9 +1,9 @@
+import os
 import re
 from typing import List, Optional, Tuple
 
 import pytest
 import torch
-from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, TensorBlock
@@ -100,10 +100,7 @@ def test_repr():
     gradients: ['g']
 """
     assert str(block) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(block) == expected
+    assert repr(block) == expected
 
     expected = """Gradient TensorBlock ('g')
     samples (3): ['sample', 'g']
@@ -112,10 +109,7 @@ def test_repr():
     gradients: None
 """
     assert str(block.gradient("g")) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(block.gradient("g")) == expected
+    assert repr(block.gradient("g")) == expected
 
 
 def test_copy():
@@ -284,14 +278,14 @@ def test_to():
     )
 
     assert block.device.type == torch.device("cpu").type
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(block, torch.float32)
-        check_dtype(block.gradient("g"), torch.float32)
+    check_dtype(block, torch.float32)
+    check_dtype(block.gradient("g"), torch.float32)
 
-    converted = block.to(dtype=torch.float64)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(converted, torch.float64)
-        check_dtype(converted.gradient("g"), torch.float64)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = block.to(dtype=torch.float64, non_blocking=True)
+    check_dtype(converted, torch.float64)
+    check_dtype(converted.gradient("g"), torch.float64)
 
     devices = ["meta", torch.device("meta")]
     if _tests_utils.can_use_mps_backend():
@@ -304,7 +298,7 @@ def test_to():
         devices.append(torch.device("cuda"))
 
     for device in devices:
-        moved = block.to(device=device)
+        moved = block.to(device=device, non_blocking=True)
         assert moved.device.type == torch.device(device).type
         assert moved.gradient("g").device.type == torch.device(device).type
 
@@ -338,9 +332,16 @@ def test_to():
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
-@torch.jit.script
-def check_dtype(block: TensorBlock, dtype: torch.dtype):
-    assert block.dtype == dtype
+if os.environ.get("PYTORCH_JIT") == "0":
+
+    def check_dtype(block: TensorBlock, dtype: torch.dtype):
+        pass
+
+else:
+
+    @torch.jit.script
+    def check_dtype(block: TensorBlock, dtype: torch.dtype):
+        assert block.dtype == dtype
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all

@@ -62,7 +62,7 @@ import ase.visualize.plot
 import matplotlib.pyplot as plt
 import numpy as np
 
-import metatensor
+import metatensor as mts
 
 
 # %%
@@ -90,7 +90,7 @@ plt.show()
 # ``neighbor_type`` indicating the species of the neighboring atoms (atom :math:`j`
 # in the equations)
 
-radial_spectrum = metatensor.load("radial-spectrum.mts")
+radial_spectrum = mts.load("radial-spectrum.mts")
 
 print(radial_spectrum)
 

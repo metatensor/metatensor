@@ -11,7 +11,7 @@ from setuptools.command.sdist import sdist
 ROOT = os.path.realpath(os.path.dirname(__file__))
 METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor_core"))
 
-METATENSOR_OPERATIONS_VERSION = "0.3.2"
+METATENSOR_OPERATIONS_VERSION = "0.3.3"
 
 
 class bdist_egg_disabled(bdist_egg):

@@ -679,17 +679,19 @@ class TensorMap:
         Move the keys and all the blocks in this :py:class:`TensorMap` to the given
         ``dtype``, ``device`` and ``arrays`` backend.
 
-        The arguments to this function can be given as positional or keyword arguments.
-
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This can be either
-            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend); and must
-            be given as a keyword argument (``arrays="numpy"``).
+        :param Optional[str] arrays: new backend to use for the arrays. This can be
+            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
+            and must be given as a keyword argument (``arrays="numpy"``).
+        :param bool non_blocking: If this is ``True`` and the :py:class:`TensorMap`
+            contains ``"torch"`` arrays, the function tries to move the data
+            asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
         arrays = kwargs.pop("arrays", None)
+        non_blocking = kwargs.pop("non_blocking", False)
         dtype, device = _to_arguments_parse("`TensorMap.to`", *args, **kwargs)
 
         blocks = []
@@ -700,7 +702,14 @@ class TensorMap:
             warnings.simplefilter("ignore", DeviceWarning)
 
             for block in self.blocks():
-                blocks.append(block.to(dtype=dtype, device=device, arrays=arrays))
+                blocks.append(
+                    block.to(
+                        dtype=dtype,
+                        device=device,
+                        arrays=arrays,
+                        non_blocking=non_blocking,
+                    )
+                )
 
         return TensorMap(self.keys, blocks)
 

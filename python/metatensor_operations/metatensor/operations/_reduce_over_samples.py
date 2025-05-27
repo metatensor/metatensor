@@ -1,45 +1,3 @@
-"""
-Reduction over samples
-======================
-
-These functions allow to reduce over the sample indices of a :py:class:`TensorMap` or
-:py:class:`TensorBlock` objects, generating a new :py:class:`TensorMap` or
-:py:class:`TensorBlock` in which the values sharing the same indices for the indicated
-``sample_names`` have been combined in a single entry. The functions differ by the type
-of reduction operation, but otherwise operate in the same way. The reduction operation
-loops over the samples in each block/map, and combines all those that only differ by the
-values of the indices associated with the names listed in the ``sample_names`` argument.
-One way to see these operations is that the sample indices describe the non-zero entries
-in a *sparse* array, and the reduction acts much like :func:`numpy.sum`, where
-``sample_names`` plays the same role as the ``axis`` argument. Whenever gradients are
-present, the reduction is performed also on the gradients.
-
-See also :py:func:`metatensor.sum_over_samples_block` and
-:py:func:`metatensor.sum_over_samples` for a detailed discussion with examples.
-
-TensorMap operations
---------------------
-
-.. autofunction:: metatensor.sum_over_samples
-
-.. autofunction:: metatensor.mean_over_samples
-
-.. autofunction:: metatensor.var_over_samples
-
-.. autofunction:: metatensor.std_over_samples
-
-TensorBlock operations
-----------------------
-
-.. autofunction:: metatensor.sum_over_samples_block
-
-.. autofunction:: metatensor.mean_over_samples_block
-
-.. autofunction:: metatensor.var_over_samples_block
-
-.. autofunction:: metatensor.std_over_samples_block
-"""
-
 from typing import List, Optional, Union
 
 import numpy as np
@@ -98,7 +56,7 @@ def _reduce_over_samples_block(
 
     assert reduction in ["sum", "mean", "var", "std"]
     # get the indices of the selected sample
-    sample_selected = [
+    remaining_sample_columns = [
         block_samples.names.index(sample) for sample in remaining_sample_names
     ]
 
@@ -151,48 +109,52 @@ def _reduce_over_samples_block(
         )
     else:
         new_samples, index = _dispatch.unique_with_inverse(
-            block_samples.values[:, sample_selected], axis=0
+            block_samples.values[:, remaining_sample_columns], axis=0
         )
         index = index.reshape(-1)
 
     block_values = block.values
     other_shape = block_values.shape[1:]
-    values_result = _dispatch.zeros_like(
+    values_sum = _dispatch.zeros_like(
         block_values, shape=(new_samples.shape[0],) + other_shape
     )
 
     _dispatch.index_add(
-        values_result,
+        values_sum,
         block_values,
         index,
     )
 
-    # define values_mean for torchscript (won't be used unless there are gradients)
-    values_mean = _dispatch.empty_like(values_result, [0])
+    # pre-declare variables that we'll need to use outside of the if block below
+    values_mean = _dispatch.empty_like(values_sum, [0])
+    values_result = _dispatch.empty_like(values_sum, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
-        bincount = _dispatch.make_like(_dispatch.bincount(index), values_result)
-        values_result = values_result / bincount.reshape(
-            (-1,) + (1,) * len(other_shape)
-        )
+        bincount = _dispatch.make_like(_dispatch.bincount(index), values_sum)
+        bincount = bincount.reshape((-1,) + (1,) * len(other_shape))
+        values_mean = values_sum / bincount
+
         if reduction == "std" or reduction == "var":
-            values_result2 = _dispatch.zeros_like(
+            values_var = _dispatch.zeros_like(
                 block_values, shape=(new_samples.shape[0],) + other_shape
             )
+
             _dispatch.index_add(
-                values_result2,
-                block_values**2,
+                values_var,
+                (block_values - values_mean[index]) ** 2,
                 index,
             )
-            values_result2 = values_result2 / bincount.reshape(
-                (-1,) + (1,) * len(other_shape)
-            )
-            # I need the mean values in the derivatives
-            if len(block.gradients_list()) > 0:
-                values_mean = _dispatch.copy(values_result)
-            values_result = values_result2 - values_result**2
+            values_var = values_var / bincount
+
             if reduction == "std":
-                values_result = _dispatch.sqrt(values_result)
+                values_result = _dispatch.sqrt(values_var)
+            elif reduction == "var":
+                values_result = values_var
+
+        elif reduction == "mean":
+            values_result = values_mean
+    elif reduction == "sum":
+        values_result = values_sum
 
     # check if the reduce operation reduce all the samples
     if len(remaining_sample_names) == 0:
@@ -242,7 +204,7 @@ def _reduce_over_samples_block(
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
-        samples[:, 0] = index[_dispatch.to_index_array(samples[:, 0])]
+        samples[:, 0] = index[samples[:, 0]]
 
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
             samples[:, :], axis=0
@@ -259,9 +221,8 @@ def _reduce_over_samples_block(
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
-            gradient_values_result = gradient_values_result / bincount.reshape(
-                (-1,) + (1,) * len(other_shape)
-            )
+            bincount = bincount.reshape((-1,) + (1,) * len(other_shape))
+            gradient_values_result = gradient_values_result / bincount
             if reduction == "std" or reduction == "var":
                 values_times_gradient_values = _dispatch.zeros_like(gradient_values)
 
@@ -281,9 +242,7 @@ def _reduce_over_samples_block(
                     index_gradient,
                 )
 
-                values_grad_result = values_grad_result / bincount.reshape(
-                    (-1,) + (1,) * len(other_shape)
-                )
+                values_grad_result = values_grad_result / bincount
                 if reduction == "var":
                     for i, s in enumerate(new_gradient_samples):
                         gradient_values_result[i] = (

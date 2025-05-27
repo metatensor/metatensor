@@ -2,6 +2,7 @@ import importlib.util
 import os
 import sys
 
+import pytest
 import torch
 
 from metatensor.torch.atomistic import (
@@ -17,6 +18,7 @@ EXAMPLES = os.path.abspath(
 )
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_export_atomistic_model(tmp_path):
     """test if model defined in `1-export-atomistic-model.py` can run"""
     os.chdir(tmp_path)

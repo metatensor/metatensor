@@ -78,14 +78,15 @@ TensorBlock TensorBlockHolder::copy() const {
 
 TensorBlock TensorBlockHolder::to(
     torch::optional<torch::Dtype> dtype,
-    torch::optional<torch::Device> device
+    torch::optional<torch::Device> device,
+    bool non_blocking
 ) const {
     auto values = this->values().to(
         dtype,
         /*layout*/ torch::nullopt,
         device,
         /*pin_memory*/ torch::nullopt,
-        /*non_blocking*/ false,
+        /*non_blocking*/ non_blocking,
         /*copy*/ false,
         /*memory_format*/ torch::MemoryFormat::Preserve
     );
@@ -114,7 +115,8 @@ TensorBlock TensorBlockHolder::to_positional(
     torch::IValue positional_2,
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device,
-    torch::optional<std::string> arrays
+    torch::optional<std::string> arrays,
+    bool non_blocking
 ) const {
     if (arrays.value_or("torch") != "torch") {
         C10_THROW_ERROR(ValueError,
@@ -130,7 +132,7 @@ TensorBlock TensorBlockHolder::to_positional(
         "`TensorBlock.to`"
     );
 
-    return this->to(parsed_dtype, parsed_device);
+    return this->to(parsed_dtype, parsed_device, non_blocking);
 }
 
 torch::Tensor TensorBlockHolder::values() const {

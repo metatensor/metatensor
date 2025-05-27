@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -37,7 +37,7 @@ def test_self_solve_no_gradients():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
     X = TensorMap(keys, [block_1, block_2])
     Y = TensorMap(keys, [block_3, block_4])
-    w = metatensor.solve(X, Y)
+    w = mts.solve(X, Y)
 
     assert w.keys == X.keys
     assert np.allclose(w.block(0).values, np.array([-1.0, 1.0]), rtol=1e-13)
@@ -46,5 +46,5 @@ def test_self_solve_no_gradients():
         assert block_w.samples == Y.block(key).properties
         assert block_w.properties == X.block(key).properties
 
-    Ydot = metatensor.dot(X, w)
-    assert metatensor.allclose(Ydot, Y)
+    Ydot = mts.dot(X, w)
+    assert mts.allclose(Ydot, Y)

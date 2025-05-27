@@ -102,7 +102,7 @@ def lstsq(
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> values_X = np.array(
     ...     [
     ...         [1.0, 2.0],
@@ -123,7 +123,7 @@ def lstsq(
     >>> block_Y = TensorBlock(values_Y, samples, components, properties)
     >>> X = TensorMap(keys, [block_X])
     >>> Y = TensorMap(keys, [block_Y])
-    >>> w = metatensor.lstsq(X, Y, rcond=1e-10)
+    >>> w = mts.lstsq(X, Y, rcond=1e-10)
 
     We take the transpose here
 

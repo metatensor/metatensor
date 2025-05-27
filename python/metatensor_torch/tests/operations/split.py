@@ -1,10 +1,10 @@
 import io
+import os
 
 import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 from metatensor.torch import Labels, TensorMap
 
 
@@ -39,18 +39,16 @@ from metatensor.torch import Labels, TensorMap
 def test_split(selections):
     tensor = TensorMap(
         keys=Labels.single(),
-        blocks=[
-            metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
-        ],
+        blocks=[mts.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))],
     )
     samples_selections, properties_selections = selections
 
-    split_tensors_samples = metatensor.torch.split(
+    split_tensors_samples = mts.split(
         tensor,
         axis="samples",
         selections=samples_selections,
     )
-    split_tensors_properties = metatensor.torch.split(
+    split_tensors_properties = mts.split(
         tensor,
         axis="properties",
         selections=properties_selections,
@@ -59,13 +57,11 @@ def test_split(selections):
     # check type
     assert isinstance(split_tensors_samples, list)
     assert isinstance(split_tensors_samples[0], torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_tensors_samples[0]._type().name() == "TensorMap"
+    assert split_tensors_samples[0]._type().name() == "TensorMap"
 
     assert isinstance(split_tensors_properties, list)
     assert isinstance(split_tensors_properties[0], torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_tensors_properties[0]._type().name() == "TensorMap"
+    assert split_tensors_properties[0]._type().name() == "TensorMap"
 
     # check values
     assert torch.equal(
@@ -83,7 +79,7 @@ def test_split(selections):
 
 
 def test_split_block():
-    block = metatensor.torch.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
+    block = mts.block_from_array(torch.tensor([[0, 1, 2], [3, 4, 5]]))
     split_labels_samples = [
         Labels(names=["sample"], values=torch.tensor([[0]])),
         Labels(names=["sample"], values=torch.tensor([[1]])),
@@ -92,12 +88,12 @@ def test_split_block():
         Labels(names=["property"], values=torch.tensor([[0], [1]])),
         Labels(names=["property"], values=torch.tensor([[2]])),
     ]
-    split_blocks_samples = metatensor.torch.split_block(
+    split_blocks_samples = mts.split_block(
         block,
         axis="samples",
         selections=split_labels_samples,
     )
-    split_blocks_properties = metatensor.torch.split_block(
+    split_blocks_properties = mts.split_block(
         block,
         axis="properties",
         selections=split_labels_properties,
@@ -106,13 +102,11 @@ def test_split_block():
     # check type
     assert isinstance(split_blocks_samples, list)
     assert isinstance(split_blocks_samples[0], torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_blocks_samples[0]._type().name() == "TensorBlock"
+    assert split_blocks_samples[0]._type().name() == "TensorBlock"
 
     assert isinstance(split_blocks_properties, list)
     assert isinstance(split_blocks_properties[0], torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert split_blocks_properties[0]._type().name() == "TensorBlock"
+    assert split_blocks_properties[0]._type().name() == "TensorBlock"
 
     # check values
     assert torch.equal(split_blocks_samples[0].values, torch.tensor([[0, 1, 2]]))
@@ -123,13 +117,14 @@ def test_split_block():
     assert torch.equal(split_blocks_properties[1].values, torch.tensor([[2], [5]]))
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.split, buffer)
+        torch.jit.save(mts.split, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.split_block, buffer)
+        torch.jit.save(mts.split_block, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

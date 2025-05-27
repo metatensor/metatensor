@@ -43,7 +43,7 @@ import ase
 import ase.visualize.plot
 import matplotlib.pyplot as plt
 
-import metatensor
+import metatensor as mts
 
 
 # %%
@@ -71,7 +71,7 @@ plt.show()
 
 # sphinx_gallery_thumbnail_path = '../static/images/TensorMap.*'
 
-tensor = metatensor.load("spherical-expansion.mts")
+tensor = mts.load("spherical-expansion.mts")
 print(type(tensor))
 
 # %%

@@ -156,8 +156,8 @@ TORCH_LIBRARY(metatensor, m) {
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
         .def("to",
-            static_cast<Labels (LabelsHolder::*)(torch::IValue) const>(&LabelsHolder::to),
-            DOCSTRING, {torch::arg("device")}
+            static_cast<Labels (LabelsHolder::*)(torch::IValue, bool) const>(&LabelsHolder::to),
+            DOCSTRING, {torch::arg("device"), torch::arg("non_blocking") = false}
         )
         .def_property("device", &LabelsHolder::device)
         .def("position", &LabelsHolder::position, DOCSTRING,
@@ -216,7 +216,8 @@ TORCH_LIBRARY(metatensor, m) {
             torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
-            torch::arg("arrays") = torch::nullopt
+            torch::arg("arrays") = torch::nullopt,
+            torch::arg("non_blocking") = false
         })
         .def("save", &TensorBlockHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorBlockHolder::save_buffer)
@@ -281,7 +282,8 @@ TORCH_LIBRARY(metatensor, m) {
             torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
-            torch::arg("arrays") = torch::nullopt
+            torch::arg("arrays") = torch::nullopt,
+            torch::arg("non_blocking") = false
         })
         .def("print", &TensorMapHolder::print, DOCSTRING,
             {torch::arg("max_keys")}

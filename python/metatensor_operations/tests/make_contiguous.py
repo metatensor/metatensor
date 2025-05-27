@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import TensorBlock, TensorMap
 
 
@@ -12,7 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 @pytest.fixture
 def tensor():
     """Loads a TensorMap from file for use in tests"""
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 def _non_contiguous_block(block: TensorBlock) -> TensorBlock:
@@ -59,10 +59,10 @@ def non_contiguous_tensor(tensor) -> TensorMap:
 def test_make_contiguous_block(tensor):
     block = _non_contiguous_block(tensor.block(0))
 
-    assert not metatensor.is_contiguous_block(block)
-    assert metatensor.is_contiguous_block(metatensor.make_contiguous_block(block))
+    assert not mts.is_contiguous_block(block)
+    assert mts.is_contiguous_block(mts.make_contiguous_block(block))
 
 
 def test_make_contiguous(non_contiguous_tensor):
-    assert not metatensor.is_contiguous(non_contiguous_tensor)
-    assert metatensor.is_contiguous(metatensor.make_contiguous(non_contiguous_tensor))
+    assert not mts.is_contiguous(non_contiguous_tensor)
+    assert mts.is_contiguous(mts.make_contiguous(non_contiguous_tensor))

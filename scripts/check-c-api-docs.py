@@ -1,6 +1,7 @@
 """
 A small script checking that all the C API functions are documented
 """
+
 import os
 import sys
 

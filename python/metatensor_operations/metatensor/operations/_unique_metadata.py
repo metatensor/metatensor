@@ -1,7 +1,3 @@
-"""
-Module for finding unique metadata for TensorMaps and TensorBlocks
-"""
-
 from typing import List, Optional, Tuple, Union
 
 from . import _dispatch
@@ -9,7 +5,7 @@ from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -93,7 +89,7 @@ def unique_metadata(
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(5, 3),
     ...     samples=Labels(
@@ -105,11 +101,7 @@ def unique_metadata(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block.copy()])
-    >>> unique_systems = metatensor.unique_metadata(
-    ...     tensor,
-    ...     axis="samples",
-    ...     names=["system"],
-    ... )
+    >>> unique_systems = mts.unique_metadata(tensor, axis="samples", names=["system"])
     >>> unique_systems
     Labels(
         system
@@ -133,7 +125,7 @@ def unique_metadata(
     ... )
     >>> block.add_gradient("positions", gradient)
     >>> tensor = TensorMap(keys, [block])
-    >>> metatensor.unique_metadata(
+    >>> mts.unique_metadata(
     ...     tensor,
     ...     axis="samples",
     ...     names=["system", "atom"],
@@ -164,7 +156,7 @@ def unique_metadata(
     """
     # Parse input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor, TensorMap):
+        if not isinstance_metatensor(tensor, "TensorMap"):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
@@ -224,7 +216,7 @@ def unique_metadata_block(
     """
     # Parse input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(block, TensorBlock):
+        if not isinstance_metatensor(block, "TensorBlock"):
             raise TypeError(
                 f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )

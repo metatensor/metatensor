@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels
 
 
@@ -12,7 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 def test_split_block_samples():
     # use a TensorMap with multiple components
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=6)
 
     selections = [
@@ -21,7 +21,7 @@ def test_split_block_samples():
         Labels(names=["system"], values=np.array([[1], [5], [8], [9]])),
     ]
 
-    splitted = metatensor.split_block(block, axis="samples", selections=selections)
+    splitted = mts.split_block(block, axis="samples", selections=selections)
 
     assert len(splitted) == 3
     assert sum(len(b.samples) for b in splitted) == len(block.samples)
@@ -60,7 +60,7 @@ def test_split_block_samples():
 
 def test_split_block_samples_not_everything():
     # use a TensorMap with multiple components
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=6)
 
     # using `selections` with some samples not present in the initial block,
@@ -71,7 +71,7 @@ def test_split_block_samples_not_everything():
         # 18 is not in the samples
         Labels(names=["system"], values=np.array([[18]])),
     ]
-    splitted = metatensor.split_block(block, axis="samples", selections=selections)
+    splitted = mts.split_block(block, axis="samples", selections=selections)
 
     assert len(splitted) == 2
     partial = splitted[0]
@@ -85,11 +85,11 @@ def test_split_block_samples_not_everything():
     assert empty.properties == block.properties
 
     # an empty list of selections gets you an empty list of blocks
-    assert metatensor.split_block(block, axis="samples", selections=[]) == []
+    assert mts.split_block(block, axis="samples", selections=[]) == []
 
 
 def test_split_samples():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     selections = [
         Labels(names=["system"], values=np.array([[0], [6], [7]])),
@@ -97,7 +97,7 @@ def test_split_samples():
         Labels(names=["system"], values=np.array([[1], [5], [8], [9]])),
     ]
 
-    splitted = metatensor.split(tensor, axis="samples", selections=selections)
+    splitted = mts.split(tensor, axis="samples", selections=selections)
 
     for split_tensor in splitted:
         assert split_tensor.keys == tensor.keys
@@ -119,12 +119,12 @@ def test_split_samples():
             assert split_block.properties == block.properties
 
     # an empty list of selections gets you an empty list of tensors
-    assert metatensor.split(tensor, axis="samples", selections=[]) == []
+    assert mts.split(tensor, axis="samples", selections=[]) == []
 
 
 def test_split_block_properties():
     # TensorMap with multiple properties
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
     block = tensor.block(center_type=8, neighbor_1_type=6, neighbor_2_type=8)
 
     selections = [
@@ -132,7 +132,7 @@ def test_split_block_properties():
         Labels(names=["l", "n_2"], values=np.array([[4, 2], [4, 3], [4, 1]])),
         Labels(names=["l", "n_2"], values=np.array([[3, 2], [1, 1]])),
     ]
-    splitted = metatensor.split_block(block, axis="properties", selections=selections)
+    splitted = mts.split_block(block, axis="properties", selections=selections)
 
     assert len(splitted) == 3
     for split_block, expected_properties in zip(splitted, selections):
@@ -161,19 +161,19 @@ def test_split_block_properties():
             assert np.all(split_gradient.values == gradient.values[..., mask])
 
     # an empty list of selections gets you an empty list of blocks
-    assert metatensor.split_block(block, axis="properties", selections=[]) == []
+    assert mts.split_block(block, axis="properties", selections=[]) == []
 
 
 def test_split_properties():
     # TensorMap with multiple properties
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     selections = [
         Labels(names=["l", "n_2"], values=np.array([[0, 0], [1, 3], [3, 1]])),
         Labels(names=["l", "n_2"], values=np.array([[4, 2], [4, 3], [4, 1]])),
         Labels(names=["l", "n_2"], values=np.array([[3, 2], [1, 1]])),
     ]
-    splitted = metatensor.split(tensor, axis="properties", selections=selections)
+    splitted = mts.split(tensor, axis="properties", selections=selections)
 
     for split_tensor in splitted:
         assert split_tensor.keys == tensor.keys
@@ -188,11 +188,11 @@ def test_split_properties():
                 assert p in expected_properties
 
     # an empty list of selections gets you an empty list of blocks
-    assert metatensor.split(tensor, axis="properties", selections=[]) == []
+    assert mts.split(tensor, axis="properties", selections=[]) == []
 
 
 def test_split_errors():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     block = tensor.block(4)
     selections = [
         Labels(names=["system"], values=np.array([[0], [6], [7]])),
@@ -205,26 +205,26 @@ def test_split_errors():
         "not <class 'metatensor.block.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.split(block, axis="samples", selections=selections)
+        mts.split(block, axis="samples", selections=selections)
 
     message = "axis must be a string, not <class 'float'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.split(tensor, axis=3.14, selections=selections)
+        mts.split(tensor, axis=3.14, selections=selections)
 
     message = "axis must be either 'samples' or 'properties'"
     with pytest.raises(ValueError, match=message):
-        metatensor.split(tensor, axis="buongiorno!", selections=selections)
+        mts.split(tensor, axis="buongiorno!", selections=selections)
 
     message = "`selections` must be a list, not <class 'metatensor.labels.Labels'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.split(tensor, axis="samples", selections=selections[0])
+        mts.split(tensor, axis="samples", selections=selections[0])
 
     message = (
         "`selection` must be metatensor Labels, an array or List\\[int\\], "
         "not <class 'str'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.split(tensor, axis="samples", selections=["a", "b", "c"])
+        mts.split(tensor, axis="samples", selections=["a", "b", "c"])
 
     selections = [
         Labels(names=["red"], values=np.array([[0], [6], [7]])),
@@ -234,7 +234,7 @@ def test_split_errors():
 
     message = "invalid sample name 'red' which is not part of the input"
     with pytest.raises(ValueError, match=message):
-        metatensor.split(tensor, axis="samples", selections=selections)
+        mts.split(tensor, axis="samples", selections=selections)
 
     selections = [
         Labels(names=["missing", "atom"], values=np.array([[0, 1], [6, 7], [7, 4]])),
@@ -247,11 +247,11 @@ def test_split_errors():
 
     message = "invalid sample name 'missing' which is not part of the input"
     with pytest.raises(ValueError, match=message):
-        metatensor.split(tensor, axis="samples", selections=selections)
+        mts.split(tensor, axis="samples", selections=selections)
 
     message = (
         "`block` must be a metatensor TensorBlock, "
         "not <class 'metatensor.tensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.split_block(tensor, axis="samples", selections=[])
+        mts.split_block(tensor, axis="samples", selections=[])

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -13,7 +13,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     msg = (
         "Tensor must have at least one gradient. When no gradients are present certain "
@@ -26,9 +26,7 @@ def tensor():
 
 @pytest.fixture
 def components_tensor():
-    components_tensor = metatensor.load(
-        os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts")
-    )
+    components_tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     # Test if Tensormaps have at least one gradient. This avoids dropping gradient
     # tests silently by removing gradients from the reference data
@@ -40,39 +38,39 @@ def components_tensor():
 def test_wrong_axis(tensor):
     """Test error with unknown `axis` keyword."""
     with pytest.raises(ValueError, match="values for the `axis` parameter"):
-        metatensor.join([tensor, tensor, tensor], axis="foo")
+        mts.join([tensor, tensor, tensor], axis="foo")
 
 
 def test_wrong_type(tensor):
     """Test if a wrong type (e.g., TensorMap) is provided."""
     with pytest.raises(TypeError, match="list or a tuple"):
-        metatensor.join(tensor, axis="properties")
+        mts.join(tensor, axis="properties")
 
 
 def test_wrong_different_keys(tensor):
     """Test if a wrong type (e.g., TensorMap) is provided."""
     match = "'foo' is not a valid option for `different_keys`"
     with pytest.raises(ValueError, match=match):
-        metatensor.join([tensor, tensor], axis="properties", different_keys="foo")
+        mts.join([tensor, tensor], axis="properties", different_keys="foo")
 
 
 @pytest.mark.parametrize("tensor", ([], ()))
 def test_no_tensormaps(tensor):
     """Test if an empty list or tuple is provided."""
     with pytest.raises(ValueError, match="provide at least one"):
-        metatensor.join(tensor, axis="properties")
+        mts.join(tensor, axis="properties")
 
 
 def test_single_tensormap(tensor):
     """Test if only one TensorMap is provided."""
-    joined_tensor = metatensor.join([tensor], axis="properties")
+    joined_tensor = mts.join([tensor], axis="properties")
     assert joined_tensor is tensor
 
 
 @pytest.mark.parametrize("axis", ["samples", "properties"])
 def test_join_components(components_tensor, axis):
     """Test join for tensors with components."""
-    metatensor.join([components_tensor, components_tensor], axis=axis)
+    mts.join([components_tensor, components_tensor], axis=axis)
 
 
 def test_join_properties_metadata(tensor):
@@ -80,7 +78,7 @@ def test_join_properties_metadata(tensor):
 
     We check for the values below"""
 
-    joined_tensor = metatensor.join([tensor, tensor, tensor], axis="properties")
+    joined_tensor = mts.join([tensor, tensor, tensor], axis="properties")
 
     # test property names
     names = tensor.block(0).properties.names
@@ -102,17 +100,17 @@ def test_join_properties_values(tensor):
         tensor[0].properties.names,
         tensor[0].properties.values[:1],
     )
-    slice_1 = metatensor.slice(tensor, axis="properties", selection=first_property)
+    slice_1 = mts.slice(tensor, axis="properties", selection=first_property)
 
     other_properties = Labels(
         tensor[0].properties.names,
         tensor[0].properties.values[1:],
     )
-    slice_2 = metatensor.slice(tensor, axis="properties", selection=other_properties)
+    slice_2 = mts.slice(tensor, axis="properties", selection=other_properties)
 
-    joined_tensor = metatensor.join([slice_1, slice_2], axis="properties")
+    joined_tensor = mts.join([slice_1, slice_2], axis="properties")
 
-    # We can not use `metatensor.equal_raise` for the checks because the meta data
+    # We can not use `mts.equal_raise` for the checks because the meta data
     # differs by the tensor entry.
     for key, block in tensor.items():
         joined_block = joined_tensor[key]
@@ -127,7 +125,7 @@ def test_join_properties_values(tensor):
 def test_join_properties_with_same_property_names(tensor):
     """Test join function with three tensor along properties"""
 
-    joined_tensor = metatensor.join([tensor, tensor, tensor], axis="properties")
+    joined_tensor = mts.join([tensor, tensor, tensor], axis="properties")
 
     # test property names
     names = tensor.block(0).properties.names
@@ -174,14 +172,14 @@ def test_join_properties_with_different_property_names():
         ],
     )
 
-    joined_tensor = metatensor.join([tensor_map_a, tensor_map_b], axis="properties")
+    joined_tensor = mts.join([tensor_map_a, tensor_map_b], axis="properties")
     assert joined_tensor.property_names == ["tensor", "property"]
     assert len(joined_tensor[0].properties) == 2
 
 
 def test_join_samples_metadata(tensor):
     """Test join function with three tensors along `samples`"""
-    joined_tensor = metatensor.join([tensor, tensor, tensor], axis="samples")
+    joined_tensor = mts.join([tensor, tensor, tensor], axis="samples")
 
     # test sample values
     assert len(joined_tensor.block(0).samples) == 3 * len(tensor.block(0).samples)
@@ -204,17 +202,17 @@ def test_join_samples_values(tensor):
         tensor[0].samples.names,
         tensor[0].samples.values[:1],
     )
-    slice_1 = metatensor.slice(tensor, axis="samples", selection=first_samples)
+    slice_1 = mts.slice(tensor, axis="samples", selection=first_samples)
 
     other_samples = Labels(
         tensor[0].samples.names,
         tensor[0].samples.values[1:],
     )
-    slice_2 = metatensor.slice(tensor, axis="samples", selection=other_samples)
+    slice_2 = mts.slice(tensor, axis="samples", selection=other_samples)
 
-    joined_tensor = metatensor.join([slice_1, slice_2], axis="samples")
+    joined_tensor = mts.join([slice_1, slice_2], axis="samples")
 
-    # We can not use #metatensor.equal_raise for the checks because the meta data
+    # We can not use #mts.equal_raise for the checks because the meta data
     # differs by the tensor entry.
     for key, block in tensor.items():
         joined_block = joined_tensor[key]
@@ -257,7 +255,7 @@ def test_join_samples_with_different_sample_names():
     )
 
     with pytest.raises(ValueError, match="Sample names are not the same!"):
-        metatensor.join([tensor_map_a, tensor_map_b], axis="samples")
+        mts.join([tensor_map_a, tensor_map_b], axis="samples")
 
 
 def test_split_join_samples(tensor):
@@ -266,12 +264,10 @@ def test_split_join_samples(tensor):
     labels_1 = Labels(names=["system"], values=np.arange(4).reshape(-1, 1))
     labels_2 = Labels(names=["system"], values=np.arange(4, 10).reshape(-1, 1))
 
-    split_tensors = metatensor.split(
+    split_tensors = mts.split(
         tensor=tensor, axis="samples", selections=[labels_1, labels_2]
     )
-    joined_tensor = metatensor.join(
-        split_tensors, axis="samples", remove_tensor_name=True
-    )
+    joined_tensor = mts.join(split_tensors, axis="samples", remove_tensor_name=True)
 
     assert joined_tensor == tensor
 
@@ -283,12 +279,10 @@ def test_split_join_properties(tensor):
     labels_1 = Labels(names=properties.names, values=properties.values[:5])
     labels_2 = Labels(names=properties.names, values=properties.values[5:])
 
-    split_tensors = metatensor.split(
+    split_tensors = mts.split(
         tensor=tensor, axis="properties", selections=[labels_1, labels_2]
     )
-    joined_tensor = metatensor.join(
-        split_tensors, axis="properties", remove_tensor_name=True
-    )
+    joined_tensor = mts.join(split_tensors, axis="properties", remove_tensor_name=True)
 
     assert joined_tensor == tensor
 
@@ -300,9 +294,9 @@ def test_intersection_join(axis, components_tensor):
     labels_remove = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[:1])
     labels_present = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[1:])
 
-    tensor_2 = metatensor.drop_blocks(components_tensor, labels_remove, copy=True)
+    tensor_2 = mts.drop_blocks(components_tensor, labels_remove, copy=True)
 
-    joined_tensor = metatensor.join(
+    joined_tensor = mts.join(
         [tensor_1, tensor_2], axis=axis, different_keys="intersection"
     )
 
@@ -315,11 +309,9 @@ def test_union_join(axis, components_tensor):
 
     labels_remove = Labels(names=tensor_1.keys.names, values=tensor_1.keys.values[:1])
 
-    tensor_2 = metatensor.drop_blocks(components_tensor, labels_remove, copy=True)
+    tensor_2 = mts.drop_blocks(components_tensor, labels_remove, copy=True)
 
-    joined_tensor = metatensor.join(
-        [tensor_1, tensor_2], axis=axis, different_keys="union"
-    )
+    joined_tensor = mts.join([tensor_1, tensor_2], axis=axis, different_keys="union")
 
     assert joined_tensor.keys == tensor_1.keys
 
@@ -379,7 +371,7 @@ def test_sort_samples(axis, sort_samples):
     tensor_1 = TensorMap(keys=keys, blocks=[block_1])
 
     # reverse order of tensors
-    joined_tensor = metatensor.join(
+    joined_tensor = mts.join(
         [tensor_1, tensor_0],
         axis=axis,
         sort_samples=sort_samples,

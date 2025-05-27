@@ -4,11 +4,11 @@
 import numpy as np
 import pytest
 
+import metatensor as mts
+from metatensor import TensorMap
+
 
 torch = pytest.importorskip("torch")
-
-import metatensor  # noqa: E402
-from metatensor import TensorMap  # noqa: E402
 from metatensor.learn.data import DataLoader, Dataset, group  # noqa: E402
 
 from . import _tests_utils  # noqa: E402
@@ -42,7 +42,7 @@ def test_dataloader_indices(create_dataset, tmpdir):
         for exp_idxs, batch in zip(expected_indices, dataloader):
             assert (
                 np.sort(
-                    metatensor.unique_metadata(
+                    mts.unique_metadata(
                         batch.input, "samples", "sample_index"
                     ).values.reshape(-1)
                 ).tolist()
@@ -75,7 +75,7 @@ def test_dataloader_indices_indexed(create_dataset, tmpdir):
         for exp_idxs, batch in zip(expected_indices, dataloader):
             assert (
                 np.sort(
-                    metatensor.unique_metadata(
+                    mts.unique_metadata(
                         batch.input, "samples", "sample_index"
                     ).values.reshape(-1)
                 ).tolist()
@@ -125,9 +125,7 @@ def test_dataloader_collate_fn_group_and_join(tmpdir):
                 assert all(
                     [
                         A
-                        in metatensor.unique_metadata(
-                            field, "samples", "sample_index"
-                        ).values
+                        in mts.unique_metadata(field, "samples", "sample_index").values
                         for A in batch.sample_id
                     ]
                 )
@@ -148,7 +146,7 @@ def test_dataloader_collate_fn_group(tmpdir):
                     assert isinstance(field[i], TensorMap)
                     assert (
                         A
-                        == metatensor.unique_metadata(
+                        == mts.unique_metadata(
                             field[i], "samples", "sample_index"
                         ).values[0]
                     )

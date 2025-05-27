@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -12,7 +12,7 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 def test_drop_empty_tensor():
@@ -20,8 +20,8 @@ def test_drop_empty_tensor():
     Tests that dropping blocks from an empty tensor returns an empty tensor.
     """
     empty_tensor = TensorMap(keys=Labels.empty(["a", "b"]), blocks=[])
-    new_tensor = metatensor.drop_blocks(empty_tensor, Labels.empty(["a", "b"]))
-    assert metatensor.equal(new_tensor, empty_tensor)
+    new_tensor = mts.drop_blocks(empty_tensor, Labels.empty(["a", "b"]))
+    assert mts.equal(new_tensor, empty_tensor)
 
 
 def test_drop_block_with_an_empty_dimension():
@@ -53,7 +53,7 @@ def test_drop_block_with_an_empty_dimension():
     tensor = TensorMap(keys=keys, blocks=[block_1, block_2, block_3])
 
     # Drop blocks with empty dimensions
-    new_tensor = metatensor.drop_empty_blocks(tensor, copy=False)
+    new_tensor = mts.drop_empty_blocks(tensor, copy=False)
     assert len(new_tensor) == 2
 
     # Check which idxes were kept
@@ -72,8 +72,8 @@ def test_drop_empty_blocks_in_empty_tensor():
     Tests that dropping empty blocks from an empty tensor returns an empty tensor.
     """
     empty_tensor = TensorMap(keys=Labels.empty(["key_1", "key_2"]), blocks=[])
-    new_tensor = metatensor.drop_empty_blocks(empty_tensor, copy=False)
-    assert metatensor.equal(new_tensor, empty_tensor)
+    new_tensor = mts.drop_empty_blocks(empty_tensor, copy=False)
+    assert mts.equal(new_tensor, empty_tensor)
 
 
 def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
@@ -106,7 +106,7 @@ def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
     tensor = TensorMap(keys=keys, blocks=[block_1, block_2, block_3])
 
     # Drop blocks with empty dimensions
-    new_tensor = metatensor.drop_empty_blocks(tensor, copy=False)
+    new_tensor = mts.drop_empty_blocks(tensor, copy=False)
     assert len(new_tensor) == 3
 
     # Check which idxes were kept
@@ -122,9 +122,9 @@ def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
 
 
 def test_drop_all(tensor):
-    tensor = metatensor.drop_blocks(tensor, tensor.keys)
+    tensor = mts.drop_blocks(tensor, tensor.keys)
     empty_tensor = TensorMap(keys=Labels.empty(tensor.keys.names), blocks=[])
-    assert metatensor.equal(tensor, empty_tensor)
+    assert mts.equal(tensor, empty_tensor)
 
 
 def test_drop_two_random_keys(tensor):
@@ -143,22 +143,22 @@ def test_drop_two_random_keys(tensor):
     ref_blocks = [tensor[key].copy() for key in keys_to_keep]
     ref_tensor = TensorMap(keys_to_keep, ref_blocks)
 
-    new_tensor = metatensor.drop_blocks(tensor, keys_to_drop)
-    assert metatensor.equal(new_tensor, ref_tensor)
+    new_tensor = mts.drop_blocks(tensor, keys_to_drop)
+    assert mts.equal(new_tensor, ref_tensor)
 
 
 def test_drop_selection(tensor):
     assert np.unique(tensor.keys["center_type"]).tolist() == [1, 6, 8]
 
     keys_to_drop = Labels("center_type", np.array([[1]]))
-    new_tensor = metatensor.drop_blocks(tensor, keys_to_drop)
+    new_tensor = mts.drop_blocks(tensor, keys_to_drop)
 
     assert np.unique(new_tensor.keys["center_type"]).tolist() == [6, 8]
 
 
 def test_drop_nothing(tensor):
     empty_key = Labels.empty(tensor.keys.names)
-    new_tensor = metatensor.drop_blocks(tensor, empty_key)
+    new_tensor = mts.drop_blocks(tensor, empty_key)
     assert new_tensor == tensor
 
 
@@ -176,13 +176,13 @@ def test_copy_flag(tensor):
     )
 
     # Drop blocks with copy=True flag
-    new_tensor_copied = metatensor.drop_blocks(tensor, keys_to_drop, copy=True)
+    new_tensor_copied = mts.drop_blocks(tensor, keys_to_drop, copy=True)
 
     # Drop blocks with copy=False flag
-    new_tensor_not_copied = metatensor.drop_blocks(tensor, keys_to_drop, copy=False)
+    new_tensor_not_copied = mts.drop_blocks(tensor, keys_to_drop, copy=False)
 
     # Check that the resulting tensor are equal whether or not they are copied
-    assert metatensor.equal(new_tensor_copied, new_tensor_not_copied)
+    assert mts.equal(new_tensor_copied, new_tensor_not_copied)
 
     # Now modify the original tensor's block values in place
     for block in tensor.blocks():

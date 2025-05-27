@@ -1,7 +1,7 @@
 import ase
 from featomic import SphericalExpansion
 
-import metatensor
+import metatensor as mts
 
 
 co2 = ase.Atoms(
@@ -27,4 +27,4 @@ calculator = SphericalExpansion(
 
 descriptor = calculator.compute(co2, gradients=["positions"])
 
-metatensor.save("spherical-expansion.mts", descriptor)
+mts.save("spherical-expansion.mts", descriptor)

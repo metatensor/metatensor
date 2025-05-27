@@ -57,11 +57,11 @@ def block_from_array(
         corresponding axis. The returned :py:class:`TensorBlock` has no gradients.
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> # Construct a simple 4D array:
     >>> array = np.linspace(0, 10, 42).reshape((7, 3, 1, 2))
     >>> # Transform it into a TensorBlock:
-    >>> tensor_block = metatensor.block_from_array(array)
+    >>> tensor_block = mts.block_from_array(array)
     >>> print(tensor_block)
     TensorBlock
         samples (7): ['sample']
@@ -74,7 +74,7 @@ def block_from_array(
     >>> # High-dimensional tensor
     >>> array = np.linspace(0, 10, 60).reshape((2, 3, 5, 1, 2))
     >>> # Specify axes names:
-    >>> tensor_block = metatensor.block_from_array(
+    >>> tensor_block = mts.block_from_array(
     ...     array, sample_names=["a", "b"], property_names=["y"]
     ... )
     >>> print(tensor_block)

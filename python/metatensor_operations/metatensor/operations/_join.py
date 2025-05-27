@@ -5,12 +5,12 @@ from ._backend import (
     Labels,
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
+from ._manipulate_dimension import remove_dimension
 from ._utils import _check_same_keys_raise
-from .manipulate_dimension import remove_dimension
 
 
 def _disjoint_tensor_labels(tensors: List[TensorMap], axis: str) -> bool:
@@ -227,7 +227,7 @@ def join(
        ``remove_tensor_name=True`` we keep the names and join the values
 
        >>> import numpy as np
-       >>> import metatensor
+       >>> import metatensor as mts
        >>> from metatensor import Labels, TensorBlock, TensorMap
 
        >>> values = np.array([[1.1, 2.1, 3.1]])
@@ -256,7 +256,7 @@ def join(
 
        joining along the properties leads
 
-       >>> joined_tensor = metatensor.join(
+       >>> joined_tensor = mts.join(
        ...     [tensor_1, tensor_2], axis="properties", remove_tensor_name=True
        ... )
        >>> joined_tensor[0].properties
@@ -273,7 +273,7 @@ def join(
        If ``remove_tensor_name=False`` There will be an extra dimension ``tensor``
        added
 
-       >>> joined_tensor = metatensor.join(
+       >>> joined_tensor = mts.join(
        ...     [tensor_1, tensor_2], axis="properties", remove_tensor_name=False
        ... )
        >>> joined_tensor[0].properties
@@ -305,7 +305,7 @@ def join(
 
        joining along properties leads to
 
-       >>> joined_tensor = metatensor.join([tensor_1, tensor_3], axis="properties")
+       >>> joined_tensor = mts.join([tensor_1, tensor_3], axis="properties")
        >>> joined_tensor[0].properties
        Labels(
            tensor  n
@@ -336,7 +336,7 @@ def join(
 
        joining along properties leads to
 
-        >>> joined_tensor = metatensor.join([tensor_1, tensor_4], axis="properties")
+        >>> joined_tensor = mts.join([tensor_1, tensor_4], axis="properties")
         >>> joined_tensor[0].properties
         Labels(
             tensor  property
@@ -353,7 +353,7 @@ def join(
             raise TypeError(f"`tensor` must be a list or a tuple, not {type(tensors)}")
 
         for tensor in tensors:
-            if not is_metatensor_class(tensor, TensorMap):
+            if not isinstance_metatensor(tensor, "TensorMap"):
                 raise TypeError(
                     "`tensors` elements must be metatensor TensorMap, "
                     f"not {type(tensor)}"

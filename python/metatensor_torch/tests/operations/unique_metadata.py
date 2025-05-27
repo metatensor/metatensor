@@ -3,14 +3,13 @@ import os
 
 import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 @pytest.fixture
 def tensor():
-    return metatensor.torch.load(
+    return mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -25,7 +24,7 @@ def tensor():
 
 
 def test_unique_metadata(tensor):
-    unique_labels = metatensor.torch.unique_metadata(
+    unique_labels = mts.unique_metadata(
         tensor,
         axis="samples",
         names=["system"],
@@ -33,14 +32,13 @@ def test_unique_metadata(tensor):
 
     # check type
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     # check label names
     assert unique_labels.names == ["system"]
 
     # repeat with gradients
-    unique_labels = metatensor.torch.unique_metadata(
+    unique_labels = mts.unique_metadata(
         tensor,
         axis="samples",
         names=["atom"],
@@ -48,8 +46,7 @@ def test_unique_metadata(tensor):
     )
 
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     assert unique_labels.names == ["atom"]
 
@@ -57,7 +54,7 @@ def test_unique_metadata(tensor):
 def test_unique_metadata_block(tensor):
     block = tensor.block(0)
 
-    unique_labels = metatensor.torch.unique_metadata_block(
+    unique_labels = mts.unique_metadata_block(
         block,
         axis="samples",
         names=["system"],
@@ -65,14 +62,13 @@ def test_unique_metadata_block(tensor):
 
     # check type
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     # check label names
     assert unique_labels.names == ["system"]
 
     # repeat with gradients
-    unique_labels = metatensor.torch.unique_metadata_block(
+    unique_labels = mts.unique_metadata_block(
         block,
         axis="samples",
         names=["atom"],
@@ -80,14 +76,14 @@ def test_unique_metadata_block(tensor):
     )
 
     assert isinstance(unique_labels, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert unique_labels._type().name() == "Labels"
+    assert unique_labels._type().name() == "Labels"
 
     assert unique_labels.names == ["atom"]
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.unique_metadata, buffer)
+        torch.jit.save(mts.unique_metadata, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

@@ -425,33 +425,33 @@ mod tests {
 
         let tensor = TensorMap::new(keys, blocks).unwrap();
 
-        let selection = Labels::new(&["key_1", "key_2"], vec![1, 1]).unwrap();
+        let selection = Labels::new_i32(&["key_1", "key_2"], vec![1, 1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2]
         );
 
-        let selection = Labels::new(&["key_1"], vec![1]).unwrap();
+        let selection = Labels::new_i32(&["key_1"], vec![1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2, 3]
         );
 
-        let selection = Labels::new(&["key_1"], Vec::<i32>::new()).unwrap();
+        let selection = Labels::new_i32(&["key_1"], vec![]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 0"
         );
 
-        let selection = Labels::new(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
+        let selection = Labels::new_i32(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 2"
         );
 
-        let selection = Labels::new(&["key_3"], vec![1]).unwrap();
+        let selection = Labels::new_i32(&["key_3"], vec![1]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),

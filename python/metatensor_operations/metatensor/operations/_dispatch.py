@@ -21,7 +21,6 @@ try:
 
     torch_dtype = torch.dtype
     torch_device = torch.device
-    torch_version = parse_version(torch.__version__)
 
 except ImportError:
 
@@ -33,8 +32,6 @@ except ImportError:
 
     class torch_device:
         pass
-
-    torch_version = (0, 0, 0)
 
 
 UNKNOWN_ARRAY_TYPE = (
@@ -490,7 +487,7 @@ def index_add(output_array, input_array, index):
     output_array.index_add_(0, torch.tensor(index),input_array)
 
     """
-    index = to_index_array(index)
+    _index_array_checks(index)
     if isinstance(input_array, TorchTensor):
         if not isinstance(index, TorchTensor):
             index = torch.tensor(index).to(device=input_array.device)
@@ -860,7 +857,7 @@ def to(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def _to_index_array_checks(array):
+def _index_array_checks(array):
     if len(array.shape) != 1:
         raise ValueError("Index arrays must be 1D")
 
@@ -872,33 +869,6 @@ def _to_index_array_checks(array):
             raise ValueError("Index arrays must be integers")
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
-
-
-if torch_version >= (2, 0, 0):
-
-    def to_index_array(array):
-        """
-        Returns an array that is suitable for indexing a dimension of
-        a different array.
-        """
-        _to_index_array_checks(array)
-        return array
-
-else:
-
-    def to_index_array(array):
-        """
-        Returns an array that is suitable for indexing a dimension of
-        a different array, converting torch data to long/64-bit integers
-        """
-        _to_index_array_checks(array)
-
-        if isinstance(array, TorchTensor):
-            return array.to(torch.long)
-        elif isinstance(array, np.ndarray):
-            return array
-        else:
-            raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
 def unique(array, axis: Optional[int] = None):

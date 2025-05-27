@@ -1,13 +1,9 @@
-"""
-Module for checking equivalence in metadata between 2 TensorMaps
-"""
-
 from typing import List, Union
 
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
@@ -25,9 +21,9 @@ def _equal_metadata_impl(
     check: Union[List[str], str] = "all",
 ) -> str:
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor_1, TensorMap):
+        if not isinstance_metatensor(tensor_1, "TensorMap"):
             return f"`tensor_1` must be a metatensor TensorMap, not {type(tensor_1)}"
-        if not is_metatensor_class(tensor_2, TensorMap):
+        if not isinstance_metatensor(tensor_2, "TensorMap"):
             return f"`tensor_2` must be a metatensor TensorMap, not {type(tensor_2)}"
 
     message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
@@ -48,9 +44,9 @@ def _equal_metadata_block_impl(
     check: Union[List[str], str] = "all",
 ) -> str:
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(block_1, TensorBlock):
+        if not isinstance_metatensor(block_1, "TensorBlock"):
             return f"`block_1` must be a metatensor TensorBlock, not {type(block_1)}"
-        if not is_metatensor_class(block_2, TensorBlock):
+        if not isinstance_metatensor(block_2, "TensorBlock"):
             return f"`block_2` must be a metatensor TensorBlock, not {type(block_2)}"
 
     check_blocks_message = _check_blocks_impl(
@@ -107,7 +103,7 @@ def equal_metadata(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock, TensorMap
     >>> tensor_1 = TensorMap(
     ...     keys=Labels(
@@ -149,9 +145,9 @@ def equal_metadata(
     ...         ),
     ...     ],
     ... )
-    >>> metatensor.equal_metadata(tensor_1, tensor_2)
+    >>> mts.equal_metadata(tensor_1, tensor_2)
     False
-    >>> metatensor.equal_metadata(
+    >>> mts.equal_metadata(
     ...     tensor_1,
     ...     tensor_2,
     ...     check=("samples", "components"),
@@ -190,7 +186,7 @@ def equal_metadata_raise(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock, TensorMap
     >>> tensor_1 = TensorMap(
     ...     keys=Labels(
@@ -232,16 +228,17 @@ def equal_metadata_raise(
     ...         ),
     ...     ],
     ... )
-    >>> metatensor.equal_metadata_raise(tensor_1, tensor_2)
+    >>> mts.equal_metadata_raise(tensor_1, tensor_2)
     Traceback (most recent call last):
         ...
-    metatensor.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' should have the same properties, but they are not the same or not in the same order
-    >>> metatensor.equal_metadata_raise(
+    metatensor.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
+should have the same properties, but they are not the same or not in the same order
+    >>> mts.equal_metadata_raise(
     ...     tensor_1,
     ...     tensor_2,
     ...     check=("samples", "components"),
     ... )
-    """  # noqa: E501
+    """
     message = _equal_metadata_impl(tensor_1, tensor_2, check)
     if message != "":
         raise NotEqualError(message)
@@ -275,7 +272,7 @@ def equal_metadata_block(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock
     >>> block_1 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
@@ -327,7 +324,7 @@ def equal_metadata_block_raise(
     Examples
     --------
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import Labels, TensorBlock
     >>> block_1 = TensorBlock(
     ...     values=np.full((4, 3, 1), 4.0),
@@ -341,15 +338,15 @@ def equal_metadata_block_raise(
     ...     components=[Labels.range("components", 3)],
     ...     properties=Labels(["p_3", "p_4"], np.array([[0, 1]])),
     ... )
-    >>> metatensor.equal_metadata_block_raise(block_1, block_2)
+    >>> mts.equal_metadata_block_raise(block_1, block_2)
     Traceback (most recent call last):
         ...
     metatensor.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
 should have the same properties, but they are not the same or not in the same order
-    >>> metatensor.equal_metadata_block_raise(
+    >>> mts.equal_metadata_block_raise(
     ...     block_1, block_2, check=("samples", "components")
     ... )
-    """  # noqa: E501
+    """
     message = _equal_metadata_block_impl(block_1, block_2, check)
     if message != "":
         raise NotEqualError(message)

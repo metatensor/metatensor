@@ -1,7 +1,7 @@
 import ase
 from featomic import SoapRadialSpectrum
 
-import metatensor
+import metatensor as mts
 
 
 atoms = ase.Atoms(
@@ -25,4 +25,4 @@ calculator = SoapRadialSpectrum(
 
 descriptor = calculator.compute(atoms, gradients=["positions"])
 
-metatensor.save("radial-spectrum.mts", descriptor)
+mts.save("radial-spectrum.mts", descriptor)

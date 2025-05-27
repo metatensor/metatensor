@@ -3,11 +3,11 @@ from typing import Dict, List
 from ._backend import (
     TensorBlock,
     TensorMap,
-    is_metatensor_class,
+    isinstance_metatensor,
     torch_jit_is_scripting,
     torch_jit_script,
 )
-from .slice import SliceSelection, _check_slice_args, _slice_block
+from ._slice import SliceSelection, _check_slice_args, _slice_block
 
 
 def _split_block(
@@ -68,18 +68,18 @@ def split(
     The operation is based on some specified groups of indices, along either the
     "samples" or "properties" ``axis``. The length of the returned list is equal to the
     number of :py:class:`Labels` objects passed in ``selections``. Each returned
-    :py:class`TensorMap` will have the same keys and number of blocks at the input
+    :py:class:`TensorMap` will have the same keys and number of blocks at the input
     ``tensor``, but with the dimensions of the blocks reduced to only contain the
     specified indices for the corresponding group.
 
     For example, to split a tensor along the ``"samples"`` axis, according to the
     ``"system"`` index, where system 0, 6, and 7 are in the first returned
-    :py:class`TensorMap`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
+    :py:class:`TensorMap`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
     third:
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(11, 3),
     ...     samples=Labels(
@@ -91,7 +91,7 @@ def split(
     ... )
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
-    >>> splitted = metatensor.split(
+    >>> splitted = mts.split(
     ...     tensor,
     ...     axis="samples",
     ...     selections=[
@@ -144,7 +144,7 @@ def split(
     """
     # Check input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor, TensorMap):
+        if not isinstance_metatensor(tensor, "TensorMap"):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )
@@ -179,19 +179,19 @@ def split_block(
     Splits an input :py:class:`TensorBlock` into multiple :py:class:`TensorBlock`
     objects based on some specified ``selections``, along either the ``"samples"`` or
     ``"properties"`` ``axis``. The length of the returned list is equal to the number of
-    selections passed in ``selections``. Each returned :py:class`TensorBlock` will have
+    selections passed in ``selections``. Each returned :py:class:`TensorBlock` will have
     the same keys and number of blocks at the input ``tensor``, but with the dimensions
     of the blocks reduced to only contain the specified indices for the corresponding
     group.
 
     For example, to split a block along the ``"samples"`` axis, according to the
     ``"system"`` index, where system 0, 6, and 7 are in the first returned
-    :py:class`TensorBlock`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
+    :py:class:`TensorBlock`; 2, 3, and 4 in the second; and 1, 5, 8, 9, and 10 in the
     third:
 
     >>> import numpy as np
     >>> from metatensor import Labels, TensorBlock, TensorMap
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> block = TensorBlock(
     ...     values=np.random.rand(11, 3),
     ...     samples=Labels(
@@ -201,7 +201,7 @@ def split_block(
     ...     components=[],
     ...     properties=Labels.range("properties", 3),
     ... )
-    >>> splitted = metatensor.split_block(
+    >>> splitted = mts.split_block(
     ...     block,
     ...     axis="samples",
     ...     selections=[
@@ -253,7 +253,7 @@ def split_block(
     """
     # Check input args
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(block, TensorBlock):
+        if not isinstance_metatensor(block, "TensorBlock"):
             raise TypeError(
                 f"`block` must be a metatensor TensorBlock, not {type(block)}"
             )

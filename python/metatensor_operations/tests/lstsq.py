@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -44,10 +44,10 @@ def test_self_lstsq_no_gradients():
 
     message = "the values in each block of X should be a square 2D array"
     with pytest.raises(ValueError, match=message):
-        w = metatensor.solve(X, Y)
+        w = mts.solve(X, Y)
 
     # solve with least square
-    w = metatensor.lstsq(X, Y, rcond=1e-13)
+    w = mts.lstsq(X, Y, rcond=1e-13)
 
     assert w.keys == X.keys
     assert np.allclose(w.block(0).values, np.array([-1.0, 1.0]), rtol=1e-13)
@@ -56,8 +56,8 @@ def test_self_lstsq_no_gradients():
         assert block_w.samples == Y.block(key).properties
         assert block_w.properties == X.block(key).properties
 
-    Ydot = metatensor.dot(X, w)
-    assert metatensor.allclose(Ydot, Y)
+    Ydot = mts.dot(X, w)
+    assert mts.allclose(Ydot, Y)
 
 
 def test_self_lstsq_gradients():
@@ -98,7 +98,7 @@ def test_self_lstsq_gradients():
 
     X = TensorMap(keys, [block_X])
     Y = TensorMap(keys, [block_Y])
-    w = metatensor.lstsq(X, Y, rcond=1e-13)
+    w = mts.lstsq(X, Y, rcond=1e-13)
 
     assert w.keys == X.keys
     assert np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
@@ -107,8 +107,8 @@ def test_self_lstsq_gradients():
         assert block_w.samples == Y.block(key).properties
         assert block_w.properties == X.block(key).properties
 
-    Ydot = metatensor.dot(X, w)
-    assert metatensor.allclose(Ydot, Y)
+    Ydot = mts.dot(X, w)
+    assert mts.allclose(Ydot, Y)
 
 
 def test_self_lstsq_gradients_components():
@@ -155,7 +155,7 @@ def test_self_lstsq_gradients_components():
 
     X = TensorMap(keys, [block_X])
     Y = TensorMap(keys, [block_Y])
-    w = metatensor.lstsq(X, Y, rcond=1e-13)
+    w = mts.lstsq(X, Y, rcond=1e-13)
 
     assert w.keys == X.keys
     assert np.allclose(w.block(0).values, np.array([1.0, 3.0]), rtol=1e-13)
@@ -164,8 +164,8 @@ def test_self_lstsq_gradients_components():
         assert block_w.samples == Y.block(key).properties
         assert block_w.properties == X.block(key).properties
 
-    Ydot = metatensor.dot(X, w)
-    assert metatensor.allclose(Ydot, Y)
+    Ydot = mts.dot(X, w)
+    assert mts.allclose(Ydot, Y)
 
 
 def Xfun1(x, y, z):

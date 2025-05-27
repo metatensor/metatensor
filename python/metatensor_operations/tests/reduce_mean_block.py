@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock
 
 
@@ -10,14 +10,12 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_mean_samples_block():
-    tensor_se = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    tensor_ps = metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor_se = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
     block_ps = tensor_ps[0]
     # check both passing a list and a single string for sample_names
-    reduce_block_ps = metatensor.mean_over_samples_block(
-        block_ps, sample_names=["atom"]
-    )
+    reduce_block_ps = mts.mean_over_samples_block(block_ps, sample_names=["atom"])
 
     assert np.all(np.mean(block_ps.values[:4], axis=0) == reduce_block_ps.values[0])
 
@@ -69,7 +67,7 @@ def test_mean_samples_block():
     # The TensorBlock with key=(8,8,8) has nothing to be averaged over
 
     for _ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
-        reduced_block = metatensor.mean_over_samples_block(bl2, sample_names="atom")
+        reduced_block = mts.mean_over_samples_block(bl2, sample_names="atom")
         assert np.all(np.mean(bl2.values[:4], axis=0) == reduced_block.values[0])
         assert np.allclose(
             np.mean(bl2.values[26:32], axis=0),
@@ -122,13 +120,9 @@ def test_reduction_block_two_samples():
         properties=Labels(["p"], np.array([[0], [1], [5]])),
     )
 
-    reduce_block_12 = metatensor.mean_over_samples_block(
-        block_1, sample_names=["samples3"]
-    )
-    reduce_block_23 = metatensor.mean_over_samples_block(
-        block_1, sample_names="samples1"
-    )
-    reduce_block_2 = metatensor.mean_over_samples_block(
+    reduce_block_12 = mts.mean_over_samples_block(block_1, sample_names=["samples3"])
+    reduce_block_23 = mts.mean_over_samples_block(block_1, sample_names="samples1")
+    reduce_block_2 = mts.mean_over_samples_block(
         block_1, sample_names=["samples1", "samples3"]
     )
 

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
@@ -110,12 +110,12 @@ def test_self_pow_scalar_gradient():
 
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
-    tensor_sum = metatensor.pow(A, B)
+    tensor_sum = mts.pow(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
     # Check not modified in place
-    assert metatensor.equal(A, A_copy)
+    assert mts.equal(A, A_copy)
 
 
 def test_self_pow_components_scalar_gradient():
@@ -229,10 +229,10 @@ def test_self_pow_components_scalar_gradient():
     )
     keys = Labels(names=["key_1"], values=np.array([[0]]))
 
-    tensor_pow = metatensor.pow(A, B)
+    tensor_pow = mts.pow(A, B)
     tensor_result = TensorMap(keys, [block_res_1])
 
-    assert metatensor.allclose(tensor_result, tensor_pow)
+    assert mts.allclose(tensor_result, tensor_pow)
 
 
 def test_self_pow_scalar_sqrt_gradient():
@@ -335,10 +335,10 @@ def test_self_pow_scalar_sqrt_gradient():
 
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
 
-    tensor_sum = metatensor.pow(A, B)
+    tensor_sum = mts.pow(A, B)
     tensor_result = TensorMap(keys, [block_res_1, block_res_2])
 
-    assert metatensor.allclose(tensor_result, tensor_sum)
+    assert mts.allclose(tensor_result, tensor_sum)
 
 
 def test_self_pow_error():
@@ -353,8 +353,8 @@ def test_self_pow_error():
 
     message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.pow(np.ones((3, 4)), 2.0)
+        keys = mts.pow(np.ones((3, 4)), 2.0)
 
     message = "`B` must be a scalar value, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        keys = metatensor.pow(tensor, np.ones((3, 4)))
+        keys = mts.pow(tensor, np.ones((3, 4)))

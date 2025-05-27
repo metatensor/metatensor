@@ -70,6 +70,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
@@ -321,7 +322,7 @@ if __name__ == "__main__":
         torch_version = f"== {torch_v_major}.{torch_v_minor}.*"
     except ImportError:
         # otherwise we are building a sdist
-        torch_version = ">= 1.12"
+        torch_version = ">= 2.1"
 
     install_requires = [f"torch {torch_version}", "vesin"]
 

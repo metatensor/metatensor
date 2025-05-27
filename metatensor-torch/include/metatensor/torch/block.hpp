@@ -140,7 +140,8 @@ public:
     /// Move all arrays in this block to the given `dtype` and `device`.
     TensorBlock to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
-        torch::optional<torch::Device> device = torch::nullopt
+        torch::optional<torch::Device> device = torch::nullopt,
+        bool non_blocking = false
     ) const;
 
     /// Wrapper of the `to` function to enable using it with positional
@@ -156,7 +157,8 @@ public:
         torch::IValue positional_2,
         torch::optional<torch::Dtype> dtype,
         torch::optional<torch::Device> device,
-        torch::optional<std::string> arrays
+        torch::optional<std::string> arrays,
+        bool non_blocking = false
     ) const;
 
     /// Implementation of __repr__/__str__ for Python

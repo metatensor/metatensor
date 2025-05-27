@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 
 
 try:
@@ -16,13 +16,13 @@ except ImportError:
 def test_too_few_axes(n_axes):
     """Test block_from_array when too few axes are provided."""
     with pytest.raises(ValueError, match="at least"):
-        metatensor.block_from_array(np.zeros((4,) * n_axes))
+        mts.block_from_array(np.zeros((4,) * n_axes))
 
 
 def test_without_components():
     """Test block_from_array for a 2D array."""
     array = np.zeros((6, 7))
-    block = metatensor.block_from_array(array)
+    block = mts.block_from_array(array)
     assert block.values is array
 
     assert block.samples.names == ["sample"]
@@ -39,7 +39,7 @@ def test_without_components():
 def test_with_components():
     """Test block_from_array with components."""
     array = array = np.zeros((6, 5, 7))
-    block = metatensor.block_from_array(array)
+    block = mts.block_from_array(array)
     assert block.values is array
 
     assert block.samples.names == ["sample"]
@@ -76,7 +76,7 @@ def test_with_label_names(sample_names, component_names, property_names):
         len(sample_names) != 1 or len(property_names) != 1
     ):
         with pytest.raises(ValueError, match=".*does not have enough dimensions.*"):
-            block = metatensor.block_from_array(
+            block = mts.block_from_array(
                 array,
                 sample_names=sample_names,
                 component_names=component_names,
@@ -84,7 +84,7 @@ def test_with_label_names(sample_names, component_names, property_names):
             )
         return
     else:
-        block = metatensor.block_from_array(
+        block = mts.block_from_array(
             array,
             sample_names=sample_names,
             component_names=component_names,
@@ -126,7 +126,7 @@ def test_with_label_names(sample_names, component_names, property_names):
 def test_torch_with_components():
     """Test block_from_array with components and torch arrays"""
     array = array = torch.zeros((6, 5, 7))
-    block = metatensor.block_from_array(array)
+    block = mts.block_from_array(array)
     assert block.values is array
 
     assert block.samples.names == ["sample"]

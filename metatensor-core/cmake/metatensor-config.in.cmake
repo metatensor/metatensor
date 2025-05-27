@@ -78,3 +78,10 @@ if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
         add_library(metatensor ALIAS metatensor::static)
     endif()
 endif()
+
+
+if (@BUILD_SHARED_LIBS@)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE)
+else()
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE)
+endif()

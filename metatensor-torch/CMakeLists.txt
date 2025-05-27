@@ -96,7 +96,7 @@ endif()
 # fixed version in `cmake/FindCUDNN.cmake`
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
-find_package(Torch 1.12 REQUIRED)
+find_package(Torch 2.1 REQUIRED)
 
 set(METATENSOR_TORCH_HEADERS
     "include/metatensor/torch/array.hpp"

@@ -227,8 +227,7 @@ impl Labels {
     ///
     /// The values are given as a flatten, row-major array, and we will check
     /// that rows are unique in the array.
-    pub fn new(names: &[&str], values: Vec<impl Into<LabelValue>>) -> Result<Labels, Error> {
-        let values = values.into_iter().map(Into::into).collect();
+    pub fn new(names: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
         return Labels::new_impl(names, values, true);
     }
 
@@ -237,13 +236,19 @@ impl Labels {
     /// This is identical to [`Labels::new`] except that the rows are not
     /// checked for uniqueness, but instead the caller must ensure that rows are
     /// unique.
-    pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<impl Into<LabelValue>>) -> Result<Labels, Error> {
-        let values = values.into_iter().map(Into::into).collect();
+    pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
         if cfg!(debug_assertions) {
             return Labels::new_impl(names, values, true);
         } else {
             return Labels::new_impl(names, values, false);
         }
+    }
+
+    /// Helper constructor to make tests more readable
+    #[cfg(test)]
+    pub fn new_i32(names: &[&str], values: Vec<i32>) -> Result<Labels, Error> {
+        let values = values.into_iter().map(Into::into).collect();
+        return Labels::new(names, values);
     }
 
     /// Actual implementation of both [`Labels::new`] and
@@ -702,22 +707,22 @@ mod tests {
 
     #[test]
     fn valid_names() {
-        let e = Labels::new(&["not an ident"], Vec::<i32>::new()).err().unwrap();
+        let e = Labels::new(&["not an ident"], Vec::<LabelValue>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not");
 
-        let e = Labels::new(&["not", "there", "not"], Vec::<i32>::new()).err().unwrap();
+        let e = Labels::new(&["not", "there", "not"], Vec::<LabelValue>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
     }
 
     #[test]
     fn sorted() {
-        let labels = Labels::new(&["aa", "bb"],
+        let labels = Labels::new_i32(&["aa", "bb"],
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
         assert!(labels.is_sorted());
 
-        let labels = Labels::new(&["aa", "bb"],
+        let labels = Labels::new_i32(&["aa", "bb"],
             vec![0, 1, /**/ 1, 2, /**/ 0, 2]
         ).unwrap();
 
@@ -726,12 +731,12 @@ mod tests {
 
     #[test]
     fn union() {
-        let first = Labels::new(
+        let first = Labels::new_i32(
             &["aa", "bb"],
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
-        let second = Labels::new(
+        let second = Labels::new_i32(
             &["aa", "bb"],
             vec![2, 3, /**/ 1, 2, /**/ 4, 5]
         ).unwrap();
@@ -754,7 +759,7 @@ mod tests {
         assert_eq!(first_mapping, &[0, 1, 2]);
         assert_eq!(second_mapping, &[3, 1]);
 
-        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
+        let labels = Labels::new(&["aa"], Vec::<LabelValue>::new()).unwrap();
         let err = first.union(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -762,7 +767,7 @@ mod tests {
         );
 
         // Take the union with an empty set of labels
-        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
+        let empty = Labels::new(&["aa", "bb"], Vec::<LabelValue>::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -775,12 +780,12 @@ mod tests {
 
     #[test]
     fn intersection() {
-        let first = Labels::new(
+        let first = Labels::new_i32(
             &["aa", "bb"],
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
-        let second = Labels::new(
+        let second = Labels::new_i32(
             &["aa", "bb"],
             vec![2, 3, /**/ 1, 2, /**/ 4, 5]
         ).unwrap();
@@ -803,7 +808,7 @@ mod tests {
         assert_eq!(first_mapping, &[-1, 0, -1]);
         assert_eq!(second_mapping, &[-1, 0]);
 
-        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
+        let labels = Labels::new(&["aa"], Vec::<LabelValue>::new()).unwrap();
         let err = first.intersection(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -811,7 +816,7 @@ mod tests {
         );
 
         // Take the intersection with an empty set of labels
-        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
+        let empty = Labels::new(&["aa", "bb"], Vec::<LabelValue>::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -824,8 +829,8 @@ mod tests {
 
     #[test]
     fn difference() {
-        let first = Labels::new(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
-        let second = Labels::new(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
+        let first = Labels::new_i32(&["aa", "bb"], vec![0, 1, /**/ 1, 2]).unwrap();
+        let second = Labels::new_i32(&["aa", "bb"], vec![2, 3, /**/ 1, 2, /**/ 4, 5]).unwrap();
 
         let first_mapping = &mut vec![0; first.count()];
 
@@ -841,7 +846,7 @@ mod tests {
         assert_eq!(difference.values, &[2, 3, /**/ 4, 5]);
         assert_eq!(first_mapping, &[0, -1, 1]);
 
-        let labels = Labels::new(&["aa"], Vec::<i32>::new()).unwrap();
+        let labels = Labels::new(&["aa"], Vec::<LabelValue>::new()).unwrap();
         let err = first.difference(&labels, &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -849,7 +854,7 @@ mod tests {
         );
 
         // Take the difference with an empty set of labels
-        let empty = Labels::new(&["aa", "bb"], Vec::<i32>::new()).unwrap();
+        let empty = Labels::new(&["aa", "bb"], Vec::<LabelValue>::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
 
         let difference = first.difference(&empty, first_mapping).unwrap();
@@ -864,7 +869,7 @@ mod tests {
         fn use_send(_: impl Send) {}
         fn use_sync(_: impl Sync) {}
 
-        let labels = Arc::new(Labels::new(&["aa", "bb"], vec![0, 1, 1, 2]).unwrap());
+        let labels = Arc::new(Labels::new_i32(&["aa", "bb"], vec![0, 1, 1, 2]).unwrap());
 
         use_send(labels.clone());
         use_sync(labels);

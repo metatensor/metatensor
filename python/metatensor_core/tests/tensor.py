@@ -493,7 +493,9 @@ def test_to():
     assert tensor.device == "cpu"
     assert tensor.dtype == np.float64
 
-    converted = tensor.to(dtype=np.float32)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = tensor.to(dtype=np.float32, non_blocking=True)
     assert converted.dtype == np.float32
 
     # check that the code handles both positional and keyword arguments
@@ -538,6 +540,6 @@ def test_to():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                moved = tensor.to(device=device)
+                moved = tensor.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type

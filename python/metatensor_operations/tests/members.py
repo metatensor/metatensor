@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock
 
 from . import _tests_utils
@@ -41,45 +41,43 @@ def large_tensor():
 
 
 def test_block_eq(block):
-    assert metatensor.equal_block(block, block) == (block == block)
+    assert mts.equal_block(block, block) == (block == block)
 
 
 def test_block_neq(block, block_components):
-    assert metatensor.equal_block(block, block_components) == (
-        block == block_components
-    )
+    assert mts.equal_block(block, block_components) == (block == block_components)
 
 
 def test_tensor_eq(tensor):
-    assert metatensor.equal(tensor, tensor) == (tensor == tensor)
+    assert mts.equal(tensor, tensor) == (tensor == tensor)
 
 
 def test_tensor_neq(tensor, large_tensor):
-    assert metatensor.equal(tensor, large_tensor) == (tensor == large_tensor)
+    assert mts.equal(tensor, large_tensor) == (tensor == large_tensor)
 
 
 def test_tensor_add(tensor):
-    assert metatensor.add(tensor, 1) == (tensor + 1)
+    assert mts.add(tensor, 1) == (tensor + 1)
 
 
 def test_tensor_sub(tensor):
-    assert metatensor.subtract(tensor, 1) == (tensor - 1)
+    assert mts.subtract(tensor, 1) == (tensor - 1)
 
 
 def test_tensor_mul(tensor):
-    assert metatensor.multiply(tensor, 2) == (tensor * 2)
+    assert mts.multiply(tensor, 2) == (tensor * 2)
 
 
 def test_tensor_matmul(tensor):
     tensor = tensor.components_to_properties("c")
-    tensor = metatensor.remove_gradients(tensor)
+    tensor = mts.remove_gradients(tensor)
 
-    assert metatensor.dot(tensor, tensor) == (tensor @ tensor)
+    assert mts.dot(tensor, tensor) == (tensor @ tensor)
 
 
 def test_tensor_truediv(tensor):
-    assert metatensor.divide(tensor, 2) == (tensor / 2)
+    assert mts.divide(tensor, 2) == (tensor / 2)
 
 
 def test_tensor_pow(tensor):
-    assert metatensor.pow(tensor, 2) == (tensor**2)
+    assert mts.pow(tensor, 2) == (tensor**2)

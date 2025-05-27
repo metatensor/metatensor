@@ -1,8 +1,8 @@
+import os
 from typing import Dict, List, Optional, Tuple, Union
 
 import pytest
 import torch
-from packaging import version
 
 from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 
@@ -37,10 +37,7 @@ keys: key_1  key_2
         2      3"""
     assert expected == str(tensor)
     assert expected == tensor.print(6)
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(tensor) == expected
+    assert repr(tensor) == expected
 
 
 def test_print_large(large_tensor):
@@ -79,9 +76,7 @@ keys: key_1  key_2
         2      5
         3      5"""
 
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(large_tensor) == expected
+    assert repr(large_tensor) == expected
 
 
 def test_labels_names(tensor):
@@ -510,12 +505,12 @@ def test_different_dtype(meta_tensor):
 
 def test_to(tensor):
     assert tensor.device.type == torch.device("cpu").type
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(tensor, torch.float32)
+    check_dtype(tensor, torch.float32)
 
-    converted = tensor.to(dtype=torch.float64)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        check_dtype(converted, torch.float64)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = tensor.to(dtype=torch.float64, non_blocking=True)
+    check_dtype(converted, torch.float64)
 
     devices = ["meta", torch.device("meta")]
     if _tests_utils.can_use_mps_backend():
@@ -528,7 +523,7 @@ def test_to(tensor):
         devices.append(torch.device("cuda"))
 
     for device in devices:
-        moved = tensor.to(device=device)
+        moved = tensor.to(device=device, non_blocking=True)
         assert moved.device.type == torch.device(device).type
 
     # this should run without error
@@ -561,9 +556,16 @@ def test_to(tensor):
 
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
-@torch.jit.script
-def check_dtype(tensor: TensorMap, dtype: torch.dtype):
-    assert tensor.dtype == dtype
+if os.environ.get("PYTORCH_JIT") == "0":
+
+    def check_dtype(tensor: TensorMap, dtype: torch.dtype):
+        pass
+
+else:
+
+    @torch.jit.script
+    def check_dtype(tensor: TensorMap, dtype: torch.dtype):
+        assert tensor.dtype == dtype
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all

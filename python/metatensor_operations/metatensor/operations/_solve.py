@@ -79,7 +79,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
 
 
     >>> import numpy as np
-    >>> import metatensor
+    >>> import metatensor as mts
     >>> from metatensor import TensorBlock, TensorMap, Labels
     >>> np.random.seed(0)
     >>> # We construct two independent variables, each sampled at 100 random points
@@ -112,7 +112,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ...         )
     ...     ],
     ... )
-    >>> c = metatensor.solve(X, y)
+    >>> c = mts.solve(X, y)
     >>> print(c.block())
     TensorBlock
         samples (1): ['property_to_regress']

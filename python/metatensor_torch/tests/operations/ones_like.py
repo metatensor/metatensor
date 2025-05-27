@@ -1,14 +1,14 @@
 import io
 import os
 
+import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_ones_like():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,23 +20,23 @@ def test_ones_like():
             "qm7-power-spectrum.mts",
         )
     )
-    ones_tensor = metatensor.torch.ones_like(tensor)
+    ones_tensor = mts.ones_like(tensor)
 
     # right output type
     assert isinstance(ones_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert ones_tensor._type().name() == "TensorMap"
+    assert ones_tensor._type().name() == "TensorMap"
 
     # right metadata
-    assert metatensor.torch.equal_metadata(ones_tensor, tensor)
+    assert mts.equal_metadata(ones_tensor, tensor)
 
     # right values
     for block in ones_tensor.blocks():
         assert torch.all(block.values == 1)
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.ones_like, buffer)
+        torch.jit.save(mts.ones_like, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

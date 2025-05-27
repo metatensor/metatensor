@@ -1,17 +1,17 @@
 import io
 import os
 
+import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 from metatensor.torch import Labels
 
 
 def test_drop_blocks():
     # this only runs basic checks functionality checks, and that the code produces
     # output with the right type
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -32,20 +32,20 @@ def test_drop_blocks():
 
     keys_to_drop = Labels(names=["center_type"], values=torch.tensor([[1], [8]]))
 
-    tensor = metatensor.torch.drop_blocks(tensor, keys_to_drop)
+    tensor = mts.drop_blocks(tensor, keys_to_drop)
 
     # check type
     assert isinstance(tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert tensor._type().name() == "TensorMap"
+    assert tensor._type().name() == "TensorMap"
 
     # check remaining block
     expected_keys = Labels(names=["center_type"], values=torch.tensor([[6]]))
     assert tensor.keys == expected_keys
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.drop_blocks, buffer)
+        torch.jit.save(mts.drop_blocks, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

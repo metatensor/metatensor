@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorMap
 
 
@@ -12,27 +12,27 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 @pytest.fixture
 def tensor() -> TensorMap:
-    return metatensor.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
 def test_keep_all(tensor):
-    full_tensor = metatensor.filter_blocks(tensor, tensor.keys)
+    full_tensor = mts.filter_blocks(tensor, tensor.keys)
 
     assert tensor.keys == full_tensor.keys
-    assert metatensor.equal(tensor, full_tensor)
+    assert mts.equal(tensor, full_tensor)
 
 
 def test_keep_none(tensor):
-    tensor = metatensor.filter_blocks(tensor, Labels.empty(tensor.keys.names))
+    tensor = mts.filter_blocks(tensor, Labels.empty(tensor.keys.names))
     empty_tensor = TensorMap(keys=Labels.empty(tensor.keys.names), blocks=[])
-    assert metatensor.equal(tensor, empty_tensor)
+    assert mts.equal(tensor, empty_tensor)
 
 
 def test_keep_selection(tensor):
     assert np.unique(tensor.keys["center_type"]).tolist() == [1, 6, 8]
 
     keys_to_keep = Labels("center_type", np.array([[1]]))
-    new_tensor = metatensor.filter_blocks(tensor, keys_to_keep)
+    new_tensor = mts.filter_blocks(tensor, keys_to_keep)
 
     assert np.unique(new_tensor.keys["center_type"]).tolist() == [1]
 
@@ -52,9 +52,9 @@ def test_keep_two_random_keys(tensor):
     ref_blocks = [tensor[key].copy() for key in keys_to_keep]
     ref_tensor = TensorMap(keys_to_keep, ref_blocks)
 
-    new_tensor = metatensor.filter_blocks(tensor, keys_to_keep)
+    new_tensor = mts.filter_blocks(tensor, keys_to_keep)
     assert ref_tensor.keys == new_tensor.keys
-    assert metatensor.equal(new_tensor, ref_tensor)
+    assert mts.equal(new_tensor, ref_tensor)
 
 
 def test_larger_filter(tensor):
@@ -66,10 +66,10 @@ def test_larger_filter(tensor):
             [np.array([[1000] * len(tensor.keys.names)]), tensor.keys.values], axis=0
         ),
     )
-    test_filter = metatensor.filter_blocks(tensor, key_to_filter)
+    test_filter = mts.filter_blocks(tensor, key_to_filter)
 
     assert test_filter.keys == tensor.keys
-    assert metatensor.equal(test_filter, tensor)
+    assert mts.equal(test_filter, tensor)
 
 
 def test_copy_flag(tensor):
@@ -86,14 +86,14 @@ def test_copy_flag(tensor):
     )
 
     # Drop blocks with copy=True flag
-    new_tensor_copied = metatensor.filter_blocks(tensor, keys_to_keep, copy=True)
+    new_tensor_copied = mts.filter_blocks(tensor, keys_to_keep, copy=True)
 
     # Drop blocks with copy=False flag
-    new_tensor_not_copied = metatensor.filter_blocks(tensor, keys_to_keep, copy=False)
+    new_tensor_not_copied = mts.filter_blocks(tensor, keys_to_keep, copy=False)
 
     # Check that the resulting tensor are equal whether or not they are copied
     assert new_tensor_copied.keys == new_tensor_not_copied.keys
-    assert metatensor.equal(new_tensor_copied, new_tensor_not_copied)
+    assert mts.equal(new_tensor_copied, new_tensor_not_copied)
 
     # Now modify the original tensor's block values in place
     for block in tensor.blocks():
