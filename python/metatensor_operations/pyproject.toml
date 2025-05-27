@@ -49,3 +49,4 @@ namespaces = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
+filterwarnings = ["error"]
