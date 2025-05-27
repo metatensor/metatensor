@@ -99,7 +99,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
 @torch_jit_script
 def drop_empty_blocks(tensor: TensorMap, copy: bool = False) -> TensorMap:
     """
-    Drop every blocks in a TensorMap with any 0-length dimension.
+    Drop every blocks in a :py:class: `TensorMap` with any 0-length dimension.
 
     :param tensor: the :py:class:`TensorMap` to drop empty blocks from.
 
@@ -111,7 +111,7 @@ def drop_empty_blocks(tensor: TensorMap, copy: bool = False) -> TensorMap:
     """
     # Check arg types
     if not torch_jit_is_scripting():
-        if not is_metatensor_class(tensor, TensorMap):
+        if not isinstance_metatensor(tensor, "TensorMap"):
             raise TypeError(
                 f"`tensor` must be a metatensor TensorMap, not {type(tensor)}"
             )

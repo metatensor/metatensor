@@ -15,7 +15,7 @@ def tensor() -> TensorMap:
     return mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
 
 
-def test_drop_empty_tensor():
+def test_drop_blocks_empty_tensor():
     """
     Tests that dropping blocks from an empty tensor returns an empty tensor.
     """
@@ -25,7 +25,10 @@ def test_drop_empty_tensor():
 
 
 def test_drop_block_with_an_empty_dimension():
-    # Define a TensorMap with a block that has an empty dimension
+    """
+    Define a TensorMap in which block_2 has a zero-length dimension.
+    Assert then that calling drop_empty_blocks() removes block_2 from the resulting TensorMap.
+    """
     block_1 = TensorBlock(
         values=np.full((5, 3), 2.0),
         samples=Labels.range("sample", 5),
@@ -77,7 +80,10 @@ def test_drop_empty_blocks_in_empty_tensor():
 
 
 def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
-    # Define a TensorMap with a block that has an empty dimension
+    """ 
+    Define a TensorMap in which no block has a zero-length dimension.
+    Assert than that calling drop_empty_blocks() leaves all blocks intact.
+    """
     block_1 = TensorBlock(
         values=np.full((5, 3), 2.0),
         samples=Labels.range("sample", 5),
@@ -107,18 +113,7 @@ def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
 
     # Drop blocks with empty dimensions
     new_tensor = mts.drop_empty_blocks(tensor, copy=False)
-    assert len(new_tensor) == 3
-
-    # Check which idxes were kept
-    kept_idxs = new_tensor.keys.values.flatten().tolist()
-
-    assert kept_idxs == [0, 1, 2], (
-        "Blocks with empty dimensions were not dropped correctly"
-    )
-
-    np.testing.assert_allclose(new_tensor[0].values, bkp_block_1.values)
-    np.testing.assert_allclose(new_tensor[1].values, bkp_block_2.values)
-    np.testing.assert_allclose(new_tensor[2].values, bkp_block_3.values)
+    assert mts.equal(tensor, new_tensor)
 
 
 def test_drop_all(tensor):
