@@ -6,16 +6,13 @@ Metatensor's goals
 At its core, ``metatensor`` provides tools to efficiently store and manipulate
 sparse arrays and their associated metadata. You can learn more about this in
 the :ref:`core classes overview <core-classes-overview>`. With the creation of
-metatensor, we have three main use cases in mind:
+metatensor, we have two main use cases in mind:
 
 1. provide an exchange format for the atomistic machine learning ecosystem,
    making different players in this ecosystem more interoperable with one
    another and enhancing collaboration: see :ref:`metatensor-goal-exchange`;
 2. make it easier and faster to develop new machine learning representations,
    models and algorithms: see :ref:`metatensor-goal-models`;
-3. run large scale simulations using machine learning interatomic potentials,
-   with fully customizable potentials, directly defined by the researchers
-   running the simulations: see :ref:`metatensor-goal-simulation`;
 
 .. _metatensor-goal-exchange:
 
@@ -123,29 +120,3 @@ models with a few lines of code and a familiar API.
 
 
 .. _scikit-learn: https://scikit-learn.org/
-
-.. _metatensor-goal-simulation:
-
-Running atomistic simulations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-One particularly interesting class of machine learning model for atomistic
-modelling is machine learning interatomic potentials (MLIPs). Using the
-capacities provided by the first two goals of metatensor, researchers should be
-able to created and train such MLIPs and customize various parts of the model.
-
-The final objective of metatensor is to allow using these custom models inside
-large scale molecular simulation engines. To do this, we integrate metatensor
-with `TorchScript <https://pytorch.org/docs/stable/jit.html>`_, and use the
-facilities of TorchScript to export the model from Python and then load and
-execute it inside the simulation engine. Have a look at the
-:ref:`atomistic-models` section for more information!
-
-.. figure:: /../static/images/goal-simulations.*
-    :width: 500px
-    :align: center
-
-    Different steps in the workflow of running simulations with metatensor.
-    Defining a model, training a model and running simulations with it can be
-    done by different users; and the same metatensor-based model can be used
-    with multiple simulation engines.

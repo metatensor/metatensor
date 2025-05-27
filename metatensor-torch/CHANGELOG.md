@@ -19,6 +19,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Changed
 
+- `metatensor.torch.atomistic` now lives in the `metatomic-torch` package
+  (https://github.com/metatensor/metatomic). `metatensor.torch.atomistic` in
+  Python re-exports the classes from metatomic, and
+  `metatensor/torch/atomistic.hpp` does the same for C++.
+
 - `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
   argument, with the same meaning as in `torch.Tensor.to`.
 - `metatensor.torch.save`, `metatensor.torch.load`,

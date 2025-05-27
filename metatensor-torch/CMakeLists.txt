@@ -104,8 +104,6 @@ set(METATENSOR_TORCH_HEADERS
     "include/metatensor/torch/block.hpp"
     "include/metatensor/torch/tensor.hpp"
     "include/metatensor/torch/module.hpp"
-    "include/metatensor/torch/atomistic/system.hpp"
-    "include/metatensor/torch/atomistic/model.hpp"
     "include/metatensor/torch.hpp"
 )
 
@@ -116,9 +114,6 @@ set(METATENSOR_TORCH_SOURCES
     "src/tensor.cpp"
     "src/misc.cpp"
     "src/module.cpp"
-    "src/atomistic/system.cpp"
-    "src/atomistic/model.cpp"
-    "src/internal/shared_libraries.cpp"
     "src/register.cpp"
 )
 
@@ -197,29 +192,6 @@ if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
 else()
     copy_if_different(${_path_} ${_destination_})
 endif()
-
-#------------------------------------------------------------------------------#
-# External dependencies
-#------------------------------------------------------------------------------#
-include(FetchContent)
-
-# JSON library from https://github.com/nlohmann/json
-FetchContent_Declare(nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
-)
-if (CMAKE_VERSION VERSION_GREATER 3.18)
-    FetchContent_MakeAvailable(nlohmann_json)
-else()
-    if (NOT nlohmann_json_POPULATED)
-        FetchContent_Populate(nlohmann_json)
-    endif()
-
-    add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR})
-endif()
-
-target_link_libraries(metatensor_torch PRIVATE nlohmann_json::nlohmann_json)
-
 
 if (METATENSOR_TORCH_TESTS)
     enable_testing()

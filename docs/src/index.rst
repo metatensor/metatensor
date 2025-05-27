@@ -41,8 +41,7 @@ store gradients, keeping them together with the associated values.
         Learn about the core goals of metatensor, and what the library is about:
 
         - an exchange format for ML data;
-        - a tool to develop new ML models;
-        - an interface for atomistic simulations.
+        - tools to develop new kinds of ML models;
 
     .. grid-item-card:: 🛠️ Core classes
         :link: core-classes-overview
