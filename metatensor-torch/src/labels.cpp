@@ -6,7 +6,8 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/labels.hpp"
-#include "internal/utils.hpp"
+
+#include "./utils.hpp"
 
 using namespace metatensor_torch;
 
