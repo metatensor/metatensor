@@ -59,12 +59,12 @@ omit = ["documentation.py"]
 ### ======================================================================== ###
 
 [tool.pytest.ini_options]
-# ignore" a bunch of internal warnings with Python 3.12 and PyTorch
 filterwarnings = [
     "error",
-    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    # metatensor.torch.atomistic deprecation
+    "ignore:`metatensor.torch.atomistic` now lives in `metatomic.torch`, please update your code",
+    "ignore:`metatensor.torch.atomistic.io` now lives in `metatomic.torch.io`, please update your code",
+    "ignore:`metatensor.torch.atomistic.ase_calculator` now lives in `metatomic.torch.ase_calculator`, please update your code",
 ]
 
 ### ======================================================================== ###
