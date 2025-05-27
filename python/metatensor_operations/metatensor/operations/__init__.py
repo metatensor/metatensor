@@ -21,7 +21,7 @@ from ._checks import (  # noqa: F401
 from ._detach import detach, detach_block  # noqa: F401
 from ._divide import divide  # noqa: F401
 from ._dot import dot  # noqa: F401
-from ._drop_blocks import drop_blocks  # noqa: F401
+from ._drop_blocks import drop_blocks, drop_empty_blocks  # noqa: F401
 from ._empty_like import empty_like, empty_like_block  # noqa: F401
 from ._equal import equal, equal_block, equal_block_raise, equal_raise  # noqa: F401
 from ._equal_metadata import (  # noqa: F401
