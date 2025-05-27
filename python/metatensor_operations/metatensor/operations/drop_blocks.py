@@ -101,7 +101,7 @@ def drop_empty_blocks(tensor: TensorMap, copy: bool = False) -> TensorMap:
     """
     Drop every blocks in a TensorMap with any 0-length dimension.
 
-    :param tensor: the :py:class:`TensorMap` to drop the key-block pair from.
+    :param tensor: the :py:class:`TensorMap` to drop empty blocks from.
 
     :param copy: if :py:obj:`True`, the returned :py:class:`TensorMap` is constructed by
         copying the blocks from the input `tensor`. If :py:obj:`False` (default), the
