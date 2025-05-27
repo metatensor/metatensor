@@ -19,7 +19,7 @@ from .block_from_array import block_from_array  # noqa
 from .detach import detach, detach_block  # noqa
 from .divide import divide  # noqa
 from .dot import dot  # noqa
-from .drop_blocks import drop_blocks  # noqa
+from .drop_blocks import drop_blocks, drop_empty_blocks  # noqa
 from .empty_like import empty_like, empty_like_block  # noqa
 from .equal import equal, equal_block, equal_block_raise, equal_raise  # noqa
 from .equal_metadata import (  # noqa
