@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -83,6 +84,15 @@ def test_load(tensor_path):
     loaded = TensorMap.load(tensor_path)
     check_tensor(loaded)
 
+    # using Path
+    loaded = mts.load(Path(tensor_path))
+    check_tensor(loaded)
+
+    # using pre-opened file
+    with open(tensor_path, "rb") as file:
+        loaded = mts.load(file)
+        check_tensor(loaded)
+
     # load from buffer
     buffer = torch.tensor(np.fromfile(tensor_path, dtype="uint8"))
 
@@ -102,12 +112,21 @@ def test_save(tmpdir, tensor_path):
     with tmpdir.as_cwd():
         mts.save(tmpfile, tensor)
         data = mts.load(tmpfile)
-
         assert len(data.keys) == 4
 
         tensor.save(tmpfile)
         data = mts.load(tmpfile)
+        assert len(data.keys) == 4
 
+        # using Path
+        mts.save(Path(tmpfile), tensor)
+        data = mts.load(tmpfile)
+        assert len(data.keys) == 4
+
+        # using pre-opened file
+        with open(tmpfile, "wb") as file:
+            mts.save(file, tensor)
+        data = mts.load(tmpfile)
         assert len(data.keys) == 4
 
     # save using buffer
@@ -164,6 +183,15 @@ def test_load_block(block_path):
     loaded = TensorBlock.load(block_path)
     check_block(loaded)
 
+    # using Path
+    loaded = mts.load_block(Path(block_path))
+    check_block(loaded)
+
+    # using pre-opened file
+    with open(block_path, "rb") as file:
+        loaded = mts.load_block(file)
+        check_block(loaded)
+
     # load from buffer
     buffer = torch.tensor(np.fromfile(block_path, dtype="uint8"))
 
@@ -186,6 +214,17 @@ def test_save_block(tmpdir, block_path):
         assert len(data) == 4
 
         block.save(tmpfile)
+        data = mts.load_block(tmpfile)
+        assert len(data) == 4
+
+        # using Path
+        mts.save(Path(tmpfile), block)
+        data = mts.load_block(tmpfile)
+        assert len(data) == 4
+
+        # using pre-opened file
+        with open(tmpfile, "wb") as file:
+            mts.save(file, block)
         data = mts.load_block(tmpfile)
         assert len(data) == 4
 
@@ -230,6 +269,15 @@ def test_load_labels(labels_path):
     loaded = Labels.load(labels_path)
     check_labels(loaded)
 
+    # using Path
+    loaded = mts.load_labels(Path(labels_path))
+    check_labels(loaded)
+
+    # using pre-opened file
+    with open(labels_path, "rb") as file:
+        loaded = mts.load_labels(file)
+        check_labels(loaded)
+
     # load from buffer
     buffer = torch.tensor(np.fromfile(labels_path, dtype="uint8"))
 
@@ -252,6 +300,17 @@ def test_save_labels(tmpdir, labels_path):
         assert len(data) == 4
 
         labels.save(tmpfile)
+        data = mts.load_labels(tmpfile)
+        assert len(data) == 4
+
+        # using Path
+        mts.save(Path(tmpfile), labels)
+        data = mts.load_labels(tmpfile)
+        assert len(data) == 4
+
+        # using pre-opened file
+        with open(tmpfile, "wb") as file:
+            mts.save(file, labels)
         data = mts.load_labels(tmpfile)
         assert len(data) == 4
 
@@ -278,26 +337,26 @@ def test_pickle_labels(tmpdir, labels_path):
 
 
 class Serialization:
-    def load(self, path: str) -> TensorMap:
-        return mts.load(path=path)
+    def load(self, file: str) -> TensorMap:
+        return mts.load(file=file)
 
     def load_buffer(self, buffer: torch.Tensor) -> TensorMap:
         return mts.load_buffer(buffer=buffer)
 
-    def load_block(self, path: str) -> TensorBlock:
-        return mts.load_block(path=path)
+    def load_block(self, file: str) -> TensorBlock:
+        return mts.load_block(file=file)
 
     def load_block_buffer(self, buffer: torch.Tensor) -> TensorBlock:
         return mts.load_block_buffer(buffer=buffer)
 
-    def load_labels(self, path: str) -> Labels:
-        return mts.load_labels(path=path)
+    def load_labels(self, file: str) -> Labels:
+        return mts.load_labels(file=file)
 
     def load_labels_buffer(self, buffer: torch.Tensor) -> Labels:
         return mts.load_labels_buffer(buffer=buffer)
 
-    def save(self, path: str, data: Union[Labels, TensorBlock, TensorMap]):
-        return mts.save(path=path, data=data)
+    def save(self, file: str, data: Union[Labels, TensorBlock, TensorMap]):
+        return mts.save(file=file, data=data)
 
     def save_buffer(self, data: Union[Labels, TensorBlock, TensorMap]) -> torch.Tensor:
         return mts.save_buffer(data=data)
@@ -310,6 +369,6 @@ def test_script():
 
     @torch.jit.script
     def test_function(labels: Labels):
-        mts.save("tmp.mts", labels)
+        torch.ops.metatensor.save("tmp.mts", labels)
 
     assert 'ops.metatensor.save("tmp.mts", labels)' in test_function.code
