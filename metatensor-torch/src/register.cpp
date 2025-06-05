@@ -301,7 +301,7 @@ TORCH_LIBRARY(metatensor, m) {
     m.def("dtype_name(ScalarType dtype) -> str", scalar_type_name);
 
     m.def(
-        "load(str path) -> __torch__.torch.classes.metatensor.TensorMap",
+        "load(str file) -> __torch__.torch.classes.metatensor.TensorMap",
         metatensor_torch::load
     );
     m.def(
@@ -310,7 +310,7 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
-        "load_block(str path) -> __torch__.torch.classes.metatensor.TensorBlock",
+        "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block
     );
     m.def(
@@ -319,7 +319,7 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
-        "load_labels(str path) -> __torch__.torch.classes.metatensor.Labels",
+        "load_labels(str file) -> __torch__.torch.classes.metatensor.Labels",
         metatensor_torch::load_labels
     );
     m.def(
@@ -327,7 +327,7 @@ TORCH_LIBRARY(metatensor, m) {
         metatensor_torch::load_labels_buffer
     );
 
-    // manually construct the schema for "save(str path, Any data) -> ()", so we
+    // manually construct the schema for "save(str file, Any data) -> ()", so we
     // can set AliasAnalysisKind to CONSERVATIVE. In turn, this make it so
     // the TorchScript compiler knows this function has side-effects, and does
     // not remove it from the graph.
@@ -335,7 +335,7 @@ TORCH_LIBRARY(metatensor, m) {
         /*name=*/"save",
         /*overload_name=*/"save",
         /*arguments=*/{
-            c10::Argument("path", c10::getTypePtr<std::string>()),
+            c10::Argument("file", c10::getTypePtr<std::string>()),
             c10::Argument("data", c10::getTypePtr<c10::IValue>())
         },
         /*returns=*/{}

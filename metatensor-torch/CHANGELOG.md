@@ -21,6 +21,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
   argument, with the same meaning as in `torch.Tensor.to`.
+- `metatensor.torch.save`, `metatensor.torch.load`,
+  `metatensor.torch.load_block` and `metatensor.torch.load_labels` can now take
+  `pathlib.Path` objects as inputs, as well as pre-opened files. When using these
+  functions from TorchScript, only `str` arguments are supported.
 
 ## [Version 0.7.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.6) - 2025-04-25
 

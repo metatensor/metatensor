@@ -1383,48 +1383,6 @@ def dtype_name(dtype: torch.dtype) -> str:
     """
 
 
-def load(path: str) -> TensorMap:
-    """
-    Load a previously saved :py:class:`TensorMap` from the given path.
-
-    :py:class:`TensorMap` are serialized using the ``.mts`` format, i.e. a
-    ZIP file without compression (storage method is ``STORED``), where each file
-    is stored as a ``.npy`` array. See the C API documentation for more
-    information on the format.
-
-    :param path: path of the file to load
-    """
-
-
-def load_block(path: str) -> TensorBlock:
-    """
-    Load previously saved :py:class:`TensorBlock` from the given file.
-
-    :param path: path of the file to load
-    """
-
-
-def load_labels(path: str) -> Labels:
-    """
-    Load previously saved :py:class:`Labels` from the given file.
-
-    :param path: path of the file to load
-    """
-
-
-def save(path: str, data: Union[TensorMap, TensorBlock, Labels]):
-    """
-    Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`, or
-    :py:class:`Labels`) to the given file at the given ``path``.
-
-    If the file already exists, it is overwritten. The recomended file extension when
-    saving data is ``.mts``, to prevent confusion with generic ``.npz`` files.
-
-    :param path: path of the file where to save the data
-    :param data: data to serialize and save
-    """
-
-
 def load_buffer(buffer: torch.Tensor) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from an in-memory buffer, stored
