@@ -327,7 +327,22 @@ TORCH_LIBRARY(metatensor, m) {
         metatensor_torch::load_labels_buffer
     );
 
-    m.def("save(str path, Any data) -> ()", save_ivalue);
+    // manually construct the schema for "save(str path, Any data) -> ()", so we
+    // can set AliasAnalysisKind to CONSERVATIVE. In turn, this make it so
+    // the TorchScript compiler knows this function has side-effects, and does
+    // not remove it from the graph.
+    auto schema = c10::FunctionSchema(
+        /*name=*/"save",
+        /*overload_name=*/"save",
+        /*arguments=*/{
+            c10::Argument("path", c10::getTypePtr<std::string>()),
+            c10::Argument("data", c10::getTypePtr<c10::IValue>())
+        },
+        /*returns=*/{}
+    );
+    schema.setAliasAnalysis(c10::AliasAnalysisKind::CONSERVATIVE);
+    m.def(std::move(schema), save_ivalue);
+
     m.def("save_buffer(Any data) -> Tensor", save_ivalue_buffer);
 
     // ====================================================================== //

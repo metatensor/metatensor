@@ -307,3 +307,9 @@ def test_script():
     # check that the operators definition (in register.cpp) match what we expect
     # (defined in `Serialization`)
     _ = torch.jit.script(Serialization)
+
+    @torch.jit.script
+    def test_function(labels: Labels):
+        mts.save("tmp.mts", labels)
+
+    assert 'ops.metatensor.save("tmp.mts", labels)' in test_function.code
