@@ -12,10 +12,17 @@ namespace metatensor_torch {
 /// also move metatensor data to the correct dtype and device.
 class METATENSOR_TORCH_EXPORT Module: public torch::jit::Module {
 public:
+    /// Construct a `metatensor_torch::Module` wrapping the given
+    /// `torch::jit::Module`.
     Module(torch::jit::Module module): torch::jit::Module(std::move(module)) {}
 
+    /// Move all the data in the module to the given `device` and `dtype`
     void to(at::Device device, at::ScalarType dtype, bool non_blocking = false);
+
+    /// Move all the data in the module to the given `dtype`
     void to(at::ScalarType dtype, bool non_blocking = false);
+
+    /// Move all the data in the module to the given `device`
     void to(at::Device device, bool non_blocking = false);
 
 private:
