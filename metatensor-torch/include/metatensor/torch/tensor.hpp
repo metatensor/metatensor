@@ -17,9 +17,6 @@ class TensorMapHolder;
 /// TorchScript will always manipulate `TensorMapHolder` through a `torch::intrusive_ptr`
 using TensorMap = torch::intrusive_ptr<TensorMapHolder>;
 
-// for backward compatibility, to remove later
-using TorchTensorMap = TensorMap;
-
 /// Wrapper around `metatensor::TensorMap` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate

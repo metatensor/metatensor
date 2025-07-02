@@ -15,15 +15,9 @@ class LabelsHolder;
 /// TorchScript will always manipulate `LabelsHolder` through a `torch::intrusive_ptr`
 using Labels = torch::intrusive_ptr<LabelsHolder>;
 
-// for backward compatibility, to remove later
-using TorchLabels = Labels;
-
 class LabelsEntryHolder;
 /// TorchScript will always manipulate `LabelsEntryHolder` through a `torch::intrusive_ptr`
 using LabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
-
-// for backward compatibility, to remove later
-using TorchLabelsEntry = LabelsEntry;
 
 namespace details {
     /// Transform a torch::IValue containing either a single string, a list of

@@ -16,9 +16,6 @@ class TensorBlockHolder;
 /// TorchScript will always manipulate `TensorBlockHolder` through a `torch::intrusive_ptr`
 using TensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
 
-// for backward compatibility, to remove later
-using TorchTensorBlock = TensorBlock;
-
 /// Wrapper around `metatensor::TensorBlock` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
