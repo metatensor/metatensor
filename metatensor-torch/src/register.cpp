@@ -81,6 +81,15 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
     );
 }
 
+static void block_values_setter(TensorBlock, torch::Tensor) {
+    C10_THROW_ERROR(
+        ValueError,
+        "Direct assignment to `values` is not possible. "
+        "Please use `block.values[:] = new_values` instead."
+    );
+}
+
+
 TORCH_LIBRARY(metatensor, m) {
     // There is no way to access the docstrings from Python, so we don't bother
     // setting them to something useful here.
@@ -191,8 +200,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__str__", &TensorBlockHolder::repr)
         .def("__len__", &TensorBlockHolder::len )
         .def("copy", &TensorBlockHolder::copy)
-        .def_property("values", &TensorBlockHolder::values,
-        &TensorBlockHolder::set_values)
+        .def_property("values", &TensorBlockHolder::values, block_values_setter)
         .def_property("samples", &TensorBlockHolder::samples)
         .def_property("components", &TensorBlockHolder::components)
         .def_property("properties", &TensorBlockHolder::properties)

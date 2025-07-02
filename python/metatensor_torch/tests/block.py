@@ -181,10 +181,10 @@ def test_values_setter():
     )
 
     with pytest.raises(
-        RuntimeError,
+        ValueError,
         match=re.escape(
             "Direct assignment to `values` is not possible. "
-            "Please use block.values[:] = new_values instead."
+            "Please use `block.values[:] = new_values` instead."
         ),
     ):
         block.values = torch.tensor([[4.0, 5.0, 6.0]])
