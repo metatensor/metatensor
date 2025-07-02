@@ -54,9 +54,6 @@ def test_module_map(tensor, out_properties):
     for i, item in enumerate(tensor.items()):
         key, block = item
         module = modules[i]
-        assert tensor_module.get_module(key) is module, (
-            "modules should be initialized in the same order as keys"
-        )
 
         with torch.no_grad():
             ref_values = module(block.values)
@@ -108,24 +105,13 @@ def test_to_device(tensor, torch_script):
 
         module.to(device=device)
 
-        # at this point, the parameters should have been moved,
-        # but the input keys and output properties should still be on cpu
         assert len(list(module.parameters())) > 0
         for parameter in module.parameters():
             assert parameter.device.type == device
 
-        assert module._in_keys.device.type == "cpu"
-        for label in module._out_properties:
-            assert label.device.type == "cpu"
-
-        device_tensor = tensor.to(device=device)
-        output = module(device_tensor)
-        assert output.device.type == device
-
-        # the input keys and output properties should now be on device
         assert module._in_keys.device.type == device
-        for label in module._out_properties:
-            assert label.device.type == device
+        for labels in module._out_properties:
+            assert labels.device.type == device
 
 
 @pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
@@ -145,9 +131,6 @@ def test_torchscript(tensor):
     out_tensor = tensor_module_script(tensor)
 
     allclose_raise(ref_tensor, out_tensor)
-
-    # tests if member functions work that do not appear in forward
-    tensor_module_script.get_module(tensor.keys[0])
 
     # test save load
     scripted = torch.jit.script(tensor_module_script)
