@@ -17,12 +17,20 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
-### Changed
+### Removed
 
 - `metatensor.torch.atomistic` now lives in the `metatomic-torch` package
-  (https://github.com/metatensor/metatomic). `metatensor.torch.atomistic` in
-  Python re-exports the classes from metatomic, and
-  `metatensor/torch/atomistic.hpp` does the same for C++.
+  (https://github.com/metatensor/metatomic).
+
+### Added
+
+- A custom C++ class `metatensor_torch::Module` that should be used instead of
+  `torch::jit::Module` when the modules contains metatensor data (Labels,
+  TensorBlock, TensorMap) as attributes. This class will properly handle moving
+  this data to the correct dtype and device when calling `module.to()`. The
+  corresponding Python class is defined in `metatensor-learn`.
+
+### Changed
 
 - `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
   argument, with the same meaning as in `torch.Tensor.to`.
