@@ -17,6 +17,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- A custom class `metatensor.learn.nn.Module` that should be used instead of
+  `torch.nn.Module` when the modules contains metatensor data (Labels,
+  TensorBlock, TensorMap) as attributes. This class will properly handle moving
+  this data to the correct dtype and device when calling `module.to()` and
+  related functions. It will also handle putting this data in the module
+  `state_dict()` and loading it back with `load_state_dict()`.
+
 ## [Version 0.3.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.3.2) - 2025-04-25
 
 - Make the code compatible with metatensor-torch v0.7.6
