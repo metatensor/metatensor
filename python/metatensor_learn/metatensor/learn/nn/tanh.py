@@ -1,10 +1,10 @@
 from typing import List, Optional
 
 import torch
-from torch.nn import Module
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from .module_map import ModuleMap
 
 
@@ -51,7 +51,7 @@ class Tanh(Module):
         return self.module_map(tensor)
 
 
-class InvariantTanh(torch.nn.Module):
+class InvariantTanh(Module):
     """
     Module similar to :py:class:`torch.nn.Tanh` that works with
     :py:class:`metatensor.torch.TensorMap` objects, applying the transformation only to

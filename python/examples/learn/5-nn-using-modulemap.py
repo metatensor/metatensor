@@ -23,7 +23,7 @@ import torch
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorMap
-from metatensor.torch.learn.nn import Linear, ModuleMap
+from metatensor.torch.learn import nn
 
 
 torch.manual_seed(42)
@@ -99,8 +99,8 @@ for key in in_keys:
     modules.append(module)
 
 # initialize the ModuleMap with the input keys, list of modules, and the output
-# property labels' metadata.
-linear_mmap = ModuleMap(
+# properties
+linear_mmap = nn.ModuleMap(
     in_keys,
     modules,
     out_properties=[target_tensormap[key].properties for key in in_keys],
@@ -139,7 +139,7 @@ print(prediction_subset.keys, prediction_subset.blocks())
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by a summation operation
-class TensorMapLoss(torch.nn.Module):
+class TensorMapLoss(nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
     sum.
@@ -165,8 +165,8 @@ class TensorMapLoss(torch.nn.Module):
 
 # construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: torch.nn.Module,
-    loss_fn: torch.nn.Module,
+    model,
+    loss_fn,
     features: Union[torch.Tensor, TensorMap],
     targets: Union[torch.Tensor, TensorMap],
 ) -> None:
@@ -226,7 +226,7 @@ for key in in_keys:
     modules.append(module)
 
 # initialize the ModuleMap as in the previous section.
-custom_mmap = ModuleMap(
+custom_mmap = nn.ModuleMap(
     in_keys,
     modules,
     out_properties=[target_tensormap[key].properties for key in in_keys],
@@ -239,19 +239,18 @@ training_loop(custom_mmap, loss_fn_mts, feature_tensormap, target_tensormap)
 
 # %%
 #
-# ModuleMap objects can also be wrapped in a ``torch.nn.torch.nn.Module`` to
-# allow construction of complex architectures. For instance, we can have a
-# "ResNet"-style neural network module that takes a ModuleMap and applies it,
-# then sums with some residual connections. Wikipedia has a good summary and
-# diagram of this architectural motif, see:
-# https://en.wikipedia.org/wiki/Residual_neural_network .
+# ModuleMap objects can also be used in another ``nn.Module`` to allow construction of
+# complex architectures. For instance, we can have a "ResNet"-style neural network
+# module that takes a ModuleMap and applies it, then sums with some residual
+# connections. Wikipedia has a good summary and diagram of this architectural motif,
+# see: https://en.wikipedia.org/wiki/Residual_neural_network .
 #
 # To do the latter step, we can combine application of the ``ModuleMap`` with a
 # ``Linear`` convenience layer from metatensor-learn, and the sparse addition operation
 # from ``metatensor-operations`` to build a complex architecture.
 
 
-class ResidualNetwork(torch.nn.Module):
+class ResidualNetwork(nn.Module):
     def __init__(
         self,
         in_keys: Labels,
@@ -281,14 +280,14 @@ class ResidualNetwork(torch.nn.Module):
             )
             modules.append(module)
 
-        self.module_map = ModuleMap(
+        self.module_map = nn.ModuleMap(
             in_keys,
             modules,
             out_properties=out_properties,
         )
 
         # build the input projection layer
-        self.projection = Linear(
+        self.projection = nn.Linear(
             in_keys=in_keys,
             in_features=in_features,
             out_properties=out_properties,

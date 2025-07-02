@@ -1,9 +1,9 @@
 from typing import List
 
 import torch
-from torch.nn import Module
 
 from .._backend import Labels, TensorMap, isinstance_metatensor
+from ._module import Module
 from .module_map import ModuleMap
 
 
@@ -26,7 +26,9 @@ class Sequential(Module):
 
         modules: List[Module] = []
         for i in range(len(in_keys)):
-            modules.append(torch.nn.Sequential(*[arg.module_map[i] for arg in args]))
+            modules.append(
+                torch.nn.Sequential(*[arg.module_map.module_list[i] for arg in args])
+            )
         self.module_map = ModuleMap(
             in_keys, modules, out_properties=args[-1].module_map.out_properties
         )
