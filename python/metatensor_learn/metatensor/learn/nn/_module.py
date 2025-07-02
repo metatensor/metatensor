@@ -85,8 +85,8 @@ class Module(torch.nn.Module):
         return result
 
 
-# WARNING: used by metatensor.torch.learn, do not update without increasing the version
-# number as for a breaking change.
+# WARNING: this is duplicated in metatensor.torch._module, make sure to change both
+# versions of the function at the same time
 def _metatensor_data_to(value, dtype, device):
     """
     Convert metatensor data to the given dtype/device, returning the new data and a

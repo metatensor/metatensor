@@ -71,7 +71,10 @@ except ImportError:
     pass
 
 from . import atomistic  # noqa: F401
+from ._module import _patch_torch_jit_module
 
+
+_patch_torch_jit_module()
 
 __all__ = [
     "Labels",
