@@ -192,6 +192,32 @@ TEST_CASE("Data Array") {
                 new_array.destroy(new_array.ptr);
         }
 
+        SECTION("to_dlpack") {
+            DLManagedTensor* dl_tensor = nullptr;
+            auto status = array.to_dlpack(array.ptr, &dl_tensor);
+            CHECK(status == MTS_SUCCESS);
+            REQUIRE(dl_tensor != nullptr);
+
+            // Check the tensor properties
+            CHECK(dl_tensor->dl_tensor.device.device_type == kDLCPU);
+            CHECK(dl_tensor->dl_tensor.ndim == 3);
+            CHECK(dl_tensor->dl_tensor.dtype.code == kDLFloat);
+            CHECK(dl_tensor->dl_tensor.dtype.bits == 64);
+            CHECK(dl_tensor->dl_tensor.dtype.lanes == 1);
+            CHECK(dl_tensor->dl_tensor.shape[0] == 2);
+            CHECK(dl_tensor->dl_tensor.shape[1] == 3);
+            CHECK(dl_tensor->dl_tensor.shape[2] == 4);
+
+            // Check that the data is the same
+            auto cxx_array = static_cast<SimpleDataArray*>(array.ptr);
+            auto* data_ptr = static_cast<double*>(dl_tensor->dl_tensor.data);
+            CHECK(data_ptr == cxx_array->data());
+
+            // The consumer is responsible for calling the deleter to free the
+            // memory
+            dl_tensor->deleter(dl_tensor);
+        }
+
         array.destroy(array.ptr);
 }
 
