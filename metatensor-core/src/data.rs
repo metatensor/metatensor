@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
-use dlpark::ffi::ManagedTensor as dlpark_managed_tensor;
+use dlpark::ffi::ManagedTensor as DLManagedTensor;
 use dlpark::SafeManagedTensor;
 
 use crate::c_api::mts_status_t;
@@ -98,7 +98,7 @@ pub struct mts_array_t {
     to_dlpack: Option<
         unsafe extern "C" fn(
             array: *const c_void,
-            dl_tensor: *mut *mut dlpark_managed_tensor,
+            dl_tensor: *mut *mut DLManagedTensor,
         ) -> mts_status_t,
     >,
 
@@ -225,7 +225,7 @@ impl mts_array_t {
             .to_dlpack
             .expect("mts_array_t.to_dlpack function is NULL");
 
-        let mut dl_tensor_ptr: *mut dlpark_managed_tensor = std::ptr::null_mut();
+        let mut dl_tensor_ptr: *mut DLManagedTensor = std::ptr::null_mut();
         let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
 
         if !status.is_success() {
@@ -617,7 +617,7 @@ mod tests {
         // C-compatible function to produce a DLPack tensor
         unsafe extern "C" fn to_dlpack(
             array: *const c_void,
-            dl_tensor: *mut *mut dlpark_managed_tensor,
+            dl_tensor: *mut *mut DLManagedTensor,
         ) -> mts_status_t {
             let array = &*(array as *const DlpackTestArray);
 
