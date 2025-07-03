@@ -2,6 +2,7 @@
 #define METATENSOR_HPP
 
 #include <array>
+#include <dlpack/dlpack.h>
 #include <vector>
 #include <string>
 #include <memory>
@@ -35,6 +36,7 @@ namespace metatensor {
 class Labels;
 class TensorMap;
 class TensorBlock;
+class ManagedTensor;
 
 /// Exception class used for all errors in metatensor
 class Error: public std::runtime_error {
@@ -183,6 +185,70 @@ namespace details {
 /*                                                                            */
 /******************************************************************************/
 /******************************************************************************/
+
+
+/// A RAII-style wrapper around a C `DLManagedTensor`.
+///
+/// This class manages the lifetime of a `DLManagedTensor*` pointer, calling
+/// the provided `deleter` function when it goes out of scope. This makes it
+/// safe to work with DLPack tensors in C++.
+class ManagedTensor {
+  public:
+    /// Create a new `ManagedTensor` from a raw `DLManagedTensor` pointer.
+    /// The `ManagedTensor` takes ownership of the pointer.
+    explicit ManagedTensor(DLManagedTensor *tensor) : tensor_(tensor) {}
+
+    /// The destructor automatically calls the tensor's deleter function,
+    /// ensuring the underlying memory is properly freed.
+    ~ManagedTensor() {
+        if (tensor_ && tensor_->deleter) {
+            tensor_->deleter(tensor_);
+        }
+    }
+
+    /// ManagedTensor is not copy-constructible
+    ManagedTensor(const ManagedTensor &) = delete;
+    /// ManagedTensor can not be copy-assigned
+    ManagedTensor &operator=(const ManagedTensor &other) = delete;
+
+    /// ManagedTensor is move-constructible
+    ManagedTensor(ManagedTensor &&other) noexcept : tensor_(other.tensor_) {
+        other.tensor_ = nullptr;
+    }
+
+    /// ManagedTensor can be move-assigned
+    ManagedTensor &operator=(ManagedTensor &&other) noexcept {
+        if (tensor_ && tensor_->deleter) {
+            tensor_->deleter(tensor_);
+        }
+        tensor_ = other.tensor_;
+        other.tensor_ = nullptr;
+        return *this;
+    }
+
+    /// Access the underlying `DLManagedTensor`.
+    const DLManagedTensor *operator->() const { return tensor_; }
+
+    /// Access the underlying `DLManagedTensor`.
+    DLManagedTensor *operator->() { return tensor_; }
+
+    /// Access the underlying `DLManagedTensor`.
+    const DLManagedTensor &operator*() const { return *tensor_; }
+
+    /// Access the underlying `DLManagedTensor`.
+    DLManagedTensor &operator*() { return *tensor_; }
+
+    /// Release ownership of the underlying pointer. The caller is now
+    /// responsible for calling the deleter.
+    DLManagedTensor *release() {
+        auto ptr = tensor_;
+        tensor_ = nullptr;
+        return ptr;
+    }
+
+  private:
+    DLManagedTensor *tensor_;
+};
 
 
 /// Simple N-dimensional array interface
@@ -536,6 +602,16 @@ public:
             }, array, data);
         };
 
+        array.to_dlpack = [](const void* array, DLManagedTensor** dl_tensor) {
+            return details::catch_exceptions([](const void* array, DLManagedTensor** dl_tensor){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                auto managed_tensor = cxx_array->to_dlpack();
+                // release the raw pointer from the smart pointer to transfer ownership to C
+                *dl_tensor = managed_tensor.release();
+                return MTS_SUCCESS;
+            }, array, dl_tensor);
+        };
+
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
             return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -611,12 +687,18 @@ public:
 
     /// Get a pointer to the underlying data storage.
     ///
+    /// @deprecated This function is being phased out in favor of `to_dlpack()`
+    /// which provides a generic, type safe tensor.
+    ///
     /// This function is allowed to fail if the data is not accessible in RAM,
     /// not stored as 64-bit floating point values, or not stored as a
     /// C-contiguous array.
     virtual double* data() & = 0;
 
     double* data() && = delete;
+
+    /// Get the underlying data as a DLPack tensor.
+    virtual ManagedTensor to_dlpack() const = 0;
 
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
@@ -693,6 +775,54 @@ public:
 
     double* data() & override {
         return data_.data();
+    }
+
+    ManagedTensor to_dlpack() const override {
+        // This struct will hold all the data that needs to be kept alive
+        // for the DLManagedTensor to be valid. The manager_ctx will point
+        // to an instance of this struct.
+        struct DlpackContext {
+            DLManagedTensor tensor;
+            std::vector<int64_t> shape;
+        };
+
+        // We allocate the context on the heap, and the DLManagedTensor will
+        // take ownership of it.
+        auto context = new DlpackContext();
+
+        // Copy the shape from uintptr_t to the int64_t required by DLPack
+        context->shape.reserve(this->shape_.size());
+        for (const auto& s: this->shape_) {
+            context->shape.push_back(static_cast<int64_t>(s));
+        }
+
+        // Fill the DLTensor fields
+        auto& dl_tensor = context->tensor.dl_tensor;
+        // The DLPack standard requires a non-const data pointer.
+        dl_tensor.data = const_cast<double*>(this->data_.data());
+        dl_tensor.device = {kDLCPU, 0};
+        dl_tensor.ndim = static_cast<int32_t>(this->shape_.size());
+        dl_tensor.dtype = {kDLFloat, 64, 1};
+        dl_tensor.shape = context->shape.data();
+        dl_tensor.strides = nullptr; // contiguous row-major array
+        dl_tensor.byte_offset = 0;
+
+        // Set the manager context and the deleter
+        context->tensor.manager_ctx = context;
+        context->tensor.deleter = [](DLManagedTensor* self) {
+            // The manager_ctx points to the DlpackContext. Deleting it will
+            // free the context struct, which in turn frees the shape vector
+            // and the DLManagedTensor itself. The actual tensor data (`data_`)
+            // is owned by the SimpleDataArray and will be cleaned up when it
+            // is destroyed.
+            delete static_cast<DlpackContext*>(self->manager_ctx);
+        };
+
+        // Return the safe C++ wrapper, which now owns the DLManagedTensor.
+        // We are giving a pointer to a member of the `context` struct, which
+        // is fine since the lifetime of the tensor is tied to the context
+        // through the deleter.
+        return ManagedTensor(&context->tensor);
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -896,6 +1026,35 @@ public:
 
     double* data() & override {
         throw metatensor::Error("can not call `data` for an EmptyDataArray");
+    }
+
+    ManagedTensor to_dlpack() const override {
+        // See SimpleDataArray for the details of this
+        struct DlpackContext {
+            DLManagedTensor tensor;
+            std::vector<int64_t> shape;
+        };
+        auto context = new DlpackContext();
+        context->shape.reserve(this->shape_.size());
+        for (const auto& s: this->shape_) {
+            context->shape.push_back(static_cast<int64_t>(s));
+        }
+        auto& dl_tensor = context->tensor.dl_tensor;
+        dl_tensor.data = nullptr;
+        dl_tensor.device = {kDLCPU, 0};
+        dl_tensor.ndim = static_cast<int32_t>(this->shape_.size());
+        dl_tensor.dtype = {kDLFloat, 64, 1};
+        dl_tensor.shape = context->shape.data();
+        dl_tensor.strides = nullptr; // contiguous row-major array
+        dl_tensor.byte_offset = 0;
+        context->tensor.manager_ctx = context;
+        context->tensor.deleter = [](DLManagedTensor* self) {
+            // The manager_ctx points to the DlpackContext. Deleting it will
+            // free the context struct, which in turn frees the shape vector
+            // and the DLManagedTensor itself.
+            delete static_cast<DlpackContext*>(self->manager_ctx);
+        };
+        return ManagedTensor(&context->tensor);
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -1948,6 +2107,9 @@ public:
         return block;
     }
 
+    /// @deprecated This function is deprecated and will be removed in a future
+    /// version. Use `dlpack()` instead to get a generic, type-safe tensor.
+    ///
     /// Get a view in the values in this block
     NDArray<double> values() & {
         auto array = this->mts_array();
@@ -1958,6 +2120,15 @@ public:
     }
 
     NDArray<double> values() && = delete;
+
+    /// Get the values array as a DLPack tensor.
+    ManagedTensor dlpack() const & {
+        auto array = this->const_mts_array();
+        DLManagedTensor* dl_tensor = nullptr;
+        details::check_status(array.to_dlpack(array.ptr, &dl_tensor));
+        details::check_pointer(dl_tensor);
+        return ManagedTensor(dl_tensor);
+    }
 
     /// Access the sample `Labels` for this block.
     ///
