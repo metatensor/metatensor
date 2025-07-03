@@ -4,6 +4,9 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
+use dlpark::ffi::ManagedTensor as dlpark_managed_tensor;
+use dlpark::SafeManagedTensor;
+
 use crate::c_api::mts_status_t;
 use crate::Error;
 
@@ -78,45 +81,53 @@ pub struct mts_array_t {
     /// `origin`. Users of `mts_array_t` should register a single data
     /// origin with `mts_register_data_origin`, and use it for all compatible
     /// arrays.
-    origin: Option<unsafe extern "C" fn(
-        array: *const c_void,
-        origin: *mut mts_data_origin_t
-    ) -> mts_status_t>,
+    origin: Option<
+        unsafe extern "C" fn(array: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t,
+    >,
 
     /// Get a pointer to the underlying data storage.
     ///
     /// This function is allowed to fail if the data is not accessible in RAM,
     /// not stored as 64-bit floating point values, or not stored as a
     /// C-contiguous array.
-    data: Option<unsafe extern "C" fn(
-        array: *mut c_void,
-        data: *mut *mut f64,
-    ) -> mts_status_t>,
+    /// NOTE(rg): Now deprecated, only call to_dlpack
+    data: Option<unsafe extern "C" fn(array: *mut c_void, data: *mut *mut f64) -> mts_status_t>,
+
+    /// Get a pointer to a DLPack compattible managed tensor usable by any DLPack interface
+    /// The consumer of the tensor is responsible for calling the deleter
+    to_dlpack: Option<
+        unsafe extern "C" fn(
+            array: *const c_void,
+            dl_tensor: *mut *mut dlpark_managed_tensor,
+        ) -> mts_status_t,
+    >,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`.
-    shape: Option<unsafe extern "C" fn(
-        array: *const c_void,
-        shape: *mut *const usize,
-        shape_count: *mut usize,
-    ) -> mts_status_t>,
+    shape: Option<
+        unsafe extern "C" fn(
+            array: *const c_void,
+            shape: *mut *const usize,
+            shape_count: *mut usize,
+        ) -> mts_status_t,
+    >,
 
     /// Change the shape of the array managed by this `mts_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
     /// `shape` array
-    reshape: Option<unsafe extern "C" fn(
-        array: *mut c_void,
-        shape: *const usize,
-        shape_count: usize,
-    ) -> mts_status_t>,
+    reshape: Option<
+        unsafe extern "C" fn(
+            array: *mut c_void,
+            shape: *const usize,
+            shape_count: usize,
+        ) -> mts_status_t,
+    >,
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
-    swap_axes: Option<unsafe extern "C" fn(
-        array: *mut c_void,
-        axis_1: usize,
-        axis_2: usize,
-    ) -> mts_status_t>,
+    swap_axes: Option<
+        unsafe extern "C" fn(array: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t,
+    >,
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`; and store it in
@@ -124,21 +135,22 @@ pub struct mts_array_t {
     /// in `shape_count`.
     ///
     /// The new array should be filled with zeros.
-    create: Option<unsafe extern "C" fn(
-        array: *const c_void,
-        shape: *const usize,
-        shape_count: usize,
-        new_array: *mut mts_array_t,
-    ) -> mts_status_t>,
+    create: Option<
+        unsafe extern "C" fn(
+            array: *const c_void,
+            shape: *const usize,
+            shape_count: usize,
+            new_array: *mut mts_array_t,
+        ) -> mts_status_t,
+    >,
 
     /// Make a copy of this `array` and return the new array in `new_array`.
     ///
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
-    copy: Option<unsafe extern "C" fn(
-        array: *const c_void,
-        new_array: *mut mts_array_t,
-    ) -> mts_status_t>,
+    copy: Option<
+        unsafe extern "C" fn(array: *const c_void, new_array: *mut mts_array_t) -> mts_status_t,
+    >,
 
     /// Remove this array and free the associated memory. This function can be
     /// set to `NULL` is there is no memory management to do.
@@ -155,14 +167,16 @@ pub struct mts_array_t {
     /// This function should copy data from `input[samples[i].input, ..., :]` to
     /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
     /// to `samples_count`. All indexes are 0-based.
-    move_samples_from: Option<unsafe extern "C" fn(
-        output: *mut c_void,
-        input: *const c_void,
-        samples: *const mts_sample_mapping_t,
-        samples_count: usize,
-        property_start: usize,
-        property_end: usize,
-    ) -> mts_status_t>,
+    move_samples_from: Option<
+        unsafe extern "C" fn(
+            output: *mut c_void,
+            input: *const c_void,
+            samples: *const mts_sample_mapping_t,
+            samples_count: usize,
+            property_start: usize,
+            property_end: usize,
+        ) -> mts_status_t,
+    >,
 }
 
 /// Representation of a single sample moved from an array to another one
@@ -202,6 +216,39 @@ impl Drop for mts_array_t {
 }
 
 impl mts_array_t {
+    /// Get the underlying data as a DLPack tensor.
+    ///
+    /// This is the new primary way to access the tensor data. The returned
+    /// object is a safe wrapper around the raw DLPack pointer.
+    pub fn to_dlpack(&self) -> Result<SafeManagedTensor, Error> {
+        let function = self
+            .to_dlpack
+            .expect("mts_array_t.to_dlpack function is NULL");
+
+        let mut dl_tensor_ptr: *mut dlpark_managed_tensor = std::ptr::null_mut();
+        let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status,
+                context: "calling mts_array_t.to_dlpack failed".into(),
+            });
+        }
+
+        if dl_tensor_ptr.is_null() {
+            return Err(Error::External {
+                status: mts_status_t(-1),
+                context: "mts_array_t.to_dlpack returned a NULL pointer".into(),
+            });
+        }
+
+        // The safe wrapper takes ownership of the raw pointer and will call
+        // the deleter when it is dropped.
+        let safe_tensor = unsafe { SafeManagedTensor::from_raw(dl_tensor_ptr) };
+
+        return Ok(safe_tensor);
+    }
+
     /// make a raw (member by member) copy of the array. Contrary to
     /// `mts_array_t::clone`, the returned array refers to the same
     /// `mts_array_t` instance, and as such should not be freed.
@@ -210,6 +257,7 @@ impl mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
             data: self.data,
+            to_dlpack: self.to_dlpack,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -227,6 +275,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             data: None,
+            to_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -242,13 +291,12 @@ impl mts_array_t {
         let function = self.origin.expect("mts_array_t.origin function is NULL");
 
         let mut origin = mts_data_origin_t(0);
-        let status = unsafe {
-            function(self.ptr, &mut origin)
-        };
+        let status = unsafe { function(self.ptr, &mut origin) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.origin failed".into()
+                status,
+                context: "calling mts_array_t.origin failed".into(),
             });
         }
 
@@ -267,16 +315,12 @@ impl mts_array_t {
 
         let mut data_ptr = std::ptr::null_mut();
 
-        let status = unsafe {
-            function(
-                self.ptr,
-                &mut data_ptr,
-            )
-        };
+        let status = unsafe { function(self.ptr, &mut data_ptr) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.data failed".into()
+                status,
+                context: "calling mts_array_t.data failed".into(),
             });
         }
 
@@ -286,9 +330,7 @@ impl mts_array_t {
         }
 
         assert!(!data_ptr.is_null());
-        let data = unsafe {
-            std::slice::from_raw_parts(data_ptr, len)
-        };
+        let data = unsafe { std::slice::from_raw_parts(data_ptr, len) };
 
         return Ok(data);
     }
@@ -305,16 +347,12 @@ impl mts_array_t {
 
         let mut data_ptr = std::ptr::null_mut();
 
-        let status = unsafe {
-            function(
-                self.ptr,
-                &mut data_ptr,
-            )
-        };
+        let status = unsafe { function(self.ptr, &mut data_ptr) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.data failed".into()
+                status,
+                context: "calling mts_array_t.data failed".into(),
             });
         }
 
@@ -324,9 +362,7 @@ impl mts_array_t {
         }
 
         assert!(!data_ptr.is_null());
-        let data = unsafe {
-            std::slice::from_raw_parts_mut(data_ptr, len)
-        };
+        let data = unsafe { std::slice::from_raw_parts_mut(data_ptr, len) };
 
         return Ok(data);
     }
@@ -339,25 +375,18 @@ impl mts_array_t {
         let mut shape = std::ptr::null();
         let mut shape_count: usize = 0;
 
-        let status = unsafe {
-            function(
-                self.ptr,
-                &mut shape,
-                &mut shape_count,
-            )
-        };
+        let status = unsafe { function(self.ptr, &mut shape, &mut shape_count) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.shape failed".into()
+                status,
+                context: "calling mts_array_t.shape failed".into(),
             });
         }
 
         assert!(shape_count > 0);
         assert!(!shape.is_null());
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
+        let shape = unsafe { std::slice::from_raw_parts(shape, shape_count) };
 
         return Ok(shape);
     }
@@ -366,17 +395,12 @@ impl mts_array_t {
     pub fn reshape(&mut self, shape: &[usize]) -> Result<(), Error> {
         let function = self.reshape.expect("mts_array_t.reshape function is NULL");
 
-        let status = unsafe {
-            function(
-                self.ptr,
-                shape.as_ptr(),
-                shape.len(),
-            )
-        };
+        let status = unsafe { function(self.ptr, shape.as_ptr(), shape.len()) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.reshape failed".into()
+                status,
+                context: "calling mts_array_t.reshape failed".into(),
             });
         }
 
@@ -385,19 +409,16 @@ impl mts_array_t {
 
     /// Swap the axes `axis_1` and `axis_2` in the dimensions of this array.
     pub fn swap_axes(&mut self, axis_1: usize, axis_2: usize) -> Result<(), Error> {
-        let function = self.swap_axes.expect("mts_array_t.swap_axes function is NULL");
+        let function = self
+            .swap_axes
+            .expect("mts_array_t.swap_axes function is NULL");
 
-        let status = unsafe {
-            function(
-                self.ptr,
-                axis_1,
-                axis_2,
-            )
-        };
+        let status = unsafe { function(self.ptr, axis_1, axis_2) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.swap_axes failed".into()
+                status,
+                context: "calling mts_array_t.swap_axes failed".into(),
             });
         }
 
@@ -409,18 +430,12 @@ impl mts_array_t {
         let function = self.create.expect("mts_array_t.create function is NULL");
 
         let mut data_storage = mts_array_t::null();
-        let status = unsafe {
-            function(
-                self.ptr,
-                shape.as_ptr(),
-                shape.len(),
-                &mut data_storage
-            )
-        };
+        let status = unsafe { function(self.ptr, shape.as_ptr(), shape.len(), &mut data_storage) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
+                status,
+                context: "calling mts_array_t.create failed".into(),
             });
         }
 
@@ -433,13 +448,12 @@ impl mts_array_t {
         let function = self.copy.expect("mts_array_t.copy function is NULL");
 
         let mut new_array = mts_array_t::null();
-        let status = unsafe {
-            function(self.ptr, &mut new_array)
-        };
+        let status = unsafe { function(self.ptr, &mut new_array) };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
+                status,
+                context: "calling mts_array_t.create failed".into(),
             });
         }
 
@@ -463,7 +477,9 @@ impl mts_array_t {
         samples: &[mts_sample_mapping_t],
         properties: Range<usize>,
     ) -> Result<(), Error> {
-        let function = self.move_samples_from.expect("mts_array_t.move_samples_from function is NULL");
+        let function = self
+            .move_samples_from
+            .expect("mts_array_t.move_samples_from function is NULL");
 
         let status = unsafe {
             function(
@@ -478,7 +494,8 @@ impl mts_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.move_samples_from failed".into()
+                status,
+                context: "calling mts_array_t.move_samples_from failed".into(),
             });
         }
 
@@ -491,10 +508,11 @@ pub(crate) use self::tests::TestArray;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::c_api::MTS_SUCCESS;
 
-    use super::*;
-
+    // This mock is used to test basic mts_array_t functionality without
+    // any actual data or DLPack conversion.
     pub struct TestArray {
         shape: Vec<usize>,
     }
@@ -502,11 +520,13 @@ mod tests {
     impl TestArray {
         #[allow(clippy::new_ret_no_self)]
         pub fn new(shape: Vec<usize>) -> mts_array_t {
-            let array = Box::new(TestArray {shape});
+            let array = Box::new(TestArray { shape });
 
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
+                // Initialize the new field to None
+                to_dlpack: None,
                 data: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
@@ -515,43 +535,50 @@ mod tests {
                 copy: None,
                 destroy: Some(TestArray::destroy),
                 move_samples_from: None,
-            }
+            };
         }
 
-        unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
+        unsafe extern "C" fn origin(
+            _: *const c_void,
+            origin: *mut mts_data_origin_t,
+        ) -> mts_status_t {
             *origin = register_data_origin("rust.TestArray".into());
-
             return mts_status_t(MTS_SUCCESS);
         }
 
-        unsafe extern "C" fn shape(ptr: *const c_void, shape: *mut *const usize, shape_count: *mut usize) -> mts_status_t {
+        unsafe extern "C" fn shape(
+            ptr: *const c_void,
+            shape: *mut *const usize,
+            shape_count: *mut usize,
+        ) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
-
             *shape = (*ptr).shape.as_ptr();
             *shape_count = (*ptr).shape.len();
-
             return mts_status_t(MTS_SUCCESS);
         }
 
-        unsafe extern "C" fn reshape(ptr: *mut c_void, shape_ptr: *const usize, shape_count: usize) -> mts_status_t {
+        unsafe extern "C" fn reshape(
+            ptr: *mut c_void,
+            shape_ptr: *const usize,
+            shape_count: usize,
+        ) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
-
             let shape = &mut (*ptr).shape;
             shape.clear();
-
             for i in 0..shape_count {
                 shape.push(shape_ptr.add(i).read());
             }
-
             return mts_status_t(MTS_SUCCESS);
         }
 
-        unsafe extern "C" fn swap_axes(ptr: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t {
+        unsafe extern "C" fn swap_axes(
+            ptr: *mut c_void,
+            axis_1: usize,
+            axis_2: usize,
+        ) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
-
             let shape = &mut (*ptr).shape;
             shape.swap(axis_1, axis_2);
-
             return mts_status_t(MTS_SUCCESS);
         }
 
@@ -562,10 +589,75 @@ mod tests {
         }
     }
 
+    // This mock is used specifically to test the to_dlpack functionality
+    struct DlpackTestArray {
+        data: Vec<f32>,
+        shape: Vec<usize>,
+    }
+
+    impl DlpackTestArray {
+        #[allow(clippy::new_ret_no_self)]
+        fn new(data: Vec<f32>, shape: Vec<usize>) -> mts_array_t {
+            let array = Box::new(DlpackTestArray { data, shape });
+            mts_array_t {
+                ptr: Box::into_raw(array).cast(),
+                origin: Some(TestArray::origin), // can reuse origin from basic TestArray
+                to_dlpack: Some(Self::to_dlpack),
+                data: None, // This array does not support the deprecated `data` function
+                shape: Some(Self::shape),
+                reshape: None,
+                swap_axes: None,
+                create: None,
+                copy: None,
+                destroy: Some(Self::destroy),
+                move_samples_from: None,
+            }
+        }
+
+        // C-compatible function to produce a DLPack tensor
+        unsafe extern "C" fn to_dlpack(
+            array: *const c_void,
+            dl_tensor: *mut *mut dlpark_managed_tensor,
+        ) -> mts_status_t {
+            let array = &*(array as *const DlpackTestArray);
+
+            // Create a dlpark tensor from the data.
+            // This will copy the data, a more advanced implementation could
+            // share the memory.
+            let tensor = SafeManagedTensor::new(array.data.clone())
+                .expect("Failed to create SafeManagedTensor in test");
+            *dl_tensor = tensor.into_raw();
+
+            mts_status_t(MTS_SUCCESS)
+        }
+
+        // C-compatible shape function for this specific test array
+        unsafe extern "C" fn shape(
+            ptr: *const c_void,
+            shape: *mut *const usize,
+            shape_count: *mut usize,
+        ) -> mts_status_t {
+            let ptr = ptr.cast::<DlpackTestArray>();
+            *shape = (*ptr).shape.as_ptr();
+            *shape_count = (*ptr).shape.len();
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        // C-compatible destroy function for this specific test array
+        unsafe extern "C" fn destroy(ptr: *mut c_void) {
+            let ptr = ptr.cast::<DlpackTestArray>();
+            let boxed = Box::from_raw(ptr);
+            std::mem::drop(boxed);
+        }
+    }
+
     #[test]
     fn data_origin() {
         assert_eq!(get_data_origin(mts_data_origin_t(0)), "unregistered origin");
-        assert_eq!(get_data_origin(mts_data_origin_t(10000)), "unregistered origin");
+        assert_eq!(
+            get_data_origin(mts_data_origin_t(10000)),
+            "unregistered origin"
+        );
 
         let origin = register_data_origin("test origin".into());
         assert_eq!(get_data_origin(origin), "test origin");
@@ -580,5 +672,24 @@ mod tests {
             "mts_array_t {{ ptr: {:?}, origin: Some(\"rust.TestArray\"), shape: Some([3, 4, 5]), .. }}",
             data.ptr
         ));
+    }
+
+    #[test]
+    fn dlpack_conversion() {
+        use dlpark::ffi::DataType;
+        use dlpark::traits::TensorView;
+
+        let source_data = vec![1.0f32, 2.0, 3.0, 4.0];
+        let mts_array = DlpackTestArray::new(source_data.clone(), vec![4]);
+
+        let dlpack_tensor = mts_array.to_dlpack().unwrap();
+
+        assert_eq!(dlpack_tensor.shape(), &[4]);
+        assert_eq!(dlpack_tensor.data_type(), &DataType::F32);
+
+        // Check that the data was correctly converted
+        let slice =
+            unsafe { std::slice::from_raw_parts(dlpack_tensor.data_ptr() as *const f32, 4) };
+        assert_eq!(slice, &source_data);
     }
 }
