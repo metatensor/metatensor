@@ -730,7 +730,6 @@ public:
     ) = 0;
 };
 
-
 /// Very basic implementation of DataArrayBase in C++.
 ///
 /// This is included as an example implementation of DataArrayBase, and to make
@@ -781,14 +780,14 @@ public:
         // This struct will hold all the data that needs to be kept alive
         // for the DLManagedTensor to be valid. The manager_ctx will point
         // to an instance of this struct.
-        struct DlpackContext {
+        struct DLPackContext {
             DLManagedTensor tensor;
             std::vector<int64_t> shape;
         };
 
         // We allocate the context on the heap, and the DLManagedTensor will
         // take ownership of it.
-        auto context = new DlpackContext();
+        auto context = new DLPackContext();
 
         // Copy the shape from uintptr_t to the int64_t required by DLPack
         context->shape.reserve(this->shape_.size());
@@ -810,12 +809,12 @@ public:
         // Set the manager context and the deleter
         context->tensor.manager_ctx = context;
         context->tensor.deleter = [](DLManagedTensor* self) {
-            // The manager_ctx points to the DlpackContext. Deleting it will
+            // The manager_ctx points to the DLPackContext. Deleting it will
             // free the context struct, which in turn frees the shape vector
             // and the DLManagedTensor itself. The actual tensor data (`data_`)
             // is owned by the SimpleDataArray and will be cleaned up when it
             // is destroyed.
-            delete static_cast<DlpackContext*>(self->manager_ctx);
+            delete static_cast<DLPackContext*>(self->manager_ctx);
         };
 
         // Return the safe C++ wrapper, which now owns the DLManagedTensor.
@@ -997,6 +996,89 @@ inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 }
 
 
+/// An implementation of `DataArrayBase` which can hold more than f64.
+///
+/// Consumes an existing DLPack tensor.
+class DLPackDataArray: public DataArrayBase {
+public:
+    /// Create a new array by taking ownership of an existing DLPack tensor.
+    /// This is the C++ equivalent of `from_dlpack`.
+    explicit DLPackDataArray(ManagedTensor tensor):
+        tensor_(std::move(tensor))
+    {
+        // We must copy the shape information, as the pointer inside the
+        // DLTensor is not guaranteed to outlive this object.
+        const auto& dl_tensor = tensor_->dl_tensor;
+        shape_.reserve(dl_tensor.ndim);
+        for (int32_t i=0; i<dl_tensor.ndim; ++i) {
+            shape_.push_back(static_cast<uintptr_t>(dl_tensor.shape[i]));
+        }
+    }
+
+    mts_data_origin_t origin() const override {
+        // We could register a specific "dlpack" origin, or try to inspect
+        // the tensor to determine its origin if the producer provides that info.
+        mts_data_origin_t origin = 0;
+        mts_register_data_origin("external::dlpack", &origin);
+        return origin;
+    }
+
+    ManagedTensor to_dlpack() const override {
+        // XXX(rg): Should share the manager_ctx and keep a ref-count..?
+        // This is less efficient, but OK.
+        return this->copy()->to_dlpack();
+    }
+
+    // The deprecated data() function now throws if the underlying data is not
+    // float64
+    double* data() & override {
+        auto& dl_tensor = tensor_->dl_tensor;
+        if (dl_tensor.dtype.code != kDLFloat || dl_tensor.dtype.bits != 64) {
+            throw Error(
+                "can not get a double* from this tensor, its data type is not float64"
+            );
+        }
+        return static_cast<double*>(dl_tensor.data);
+    }
+
+    const std::vector<uintptr_t>& shape() const & override {
+        return shape_;
+    }
+
+    // Stubs for later.
+    std::unique_ptr<DataArrayBase> copy() const override {
+        // A real implementation would need a way to request a deep copy
+        // from the original DLPack producer.
+        throw Error("copy() is not implemented for DLPackDataArray");
+    }
+
+    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+        throw Error("create() is not implemented for DLPackDataArray");
+    }
+
+    void reshape(std::vector<uintptr_t> shape) override {
+         throw Error("reshape() is not implemented for DLPackDataArray");
+    }
+
+    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+         throw Error("swap_axes() is not implemented for DLPackDataArray");
+    }
+
+    void move_samples_from(
+        const DataArrayBase& input,
+        std::vector<mts_sample_mapping_t> samples,
+        uintptr_t property_start,
+        uintptr_t property_end
+    ) override {
+        throw Error("move_samples_from() is not implemented for DLPackDataArray");
+    }
+
+
+private:
+    ManagedTensor tensor_;
+    std::vector<uintptr_t> shape_;
+};
+
 /// An implementation of `DataArrayBase` containing no data.
 ///
 /// This class only tracks it's shape, and can be used when only the metadata
@@ -1030,11 +1112,11 @@ public:
 
     ManagedTensor to_dlpack() const override {
         // See SimpleDataArray for the details of this
-        struct DlpackContext {
+        struct DLPackContext {
             DLManagedTensor tensor;
             std::vector<int64_t> shape;
         };
-        auto context = new DlpackContext();
+        auto context = new DLPackContext();
         context->shape.reserve(this->shape_.size());
         for (const auto& s: this->shape_) {
             context->shape.push_back(static_cast<int64_t>(s));
@@ -1049,10 +1131,10 @@ public:
         dl_tensor.byte_offset = 0;
         context->tensor.manager_ctx = context;
         context->tensor.deleter = [](DLManagedTensor* self) {
-            // The manager_ctx points to the DlpackContext. Deleting it will
+            // The manager_ctx points to the DLPackContext. Deleting it will
             // free the context struct, which in turn frees the shape vector
             // and the DLManagedTensor itself.
-            delete static_cast<DlpackContext*>(self->manager_ctx);
+            delete static_cast<DLPackContext*>(self->manager_ctx);
         };
         return ManagedTensor(&context->tensor);
     }

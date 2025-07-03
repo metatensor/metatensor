@@ -269,3 +269,85 @@ TEST_CASE("DLPack Array") {
         // The original array can now be destroyed
         dlpack_array.destroy(dlpack_array.ptr);
 }
+
+
+TEST_CASE("DLPack consumer") {
+    // This struct holds all data related to a mock DLPack tensor
+    struct Int32Tensor {
+        DLManagedTensor tensor;
+        std::vector<int32_t> data = {10, 20, 30, 40, 50, 60};
+        std::vector<int64_t> shape = {2, 3};
+    };
+
+    // deleter for the mock tensor
+    auto deleter = [](DLManagedTensor* self) {
+        delete static_cast<Int32Tensor*>(self->manager_ctx);
+    };
+
+    // create a mock DLPack tensor with int32 data
+    auto int32_tensor_ptr = new Int32Tensor();
+    int32_tensor_ptr->tensor.dl_tensor.data = int32_tensor_ptr->data.data();
+    int32_tensor_ptr->tensor.dl_tensor.device = {kDLCPU, 0};
+    int32_tensor_ptr->tensor.dl_tensor.ndim = 2;
+    int32_tensor_ptr->tensor.dl_tensor.dtype = {kDLInt, 32, 1};
+    int32_tensor_ptr->tensor.dl_tensor.shape = int32_tensor_ptr->shape.data();
+    int32_tensor_ptr->tensor.dl_tensor.strides = nullptr;
+    int32_tensor_ptr->tensor.dl_tensor.byte_offset = 0;
+    int32_tensor_ptr->tensor.manager_ctx = int32_tensor_ptr;
+    int32_tensor_ptr->tensor.deleter = deleter;
+
+    // Create a metatensor array from the DLPack tensor
+    auto managed_tensor = ManagedTensor(&int32_tensor_ptr->tensor);
+    auto data = std::unique_ptr<DataArrayBase>(new DLPackDataArray(std::move(managed_tensor)));
+    auto array = DataArrayBase::to_mts_array_t(std::move(data));
+
+    SECTION("origin") {
+        mts_data_origin_t origin = 0;
+        auto status = array.origin(array.ptr, &origin);
+        CHECK(status == MTS_SUCCESS);
+
+        char buffer[64] = {0};
+        status = mts_get_data_origin(origin, buffer, 64);
+        CHECK(status == MTS_SUCCESS);
+        CHECK(std::string(buffer) == "external::dlpack");
+    }
+
+    SECTION("shape") {
+        const uintptr_t* shape = nullptr;
+        uintptr_t shape_count = 0;
+        auto status = array.shape(array.ptr, &shape, &shape_count);
+        CHECK(status == MTS_SUCCESS);
+
+        CHECK(shape_count == 2);
+        CHECK(shape[0] == 2);
+        CHECK(shape[1] == 3);
+    }
+
+    SECTION("data fails") {
+        // check that calling the deprecated data() function throws an exception
+        auto array_copy = array;
+        CHECK_THROWS_WITH(
+            [&]() {
+                double* data_ptr = nullptr;
+                auto status = array_copy.data(array_copy.ptr, &data_ptr);
+                details::check_status(status);
+            }(),
+            Catch::Matchers::Contains("can not get a double* from this tensor")
+        );
+    }
+
+    SECTION("to_dlpack") {
+        auto array_copy = array;
+        // this should fail since copy is not implemented on DlpackDataArray
+        CHECK_THROWS_WITH(
+            [&]() {
+                DLManagedTensor* dl_tensor = nullptr;
+                auto status = array_copy.to_dlpack(array_copy.ptr, &dl_tensor);
+                details::check_status(status);
+            }(),
+            Catch::Matchers::Contains("copy() is not implemented for DLPackDataArray")
+        );
+    }
+
+    array.destroy(array.ptr);
+}
