@@ -2,11 +2,11 @@ from copy import deepcopy
 from typing import List, Optional, Union
 
 import torch
-from torch.nn import Module, ModuleList
 
 from metatensor.operations import _dispatch
 
 from .._backend import Labels, LabelsEntry, TensorBlock, TensorMap
+from ._module import Module
 
 
 @torch.jit.interface
@@ -28,7 +28,7 @@ class ModuleMapInterface(torch.nn.Module):
         pass
 
 
-class ModuleMap(ModuleList):
+class ModuleMap(Module):
     """
     A class that imitates :py:class:`torch.nn.ModuleDict`. In its forward function the
     module at position `i` given on construction by :param modules: is applied to the
@@ -42,7 +42,7 @@ class ModuleMap(ModuleList):
         A sequence of modules applied in the :py:meth:`forward` function on the input
         :py:class:`TensorMap`. Each module corresponds to one :py:class:`LabelsEntry` in
         :param in_keys: that determines on which :py:class:`TensorBlock` the module is
-        applied on.  :param modules: and :param in_keys: must match in length.
+        applied on. :param modules: and :param in_keys: must match in length.
 
     :param out_properties:
         A list of labels that is used to determine the properties labels of the
@@ -150,12 +150,15 @@ class ModuleMap(ModuleList):
         modules: List[Module],
         out_properties: Optional[List[Labels]] = None,
     ):
-        super().__init__(modules)
+        super().__init__()
+
+        self.module_list = torch.nn.ModuleList(modules)
         if len(in_keys) != len(modules):
             raise ValueError(
                 "in_keys and modules must match in length, but found "
                 f"{len(in_keys) != len(modules)} [len(in_keys) != len(modules)]"
             )
+
         self._in_keys: Labels = in_keys
         self._out_properties = out_properties
 
@@ -167,8 +170,9 @@ class ModuleMap(ModuleList):
         out_properties: Optional[List[Labels]] = None,
     ):
         """
-        A wrapper around one :py:class:`torch.nn.Module` applying the same type of
-        module on each tensor block.
+        A wrapper around one :py:class:`torch.nn.Module` or
+        :py:class:`metatensor.learn.nn.Module` applying the same type of module on each
+        tensor block.
 
         :param in_keys:
             A :py:class:`metatensor.Labels` object that determines the keys of the
@@ -177,10 +181,10 @@ class ModuleMap(ModuleList):
         :param module:
             The module that is applied on each block.
         :param out_properties:
-            A list of labels that is used to determine the properties labels of
-            the output.  Because a module could change the number of properties, the
-            labels of the properties cannot be persevered. By default the output
-            properties are relabeled using Labels.range with "_" as key.
+            A list of labels that is used to determine the properties labels of the
+            output.  Because a module could change the number of properties, the labels
+            of the properties cannot be persevered. By default the output properties are
+            relabeled using Labels.range with "_" as key.
 
         >>> import torch
         >>> import numpy as np
@@ -192,15 +196,7 @@ class ModuleMap(ModuleList):
         ...             [3.0, 5.0, 6.0],
         ...         ]
         ...     ),
-        ...     samples=Labels(
-        ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
-        ...     ),
+        ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
         ...     components=[],
         ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
         ... )
@@ -211,15 +207,7 @@ class ModuleMap(ModuleList):
         ...             [1.0, 2.0, 8.0],
         ...         ]
         ...     ),
-        ...     samples=Labels(
-        ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
-        ...     ),
+        ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
         ...     components=[],
         ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
         ... )
@@ -254,15 +242,9 @@ class ModuleMap(ModuleList):
         :param tensor:
             input tensor map
         """
-        self._in_keys = self._in_keys.to(tensor.device)
-        if self._out_properties is not None:
-            self._out_properties = [
-                label.to(tensor.device) for label in self._out_properties
-            ]
-
         out_blocks: List[TensorBlock] = []
         for key, block in tensor.items():
-            out_block = self.forward_block(key, block)
+            out_block = self._forward_block(key, block)
 
             for parameter, gradient in block.gradients():
                 if len(gradient.gradients_list()) != 0:
@@ -271,22 +253,22 @@ class ModuleMap(ModuleList):
                     )
                 out_block.add_gradient(
                     parameter=parameter,
-                    gradient=self.forward_block(key, gradient),
+                    gradient=self._forward_block(key, gradient),
                 )
             out_blocks.append(out_block)
 
         return TensorMap(tensor.keys, out_blocks)
 
-    def forward_block(self, key: LabelsEntry, block: TensorBlock) -> TensorBlock:
-        position = self._in_keys.position(key)
-        if position is None:
+    def _forward_block(self, key: LabelsEntry, block: TensorBlock) -> TensorBlock:
+        module_idx = self.in_keys.position(key)
+        if module_idx is None:
             raise KeyError(f"key {key} not found in modules.")
-        module_idx: int = position
-        module: ModuleMapInterface = self[module_idx]
+
+        module: ModuleMapInterface = self.module_list[module_idx]
 
         out_values = module.forward(block.values)
         if self._out_properties is None:
-            # we do not use range because of metatensor/issues/410
+            # we do not use `Labels.range` because of metatensor/issues/410
             properties = Labels(
                 "_",
                 _dispatch.int_array_like(
@@ -295,6 +277,7 @@ class ModuleMap(ModuleList):
             )
         else:
             properties = self._out_properties[module_idx]
+
         return TensorBlock(
             values=out_values,
             properties=properties,
@@ -302,46 +285,16 @@ class ModuleMap(ModuleList):
             samples=block.samples,
         )
 
-    @torch.jit.export
-    def get_module(self, key: LabelsEntry):
-        """
-        :param key:
-            key of module which should be returned
-
-        :return module:
-            returns he torch.nn.Module corresponding to the :param key:
-        """
-        # type annotation in function signature had to be removed because of TorchScript
-        position = self._in_keys.position(key)
-        if position is None:
-            raise KeyError(f"key {key} not found in modules.")
-        module_idx: int = position
-        module: ModuleMapInterface = self[module_idx]
-        return module
-
     @property
     def in_keys(self) -> Labels:
         """
-        A list of labels that defines the initialized keys with corresponding modules
-        of this module map.
+        Labels that defines the keys this module map expects as input
         """
         return self._in_keys
 
     @property
     def out_properties(self) -> Union[None, List[Labels]]:
         """
-        A list of labels that is used to determine properties labels of the
-        output of forward function.
+        A list of labels that is used to determine properties of the output
         """
         return self._out_properties
-
-    def repr_as_module_dict(self) -> str:
-        """
-        Returns a string that is easier to read that the standard __repr__ showing the
-        mapping from label entry key to module.
-        """
-        representation = "ModuleMap(\n"
-        for i, key in enumerate(self._in_keys):
-            representation += f"  ({key!r}): {self[i]!r}\n"
-        representation += ")"
-        return representation

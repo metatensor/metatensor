@@ -7,11 +7,10 @@ respectively.
 from typing import List, Optional
 
 import torch
-from torch.nn import Module, init
-from torch.nn.parameter import Parameter
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -277,11 +276,11 @@ class _LayerNorm(Module):
         self.elementwise_affine = elementwise_affine
         self.mean = mean
         if self.elementwise_affine:
-            self.weight = Parameter(
+            self.weight = torch.nn.Parameter(
                 torch.empty(in_features, device=device, dtype=dtype)
             )
             if bias:
-                self.bias = Parameter(
+                self.bias = torch.nn.Parameter(
                     torch.empty(in_features, device=device, dtype=dtype)
                 )
             else:
@@ -294,9 +293,9 @@ class _LayerNorm(Module):
 
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
-            init.ones_(self.weight)
+            torch.nn.init.ones_(self.weight)
             if self.bias is not None:
-                init.zeros_(self.bias)
+                torch.nn.init.zeros_(self.bias)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return _layer_norm(

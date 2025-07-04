@@ -1,10 +1,10 @@
 from typing import List, Optional
 
 import torch
-from torch.nn import Module
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from .module_map import ModuleMap
 
 
@@ -55,7 +55,7 @@ class ReLU(Module):
         return self.module_map(tensor)
 
 
-class InvariantReLU(torch.nn.Module):
+class InvariantReLU(Module):
     """
     Module similar to :py:class:`torch.nn.ReLU` that works with
     :py:class:`metatensor.torch.TensorMap` objects, applying the transformation only to
