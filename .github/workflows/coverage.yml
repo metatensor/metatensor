@@ -22,6 +22,16 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+          override: true
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: install python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -56,9 +66,17 @@ jobs:
             coverage combine .tox/*/.coverage
             coverage xml
 
+      - name: Generate code coverage
+        id: coverage
+        run: |
+          cargo llvm-cov --all-features --workspace \
+            --no-fail-fast --codecov \
+            --exclude metatensor-python \
+            --output-path rust_codecov.json
+
       - name: upload to codecov.io
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
-          files: coverage.xml
+          files: coverage.xml,rust_codecov.json
           token: ${{ secrets.CODECOV_TOKEN }}
