@@ -73,6 +73,9 @@ jobs:
             --no-fail-fast --codecov \
             --exclude metatensor-python \
             --output-path rust_codecov.json
+        env:
+            # Use the CPU only version of torch when building/running the code
+            PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
 
       - name: upload to codecov.io
         uses: codecov/codecov-action@v5
