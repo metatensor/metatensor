@@ -110,6 +110,11 @@ def setup_functions(lib):
     ]
     lib.mts_labels_create.restype = _check_status
 
+    lib.mts_labels_create_unchecked.argtypes = [
+        POINTER(mts_labels_t),
+    ]
+    lib.mts_labels_create_unchecked.restype = _check_status
+
     lib.mts_labels_set_user_data.argtypes = [
         mts_labels_t,
         ctypes.c_void_p,

@@ -112,6 +112,14 @@ function mts_labels_create(labels::Ptr{mts_labels_t})
     )
 end
 
+function mts_labels_create_unchecked(labels::Ptr{mts_labels_t})
+    ccall((:mts_labels_create_unchecked, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_labels_t},),
+        labels
+    )
+end
+
 function mts_labels_set_user_data(labels::mts_labels_t, user_data::Ptr{Cvoid}, user_data_delete::Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#)
     ccall((:mts_labels_set_user_data, libmetatensor), 
         mts_status_t,
