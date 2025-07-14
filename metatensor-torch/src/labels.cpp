@@ -424,11 +424,12 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         // Doing this here allow to minimize the number of copies of the values
         // when moving from CPU to GPU.
         auto raw_labels = this->as_metatensor().as_mts_labels_t();
-        // reset the internal rust pointer, this allows `mts_labels_create` to
+        // reset the internal rust pointer, this allows `mts_labels_create_unchecked` to
         // create a new rust pointer corresponding to a different object instead
         // of incrementing the reference count of the existing labels.
         raw_labels.internal_ptr_ = nullptr;
-        metatensor::details::check_status(mts_labels_create(&raw_labels));
+        // assume that the user is already responsible for valid (unique) labels at this point
+        metatensor::details::check_status(mts_labels_create_unchecked(&raw_labels));
         auto new_labels = metatensor::Labels(raw_labels);
 
         return torch::make_intrusive<LabelsHolder>(
