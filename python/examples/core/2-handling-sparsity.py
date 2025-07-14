@@ -4,11 +4,11 @@ r"""
 Handling sparsity
 =================
 
-The one sentence introduction to metatensor mentions that this is a "self-describing
-**sparse** tensor data format". The :ref:`previous tutorial <core-tutorial-first-steps>`
-explained the self-describing part of the format, and in this tutorial we will explore
-what makes metatensor a sparse format; and how to remove the corresponding sparsity when
-required.
+The one sentence introduction to metatensor mentions that it is a
+"self-describing **sparse** tensor data format". The :ref:`previous tutorial
+<core-tutorial-first-steps>` explained the self-describing part of the format,
+and in this tutorial we will explore what makes metatensor a sparse format; and
+how to remove this sparsity when required.
 
 Like in the :ref:`previous tutorial <core-tutorial-first-steps>`, we will load the data
 we need from a file. The code used to generate this file can be found below:
@@ -35,8 +35,9 @@ functions :math:`f_n(r)`
     R_i^\alpha(n) = \int f_n(r) \rho_i(r) dr
 
 The density :math:`\rho_i^\alpha(r)` associated with all neighbors of species
-:math:`\alpha` of the atom :math:`i` (each neighbor is replaced with a Gaussian function
-centered on the neighbor :math:`g(r_{ij})`) is defined as:
+:math:`\alpha` for the atom :math:`i` (where each neighbor is replaced with a
+Gaussian function centered on the neighbor's coordinates :math:`g(r_{ij})`) is
+defined as:
 
 .. math::
 
@@ -44,9 +45,10 @@ centered on the neighbor :math:`g(r_{ij})`) is defined as:
         \delta_{\alpha_j,\alpha}
 
 
-The exact mathematical details above don't matter too much for this tutorial, the main
-point being that this representation treats atomic species as completely independent,
-effectively using the neighbor species :math:`\alpha` for `one-hot encoding`_.
+The exact mathematical details above don't matter too much for this tutorial,
+the main point being that this representation treats each atomic species as an
+independent quantity, effectively using the neighboring species :math:`\alpha`
+for `one-hot encoding`_.
 
 .. _one-hot encoding: https://en.wikipedia.org/wiki/One-hot
 
@@ -68,7 +70,7 @@ import metatensor as mts
 # %%
 #
 # We will work on the radial spectrum representation of three molecules in our system:
-# a carbon monoxide, an oxygen molecule and a nitrogen molecule.
+# a carbon monoxide molecule, an oxygen molecule and a nitrogen molecule.
 
 atoms = ase.Atoms(
     "COO2N2",
@@ -105,8 +107,9 @@ print(radial_spectrum)
 # spectrum coefficients :math:`R_i^\alpha(n)` will be zero (since the neighbor density
 # :math:`\rho_i^\alpha(r)` is zero everywhere).
 #
-# Instead of wasting memory space by storing all of these zeros explicitly, we simply
-# avoid creating the corresponding blocks from the get-go and save a lot of memory!
+# Instead of wasting memory by storing all of these zeros explicitly, we simply
+# avoid creating the corresponding blocks from the get-go and save a lot of
+# memory!
 
 
 # %%
@@ -125,11 +128,11 @@ print(block.samples)
 
 # %%
 #
-# There is a second level of sparsity happening here, using a format related to
-# `coordinate sparse arrays (COO format) <COO_>`_. Since there is only one oxygen atom
-# with carbon neighbors, we only include this atom in the samples, and the
-# density/radial spectrum coefficient for all the other oxygen atoms is assumed to be
-# zero.
+# There is a second level of sparsity here, using a format related to the
+# `coordinate sparse arrays (COO format) <COO_>`_. Since there is only one
+# oxygen atom with carbon neighbors, we only include this atom in the samples,
+# and the density/radial spectrum coefficient for all the other oxygen atoms is
+# assumed to be zero.
 #
 # .. _COO: https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)
 
@@ -139,14 +142,16 @@ print(block.samples)
 # Making the data dense again
 # ---------------------------
 #
-# Sometimes, we might have to use data in a sparse metatensor format with code that does
-# not understands this sparsity. One solution is to convert the data to a dense format,
-# making the zeros explicit as much as possible. Metatensor provides functionalities to
-# convert sparse data to a dense format for the keys sparsity; and metadata to convert
-# to a dense format for sample sparsity.
+# Sometimes, we might have to use data in a sparse metatensor format with code
+# that does not understands this sparsity pattern. One solution is to convert
+# the data to a dense format, making the zeros explicit.
+# Metatensor provides functionalities to convert sparse data to a dense format
+# for the keys sparsity; and metadata to convert to a dense format for sample
+# sparsity.
 #
-# First, the sample sparsity can be removed block by block by creating a new array full
-# of zeros, and copying the data according to the indices in ``block.samples``
+# First, the sample sparsity can be removed block by block by creating a new
+# array full of zeros, and copying the data according to the indices in
+# ``block.samples``
 
 dense_block_data = np.zeros((len(atoms), block.values.shape[1]))
 
@@ -189,9 +194,9 @@ with np.printoptions(precision=3):
 
 # %%
 #
-# And using the metadata attached to the block, we can understand which part of the data
+# By using the metadata attached to the block, we can understand which part of the data
 # is zero and why. For example, the lower-right corner of the array corresponds to
-# nitrogen atoms (the last two samples):
+# the nitrogen atoms (the last two samples):
 
 print(block.samples.print(max_entries=-1))
 
