@@ -36,6 +36,9 @@ class Labels;
 class TensorMap;
 class TensorBlock;
 
+/// Tag for creation without uniqueness checks
+struct unchecked_t {};
+
 /// Exception class used for all errors in metatensor
 class Error: public std::runtime_error {
 public:
@@ -1236,6 +1239,13 @@ public:
         const std::vector<std::initializer_list<int32_t>>& values
     ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
 
+   /// Unchecked variant of the same
+    Labels(
+        const std::vector<std::string>& names,
+        const std::vector<std::initializer_list<int32_t>>& values,
+        unchecked_t
+    ): Labels(names, NDArray<int32_t>(values, names.size()), unchecked_t(), InternalConstructor{}) {}
+
     /// Create an empty set of Labels with the given names
     explicit Labels(const std::vector<std::string>& names):
         Labels(names, static_cast<const int32_t*>(nullptr), 0) {}
@@ -1243,7 +1253,11 @@ public:
     /// Create labels with the given `names` and `values`. `values` must be an
     /// array with `count x names.size()` elements.
     Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
-        Labels(details::labels_from_cxx(names, values, count)) {}
+        Labels(details::labels_from_cxx(names, values, count, false)) {}
+
+    /// Unchecked variant, caller promises the labels are unique
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, unchecked_t):
+        Labels(details::labels_from_cxx(names, values, count, true)) {}
 
     ~Labels() {
         mts_labels_free(&labels_);
@@ -1768,6 +1782,9 @@ private:
     struct InternalConstructor {};
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
         Labels(names, values.data(), values.shape()[0]) {}
+
+    Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, unchecked_t, InternalConstructor):
+        Labels(names, values.data(), values.shape()[0], unchecked_t()) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
     friend Labels io::load_labels(const std::string &path);
