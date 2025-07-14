@@ -141,6 +141,74 @@ unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error
 }
 
 
+/// Convert from `mts_label_t` back to a Rust `Arc<Labels>`, potentially
+/// constructing new `Labels` without uniquness checks if they don't exist yet.
+pub unsafe fn mts_labels_to_rust_unchecked(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
+    // if the labels have already been constructed on the rust side,
+    // increase the reference count of the arc & return that
+    if labels.is_rust() {
+        let labels = Arc::from_raw(labels.internal_ptr_.cast());
+        let cloned = Arc::clone(&labels);
+
+        // keep the original arc alive
+        std::mem::forget(labels);
+
+        return Ok(cloned);
+    }
+
+    // otherwise, create new labels from the data
+    return create_rust_labels_unchecked(labels);
+}
+
+
+/// Create a new set of rust Labels from `mts_labels_t`, copying the data into
+/// Rust managed memory.
+///
+/// This function does not check that the labels entries are unique.
+unsafe fn create_rust_labels_unchecked(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
+    assert!(!labels.is_rust());
+
+    if labels.size == 0 {
+        if labels.count > 0 {
+            return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
+        }
+
+        let labels = Labels::new_unchecked_uniqueness(&[], Vec::<LabelValue>::new()).expect("invalid empty labels");
+        return Ok(Arc::new(labels));
+    }
+
+    if labels.names.is_null() {
+        return Err(Error::InvalidParameter("labels.names can not be NULL in mts_labels_t".into()))
+    }
+
+    if labels.values.is_null() && labels.count > 0 {
+        return Err(Error::InvalidParameter("labels.values is NULL but labels.count is >0 in mts_labels_t".into()))
+    }
+
+    let mut names = Vec::new();
+    for i in 0..labels.size {
+        let name = CStr::from_ptr(*(labels.names.add(i)));
+        let name = name.to_str().expect("invalid UTF8 name");
+        if !crate::labels::is_valid_label_name(name) {
+            return Err(Error::InvalidParameter(format!(
+                "'{}' is not a valid label name", name
+            )));
+        }
+        names.push(name);
+    }
+
+    let values = if labels.count != 0 && labels.size != 0 {
+        assert!(!labels.values.is_null());
+        let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
+        slice.to_vec()
+    } else {
+        vec![]
+    };
+
+    let labels = Labels::new_unchecked_uniqueness(&names, values)?;
+    return Ok(Arc::new(labels));
+}
+
 /// Get the position of the entry defined by the `values` array in the given set
 /// of `labels`. This operation is only available if the labels correspond to a
 /// set of Rust Labels (i.e. `labels.internal_ptr_` is not NULL).
@@ -216,6 +284,41 @@ pub unsafe extern "C" fn mts_labels_create(
         }
 
         let rust_labels = create_rust_labels(&*labels)?;
+        *labels = rust_to_mts_labels(rust_labels);
+
+        Ok(())
+    })
+}
+
+
+/// Finish the creation of `mts_labels_t` by associating it to Rust-owned
+/// labels. This version does not check for uniqueness of the labels entries.
+///
+/// This allows using the `mts_labels_positions` and `mts_labels_clone`
+/// functions on the `mts_labels_t`.
+///
+/// This function allocates memory which must be released `mts_labels_free` when
+/// you don't need it anymore.
+///
+/// @param labels new set of labels containing pointers to user-managed memory
+///        on input, and pointers to Rust-managed memory on output.
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_labels_create_unchecked(
+    labels: *mut mts_labels_t,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(labels);
+
+        if (*labels).is_rust() {
+            return Err(Error::InvalidParameter(
+                "these labels already correspond to rust labels".into()
+            ));
+        }
+
+        let rust_labels = create_rust_labels_unchecked(&*labels)?;
         *labels = rust_to_mts_labels(rust_labels);
 
         Ok(())
