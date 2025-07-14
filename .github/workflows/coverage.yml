@@ -14,8 +14,26 @@ jobs:
   coverage:
     runs-on: ubuntu-22.04
     name: collect code coverage
+    # Kanged from [1]
+    strategy:
+      matrix:
+        llvm-version: [20]
+    env:
+      CMAKE_C_COMPILER: clang-${{ matrix.llvm-version }}
+      CMAKE_CXX_COMPILER: clang++-${{ matrix.llvm-version }}
+      CC: clang-${{ matrix.llvm-version }}
+      CXX: clang++-${{ matrix.llvm-version }}
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: setup LLVM
+        run: |
+            wget https://apt.llvm.org/llvm.sh
+            chmod +x llvm.sh
+            sudo ./llvm.sh ${{ matrix.llvm-version }}
+            sudo apt-get update
+            sudo apt install --no-install-recommends clang-${{ matrix.llvm-version }}
 
       - name: setup Python
         uses: actions/setup-python@v5
@@ -29,7 +47,7 @@ jobs:
           components: llvm-tools-preview
           override: true
 
-      - name: Install cargo-llvm-cov
+      - name: install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: install python dependencies
@@ -43,12 +61,12 @@ jobs:
           path: .tox
           key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
 
-      - name: Setup sccache
+      - name: setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
           version: "v0.10.0"
 
-      - name: Setup sccache environnement variables
+      - name: setup sccache environnement variables
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -66,7 +84,7 @@ jobs:
             coverage combine .tox/*/.coverage
             coverage xml
 
-      - name: Generate code coverage
+      - name: generate code coverage
         id: coverage
         run: |
           cargo llvm-cov --all-features --workspace \
@@ -83,3 +101,6 @@ jobs:
           fail_ci_if_error: true
           files: coverage.xml,rust_codecov.json
           token: ${{ secrets.CODECOV_TOKEN }}
+
+# References
+# [1]: https://www.scivision.dev/github-actions-latest-llvm-clang-flang/
