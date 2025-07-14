@@ -2,7 +2,7 @@ coverage:
   status:
     project:
       default:
-        target: 70%
+        target: 78%
     patch: off
   ignore:
     - "tests/.*"
