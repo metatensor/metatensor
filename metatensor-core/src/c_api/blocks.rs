@@ -4,7 +4,7 @@ use std::ffi::CStr;
 
 use crate::{TensorBlock, Error, mts_array_t};
 
-use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust_unchecked};
+use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
 
 use super::{catch_unwind, mts_status_t};
 
@@ -79,20 +79,17 @@ pub unsafe extern "C" fn mts_block(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        // SAFETY: Existing labels should be safe already
-        let samples = mts_labels_to_rust_unchecked(&samples)?;
+        let samples = mts_labels_to_rust(&samples)?;
 
         let mut rust_components = Vec::new();
         if components_count != 0 {
             check_pointers_non_null!(components);
             for component in std::slice::from_raw_parts(components, components_count) {
-                // SAFETY: Existing labels should be safe already
-                rust_components.push(mts_labels_to_rust_unchecked(component)?);
+                rust_components.push(mts_labels_to_rust(component)?);
             }
         }
 
-        // SAFETY: Existing labels should be safe already
-        let properties = mts_labels_to_rust_unchecked(&properties)?;
+        let properties = mts_labels_to_rust(&properties)?;
 
         let block = TensorBlock::new(data, samples, rust_components, properties)?;
 
