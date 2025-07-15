@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 
 use crate::{TensorMap, TensorBlock, Error};
 
-use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
+use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust_unchecked};
 use super::blocks::mts_block_t;
 use super::status::{mts_status_t, catch_unwind};
 
@@ -89,7 +89,8 @@ pub unsafe extern "C" fn mts_tensormap(
             }
         }
 
-        let keys = mts_labels_to_rust(&keys)?;
+        // SAFETY: Existing labels should be safe already
+        let keys = mts_labels_to_rust_unchecked(&keys)?;
         let tensor = TensorMap::new(keys, blocks_vec)?;
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -272,7 +273,7 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
             )));
         }
 
-        let selection = mts_labels_to_rust(&selection)?;
+        let selection = mts_labels_to_rust_unchecked(&selection)?;
         let rust_blocks = (*tensor).blocks_matching(&selection)?;
 		*count = rust_blocks.len();
 
@@ -340,7 +341,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor);
 
-        let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
+        let keys_to_move = mts_labels_to_rust_unchecked(&keys_to_move)?;
         let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -448,7 +449,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor);
 
-        let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
+        let keys_to_move = mts_labels_to_rust_unchecked(&keys_to_move)?;
         let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
 
         // force the closure to capture the full unwind_wrapper, not just
