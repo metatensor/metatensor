@@ -10,7 +10,7 @@ use crate::Error;
 use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
-use super::super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
+use super::super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust_unchecked};
 
 /// Load labels from the file at the given path.
 ///
@@ -151,7 +151,8 @@ pub unsafe extern "C" fn mts_labels_save(
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let mut file = BufWriter::new(File::create(path)?);
 
-        let labels = mts_labels_to_rust(&labels)?;
+        // SAFETY: Existing labels should be unique already
+        let labels = mts_labels_to_rust_unchecked(&labels)?;
         crate::io::save_labels(&mut file, &labels)?;
 
         Ok(())
@@ -219,7 +220,8 @@ pub unsafe extern "C" fn mts_labels_save_buffer(
             current: 0,
         };
 
-        let labels = mts_labels_to_rust(&labels)?;
+        // SAFETY: Existing labels should be safe already
+        let labels = mts_labels_to_rust_unchecked(&labels)?;
         crate::io::save_labels(&mut external_buffer, &labels)?;
 
         *buffer_count = external_buffer.current as usize;

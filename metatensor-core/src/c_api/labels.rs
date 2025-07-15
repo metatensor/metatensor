@@ -75,25 +75,6 @@ pub unsafe fn rust_to_mts_labels(labels: Arc<Labels>) -> mts_labels_t {
     }
 }
 
-/// Convert from `mts_label_t` back to a Rust `Arc<Labels>`, potentially
-/// constructing new `Labels` if they don't exist yet.
-pub unsafe fn mts_labels_to_rust(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
-    // if the labels have already been constructed on the rust side,
-    // increase the reference count of the arc & return that
-    if labels.is_rust() {
-        let labels = Arc::from_raw(labels.internal_ptr_.cast());
-        let cloned = Arc::clone(&labels);
-
-        // keep the original arc alive
-        std::mem::forget(labels);
-
-        return Ok(cloned);
-    }
-
-    // otherwise, create new labels from the data
-    return create_rust_labels(labels);
-}
-
 /// Create a new set of rust Labels from `mts_labels_t`, copying the data into
 /// Rust managed memory.
 unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
