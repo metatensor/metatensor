@@ -1244,7 +1244,7 @@ public:
         const std::vector<std::string>& names,
         const std::vector<std::initializer_list<int32_t>>& values,
         unchecked_t
-    ): Labels(names, NDArray<int32_t>(values, names.size()), unchecked_t(), InternalConstructor{}) {}
+    ): Labels(names, NDArray<int32_t>(values, names.size()), unchecked_t{}, InternalConstructor{}) {}
 
     /// Create an empty set of Labels with the given names
     explicit Labels(const std::vector<std::string>& names):
@@ -1784,7 +1784,7 @@ private:
         Labels(names, values.data(), values.shape()[0]) {}
 
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, unchecked_t, InternalConstructor):
-        Labels(names, values.data(), values.shape()[0], unchecked_t()) {}
+        Labels(names, values.data(), values.shape()[0], unchecked_t{}) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
     friend Labels io::load_labels(const std::string &path);
