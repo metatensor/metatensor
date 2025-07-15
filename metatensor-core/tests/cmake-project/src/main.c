@@ -18,6 +18,11 @@ int main(void) {
         goto fail;
     }
 
+    mts_status_t status_unchecked = mts_labels_create_unchecked(&labels);
+    if (status_unchecked != MTS_SUCCESS) {
+        goto fail;
+    }
+
     status = mts_labels_free(&labels);
     if (status != MTS_SUCCESS) {
         goto fail;
