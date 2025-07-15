@@ -160,6 +160,15 @@ You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
 replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
 ``tox -e tests -- python/tests/operations/abs.py``.
 
+To get the release build for ``tox`` runs, set the environment variable.
+
+.. code-block:: bash
+
+    METATENSOR_BUILD_TYPE="release" tox -e core-tests
+
+This corresponds to running ``cargo test --package-metatensor-python --release``
+but on the subset of interest.
+
 Controlling tests behavior with environment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
