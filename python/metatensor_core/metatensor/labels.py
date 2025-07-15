@@ -266,7 +266,12 @@ class Labels:
     True
     """
 
-    def __init__(self, names: Union[str, Sequence[str]], values: np.ndarray):
+    def __init__(
+        self,
+        names: Union[str, Sequence[str]],
+        values: np.ndarray,
+        unchecked: bool = False,
+    ):
         """
         :param names: names of the dimensions in the new labels. A single string
                       is transformed into a list with one element, i.e.
@@ -274,6 +279,8 @@ class Labels:
 
         :param values: values of the labels, this needs to be a 2-dimensional
                        array of integers.
+
+        :param unchecked: Signal if uniqueness checks can be dropped safely.
         """
 
         names = _normalize_names_type(names)
@@ -309,7 +316,7 @@ class Labels:
             raise TypeError("Labels values must be convertible to integers") from e
 
         self._lib = _get_library()
-        self._labels = _create_new_labels(self._lib, names, values)
+        self._labels = _create_new_labels(self._lib, names, values, unchecked=unchecked)
         self._names = names
         self._cached_values = None
 
@@ -1169,7 +1176,8 @@ class Labels:
 
     def to_owned(self) -> "Labels":
         """convert a view to owned labels, which implement the full API"""
-        labels = _create_new_labels(self._lib, self._names, self.values)
+        # At this point it can be safely assumed that the values are unique..
+        labels = _create_new_labels(self._lib, self._names, self.values, unchecked=True)
         return Labels._from_mts_labels_t(labels)
 
 
@@ -1201,7 +1209,9 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
     return names
 
 
-def _create_new_labels(lib, names: List[str], values: np.ndarray) -> mts_labels_t:
+def _create_new_labels(
+    lib, names: List[str], values: np.ndarray, *, unchecked: bool = False
+) -> mts_labels_t:
     labels = mts_labels_t()
 
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
@@ -1214,7 +1224,10 @@ def _create_new_labels(lib, names: List[str], values: np.ndarray) -> mts_labels_
 
     labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
     labels.count = values.shape[0]
-    lib.mts_labels_create(labels)
+    if unchecked:
+        lib.mts_labels_create_unchecked(labels)
+    else:
+        lib.mts_labels_create(labels)
 
     return labels
 
