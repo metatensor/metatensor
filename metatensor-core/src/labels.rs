@@ -874,4 +874,21 @@ mod tests {
         use_send(labels.clone());
         use_sync(labels);
     }
+
+    #[test]
+    fn new_unchecked_uniqueness_valid() {
+        let names = &["x", "y"];
+        let values: Vec<LabelValue> = vec![1, 10, 2, 20, 3, 30]
+            .into_iter()
+            .map(Into::into)
+            .collect();
+
+        let labels = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
+        let labels_safe = unsafe { Labels::new(names, values.clone()).unwrap() };
+        assert_eq!(labels.count(), 3);
+        assert_eq!(labels.names(), vec!["x", "y"]);
+        assert_eq!(labels[0], labels_safe[0]);
+        assert_eq!(labels[1], labels_safe[1]);
+        assert_eq!(labels[2], labels_safe[2]);
+    }
 }
