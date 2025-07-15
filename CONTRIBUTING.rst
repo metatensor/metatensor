@@ -175,7 +175,9 @@ Controlling tests behavior with environment variables
 There are a handful of environment variables that you can set to control the
 behavior of tests:
 
-- ``METATENSOR_DISABLE_VALGRIND=1``` will disable the use of `valgrind`_ for the
+- ``METATENSOR_BUILD_TYPE=release`` will use the ``release`` target for the
+  rust libraries, and is useful for ``tox``;
+- ``METATENSOR_DISABLE_VALGRIND=1`` will disable the use of `valgrind`_ for the
   C++ tests. Valgrind is a tool that check for memory errors in native code, but
   it makes the tests run quite a bit slower;
 - ``METATENSOR_TESTS_TORCH_VERSION`` allow you to run the tests against a
