@@ -454,3 +454,16 @@ def test_select():
     labels = Labels(["aa", "bb"], np.empty((0, 2), dtype=np.int32))
     selection = Labels(["aa"], np.array([[1], [2], [5]]))
     assert len(labels.select(selection)) == 0
+
+
+def test_constructor_unchecked():
+    values = np.array([[1, 2], [3, 4], [1, 2]])
+
+    msg = "invalid parameter"
+    with pytest.raises(MetatensorError, match=msg):
+        Labels(names=["a", "b"], values=values)
+
+    # NOTE(rg):: This will only work if the release build is used
+    labels = Labels(names=["a", "b"], values=values, unchecked=True)
+    assert len(labels) == 3
+    np.testing.assert_equal(labels.values, values)
