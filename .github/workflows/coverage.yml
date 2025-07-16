@@ -14,7 +14,7 @@ jobs:
   coverage:
     runs-on: ubuntu-22.04
     name: collect code coverage
-    # Kanged from [1]
+    # Adapted from https://www.scivision.dev/github-actions-latest-llvm-clang-flang/
     strategy:
       matrix:
         llvm-version: [20]
