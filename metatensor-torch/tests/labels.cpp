@@ -41,6 +41,24 @@ TEST_CASE("Labels") {
         CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
     }
 
+    SECTION("unchecked constructor") {
+        auto names = std::vector<std::string>{"a", "b"};
+
+        auto non_unique_values = torch::tensor({{1, 2}, {1, 2}}, torch::kInt32);
+        CHECK_THROWS_WITH(
+            LabelsHolder(names, non_unique_values),
+            "invalid parameter: can not have the same label entry multiple time: [1, 2] is already present"
+        );
+        auto labels = LabelsHolder(names, non_unique_values, metatensor::unchecked_t{});
+        CHECK(labels.count() == 2);
+        CHECK(labels.values()[0][0].item<int64_t>() == 1);
+        CHECK(labels.values()[1][0].item<int64_t>() == 1);
+        CHECK(labels.values()[0][1].item<int64_t>() == 2);
+        CHECK(labels.values()[1][1].item<int64_t>() == 2);
+        auto created = LabelsHolder::create(names, {{1, 2}, {1, 2}}, metatensor::unchecked_t{});
+        CHECK(created->count() == 2);
+    }
+
     SECTION("position") {
         auto labels = LabelsHolder::create({"a", "bb"}, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
