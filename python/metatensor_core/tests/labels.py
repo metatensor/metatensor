@@ -463,7 +463,6 @@ def test_constructor_unchecked():
     with pytest.raises(MetatensorError, match=msg):
         Labels(names=["a", "b"], values=values)
 
-    # NOTE(rg):: This will only work if the release build is used
     labels = Labels(names=["a", "b"], values=values, unchecked=True)
     assert len(labels) == 3
     np.testing.assert_equal(labels.values, values)
