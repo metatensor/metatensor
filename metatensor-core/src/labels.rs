@@ -292,7 +292,7 @@ impl Labels {
                 let entry = entries[identical];
                 let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 return Err(Error::InvalidParameter(format!(
-                    "can not have the same label entry multiple time: [{}] is already present",
+                    "can not have the same label entry multiple times: [{}] is already present",
                     entry_display
                 )));
             }

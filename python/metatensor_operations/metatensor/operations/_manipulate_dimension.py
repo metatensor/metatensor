@@ -326,7 +326,7 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     ...     mts.remove_dimension(tensor, axis="keys", name="extra")
     ... except MetatensorError as e:
     ...     print(e)
-    invalid parameter: can not have the same label entry multiple time: [0] is already present
+    invalid parameter: can not have the same label entry multiple times: [0] is already present
     """  # noqa E501
     _check_axis(axis)
 
