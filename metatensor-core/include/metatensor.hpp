@@ -36,6 +36,9 @@ class Labels;
 class TensorMap;
 class TensorBlock;
 
+/// Tag for creation without uniqueness checks
+struct unchecked_t {};
+
 /// Exception class used for all errors in metatensor
 class Error: public std::runtime_error {
 public:
@@ -169,7 +172,7 @@ namespace details {
         return linear_index(shape, index.data(), index.size());
     }
 
-    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
+    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
 }
 
 /******************************************************************************/
@@ -1236,6 +1239,13 @@ public:
         const std::vector<std::initializer_list<int32_t>>& values
     ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
 
+   /// Unchecked variant of the same
+    explicit Labels(
+        const std::vector<std::string>& names,
+        const std::vector<std::initializer_list<int32_t>>& values,
+        unchecked_t
+    ): Labels(names, NDArray<int32_t>(values, names.size()), unchecked_t{}, InternalConstructor{}) {}
+
     /// Create an empty set of Labels with the given names
     explicit Labels(const std::vector<std::string>& names):
         Labels(names, static_cast<const int32_t*>(nullptr), 0) {}
@@ -1243,7 +1253,11 @@ public:
     /// Create labels with the given `names` and `values`. `values` must be an
     /// array with `count x names.size()` elements.
     Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
-        Labels(details::labels_from_cxx(names, values, count)) {}
+        Labels(details::labels_from_cxx(names, values, count, false)) {}
+
+    /// Unchecked variant, caller promises the labels are unique
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, unchecked_t):
+        Labels(details::labels_from_cxx(names, values, count, true)) {}
 
     ~Labels() {
         mts_labels_free(&labels_);
@@ -1769,7 +1783,10 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
         Labels(names, values.data(), values.shape()[0]) {}
 
-    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count);
+    Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, unchecked_t, InternalConstructor):
+        Labels(names, values.data(), values.shape()[0], unchecked_t{}) {}
+
+    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
     friend Labels io::load_labels(const std::string &path);
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
     friend class TensorMap;
@@ -1788,7 +1805,7 @@ namespace details {
     inline metatensor::Labels labels_from_cxx(
         const std::vector<std::string>& names,
         const int32_t* values,
-        size_t count
+        size_t count, bool unchecked = false
     ) {
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));
@@ -1803,7 +1820,11 @@ namespace details {
         labels.count = count;
         labels.values = values;
 
-        details::check_status(mts_labels_create(&labels));
+        if (unchecked == true) {
+            details::check_status(mts_labels_create_unchecked(&labels));
+        } else {
+            details::check_status(mts_labels_create(&labels));
+        }
 
         return metatensor::Labels(labels);
     }

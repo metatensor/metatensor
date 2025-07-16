@@ -489,7 +489,7 @@ class Labels:
         ...     label.remove(name="bar")
         ... except RuntimeError as e:
         ...     print(e)
-        invalid parameter: can not have the same label entry multiple time: [42] is already present
+        invalid parameter: can not have the same label entry multiple times: [42] is already present
         """  # noqa E501
 
     def rename(self, old: str, new: str) -> "Labels":
