@@ -4,13 +4,14 @@ import torch
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
 
-class EquivariantTransformation(torch.nn.Module):
+class EquivariantTransformation(Module):
     """
-    A custom :py:class:`torch.nn.Module` that applies an arbitrary shape- and
+    A custom :py:class:`metatensor.learn.nn.Module` that applies an arbitrary shape- and
     equivariance-preserving transformation to an input :py:class:`TensorMap`.
 
     For invariant blocks (specified with ``invariant_keys``), the respective
@@ -18,19 +19,18 @@ class EquivariantTransformation(torch.nn.Module):
     an invariant multiplier is created, applying the transformation to the norm of the
     block over the component dimensions.
 
-    :param modules: a :py:class:`list` of :py:class:`torch.nn.Module` containing the
-        transformations to be applied to each block indexed by
-        :param in_keys:. Transformations for invariant and covariant blocks differ. See
-        above.
+    :param modules: a :py:class:`list` of :py:class:`torch.nn.Module` or
+        :py:class:`metatensor.nn.Module` containing the transformations to be applied to
+        each block indexed by :param in_keys:. Transformations for invariant and
+        covariant blocks differ. See above.
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         :py:class:`TensorMap` in the :py:meth:`forward` method.
     :param in_features: :py:class:`list` of :py:class:`int`, the number of features in
         the input tensor for each block indexed by the keys in :param in_keys:. If
         passed as a single value, the same number of features is assumed for all blocks.
-    :param out_properties: :py:class:`list` of :py:class:`Labels` (optional), the
-        properties labels
-        of the output. By default the output properties are relabeled using
-        Labels.range.
+    :param out_properties: :py:class:`list` of :py:class`Labels` (optional), the
+        properties labels of the output. By default the output properties are relabeled
+        using ``Labels.range``.
     :param invariant_keys: a :py:class:`Labels` object that is used to select the
         invariant keys from ``in_keys``. If not provided, the invariant keys are assumed
         to be those where key dimensions ``["o3_lambda", "o3_sigma"]`` are equal to
@@ -169,7 +169,7 @@ class EquivariantTransformation(torch.nn.Module):
         return self.module_map(tensor)
 
 
-class _CovariantTransform(torch.nn.Module):
+class _CovariantTransform(Module):
     """
     Applies an arbitrary shape-preserving transformation defined in ``module`` to a
     3-dimensional tensor in a way that preserves equivariance. The transformation is
