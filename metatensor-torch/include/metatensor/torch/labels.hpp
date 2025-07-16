@@ -45,11 +45,23 @@ public:
     /// and the values should be a 2D tensor of integers.
     LabelsHolder(torch::IValue names, torch::Tensor values);
 
+    /// Unchecked variant of the same constructor. The user promises that the
+    /// labels are unique.
+    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::unchecked_t);
+
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
     static Labels create(
         std::vector<std::string> names,
         const std::vector<std::initializer_list<int32_t>>& values
+    );
+
+    /// Unchecked variant of `LabelsHolder::create`. The user promises that the
+    /// labels are unique.
+    static Labels create(
+        std::vector<std::string> names,
+        const std::vector<std::initializer_list<int32_t>>& values,
+        metatensor::unchecked_t
     );
 
     /// Get a view of `labels` corresponding to only the given columns names

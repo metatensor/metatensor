@@ -145,6 +145,31 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     labels_->set_user_data(std::move(user_data));
 }
 
+LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::unchecked_t):
+    names_(details::normalize_names(names, "names")),
+    values_(normalize_int32_tensor(values, 2, "Labels values")),
+    labels_(torch::nullopt)
+{
+    if (values_.sizes()[1] != names_.size()) {
+        C10_THROW_ERROR(ValueError,
+            "invalid Labels: the names must have an entry for each column of the array"
+        );
+    }
+
+    labels_ = metatensor::Labels(
+        names_,
+        values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
+        values_.sizes()[0],
+        metatensor::unchecked_t{}
+    );
+
+    auto user_data = metatensor::LabelsUserData(
+        new torch::Tensor(values_),
+        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
+    );
+    labels_->set_user_data(std::move(user_data));
+}
+
 Labels LabelsHolder::create(
     std::vector<std::string> names,
     const std::vector<std::initializer_list<int32_t>>& values
@@ -153,6 +178,19 @@ Labels LabelsHolder::create(
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(torch_values));
 }
 
+Labels LabelsHolder::create(
+    std::vector<std::string> names,
+    const std::vector<std::initializer_list<int32_t>>& values,
+    metatensor::unchecked_t
+) {
+    auto torch_values = initializer_list_to_tensor(values, names.size());
+
+    return torch::make_intrusive<LabelsHolder>(
+        std::move(names),
+        std::move(torch_values),
+        metatensor::unchecked_t{}
+    );
+}
 
 LabelsHolder::LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView):
     names_(std::move(names)),
