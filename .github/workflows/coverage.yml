@@ -102,5 +102,3 @@ jobs:
           files: coverage.xml,rust_codecov.json
           token: ${{ secrets.CODECOV_TOKEN }}
 
-# References
-# [1]: https://www.scivision.dev/github-actions-latest-llvm-clang-flang/
