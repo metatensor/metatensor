@@ -280,7 +280,7 @@ class Labels:
         :param values: values of the labels, this needs to be a 2-dimensional
                        array of integers.
 
-        :param unchecked: Signal if uniqueness checks can be dropped safely.
+        :param unchecked: Flag to skip uniqueness checks if labels are already unique.
         """
 
         names = _normalize_names_type(names)
@@ -704,7 +704,7 @@ class Labels:
         ...     label.remove(name="bar")
         ... except MetatensorError as e:
         ...     print(e)
-        invalid parameter: can not have the same label entry multiple time: [42] is already present
+        invalid parameter: can not have the same label entry multiple times: [42] is already present
         """  # noqa E501
         if name not in self.names:
             raise ValueError(f"'{name}' not found in the dimensions of these Labels")

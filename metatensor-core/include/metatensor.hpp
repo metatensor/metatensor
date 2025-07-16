@@ -1240,7 +1240,7 @@ public:
     ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
 
    /// Unchecked variant of the same
-    Labels(
+    explicit Labels(
         const std::vector<std::string>& names,
         const std::vector<std::initializer_list<int32_t>>& values,
         unchecked_t
