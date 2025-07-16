@@ -1,6 +1,7 @@
 # Rust stuff
 target/
 Cargo.lock
+*.profraw
 
 # Python stuff
 __pycache__
