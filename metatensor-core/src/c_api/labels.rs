@@ -96,96 +96,84 @@ pub unsafe fn mts_labels_to_rust(labels: &mts_labels_t) -> Result<Arc<Labels>, E
 
 /// Create a new set of rust Labels from `mts_labels_t`, copying the data into
 /// Rust managed memory.
-unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
+///
+/// This function does not check that the labels entries are unique.
+unsafe fn create_rust_labels_unchecked(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
+    // Wrap the call to the `unsafe` constructor in a safe closure.
+    // This closure matches the `F: FnOnce(...)` trait bound required by the helper.
+    create_rust_labels_internal(labels, |names, values| unsafe {
+        Labels::new_unchecked_uniqueness(names, values)
+    })
+}
+
+/// Generic implementation for creating a new set of Rust `Labels` from `mts_labels_t`.
+unsafe fn create_rust_labels_internal<F>(
+    labels: &mts_labels_t,
+    constructor: F,
+) -> Result<Arc<Labels>, Error>
+where
+    F: FnOnce(&[&str], Vec<LabelValue>) -> Result<Labels, Error>,
+{
     assert!(!labels.is_rust());
 
+    // Handle empty labels
     if labels.size == 0 {
         if labels.count > 0 {
-            return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
+            return Err(Error::InvalidParameter(
+                "can not have labels.count > 0 if labels.size is 0".into(),
+            ));
         }
-
-        let labels = Labels::new(&[], Vec::<LabelValue>::new()).expect("invalid empty labels");
+        let labels = constructor(&[], Vec::new())?;
         return Ok(Arc::new(labels));
     }
 
+    // Validate pointers
     if labels.names.is_null() {
-        return Err(Error::InvalidParameter("labels.names can not be NULL in mts_labels_t".into()))
+        return Err(Error::InvalidParameter(
+            "labels.names can not be NULL in mts_labels_t".into(),
+        ));
     }
 
     if labels.values.is_null() && labels.count > 0 {
-        return Err(Error::InvalidParameter("labels.values is NULL but labels.count is >0 in mts_labels_t".into()))
+        return Err(Error::InvalidParameter(
+            "labels.values is NULL but labels.count is > 0 in mts_labels_t".into(),
+        ));
     }
 
-    let mut names = Vec::new();
+    // Process label names
+    let mut names = Vec::with_capacity(labels.size);
     for i in 0..labels.size {
         let name = CStr::from_ptr(*(labels.names.add(i)));
-        let name = name.to_str().expect("invalid UTF8 name");
+        let name = name.to_str().expect("invalid UTF-8 in label name");
         if !crate::labels::is_valid_label_name(name) {
             return Err(Error::InvalidParameter(format!(
-                "'{}' is not a valid label name", name
+                "'{}' is not a valid label name",
+                name
             )));
         }
         names.push(name);
     }
 
-    let values = if labels.count != 0 && labels.size != 0 {
+    // Process label values
+    let values = if labels.count > 0 {
         assert!(!labels.values.is_null());
-        let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
+        let slice = std::slice::from_raw_parts(
+            labels.values.cast::<LabelValue>(),
+            labels.count * labels.size,
+        );
         slice.to_vec()
     } else {
-        vec![]
+        Vec::new()
     };
 
-    let labels = Labels::new(&names, values)?;
-    return Ok(Arc::new(labels));
+    let labels = constructor(&names, values)?;
+    Ok(Arc::new(labels))
 }
 
 /// Create a new set of rust Labels from `mts_labels_t`, copying the data into
 /// Rust managed memory.
-///
-/// This function does not check that the labels entries are unique.
-unsafe fn create_rust_labels_unchecked(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
-    assert!(!labels.is_rust());
-
-    if labels.size == 0 {
-        if labels.count > 0 {
-            return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
-        }
-
-        let labels = Labels::new_unchecked_uniqueness(&[], Vec::<LabelValue>::new()).expect("invalid empty labels");
-        return Ok(Arc::new(labels));
-    }
-
-    if labels.names.is_null() {
-        return Err(Error::InvalidParameter("labels.names can not be NULL in mts_labels_t".into()))
-    }
-
-    if labels.values.is_null() && labels.count > 0 {
-        return Err(Error::InvalidParameter("labels.values is NULL but labels.count is >0 in mts_labels_t".into()))
-    }
-
-    let mut names = Vec::new();
-    for i in 0..labels.size {
-        let name = CStr::from_ptr(*(labels.names.add(i)));
-        let name = name.to_str().expect("invalid UTF8 name");
-        if !crate::labels::is_valid_label_name(name) {
-            return Err(Error::InvalidParameter(format!(
-                "'{}' is not a valid label name", name
-            )));
-        }
-        names.push(name);
-    }
-
-    let values = if labels.count != 0 && labels.size != 0 {
-        assert!(!labels.values.is_null());
-        let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
-        slice.to_vec()
-    } else {
-        vec![]
-    };
-
-    let labels = Labels::new_unchecked_uniqueness(&names, values)?;
-    return Ok(Arc::new(labels));
+unsafe fn create_rust_labels(labels: &mts_labels_t) -> Result<Arc<Labels>, Error> {
+    create_rust_labels_internal(labels, Labels::new)
 }
 
 /// Get the position of the entry defined by the `values` array in the given set
