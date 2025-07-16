@@ -84,7 +84,7 @@ jobs:
             coverage combine .tox/*/.coverage
             coverage xml
 
-      - name: generate code coverage
+      - name: generate rust code coverage
         id: coverage
         run: |
           cargo llvm-cov --all-features --workspace \
