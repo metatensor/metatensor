@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <dlpack/dlpack.h>
 
 /**
  * Status code used when a function succeeded
@@ -131,7 +132,7 @@ typedef struct mts_sample_mapping_t {
 
 /**
  * `mts_array_t` manages n-dimensional arrays used as data in a block or tensor
- * map. The array itself if opaque to this library and can come from multiple
+ * map. The array itself is opaque to this library and can come from multiple
  * sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
  * or torch. The data does not have to live on CPU, or even on the same machine
  * where this code is executed.
@@ -163,8 +164,14 @@ typedef struct mts_array_t {
    * This function is allowed to fail if the data is not accessible in RAM,
    * not stored as 64-bit floating point values, or not stored as a
    * C-contiguous array.
+   * NOTE(rg): Now deprecated, only call to_dlpack
    */
   mts_status_t (*data)(void *array, double **data);
+  /**
+   * Get a pointer to a DLPack compattible managed tensor usable by any DLPack interface
+   * The consumer of the tensor is responsible for calling the deleter
+   */
+  mts_status_t (*to_dlpack)(const void *array, DLManagedTensor **dl_tensor);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in

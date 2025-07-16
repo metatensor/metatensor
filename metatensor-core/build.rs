@@ -22,6 +22,10 @@ fn main() {
     config.documentation_style = cbindgen::DocumentationStyle::Doxy;
     config.line_endings = cbindgen::LineEndingStyle::LF;
     config.header = Some(generated_comment.into());
+    // TODO(rg): Currently depends on having dlpack "installed"
+    // e.g. via pixi add dlpack
+    // Should be vendored (corresponding to the version @ dlpark..).
+    config.sys_includes.push("dlpack/dlpack.h".to_string());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
