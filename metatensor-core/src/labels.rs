@@ -237,11 +237,7 @@ impl Labels {
     /// checked for uniqueness, but instead the caller must ensure that rows are
     /// unique.
     pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
-        if cfg!(debug_assertions) {
-            return Labels::new_impl(names, values, true);
-        } else {
-            return Labels::new_impl(names, values, false);
-        }
+        return Labels::new_impl(names, values, false);
     }
 
     /// Helper constructor to make tests more readable
@@ -903,24 +899,10 @@ mod tests {
 
         let result_safe = Labels::new(names, values.clone());
         assert!(result_safe.is_err());
-
-        #[cfg(debug_assertions)]
-        {
-            let result_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()) };
-            assert!(result_unchecked.is_err());
-            assert_eq!(
-                result_unchecked.err().unwrap().to_string(),
-                "invalid parameter: can not have the same label entry multiple time: [1, 10] is already present"
-            );
-        }
-
-        #[cfg(not(debug_assertions))]
-        {
-            let labels_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
-            assert_eq!(labels_unchecked.count(), 3);
-            let position = labels_unchecked.position(&[LabelValue::new(1), LabelValue::new(10)]);
-            // First duplicate
-            assert_eq!(position, Some(0));
-        }
+        let labels_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
+        assert_eq!(labels_unchecked.count(), 3);
+        let position = labels_unchecked.position(&[LabelValue::new(1), LabelValue::new(10)]);
+        // First duplicate
+        assert_eq!(position, Some(0));
     }
 }
