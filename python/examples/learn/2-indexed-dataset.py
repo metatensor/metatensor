@@ -21,12 +21,13 @@ from metatensor.learn.data import DataLoader, Dataset, IndexedDataset
 # ------------------------------------------
 #
 # The previous tutorial, :ref:`learn-tutorial-dataset-dataloader`, showed how to define
-# a :py:class:`Dataset` able to handle both ```torch.Tensor``` and metatensor
+# a :py:class:`Dataset` which can handle both ```torch.Tensor``` and metatensor's
 # ``TensorMap``. We saw that in-memory, on-disk, or mixed in-memory/on-disk datasets
 # can be defined. ``DataLoaders`` are then defined on top of these ``Dataset`` objects.
 #
-# In all cases, however, each data sample is accessed by a numeric integer index, which
-# ranges from ``0`` to ``len(dataset) - 1``. Let's use a simple example to review this.
+# In all cases, however, each sample is accessed by a numeric integer index,
+# which ranges from ``0`` to ``len(dataset) - 1``. Let us use a simple example
+# to review this.
 #
 # Again let's define some dummy data. Our ``x`` data is a list of random tensors,
 # and our ``y`` data is a list of integers that enumerate the samples.
@@ -56,7 +57,7 @@ print(dataset[3])
 # continuous range?
 #
 # For instance, what if we wanted to access samples by:
-#    1. a string id, or other arbitrary hashable object?
+#    1. a string id, or other arbitrary hashable objects?
 #    2. an integer index that is not defined inside a continuous range?
 #
 # In these cases, we can use an :py:class:`IndexedDataset` instead.

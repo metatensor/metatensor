@@ -37,8 +37,8 @@ torch.set_default_dtype(torch.float64)
 #
 # Often the targets of machine learning are physical observables with certain
 # symmetries, such as invariance with respect to translation or equivariance with
-# respect to rotation (rotating the input structure means that the target should be
-# rotated in the same way).
+# respect to rotation (i.e., rotating the input structure means that the target
+# should be rotated in the same way).
 #
 # Many successful approaches to these learning tasks use equivariance-preserving
 # architectures to map equivariant features onto predictions of an equivariant target.
@@ -132,8 +132,8 @@ print(
 # basic <learn-tutorial-nn-modules-basic>`, where we only had a single block in our
 # features and targets.
 #
-# Furthermore, as the features are a per-atom quantity, we will use some sparse tensor
-# operations to sum the contributions of all atoms in the system to give a per-sytem
+# Furthermore, as the features are a per-atom quantity, we will use sparse tensor
+# operations to sum over the contributions of all atoms in the system to get a per-sytem
 # prediction. For this we will use ``metatensor-operations``.
 #
 # Starting simple, let's define the neural network as just a simple linear layer. As
@@ -152,23 +152,23 @@ print(equi_linear)
 
 # %%
 #
-# We can see by printing the archectecture of the ``EquivariantLinear`` module, that
-# there are 8 'Linear' layers, one for each block. In order to preserve equivariance,
-# bias is always turned off for all covariant blocks. For invariant blocks, bias can be
-# switched on or off by passing the bool parameter ``bias`` when initializing
-# ``EquivariantLinear``.
+# We can see by printing the architecture of the ``EquivariantLinear`` module,
+# that there are 8 'Linear' layers, one for each block. In order to preserve
+# equivariance, bias is always turned off for all covariant blocks. For
+# invariant blocks, bias can be switched on or off by passing the boolean
+# parameter ``bias`` when initializing ``EquivariantLinear`` objects.
 
-# Let's see what happens when we pass the features through the network.
+# Let's see what happens when we pass features through the network.
 per_atom_predictions = equi_linear(spherical_expansion)
 print(per_atom_predictions)
 print(per_atom_predictions[0])
 
 # %%
 #
-# The output of the ``EquivariantLinear`` module are still per-atom and block sparse in
-# both "center_type" and "neighbor_type". To get the per-system prediction, we can
-# densify the prediction in these key dimensions by moving them to samples, then sum
-# over all sample dimensions except "system".
+# The outputs of the ``EquivariantLinear`` module are still per-atom and block sparse in
+# both "center_type" and "neighbor_type". To get per-system predictions, we can
+# "densify" the predictions in these key dimensions by moving them to samples,
+# then taking the sum over all sample dimensions except "system".
 per_atom_predictions = per_atom_predictions.keys_to_samples(
     ["center_type", "neighbor_type"]
 )
@@ -219,7 +219,7 @@ class EquivariantMLP(torch.nn.Module):
 
 
 # define a custom loss function for TensorMaps that computes the squared error and
-# reduces by sum
+# reduces by a summation operation
 class TensorMapLoss(torch.nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
@@ -229,17 +229,17 @@ class TensorMapLoss(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, input: TensorMap, target: TensorMap) -> torch.Tensor:
+    def forward(self, _input: TensorMap, target: TensorMap) -> torch.Tensor:
         """
-        Computes the total squared error between the ``input`` and ``target``
+        Computes the total squared error between the ``_input`` and ``target``
         TensorMaps.
         """
-        # input and target should have equal metadata over all axes
-        assert mts.equal_metadata(input, target)
+        # inputs and targets should have the same metadata over all axes
+        assert mts.equal_metadata(_input, target)
 
         squared_loss = 0
-        for key in input.keys:
-            squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+        for key in _input.keys:
+            squared_loss += torch.sum((_input[key].values - target[key].values) ** 2)
 
         return squared_loss
 
@@ -320,8 +320,8 @@ print(equi_mlp)
 
 # %%
 #
-# Notice now that for invariant blocks, the 'block model' is a nonlinear MLP whereas for
-# invariant blocks it is the sequential application of two linear layers, wihtout bias.
+# Notice that for invariant blocks, the 'block model' is a nonlinear MLP whereas for
+# invariant blocks it is the sequential application of two linear layers, without bias.
 # Re-running the training loop with this new architecture:
 model = EquivariantMLP(equi_mlp)
 print("with NN = [EquivariantLinear, InvariantSiLU, EquivariantLinear]")
@@ -348,7 +348,7 @@ for key, block in prediction.items():
 #
 # The key difference is that the invariant or covariant nature (via the "o3_lambda" key
 # dimension) of the input blocks are taken into account, and used to determine the
-# transformations applied to each block. For the convenience modules shown above
+# transformations applied to each block.
 
 # %%
 #

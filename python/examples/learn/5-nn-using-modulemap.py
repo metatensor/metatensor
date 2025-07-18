@@ -38,21 +38,22 @@ torch.set_default_dtype(torch.float64)
 # The previous tutorials cover how to use metatensor learn's ``nn`` convenience modules
 # to build simple multi-layer perceptrons and their equivariance-preserving analogs. Now
 # we will explore the use of a special module called ``ModuleMap`` that allows users to
-# wrap any native torch module to be compatible with a ``TensorMap``.
+# wrap any native torch module in a ``TensorMap`` compatible manner.
 #
-# This is useful for building arbitrary architectures containing layers more complex
-# than found in the standard available layers: namely ``Linear``, ``Tanh``, ``ReLU``,
-# ``SiLU`` and ``LayerNorm`` and their equivariant counterparts.
+# This is useful for building arbitrary architectures containing layers more
+# complex than those found in the standard available layers: namely ``Linear``,
+# ``Tanh``, ``ReLU``, ``SiLU`` and ``LayerNorm`` and their equivariant
+# counterparts.
 #
-# First we need to create some dummy data in :py:class:`TensorMap` format, with multiple
-# :py:class:`TensorBlock`. Here we will focus on unconstrained architectures, as opposed
-# to equivariance preserving ones. The principles in the latter case will be similar, as
-# long as care is taken to build architectures with equivarince-preserving
-# transformations.
+# First we need to create some dummy data in the :py:class:`TensorMap` format,
+# with multiple :py:class:`TensorBlock` objects. Here we will focus on
+# unconstrained architectures, as opposed to equivariance preserving ones. The
+# principles in the latter case will be similar, as long as care is taken to
+# build architectures with equivarince-preserving transformations.
 #
 # Let's start by defining a random tensor that we will treat as some intermediate
 # representation. We will build a multi-layer perceptron to transform this tensor into a
-# prediction. Here we will define a 3-block tensor map, with variable in and out
+# prediction. Here we will define a 3-block tensor map, with variables with the in and out
 # dimensions for each block.
 n_samples = 100
 in_features = [64, 128, 256]
@@ -83,7 +84,7 @@ print("target:", target_tensormap)
 #
 # Let's start with a simple linear layer, but this time constructed manually using
 # ``ModuleMap``. Here we want a linear layer for each block, with the correct in and out
-# feature sizes. The result will be a module that is equivalent to the
+# feature shapes. The result will be a module that is equivalent to the
 # ``metatensor.torch.learn.nn.Linear`` module.
 
 in_keys = feature_tensormap.keys
@@ -98,7 +99,7 @@ for key in in_keys:
     modules.append(module)
 
 # initialize the ModuleMap with the input keys, list of modules, and the output
-# properties labels metadata.
+# property labels' metadata.
 linear_mmap = ModuleMap(
     in_keys,
     modules,
@@ -109,15 +110,15 @@ print(linear_mmap)
 # %%
 #
 # ``ModuleMap`` automatically handles the forward pass for each block indexed by the
-# ``in_keys`` used to intialize it. In the case where the input contains more
-# keys/blocks than what's given as ``in_keys`, the forward pass will only be applied to
+# ``in_keys`` used to intialize it. In cases where the input contains more
+# keys/blocks than what is present in the ``in_keys` field, the forward pass will only be applied to
 # the blocks that are present in the input. The output will be a new ``TensorMap`` with
-# the same keys as the input, with the correct output meatdata.
+# the same keys as the input, now with the correct output meatdata.
 
-# apply the ModuleMap to the whole feature tensor map
+# apply the ModuleMap to the whole tensor map of features
 prediction_full = linear_mmap(feature_tensormap)
 
-# filter the features to only contain one of the blocks, and pass through the ModuleMap
+# filter the features to only contain one of the blocks, and pass it through the ModuleMap
 prediction_subset = linear_mmap(
     mts.filter_blocks(
         feature_tensormap, Labels(["key"], torch.tensor([1]).reshape(-1, 1))
@@ -130,12 +131,12 @@ print(prediction_subset.keys, prediction_subset.blocks())
 
 # %%
 #
-# Now define a loss function and run a training loop. This is the same as done in the
-# previous tutorials.
+# Now we define a loss function and run a training loop. This is the same as in
+# the previous tutorials.
 
 
 # define a custom loss function for TensorMaps that computes the squared error and
-# reduces by sum
+# reduces by a summation operation
 class TensorMapLoss(torch.nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
@@ -145,17 +146,17 @@ class TensorMapLoss(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, input: TensorMap, target: TensorMap) -> torch.Tensor:
+    def forward(self, _input: TensorMap, target: TensorMap) -> torch.Tensor:
         """
-        Computes the total squared error between the ``input`` and ``target``
+        Computes the total squared error between the ``_input`` and ``target``
         TensorMaps.
         """
-        # input and target should have equal metadata over all axes
-        assert mts.equal_metadata(input, target)
+        # inputs and targets should have the same metadata over all axes
+        assert mts.equal_metadata(_input, target)
 
         squared_loss = 0
-        for key in input.keys:
-            squared_loss += torch.sum((input[key].values - target[key].values) ** 2)
+        for key in _input.keys:
+            squared_loss += torch.sum((_input[key].values - target[key].values) ** 2)
 
         return squared_loss
 
@@ -222,8 +223,7 @@ for key in in_keys:
     )
     modules.append(module)
 
-# initialize the ModuleMap with the input keys, list of modules, and the output
-# properties labels metadata.
+# initialize the ModuleMap as in the previous section.
 custom_mmap = ModuleMap(
     in_keys,
     modules,
@@ -237,13 +237,14 @@ training_loop(custom_mmap, loss_fn_mts, feature_tensormap, target_tensormap)
 
 # %%
 #
-# ModuleMap can also be wrapped in a ``torch.nn.torch.nn.Module`` to allow construction
-# of complex architectures. For instance, we can be a "ResNet"-style neural network
-# module that takes a ModuleMap and applies it, then sums with some residual
-# connections. Wikipedia has a good summary and diagram of this architectural motif,
-# see: https://en.wikipedia.org/wiki/Residual_neural_network .
+# ModuleMap objects can also be wrapped in a ``torch.nn.torch.nn.Module`` to
+# allow construction of complex architectures. For instance, we can have a
+# "ResNet"-style neural network module that takes a ModuleMap and applies it,
+# then sums with some residual connections. Wikipedia has a good summary and
+# diagram of this architectural motif, see:
+# https://en.wikipedia.org/wiki/Residual_neural_network .
 #
-# To do the latter step, we can combine application of the ``ModuleMap`` with the
+# To do the latter step, we can combine application of the ``ModuleMap`` with a
 # ``Linear`` convenience layer from metatensor-learn, and the sparse addition operation
 # from ``metatensor-operations`` to build a complex architecture.
 
@@ -299,8 +300,8 @@ class ResidualNetwork(torch.nn.Module):
         # apply the projection layer to the features
         residual = self.projection(features)
 
-        # add the prediction and residual together using the sparse addition from
-        # metatensor-operations
+        # add the prediction and residual together using the sparse addition
+        # from metatensor-operations
         return mts.add(prediction, residual)
 
 
