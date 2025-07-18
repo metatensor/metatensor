@@ -30,7 +30,7 @@ below:
 
 The :py:class:`TensorMap` stored in the file contains a machine learning representation
 (the spherical expansion) of all the atoms in a |CO2| molecule. You don't need to know
-anything the spherical expansion to follow this tutorial!
+anything about the spherical expansion to follow this tutorial!
 
 .. py:currentmodule:: metatensor
 
@@ -87,9 +87,9 @@ print(tensor)
 # *dimensions*. Two of these are used to describe the behavior of the data under spatial
 # transformations (rotations and inversions in the O3 group):
 #
-# - ``o3_lambda``, indicating the character of o3 irreducible representation this block
-#   is following. In general, a block with ``o3_lambda=3`` will transform under
-#   rotations like a ``l=3`` spherical harmonics.
+# - ``o3_lambda``, indicating the character of the o3 irreducible representation this block
+#   follows. In general, a block with ``o3_lambda=3`` will transform under
+#   rotations like the ``l=3`` spherical harmonics.
 # - ``o3_sigma``, which describe the behavior of the data under inversion symmetry. Here
 #   all blocks have ``o3_sigma=1``, meaning we only have data with the usual inversion
 #   symmetry (``o3_sigma=-1`` would be used for pseudo-tensors);
@@ -97,8 +97,8 @@ print(tensor)
 # And the other two are related to the composition of the system:
 #
 # - ``center_type`` represents the atomic type of the central atom in consideration. For
-#   |CO2|, we have both carbons (type 6) and oxygens (type 8);
-# - ``neighbor_type`` represents the atomic type of the neighbor atoms considered by the
+#   |CO2|, we have both carbon (type 6) and oxygen (type 8) atoms;
+# - ``neighbor_type`` represents the atomic type of the neighboring atoms considered by the
 #   machine learning representation, in this case it takes the values 6 and 8 as well.
 #
 #
@@ -176,13 +176,13 @@ print(block)
 
 # %%
 #
-# Each block contains some data, stored inside the :py:attr:`TensorBlock.values`. Here,
-# the values contains the different coefficients of the spherical expansion, i.e. our
+# Each block contains some data, stored inside :py:attr:`TensorBlock.values`. Here,
+# the values contain the different coefficients of the spherical expansion, i.e. our
 # atomistic machine learning representation.
 #
 # The problem with this array is that we do not know what the different numbers
 # correspond to: different libraries might be using different convention and storage
-# order, and one has to read documentation carefully if they want to use this kind of
+# order, and one has to read the documentation carefully if they want to use this kind of
 # data. Metatensor helps by making this data self-describing; by attaching metadata to
 # each element of the array indicating what exactly we are working with.
 
@@ -199,8 +199,8 @@ print(block.values.shape)
 # %%
 #
 # The **first** dimension of the ``values`` array is described by the
-# :py:attr:`TensorBlock.samples` labels, and correspond to **what** is being described.
-# This follows the usual convention in machine learning, using the different rows of the
+# :py:attr:`TensorBlock.samples` labels, and corresponds to **what** is being described.
+# This follows the usual convention in machine learning, using different rows of the
 # array to store separate samples/observations.
 #
 # Here, since we are working with a per-atom representation, the samples contain the
@@ -259,12 +259,12 @@ print("property =", block.properties[3])
 
 # %%
 #
-# To summarize this tutorial, we saw that a :py:class:`TensorMap` contains multiple
-# :py:class:`TensorBlock`, each associated with a key. The key describes the block, and
-# what kind of data will be found inside.
+# To summarize this tutorial, we saw that a :py:class:`TensorMap` contains
+# multiple :py:class:`TensorBlock` objects, each associated with a key. The key
+# describes the block, along with what kind of data will be found inside.
 #
-# The blocks contains the actual data, and multiple set of metadata, one for each axis
-# of the data array.
+# The blocks contains the actual data, and multiple sets of metadata, one for
+# each axis of the data array.
 #
 # - The rows are described by ``samples`` labels, which describe **what** is being
 #   stored;

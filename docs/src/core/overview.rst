@@ -15,12 +15,11 @@ start with our :ref:`first steps <core-tutorial-first-steps>` tutorial instead!
 TensorMap
 ^^^^^^^^^
 
-The core type of metatensor is the :py:class:`TensorMap`: a high dimensional
+The core type in metatensor is the :py:class:`TensorMap`: a high dimensional
 block-sparse tensor containing both data and metadata. A TensorMap contains a
 list of blocks (represented as :ref:`concept-TensorBlock`), each associated with
 a key; and the set of all keys is stored in a :ref:`concept-Labels` object. Both
-these building block for ``TensorMap`` are explained in more details below.
-
+these building blocks for a ``TensorMap`` are explained in more detail below.
 
 The keys can contain multiple dimensions (in the illustration below we have two
 dimensions named ``key_1`` and ``key_2``), and each entry in the keys has one
@@ -32,8 +31,8 @@ associated with ``key_1 = 0`` and ``key_2 = 1``, and so on.
     :width: 600px
     :align: center
 
-    Illustration of a metatensor TensorMap object, made of a set of keys and
-    associated :ref:`concept-TensorBlock`.
+    Illustration of a metatensor TensorMap object, consisting of a set of keys and
+    an associated :ref:`concept-TensorBlock`.
 
 
 Different key dimensions can have different purposes, but some typical keys
@@ -52,7 +51,7 @@ dimensions you'll encounter when working with atomistic data are the following:
   harmonics. When handling this kind of data, it is convenient to store and
   manipulate the data corresponding to different spherical harmonics (or
   generally different irreducible representations of the symmetry group)
-  separately. This is the case of the ``o3_lambda`` key dimension produced by
+  separately. This is the case for the ``o3_lambda`` key dimension produced by
   `featomic`_: different blocks will contain the :math:`\lambda = 1` and
   :math:`\lambda = 2` parts of an equivariant representation.
 
@@ -64,8 +63,8 @@ Labels
 ^^^^^^
 
 A fundamental part of metatensor is to carry simultaneously the data used in
-machine learning and the associated metadata. The first kind of metadata we
-encountered was the keys of a :py:class:`TensorMap`, stored as an instance of
+machine learning and its associated metadata. The first kind of metadata we
+encountered were the keys of a :py:class:`TensorMap`, stored as an instance of
 the :py:class:`Labels` class. This class is also used to store all other
 metadata in metatensor, i.e. all the metadata associated with a given
 :py:class:`TensorBlock`.
@@ -143,9 +142,9 @@ described by the ``i``:superscript:`th` entry of the samples and the
     describes **properties**.
 
 In addition to all this metadata, metatensor also carries around some data. This
-data can be stored in various arrays types, all integrated with metatensor.
-Metatensor then manipulates these arrays in an opaque way, without knowing what's
-inside. This allows to integrate metatensor with multiple third-party libraries
+data can be stored in various array types, all integrated with metatensor.
+Metatensor then manipulates these arrays in an opaque way, without knowing what is
+inside. This allows one to integrate metatensor with multiple third-party libraries
 and ecosystems, for example having the data live on GPU, or using memory-mapped
 data arrays.
 
@@ -241,7 +240,7 @@ harmonics :math:`m` as components. This impacts metadata associated with
 - :py:class:`TensorBlock` can have an arbitrary number of components associated
   with the values, which will always occur "*in between*" samples and properties
   metadata;
-- when values in a :py:class:`TensorBlock` have components, and gradient with
+- when values in a :py:class:`TensorBlock` have components, and gradients with
   respect to some parameter would add more components, the resulting gradient
   components will contain first the new, gradient-specific components, and then
   all the components already present in the values.

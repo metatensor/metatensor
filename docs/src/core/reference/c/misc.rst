@@ -53,11 +53,11 @@ Tensors
 -------
 
 - :c:func:`mts_tensormap_save`: serialize and save a ``mts_tensormap_t`` to a file
-- :c:func:`mts_tensormap_load`: load serialized ``mts_tensormap_t`` from a file
+- :c:func:`mts_tensormap_load`: load a serialized ``mts_tensormap_t`` from a file
 - :c:func:`mts_tensormap_save_buffer`: serialize and save a ``mts_tensormap_t``
   to a in-memory buffer
-- :c:func:`mts_tensormap_load_buffer`: load serialized ``mts_tensormap_t`` from
-  a in-memory buffer
+- :c:func:`mts_tensormap_load_buffer`: load a serialized ``mts_tensormap_t`` from
+  an in-memory buffer
 
 .. doxygenfunction:: mts_tensormap_load
 
@@ -77,10 +77,10 @@ Blocks
 ------
 
 - :c:func:`mts_block_save`: serialize and save a ``mts_block_t`` to a file
-- :c:func:`mts_block_load`: load serialized ``mts_block_t`` from a file
+- :c:func:`mts_block_load`: load a serialized ``mts_block_t`` from a file
 - :c:func:`mts_block_save_buffer`: serialize and save a ``mts_block_t``
   to a in-memory buffer
-- :c:func:`mts_block_load_buffer`: load serialized ``mts_block_t`` from
+- :c:func:`mts_block_load_buffer`: load a serialized ``mts_block_t`` from
   a in-memory buffer
 
 .. doxygenfunction:: mts_block_load
@@ -96,11 +96,11 @@ Labels
 -------
 
 - :c:func:`mts_labels_save`: serialize and save a ``mts_labels_t`` to a file
-- :c:func:`mts_labels_load`: load serialized ``mts_labels_t`` from a file
+- :c:func:`mts_labels_load`: load a serialized ``mts_labels_t`` from a file
 - :c:func:`mts_labels_save_buffer`: serialize and save a ``mts_labels_t``
-  to a in-memory buffer
+  to an in-memory buffer
 - :c:func:`mts_labels_load_buffer`: load serialized ``mts_labels_t`` from
-  a in-memory buffer
+  an in-memory buffer
 
 - :c:func:`mts_tensormap_load`: create the Rust-side data for the labels
 

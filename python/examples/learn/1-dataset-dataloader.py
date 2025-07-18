@@ -7,8 +7,9 @@ Datasets and data loaders
 .. py:currentmodule:: metatensor.learn.data
 
 This tutorial shows how to define :py:class:`Dataset` and :py:class:`DataLoader`
-compatible with PyTorch and containing metatensor data (i.e. data stored in
-:py:class:`metatensor.torch.TensorMap`) in addition to more usual types of data.
+objects compatible with PyTorch while containing metatensor data (i.e. data
+stored in :py:class:`metatensor.torch.TensorMap`) in addition to more usual
+types of data.
 """
 
 import os
@@ -94,8 +95,8 @@ for i, x in enumerate(x_data):
 
 # %%
 #
-# In order for the ``x`` data to be loaded lazily, we need to give the
-# :py:class:`Dataset` a ``load`` function that loads a single sample into
+# In order for the ``x`` data to be loaded lazily, we need to equip the
+# :py:class:`Dataset` with a ``load`` function that loads a single sample into
 # memory. This can be a function of arbitrary complexity, taking a single
 # argument which is the numeric index (between ``0`` and ``len(dataset) - 1``)
 # of the sample to load
@@ -208,8 +209,8 @@ for batch in in_memory_dataloader:
 #
 # One can use the usual torch :py:func:`torch.utils.data.random_split` function
 # to split a ``Dataset`` into train, validation, and test subsets for
-# cross-validation purposes. ``DataLoader`` s can then be constructed for each
-# subset.
+# cross-validation purposes. ``DataLoader`` objectss can then be constructed for
+# each subset.
 
 
 # Perform a random train/val/test split of the Dataset,

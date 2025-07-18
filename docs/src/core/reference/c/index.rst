@@ -26,13 +26,14 @@ C API reference
 
 ``metatensor`` offers a C API that can be called from any language able to call
 C functions (in particular, this includes Python, Fortran with ``iso_c_env``,
-C++, and most languages used nowadays). Convenient wrappers of the C API are
-also provided for :ref:`Python <python-api-core>` users.
+C++, and most languages used nowadays). Convenient wrappers over the C API are
+also provided for :ref:`Python <python-api-core>` and :ref:`C++ <cxx-api-core>`
+users.
 
 The C API is implemented in Rust. You can use these functions in your own code
 by :ref:`installing the corresponding shared library and header <install-c>`,
-and then including ``metatensor.h`` and linking with ``-lmetatensor``.
-Alternatively, we provide a cmake package config file, allowing you to do use
+and then including ``metatensor.h`` while linking with ``-lmetatensor``.
+Alternatively, we provide a ``cmake`` configuration file, allowing you to use
 ``metatensor`` like this (after installation):
 
 .. code-block:: cmake
@@ -46,18 +47,19 @@ Alternatively, we provide a cmake package config file, allowing you to do use
     add_executable(my-exe exe-source.c)
     add_library(my-lib lib-source.c)
 
-    # Link to metatensor, this makes the header accessible and link to the right
-    # libraries.
+    # Link to metatensor, this makes the header accessible and links to the
+    # right libraries.
     #
     # The `metatensor` target will be an alias for `metatensor::shared`
-    # or `metatensor::static` depending how you've installed the code.
+    # or `metatensor::static` depending how you installed the code.
     target_link_libraries(my-exe metatensor)
     target_link_libraries(my-lib metatensor)
 
     # alternatively, you can explicitly use the static or shared build of
     # metatensor. Unless you have a very specific need for a static build, we
-    # recommend using the shared version of metatensor: this will allow to pass
-    # data from your code to any other code using metatensor.
+    # recommend using the shared version of metatensor: this will allow you to
+    # pass data from your code to other codes which use the same metatensor
+    # shared library.
 
     # target_link_libraries(my-exe metatensor::shared)
     # target_link_libraries(my-exe metatensor::static)

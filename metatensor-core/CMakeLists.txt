@@ -100,7 +100,7 @@ if(CARGO_STATUS AND NOT CARGO_STATUS EQUAL 0)
     )
 endif()
 
-set(REQUIRED_RUST_VERSION "1.53.0")
+set(REQUIRED_RUST_VERSION "1.74.0")
 if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+\\.[0-9]+\\.[0-9]+).*")
     set(CARGO_VERSION "${CMAKE_MATCH_1}")
 else()
