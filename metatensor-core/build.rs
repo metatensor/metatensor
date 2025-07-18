@@ -21,7 +21,7 @@ fn main() {
     config.documentation = true;
     config.documentation_style = cbindgen::DocumentationStyle::Doxy;
     config.line_endings = cbindgen::LineEndingStyle::LF;
-    config.header = Some(generated_comment.into());
+    config.autogen_warning = Some(generated_comment.into());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
