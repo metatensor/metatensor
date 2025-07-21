@@ -13,7 +13,7 @@ int main(void) {
     labels.values = values;
     labels.count = 3;
 
-    mts_status_t status = mts_labels_create_unchecked(&labels);
+    mts_status_t status = mts_labels_create(&labels);
     if (status != MTS_SUCCESS) {
         goto fail;
     }
