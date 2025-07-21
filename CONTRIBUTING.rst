@@ -30,8 +30,7 @@ not have to interact with them directly:
 
 - **CMake**: we need a CMake version of at least 3.16.
 - **a C++ compiler** we need a compiler supporting C++11 (C++17 for
-  ``metatensor-torch``). GCC >= 7, clang >= 5 and MSVC >= 19 should all work,
-  although MSVC is not yet tested continuously.
+  ``metatensor-torch``). GCC >= 7, clang >= 5 and MSVC >= 19 should all work.
 
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest
