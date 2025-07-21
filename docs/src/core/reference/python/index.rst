@@ -28,9 +28,9 @@ Python API reference
 .. py:currentmodule:: metatensor
 
 Most users will find the Python interface to ``metatensor`` to be the most
-convenient to use. This interface is built on top of the C API, and can be
-:ref:`installed independently <install-python>`. The functions and classes
-provided in ``metatensor`` can be grouped as follows:
+convenient to use. This interface is built on top of the :ref:`C API
+<c-api-core>`, and can be :ref:`installed independently <install-python>`. The
+functions and classes provided in ``metatensor`` can be grouped as follows:
 
 .. toctree::
     :maxdepth: 1
@@ -40,7 +40,7 @@ provided in ``metatensor`` can be grouped as follows:
     labels
     io
 
-Some modules are part of the advanced API that most users should not need to
+Some modules are part of an advanced API that most users should not need to
 interact with:
 
 .. toctree::

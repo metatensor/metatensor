@@ -13,7 +13,7 @@ one can do with them.
 
     Metatensor supports multiple ways of managing gradients: explicit forward gradients,
     presented in this tutorial; and implicit backward mode gradients (only when the data
-    is stored in :py:class:`torch.Tensor`). Both can be mixed as well, to compute
+    is stored in a :py:class:`torch.Tensor`). Both can be mixed as well, to compute
     backward mode gradients of explicit forward mode gradients when training a model
     with gradient data (forces and virial).
 
@@ -45,11 +45,12 @@ from metatensor import TensorBlock, TensorMap
 # Amazing gradients and where to find them
 # ----------------------------------------
 #
-# In the first :ref:`tutorial <core-tutorial-first-steps>`, we have seen how metatensor
-# stores data and metadata together inside :py:class:`TensorBlock`; and groups multiple
-# blocks to form a full :py:class:`TensorMap`. To refresh our memory, let's load some
-# data (the radial spectrum from the :ref:`sparsity tutorial <core-tutorial-sparsity>`).
-# It is a tensor map with two dimensions for the keys; and 5 blocks:
+# In the first :ref:`tutorial <core-tutorial-first-steps>`, we have seen how
+# metatensor stores data and metadata together inside the
+# :py:class:`TensorBlock` object; and groups multiple blocks to form a full
+# :py:class:`TensorMap`. To refresh our memory, let's load some data (the radial
+# spectrum from the :ref:`sparsity tutorial <core-tutorial-sparsity>`).  It is a
+# tensor map with two dimensions for the keys; and five blocks:
 
 # sphinx_gallery_thumbnail_path = '../static/images/TensorBlock-Gradients.*'
 
@@ -58,31 +59,33 @@ print(radial_spectrum)
 
 # %%
 #
-# If we look at one of the block, we can see that is contains gradients with respect to
-# ``"positions"``:
+# If we look at one of the block, we can see that is contains gradients with
+# respect to ``"positions"``:
 
 block = radial_spectrum.block(center_type=7, neighbor_type=7)
 print(block)
 
 # %%
 #
-# Gradients are stored inside normal :py:class:`TensorBlock`, with their own set of
-# metadata in the samples, components and properties dimensions.
+# Gradients are stored inside normal :py:class:`TensorBlock` instances, with
+# their own set of metadata in the samples, components and properties
+# dimensions.
 
 gradient = block.gradient("positions")
 print(gradient)
 
 # %%
 #
-# The samples are different from the values blocks (the block to which this gradient it
+# The samples are different from the values blocks (the block to which this gradient is
 # attached to): there is a first ``"sample"`` dimension, followed by a pair of indices
 # ``(structure, atom)``.
 #
-# The ``"sample"`` dimension is always present in gradients, and indicate which of the
-# samples in the values block we are taking the gradient of. Here, the first row of the
-# gradients will contain a gradient of the first sample in the values; with respect to
-# the position of atom 4; while the last row of the gradients contains a gradient of the
-# second row of the values with respect to the position of atom 5.
+# The ``"sample"`` dimension is always present in gradients, and indicates which
+# of the samples in the values block we are taking the gradient of. Here, the
+# first row of the gradients will contain a gradient of the first sample in the
+# values array; with respect to the position of atom 4; while the last row of
+# the gradients contains a gradient of the second row of the values with respect
+# to the position of atom 5.
 
 print(gradient.samples)
 
@@ -107,10 +110,10 @@ print(block.samples)
 # - :math:`\nabla_5 \rho_5`: gradient of the representation of atom 5 with respect to
 #   the position of atom 5.
 #
-# You'll realize that some of the combinations of atoms are missing here: there is no
-# gradient of :math:`\rho_4` with respect to the positions of atom 0, 1, 2, *etc.* This
-# is another instance of the data sparsity that metatensor enable: only the non-zero
-# gradients are actually stored in memory.
+# You'll realize that some combinations of atoms are missing here: there is no
+# gradient of :math:`\rho_4` with respect to the positions of atom 0, 1, 2,
+# *etc.* This is another instance of the data sparsity that metatensor enables:
+# only the non-zero gradients are actually stored in memory.
 #
 # .. figure:: /../static/images/TensorBlock-Gradients.*
 #     :width: 400px
@@ -122,9 +125,10 @@ print(block.samples)
 
 # %%
 #
-# The gradient block can also differ from the values block in the components: here the
-# values have no components, but the gradient have one, representing the x/y/z cartesian
-# coordinate direction of the gradient with respect to positions.
+# The gradient block can also differ from the values block in the components:
+# here the values have no components, but the gradients have one, representing
+# the x/y/z cartesian coordinate direction of the gradient with respect to
+# positions.
 
 print(gradient.components)
 
@@ -137,7 +141,7 @@ print(block.properties == gradient.properties)
 
 # %%
 #
-# The gradient block also contains the data for the gradient, in the ``values``
+# The gradient block also contains the data for the gradients, in the ``values``
 # attribute. Here the gradients are zeros everywhere except in the x direction because
 # in the original input, the N\ :sub:`2` molecule was oriented along the x axis.
 
@@ -298,8 +302,8 @@ print("square gradient:", squared_block.gradient("positions").values[:, 0])
 #     :py:class:`TensorBlock` as part of the :ref:`metatensor-operations
 #     <metatensor-operations>` module (installed by default with the main
 #     ``metatensor`` package). These operations already support the different sparsity
-#     levels of metatensor, and support for explicit forward gradients. In general you
-#     will not have to write the type of code from this tutorial yourself, and you
+#     patterns in metatensor, and support explicit forward gradients. In general you
+#     will not have to write the type of code shown in this tutorial yourself, and you
 #     should use the corresponding operation.
 #
 #     For example, ``squared`` from this tutorial can be calculated with:
