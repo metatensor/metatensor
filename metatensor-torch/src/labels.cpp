@@ -466,7 +466,7 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         // create a new rust pointer corresponding to a different object instead
         // of incrementing the reference count of the existing labels.
         raw_labels.internal_ptr_ = nullptr;
-        // assume that the user is already responsible for valid (unique) labels at this point
+        // assume that entries uniqueness has been validated at this point
         metatensor::details::check_status(mts_labels_create_unchecked(&raw_labels));
         auto new_labels = metatensor::Labels(raw_labels);
 
