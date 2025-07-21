@@ -184,12 +184,20 @@ behavior of tests:
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/
 
-Inspecting Python code coverage
--------------------------------
 
-The code coverage is reported at `codecov`_. You can also inspect the coverage
-locally. To get the full coverage first combine all reports and open produced
-html file in a browser
+Code coverage
+~~~~~~~~~~~~~
+
+The code coverage is reported at `codecov`_. Locally, coverage reports can be
+generated for each programming language.
+
+.. _codecov: https://codecov.io/gh/metatensor/metatensor
+
+Python coverage
+^^^^^^^^^^^^^^^
+
+Python coverage is written out as several individual files. It is easier to
+combine all reports and open the generated ``html`` file in a browser
 
 .. code-block:: bash
 
@@ -198,7 +206,38 @@ html file in a browser
     coverage html
     firefox htmlcov/index.html
 
-.. _codecov: https://codecov.io/gh/metatensor/metatensor
+
+Rust coverage
+^^^^^^^^^^^^^
+
+Rust coverage is instrumeted through the `cargo-llvm-cov`_ plugin
+
+.. code-block:: bash
+
+    rustup component add llvm-tools
+    cargo +stable install cargo-llvm-cov --locked
+
+It is desirable to generate coverage taking into account the coverage for the bindings to C/C++ and Python so:
+
+.. code-block:: bash
+
+    CC=$(which clang) CXX=$(which clang++) \
+    LLVM_COV=$(which llvm-cov) LLVM_PROFDATA=$(which llvm-profdata) \
+    LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" \
+    CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' \
+    CFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    CXXFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    cargo llvm-cov --include-ffi --all-features \
+    --workspace --html
+
+Finally a local ``http`` server can be used to view the generated ``html``
+
+
+.. code-block:: bash
+
+    python -m http.server -d target/llvm-cov/html
+
+.. _cargo-llvm-cov: https://github.com/taiki-e/cargo-llvm-cov
 
 Contributing to the documentation
 ---------------------------------
