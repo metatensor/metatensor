@@ -1805,7 +1805,8 @@ namespace details {
     inline metatensor::Labels labels_from_cxx(
         const std::vector<std::string>& names,
         const int32_t* values,
-        size_t count, bool unchecked = false
+        size_t count,
+        bool unchecked = false
     ) {
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));
