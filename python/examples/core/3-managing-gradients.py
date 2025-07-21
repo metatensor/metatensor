@@ -125,9 +125,10 @@ print(block.samples)
 
 # %%
 #
-# The gradient block can also differ from the values block in the components: here the
-# values have no components, but the gradients have one, representing the x/y/z cartesian
-# coordinate direction of the gradient with respect to positions.
+# The gradient block can also differ from the values block in the components:
+# here the values have no components, but the gradients have one, representing
+# the x/y/z cartesian coordinate direction of the gradient with respect to
+# positions.
 
 print(gradient.components)
 

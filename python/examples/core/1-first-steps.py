@@ -87,19 +87,21 @@ print(tensor)
 # *dimensions*. Two of these are used to describe the behavior of the data under spatial
 # transformations (rotations and inversions in the O3 group):
 #
-# - ``o3_lambda``, indicating the character of the o3 irreducible representation this block
-#   follows. In general, a block with ``o3_lambda=3`` will transform under
-#   rotations like the ``l=3`` spherical harmonics.
-# - ``o3_sigma``, which describe the behavior of the data under inversion symmetry. Here
-#   all blocks have ``o3_sigma=1``, meaning we only have data with the usual inversion
-#   symmetry (``o3_sigma=-1`` would be used for pseudo-tensors);
+# - ``o3_lambda``, indicating the character of the o3 irreducible representation
+#   this block follows. In general, a block with ``o3_lambda=3`` will transform
+#   under rotations like the ``l=3`` spherical harmonics.
+# - ``o3_sigma``, which describe the behavior of the data under inversion
+#   symmetry. Here all blocks have ``o3_sigma=1``, meaning we only have data
+#   with the usual inversion symmetry (``o3_sigma=-1`` would be used for
+#   pseudo-tensors);
 #
 # And the other two are related to the composition of the system:
 #
-# - ``center_type`` represents the atomic type of the central atom in consideration. For
-#   |CO2|, we have both carbon (type 6) and oxygen (type 8) atoms;
-# - ``neighbor_type`` represents the atomic type of the neighboring atoms considered by the
-#   machine learning representation, in this case it takes the values 6 and 8 as well.
+# - ``center_type`` represents the atomic type of the central atom in consideration.
+#   For |CO2|, we have both carbon (type 6) and oxygen (type 8) atoms;
+# - ``neighbor_type`` represents the atomic type of the neighboring atoms
+#   considered by the machine learning representation, in this case it takes the
+#   values 6 and 8 as well.
 #
 #
 # These keys can be accessed with :py:attr:`TensorMap.keys`, and they are an instance of
@@ -181,10 +183,11 @@ print(block)
 # atomistic machine learning representation.
 #
 # The problem with this array is that we do not know what the different numbers
-# correspond to: different libraries might be using different convention and storage
-# order, and one has to read the documentation carefully if they want to use this kind of
-# data. Metatensor helps by making this data self-describing; by attaching metadata to
-# each element of the array indicating what exactly we are working with.
+# correspond to: different libraries might be using different convention and
+# storage order, and one has to read the documentation carefully if they want to
+# use this kind of data. Metatensor helps by making this data self-describing;
+# by attaching metadata to each element of the array indicating what exactly we
+# are working with.
 
 print(block.values)
 

@@ -51,10 +51,10 @@ torch.set_default_dtype(torch.float64)
 # principles in the latter case will be similar, as long as care is taken to
 # build architectures with equivarince-preserving transformations.
 #
-# Let's start by defining a random tensor that we will treat as some intermediate
-# representation. We will build a multi-layer perceptron to transform this tensor into a
-# prediction. Here we will define a 3-block tensor map, with variables with the in and out
-# dimensions for each block.
+# Let's start by defining a random tensor that we will treat as some
+# intermediate representation. We will build a multi-layer perceptron to
+# transform this tensor into a prediction. Here we will define a 3-block tensor
+# map, with variables with the in and out dimensions for each block.
 n_samples = 100
 in_features = [64, 128, 256]
 out_features = [1, 2, 3]
@@ -109,16 +109,18 @@ print(linear_mmap)
 
 # %%
 #
-# ``ModuleMap`` automatically handles the forward pass for each block indexed by the
-# ``in_keys`` used to intialize it. In cases where the input contains more
-# keys/blocks than what is present in the ``in_keys` field, the forward pass will only be applied to
-# the blocks that are present in the input. The output will be a new ``TensorMap`` with
-# the same keys as the input, now with the correct output meatdata.
+# ``ModuleMap`` automatically handles the forward pass for each block indexed by
+# the ``in_keys`` used to initialize it. In cases where the input contains more
+# keys/blocks than what is present in the ``in_keys` field, the forward pass
+# will only be applied to the blocks that are present in the input. The output
+# will be a new ``TensorMap`` with the same keys as the input, now with the
+# correct output metadata.
 
 # apply the ModuleMap to the whole tensor map of features
 prediction_full = linear_mmap(feature_tensormap)
 
-# filter the features to only contain one of the blocks, and pass it through the ModuleMap
+# filter the features to only contain one of the blocks,
+# and pass it through the ModuleMap
 prediction_subset = linear_mmap(
     mts.filter_blocks(
         feature_tensormap, Labels(["key"], torch.tensor([1]).reshape(-1, 1))
