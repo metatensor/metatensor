@@ -46,7 +46,7 @@ public:
     LabelsHolder(torch::IValue names, torch::Tensor values);
 
     /// Unchecked variant of the same constructor. The user promises that the
-    /// labels are unique.
+    /// entries (i.e. rows of the values) are unique.
     LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::unchecked_t);
 
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
