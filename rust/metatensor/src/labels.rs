@@ -747,6 +747,48 @@ impl LabelsBuilder {
 
         return unsafe { Labels::from_raw(raw_labels) };
     }
+
+    /// Finish building the `Labels`, assuming that all entries are unique.
+    ///
+    /// This is faster than `finish` as it does not perform a uniqueness check
+    /// on the labels entries. It is the caller's responsibility to ensure that
+    /// entries are unique.
+    ///
+    /// # Panics
+    ///
+    /// If the set of names is not valid (contains duplicates or invalid names).
+    #[inline]
+    pub fn finish_unchecked(self) -> Labels {
+        let mut raw_names = Vec::new();
+        let mut raw_names_ptr = Vec::new();
+
+        let mut raw_labels = if self.names.is_empty() {
+            assert!(self.values.is_empty());
+            mts_labels_t::null()
+        } else {
+            for name in &self.names {
+                let name = CString::new(&**name).expect("name contains a NULL byte");
+                raw_names_ptr.push(name.as_ptr());
+                raw_names.push(name);
+            }
+
+            mts_labels_t {
+                internal_ptr_: std::ptr::null_mut(),
+                names: raw_names_ptr.as_ptr(),
+                values: self.values.as_ptr().cast(),
+                size: self.size(),
+                count: self.values.len() / self.size(),
+            }
+        };
+
+        unsafe {
+            check_status(
+                crate::c_api::mts_labels_create_unchecked(&mut raw_labels)
+            ).expect("invalid labels?");
+        }
+
+        return unsafe { Labels::from_raw(raw_labels) };
+    }
 }
 
 
