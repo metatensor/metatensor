@@ -5,7 +5,7 @@ use std::iter::FusedIterator;
 
 use smallvec::SmallVec;
 
-use crate::c_api::mts_labels_t;
+use crate::c_api::{mts_labels_t, mts_status_t};
 use crate::errors::{Error, check_status};
 
 /// A single value inside a label.
@@ -714,9 +714,11 @@ impl LabelsBuilder {
         self.values.extend(&entry);
     }
 
-    /// Finish building the `Labels`
-    #[inline]
-    pub fn finish(self) -> Labels {
+    /// Common implementation for `finish` and `finish_unchecked`.
+    fn finish_with(
+        self,
+        creator: unsafe extern "C" fn(*mut mts_labels_t) -> mts_status_t
+    ) -> Labels {
         let mut raw_names = Vec::new();
         let mut raw_names_ptr = Vec::new();
 
@@ -740,12 +742,18 @@ impl LabelsBuilder {
         };
 
         unsafe {
-            check_status(
-                crate::c_api::mts_labels_create(&mut raw_labels)
-            ).expect("invalid labels?");
+            check_status(creator(&mut raw_labels)).expect("invalid labels?");
         }
 
         return unsafe { Labels::from_raw(raw_labels) };
+    }
+
+    /// Finish building the `Labels`.
+    ///
+    /// This function checks that all entries in the labels are unique.
+    #[inline]
+    pub fn finish(self) -> Labels {
+        self.finish_with(crate::c_api::mts_labels_create)
     }
 
     /// Finish building the `Labels`, assuming that all entries are unique.
@@ -759,35 +767,7 @@ impl LabelsBuilder {
     /// If the set of names is not valid (contains duplicates or invalid names).
     #[inline]
     pub fn finish_unchecked(self) -> Labels {
-        let mut raw_names = Vec::new();
-        let mut raw_names_ptr = Vec::new();
-
-        let mut raw_labels = if self.names.is_empty() {
-            assert!(self.values.is_empty());
-            mts_labels_t::null()
-        } else {
-            for name in &self.names {
-                let name = CString::new(&**name).expect("name contains a NULL byte");
-                raw_names_ptr.push(name.as_ptr());
-                raw_names.push(name);
-            }
-
-            mts_labels_t {
-                internal_ptr_: std::ptr::null_mut(),
-                names: raw_names_ptr.as_ptr(),
-                values: self.values.as_ptr().cast(),
-                size: self.size(),
-                count: self.values.len() / self.size(),
-            }
-        };
-
-        unsafe {
-            check_status(
-                crate::c_api::mts_labels_create_unchecked(&mut raw_labels)
-            ).expect("invalid labels?");
-        }
-
-        return unsafe { Labels::from_raw(raw_labels) };
+        self.finish_with(crate::c_api::mts_labels_create_unchecked)
     }
 }
 
