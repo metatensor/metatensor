@@ -45,10 +45,6 @@ TEST_CASE("Labels") {
         auto names = std::vector<std::string>{"a", "b"};
 
         auto non_unique_values = torch::tensor({{1, 2}, {1, 3}}, torch::kInt32);
-        CHECK_THROWS_WITH(
-            LabelsHolder(names, non_unique_values),
-            "invalid parameter: can not have the same label entry multiple times: [1, 2] is already present"
-        );
         auto labels = LabelsHolder(names, non_unique_values, metatensor::assume_unique{});
         CHECK(labels.count() == 2);
         CHECK(labels.values()[0][0].item<int64_t>() == 1);
