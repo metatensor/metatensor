@@ -236,8 +236,15 @@ impl Labels {
     /// This is identical to [`Labels::new`] except that the rows are not
     /// checked for uniqueness, but instead the caller must ensure that rows are
     /// unique.
+    ///
+    /// ``NOTE(rg)::`` This is a no-op on debug builds, i.e. uniqueness manually
+    /// preserved
     pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
-        return Labels::new_impl(names, values, false);
+        if cfg!(debug_assertions) {
+            return Labels::new_impl(names, values, true);
+        } else {
+            return Labels::new_impl(names, values, false);
+        }
     }
 
     /// Helper constructor to make tests more readable
