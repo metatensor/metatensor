@@ -126,12 +126,12 @@ TORCH_LIBRARY(metatensor, m) {
             torch::init([](torch::IValue names, torch::Tensor values,
                            bool assume_unique) {
                 if (assume_unique) {
-                    return std::make_unique<LabelsHolder>(std::move(names),
-                                                          std::move(values),
-                                                          metatensor::assume_unique{});
+                    return c10::make_intrusive<LabelsHolder>(std::move(names),
+                                                             std::move(values),
+                                                             metatensor::assume_unique{});
                 } else {
-                    return std::make_unique<LabelsHolder>(std::move(names),
-                                                          std::move(values));
+                    return c10::make_intrusive<LabelsHolder>(std::move(names),
+                                                             std::move(values));
                 }
             }),
             DOCSTRING,
