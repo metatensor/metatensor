@@ -49,13 +49,13 @@ TEST_CASE("Labels") {
             LabelsHolder(names, non_unique_values),
             "invalid parameter: can not have the same label entry multiple times: [1, 2] is already present"
         );
-        auto labels = LabelsHolder(names, non_unique_values, metatensor::unchecked_t{});
+        auto labels = LabelsHolder(names, non_unique_values, metatensor::assume_unique{});
         CHECK(labels.count() == 2);
         CHECK(labels.values()[0][0].item<int64_t>() == 1);
         CHECK(labels.values()[1][0].item<int64_t>() == 1);
         CHECK(labels.values()[0][1].item<int64_t>() == 2);
         CHECK(labels.values()[1][1].item<int64_t>() == 2);
-        auto created = LabelsHolder::create(names, {{1, 2}, {1, 2}}, metatensor::unchecked_t{});
+        auto created = LabelsHolder::create(names, {{1, 2}, {1, 2}}, metatensor::assume_unique{});
         CHECK(created->count() == 2);
     }
 

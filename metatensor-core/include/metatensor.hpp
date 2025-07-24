@@ -37,7 +37,7 @@ class TensorMap;
 class TensorBlock;
 
 /// Tag for creation without uniqueness checks
-struct unchecked_t {};
+struct assume_unique {};
 
 /// Exception class used for all errors in metatensor
 class Error: public std::runtime_error {
@@ -1243,8 +1243,8 @@ public:
     explicit Labels(
         const std::vector<std::string>& names,
         const std::vector<std::initializer_list<int32_t>>& values,
-        unchecked_t
-    ): Labels(names, NDArray<int32_t>(values, names.size()), unchecked_t{}, InternalConstructor{}) {}
+        assume_unique
+    ): Labels(names, NDArray<int32_t>(values, names.size()), assume_unique{}, InternalConstructor{}) {}
 
     /// Create an empty set of Labels with the given names
     explicit Labels(const std::vector<std::string>& names):
@@ -1256,7 +1256,7 @@ public:
         Labels(details::labels_from_cxx(names, values, count, false)) {}
 
     /// Unchecked variant, caller promises the labels are unique
-    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, unchecked_t):
+    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, assume_unique):
         Labels(details::labels_from_cxx(names, values, count, true)) {}
 
     ~Labels() {
@@ -1783,8 +1783,8 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, InternalConstructor):
         Labels(names, values.data(), values.shape()[0]) {}
 
-    Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, unchecked_t, InternalConstructor):
-        Labels(names, values.data(), values.shape()[0], unchecked_t{}) {}
+    Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, assume_unique, InternalConstructor):
+        Labels(names, values.data(), values.shape()[0], assume_unique{}) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
     friend Labels io::load_labels(const std::string &path);

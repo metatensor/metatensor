@@ -145,7 +145,7 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     labels_->set_user_data(std::move(user_data));
 }
 
-LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::unchecked_t):
+LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):
     names_(details::normalize_names(names, "names")),
     values_(normalize_int32_tensor(values, 2, "Labels values")),
     labels_(torch::nullopt)
@@ -160,7 +160,7 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor
         names_,
         values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
         values_.sizes()[0],
-        metatensor::unchecked_t{}
+        metatensor::assume_unique{}
     );
 
     auto user_data = metatensor::LabelsUserData(
@@ -181,14 +181,14 @@ Labels LabelsHolder::create(
 Labels LabelsHolder::create(
     std::vector<std::string> names,
     const std::vector<std::initializer_list<int32_t>>& values,
-    metatensor::unchecked_t
+    metatensor::assume_unique
 ) {
     auto torch_values = initializer_list_to_tensor(values, names.size());
 
     return torch::make_intrusive<LabelsHolder>(
         std::move(names),
         std::move(torch_values),
-        metatensor::unchecked_t{}
+        metatensor::assume_unique{}
     );
 }
 

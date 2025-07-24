@@ -47,7 +47,7 @@ public:
 
     /// Unchecked variant of the same constructor. The user promises that the
     /// entries (i.e. rows of the values) are unique.
-    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::unchecked_t);
+    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique);
 
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
@@ -61,7 +61,7 @@ public:
     static Labels create(
         std::vector<std::string> names,
         const std::vector<std::initializer_list<int32_t>>& values,
-        metatensor::unchecked_t
+        metatensor::assume_unique
     );
 
     /// Get a view of `labels` corresponding to only the given columns names
