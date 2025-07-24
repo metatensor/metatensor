@@ -217,6 +217,7 @@ fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, us
     let mut positions = HashMap::new();
     for (i, entry) in values.chunks_exact(size).enumerate() {
         // entries should be unique!
+        // TODO(rg):: Reconsider working to `insert`
         positions.insert_unique_unchecked(entry.into(), i);
     }
     return positions;
