@@ -44,7 +44,7 @@ TEST_CASE("Labels") {
     SECTION("unchecked constructor") {
         auto names = std::vector<std::string>{"a", "b"};
 
-        auto non_unique_values = torch::tensor({{1, 2}, {1, 2}}, torch::kInt32);
+        auto non_unique_values = torch::tensor({{1, 2}, {1, 3}}, torch::kInt32);
         CHECK_THROWS_WITH(
             LabelsHolder(names, non_unique_values),
             "invalid parameter: can not have the same label entry multiple times: [1, 2] is already present"
@@ -54,8 +54,8 @@ TEST_CASE("Labels") {
         CHECK(labels.values()[0][0].item<int64_t>() == 1);
         CHECK(labels.values()[1][0].item<int64_t>() == 1);
         CHECK(labels.values()[0][1].item<int64_t>() == 2);
-        CHECK(labels.values()[1][1].item<int64_t>() == 2);
-        auto created = LabelsHolder::create(names, {{1, 2}, {1, 2}}, metatensor::assume_unique{});
+        CHECK(labels.values()[1][1].item<int64_t>() == 3);
+        auto created = LabelsHolder::create(names, {{1, 2}, {1, 3}}, metatensor::assume_unique{});
         CHECK(created->count() == 2);
     }
 
