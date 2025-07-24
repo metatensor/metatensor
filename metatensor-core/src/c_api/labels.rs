@@ -155,7 +155,7 @@ where
     }
 
     // Process label values
-    let values = if labels.count > 0 {
+    let values = if labels.count != 0 && labels.size != 0 {
         assert!(!labels.values.is_null());
         let slice = std::slice::from_raw_parts(
             labels.values.cast::<LabelValue>(),
