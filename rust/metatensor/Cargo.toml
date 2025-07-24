@@ -28,7 +28,7 @@ default = []
 static = ["metatensor-sys/static"]
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = {version = "0.5.1", features = ["html_reports"]}
 
 [[bench]]
 name = "labels_benchmark"
