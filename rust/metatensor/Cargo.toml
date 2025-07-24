@@ -27,9 +27,9 @@ default = []
 # use the static build of metatensor-core instead of the shared one
 static = ["metatensor-sys/static"]
 
-[dev-dependencies]
-criterion = {version = "0.5.1", features = ["html_reports"]}
+# [dev-dependencies]
+# criterion = {version = "0.5.1", features = ["html_reports"]}
 
-[[bench]]
-name = "labels_benchmark"
-harness = false
+# [[bench]]
+# name = "labels_benchmark"
+# harness = false
