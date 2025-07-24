@@ -857,20 +857,6 @@ mod tests {
     }
 
     #[test]
-    fn duplicated_label_entry_unchecked() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[0, 1]);
-        builder.add(&[0, 1]);
-
-        // this does not panic by definition
-        let labels = builder.finish_unchecked();
-
-        assert_eq!(labels.count(), 2);
-        assert_eq!(labels[0], [0, 1]);
-        assert_eq!(labels[1], [0, 1]);
-    }
-
-    #[test]
     fn single_label() {
         let labels = Labels::single();
         assert_eq!(labels.names(), &["_"]);

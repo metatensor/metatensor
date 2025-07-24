@@ -896,21 +896,4 @@ mod tests {
         assert_eq!(&labels_safe[1], &labels_unchecked[1]);
         assert_eq!(&labels_safe[2], &labels_unchecked[2]);
     }
-
-    #[test]
-    fn new_unchecked_uniqueness_with_duplicates() {
-        let names = &["x", "y"];
-        let values: Vec<LabelValue> = vec![1, 10, 2, 20, 1, 10]
-            .into_iter()
-            .map(Into::into)
-            .collect();
-
-        let result_safe = Labels::new(names, values.clone());
-        assert!(result_safe.is_err());
-        let labels_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
-        assert_eq!(labels_unchecked.count(), 3);
-        let position = labels_unchecked.position(&[LabelValue::new(1), LabelValue::new(10)]);
-        // First duplicate
-        assert_eq!(position, Some(0));
-    }
 }

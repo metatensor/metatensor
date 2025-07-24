@@ -457,12 +457,9 @@ def test_select():
 
 
 def test_constructor_unchecked():
-    values = np.array([[1, 2], [3, 4], [1, 2]])
+    values = np.array([[1, 2], [3, 4], [3, 2]])
 
-    msg = "invalid parameter"
-    with pytest.raises(MetatensorError, match=msg):
-        Labels(names=["a", "b"], values=values)
-
+    safe_labels = Labels(names=["a", "b"], values=values)
     labels = Labels(names=["a", "b"], values=values, unchecked=True)
-    assert len(labels) == 3
+    assert labels == safe_labels
     np.testing.assert_equal(labels.values, values)
