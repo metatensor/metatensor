@@ -270,7 +270,7 @@ class Labels:
         self,
         names: Union[str, Sequence[str]],
         values: np.ndarray,
-        unchecked: bool = False,
+        assume_unique: bool = False,
     ):
         """
         :param names: names of the dimensions in the new labels. A single string
@@ -280,7 +280,10 @@ class Labels:
         :param values: values of the labels, this needs to be a 2-dimensional
                        array of integers.
 
-        :param unchecked: Flag to skip uniqueness checks if labels are already unique.
+        :param assume_unique: skip uniqueness checks inside metatensor. This
+                              should only be set to ``True`` if you can
+                              ensure that label entries are already unique,
+                              either by construction or because you checked.
         """
 
         names = _normalize_names_type(names)
@@ -316,7 +319,9 @@ class Labels:
             raise TypeError("Labels values must be convertible to integers") from e
 
         self._lib = _get_library()
-        self._labels = _create_new_labels(self._lib, names, values, unchecked=unchecked)
+        self._labels = _create_new_labels(
+            self._lib, names, values, assume_unique=assume_unique
+        )
         self._names = names
         self._cached_values = None
 
@@ -1176,8 +1181,9 @@ class Labels:
 
     def to_owned(self) -> "Labels":
         """convert a view to owned labels, which implement the full API"""
-        # At this point it can be safely assumed that the values are unique..
-        labels = _create_new_labels(self._lib, self._names, self.values, unchecked=True)
+        labels = _create_new_labels(
+            self._lib, self._names, self.values, assume_unique=False
+        )
         return Labels._from_mts_labels_t(labels)
 
 
@@ -1210,7 +1216,7 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
 
 
 def _create_new_labels(
-    lib, names: List[str], values: np.ndarray, *, unchecked: bool = False
+    lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
 ) -> mts_labels_t:
     labels = mts_labels_t()
 
@@ -1224,8 +1230,8 @@ def _create_new_labels(
 
     labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
     labels.count = values.shape[0]
-    if unchecked:
-        lib.mts_labels_create_unchecked(labels)
+    if assume_unique:
+        lib.mts_labels_create_assume_unique(labels)
     else:
         lib.mts_labels_create(labels)
 

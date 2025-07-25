@@ -178,20 +178,6 @@ Labels LabelsHolder::create(
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(torch_values));
 }
 
-Labels LabelsHolder::create(
-    std::vector<std::string> names,
-    const std::vector<std::initializer_list<int32_t>>& values,
-    metatensor::assume_unique
-) {
-    auto torch_values = initializer_list_to_tensor(values, names.size());
-
-    return torch::make_intrusive<LabelsHolder>(
-        std::move(names),
-        std::move(torch_values),
-        metatensor::assume_unique{}
-    );
-}
-
 LabelsHolder::LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView):
     names_(std::move(names)),
     values_(std::move(values)),
@@ -462,12 +448,12 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         // Doing this here allow to minimize the number of copies of the values
         // when moving from CPU to GPU.
         auto raw_labels = this->as_metatensor().as_mts_labels_t();
-        // reset the internal rust pointer, this allows `mts_labels_create_unchecked` to
+        // reset the internal rust pointer, this allows `mts_labels_create_assume_unique` to
         // create a new rust pointer corresponding to a different object instead
         // of incrementing the reference count of the existing labels.
         raw_labels.internal_ptr_ = nullptr;
         // assume that entries uniqueness has been validated at this point
-        metatensor::details::check_status(mts_labels_create_unchecked(&raw_labels));
+        metatensor::details::check_status(mts_labels_create_assume_unique(&raw_labels));
         auto new_labels = metatensor::Labels(raw_labels);
 
         return torch::make_intrusive<LabelsHolder>(

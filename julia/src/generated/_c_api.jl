@@ -112,8 +112,8 @@ function mts_labels_create(labels::Ptr{mts_labels_t})
     )
 end
 
-function mts_labels_create_unchecked(labels::Ptr{mts_labels_t})
-    ccall((:mts_labels_create_unchecked, libmetatensor), 
+function mts_labels_create_assume_unique(labels::Ptr{mts_labels_t})
+    ccall((:mts_labels_create_assume_unique, libmetatensor), 
         mts_status_t,
         (Ptr{mts_labels_t},),
         labels

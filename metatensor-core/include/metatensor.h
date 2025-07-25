@@ -337,7 +337,7 @@ mts_status_t mts_labels_create(struct mts_labels_t *labels);
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_create_unchecked(struct mts_labels_t *labels);
+mts_status_t mts_labels_create_assume_unique(struct mts_labels_t *labels);
 
 /**
  * Update the registered user data in `labels`

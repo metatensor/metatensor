@@ -273,7 +273,7 @@ pub unsafe extern "C" fn mts_labels_create(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern "C" fn mts_labels_create_unchecked(
+pub unsafe extern "C" fn mts_labels_create_assume_unique(
     labels: *mut mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {

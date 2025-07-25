@@ -172,7 +172,7 @@ namespace details {
         return linear_index(shape, index.data(), index.size());
     }
 
-    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
+    Labels labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
 }
 
 /******************************************************************************/
@@ -1786,7 +1786,7 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, assume_unique, InternalConstructor):
         Labels(names, values.data(), values.shape()[0], assume_unique{}) {}
 
-    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool unchecked);
+    friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
     friend Labels io::load_labels(const std::string &path);
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
     friend class TensorMap;
@@ -1806,7 +1806,7 @@ namespace details {
         const std::vector<std::string>& names,
         const int32_t* values,
         size_t count,
-        bool unchecked = false
+        bool assume_unique = false
     ) {
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));
@@ -1821,8 +1821,8 @@ namespace details {
         labels.count = count;
         labels.values = values;
 
-        if (unchecked == true) {
-            details::check_status(mts_labels_create_unchecked(&labels));
+        if (assume_unique == true) {
+            details::check_status(mts_labels_create_assume_unique(&labels));
         } else {
             details::check_status(mts_labels_create(&labels));
         }

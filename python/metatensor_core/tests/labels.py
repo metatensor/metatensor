@@ -456,10 +456,10 @@ def test_select():
     assert len(labels.select(selection)) == 0
 
 
-def test_constructor_unchecked():
+def test_constructor_assume_unique():
     values = np.array([[1, 2], [3, 4], [3, 2]])
 
     safe_labels = Labels(names=["a", "b"], values=values)
-    labels = Labels(names=["a", "b"], values=values, unchecked=True)
+    labels = Labels(names=["a", "b"], values=values, assume_unique=True)
     assert labels == safe_labels
     np.testing.assert_equal(labels.values, values)

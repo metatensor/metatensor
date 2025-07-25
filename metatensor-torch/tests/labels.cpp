@@ -44,15 +44,13 @@ TEST_CASE("Labels") {
     SECTION("unchecked constructor") {
         auto names = std::vector<std::string>{"a", "b"};
 
-        auto non_unique_values = torch::tensor({{1, 2}, {1, 3}}, torch::kInt32);
-        auto labels = LabelsHolder(names, non_unique_values, metatensor::assume_unique{});
+        auto values = torch::tensor({{1, 2}, {1, 3}}, torch::kInt32);
+        auto labels = LabelsHolder(names, values, metatensor::assume_unique{});
         CHECK(labels.count() == 2);
         CHECK(labels.values()[0][0].item<int64_t>() == 1);
         CHECK(labels.values()[1][0].item<int64_t>() == 1);
         CHECK(labels.values()[0][1].item<int64_t>() == 2);
         CHECK(labels.values()[1][1].item<int64_t>() == 3);
-        auto created = LabelsHolder::create(names, {{1, 2}, {1, 3}}, metatensor::assume_unique{});
-        CHECK(created->count() == 2);
     }
 
     SECTION("position") {

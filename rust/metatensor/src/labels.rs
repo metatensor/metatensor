@@ -767,7 +767,7 @@ impl LabelsBuilder {
     /// If the set of names is not valid (contains duplicates or invalid names).
     #[inline]
     pub fn finish_unchecked(self) -> Labels {
-        self.finish_with(crate::c_api::mts_labels_create_unchecked)
+        self.finish_with(crate::c_api::mts_labels_create_assume_unique)
     }
 }
 

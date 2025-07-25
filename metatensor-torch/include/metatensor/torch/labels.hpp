@@ -56,14 +56,6 @@ public:
         const std::vector<std::initializer_list<int32_t>>& values
     );
 
-    /// Unchecked variant of `LabelsHolder::create`. The user promises that the
-    /// labels are unique.
-    static Labels create(
-        std::vector<std::string> names,
-        const std::vector<std::initializer_list<int32_t>>& values,
-        metatensor::assume_unique
-    );
-
     /// Get a view of `labels` corresponding to only the given columns names
     static Labels view(const Labels& labels, std::vector<std::string> names);
 
