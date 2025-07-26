@@ -119,25 +119,19 @@ where
     // Handle empty labels
     if labels.size == 0 {
         if labels.count > 0 {
-            return Err(Error::InvalidParameter(
-                "can not have labels.count > 0 if labels.size is 0".into(),
-            ));
+            return Err(Error::InvalidParameter("can not have labels.count > 0 if labels.size is 0".into()));
         }
-        let labels = constructor(&[], Vec::new())?;
+        let labels = Labels::new(&[], Vec::<LabelValue>::new()).expect("invalid empty labels");
         return Ok(Arc::new(labels));
     }
 
     // Validate pointers
     if labels.names.is_null() {
-        return Err(Error::InvalidParameter(
-            "labels.names can not be NULL in mts_labels_t".into(),
-        ));
+        return Err(Error::InvalidParameter("labels.names can not be NULL in mts_labels_t".into()))
     }
 
     if labels.values.is_null() && labels.count > 0 {
-        return Err(Error::InvalidParameter(
-            "labels.values is NULL but labels.count is > 0 in mts_labels_t".into(),
-        ));
+        return Err(Error::InvalidParameter("labels.values is NULL but labels.count is >0 in mts_labels_t".into()))
     }
 
     // Process label names
@@ -147,8 +141,7 @@ where
         let name = name.to_str().expect("invalid UTF-8 in label name");
         if !crate::labels::is_valid_label_name(name) {
             return Err(Error::InvalidParameter(format!(
-                "'{}' is not a valid label name",
-                name
+                "'{}' is not a valid label name", name
             )));
         }
         names.push(name);
@@ -157,10 +150,7 @@ where
     // Process label values
     let values = if labels.count != 0 && labels.size != 0 {
         assert!(!labels.values.is_null());
-        let slice = std::slice::from_raw_parts(
-            labels.values.cast::<LabelValue>(),
-            labels.count * labels.size,
-        );
+        let slice = std::slice::from_raw_parts(labels.values.cast::<LabelValue>(), labels.count * labels.size);
         slice.to_vec()
     } else {
         Vec::new()
