@@ -45,6 +45,10 @@ public:
     /// and the values should be a 2D tensor of integers.
     LabelsHolder(torch::IValue names, torch::Tensor values);
 
+    /// Unchecked variant of the same constructor. The user promises that the
+    /// entries (i.e. rows of the values) are unique.
+    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique);
+
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
     static Labels create(

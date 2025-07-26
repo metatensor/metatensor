@@ -18,7 +18,14 @@ The following functions operate on :c:type:`mts_labels_t`:
 - :c:func:`mts_labels_set_user_data`: store some data inside the labels for later retrieval
 - :c:func:`mts_labels_user_data`: retrieve data stored earlier in the labels
 
+Additionally, there are a few advanced functions which may be used if the user
+can guarantee that the data used for labels is already unique.
+
+- :c:func:`mts_labels_create_assume_unique`: create the Rust-side data for labels without verifying uniqueness
+
 --------------------------------------------------------------------------------
+
+.. doxygenfunction:: mts_labels_create_assume_unique
 
 .. doxygenfunction:: mts_labels_create
 

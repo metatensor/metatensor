@@ -5,7 +5,7 @@ use std::iter::FusedIterator;
 
 use smallvec::SmallVec;
 
-use crate::c_api::mts_labels_t;
+use crate::c_api::{mts_labels_t, mts_status_t};
 use crate::errors::{Error, check_status};
 
 /// A single value inside a label.
@@ -714,9 +714,11 @@ impl LabelsBuilder {
         self.values.extend(&entry);
     }
 
-    /// Finish building the `Labels`
-    #[inline]
-    pub fn finish(self) -> Labels {
+    /// Common implementation for `finish` and `finish_unchecked`.
+    fn finish_with(
+        self,
+        creator: unsafe extern "C" fn(*mut mts_labels_t) -> mts_status_t
+    ) -> Labels {
         let mut raw_names = Vec::new();
         let mut raw_names_ptr = Vec::new();
 
@@ -740,12 +742,32 @@ impl LabelsBuilder {
         };
 
         unsafe {
-            check_status(
-                crate::c_api::mts_labels_create(&mut raw_labels)
-            ).expect("invalid labels?");
+            check_status(creator(&mut raw_labels)).expect("invalid labels?");
         }
 
         return unsafe { Labels::from_raw(raw_labels) };
+    }
+
+    /// Finish building the `Labels`.
+    ///
+    /// This function checks that all entries in the labels are unique.
+    #[inline]
+    pub fn finish(self) -> Labels {
+        self.finish_with(crate::c_api::mts_labels_create)
+    }
+
+    /// Finish building the `Labels`, assuming that all entries are unique.
+    ///
+    /// This is faster than `finish` as it does not perform a uniqueness check
+    /// on the labels entries. It is the caller's responsibility to ensure that
+    /// entries are unique.
+    ///
+    /// # Panics
+    ///
+    /// If the set of names is not valid (contains duplicates or invalid names).
+    #[inline]
+    pub fn finish_unchecked(self) -> Labels {
+        self.finish_with(crate::c_api::mts_labels_create_assume_unique)
     }
 }
 
@@ -826,7 +848,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "can not have the same label entry multiple time: [0, 1] is already present")]
+    #[should_panic(expected = "can not have the same label entry multiple times: [0, 1] is already present")]
     fn duplicated_label_entry() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
         builder.add(&[0, 1]);

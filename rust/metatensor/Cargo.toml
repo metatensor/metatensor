@@ -26,3 +26,14 @@ rayon = {version = "1", optional = true}
 default = []
 # use the static build of metatensor-core instead of the shared one
 static = ["metatensor-sys/static"]
+
+# note(rg):: These can be enabled to double check the benchmarks, but needn't be
+# provided to end users
+# With the lines un-commented cargo bench will generate an HTML report of the
+# timings in target/criterion
+# [dev-dependencies]
+# criterion = {version = "0.5.1", features = ["html_reports"]}
+
+# [[bench]]
+# name = "labels_benchmark"
+# harness = false
