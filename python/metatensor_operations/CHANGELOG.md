@@ -17,6 +17,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.4) - 2025-07-28
+
+### Fixed
+
+- `insert_dimension` no longer fails when called on empty TensorMap (#924)
+
+### Added
+
+- `equal_metadata` now takes a `check_gradients=True/False` flag to enable or
+  disable metadata checks on the gradients (#948)
+
 ## [Version 0.3.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.3) - 2025-04-25
 
 ### Fixed
