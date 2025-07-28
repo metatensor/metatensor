@@ -13,6 +13,7 @@ API reference
     :tag-prefix: metatensor-operations-v
     :url-suffix: operations/reference/index.html
 
+    .. version:: 0.3.4
     .. version:: 0.3.3
     .. version:: 0.3.2
     .. version:: 0.3.1
