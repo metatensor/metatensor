@@ -323,7 +323,10 @@ mts_status_t mts_labels_create(struct mts_labels_t *labels);
 
 /**
  * Finish the creation of `mts_labels_t` by associating it to Rust-owned
- * labels. This version does not check for uniqueness of the labels entries.
+ *
+ * This function does not check for uniqueness of the labels entries, which
+ * should be enforced by the caller. Calling this function with non-unique
+ * entries is invalid and can lead to crashes or infinite loops.
  *
  * This allows using the `mts_labels_positions` and `mts_labels_clone`
  * functions on the `mts_labels_t`.

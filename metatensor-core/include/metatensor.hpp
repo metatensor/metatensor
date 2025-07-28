@@ -36,7 +36,7 @@ class Labels;
 class TensorMap;
 class TensorBlock;
 
-/// Tag for creation without uniqueness checks
+/// Tag for the creation of Labels without uniqueness checks
 struct assume_unique {};
 
 /// Exception class used for all errors in metatensor
@@ -1239,7 +1239,9 @@ public:
         const std::vector<std::initializer_list<int32_t>>& values
     ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
 
-   /// Unchecked variant of the same
+    /// This function does not check for uniqueness of the labels entries, which
+    /// should be enforced by the caller. Calling this function with non-unique
+    /// entries is invalid and can lead to crashes or infinite loops.
     explicit Labels(
         const std::vector<std::string>& names,
         const std::vector<std::initializer_list<int32_t>>& values,
@@ -1255,7 +1257,8 @@ public:
     Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
         Labels(details::labels_from_cxx(names, values, count, false)) {}
 
-    /// Unchecked variant, caller promises the labels are unique
+    /// Unchecked variant, caller promises the labels are unique. Calling with
+    /// non-unique entries is invalid and can ead to crashes or infinite loops.
     Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, assume_unique):
         Labels(details::labels_from_cxx(names, values, count, true)) {}
 
@@ -1821,7 +1824,7 @@ namespace details {
         labels.count = count;
         labels.values = values;
 
-        if (assume_unique == true) {
+        if (assume_unique) {
             details::check_status(mts_labels_create_assume_unique(&labels));
         } else {
             details::check_status(mts_labels_create(&labels));
