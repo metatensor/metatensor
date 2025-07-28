@@ -466,3 +466,10 @@ def test_remove_last_component(tensor_map):
 
     new_tensor = TensorMap(keys=tensor_map.keys, blocks=new_blocks)
     assert not mts.equal_metadata(tensor_map, new_tensor)
+
+
+def test_ignore_gradients(tensor_map):
+    """Check that we can compare tensormaps while ignoring gradients."""
+    new_tensor = mts.remove_gradients(tensor_map)
+    assert not mts.equal_metadata(tensor_map, new_tensor, check_gradients=True)
+    assert mts.equal_metadata(tensor_map, new_tensor, check_gradients=False)

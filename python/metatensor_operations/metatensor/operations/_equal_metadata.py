@@ -19,6 +19,7 @@ def _equal_metadata_impl(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ) -> str:
     if not torch_jit_is_scripting():
         if not isinstance_metatensor(tensor_1, "TensorMap"):
@@ -31,7 +32,9 @@ def _equal_metadata_impl(
         return message
 
     for key in [tensor_1.keys[i] for i in range(len(tensor_1.keys))]:
-        message = _equal_metadata_block_impl(tensor_1[key], tensor_2[key], check=check)
+        message = _equal_metadata_block_impl(
+            tensor_1[key], tensor_2[key], check=check, check_gradients=check_gradients
+        )
         if message != "":
             return message
 
@@ -42,6 +45,7 @@ def _equal_metadata_block_impl(
     block_1: TensorBlock,
     block_2: TensorBlock,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ) -> str:
     if not torch_jit_is_scripting():
         if not isinstance_metatensor(block_1, "TensorBlock"):
@@ -59,15 +63,16 @@ def _equal_metadata_block_impl(
     if check_blocks_message != "":
         return check_blocks_message
 
-    check_same_gradient_message = _check_same_gradients_impl(
-        block_1,
-        block_2,
-        "equal_metadata_block_raise",
-        check=check,
-    )
+    if check_gradients:
+        check_same_gradient_message = _check_same_gradients_impl(
+            block_1,
+            block_2,
+            "equal_metadata_block_raise",
+            check=check,
+        )
 
-    if check_same_gradient_message != "":
-        return check_same_gradient_message
+        if check_same_gradient_message != "":
+            return check_same_gradient_message
 
     return ""
 
@@ -77,6 +82,7 @@ def equal_metadata(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ) -> bool:
     """
     Checks if two :py:class:`TensorMap` objects have the same metadata, returning a
@@ -96,6 +102,9 @@ def equal_metadata(
     :param check: Which parts of the metadata to check. This can be a list containing
         any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
         ``'all'`` to check everything. Defaults to ``'all'``.
+    :param check_gradients: Whether to check if the gradients' metadata is also equal.
+        If `True`, `check` is also used to determine which metadata to check for the
+        gradients.
 
     :return: True if the metadata of the two :py:class:`TensorMap` objects are equal,
         False otherwise.
@@ -154,7 +163,7 @@ def equal_metadata(
     ... )
     True
     """
-    return not bool(_equal_metadata_impl(tensor_1, tensor_2, check))
+    return not bool(_equal_metadata_impl(tensor_1, tensor_2, check, check_gradients))
 
 
 @torch_jit_script
@@ -162,6 +171,7 @@ def equal_metadata_raise(
     tensor_1: TensorMap,
     tensor_2: TensorMap,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorMap` have unequal
@@ -181,6 +191,9 @@ def equal_metadata_raise(
     :param check: Which parts of the metadata to check. This can be a list containing
         any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
         ``'all'`` to check everything. Defaults to ``'all'``.
+    :param check_gradients: Whether to check if the gradients' metadata is also equal.
+        If `True`, `check` is also used to determine which metadata to check for the
+        gradients.
     :raises NotEqualError: If the metadata is not the same.
 
     Examples
@@ -239,7 +252,7 @@ should have the same properties, but they are not the same or not in the same or
     ...     check=("samples", "components"),
     ... )
     """
-    message = _equal_metadata_impl(tensor_1, tensor_2, check)
+    message = _equal_metadata_impl(tensor_1, tensor_2, check, check_gradients)
     if message != "":
         raise NotEqualError(message)
 
@@ -249,6 +262,7 @@ def equal_metadata_block(
     block_1: TensorBlock,
     block_2: TensorBlock,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ) -> bool:
     """
     Checks if two :py:class:`TensorBlock` objects have the same metadata, returning a
@@ -265,6 +279,9 @@ def equal_metadata_block(
     :param check: Which parts of the metadata to check. This can be a list containing
         any of ``'samples'``, ``'components'``, and ``'properties'``; or the string
         ``'all'`` to check everything. Defaults to ``'all'``.
+    :param check_gradients: Whether to check if the gradients' metadata is also equal.
+        If `True`, `check` is also used to determine which metadata to check for the
+        gradients.
 
     :return: True if the metadata of the two :py:class:`TensorBlock` objects are equal,
         False otherwise.
@@ -295,7 +312,9 @@ def equal_metadata_block(
     ... )
     True
     """
-    return not bool(_equal_metadata_block_impl(block_1, block_2, check))
+    return not bool(
+        _equal_metadata_block_impl(block_1, block_2, check, check_gradients)
+    )
 
 
 @torch_jit_script
@@ -303,6 +322,7 @@ def equal_metadata_block_raise(
     block_1: TensorBlock,
     block_2: TensorBlock,
     check: Union[List[str], str] = "all",
+    check_gradients: bool = True,
 ):
     """
     Raise a :py:class:`NotEqualError` if two :py:class:`TensorBlock` have unequal
@@ -319,6 +339,9 @@ def equal_metadata_block_raise(
     :param check: A sequence of strings specifying which metadata of each block to
         check. If none, all metadata is checked. Allowed values are "samples",
         "components", and "properties".
+    :param check_gradients: Whether to check if the gradients' metadata is also equal.
+        If `True`, `check` is also used to determine which metadata to check for the
+        gradients.
     :raises NotEqualError: If the metadata is not the same.
 
     Examples
@@ -347,6 +370,6 @@ should have the same properties, but they are not the same or not in the same or
     ...     block_1, block_2, check=("samples", "components")
     ... )
     """
-    message = _equal_metadata_block_impl(block_1, block_2, check)
+    message = _equal_metadata_block_impl(block_1, block_2, check, check_gradients)
     if message != "":
         raise NotEqualError(message)
