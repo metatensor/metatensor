@@ -123,8 +123,19 @@ TORCH_LIBRARY(metatensor, m) {
 
     m.class_<LabelsHolder>("Labels")
         .def(
-            torch::init<torch::IValue, torch::Tensor>(), DOCSTRING,
-            {torch::arg("names"), torch::arg("values")}
+            torch::init([](torch::IValue names, torch::Tensor values, bool assume_unique) {
+                if (assume_unique) {
+                    return c10::make_intrusive<LabelsHolder>(std::
+                        move(names), std::move(values), metatensor::assume_unique{}
+                    );
+                } else {
+                    return c10::make_intrusive<LabelsHolder>(
+                        std::move(names), std::move(values)
+                    );
+                }
+            }),
+            DOCSTRING,
+            {torch::arg("names"), torch::arg("values"), torch::arg("assume_unique") = false}
         )
         .def("__str__", &LabelsHolder::str)
         .def("__repr__", &LabelsHolder::repr)

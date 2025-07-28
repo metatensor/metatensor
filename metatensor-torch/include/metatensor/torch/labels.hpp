@@ -45,6 +45,17 @@ public:
     /// and the values should be a 2D tensor of integers.
     LabelsHolder(torch::IValue names, torch::Tensor values);
 
+    /// Construct `LabelsHolder` from a set of names and the corresponding
+    /// values
+    ///
+    /// The names should be either a single string or a list/tuple of strings;
+    /// and the values should be a 2D tensor of integers.
+    ///
+    /// This constructor does not check that the labels entries are unique,
+    /// this must be validated by the caller. Calling this constructor with
+    /// non-unique  entries is invalid and can lead to crashes or infinite loops.
+    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique);
+
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
     static Labels create(

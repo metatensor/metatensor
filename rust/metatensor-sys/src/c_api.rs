@@ -348,6 +348,8 @@ extern "C" {
     #[must_use]
     pub fn mts_labels_create(labels: *mut mts_labels_t) -> mts_status_t;
     #[must_use]
+    pub fn mts_labels_create_assume_unique(labels: *mut mts_labels_t) -> mts_status_t;
+    #[must_use]
     pub fn mts_labels_set_user_data(
         labels: mts_labels_t,
         user_data: *mut ::std::os::raw::c_void,

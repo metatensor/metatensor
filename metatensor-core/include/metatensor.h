@@ -322,6 +322,27 @@ mts_status_t mts_labels_position(struct mts_labels_t labels,
 mts_status_t mts_labels_create(struct mts_labels_t *labels);
 
 /**
+ * Finish the creation of `mts_labels_t` by associating it to Rust-owned
+ *
+ * This function does not check for uniqueness of the labels entries, which
+ * should be enforced by the caller. Calling this function with non-unique
+ * entries is invalid and can lead to crashes or infinite loops.
+ *
+ * This allows using the `mts_labels_positions` and `mts_labels_clone`
+ * functions on the `mts_labels_t`.
+ *
+ * This function allocates memory which must be released `mts_labels_free` when
+ * you don't need it anymore.
+ *
+ * @param labels new set of labels containing pointers to user-managed memory
+ *        on input, and pointers to Rust-managed memory on output.
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_create_assume_unique(struct mts_labels_t *labels);
+
+/**
  * Update the registered user data in `labels`
  *
  * This function changes the registered user data in the Rust Labels to be

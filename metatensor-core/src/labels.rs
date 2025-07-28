@@ -236,6 +236,9 @@ impl Labels {
     /// This is identical to [`Labels::new`] except that the rows are not
     /// checked for uniqueness, but instead the caller must ensure that rows are
     /// unique.
+    ///
+    /// note: this function still checks for uniqueness when compiled in debug
+    /// mode, to help find issues in calling code.
     pub unsafe fn new_unchecked_uniqueness(names: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
         if cfg!(debug_assertions) {
             return Labels::new_impl(names, values, true);
@@ -296,7 +299,7 @@ impl Labels {
                 let entry = entries[identical];
                 let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
                 return Err(Error::InvalidParameter(format!(
-                    "can not have the same label entry multiple time: [{}] is already present",
+                    "can not have the same label entry multiple times: [{}] is already present",
                     entry_display
                 )));
             }
@@ -873,5 +876,23 @@ mod tests {
 
         use_send(labels.clone());
         use_sync(labels);
+    }
+
+    #[test]
+    fn new_unchecked_uniqueness_valid_no_duplicates() {
+        let names = &["x", "y"];
+        let values: Vec<LabelValue> = vec![1, 10, 2, 20, 3, 30]
+            .into_iter()
+            .map(Into::into)
+            .collect();
+
+        let labels_safe = Labels::new(names, values.clone()).unwrap();
+        let labels_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
+
+        assert_eq!(labels_safe.count(), 3);
+        assert_eq!(labels_unchecked.count(), 3);
+        assert_eq!(&labels_safe[0], &labels_unchecked[0]);
+        assert_eq!(&labels_safe[1], &labels_unchecked[1]);
+        assert_eq!(&labels_safe[2], &labels_unchecked[2]);
     }
 }
