@@ -766,7 +766,7 @@ impl LabelsBuilder {
     ///
     /// If the set of names is not valid (contains duplicates or invalid names).
     #[inline]
-    pub fn finish_unchecked(self) -> Labels {
+    pub fn finish_assume_unique(self) -> Labels {
         self.finish_with(crate::c_api::mts_labels_create_assume_unique)
     }
 }
@@ -783,19 +783,27 @@ mod tests {
         builder.add(&[1, 243]);
         builder.add(&[-4, -2413]);
 
-        let idx = builder.finish();
-        assert_eq!(idx.names(), &["foo", "bar"]);
-        assert_eq!(idx.size(), 2);
-        assert_eq!(idx.count(), 3);
+        let labels = builder.finish();
+        assert_eq!(labels.names(), &["foo", "bar"]);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels.count(), 3);
 
-        assert_eq!(idx[0], [2, 3]);
-        assert_eq!(idx[1], [1, 243]);
-        assert_eq!(idx[2], [-4, -2413]);
+        assert_eq!(labels[0], [2, 3]);
+        assert_eq!(labels[1], [1, 243]);
+        assert_eq!(labels[2], [-4, -2413]);
 
         let builder = LabelsBuilder::new(vec![]);
         let labels = builder.finish();
         assert_eq!(labels.size(), 0);
         assert_eq!(labels.count(), 0);
+
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 243]);
+        let labels = builder.finish_assume_unique();
+        assert_eq!(labels.names(), &["foo", "bar"]);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels.count(), 2);
     }
 
     #[test]

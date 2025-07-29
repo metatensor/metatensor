@@ -27,13 +27,13 @@ default = []
 # use the static build of metatensor-core instead of the shared one
 static = ["metatensor-sys/static"]
 
-# note(rg):: These can be enabled to double check the benchmarks, but needn't be
-# provided to end users
-# With the lines un-commented cargo bench will generate an HTML report of the
-# timings in target/criterion
-# [dev-dependencies]
-# criterion = {version = "0.5.1", features = ["html_reports"]}
 
-# [[bench]]
-# name = "labels_benchmark"
-# harness = false
+[dev-dependencies]
+criterion = {version = "0.5.1", features = ["html_reports"]}
+
+# Pin half to the last version supporting rustc 1.74
+half = "=2.4.1"
+
+[[bench]]
+name = "labels"
+harness = false
