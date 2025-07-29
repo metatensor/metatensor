@@ -22,12 +22,12 @@ fn bench_finish_methods(c: &mut Criterion) {
         });
 
         group.bench_with_input(
-            BenchmarkId::new("finish_unchecked", size),
+            BenchmarkId::new("finish_assume_unique", size),
             &builder,
             |b, builder| {
                 b.iter(|| {
                     let b = builder.clone();
-                    black_box(b.finish_unchecked());
+                    black_box(b.finish_assume_unique());
                 });
             },
         );
