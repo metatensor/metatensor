@@ -29,6 +29,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   TensorBlock, TensorMap) as attributes. This class will properly handle moving
   this data to the correct dtype and device when calling `module.to()`. The
   corresponding Python class is defined in `metatensor-learn`.
+- There is now an `assume_unique` flag in the `Labels` constructor. This allows
+  bypassing a check when the user can ensure beforehand that all entries will be
+  unique.
 
 ### Changed
 
