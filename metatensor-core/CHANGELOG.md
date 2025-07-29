@@ -17,10 +17,19 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.15](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.15) - 2025-07-29
+
 ### Changed
 
 - `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
   argument, with the same meaning as in `torch.Tensor.to`.
+
+### Added
+
+- `mts_labels_create_assume_unique` to create `mts_labels` without checking that
+  the entries are unique; as well as the corresponding flag in the C++ and
+  Python constructors. This allows bypassing a check when the user can ensure
+  beforehand that all entries will be unique.
 
 ## [Version 0.1.14](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.14) - 2025-04-11
 
