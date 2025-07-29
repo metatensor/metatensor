@@ -5,10 +5,10 @@ fn bench_finish_methods(c: &mut Criterion) {
     let mut group = c.benchmark_group("LabelsBuilder");
 
     for size in [100, 1_000, 10_000].iter() {
-        // Pre-build a LabelsBuilder with a given number of unique entries.
-        let mut builder = LabelsBuilder::new(vec!["structure", "center", "species_center"]);
+        // Pre-build a LabelsBuilder with a given number of entries.
+        let mut builder = LabelsBuilder::new(vec!["a", "b", "c"]);
         for i in 0..*size {
-            builder.add(&[i as i32, i as i32, i as i32]);
+            builder.add(&[i, i, i]);
         }
 
         // Benchmark the standard `finish` method.
