@@ -8,6 +8,7 @@ from typing import BinaryIO, Generator, List, Sequence, Tuple, Union
 from . import data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
+from ._html_stylesheet import _stylesheet
 from .data import (
     Array,
     Device,
@@ -207,7 +208,27 @@ class TensorBlock:
         get a deep copy of this block, including all the data and metadata
         """
         return copy.deepcopy(self)
+    
+    def _get_shape_string(self) -> str:
+        """
+        Returns the shape of the block as a string.
 
+        For a block with 2 samples, two component dimensions of length 3 and 5 
+        and 7 properties it will return: (samples: 2, components: 3x5, properties: 7) 
+        """
+        out = f"(samples: {len(self.samples)}"
+        if len(self.components) != 0:
+            out += f", components: {'x'.join(str(len(comp)) for comp in self.components)}"
+        
+        out += f", properties: {len(self.properties)})"
+        return out
+      
+    def _short_repr(self) -> str:
+        """
+        Short string representation of the block, containing its class and shape.
+        """
+        return f"<{self.__class__.__name__} {self._get_shape_string()}>"
+    
     def __repr__(self) -> str:
         if self._actual_ptr is None:
             return (
@@ -216,29 +237,74 @@ class TensorBlock:
             )
 
         if len(self._gradient_parameters) != 0:
-            s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
+            s = f"<Gradient {self.__class__.__name__} ('{'/'.join(self._gradient_parameters)}')\n"
         else:
-            s = "TensorBlock\n"
-        s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
-        s += "\n"
-        s += "    components ("
-        s += ", ".join([str(len(c)) for c in self.components])
-        s += "): ["
+            s = f"<{self.__class__.__name__}"
+            
+        s += f"\n  shape: {self._get_shape_string()}"
+        # s += f"\n  samples {tuple(self.samples.names)}"
+        # s += "\n  components: ["
+        # for ic in self.components:
+        #     for name in ic.names[:]:
+        #         s += "'" + name + "', "
+        # if len(self.components) > 0:
+        #     s = s[:-2]
+        # s += "]"
+        # s += f"\n  properties {tuple(self.properties.names)}""
+
+        s += "\n  labels:"
+        s += f"\n    - samples {tuple(self.samples.names)}"
+        s += "\n    - components:"
         for ic in self.components:
-            for name in ic.names[:]:
-                s += "'" + name + "', "
-        if len(self.components) > 0:
-            s = s[:-2]
-        s += "]\n"
-        s += f"    properties ({len(self.properties)}): "
-        s += f"{str(list(self.properties.names))}\n"
-        s += "    gradients: "
-        if len(self.gradients_list()) > 0:
-            s += f"{str(list(self.gradients_list()))}"
-        else:
-            s += "None"
+            s += f"\n      · {ic.names[0]}"
+        s += f"\n    - properties {tuple(self.properties.names)}"
+
+        s += f"\n  gradients: {self.gradients_list()}"
+
+        s += "\n>"
 
         return s
+    
+    def _repr_html_(self, add_stylesheet: bool = True) -> str:
+
+        def _get_labels_html(labels: Labels) -> str:
+            """
+            Helper function to get the html for labels inside a block
+            """
+            
+            html = "<div class='labels-container'>"
+            html += f"<div class='labels-names'> {''.join(f'<div>{name}</div>' for name in labels.names)} </div>"
+
+            html += "<div class='labels-values'>"
+            for vals in labels.values.astype(str):
+                html += f"<div class='labels-value'> {''.join(f'<div>{val}</div>' for val in vals)} </div>"
+            html += "</div>"
+
+            html += "</div>"
+
+            return html
+        
+        return f"""
+        <div class="tensorblock-container">
+            <div class="tensorblock-header">metatensor.{self.__class__.__name__} <span class='tensorblock-shape'>{self._get_shape_string()}</span></div>
+            <div class="tensorblock-content">
+                <div>
+                    <b>Samples:</b> {_get_labels_html(self.samples)}
+                </div>
+                <div>
+                    <div><b>Components: </b><div>
+                    {''.join(_get_labels_html(comp) for comp in self.components)}
+                </div>
+                <div>
+                    <b>Properties:</b> {_get_labels_html(self.properties)}
+                </div>
+                <div>
+                    <b>Gradients:</b> {self.gradients_list()}
+                </div>
+            </div>
+            {'<style>' + _stylesheet + '</style>' if add_stylesheet else ''}
+        </div>
+        """
 
     def __eq__(self, other):
         from metatensor.operations import equal_block
