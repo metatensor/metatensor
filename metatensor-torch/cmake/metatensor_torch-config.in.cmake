@@ -1,4 +1,5 @@
 include(CMakeFindDependencyMacro)
+include(FindPackageHandleStandardArgs)
 
 # use the same version for metatensor-core as the main CMakeLists.txt
 set(REQUIRED_METATENSOR_VERSION @REQUIRED_METATENSOR_VERSION@)
