@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 
+include(FindPackageHandleStandardArgs)
+
 if(metatensor_FOUND)
     return()
 endif()
