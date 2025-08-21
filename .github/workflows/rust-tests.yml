@@ -132,6 +132,14 @@ jobs:
           cargo update -p rayon --precise 1.10.0
           cargo update -p rayon-core --precise 1.12.1
           cargo update -p half --precise 2.4.1
+          cargo update -p cbindgen --precise 0.27.0
+
+      - name: Regenerate C_API
+        if: matrix.rust-version == '1.74'
+        shell: bash
+        run: |
+          ./scripts/update-declarations.sh
+          rustfmt rust/metatensor-sys/src/c_api.rs
 
       - name: run tests
         run: |
