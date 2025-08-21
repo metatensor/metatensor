@@ -273,7 +273,10 @@ pub unsafe extern "C" fn mts_block_data(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, data);
-        *data = (*block).values.raw_copy();
+        let block_ref = block
+            .as_ref()
+            .expect("C API caller violated contract: block pointer must not be NULL");
+        *data = block_ref.values.raw_copy();
         Ok(())
     })
 }
