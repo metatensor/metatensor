@@ -123,6 +123,16 @@ jobs:
           echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 
+      - name: Pin Dependencies for MSRV build
+        if: matrix.rust-version == '1.74'
+        shell: bash
+        run: |
+          # Use 'cargo update' with '--precise' to force the Cargo.lock file to
+          # use specific package versions.
+          cargo update -p rayon --precise 1.10.0
+          cargo update -p rayon-core --precise 1.12.1
+          cargo update -p half --precise 2.4.1
+
       - name: run tests
         run: |
           cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
