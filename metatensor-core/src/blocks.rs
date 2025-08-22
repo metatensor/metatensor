@@ -462,11 +462,23 @@ mod tests {
             vec![0, 1],
         ).expect("invalid labels"));
 
-        let result = TensorBlock::new(values, samples, vec![component], properties);
+        let result = TensorBlock::new(values, samples.clone(), vec![component], properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: component labels must have a single dimension, \
             got 2: [component_1, component_2] for component 0"
+        );
+
+        let values = TestArray::new(vec![3, 0, 2]);
+        let component = Arc::new(Labels::new_i32(
+            &["component"],
+            vec![],
+        ).expect("invalid labels"));
+
+        let result = TensorBlock::new(values, samples, vec![component], properties);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: component 'component' must contain at least one entry, got 0"
         );
     }
 
@@ -518,6 +530,137 @@ mod tests {
             assert_eq!(gradient_block.properties.names(), ["properties"]);
 
             assert!(block.gradients().get("baz").is_none());
+        }
+
+        #[allow(clippy::too_many_lines)]
+        #[test]
+        fn errors() {
+            let samples = example_labels("samples", 4);
+            let properties = example_labels("properties", 7);
+            let values = TestArray::new(vec![4, 7]);
+            let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
+            assert!(block.gradients().is_empty());
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            block.add_gradient("gradient", gradient).unwrap();
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("gradient", gradient).unwrap_err().to_string(),
+                "invalid parameter: gradient with respect to 'gradient' already exists for this block"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new_other_origin(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: the gradient data has a different origin \
+                ('rust.TestArrayOtherOrigin') than the value data ('rust.TestArray')"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![0, 7]),
+                Arc::new(Labels::new(&[], vec![]).unwrap()),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: gradients samples must have at least one dimension, named 'sample', we got none"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                example_labels("invalid", 3),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: 'invalid' is not valid for the first dimension in the gradients samples labels, it should be 'sample'"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                Arc::new(Labels::new_i32(&["sample"], vec![2, 1, -1]).unwrap()),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: invalid value for the 'sample' dimension in gradient samples: all values should be positive, but we got -1"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                Arc::new(Labels::new_i32(&["sample"], vec![2, 1, 6]).unwrap()),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: invalid value for the 'sample' dimension in gradient samples: we got 6, but the values contain 4 samples"
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                example_labels("invalid", 7),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: gradient properties must be the same as values properties"
+            );
+
+            // errors about component mismatch
+            let component = example_labels("component", 5);
+            let properties = example_labels("properties", 7);
+            let mut block = TensorBlock::new(
+                TestArray::new(vec![4, 5, 7]),
+                example_labels("samples", 4),
+                vec![component.clone()],
+                properties.clone(),
+            ).unwrap();
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 5, 5, 7]),
+                example_labels("sample", 3),
+                vec![component.clone(), example_labels("invalid", 5)],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: gradients and values components mismatch for \
+                values component 0 (dimension name is 'component'). Components \
+                which are specific to the gradients must come first, and be followed \
+                by the exact same components as the values."
+            );
+
+            let gradient = TensorBlock::new(
+                TestArray::new(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties.clone(),
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("invalid", gradient).unwrap_err().to_string(),
+                "invalid parameter: gradients components should contain at least as many labels as the values components"
+            );
         }
 
         #[test]
