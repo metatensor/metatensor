@@ -13,7 +13,8 @@ how to remove this sparsity when required.
 Like in the :ref:`previous tutorial <core-tutorial-first-steps>`, we will load the data
 we need from a file. The code used to generate this file can be found below:
 
-.. details:: Show the code used to generate the :file:`radial-spectrum.mts` file
+.. details:: Show the code used to generate the :download:`radial-spectrum.mts` file
+             (located at :file:`python/examples/core/`), or use the link to download it
 
     ..
 
