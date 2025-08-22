@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use torch-pme for your work, please read and cite it as below."
+title: >-
+  Metatensor and metatomic: foundational libraries for interoperable atomistic machine learning
+abstract: |
+  Incorporation of machine learning (ML) techniques into atomic-scale modeling has proven to be an extremely effective strategy to improve the accuracy and reduce the computational cost of simulations. It also entails conceptual and practical challenges, as it involves combining very different mathematical foundations, as well as software ecosystems that are very well developed in their own merit, but do not share many commonalities. To address these issues and facilitate the adoption of ML in atomistic simulations we introduce two dedicated software libraries. The first one, metatensor, provides cross-platform and cross-language storage and manipulation of arrays with many potentially sparse indices, designed from the ground up for atomistic ML applications. By combining the actual values with metadata that describes their nature and that facilitates the handling of geometric information and gradients with respect to the atomic positions, metatensor provides a common framework to enable data sharing between ML software - typically written in Python - and established atomistic modeling tools - typically written in Fortran, C or C++. The second library, metatomic, provides an interface to store an atomistic ML model and metadata about this model in a portable way, facilitating the implementation, training and distribution of models, and their use across different simulation packages. We showcase a growing ecosystem of tools, from low-level libraries, training utilities, to interfaces with existing software packages that demonstrate the effectiveness of metatensor and metatomic in bridging the gap between traditional simulation software and modern ML frameworks.
+type: preprint
+database: arXiv.org
+repository: arXiv
+url: http://arxiv.org/abs/2508.15704
+keywords: 
+  - Physics - Chemical Physics
+authors: 
+  - family-names: Bigi
+    given-names: Filippo
+  - family-names: Abbott
+    given-names: Joseph W.
+  - family-names: Loche
+    given-names: Philip
+  - family-names: Mazitov
+    given-names: Arslan
+  - family-names: Tisi
+    given-names: Davide
+  - family-names: Langer
+    given-names: Marcel F.
+  - family-names: Goscinski
+    given-names: Alexander
+  - family-names: Pegolo
+    given-names: Paolo
+  - family-names: Chong
+    given-names: Sanggyu
+  - family-names: Goswami
+    given-names: Rohit
+  - family-names: Chorna
+    given-names: Sofiia
+  - family-names: Kellner
+    given-names: Matthias
+  - family-names: Ceriotti
+    given-names: Michele
+  - family-names: Fraux
+    given-names: Guillaume
+date-published: 2025-08-21
+identifiers: 
+  - type: doi
+    value: 10.48550/arXiv.2508.15704
