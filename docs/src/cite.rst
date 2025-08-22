@@ -3,7 +3,7 @@
 Cite Metatensor
 ===============
 
-If you use metatensor for your work, please read and cite our paper:
+If you use metatensor for your work, please read and cite the corresponding article:
 
 - F. Bigi, J.W. Abbott, P. Loche et. al. Metatensor and metatomic: foundational
   libraries for interoperable atomistic machine learning, (2025).
@@ -24,11 +24,6 @@ In BibTeX format:
     Ceriotti, Michele and Fraux, Guillaume},
     year = {2025},
     month = aug,
-    number = {arXiv:2508.15704},
-    eprint = {2508.15704},
-    primaryclass = {physics},
     publisher = {arXiv},
     doi = {10.48550/arXiv.2508.15704},
-    urldate = {2025-08-22},
-    archiveprefix = {arXiv}
     }

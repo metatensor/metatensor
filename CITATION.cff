@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use torch-pme for your work, please read and cite it as below."
+message: "If you use metatensor for your work, please read and cite it as below."
 title: >-
   Metatensor and metatomic: foundational libraries for interoperable atomistic machine learning
 abstract: |
