@@ -24,6 +24,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
+- Added support for PyTorch v2.8
 - A custom C++ class `metatensor_torch::Module` that should be used instead of
   `torch::jit::Module` when the modules contains metatensor data (Labels,
   TensorBlock, TensorMap) as attributes. This class will properly handle moving
