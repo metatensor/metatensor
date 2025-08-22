@@ -17,10 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.8.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.0) - 2025-08-22
+
 ### Removed
 
-- `metatensor.torch.atomistic` now lives in the `metatomic-torch` package
-  (https://github.com/metatensor/metatomic).
+- The `metatensor.torch.atomistic` python module now lives in the
+  `metatomic-torch` package (https://github.com/metatensor/metatomic); as well
+  as the corresponding C++ code (`#include <metatensor/torch/atomistic.hpp>`).
 
 ### Added
 
