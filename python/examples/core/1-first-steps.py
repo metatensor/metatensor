@@ -16,7 +16,8 @@ simplicity will be loaded from a file. The code used to generate this file can b
 below:
 
 .. details:: Show the code used to generate the :download:`spherical-expansion.mts`
-             file (located at :file:`python/examples/core/`), or use the link to download it
+             file (located at :file:`python/examples/core/`), or use the link to
+             download it
 
     ..
 
