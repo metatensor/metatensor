@@ -447,7 +447,7 @@ impl Labels {
 
     /// Iterate over the entries in this set of labels as fixed-size arrays
     #[inline]
-    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<N> {
+    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<'_, N> {
         assert!(N == self.size(),
             "wrong label size in `iter_fixed_size`: the entries contains {} element \
             but this function was called with size of {}",

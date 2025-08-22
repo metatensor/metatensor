@@ -100,7 +100,7 @@ struct GradientMap<'a> {
 }
 
 impl GradientMap<'_> {
-    fn new(block: &TensorBlock) -> GradientMap {
+    fn new(block: &TensorBlock) -> GradientMap<'_> {
         // generate gradient information for a block
         let mut gradients = HashMap::new();
         for (gradient_name, sub_gradient) in block.gradients() {
