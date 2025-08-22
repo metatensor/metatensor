@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.16](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.16) - 2025-08-22
+
+### Fixed
+
+- Fix the use of pre-compiled metatensor from CMake (#954)
+- Fix the compilation with rustc >=1.89 and rustc <1.80 (#959)
+
 ## [Version 0.1.15](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.15) - 2025-07-29
 
 ### Changed

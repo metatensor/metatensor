@@ -12,6 +12,7 @@ C API reference
     :tag-prefix: metatensor-core-v
     :url-suffix: core/reference/c/index.html
 
+    .. version:: 0.1.16
     .. version:: 0.1.15
     .. version:: 0.1.14
     .. version:: 0.1.13
