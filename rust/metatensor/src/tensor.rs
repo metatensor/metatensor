@@ -432,7 +432,7 @@ impl TensorMap {
     /// Get a parallel iterator over the keys and associated blocks
     #[cfg(feature = "rayon")]
     #[inline]
-    pub fn par_iter(&self) -> TensorMapParIter {
+    pub fn par_iter(&self) -> TensorMapParIter<'_> {
         use rayon::prelude::*;
         TensorMapParIter {
             inner: self.keys().par_iter().zip_eq(self.blocks().into_par_iter())
@@ -443,7 +443,7 @@ impl TensorMap {
     /// read-write access to the blocks
     #[cfg(feature = "rayon")]
     #[inline]
-    pub fn par_iter_mut(&mut self) -> TensorMapParIterMut {
+    pub fn par_iter_mut(&mut self) -> TensorMapParIterMut<'_> {
         use rayon::prelude::*;
 
         // we can not use `self.blocks_mut()` here, since it would

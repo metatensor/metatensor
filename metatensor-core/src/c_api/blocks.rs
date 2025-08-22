@@ -273,7 +273,7 @@ pub unsafe extern "C" fn mts_block_data(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, data);
-        *data = (*block).values.raw_copy();
+        *data = (&(*block)).values.raw_copy();
         Ok(())
     })
 }

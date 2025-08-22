@@ -395,7 +395,7 @@ impl Labels {
     }
 
     /// Iterate over the entries in these Labels
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         debug_assert!(self.values.len() % self.names.len() == 0);
         return Iter {
             ptr: self.values.as_ptr(),
