@@ -4,6 +4,9 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
+use dlpark::ffi::ManagedTensor as DLParkManagedTensor;
+use dlpark::legacy::SafeManagedTensor;
+
 use crate::c_api::mts_status_t;
 use crate::Error;
 
@@ -91,6 +94,17 @@ pub struct mts_array_t {
     data: Option<unsafe extern "C" fn(
         array: *mut c_void,
         data: *mut *mut f64,
+    ) -> mts_status_t>,
+
+    /// Get a DLPack compatible managed tensor.
+    ///
+    /// # Safety
+    /// The caller must ensure that:
+    /// - The pointer is valid and points to a proper DLPack tensor
+    /// 
+    to_dlpack: Option<unsafe extern "C" fn(
+       array: *mut c_void, 
+       dl_tensor: *mut *mut DLParkManagedTensor,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -218,7 +232,36 @@ impl mts_array_t {
             // do not copy destroy, the user should never call it
             destroy: None,
             move_samples_from: self.move_samples_from,
+            to_dlpack: self.to_dlpack,
         }
+    }
+
+    /// Get the underlying data as a DLPack tensor.
+    /// 
+    /// The returned object is a safe wrapper around the raw DLPack pointer.
+    pub(crate) fn to_dlpack(&self) -> Result<SafeManagedTensor, Error> {
+        let function = self
+            .to_dlpack
+            .expect("mts_array_t.to_dlpack function is NULL");
+        let mut dl_tensor_ptr: *mut DLParkManagedTensor  = std::ptr::null_mut();
+        let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status,
+                context: "calling mts_array_t.to_dlpack failed".into(),
+            });
+        }
+
+        if dl_tensor_ptr.is_null() {
+            return Err(Error::External {
+                status: mts_status_t(-1),
+                context: "mts_array_t.to_dlpack returned a NULL pointer".into(),
+            });
+        }
+        let safe_tensor = unsafe {SafeManagedTensor::from_raw(dl_tensor_ptr)};
+
+        return Ok(safe_tensor);
     }
 
     /// Create an `mts_array_t` with all fields set to null pointers.
@@ -234,6 +277,7 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            to_dlpack: None,
         }
     }
 
