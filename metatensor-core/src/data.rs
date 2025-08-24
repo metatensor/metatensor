@@ -7,6 +7,9 @@ use once_cell::sync::Lazy;
 use dlpark::ffi::ManagedTensor as DLParkManagedTensor;
 use dlpark::legacy::SafeManagedTensor;
 
+use dlpark::versioned::SafeManagedTensorVersioned;
+use dlpark::ffi::ManagedTensorVersioned as DLParkManagedTensorVersioned;
+
 use crate::c_api::mts_status_t;
 use crate::Error;
 
@@ -98,6 +101,8 @@ pub struct mts_array_t {
 
     /// Get a DLPack compatible managed tensor.
     ///
+    /// Legacy interface, for pre 0.6.0 DLPack tensors.
+    ///
     /// # Safety
     /// The caller must ensure that:
     /// - The pointer is valid and points to a proper DLPack tensor
@@ -105,6 +110,19 @@ pub struct mts_array_t {
     to_dlpack: Option<unsafe extern "C" fn(
        array: *mut c_void, 
        dl_tensor: *mut *mut DLParkManagedTensor,
+    ) -> mts_status_t>,
+
+    /// Get a versioned DLPack managed tensor.
+    ///
+    /// This follows the (0.6.0) DLPack specification
+    ///
+    /// # Safety
+    /// The caller must ensure that:
+    /// - The pointer is valid and points to a proper DLPack tensor
+    /// 
+    to_dlpack_versioned: Option<unsafe extern "C" fn(
+       array: *mut c_void, 
+       dl_tensor: *mut *mut DLParkManagedTensorVersioned,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -233,11 +251,12 @@ impl mts_array_t {
             destroy: None,
             move_samples_from: self.move_samples_from,
             to_dlpack: self.to_dlpack,
+            to_dlpack_versioned: self.to_dlpack_versioned,
         }
     }
 
     /// Get the underlying data as a DLPack tensor.
-    /// 
+    ///
     /// The returned object is a safe wrapper around the raw DLPack pointer.
     pub(crate) fn to_dlpack(&self) -> Result<SafeManagedTensor, Error> {
         let function = self
@@ -264,6 +283,34 @@ impl mts_array_t {
         return Ok(safe_tensor);
     }
 
+    /// Get the underlying data as a DLPack tensor.
+    /// 
+    /// The returned object is a safe wrapper around the raw DLPack pointer.
+    pub(crate) fn to_dlpack_versioned(&self) -> Result<SafeManagedTensorVersioned, Error> {
+        let function = self
+            .to_dlpack_versioned
+            .expect("mts_array_t.to_dlpack_versioned function is NULL");
+        let mut dl_tensor_ptr: *mut DLParkManagedTensorVersioned  = std::ptr::null_mut();
+        let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status,
+                context: "calling mts_array_t.to_dlpack_versioned failed".into(),
+            });
+        }
+
+        if dl_tensor_ptr.is_null() {
+            return Err(Error::External {
+                status: mts_status_t(-1),
+                context: "mts_array_t.to_dlpack_versioned returned a NULL pointer".into(),
+            });
+        }
+        let safe_tensor = unsafe {SafeManagedTensorVersioned::from_raw(dl_tensor_ptr)};
+
+        return Ok(safe_tensor);
+    }
+
     /// Create an `mts_array_t` with all fields set to null pointers.
     pub(crate) fn null() -> mts_array_t {
         mts_array_t {
@@ -278,6 +325,7 @@ impl mts_array_t {
             destroy: None,
             move_samples_from: None,
             to_dlpack: None,
+            to_dlpack_versioned: None,
         }
     }
 
