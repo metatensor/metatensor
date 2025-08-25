@@ -58,7 +58,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not node.name.startswith("mts_"):
+        if not node.name.startswith("mts_") and node.name != "ManagedTensorVersioned":
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -70,8 +70,9 @@ class AstVisitor(c_ast.NodeVisitor):
 
         elif isinstance(node.type.type, c_ast.Struct):
             struct = Struct(node.name)
-            for _, member in node.type.type.children():
-                struct.add_member(member.name, member.type)
+            if node.type.type.decls is not None:
+                for _, member in node.type.type.children():
+                    struct.add_member(member.name, member.type)
 
             self.structs.append(struct)
 
