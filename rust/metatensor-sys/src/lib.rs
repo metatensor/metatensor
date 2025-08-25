@@ -87,6 +87,7 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            to_dlpack: None,
         }
     }
 
@@ -188,7 +189,19 @@ impl mts_array_t {
     pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
         let function = self.create.expect("mts_array_t.create function is NULL");
 
-        let mut new_array = mts_array_t::null();
+        let mut data_storage = mts_array_t {
+            ptr: std::ptr::null_mut(),
+            origin: None,
+            data: None,
+            shape: None,
+            reshape: None,
+            swap_axes: None,
+            create: None,
+            copy: None,
+            destroy: None,
+            move_samples_from: None,
+            to_dlpack: None,
+        };
         unsafe {
             check_status_external(
                 function(self.ptr, shape.as_ptr(), shape.len(), &mut new_array),

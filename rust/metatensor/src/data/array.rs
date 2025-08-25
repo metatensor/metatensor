@@ -83,6 +83,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
             move_samples_from: Some(rust_array_move_samples_from),
+            to_dlpack: None,
         }
     }
 }
