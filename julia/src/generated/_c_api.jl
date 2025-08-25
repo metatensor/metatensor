@@ -36,6 +36,9 @@ MTS_INTERNAL_ERROR = 255
 
 
 # ===== Struct definitions
+struct ManagedTensorVersioned
+end
+
 struct mts_block_t
 end
 
