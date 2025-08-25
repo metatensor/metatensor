@@ -11,6 +11,7 @@ from pycparser import c_ast, parse_file
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 C_API_DOCS = os.path.join(ROOT, "docs", "src", "core", "reference", "c")
 FAKE_INCLUDES = os.path.join(ROOT, "python", "scripts", "include")
+VENDORED_INCLUDES = os.path.join(ROOT, "metatensor-core", "include", "vendored")
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
@@ -61,7 +62,8 @@ def functions_in_outline():
 
 
 def all_functions():
-    cpp_args = ["-E", "-I", FAKE_INCLUDES]
+    cpp_args = ["-E", "-D__attribute__(x)=",
+                f"-I{FAKE_INCLUDES}", f"-I{VENDORED_INCLUDES}"]
     ast = parse_file(METATENSOR_HEADER, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     functions = []
