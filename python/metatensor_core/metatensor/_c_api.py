@@ -33,6 +33,10 @@ mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
 
+class ManagedTensorVersioned(ctypes.Structure):
+    pass
+
+
 class mts_block_t(ctypes.Structure):
     pass
 
