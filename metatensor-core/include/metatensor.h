@@ -3,7 +3,7 @@
     #include <stdbool.h>
     #include <stdint.h>
     #include <stdlib.h>
-    #include "dlpack.h"
+    #include "dlpack/dlpack.h"
 
     typedef struct ManagedTensorVersioned ManagedTensorVersioned;
     
