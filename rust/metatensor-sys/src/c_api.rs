@@ -4,9 +4,18 @@
 //! This module is exported for advanced users of the metatensor crate, but
 //! should not be needed by most.
 
-#[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
-#[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
-#[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
+#[cfg_attr(
+    feature = "static",
+    link(name = "metatensor", kind = "static", modifiers = "-whole-archive")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), not(target_os = "windows")),
+    link(name = "metatensor", kind = "dylib")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), target_os = "windows"),
+    link(name = "metatensor.dll", kind = "dylib")
+)]
 extern "C" {}
 
 pub const MTS_SUCCESS: i32 = 0;

@@ -366,6 +366,15 @@ Guidelines for writing Python doc strings
 .. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
 .. _`doctest` : https://docs.python.org/3/library/doctest.html
 
+Guidelines for writing Rust additions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Although the library itself forms best-practice guides for new additions, some
+other unstructured notes might be of use:
+
+- Do not use ``rustfmt`` for any file other than the auto-generated
+  ``c_api.rs``.
+
 Useful developer scripts
 ------------------------
 
