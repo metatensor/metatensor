@@ -87,6 +87,7 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            to_dlpack: None,
         }
     }
 
@@ -198,7 +199,8 @@ impl mts_array_t {
             create: None,
             copy: None,
             destroy: None,
-            move_samples_from: None
+            move_samples_from: None,
+            to_dlpack: None,
         };
         unsafe {
             check_status_external(

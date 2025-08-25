@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 use dlpark::versioned::SafeManagedTensorVersioned;
-use dlpark::ffi::ManagedTensorVersioned as DLParkManagedTensorVersioned;
+use dlpark::ffi::ManagedTensorVersioned;
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -106,7 +106,7 @@ pub struct mts_array_t {
     /// 
     to_dlpack: Option<unsafe extern "C" fn(
        array: *mut c_void, 
-       dl_tensor: *mut *mut DLParkManagedTensorVersioned,
+       dl_tensor: *mut *mut ManagedTensorVersioned,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -245,7 +245,7 @@ impl mts_array_t {
         let function = self
             .to_dlpack
             .expect("mts_array_t.to_dlpack_versioned function is NULL");
-        let mut dl_tensor_ptr: *mut DLParkManagedTensorVersioned  = std::ptr::null_mut();
+        let mut dl_tensor_ptr: *mut ManagedTensorVersioned  = std::ptr::null_mut();
         let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
 
         if !status.is_success() {
@@ -561,6 +561,7 @@ mod tests {
                 copy: None,
                 destroy: Some(TestArray::destroy),
                 move_samples_from: None,
+                to_dlpack: None,
             }
         }
 
