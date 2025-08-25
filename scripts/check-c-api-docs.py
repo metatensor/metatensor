@@ -62,8 +62,7 @@ def functions_in_outline():
 
 
 def all_functions():
-    cpp_args = ["-E", "-D__attribute__(x)=",
-                f"-I{FAKE_INCLUDES}", f"-I{VENDORED_INCLUDES}"]
+    cpp_args = ["-E", f"-I{FAKE_INCLUDES}", f"-I{VENDORED_INCLUDES}"]
     ast = parse_file(METATENSOR_HEADER, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     functions = []
