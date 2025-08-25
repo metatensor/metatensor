@@ -14,7 +14,7 @@ In BibTeX format:
 
 .. code-block:: bibtex
 
-    @misc{bigi_metatensor_2025,
+    @misc{metatensor,
     title = {Metatensor and Metatomic: Foundational Libraries for Interoperable Atomistic
     Machine Learning},
     shorttitle = {Metatensor and Metatomic},
