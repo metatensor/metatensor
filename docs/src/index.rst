@@ -123,4 +123,5 @@ store gradients, keeping them together with the associated values.
    torch/index
    learn/index
    atomistic/index
+   cite
    devdoc/index
