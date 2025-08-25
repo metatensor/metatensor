@@ -48,7 +48,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.defines = {}
 
     def visit_Decl(self, node):
-        if not node.name.startswith("mts_"):
+        if not node.name or not node.name.startswith("mts_"):
             return
 
         function = Function(node.name, node.type.type)
@@ -79,7 +79,7 @@ class AstVisitor(c_ast.NodeVisitor):
 
 
 def parse(file):
-    cpp_args = ["-E", "-I", FAKE_INCLUDES]
+    cpp_args = ["-E", "-D__attribute__(x)=", f"-I{FAKE_INCLUDES}"]
     ast = parse_file(file, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     visitor = AstVisitor()
@@ -99,7 +99,7 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name.startswith("mts_"):
+    if name.startswith("mts_") or name == "ManagedTensorVersioned":
         return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
