@@ -518,8 +518,31 @@ mod tests {
             }
         }
 
+        pub fn new_other_origin(shape: Vec<usize>) -> mts_array_t {
+            let array = Box::new(TestArray {shape});
+
+            return mts_array_t {
+                ptr: Box::into_raw(array).cast(),
+                origin: Some(TestArray::other_origin),
+                data: None,
+                shape: Some(TestArray::shape),
+                reshape: Some(TestArray::reshape),
+                swap_axes: Some(TestArray::swap_axes),
+                create: None,
+                copy: None,
+                destroy: Some(TestArray::destroy),
+                move_samples_from: None,
+            }
+        }
+
         unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
             *origin = register_data_origin("rust.TestArray".into());
+
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
+            *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
 
             return mts_status_t(MTS_SUCCESS);
         }
