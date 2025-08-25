@@ -4,9 +4,18 @@
 //! This module is exported for advanced users of the metatensor crate, but
 //! should not be needed by most.
 
-#[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
-#[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
-#[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
+#[cfg_attr(
+    feature = "static",
+    link(name = "metatensor", kind = "static", modifiers = "-whole-archive")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), not(target_os = "windows")),
+    link(name = "metatensor", kind = "dylib")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), target_os = "windows"),
+    link(name = "metatensor.dll", kind = "dylib")
+)]
 extern "C" {}
 
 pub const MTS_SUCCESS: i32 = 0;
@@ -15,6 +24,11 @@ pub const MTS_IO_ERROR: i32 = 2;
 pub const MTS_SERIALIZATION_ERROR: i32 = 3;
 pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 pub const MTS_INTERNAL_ERROR: i32 = 255;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ManagedTensorVersioned {
+    _unused: [u8; 0],
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_block_t {
@@ -158,6 +172,12 @@ pub struct mts_array_t {
             data: *mut *mut f64,
         ) -> mts_status_t,
     >,
+    pub to_dlpack: ::std::option::Option<
+        unsafe extern "C" fn(
+            array: *mut ::std::os::raw::c_void,
+            dl_tensor: *mut *mut ManagedTensorVersioned,
+        ) -> mts_status_t,
+    >,
     pub shape: ::std::option::Option<
         unsafe extern "C" fn(
             array: *const ::std::os::raw::c_void,
@@ -211,7 +231,7 @@ fn bindgen_test_layout_mts_array_t() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<mts_array_t>(),
-        80usize,
+        88usize,
         concat!("Size of: ", stringify!(mts_array_t))
     );
     assert_eq!(
@@ -250,8 +270,18 @@ fn bindgen_test_layout_mts_array_t() {
         )
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).to_dlpack) as usize - ptr as usize },
         24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(mts_array_t),
+            "::",
+            stringify!(to_dlpack)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
+        32usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -261,7 +291,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
-        32usize,
+        40usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -271,7 +301,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
-        40usize,
+        48usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -281,7 +311,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
-        48usize,
+        56usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -291,7 +321,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
-        56usize,
+        64usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -301,7 +331,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
-        64usize,
+        72usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),
@@ -311,7 +341,7 @@ fn bindgen_test_layout_mts_array_t() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).move_samples_from) as usize - ptr as usize },
-        72usize,
+        80usize,
         concat!(
             "Offset of field: ",
             stringify!(mts_array_t),

@@ -28,8 +28,13 @@ bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_ap
 #[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
 #[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
 #[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
-extern "C" {}'
+extern "C" {}' \
+    -- -I./metatensor-core/include/vendored
 
+# Format the auto-generated rust code
+mv "$ROOT_DIR/rustfmt.toml" "$ROOT_DIR/.no_op.rustfmt.toml"
+rustfmt rust/metatensor-sys/src/c_api.rs
+mv "$ROOT_DIR/.no_op.rustfmt.toml" "$ROOT_DIR/rustfmt.toml"
 
 # Regenerate Python bindings to the C API
 ./python/scripts/generate-declarations.py

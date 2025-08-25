@@ -33,6 +33,10 @@ mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
 
+class ManagedTensorVersioned(ctypes.Structure):
+    pass
+
+
 class mts_block_t(ctypes.Structure):
     pass
 
@@ -69,6 +73,7 @@ mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_double)))),
+    ("to_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ManagedTensorVersioned)))),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
