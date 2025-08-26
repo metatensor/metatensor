@@ -131,7 +131,7 @@ typedef struct mts_sample_mapping_t {
 
 /**
  * `mts_array_t` manages n-dimensional arrays used as data in a block or tensor
- * map. The array itself if opaque to this library and can come from multiple
+ * map. The array itself is opaque to this library and can come from multiple
  * sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
  * or torch. The data does not have to live on CPU, or even on the same machine
  * where this code is executed.

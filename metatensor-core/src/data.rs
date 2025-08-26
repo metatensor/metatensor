@@ -50,12 +50,12 @@ pub fn get_data_origin(origin: mts_data_origin_t) -> String {
     }
 }
 
-// SAFETY: this should be checked by the user/implementor of `mts_array_t`.
+// SAFETY: this should be checked by the user/implementer of `mts_array_t`.
 unsafe impl Sync for mts_array_t {}
 unsafe impl Send for mts_array_t {}
 
 /// `mts_array_t` manages n-dimensional arrays used as data in a block or tensor
-/// map. The array itself if opaque to this library and can come from multiple
+/// map. The array itself is opaque to this library and can come from multiple
 /// sources: Rust program, a C/C++ program, a Fortran program, Python with numpy
 /// or torch. The data does not have to live on CPU, or even on the same machine
 /// where this code is executed.
