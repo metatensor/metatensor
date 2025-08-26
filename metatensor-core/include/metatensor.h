@@ -1,3 +1,13 @@
+
+    #include <stddef.h>
+    #include <stdbool.h>
+    #include <stdint.h>
+    #include <stdlib.h>
+    #include "dlpack/dlpack.h"
+
+    typedef struct ManagedTensorVersioned ManagedTensorVersioned;
+    
+
 #ifndef METATENSOR_H
 #define METATENSOR_H
 
@@ -165,6 +175,17 @@ typedef struct mts_array_t {
    * C-contiguous array.
    */
   mts_status_t (*data)(void *array, double **data);
+  /**
+   * Get a versioned DLPack managed tensor.
+   *
+   * This follows the (0.6.0) DLPack specification
+   *
+   * # Safety
+   * The caller must ensure that:
+   * - The pointer is valid and points to a proper DLPack tensor
+   *
+   */
+  mts_status_t (*to_dlpack)(void *array, ManagedTensorVersioned **dl_tensor);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
