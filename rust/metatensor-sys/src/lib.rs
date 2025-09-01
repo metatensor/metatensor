@@ -188,26 +188,30 @@ impl mts_array_t {
     pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
         let function = self.create.expect("mts_array_t.create function is NULL");
 
-        let mut data_storage = mts_array_t {
-            ptr: std::ptr::null_mut(),
-            origin: None,
-            data: None,
-            shape: None,
-            reshape: None,
-            swap_axes: None,
-            create: None,
-            copy: None,
-            destroy: None,
-            move_samples_from: None
-        };
+        let mut new_array = mts_array_t::null();
         unsafe {
             check_status_external(
-                function(self.ptr, shape.as_ptr(), shape.len(), &mut data_storage),
+                function(self.ptr, shape.as_ptr(), shape.len(), &mut new_array),
                 "mts_array_t.create",
             )?;
         }
 
-        return Ok(data_storage);
+        return Ok(new_array);
+    }
+
+    /// call `mts_array_t.copy` with a more convenient API
+    pub fn copy(&self) -> Result<mts_array_t, Error> {
+        let function = self.copy.expect("mts_array_t.copy function is NULL");
+
+        let mut new_array = mts_array_t::null();
+        unsafe {
+            check_status_external(
+                function(self.ptr, &mut new_array),
+                "mts_array_t.copy",
+            )?;
+        }
+
+        return Ok(new_array);
     }
 
     /// call `mts_array_t.move_samples_from` with a more convenient API
