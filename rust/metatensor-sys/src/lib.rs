@@ -240,8 +240,3 @@ impl mts_array_t {
         return Ok(());
     }
 }
-
-/// Path where the metatensor shared library has been built
-pub fn c_api_install_dir() -> &'static str {
-    env!("OUT_DIR")
-}
