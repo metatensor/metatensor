@@ -91,7 +91,7 @@ jobs:
           apt install -y software-properties-common
           apt install -y cmake make gcc g++ git curl
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-22.04
     name: check C API declarations
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -176,7 +176,7 @@ jobs:
     name: check leftover debug print
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: install ripgrep
         run: |
