@@ -13,7 +13,7 @@ from setuptools.command.sdist import sdist
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 
-METATENSOR_BUILD_TYPE = os.environ.get("METATENSOR_BUILD_TYPE", "debug")
+METATENSOR_BUILD_TYPE = os.environ.get("METATENSOR_BUILD_TYPE", "release")
 if METATENSOR_BUILD_TYPE not in ["debug", "release"]:
     raise Exception(
         f"invalid build type passed: '{METATENSOR_BUILD_TYPE}', "
