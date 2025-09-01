@@ -619,12 +619,11 @@ impl rayon::iter::IndexedParallelIterator for TensorMapParIterMut<'_> {
 /******************************************************************************/
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use crate::{Labels, TensorBlock, TensorMap};
 
-    #[test]
-    #[allow(clippy::cast_lossless, clippy::float_cmp)]
-    fn iter() {
+    fn test_tensor() -> TensorMap {
         let block_1 = TensorBlock::new(
             ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
             &Labels::new(["samples"], &[[0], [1]]),
@@ -646,21 +645,46 @@ mod tests {
             &Labels::new(["properties"], &[[-2], [1]]),
         ).unwrap();
 
-        let mut tensor = TensorMap::new(
-            Labels::new(["key"], &[[1], [3], [-4]]),
+        return TensorMap::new(
+            Labels::new(["key", "other"], &[[1, 0], [3, 1], [-4, 0]]),
             vec![block_1, block_2, block_3],
         ).unwrap();
+    }
+
+    #[test]
+    fn iter() {
+        let mut tensor = test_tensor();
 
         // iterate over keys & blocks
         for (key, block) in &tensor {
-            assert_eq!(block.values().to_array()[[0, 0]], key[0].i32() as f64);
+            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in &mut tensor {
             let array = block.values_mut().to_array_mut();
             *array *= 2.0;
-            assert_eq!(array[[0, 0]], 2.0 * (key[0].i32() as f64));
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         }
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn par_iter() {
+        use rayon::iter::ParallelIterator;
+
+        let mut tensor = test_tensor();
+
+        // iterate over keys & blocks
+        tensor.par_iter().for_each(|(key, block)| {
+            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
+        });
+
+        // iterate over keys & blocks mutably
+        tensor.par_iter_mut().for_each(|(key, mut block)| {
+            let array = block.values_mut().to_array_mut();
+            *array *= 2.0;
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
+        });
     }
 }

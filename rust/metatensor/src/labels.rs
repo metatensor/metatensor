@@ -827,20 +827,62 @@ mod tests {
     }
 
     #[test]
-    fn labels_iter() {
+    fn iter() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
         builder.add(&[2, 3]);
         builder.add(&[1, 2]);
         builder.add(&[4, 3]);
 
-        let idx = builder.finish();
-        let mut iter = idx.iter();
+        let labels = builder.finish();
+        let mut iter = labels.iter();
         assert_eq!(iter.len(), 3);
 
         assert_eq!(iter.next().unwrap(), &[2, 3]);
         assert_eq!(iter.next().unwrap(), &[1, 2]);
         assert_eq!(iter.next().unwrap(), &[4, 3]);
         assert_eq!(iter.next(), None);
+    }
+
+    #[cfg( feature = "rayon")]
+    #[test]
+    fn par_iter() {
+        use rayon::iter::IndexedParallelIterator;
+
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 2]);
+        builder.add(&[4, 3]);
+
+        let labels = builder.finish();
+        let iter = labels.par_iter();
+        assert_eq!(iter.len(), 3);
+
+        let mut values = Vec::new();
+        iter.collect_into_vec(&mut values);
+
+        assert_eq!(values, [&[2, 3], &[1, 2], &[4, 3]]);
+    }
+
+    #[test]
+    fn iter_fixed_size() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[1, 2]);
+        builder.add(&[2, 3]);
+
+        let labels = builder.finish();
+
+        for (i, [a, b]) in labels.iter_fixed_size().enumerate() {
+            assert_eq!(a.usize(), 1 + i);
+            assert_eq!(b.usize(), 2 + i);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "wrong label size in `iter_fixed_size`: the entries contains 2 element but this function was called with size of 3")]
+    fn iter_fixed_size_wrong_size() {
+        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+
+        for [_, _, _] in labels.iter_fixed_size() {}
     }
 
     #[test]
@@ -885,25 +927,6 @@ mod tests {
 
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
-    }
-
-    #[test]
-    fn iter() {
-        let labels = Labels::new(
-            ["foo", "bar"],
-            &[
-                [2, 3],
-                [1, 243],
-                [-4, -2413],
-            ]
-        );
-
-        let mut iter = labels.iter();
-
-        assert_eq!(iter.next().unwrap(), &[2, 3]);
-        assert_eq!(iter.next().unwrap(), &[1, 243]);
-        assert_eq!(iter.next().unwrap(), &[-4, -2413]);
-        assert_eq!(iter.next(), None);
     }
 
     #[test]
