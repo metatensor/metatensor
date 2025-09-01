@@ -171,8 +171,9 @@ pub struct Labels {
     /// Values of the labels, as a linearized 2D array in row-major order
     values: Vec<LabelValue>,
     /// Whether the entries of the labels (i.e. the rows of the 2D array) are
-    /// sorted in lexicographical order
-    sorted: bool,
+    /// sorted in lexicographical order. This is lazily initialized on first
+    /// access.
+    sorted: OnceCell<bool>,
     /// Store the position of all the known labels, for faster access later.
     /// This is lazily initialized whenever a function requires access to the
     /// positions of different entries, allowing to skip the construction of the
@@ -283,7 +284,7 @@ impl Labels {
             return Ok(Labels {
                 names: Vec::new(),
                 values: Vec::new(),
-                sorted: true,
+                sorted: OnceCell::with_value(true),
                 positions: Default::default(),
                 user_data: RwLock::new(UserData::null()),
             });
@@ -305,11 +306,10 @@ impl Labels {
             }
         }
 
-        let sorted = is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(size));
         Ok(Labels {
             names: names,
             values: values,
-            sorted: sorted,
+            sorted: OnceCell::new(),
             positions: OnceCell::new(),
             user_data: RwLock::new(UserData::null()),
         })
@@ -331,9 +331,10 @@ impl Labels {
         &self.names
     }
 
-    /// Check whether entries in these Labels are sorted in lexicographic order
+    /// Check whether entries in these Labels are sorted in lexicographic order,
+    /// and cache the result.
     pub fn is_sorted(&self) -> bool {
-        self.sorted
+        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values.chunks_exact(self.size())))
     }
 
     /// Get the registered user data (this will be NULL if no data was
@@ -448,11 +449,10 @@ impl Labels {
             }
         }
 
-        let sorted = is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()));
         return Ok(Labels {
             names: self.names.clone(),
             values,
-            sorted: sorted,
+            sorted: OnceCell::new(),
             positions: OnceCell::with_value(positions),
             user_data: RwLock::new(UserData::null()),
         });
@@ -505,14 +505,14 @@ impl Labels {
             }
         }
 
-        let sorted = if first.is_sorted() {
+        let sorted = if first.sorted.get() == Some(&true) {
             // if the input was sorted, the output will be as well, since we
             // can only remove entries
-            true
+            OnceCell::with_value(true)
         } else {
-            // we need to check, since the removed entries could be the ones out
-            // of order
-            is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()))
+            // we'll need to check, since the removed entries could be the ones
+            // out of order
+            OnceCell::new()
         };
 
         return Ok(Labels {
@@ -561,14 +561,14 @@ impl Labels {
             }
         }
 
-        let sorted = if self.is_sorted() {
+        let sorted = if self.sorted.get() == Some(&true) {
             // if the input was sorted, the output will be as well, since we
             // can only remove entries
-            true
+            OnceCell::with_value(true)
         } else {
-            // we need to check, since the removed entries could be the ones out
-            // of order
-            is_sorted::IsSorted::is_sorted(&mut values.chunks_exact(self.size()))
+            // we'll need to check, since the removed entries could be the ones
+            // out of order
+            OnceCell::new()
         };
 
         return Ok(Labels {
@@ -723,7 +723,9 @@ mod tests {
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
+        assert!(labels.sorted.get().is_none());
         assert!(labels.is_sorted());
+        assert!(labels.sorted.get().is_some());
 
         let labels = Labels::new_i32(&["aa", "bb"],
             vec![0, 1, /**/ 1, 2, /**/ 0, 2]
