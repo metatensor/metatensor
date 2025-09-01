@@ -364,9 +364,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   - `MetatensorAtomisticModel` as a way to wrap user-defined `torch.nn.Module`
     and export them in a unified way, handling unit conversions and metadata
     checks.
-- [ASE](https://wiki.fysik.dtu.dk/ase/) calculator based on
-  `MetatensorAtomisticModel` in `metatensor.torch.atomistic.ase_calculator`.
-  This allow using arbitrary user-defined models to run simulations with ASE.
+- ASE calculator based on `MetatensorAtomisticModel` in
+  `metatensor.torch.atomistic.ase_calculator`. This allow using arbitrary
+  user-defined models to run simulations with ASE.
 
 - `TensorBlock.to`, `TensorMap.to` and `System.to` to change the device or dtype
   of torch Tensor stored by metatensor
