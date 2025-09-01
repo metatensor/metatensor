@@ -787,6 +787,7 @@ mod tests {
         assert_eq!(labels.names(), &["foo", "bar"]);
         assert_eq!(labels.size(), 2);
         assert_eq!(labels.count(), 3);
+        assert!(!labels.is_empty());
 
         assert_eq!(labels[0], [2, 3]);
         assert_eq!(labels[1], [1, 243]);
@@ -912,6 +913,32 @@ mod tests {
         assert_eq!(labels.names(), &["_"]);
         assert_eq!(labels.size(), 1);
         assert_eq!(labels.count(), 1);
+    }
+
+    #[test]
+    fn empty_label() {
+        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+
+        assert!(labels.is_empty());
+        assert_eq!(labels.count(), 0);
+        assert_eq!(labels.size(), 2);
+    }
+
+    #[test]
+    fn position() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[1, 2]);
+        builder.add(&[2, 3]);
+        let labels = builder.finish();
+
+        assert!(labels.contains(&[LabelValue::new(1), LabelValue::new(2)]));
+        assert_eq!(labels.position(&[LabelValue::new(1), LabelValue::new(2)]), Some(0));
+
+        assert!(labels.contains(&[LabelValue::new(2), LabelValue::new(3)]));
+        assert_eq!(labels.position(&[LabelValue::new(2), LabelValue::new(3)]), Some(1));
+
+        assert!(!labels.contains(&[LabelValue::new(3), LabelValue::new(3)]));
+        assert_eq!(labels.position(&[LabelValue::new(3), LabelValue::new(3)]), None);
     }
 
     #[test]
