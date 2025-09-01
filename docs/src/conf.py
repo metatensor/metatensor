@@ -176,7 +176,6 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "featomic": ("https://metatensor.github.io/featomic/latest/", None),
-    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
