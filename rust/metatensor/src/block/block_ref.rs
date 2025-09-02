@@ -24,9 +24,9 @@ unsafe impl Sync for TensorBlockRef<'_> {}
 /// All the basic data in a `TensorBlockRef` as a struct with separate fields.
 ///
 /// This can be useful when you need to borrow different fields on this struct
-/// separately. They are separate in the underlying metatensor-core, but since we
-/// go through the C API to access them, we need to re-expose them as separate
-/// fields for the rust compiler to be able to understand that.
+/// separately. They are separate in the underlying metatensor-core, but since
+/// we go through the C API to access them, we need to re-expose them as
+/// separate fields for the rust compiler to be able to understand that.
 ///
 /// The metadata is initialized lazily on first access, to not pay the cost of
 /// allocation/reference count increase if some metadata is not used.
@@ -300,5 +300,64 @@ impl FusedIterator for GradientsIter<'_> {}
 
 #[cfg(test)]
 mod tests {
-    // TODO: check gradient/gradient iter code
+    use crate::{Labels, TensorBlock};
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn gradients() {
+        let properties = Labels::new(["p"], &[[-2], [0], [1]]);
+        let mut block = TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
+            &Labels::new(["s"], &[[0], [1]]), &[], &properties,
+        ).unwrap();
+
+        block.add_gradient("g", TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], -1.0),
+            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+        ).unwrap()).unwrap();
+
+        block.add_gradient("f", TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], -2.0),
+            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+        ).unwrap()).unwrap();
+
+
+        let block = block.as_ref();
+        let gradient = block.gradient("g").unwrap();
+        assert_eq!(gradient.values().as_array()[[0, 0]], -1.0);
+
+        let gradient = block.gradient("f").unwrap();
+        assert_eq!(gradient.values().as_array()[[0, 0]], -2.0);
+
+        assert!(block.gradient("h").is_none());
+
+        let mut iter = block.gradients();
+        assert_eq!(iter.len(), 2);
+
+        assert_eq!(iter.next().unwrap().0, "g");
+        assert_eq!(iter.next().unwrap().0, "f");
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn block_data() {
+        let block = TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0),
+            &Labels::new(["samples"], &[[0], [1]]),
+            &[Labels::new(["component"], &[[0]])],
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
+        ).unwrap();
+        let block = block.as_ref();
+
+        assert_eq!(block.values().as_array(), ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
+        assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
+        assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
+
+        let block = block.data();
+        assert_eq!(block.values.as_array(), ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
+        assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
+        assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
+    }
 }
