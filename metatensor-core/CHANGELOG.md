@@ -17,6 +17,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.17](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.17) - 2025-09-02
+
+### Fixed
+
+- The pre-built wheels on PyPI are now compiled in release mode again
+
+### Changed
+
+- We removed some overhead when creating `Labels` by lazily initializing more internal data (#971)
+
 ## [Version 0.1.16](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.16) - 2025-08-22
 
 ### Fixed
