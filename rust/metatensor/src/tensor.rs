@@ -652,6 +652,38 @@ mod tests {
     }
 
     #[test]
+    fn block_access() {
+        let mut tensor = test_tensor();
+
+        let block = tensor.block_by_id(1);
+        assert_eq!(block.values().as_array().shape(), [1, 1]);
+
+        let block = tensor.block_mut_by_id(2);
+        assert_eq!(block.values().as_array().shape(), [3, 2]);
+
+        let selection = Labels::new(["key"], &[[1]]);
+        assert_eq!(tensor.block_matching(&selection).unwrap(), 0);
+        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0]);
+
+        let block = tensor.block(&selection).unwrap();
+        assert_eq!(block.values().as_array().shape(), [2, 3]);
+
+        let selection = Labels::new(["other"], &[[0]]);
+        assert!(tensor.block_matching(&selection).is_err());
+        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0, 2]);
+
+        let blocks = tensor.blocks();
+        assert_eq!(blocks[0].values().as_array().shape(), [2, 3]);
+        assert_eq!(blocks[1].values().as_array().shape(), [1, 1]);
+        assert_eq!(blocks[2].values().as_array().shape(), [3, 2]);
+
+        let blocks = tensor.blocks_mut();
+        assert_eq!(blocks[0].values().as_array().shape(), [2, 3]);
+        assert_eq!(blocks[1].values().as_array().shape(), [1, 1]);
+        assert_eq!(blocks[2].values().as_array().shape(), [3, 2]);
+    }
+
+    #[test]
     fn iter() {
         let mut tensor = test_tensor();
 
