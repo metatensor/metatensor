@@ -159,12 +159,21 @@ TEST_CASE("TensorMap") {
 
     SECTION("component_to_properties") {
         auto tensor = test_tensor_map().components_to_properties("component");
-
         auto block = tensor.block_by_id(0);
 
         CHECK(block.samples() == Labels({"samples"}, {{0}, {2}, {4}}));
 
         auto components = block.components();
+        CHECK(components.empty());
+
+        CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
+
+        tensor = test_tensor_map().components_to_properties(std::vector<std::string>{"component"});
+        block = tensor.block_by_id(0);
+
+        CHECK(block.samples() == Labels({"samples"}, {{0}, {2}, {4}}));
+
+        components = block.components();
         CHECK(components.empty());
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
@@ -225,6 +234,24 @@ TEST_CASE("TensorMap serialization") {
 
         tensor = metatensor::io::load(TEST_DATA_MTS_PATH);
         check_loaded_tensor(tensor);
+
+        CHECK_THROWS_WITH(
+            TensorMap::load(TEST_KEYS_MTS_PATH),
+            Catch::Matchers::Contains("use `load_labels` to load Labels")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load(TEST_KEYS_MTS_PATH),
+            Catch::Matchers::Contains("use `load_labels` to load Labels")
+        );
+
+        CHECK_THROWS_WITH(
+            TensorMap::load(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
     }
 
     SECTION("loading file with custom array creation") {

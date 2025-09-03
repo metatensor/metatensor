@@ -362,3 +362,46 @@ impl Array for EmptyArray {
         panic!("can not call Array::move_samples_from() for EmptyArray");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use metatensor_sys::*;
+
+    use super::*;
+
+    #[test]
+    fn ndarray_as_mts_array() {
+        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
+
+        let address = data.as_ptr() as usize;
+        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+
+        let mut rust_origin = 0;
+        let status = unsafe {
+            mts_register_data_origin(b"rust.Box<dyn Array>\0".as_ptr().cast(), &mut rust_origin)
+        };
+        assert_eq!(status, MTS_SUCCESS);
+
+        assert_eq!(mts_array.origin().unwrap(), rust_origin);
+
+        assert_eq!(mts_array.shape().unwrap(), [4, 5, 6]);
+
+        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
+
+        mts_array.reshape(&[20, 6, 1]).unwrap();
+        assert_eq!(mts_array.shape().unwrap(), [20, 6, 1]);
+
+        mts_array.swap_axes(1, 2).unwrap();
+        assert_eq!(mts_array.shape().unwrap(), [20, 1, 6]);
+
+        let copy = mts_array.copy().unwrap();
+        assert_eq!(copy.origin().unwrap(), rust_origin);
+        assert_eq!(copy.shape().unwrap(), [20, 1, 6]);
+        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
+
+        let created = mts_array.create(&[2, 3, 4]).unwrap();
+        assert_eq!(created.origin().unwrap(), rust_origin);
+        assert_eq!(created.shape().unwrap(), [2, 3, 4]);
+        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
+    }
+}

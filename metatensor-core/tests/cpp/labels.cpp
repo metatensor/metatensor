@@ -276,6 +276,24 @@ TEST_CASE("Serialization") {
 
         labels = metatensor::io::load_labels(TEST_KEYS_MTS_PATH);
         check_loaded_labels(labels);
+
+        CHECK_THROWS_WITH(
+            Labels::load(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load_labels(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
+
+        CHECK_THROWS_WITH(
+            Labels::load(TEST_DATA_MTS_PATH),
+            Catch::Matchers::Contains("use `load` to load TensorMap")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load_labels(TEST_DATA_MTS_PATH),
+            Catch::Matchers::Contains("use `load` to load TensorMap")
+        );
     }
 
     SECTION("Load/Save with buffers") {
