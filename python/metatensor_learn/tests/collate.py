@@ -122,7 +122,7 @@ def test_group_and_join_tensormaps():
         blocks=[
             TensorBlock(
                 values=np.ones((2, 1)),
-                samples=Labels(["sample_index", "tensor"], np.array([[0, 0], [2, 1]])),
+                samples=Labels(["sample_index"], np.array([[0], [2]])),
                 components=[],
                 properties=Labels(["p"], np.array([[0]])),
             )
@@ -194,9 +194,7 @@ def test_group_and_join_torch_tensormaps():
         blocks=[
             TensorBlock(
                 values=torch.ones((2, 1)),
-                samples=Labels(
-                    ["sample_index", "tensor"], torch.tensor([[0, 0], [2, 1]])
-                ),
+                samples=Labels(["sample_index"], torch.tensor([[0], [2]])),
                 components=[],
                 properties=Labels(["p"], torch.tensor([[0]])),
             )
@@ -300,7 +298,7 @@ def test_group_and_join_tensormaps_different_keys_union():
     batch_idxs = [0, 2]  # i.e. batch size 2
     batch = group_and_join(
         [dset[i] for i in batch_idxs],
-        join_kwargs={"different_keys": "union", "remove_tensor_name": True},
+        join_kwargs={"different_keys": "union"},
     )
     assert batch.sample_indices == (0, 2)
 

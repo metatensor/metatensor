@@ -270,25 +270,18 @@ def test_self_add_error():
         mts.add(tensor, np.ones((3, 4)))
 
 
-def test_add_finite_difference():
+def test_finite_difference():
     def function(array):
-        tensor_1 = _gradcheck.cartesian_linear(array)
-        tensor_2 = _gradcheck.cartesian_cubic(array)
+        tensor_1 = _gradcheck.tensor_with_grad_a(array, parameter="g")
+        tensor_2 = _gradcheck.tensor_with_grad_b(array, parameter="g")
         return mts.add(tensor_1, tensor_2)
 
     rng = np.random.default_rng(seed=123456)
-    array = rng.random((5, 3))
+    array = rng.random((50, 3))
     _gradcheck.check_finite_differences(function, array, parameter="g")
 
-
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
-def test_torch_add_finite_difference():
-    def function(array):
-        tensor_1 = _gradcheck.cartesian_linear(array)
-        tensor_2 = _gradcheck.cartesian_cubic(array)
-        return mts.add(tensor_1, tensor_2)
-
-    rng = torch.Generator()
-    rng.manual_seed(123456)
-    array = torch.rand(5, 3, dtype=torch.float64, generator=rng)
-    _gradcheck.check_finite_differences(function, array, parameter="g")
+    if HAS_TORCH:
+        rng = torch.Generator()
+        rng.manual_seed(123456)
+        array = torch.rand(50, 3, dtype=torch.float64, generator=rng)
+        _gradcheck.check_finite_differences(function, array, parameter="g")

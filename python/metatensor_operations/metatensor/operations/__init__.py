@@ -35,7 +35,7 @@ from ._is_contiguous import (  # noqa: F401
     is_contiguous,
     is_contiguous_block,
 )
-from ._join import join  # noqa: F401
+from ._join import join, join_blocks  # noqa: F401
 from ._lstsq import lstsq  # noqa: F401
 from ._make_contiguous import (  # noqa: F401
     make_contiguous,
