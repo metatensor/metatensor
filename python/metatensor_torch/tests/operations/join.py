@@ -20,7 +20,10 @@ def test_join():
             "qm7-power-spectrum.mts",
         )
     )
-    joined_tensor = mts.join([tensor, tensor], axis="properties")
+
+    joined_tensor = mts.join(
+        [tensor, tensor], axis="properties", add_dimension="tensor"
+    )
 
     assert isinstance(joined_tensor, torch.ScriptObject)
     assert joined_tensor._type().name() == "TensorMap"
@@ -30,7 +33,7 @@ def test_join():
 
     # test property names
     names = tensor.block(0).properties.names
-    assert joined_tensor.block(0).properties.names == ["tensor"] + names
+    assert joined_tensor.block(0).properties.names == names + ["tensor"]
 
     # test samples
     assert joined_tensor.block(0).samples == tensor.block(0).samples

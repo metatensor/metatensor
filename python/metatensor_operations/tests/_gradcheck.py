@@ -70,17 +70,24 @@ def check_finite_differences(
                     assert value_pos.shape == gradient.shape
                     assert value_neg.shape == gradient.shape
 
-                    finite_difference = (value_pos - value_neg) / displacement
+                    fdiff = (value_pos - value_neg) / displacement
+                    if not np.allclose(fdiff, gradient, rtol=rtol, atol=atol):
+                        components_str = ", ".join(
+                            c[i].print()[1:-1]
+                            for i, c in zip(grad_components_i, gradients.components)
+                        )
+                        raise AssertionError(
+                            f"Wrong gradient of {block.samples[sample_i].print()} "
+                            f"(gradient samples {gradient_sample.print()}, "
+                            f"components ({components_str})), \n"
+                            f"with relative tolerance {rtol} and absolute tolerance "
+                            f"{atol}:\n"
+                            f"    DIRECT CALCULATION: {gradient}\n"
+                            f"    FINITE DIFFERENCES: {fdiff}\n"
+                        )
 
-                    np.testing.assert_allclose(
-                        finite_difference,
-                        gradient,
-                        rtol=rtol,
-                        atol=atol,
-                    )
 
-
-def cartesian_cubic(array) -> TensorMap:
+def tensor_with_grad_a(array, parameter) -> TensorMap:
     """
     Creates a TensorMap from a set of cartesian vectors according to the function:
 
@@ -90,6 +97,7 @@ def cartesian_cubic(array) -> TensorMap:
 
         \\nabla f = (3x^2, 3y^2, 3z^2)
 
+    The gradients are stored with the given ``parameter`` name.
     """
     n_samples = array.shape[0]
     assert array.shape == (n_samples, 3)
@@ -97,9 +105,9 @@ def cartesian_cubic(array) -> TensorMap:
     values = _dispatch.sum(array**3, axis=1)
     values_grad = 3 * array**2
 
-    block = mts.block_from_array(values.reshape(n_samples, 1))
+    block = mts.block_from_array(values.reshape(n_samples, 1), sample_names=["s"])
     block.add_gradient(
-        parameter="g",
+        parameter=parameter,
         gradient=TensorBlock(
             values=values_grad.reshape(n_samples, 3, 1),
             samples=Labels.range("sample", len(values)),
@@ -111,7 +119,7 @@ def cartesian_cubic(array) -> TensorMap:
     return TensorMap(Labels.range("_", 1), [block])
 
 
-def cartesian_linear(array) -> TensorMap:
+def tensor_with_grad_b(array, parameter) -> TensorMap:
     """
     Creates a TensorMap from a set of cartesian vectors according to the function:
 
@@ -121,6 +129,7 @@ def cartesian_linear(array) -> TensorMap:
 
         \\nabla f = (3, 2, 8)
 
+    The gradients are stored with the given ``parameter`` name.
     """
     n_samples = array.shape[0]
     assert array.shape == (n_samples, 3)
@@ -132,9 +141,9 @@ def cartesian_linear(array) -> TensorMap:
     values_grad[:, 1] = 2 * _dispatch.ones_like(array, (n_samples, 1))
     values_grad[:, 2] = 8 * _dispatch.ones_like(array, (n_samples, 1))
 
-    block = mts.block_from_array(values.reshape(-1, 1))
+    block = mts.block_from_array(values.reshape(-1, 1), sample_names=["s"])
     block.add_gradient(
-        parameter="g",
+        parameter=parameter,
         gradient=TensorBlock(
             values=values_grad,
             samples=Labels.range("sample", len(values)),
@@ -148,5 +157,12 @@ def cartesian_linear(array) -> TensorMap:
 
 def test_basic_functions():
     array = np.random.rand(42, 3)
-    check_finite_differences(cartesian_cubic, array, parameter="g")
-    check_finite_differences(cartesian_linear, array, parameter="g")
+
+    def test_a(array):
+        return tensor_with_grad_a(array, parameter="g")
+
+    def test_b(array):
+        return tensor_with_grad_b(array, parameter="g")
+
+    check_finite_differences(test_a, array, parameter="g")
+    check_finite_differences(test_b, array, parameter="g")

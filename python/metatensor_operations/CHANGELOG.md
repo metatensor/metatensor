@@ -17,6 +17,21 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- `join_blocks`, to join multiple blocks along samples or properties, with
+  similar semantics to `join`
+
+### Changed
+
+- `join` was rewritten and made faster. As part of this, we had to change the
+  API: `sort_samples` is not an option anymore, and `remove_tensor_name: bool`
+  was replaced by `add_dimension: Optional[str]=None`. You can set
+  `add_dimension="tensor"` to get the old behavior of
+  `remove_tensor_name=False`. The new default behavior is to not add extra
+  dimensions, and fail if the resulting samples or properties are not unique.
+
+
 ## [Version 0.3.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.4) - 2025-07-28
 
 ### Fixed
