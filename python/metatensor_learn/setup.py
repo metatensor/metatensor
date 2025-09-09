@@ -9,6 +9,7 @@ from setuptools.command.sdist import sdist
 
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
+METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor_core"))
 METATENSOR_OPERATIONS = os.path.realpath(
     os.path.join(ROOT, "..", "metatensor_operations")
 )
@@ -133,14 +134,17 @@ if __name__ == "__main__":
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
 
-    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_OPERATIONS):
+    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
+        assert os.path.exists(METATENSOR_OPERATIONS)
         # we are building from a git checkout or full repo archive
         install_requires.append(
             f"metatensor-operations @ file://{METATENSOR_OPERATIONS}"
         )
+        install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-operations >=0.3.0,<0.4.0")
+        install_requires.append("metatensor-operations >=0.3.4,<0.4.0")
+        install_requires.append("metatensor-core >=0.1.15,<0.2.0")
 
     setup(
         version=create_version_number(METATENSOR_LEARN_VERSION),

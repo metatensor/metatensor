@@ -41,7 +41,12 @@ def _slice_block(
 
         new_block = TensorBlock(
             values=block.values[selected],
-            samples=Labels(block.samples.names, block.samples.values[selected]),
+            samples=Labels(
+                block.samples.names,
+                block.samples.values[selected],
+                # unique because we are sub-selecting existing samples
+                assume_unique=True,
+            ),
             components=block.components,
             properties=block.properties,
         )
@@ -82,7 +87,7 @@ def _slice_block(
             )
 
             if new_grad_samples_values.shape[0] != 0:
-                # update the "sample" column of the gradient samples
+                # update the "sample" dimension of the gradient samples
                 # to refer to the new samples
                 new_grad_samples_values[:, 0] = sample_map[
                     new_grad_samples_values[:, 0]
@@ -91,6 +96,10 @@ def _slice_block(
                 new_grad_samples = Labels(
                     names=gradient.samples.names,
                     values=new_grad_samples_values,
+                    # unique because this is a subselection of existing gradients
+                    # samples. The update to the "sample" dimension should also preserve
+                    # uniqueness.
+                    assume_unique=True,
                 )
             else:
                 new_grad_samples = Labels(
@@ -119,7 +128,12 @@ def _slice_block(
         mask[selected] = True
 
         new_values = _dispatch.mask(block.values, len(block.values.shape) - 1, mask)
-        new_properties = Labels(block.properties.names, block.properties.values[mask])
+        new_properties = Labels(
+            block.properties.names,
+            block.properties.values[mask],
+            # unique because we are sub-selecting existing properties
+            assume_unique=True,
+        )
 
         new_block = TensorBlock(
             values=new_values,

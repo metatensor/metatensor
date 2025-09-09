@@ -132,7 +132,12 @@ def block_from_array(
 
     samples = Labels(
         names=sample_names,
-        values=_dispatch.indices_like(shape[0:d_samples], labels_array_like),
+        values=_dispatch.indices_like(
+            shape[0:d_samples],
+            labels_array_like,
+        ),
+        # unique because `indices_like` produces unique entries
+        assume_unique=True,
     )
     components = [
         Labels(
@@ -140,12 +145,15 @@ def block_from_array(
             values=_dispatch.int_array_like(
                 list(range(axis_size)), labels_array_like
             ).reshape(-1, 1),
+            # unique because `list(range(...))` produces unique entries
+            assume_unique=True,
         )
         for component_index, axis_size in enumerate(shape[d_samples:-d_properties])
     ]
     properties = Labels(
         names=property_names,
         values=_dispatch.indices_like(shape[-d_properties:], labels_array_like),
+        assume_unique=True,
     )
 
     device = _dispatch.get_device(array)
