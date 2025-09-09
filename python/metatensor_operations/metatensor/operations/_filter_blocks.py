@@ -47,7 +47,7 @@ def filter_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> Tensor
     new_blocks: List[TensorBlock] = []
     new_keys_values = []
     for i in to_keep_indices:
-        new_keys_values.append(tensor_keys.entry(i).values)
+        new_keys_values.append(tensor_keys.values[i])
         block = tensor[i]
 
         if copy:
@@ -80,7 +80,12 @@ def filter_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> Tensor
             new_blocks.append(new_block)
 
     if len(new_keys_values) != 0:
-        new_keys = Labels(tensor_keys.names, _dispatch.stack(new_keys_values, 0))
+        new_keys = Labels(
+            names=tensor_keys.names,
+            values=_dispatch.stack(new_keys_values, 0),
+            # unique because we created them by removing entries from existing Labels
+            assume_unique=True,
+        )
     else:
         new_keys = Labels(
             names=tensor_keys.names,

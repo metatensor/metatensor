@@ -29,7 +29,12 @@ def _unique_from_blocks(
             all_values.append(block.properties.view(names).values)
 
     unique_values = _dispatch.unique(_dispatch.concatenate(all_values, axis=0), axis=0)
-    return Labels(names=names, values=unique_values)
+    return Labels(
+        names=names,
+        values=unique_values,
+        # we just made them unique
+        assume_unique=True,
+    )
 
 
 def _check_args(

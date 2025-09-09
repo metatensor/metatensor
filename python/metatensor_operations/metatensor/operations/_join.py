@@ -64,7 +64,8 @@ def _tensors_union(tensors: List[TensorMap], axis: str) -> List[TensorMap]:
         _, map, _ = all_keys.intersection_and_mapping(tensor.keys)
 
         missing_keys = Labels(
-            names=tensor.keys.names, values=all_keys.values[map == -1]
+            names=tensor.keys.names,
+            values=all_keys.values[map == -1],
         )
 
         new_keys = tensor.keys.union(missing_keys)
@@ -217,10 +218,15 @@ def _join_block_samples(
         new_samples_names.append(add_dimension)
 
     new_block = TensorBlock(
-        new_values,
-        Labels(new_samples_names, new_samples),
-        first_block.components,
-        first_block.properties,
+        values=new_values,
+        samples=Labels(
+            new_samples_names,
+            new_samples,
+            # we can not assume that the joined samples will be unique
+            assume_unique=False,
+        ),
+        components=first_block.components,
+        properties=first_block.properties,
     )
 
     for parameter in first_block.gradients_list():
@@ -261,10 +267,15 @@ def _join_block_samples(
             start = stop
 
         new_gradient = TensorBlock(
-            new_values,
-            Labels(first_gradient.samples.names, new_samples),
-            first_gradient.components,
-            first_gradient.properties,
+            values=new_values,
+            samples=Labels(
+                first_gradient.samples.names,
+                new_samples,
+                # we can not assume that the joined samples will be unique
+                assume_unique=False,
+            ),
+            components=first_gradient.components,
+            properties=first_gradient.properties,
         )
 
         new_block.add_gradient(parameter, new_gradient)
@@ -353,12 +364,20 @@ def _join_block_properties(
         new_properties = Labels(
             names=["joined_index", "property"],
             values=new_properties_values,
+            # unique by construction
+            assume_unique=True,
         )
     else:
         new_properties_names = first_block.properties.names
         if add_dimension is not None:
             new_properties_names.append(add_dimension)
-        new_properties = Labels(new_properties_names, new_properties_values)
+
+        new_properties = Labels(
+            new_properties_names,
+            new_properties_values,
+            # we can not assume that the joined properties will be unique
+            assume_unique=False,
+        )
 
     new_block = TensorBlock(
         new_values,

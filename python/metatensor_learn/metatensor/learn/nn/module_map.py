@@ -292,6 +292,8 @@ class ModuleMap(ModuleList):
                 _dispatch.int_array_like(
                     list(range(out_values.shape[-1])), block.samples.values
                 ).reshape(-1, 1),
+                # unique because `list(range(...))` produces unique entries
+                assume_unique=True,
             )
         else:
             properties = self._out_properties[module_idx]

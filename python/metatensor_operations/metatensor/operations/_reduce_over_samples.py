@@ -70,14 +70,14 @@ def _reduce_over_samples_block(
         # here if len(remaining_sample_names) == 0 ->
         # Labels([], shape=(0, 0), dtype=int32)
 
-        samples_label = Labels(
+        samples = Labels(
             remaining_sample_names,
             _dispatch.zeros_like(block.values, [0, len(remaining_sample_names)]),
         )
 
         result_block = TensorBlock(
             values=block.values,
-            samples=samples_label,
+            samples=samples,
             components=block.components,
             properties=block.properties,
         )
@@ -107,11 +107,23 @@ def _reduce_over_samples_block(
         index = _dispatch.zeros_like(
             block_samples.values, shape=(block_samples.values.shape[0],)
         )
+
+        samples = Labels(
+            names="_",
+            values=_dispatch.zeros_like(block_samples.values, shape=(1, 1)),
+        )
     else:
         new_samples, index = _dispatch.unique_with_inverse(
             block_samples.values[:, remaining_sample_columns], axis=0
         )
         index = index.reshape(-1)
+
+        samples = Labels(
+            remaining_sample_names,
+            new_samples,
+            # unique because we created them with `unique_with_inverse`
+            assume_unique=True,
+        )
 
     block_values = block.values
     other_shape = block_values.shape[1:]
@@ -156,21 +168,9 @@ def _reduce_over_samples_block(
     elif reduction == "sum":
         values_result = values_sum
 
-    # check if the reduce operation reduce all the samples
-    if len(remaining_sample_names) == 0:
-        samples_label = Labels(
-            names="_",
-            values=_dispatch.zeros_like(block_samples.values, shape=(1, 1)),
-        )
-    else:
-        samples_label = Labels(
-            remaining_sample_names,
-            new_samples,
-        )
-
     result_block = TensorBlock(
         values=values_result,
-        samples=samples_label,
+        samples=samples,
         components=block.components,
         properties=block.properties,
     )
@@ -200,16 +200,22 @@ def _reduce_over_samples_block(
 
         gradient_samples = gradient.samples
         # here we need to copy because we want to modify the samples array
-        samples = _dispatch.copy(gradient_samples.values)
+        samples_values = _dispatch.copy(gradient_samples.values)
 
         # change the first columns of the samples array with the mapping
         # between samples and gradient.samples
-        samples[:, 0] = index[samples[:, 0]]
+        samples_values[:, 0] = index[samples_values[:, 0]]
 
         new_gradient_samples, index_gradient = _dispatch.unique_with_inverse(
-            samples[:, :], axis=0
+            samples_values[:, :], axis=0
         )
         index_gradient = index_gradient.reshape(-1)
+        gradient_samples = Labels(
+            names=gradient_samples.names,
+            values=new_gradient_samples,
+            # unique because we created them with `unique_with_inverse`
+            assume_unique=True,
+        )
 
         gradient_values = gradient.values
         other_shape = gradient_values.shape[1:]
@@ -277,7 +283,7 @@ def _reduce_over_samples_block(
             parameter=parameter,
             gradient=TensorBlock(
                 values=gradient_values_result,
-                samples=Labels(gradient_samples.names, new_gradient_samples),
+                samples=gradient_samples,
                 components=gradient.components,
                 properties=gradient.properties,
             ),

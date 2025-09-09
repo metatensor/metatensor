@@ -57,7 +57,7 @@ def _sort_single_gradient_block(
         sample_values = _dispatch.copy(sample_values)
         sample_values[:, 0] = sorted_idx_inverse[sample_values[:, 0]]
 
-        # sort the samples in gradient regularly moving the rows considering all columns
+        # sort the samples in gradient
         sorted_idx = _dispatch.argsort_labels_values(sample_values, reverse=descending)
         sample_values = sample_values[sorted_idx]
         values = values[sorted_idx]
@@ -75,10 +75,25 @@ def _sort_single_gradient_block(
         properties_values = properties_values[sorted_idx]
         values = _dispatch.take(values, sorted_idx, axis=-1)
 
-    samples_labels = Labels(names=sample_names, values=sample_values)
-    properties_labels = Labels(names=property_names, values=properties_values)
+    samples_labels = Labels(
+        names=sample_names,
+        values=sample_values,
+        # unique because we sorted existing Labels
+        assume_unique=True,
+    )
+    properties_labels = Labels(
+        names=property_names,
+        values=properties_values,
+        # unique because we sorted existing Labels
+        assume_unique=True,
+    )
     components_labels = [
-        Labels(names=component_names[i], values=components_values[i])
+        Labels(
+            names=component_names[i],
+            values=components_values[i],
+            # unique because we sorted existing Labels
+            assume_unique=True,
+        )
         for i in range(len(component_names))
     ]
 
@@ -132,10 +147,25 @@ def _sort_single_block(
         properties_values = properties_values[sorted_idx]
         values = _dispatch.take(values, sorted_idx, axis=-1)
 
-    samples_labels = Labels(names=sample_names, values=sample_values)
-    properties_labels = Labels(names=property_names, values=properties_values)
+    samples_labels = Labels(
+        names=sample_names,
+        values=sample_values,
+        # unique because we sorted existing Labels
+        assume_unique=True,
+    )
+    properties_labels = Labels(
+        names=property_names,
+        values=properties_values,
+        # unique because we sorted existing Labels
+        assume_unique=True,
+    )
     components_labels = [
-        Labels(names=component_names[i], values=components_values[i])
+        Labels(
+            names=component_names[i],
+            values=components_values[i],
+            # unique because we sorted existing Labels
+            assume_unique=True,
+        )
         for i in range(len(component_names))
     ]
 
@@ -348,6 +378,8 @@ def sort(
         new_keys = Labels(
             names=tensor.keys.names,
             values=tensor.keys.values[sorted_idx],
+            # unique because we sorted existing Labels
+            assume_unique=True,
         )
     else:
         new_keys = tensor.keys

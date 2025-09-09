@@ -51,7 +51,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         if i in to_remove_indices:
             continue
 
-        new_keys_values.append(tensor_keys.entry(i).values)
+        new_keys_values.append(tensor_keys.values[i])
         block = tensor[i]
 
         if copy:
@@ -87,6 +87,8 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
         new_keys = Labels(
             names=tensor_keys.names,
             values=_dispatch.stack(new_keys_values, 0),
+            # unique because we created them by removing entries from existing Labels
+            assume_unique=True,
         )
     else:
         new_keys = Labels(
