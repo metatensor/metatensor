@@ -428,24 +428,10 @@ def sum_over_samples(
 
     >>> from metatensor import Labels, TensorBlock, TensorMap
     >>> block = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...             [7, 8, 9],
-    ...             [10, 11, 12],
-    ...         ]
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6], [7, 8, 9], [10, 11, 12]]),
     ...     samples=Labels(
     ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...                 [1, 0],
-    ...                 [1, 1],
-    ...             ]
-    ...         ),
+    ...         np.array([[0, 0], [0, 1], [1, 0], [1, 1]]),
     ...     ),
     ...     components=[],
     ...     properties=Labels.range("properties", 3),

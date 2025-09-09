@@ -84,7 +84,10 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
             new_blocks.append(new_block)
 
     if len(new_keys_values) != 0:
-        new_keys = Labels(tensor_keys.names, _dispatch.stack(new_keys_values, 0))
+        new_keys = Labels(
+            names=tensor_keys.names,
+            values=_dispatch.stack(new_keys_values, 0),
+        )
     else:
         new_keys = Labels(
             names=tensor_keys.names,

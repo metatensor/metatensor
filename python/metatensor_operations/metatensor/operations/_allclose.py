@@ -114,21 +114,8 @@ def allclose(
     Create simple block
 
     >>> block_1 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
@@ -136,21 +123,8 @@ def allclose(
     Create a second block that is equivalent to ``block_1``.
 
     >>> block_2 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
@@ -172,21 +146,8 @@ def allclose(
     block value.
 
     >>> block3 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1 + 1e-5, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1 + 1e-5, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
@@ -254,21 +215,8 @@ def allclose_raise(
     Create simple block, with one py:obj:`np.nan` value.
 
     >>> block_1 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, np.nan],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, np.nan]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
@@ -276,21 +224,8 @@ def allclose_raise(
     Create a second block that differs from ``block_1`` by ``1e-5`` in its first value.
 
     >>> block_2 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1 + 1e-5, 2, 4],
-    ...             [3, 5, np.nan],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1 + 1e-5, 2, 4], [3, 5, np.nan]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
@@ -370,21 +305,8 @@ def allclose_block(
     Create simple block
 
     >>> block_1 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
@@ -392,21 +314,8 @@ def allclose_block(
     Recreate ``block_1``, but change first value in the block from ``1`` to ``1.00001``.
 
     >>> block_2 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1 + 1e-5, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1 + 1e-5, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
@@ -465,21 +374,8 @@ def allclose_block_raise(
     Create simple block
 
     >>> block_1 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["property_1"], np.array([[0], [1], [2]])),
     ... )
@@ -488,21 +384,8 @@ def allclose_block_raise(
     ``'property_2'``.
 
     >>> block_2 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 4],
-    ...             [3, 5, 6],
-    ...         ]
-    ...     ),
-    ...     samples=Labels(
-    ...         ["system", "atom"],
-    ...         np.array(
-    ...             [
-    ...                 [0, 0],
-    ...                 [0, 1],
-    ...             ]
-    ...         ),
-    ...     ),
+    ...     values=np.array([[1, 2, 4], [3, 5, 6]]),
+    ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
     ...     components=[],
     ...     properties=Labels(["property_2"], np.array([[0], [1], [2]])),
     ... )

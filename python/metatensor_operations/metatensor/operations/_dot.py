@@ -62,23 +62,13 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     >>> import numpy as np
     >>> from metatensor import Labels
     >>> block_1 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 3],
-    ...             [4, 5, 6],
-    ...         ]
-    ...     ),
+    ...     values=np.array([[1, 2, 3], [4, 5, 6]]),
     ...     samples=Labels(["system"], np.array([[0], [1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
     ... )
     >>> block_2 = TensorBlock(
-    ...     values=np.array(
-    ...         [
-    ...             [1, 2, 3],
-    ...             [4, 5, 6],
-    ...         ]
-    ...     ),
+    ...     values=np.array([[1, 2, 3], [4, 5, 6]]),
     ...     samples=Labels(["system"], np.array([[0], [1]])),
     ...     components=[],
     ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
