@@ -44,6 +44,7 @@ mod tensor {
         let mut saved = Vec::new();
         file.read_to_end(&mut saved).unwrap();
 
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -57,10 +58,12 @@ mod tensor {
 
         let mut saved = Vec::new();
         metatensor::io::save_buffer(&tensor, &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         tensor.save_buffer(&mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -132,6 +135,7 @@ mod block {
         let mut saved = Vec::new();
         file.read_to_end(&mut saved).unwrap();
 
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -145,10 +149,13 @@ mod block {
 
         let mut saved = Vec::new();
         metatensor::io::save_block_buffer(block.as_ref(), &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         block.save_buffer(&mut saved).unwrap();
+
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -216,6 +223,7 @@ mod labels {
         let mut saved = Vec::new();
         file.read_to_end(&mut saved).unwrap();
 
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -229,10 +237,12 @@ mod labels {
 
         let mut saved = Vec::new();
         metatensor::io::save_labels_buffer(&labels, &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         labels.save_buffer(&mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
