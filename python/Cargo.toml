@@ -9,7 +9,4 @@ rust-version = "1.74"
 path = "lib.rs"
 
 [dev-dependencies]
-which = "7"
-
-# home MSRV is now 1.81
-home = "=0.5.9"
+which = "8"

@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use metatensor::{LabelValue, LabelsBuilder};
 
 fn bench_labels_creation(c: &mut Criterion) {
@@ -15,7 +15,7 @@ fn bench_labels_creation(c: &mut Criterion) {
         group.bench_function(BenchmarkId::new("finish", size), |b| {
             b.iter_batched(
                 || builder.clone(),
-                |builder| black_box(builder.finish()),
+                |builder| std::hint::black_box(builder.finish()),
                 BatchSize::LargeInput
             );
         });
@@ -23,7 +23,7 @@ fn bench_labels_creation(c: &mut Criterion) {
         group.bench_function(BenchmarkId::new("finish_assume_unique", size), |b| {
             b.iter_batched(
                 || builder.clone(),
-                |builder| black_box(builder.finish_assume_unique()),
+                |builder| std::hint::black_box(builder.finish_assume_unique()),
                 BatchSize::LargeInput
             );
         });
@@ -62,7 +62,7 @@ fn bench_labels_lookup(c: &mut Criterion) {
                         LabelValue::new(i % 42),
                         LabelValue::new(i + 44)
                     ]);
-                    black_box(p);
+                    std::hint::black_box(p);
                 }
             });
         });
@@ -72,7 +72,7 @@ fn bench_labels_lookup(c: &mut Criterion) {
         group.bench_function(BenchmarkId::new("init_position", 3 * size), |b| {
             b.iter_batched(
                 || labels_builder(size).finish(),
-                |labels| black_box(labels.position(&entry)),
+                |labels| std::hint::black_box(labels.position(&entry)),
                 BatchSize::LargeInput
             );
         });
