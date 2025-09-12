@@ -4,8 +4,8 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
-use dlpark::versioned::SafeManagedTensorVersioned;
-use dlpark::ffi::ManagedTensorVersioned;
+use dlpack::sys::DLManagedTensorVersioned;
+use dlpack::DLPackTensor;
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -103,10 +103,10 @@ pub struct mts_array_t {
     /// # Safety
     /// The caller must ensure that:
     /// - The pointer is valid and points to a proper DLPack tensor
-    /// 
+    ///
     to_dlpack: Option<unsafe extern "C" fn(
-       array: *mut c_void, 
-       dl_tensor: *mut *mut ManagedTensorVersioned,
+       array: *mut c_void,
+       dl_tensor: *mut *mut DLManagedTensorVersioned,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -239,13 +239,13 @@ impl mts_array_t {
     }
 
     /// Get the underlying data as a DLPack tensor.
-    /// 
+    ///
     /// The returned object is a safe wrapper around the raw DLPack pointer.
-    pub(crate) fn to_dlpack(&self) -> Result<SafeManagedTensorVersioned, Error> {
+    pub(crate) fn to_dlpack(&self) -> Result<DLPackTensor, Error> {
         let function = self
             .to_dlpack
             .expect("mts_array_t.to_dlpack_versioned function is NULL");
-        let mut dl_tensor_ptr: *mut ManagedTensorVersioned  = std::ptr::null_mut();
+        let mut dl_tensor_ptr: *mut DLManagedTensorVersioned = std::ptr::null_mut();
         let status = unsafe { function(self.ptr, &mut dl_tensor_ptr) };
 
         if !status.is_success() {
@@ -261,7 +261,8 @@ impl mts_array_t {
                 context: "mts_array_t.to_dlpack_versioned returned a NULL pointer".into(),
             });
         }
-        let safe_tensor = unsafe {SafeManagedTensorVersioned::from_raw(dl_tensor_ptr)};
+
+        let safe_tensor = unsafe { DLPackTensor::from_raw(std::ptr::read(dl_tensor_ptr)) };
 
         return Ok(safe_tensor);
     }
@@ -579,6 +580,7 @@ mod tests {
                 copy: None,
                 destroy: Some(TestArray::destroy),
                 move_samples_from: None,
+                to_dlpack: None,
             }
         }
 
