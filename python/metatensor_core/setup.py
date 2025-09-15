@@ -41,6 +41,13 @@ class cmake_ext(build_ext):
     Build the native library using cmake
     """
 
+    def finalize_options(self):
+        if self.editable_mode:
+            raise RuntimeError(
+                "metatensor-core does not support editable installation yet"
+            )
+        return super().finalize_options()
+
     def run(self):
         source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
