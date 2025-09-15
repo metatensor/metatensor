@@ -99,7 +99,7 @@ impl LabelValue {
 
 // Labels uses `AHash` instead of the default hasher in std since `AHash` is
 // much faster and we don't need the cryptographic strength hash from std.
-type AHashHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
+type LabelsHasher = std::hash::BuildHasherDefault<ahash::AHasher>;
 
 // Use a small vec to store Labels entries in the `positions`. This helps by
 // removing heap allocations in the most common case (fewer than 8 dimensions in
@@ -178,7 +178,7 @@ pub struct Labels {
     /// This is lazily initialized whenever a function requires access to the
     /// positions of different entries, allowing to skip the construction of the
     /// `HashMap` when Labels are only used as data storage.
-    positions: OnceCell<HashMap<LabelsEntry, usize, AHashHasher>>,
+    positions: OnceCell<HashMap<LabelsEntry, usize, LabelsHasher>>,
     /// Some data provided by the user that we should keep around (this is
     /// used to store a pointer to the on-GPU tensor in metatensor-torch).
     user_data: RwLock<UserData>,
@@ -212,13 +212,15 @@ impl std::fmt::Debug for Labels {
     }
 }
 
-fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, AHashHasher> {
+fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, LabelsHasher> {
     assert!(values.len() % size == 0);
 
-    let mut positions = HashMap::new();
+    let mut positions = HashMap::with_hasher(LabelsHasher::default());
     for (i, entry) in values.chunks_exact(size).enumerate() {
         // entries should be unique!
-        positions.insert_unique_unchecked(entry.into(), i);
+        unsafe {
+            positions.insert_unique_unchecked(entry.into(), i);
+        }
     }
     return positions;
 }
@@ -391,7 +393,7 @@ impl Labels {
         return self.get_or_init_positions().get(value).copied();
     }
 
-    fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, AHashHasher> {
+    fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, LabelsHasher> {
         return self.positions.get_or_init(|| init_positions(&self.values, self.size()));
     }
 

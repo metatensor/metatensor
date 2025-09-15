@@ -249,7 +249,8 @@ pub unsafe extern "C" fn mts_block_save_buffer(
 
         let mut external_buffer = ExternalBuffer {
             data: buffer,
-            len: *buffer_count,
+            allocated: *buffer_count as u64,
+            writen: 0,
             realloc_user_data,
             realloc: realloc.expect("we checked"),
             current: 0,
