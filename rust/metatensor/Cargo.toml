@@ -23,19 +23,19 @@ rayon = {version = "1", optional = true}
 # We need to pin this for compatibility with rustc 1.74
 rayon-core = {version = "=1.12", optional = true}
 
+criterion = {version = "0.7.0", default-features = false, optional = true}
+
 
 [features]
 default = []
 # use the static build of metatensor-core instead of the shared one
 static = ["metatensor-sys/static"]
-
+# feature for the benchmarks
+bench = ["dep:criterion"]
 
 [dev-dependencies]
 tempfile = "3"
-criterion = {version = "0.7.0", default-features = false}
 
-# Pin half to the last version supporting rustc 1.74
-half = "=2.4.1"
 
 [[bench]]
 name = "labels"
