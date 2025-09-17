@@ -27,7 +27,8 @@ def test_drop_blocks_empty_tensor():
 def test_drop_block_with_an_empty_dimension():
     """
     Define a TensorMap in which block_2 has a zero-length dimension.
-    Assert then that calling drop_empty_blocks() removes block_2 from the resulting TensorMap.
+    Assert then that calling drop_empty_blocks() removes block_2 from
+    the resulting TensorMap.
     """
     block_1 = TensorBlock(
         values=np.full((5, 3), 2.0),
@@ -80,7 +81,7 @@ def test_drop_empty_blocks_in_empty_tensor():
 
 
 def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
-    """ 
+    """
     Define a TensorMap in which no block has a zero-length dimension.
     Assert than that calling drop_empty_blocks() leaves all blocks intact.
     """
@@ -103,10 +104,6 @@ def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
         properties=Labels.range("property", 6),
     )
     keys = Labels(names=["id"], values=np.array([[0], [1], [2]]))
-
-    bkp_block_1 = block_1.copy()
-    bkp_block_2 = block_2.copy()
-    bkp_block_3 = block_3.copy()
 
     # Create the TensorMap
     tensor = TensorMap(keys=keys, blocks=[block_1, block_2, block_3])

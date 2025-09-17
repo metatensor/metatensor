@@ -99,7 +99,7 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
 @torch_jit_script
 def drop_empty_blocks(tensor: TensorMap, copy: bool = False) -> TensorMap:
     """
-    Drop every blocks in a :py:class: `TensorMap` with any 0-length dimension.
+    Drop every blocks in a :py:class:`TensorMap` with any 0-length dimension.
 
     :param tensor: the :py:class:`TensorMap` to drop empty blocks from.
 
