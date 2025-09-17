@@ -114,6 +114,9 @@ def test_drop_empty_blocks_on_tensor_with_no_empty_blocks():
 
 
 def test_drop_all(tensor):
+    """
+    Test that all the blocks are effectively dropped
+    """
     tensor = mts.drop_blocks(tensor, tensor.keys)
     empty_tensor = TensorMap(keys=Labels.empty(tensor.keys.names), blocks=[])
     assert mts.equal(tensor, empty_tensor)
