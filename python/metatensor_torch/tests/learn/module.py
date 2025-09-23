@@ -1,4 +1,5 @@
 import os
+from typing import Dict, List
 
 import pytest
 import torch
@@ -33,6 +34,8 @@ def _create_tensor(key_name):
 
 
 class LabelsModule(nn.Module):
+    nested: Dict[str, Dict[int, List[List[Labels]]]]
+
     def __init__(self, name):
         super().__init__()
         values = torch.arange(2).reshape(-1, 1)
@@ -40,7 +43,10 @@ class LabelsModule(nn.Module):
         self.dict = {"labels": Labels([name], values)}
         self.list = [Labels([name], values)]
         self.tuple = tuple([Labels([name], values)])
-        self.nested = {"dict": {42: [Labels([name], values)]}}
+        self.nested = {
+            "dict": {42: [[Labels([name], values)], []], 50: []},
+            "empty": {},
+        }
 
     def forward(self, x: int) -> Labels:
         if x == 0:
@@ -52,19 +58,24 @@ class LabelsModule(nn.Module):
         elif x == 3:
             return self.tuple[0]
         elif x == 4:
-            return self.nested["dict"][42][0]
+            return self.nested["dict"][42][0][0]
         else:
             return self.labels
 
 
 class BlockModule(nn.Module):
+    nested: Dict[str, Dict[int, List[List[TensorBlock]]]]
+
     def __init__(self, name):
         super().__init__()
         self.block = _create_block(name)
         self.dict = {"block": _create_block(name)}
         self.list = [_create_block(name)]
         self.tuple = tuple([_create_block(name)])
-        self.nested = {"dict": {42: [_create_block(name)]}}
+        self.nested = {
+            "dict": {42: [[_create_block(name)], []], 50: []},
+            "empty": {},
+        }
 
     def forward(self, x: int) -> TensorBlock:
         if x == 0:
@@ -76,19 +87,24 @@ class BlockModule(nn.Module):
         elif x == 3:
             return self.tuple[0]
         elif x == 4:
-            return self.nested["dict"][42][0]
+            return self.nested["dict"][42][0][0]
         else:
             return self.block
 
 
 class TensorModule(nn.Module):
+    nested: Dict[str, Dict[int, List[List[TensorMap]]]]
+
     def __init__(self, name):
         super().__init__()
         self.tensor = _create_tensor(name)
         self.dict = {"tensor": _create_tensor(name)}
         self.list = [_create_tensor(name)]
         self.tuple = tuple([_create_tensor(name)])
-        self.nested = {"dict": {42: [_create_tensor(name)]}}
+        self.nested = {
+            "dict": {42: [[_create_tensor(name)], []], 50: []},
+            "empty": {},
+        }
 
     def forward(self, x: int) -> TensorMap:
         if x == 0:
@@ -100,7 +116,7 @@ class TensorModule(nn.Module):
         elif x == 3:
             return self.tuple[0]
         elif x == 4:
-            return self.nested["dict"][42][0]
+            return self.nested["dict"][42][0][0]
         else:
             return self.tensor
 
@@ -144,7 +160,7 @@ def test_to(scripted):
         assert module.a.dict["labels"].device.type == device
         assert module.a.list[0].device.type == device
         assert module.a.tuple[0].device.type == device
-        assert module.a.nested["dict"][42][0].device.type == device
+        assert module.a.nested["dict"][42][0][0].device.type == device
 
         assert module.b.block.device.type == device
         assert module.b.block.dtype == dtype
@@ -154,8 +170,8 @@ def test_to(scripted):
         assert module.b.list[0].dtype == dtype
         assert module.b.tuple[0].device.type == device
         assert module.b.tuple[0].dtype == dtype
-        assert module.b.nested["dict"][42][0].device.type == device
-        assert module.b.nested["dict"][42][0].dtype == dtype
+        assert module.b.nested["dict"][42][0][0].device.type == device
+        assert module.b.nested["dict"][42][0][0].dtype == dtype
 
         assert module.c.tensor.device.type == device
         assert module.c.tensor.dtype == dtype
@@ -165,8 +181,8 @@ def test_to(scripted):
         assert module.c.list[0].dtype == dtype
         assert module.c.tuple[0].device.type == device
         assert module.c.tuple[0].dtype == dtype
-        assert module.c.nested["dict"][42][0].device.type == device
-        assert module.c.nested["dict"][42][0].dtype == dtype
+        assert module.c.nested["dict"][42][0][0].device.type == device
+        assert module.c.nested["dict"][42][0][0].dtype == dtype
 
     module = EverythingModule("test")
     if scripted:
@@ -256,21 +272,21 @@ def test_state_dict_labels(tmpdir):
     check_state_dict(state_dict["_extra_state"]["dict"]["labels"])
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
-    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
 
     module = LabelsModule("something")
     assert module.labels.names == ["something"]
     assert module.dict["labels"].names == ["something"]
     assert module.list[0].names == ["something"]
     assert module.tuple[0].names == ["something"]
-    assert module.nested["dict"][42][0].names == ["something"]
+    assert module.nested["dict"][42][0][0].names == ["something"]
 
     module.load_state_dict(state_dict)
     assert module.labels.names == ["test"]
     assert module.dict["labels"].names == ["test"]
     assert module.list[0].names == ["test"]
     assert module.tuple[0].names == ["test"]
-    assert module.nested["dict"][42][0].names == ["test"]
+    assert module.nested["dict"][42][0][0].names == ["test"]
 
     # make sure everything works when the outer module is a standard torch.nn.Module
     class Recursive(torch.nn.Module):
@@ -284,21 +300,21 @@ def test_state_dict_labels(tmpdir):
     check_state_dict(state_dict["sub_module._extra_state"]["dict"]["labels"])
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
-    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
 
     module = Recursive("something")
     assert module.sub_module.labels.names == ["something"]
     assert module.sub_module.dict["labels"].names == ["something"]
     assert module.sub_module.list[0].names == ["something"]
     assert module.sub_module.tuple[0].names == ["something"]
-    assert module.sub_module.nested["dict"][42][0].names == ["something"]
+    assert module.sub_module.nested["dict"][42][0][0].names == ["something"]
 
     module.load_state_dict(state_dict)
     assert module.sub_module.labels.names == ["test"]
     assert module.sub_module.dict["labels"].names == ["test"]
     assert module.sub_module.list[0].names == ["test"]
     assert module.sub_module.tuple[0].names == ["test"]
-    assert module.sub_module.nested["dict"][42][0].names == ["test"]
+    assert module.sub_module.nested["dict"][42][0][0].names == ["test"]
 
 
 def test_state_dict_block():
@@ -320,21 +336,21 @@ def test_state_dict_block():
     check_state_dict(state_dict["_extra_state"]["dict"]["block"])
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
-    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
 
     module = BlockModule("something")
     assert module.block.samples.names == ["something"]
     assert module.dict["block"].samples.names == ["something"]
     assert module.list[0].samples.names == ["something"]
     assert module.tuple[0].samples.names == ["something"]
-    assert module.nested["dict"][42][0].samples.names == ["something"]
+    assert module.nested["dict"][42][0][0].samples.names == ["something"]
 
     module.load_state_dict(state_dict)
     assert module.block.samples.names == ["test"]
     assert module.dict["block"].samples.names == ["test"]
     assert module.list[0].samples.names == ["test"]
     assert module.tuple[0].samples.names == ["test"]
-    assert module.nested["dict"][42][0].samples.names == ["test"]
+    assert module.nested["dict"][42][0][0].samples.names == ["test"]
 
     # make sure everything works when the outer module is a standard torch.nn.Module
     class Recursive(torch.nn.Module):
@@ -348,21 +364,21 @@ def test_state_dict_block():
     check_state_dict(state_dict["sub_module._extra_state"]["dict"]["block"])
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
-    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
 
     module = Recursive("something")
     assert module.sub_module.block.samples.names == ["something"]
     assert module.sub_module.dict["block"].samples.names == ["something"]
     assert module.sub_module.list[0].samples.names == ["something"]
     assert module.sub_module.tuple[0].samples.names == ["something"]
-    assert module.sub_module.nested["dict"][42][0].samples.names == ["something"]
+    assert module.sub_module.nested["dict"][42][0][0].samples.names == ["something"]
 
     module.load_state_dict(state_dict)
     assert module.sub_module.block.samples.names == ["test"]
     assert module.sub_module.dict["block"].samples.names == ["test"]
     assert module.sub_module.list[0].samples.names == ["test"]
     assert module.sub_module.tuple[0].samples.names == ["test"]
-    assert module.sub_module.nested["dict"][42][0].samples.names == ["test"]
+    assert module.sub_module.nested["dict"][42][0][0].samples.names == ["test"]
 
 
 def test_state_dict_block_device_dtype(tmpdir):
@@ -376,7 +392,9 @@ def test_state_dict_block_device_dtype(tmpdir):
     assert state_dict["_extra_state"]["dict"]["block"][2].dtype == torch.float32
     assert state_dict["_extra_state"]["list"][0][2].dtype == torch.float32
     assert state_dict["_extra_state"]["tuple"][0][2].dtype == torch.float32
-    assert state_dict["_extra_state"]["nested"]["dict"][42][0][2].dtype == torch.float32
+    assert (
+        state_dict["_extra_state"]["nested"]["dict"][42][0][0][2].dtype == torch.float32
+    )
 
     # check that loading the state dict creates data on the correct dtype
     module = BlockModule("another")
@@ -384,14 +402,14 @@ def test_state_dict_block_device_dtype(tmpdir):
     assert module.dict["block"].dtype == dtype_to_int(torch.float64)
     assert module.list[0].dtype == dtype_to_int(torch.float64)
     assert module.tuple[0].dtype == dtype_to_int(torch.float64)
-    assert module.nested["dict"][42][0].dtype == dtype_to_int(torch.float64)
+    assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float64)
 
     module.load_state_dict(state_dict)
     assert module.block.dtype == dtype_to_int(torch.float32)
     assert module.dict["block"].dtype == dtype_to_int(torch.float32)
     assert module.list[0].dtype == dtype_to_int(torch.float32)
     assert module.tuple[0].dtype == dtype_to_int(torch.float32)
-    assert module.nested["dict"][42][0].dtype == dtype_to_int(torch.float32)
+    assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float32)
 
     # Test loading from a different device
     for device in DEVICES_TO_TEST:
@@ -406,7 +424,8 @@ def test_state_dict_block_device_dtype(tmpdir):
         assert state_dict["_extra_state"]["list"][0][2].device.type == device
         assert state_dict["_extra_state"]["tuple"][0][2].device.type == device
         assert (
-            state_dict["_extra_state"]["nested"]["dict"][42][0][2].device.type == device
+            state_dict["_extra_state"]["nested"]["dict"][42][0][0][2].device.type
+            == device
         )
 
         # check that loading the state dict creates data on the correct device
@@ -415,14 +434,14 @@ def test_state_dict_block_device_dtype(tmpdir):
         assert module.dict["block"].device.type == "cpu"
         assert module.list[0].device.type == "cpu"
         assert module.tuple[0].device.type == "cpu"
-        assert module.nested["dict"][42][0].device.type == "cpu"
+        assert module.nested["dict"][42][0][0].device.type == "cpu"
 
         module.load_state_dict(state_dict)
         assert module.block.device.type == device
         assert module.dict["block"].device.type == device
         assert module.list[0].device.type == device
         assert module.tuple[0].device.type == device
-        assert module.nested["dict"][42][0].device.type == device
+        assert module.nested["dict"][42][0][0].device.type == device
 
         # check that loading the state dict from file also works
         path = os.path.join(tmpdir, "data.pt")
@@ -438,7 +457,7 @@ def test_state_dict_block_device_dtype(tmpdir):
         assert module.dict["block"].device.type == device
         assert module.list[0].device.type == device
         assert module.tuple[0].device.type == device
-        assert module.nested["dict"][42][0].device.type == device
+        assert module.nested["dict"][42][0][0].device.type == device
 
 
 def test_state_dict_tensor(tmpdir):
@@ -460,7 +479,7 @@ def test_state_dict_tensor(tmpdir):
     check_state_dict(state_dict["_extra_state"]["dict"]["tensor"])
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
-    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
 
     module = TensorModule("something")
     assert module.tensor.keys.names == ["something"]
@@ -488,7 +507,7 @@ def test_state_dict_tensor(tmpdir):
     check_state_dict(state_dict["sub_module._extra_state"]["dict"]["tensor"])
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
-    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0])
+    check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
 
     module = Recursive("something")
     assert module.sub_module.tensor.keys.names == ["something"]
@@ -516,7 +535,9 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
     assert state_dict["_extra_state"]["dict"]["tensor"][2].dtype == torch.float32
     assert state_dict["_extra_state"]["list"][0][2].dtype == torch.float32
     assert state_dict["_extra_state"]["tuple"][0][2].dtype == torch.float32
-    assert state_dict["_extra_state"]["nested"]["dict"][42][0][2].dtype == torch.float32
+    assert (
+        state_dict["_extra_state"]["nested"]["dict"][42][0][0][2].dtype == torch.float32
+    )
 
     # check that loading the state dict creates data on the correct dtype
     module = TensorModule("another")
@@ -524,14 +545,14 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
     assert module.dict["tensor"].dtype == dtype_to_int(torch.float64)
     assert module.list[0].dtype == dtype_to_int(torch.float64)
     assert module.tuple[0].dtype == dtype_to_int(torch.float64)
-    assert module.nested["dict"][42][0].dtype == dtype_to_int(torch.float64)
+    assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float64)
 
     module.load_state_dict(state_dict)
     assert module.tensor.dtype == dtype_to_int(torch.float32)
     assert module.dict["tensor"].dtype == dtype_to_int(torch.float32)
     assert module.list[0].dtype == dtype_to_int(torch.float32)
     assert module.tuple[0].dtype == dtype_to_int(torch.float32)
-    assert module.nested["dict"][42][0].dtype == dtype_to_int(torch.float32)
+    assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float32)
 
     # Test loading from a different device
     for device in DEVICES_TO_TEST:
@@ -546,7 +567,8 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
         assert state_dict["_extra_state"]["list"][0][2].device.type == device
         assert state_dict["_extra_state"]["tuple"][0][2].device.type == device
         assert (
-            state_dict["_extra_state"]["nested"]["dict"][42][0][2].device.type == device
+            state_dict["_extra_state"]["nested"]["dict"][42][0][0][2].device.type
+            == device
         )
 
         # check that loading the state dict creates data on the correct device
@@ -555,14 +577,14 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
         assert module.dict["tensor"].device.type == "cpu"
         assert module.list[0].device.type == "cpu"
         assert module.tuple[0].device.type == "cpu"
-        assert module.nested["dict"][42][0].device.type == "cpu"
+        assert module.nested["dict"][42][0][0].device.type == "cpu"
 
         module.load_state_dict(state_dict)
         assert module.tensor.device.type == device
         assert module.dict["tensor"].device.type == device
         assert module.list[0].device.type == device
         assert module.tuple[0].device.type == device
-        assert module.nested["dict"][42][0].device.type == device
+        assert module.nested["dict"][42][0][0].device.type == device
 
         # check that loading the state dict from file also works
         path = os.path.join(tmpdir, "data.pt")
@@ -578,4 +600,4 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
         assert module.dict["tensor"].device.type == device
         assert module.list[0].device.type == device
         assert module.tuple[0].device.type == device
-        assert module.nested["dict"][42][0].device.type == device
+        assert module.nested["dict"][42][0][0].device.type == device

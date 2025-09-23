@@ -33,7 +33,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
             labels = labels->to(device.value(), non_blocking);
             return std::make_pair(labels, true);
         } else {
-            return std::make_pair(ivalue, false);
+            return std::make_pair(ivalue, true);
         }
     } else if (is_custom_class<TensorBlockHolder>(ivalue)) {
         auto block = ivalue.toCustomClass<TensorBlockHolder>();
@@ -45,6 +45,10 @@ static std::pair<torch::IValue, bool> ivalue_to(
         return std::make_pair(tensor, true);
     } else if (ivalue.isGenericDict()) {
         auto dict = ivalue.toGenericDict();
+        if (dict.empty()) {
+            return std::make_pair(ivalue, true);
+        }
+
         auto updated = c10::impl::GenericDict(dict.keyType(), dict.valueType());
         auto all_changed = true;
         auto some_changed = false;
@@ -65,6 +69,10 @@ static std::pair<torch::IValue, bool> ivalue_to(
         }
     } else if (ivalue.isList()) {
         const auto& list = ivalue.toList();
+        if (list.empty()) {
+            return std::make_pair(ivalue, true);
+        }
+
         auto updated = c10::impl::GenericList(list.elementType());
         auto all_changed = true;
         auto some_changed = false;
@@ -85,6 +93,10 @@ static std::pair<torch::IValue, bool> ivalue_to(
         }
     } else if (ivalue.isTuple()) {
         const auto& tuple = ivalue.toTupleRef().elements();
+        if (tuple.empty()) {
+            return std::make_pair(ivalue, true);
+        }
+
         auto updated = std::vector<torch::IValue>();
         auto some_changed = false;
         for (const auto& item: tuple) {
