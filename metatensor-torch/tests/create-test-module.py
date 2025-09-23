@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import torch
 
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -20,6 +22,8 @@ def _create_tensor(key_name):
 
 
 class LabelsModule(torch.nn.Module):
+    nested: Dict[str, Dict[int, List[List[Labels]]]]
+
     def __init__(self, name):
         super().__init__()
         values = torch.arange(2).reshape(-1, 1)
@@ -27,27 +31,40 @@ class LabelsModule(torch.nn.Module):
         self.dict = {"labels": Labels([name], values)}
         self.list = [Labels([name], values)]
         self.tuple = tuple([Labels([name], values)])
-        self.nested = {"dict": {42: [Labels([name], values)]}}
+        self.nested = {
+            "dict": {42: [[Labels([name], values)], []], 50: []},
+            "empty": {},
+        }
 
 
 class BlockModule(torch.nn.Module):
+    nested: Dict[str, Dict[int, List[List[Labels]]]]
+
     def __init__(self, name):
         super().__init__()
         self.block = _create_block(name)
         self.dict = {"block": _create_block(name)}
         self.list = [_create_block(name)]
         self.tuple = tuple([_create_block(name)])
-        self.nested = {"dict": {42: [_create_block(name)]}}
+        self.nested = {
+            "dict": {42: [[_create_block(name)], []], 50: []},
+            "empty": {},
+        }
 
 
 class TensorModule(torch.nn.Module):
+    nested: Dict[str, Dict[int, List[List[Labels]]]]
+
     def __init__(self, name):
         super().__init__()
         self.tensor = _create_tensor(name)
         self.dict = {"tensor": _create_tensor(name)}
         self.list = [_create_tensor(name)]
         self.tuple = tuple([_create_tensor(name)])
-        self.nested = {"dict": {42: [_create_tensor(name)]}}
+        self.nested = {
+            "dict": {42: [[_create_tensor(name)], []], 50: []},
+            "empty": {},
+        }
 
 
 class EverythingModule(torch.nn.Module):

@@ -41,6 +41,9 @@ def _metatensor_data_to(value, dtype, device):
     elif isinstance_metatensor(value, "TensorMap"):
         return value.to(device=device, dtype=dtype), True
     elif isinstance(value, dict):
+        if len(value) == 0:
+            return value, True
+
         updated = {}
         all_changed = True
         some_changed = False
@@ -60,6 +63,9 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, list):
+        if len(value) == 0:
+            return value, True
+
         updated = []
         all_changed = True
         some_changed = False
@@ -79,6 +85,9 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, tuple):
+        if len(value) == 0:
+            return value, True
+
         updated = []
         some_changed = False
         for tuple_value in value:

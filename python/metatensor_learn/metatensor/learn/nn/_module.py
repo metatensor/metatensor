@@ -99,6 +99,9 @@ def _metatensor_data_to(value, dtype, device):
     elif isinstance_metatensor(value, "TensorMap"):
         return value.to(device=device, dtype=dtype), True
     elif isinstance(value, dict):
+        if len(value) == 0:
+            return value, True
+
         updated = {}
         all_changed = True
         some_changed = False
@@ -118,6 +121,9 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, list):
+        if len(value) == 0:
+            return value, True
+
         updated = []
         all_changed = True
         some_changed = False
@@ -137,6 +143,9 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, tuple):
+        if len(value) == 0:
+            return value, True
+
         updated = []
         some_changed = False
         for tuple_value in value:
@@ -214,6 +223,9 @@ def _serialize_metatensor(value):
         return serialized, True
 
     elif isinstance(value, dict):
+        if len(value) == 0:
+            return value, True
+
         serialized = {}
         all_contains_mts = True
         some_contains_mts = False
@@ -233,6 +245,9 @@ def _serialize_metatensor(value):
             return serialized, True
 
     elif isinstance(value, list):
+        if len(value) == 0:
+            return value, True
+
         serialized = []
         all_contains_mts = True
         some_contains_mts = False
@@ -252,6 +267,9 @@ def _serialize_metatensor(value):
             return serialized, True
 
     elif isinstance(value, tuple):
+        if len(value) == 0:
+            return value, True
+
         serialized = []
         some_contains_mts = False
         for tuple_value in value:
@@ -332,6 +350,9 @@ def _deserialize_metatensor(value):
             raise ValueError(f"got unexpected class name: '{class_name}'")
 
     elif isinstance(value, dict):
+        if len(value) == 0:
+            return value, True
+
         deserialized = {}
         all_contains_mts = True
         some_contains_mts = False
@@ -351,6 +372,9 @@ def _deserialize_metatensor(value):
             return deserialized, True
 
     elif isinstance(value, list):
+        if len(value) == 0:
+            return value, True
+
         deserialized = []
         all_contains_mts = True
         some_contains_mts = False
@@ -370,6 +394,9 @@ def _deserialize_metatensor(value):
             return deserialized, True
 
     elif isinstance(value, tuple):
+        if len(value) == 0:
+            return value, True
+
         deserialized = []
         some_contains_mts = False
         for tuple_value in value:

@@ -5,7 +5,16 @@
 #include <catch.hpp>
 
 static void check_dtype_device(const torch::jit::Module& module, torch::Device device, torch::ScalarType scalar_type) {
+    std::vector<std::string> all_fields = {};
     for (const auto& item: module.named_attributes()) {
+        if (item.name.find("_is_full_backward_hook") != std::string::npos) {
+            continue;
+        }
+        if (item.name.find("training") != std::string::npos) {
+            continue;
+        }
+
+        all_fields.push_back(item.name);
         if (item.name == "labels" || item.name == "a.labels") {
             auto labels = item.value.toCustomClass<metatensor_torch::LabelsHolder>();
             CHECK(labels->device() == device);
@@ -61,10 +70,18 @@ static void check_dtype_device(const torch::jit::Module& module, torch::Device d
         }
 
         if (item.name == "a.nested") {
-            auto list = item.value.toGenericDict().at("dict").toGenericDict().at(42).toList();
-            auto labels = list.get(0).toCustomClass<metatensor_torch::LabelsHolder>();
+            auto str_dict = item.value.toGenericDict();
+            auto int_dict = str_dict.at("dict").toGenericDict();
+            auto first_list = int_dict.at(42).toList();
+            auto second_list = first_list.get(0).toList();
+
+            auto labels = second_list.get(0).toCustomClass<metatensor_torch::LabelsHolder>();
             CHECK(labels->device() == device);
             CHECK(labels->values().scalar_type() == torch::kInt32);
+
+            CHECK(first_list.get(1).toList().empty());
+            CHECK(int_dict.at(50).toList().empty());
+            CHECK(str_dict.at("empty").toGenericDict().empty());
         }
 
         if (item.name == "b.dict") {
@@ -89,10 +106,18 @@ static void check_dtype_device(const torch::jit::Module& module, torch::Device d
         }
 
         if (item.name == "b.nested") {
-            auto list = item.value.toGenericDict().at("dict").toGenericDict().at(42).toList();
-            auto block = list.get(0).toCustomClass<metatensor_torch::TensorBlockHolder>();
+            auto str_dict = item.value.toGenericDict();
+            auto int_dict = str_dict.at("dict").toGenericDict();
+            auto first_list = int_dict.at(42).toList();
+            auto second_list = first_list.get(0).toList();
+
+            auto block = second_list.get(0).toCustomClass<metatensor_torch::TensorBlockHolder>();
             CHECK(block->device() == device);
             CHECK(block->scalar_type() == scalar_type);
+
+            CHECK(first_list.get(1).toList().empty());
+            CHECK(int_dict.at(50).toList().empty());
+            CHECK(str_dict.at("empty").toGenericDict().empty());
         }
 
         if (item.name == "c.dict") {
@@ -117,12 +142,31 @@ static void check_dtype_device(const torch::jit::Module& module, torch::Device d
         }
 
         if (item.name == "c.nested") {
-            auto list = item.value.toGenericDict().at("dict").toGenericDict().at(42).toList();
-            auto tensor = list.get(0).toCustomClass<metatensor_torch::TensorMapHolder>();
+            auto str_dict = item.value.toGenericDict();
+            auto int_dict = str_dict.at("dict").toGenericDict();
+            auto first_list = int_dict.at(42).toList();
+            auto second_list = first_list.get(0).toList();
+
+            auto tensor = second_list.get(0).toCustomClass<metatensor_torch::TensorMapHolder>();
             CHECK(tensor->device() == device);
             CHECK(tensor->scalar_type() == scalar_type);
+
+            CHECK(first_list.get(1).toList().empty());
+            CHECK(int_dict.at(50).toList().empty());
+            CHECK(str_dict.at("empty").toGenericDict().empty());
         }
     }
+
+    std::vector<std::string> EXPECTED_FIELDS = {
+        "a", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
+        "b", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
+        "block",
+        "c", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
+        "labels", "tensor", "tuple"
+    };
+
+    std::sort(std::begin(all_fields), std::end(all_fields));
+    CHECK(all_fields == EXPECTED_FIELDS);
 }
 
 
