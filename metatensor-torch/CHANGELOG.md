@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.8.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-09-24
+
+### Fixed
+
+- The custom `metatensor_torch::Module` now properly handles nested containers
+  (list, dict, tuples) with empty containers inside (#978)
+
 ## [Version 0.8.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.0) - 2025-08-22
 
 ### Removed
