@@ -6,6 +6,7 @@ from pycparser import c_ast, parse_file
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 FAKE_INCLUDES = os.path.join(ROOT, "python", "scripts", "include")
+VENDORED_INCLUDES = os.path.join(ROOT, "metatensor-core", "include", "vendored")
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
@@ -48,7 +49,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.defines = {}
 
     def visit_Decl(self, node):
-        if not node.name.startswith("mts_"):
+        if not node.name or not node.name.startswith("mts_"):
             return
 
         function = Function(node.name, node.type.type)
@@ -57,7 +58,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not node.name.startswith("mts_"):
+        if not node.name.startswith("mts_") and node.name != "ManagedTensorVersioned":
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -69,8 +70,10 @@ class AstVisitor(c_ast.NodeVisitor):
 
         elif isinstance(node.type.type, c_ast.Struct):
             struct = Struct(node.name)
-            for _, member in node.type.type.children():
-                struct.add_member(member.name, member.type)
+
+            if node.type.type.decls is not None:
+                for _, member in node.type.type.children():
+                    struct.add_member(member.name, member.type)
 
             self.structs.append(struct)
 
@@ -79,7 +82,7 @@ class AstVisitor(c_ast.NodeVisitor):
 
 
 def parse(file):
-    cpp_args = ["-E", "-I", FAKE_INCLUDES]
+    cpp_args = ["-E", f"-I{FAKE_INCLUDES}", f"-I{VENDORED_INCLUDES}"]
     ast = parse_file(file, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     visitor = AstVisitor()
@@ -99,7 +102,7 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name.startswith("mts_"):
+    if name.startswith("mts_") or name == "ManagedTensorVersioned":
         return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
