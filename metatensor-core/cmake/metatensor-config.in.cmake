@@ -26,6 +26,9 @@ if (NOT EXISTS ${METATENSOR_INCLUDE}/metatensor.h OR NOT EXISTS ${METATENSOR_INC
     message(FATAL_ERROR "could not find metatensor headers in '${METATENSOR_INCLUDE}', please re-install metatensor")
 endif()
 
+if (NOT EXISTS ${METATENSOR_INCLUDE}/vendored/dlpack/dlpack.h)
+    message(FATAL_ERROR "could not find vendored dlpack headers in '${METATENSOR_INCLUDE}', please re-install metatensor")
+endif()
 
 # Shared library target
 if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
