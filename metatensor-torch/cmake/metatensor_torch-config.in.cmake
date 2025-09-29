@@ -23,6 +23,10 @@ endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/metatensor_torch-targets.cmake)
 
+set_target_properties(metatensor_torch PROPERTIES
+    BUILD_VERSION "@METATENSOR_TORCH_FULL_VERSION@"
+)
+
 get_target_property(metatensor_torch_configs metatensor_torch IMPORTED_CONFIGURATIONS)
 foreach(config ${metatensor_torch_configs})
     get_target_property(metatensor_torch_library metatensor_torch IMPORTED_LOCATION_${config})
