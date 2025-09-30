@@ -24,6 +24,7 @@ pub const MTS_IO_ERROR: i32 = 2;
 pub const MTS_SERIALIZATION_ERROR: i32 = 3;
 pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 pub const MTS_INTERNAL_ERROR: i32 = 255;
+pub const MTS_NOT_IMPLEMENTED_ERROR: i32 = 5;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_block_t {
