@@ -343,12 +343,10 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[deprecated(note="use `as_dlpack` instead")]
     pub fn data(&self) -> Result<&[f64], Error> {
         let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
+        let len = shape.iter().product();
 
         let function = self.data.expect("mts_array_t.data function is NULL");
 
@@ -381,12 +379,10 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[deprecated(note="use `as_dlpack` instead")]
     pub fn data_mut(&mut self) -> Result<&mut [f64], Error> {
         let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
+        let len = shape.iter().product();
 
         let function = self.data.expect("mts_array_t.data function is NULL");
 
