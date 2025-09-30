@@ -69,7 +69,7 @@ def all_functions():
 
     class AstVisitor(c_ast.NodeVisitor):
         def visit_Decl(self, node):
-            if not node.name.startswith("mts_"):
+            if not node.name or not node.name.startswith("mts_"):
                 return
 
             functions.append(node.name)
