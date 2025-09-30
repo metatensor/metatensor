@@ -3,6 +3,7 @@ use std::os::raw::c_void;
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
+use dlpack::sys::{DLManagedTensorVersioned, DLDataTypeCode};
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -163,6 +164,92 @@ pub struct mts_array_t {
         property_start: usize,
         property_end: usize,
     ) -> mts_status_t>,
+}
+
+// DLPack internal form
+struct MtsArrayInternal {
+    tensor: *mut DLManagedTensorVersioned,
+    origin_id: mts_data_origin_t,
+}
+
+impl mts_array_t {
+    pub fn from_dlpack(dl_tensor: DLManagedTensorVersioned, origin_name: &str) -> mts_array_t {
+        let boxed_tensor = Box::new(dl_tensor);
+        let internal_state = Box::new(MtsArrayInternal {
+            tensor: Box::into_raw(boxed_tensor),
+            origin_id: register_data_origin(origin_name.into()),
+        });
+        mts_array_t {
+            ptr: Box::into_raw(internal_state) as *mut c_void,
+            origin: Some(shims::origin),
+            data: Some(shims::data),
+            shape: Some(shims::shape),
+            reshape: Some(shims::reshape_unsupported),
+            swap_axes: Some(shims::swap_axes_unsupported),
+            create: Some(shims::create_unsupported),
+            copy: Some(shims::copy_unsupported),
+            destroy: Some(shims::destroy),
+            move_samples_from: None,
+        }
+    }
+}
+
+
+mod shims {
+    use super::*;
+    use crate::c_api::{MTS_SUCCESS,MTS_INVALID_PARAMETER_ERROR,MTS_NOT_IMPLEMENTED_ERROR};
+
+    fn log_deprecation() {
+        eprintln!("Warning: This array operation is deprecated and will be removed.");
+    }
+
+    pub(super) unsafe extern "C" fn origin(array: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        *origin = internal.origin_id;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn data(array: *mut c_void, data: *mut *mut f64) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let dl = &(*internal.tensor).dl_tensor;
+        if dl.dtype.code != DLDataTypeCode::kDLFloat || dl.dtype.bits != 64 {
+            return mts_status_t(MTS_INVALID_PARAMETER_ERROR);
+        }
+        *data = (dl.data as *mut u8).add(dl.byte_offset as usize) as *mut f64;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn shape(array: *const c_void, shape: *mut *const usize, count: *mut usize) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let dl = &(*internal.tensor).dl_tensor;
+        *shape = dl.shape as *const usize;
+        *count = dl.ndim as usize;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn destroy(array: *mut c_void) {
+        if array.is_null() { return; }
+        let internal_boxed = Box::from_raw(array as *mut MtsArrayInternal);
+        let tensor_ptr = internal_boxed.tensor;
+        if let Some(deleter) = (*tensor_ptr).deleter {
+            deleter(tensor_ptr);
+        } else {
+            let _ = Box::from_raw(tensor_ptr);
+        }
+    }
+
+    pub(super) unsafe extern "C" fn reshape_unsupported(_: *mut c_void, _: *const usize, _: usize) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn swap_axes_unsupported(_: *mut c_void, _: usize, _: usize) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn create_unsupported(_: *const c_void, _: *const usize, _: usize, _: *mut mts_array_t) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn copy_unsupported(_: *const c_void, _: *mut mts_array_t) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
 }
 
 /// Representation of a single sample moved from an array to another one
@@ -491,98 +578,82 @@ pub(crate) use self::tests::TestArray;
 
 #[cfg(test)]
 mod tests {
-    use crate::c_api::MTS_SUCCESS;
-
+    use crate::c_api::MTS_NOT_IMPLEMENTED_ERROR;
     use super::*;
+    use dlpack::sys as dl;
 
-    pub struct TestArray {
-        shape: Vec<usize>,
+    fn mock_dlpack_tensor(shape: Vec<i64>, data: Vec<f64>) -> DLManagedTensorVersioned {
+        let data_ptr = Box::leak(data.into_boxed_slice()).as_mut_ptr();
+        let ndim = shape.len();
+        let shape_ptr = Box::leak(shape.into_boxed_slice()).as_mut_ptr();
+
+        unsafe extern "C" fn mock_deleter(managed: *mut DLManagedTensorVersioned) {
+            if managed.is_null() { return; }
+            let tensor = &(*managed).dl_tensor;
+
+            let shape_slice = std::slice::from_raw_parts(tensor.shape, tensor.ndim as usize);
+            let data_len = shape_slice.iter().product::<i64>() as usize;
+            let data_ptr = std::ptr::slice_from_raw_parts_mut(tensor.data as *mut f64, data_len);
+            let _ = Box::from_raw(data_ptr);
+
+            let shape_ptr = std::ptr::slice_from_raw_parts_mut(tensor.shape, tensor.ndim as usize);
+            let _ = Box::from_raw(shape_ptr);
+
+            let _ = Box::from_raw(managed);
+        }
+
+        DLManagedTensorVersioned {
+            version: dl::DLPackVersion { major: 1, minor: 0 },
+            manager_ctx: std::ptr::null_mut(),
+            deleter: Some(mock_deleter),
+            flags: 0,
+            dl_tensor: dl::DLTensor {
+                data: data_ptr as *mut c_void,
+                device: dl::DLDevice { device_type: dl::DLDeviceType::kDLCPU, device_id: 0 },
+                ndim: ndim as i32,
+                dtype: dl::DLDataType { code: DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 },
+                shape: shape_ptr,
+                strides: std::ptr::null_mut(),
+                byte_offset: 0,
+            },
+        }
     }
+
+    pub struct TestArray;
 
     impl TestArray {
         #[allow(clippy::new_ret_no_self)]
-        pub fn new(shape: Vec<usize>) -> mts_array_t {
-            let array = Box::new(TestArray {shape});
-
-            return mts_array_t {
-                ptr: Box::into_raw(array).cast(),
-                origin: Some(TestArray::origin),
-                data: None,
-                shape: Some(TestArray::shape),
-                reshape: Some(TestArray::reshape),
-                swap_axes: Some(TestArray::swap_axes),
-                create: None,
-                copy: None,
-                destroy: Some(TestArray::destroy),
-                move_samples_from: None,
-            }
+        pub(crate) fn new(shape: Vec<usize>) -> mts_array_t {
+            let shape_i64 = shape.iter().map(|&s| s as i64).collect();
+            let data = vec![0.0; shape.iter().product()];
+            let dl_tensor = mock_dlpack_tensor(shape_i64, data);
+            mts_array_t::from_dlpack(dl_tensor, "rust.TestArray")
         }
 
-        pub fn new_other_origin(shape: Vec<usize>) -> mts_array_t {
-            let array = Box::new(TestArray {shape});
-
-            return mts_array_t {
-                ptr: Box::into_raw(array).cast(),
-                origin: Some(TestArray::other_origin),
-                data: None,
-                shape: Some(TestArray::shape),
-                reshape: Some(TestArray::reshape),
-                swap_axes: Some(TestArray::swap_axes),
-                create: None,
-                copy: None,
-                destroy: Some(TestArray::destroy),
-                move_samples_from: None,
-            }
+        #[allow(clippy::new_ret_no_self)]
+        pub(crate) fn new_other_origin(shape: Vec<usize>) -> mts_array_t {
+            let shape_i64 = shape.iter().map(|&s| s as i64).collect();
+            let data = vec![0.0; shape.iter().product()];
+            let dl_tensor = mock_dlpack_tensor(shape_i64, data);
+            mts_array_t::from_dlpack(dl_tensor, "rust.TestArrayOtherOrigin")
         }
+    }
 
-        unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArray".into());
+    #[test]
+    fn facade_works() {
+        let shape = vec![2, 3];
+        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let dl = mock_dlpack_tensor(shape.iter().map(|&s| s as i64).collect(), data.clone());
+        let array = mts_array_t::from_dlpack(dl, "rust.TestArray");
 
-            return mts_status_t(MTS_SUCCESS);
-        }
+        let origin_id = array.origin().unwrap();
+        assert_eq!(get_data_origin(origin_id), "rust.TestArray");
+        assert_eq!(array.shape().unwrap(), &[2, 3]);
+        assert_eq!(array.data().unwrap(), &data);
 
-        unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn shape(ptr: *const c_void, shape: *mut *const usize, shape_count: *mut usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            *shape = (*ptr).shape.as_ptr();
-            *shape_count = (*ptr).shape.len();
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn reshape(ptr: *mut c_void, shape_ptr: *const usize, shape_count: usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            let shape = &mut (*ptr).shape;
-            shape.clear();
-
-            for i in 0..shape_count {
-                shape.push(shape_ptr.add(i).read());
-            }
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn swap_axes(ptr: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            let shape = &mut (*ptr).shape;
-            shape.swap(axis_1, axis_2);
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn destroy(ptr: *mut c_void) {
-            let ptr = ptr.cast::<TestArray>();
-            let boxed = Box::from_raw(ptr);
-            std::mem::drop(boxed);
-        }
+        let mut mut_array = array.raw_copy();
+        let err = mut_array.reshape(&[6]).unwrap_err();
+        assert!(matches!(err, Error::External { status, .. } if status.0 == MTS_NOT_IMPLEMENTED_ERROR));
     }
 
     #[test]
