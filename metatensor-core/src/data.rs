@@ -201,7 +201,7 @@ impl mts_array_t {
             copy: Some(shims::copy_unsupported),
             destroy: Some(shims::destroy),
             move_samples_from: None,
-            as_dlpack: None,
+            as_dlpack: Some(shims::as_dlpack),
         }
     }
 }
@@ -248,6 +248,47 @@ mod shims {
         } else {
             let _ = Box::from_raw(tensor_ptr);
         }
+    }
+
+    pub(super) unsafe extern "C" fn as_dlpack(
+        array: *const c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+    ) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let original_tensor = &*internal.tensor;
+        let original_dltensor = &original_tensor.dl_tensor;
+
+        let new_dltensor = dlpack::sys::DLTensor {
+            data: original_dltensor.data,
+            device: original_dltensor.device,
+            ndim: original_dltensor.ndim,
+            dtype: original_dltensor.dtype,
+            shape: original_dltensor.shape,
+            strides: original_dltensor.strides,
+            byte_offset: original_dltensor.byte_offset,
+        };
+
+        let new_tensor_struct = DLManagedTensorVersioned {
+            version: original_tensor.version,
+            manager_ctx: original_tensor.manager_ctx,
+            deleter: original_tensor.deleter,
+            flags: original_tensor.flags,
+            dl_tensor: new_dltensor,
+        };
+
+        let view = Box::new(new_tensor_struct);
+        let raw_view = Box::into_raw(view);
+
+        unsafe extern "C" fn view_deleter(managed: *mut DLManagedTensorVersioned) {
+            if !managed.is_null() {
+                let _ = Box::from_raw(managed);
+            }
+        }
+        (*raw_view).deleter = Some(view_deleter);
+        (*raw_view).manager_ctx = std::ptr::null_mut();
+
+        *dl_managed_tensor = raw_view;
+        mts_status_t(MTS_SUCCESS)
     }
 
     pub(super) unsafe extern "C" fn reshape_unsupported(_: *mut c_void, _: *const usize, _: usize) -> mts_status_t {
@@ -706,5 +747,23 @@ mod tests {
             "mts_array_t {{ ptr: {:?}, origin: Some(\"rust.TestArray\"), shape: Some([3, 4, 5]), .. }}",
             data.ptr
         ));
+    }
+
+    #[test]
+    fn as_dlpack_works() {
+        let array = TestArray::new(vec![10, 20]);
+        let dl_managed_tensor = array.as_dlpack().unwrap();
+        assert!(!dl_managed_tensor.is_null());
+
+        unsafe {
+            let tensor = &(*dl_managed_tensor).dl_tensor;
+            assert_eq!(tensor.ndim, 2);
+            let shape = std::slice::from_raw_parts(tensor.shape, tensor.ndim as usize);
+            assert_eq!(shape, &[10, 20]);
+
+            if let Some(deleter) = (*dl_managed_tensor).deleter {
+                deleter(dl_managed_tensor);
+            }
+        }
     }
 }
