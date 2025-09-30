@@ -23,13 +23,11 @@ fn main() {
     config.line_endings = cbindgen::LineEndingStyle::LF;
     config.autogen_warning = Some(generated_comment.into());
     let header = r#"
-    #include <stddef.h>
-    #include <stdbool.h>
-    #include <stdint.h>
-    #include <stdlib.h>
-    #include "dlpack/dlpack.h"
-    typedef struct ManagedTensorVersioned ManagedTensorVersioned;
-    "#;
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "dlpack/dlpack.h""#;
     config.header = Some(header.into());
 
     let result = cbindgen::Builder::new()
