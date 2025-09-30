@@ -131,8 +131,6 @@ target_compile_features(metatensor_torch PUBLIC cxx_std_17)
 target_include_directories(metatensor_torch PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/vendored>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/vendored>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
