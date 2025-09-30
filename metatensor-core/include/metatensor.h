@@ -54,6 +54,8 @@
  */
 #define MTS_INTERNAL_ERROR 255
 
+#define MTS_NOT_IMPLEMENTED_ERROR 5
+
 /**
  * Basic building block for tensor map. A single block contains a n-dimensional
  * `mts_array_t`, and n sets of `mts_labels_t` (one for each dimension).
