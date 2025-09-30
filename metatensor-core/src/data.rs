@@ -522,7 +522,7 @@ impl mts_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
+                status, context: "calling mts_array_t.copy failed".into()
             });
         }
 

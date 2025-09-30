@@ -210,7 +210,7 @@ TEST_CASE("TensorMap") {
         ));
         tensor = TensorMap(Labels({"keys"}, {{0}}), std::move(blocks));
 
-        CHECK_THROWS_WITH(tensor.clone(), "external error: calling mts_array_t.create failed (status -1)");
+        CHECK_THROWS_WITH(tensor.clone(), "external error: calling mts_array_t.copy failed (status -1)");
     }
 
     SECTION("clone metadata") {
