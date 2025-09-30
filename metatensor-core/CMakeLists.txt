@@ -364,15 +364,24 @@ set(METATENSOR_HEADERS
 )
 set(METATENSOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/)
 file(MAKE_DIRECTORY ${METATENSOR_INCLUDE_DIR})
-set(METATENSOR_VENDORED_INCLUDE_DIR_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/vendored)
-set(METATENSOR_VENDORED_INCLUDE_DIR_INSTALL ${CMAKE_INSTALL_INCLUDEDIR}/vendored)
+
+add_library(metatensor_interface INTERFACE)
+target_include_directories(metatensor_interface INTERFACE
+    # Path for the generated C header in the build directory
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    # Path for the vendored headers in the source directory
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/vendored>
+    # Paths for the installed headers
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/vendored>
+)
 
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+target_link_libraries(metatensor::shared INTERFACE metatensor_interface)
 
 if (WIN32)
     set_target_properties(metatensor::shared PROPERTIES
@@ -382,12 +391,11 @@ endif()
 
 set_target_properties(metatensor::static PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::static INTERFACE cxx_std_11)
-
+target_link_libraries(metatensor::static INTERFACE metatensor_interface)
 
 if (BUILD_SHARED_LIBS)
     add_library(metatensor ALIAS metatensor::shared)
@@ -411,6 +419,8 @@ write_basic_package_version_file(
 )
 
 install(FILES ${METATENSOR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+set(METATENSOR_VENDORED_INCLUDE_DIR_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/vendored)
 install(
     DIRECTORY ${METATENSOR_VENDORED_INCLUDE_DIR_SRC}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vendored
