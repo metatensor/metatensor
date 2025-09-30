@@ -24,10 +24,9 @@ fn main() {
     config.autogen_warning = Some(generated_comment.into());
     let header = r#"
 #include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include "dlpack/dlpack.h""#;
+#include "dlpack/dlpack.h"
+    typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+"#;
     config.header = Some(header.into());
 
     let result = cbindgen::Builder::new()

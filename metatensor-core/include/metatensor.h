@@ -1,9 +1,8 @@
 
 #include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include "dlpack/dlpack.h"
+    typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+
 
 #ifndef METATENSOR_H
 #define METATENSOR_H
@@ -233,6 +232,15 @@ typedef struct mts_array_t {
                                     uintptr_t samples_count,
                                     uintptr_t property_start,
                                     uintptr_t property_end);
+  /**
+   * Get a DLPack view of the underlying data.
+   *
+   * The returned `DLManagedTensorVersioned` is owned by the caller, who is
+   * responsible for calling its `deleter` function when the tensor is no
+   * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+   * exceed the lifetime of the `mts_array_t` it was created from.
+   */
+  mts_status_t (*as_dlpack)(const void *array, DLManagedTensorVersioned **dl_managed_tensor);
 } mts_array_t;
 
 /**

@@ -164,9 +164,20 @@ pub struct mts_array_t {
         property_start: usize,
         property_end: usize,
     ) -> mts_status_t>,
+
+    /// Get a DLPack view of the underlying data.
+    ///
+    /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
+    /// responsible for calling its `deleter` function when the tensor is no
+    /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+    /// exceed the lifetime of the `mts_array_t` it was created from.
+    as_dlpack: Option<unsafe extern "C" fn(
+        array: *const c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+    ) -> mts_status_t>,
 }
 
-// DLPack internal form
+// DLPack data-transfer only form
 struct MtsArrayInternal {
     tensor: *mut DLManagedTensorVersioned,
     origin_id: mts_data_origin_t,
@@ -190,6 +201,7 @@ impl mts_array_t {
             copy: Some(shims::copy_unsupported),
             destroy: Some(shims::destroy),
             move_samples_from: None,
+            as_dlpack: None,
         }
     }
 }
@@ -305,6 +317,7 @@ impl mts_array_t {
             // do not copy destroy, the user should never call it
             destroy: None,
             move_samples_from: self.move_samples_from,
+            as_dlpack: self.as_dlpack,
         }
     }
 
@@ -321,6 +334,7 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            as_dlpack: None,
         }
     }
 
@@ -566,6 +580,28 @@ impl mts_array_t {
         }
 
         return Ok(());
+    }
+
+    /// Get a DLPack view of this array.
+    ///
+    /// The returned pointer is valid until its `deleter` function is called.
+    /// The lifetime of the `DLManagedTensorVersioned` must not exceed the
+    /// lifetime of the `mts_array_t` it was created from.
+    pub fn as_dlpack(&self) -> Result<*mut DLManagedTensorVersioned, Error> {
+        let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
+
+        let mut dl_managed_tensor = std::ptr::null_mut();
+        let status = unsafe {
+            function(self.ptr, &mut dl_managed_tensor)
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.as_dlpack failed".into()
+            });
+        }
+
+        Ok(dl_managed_tensor)
     }
 }
 
