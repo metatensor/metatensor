@@ -77,6 +77,7 @@ mts_array_t._fields_ = [
     ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
     ("move_samples_from", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_sample_mapping_t), c_uintptr_t, c_uintptr_t, c_uintptr_t)),
+    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_DLManagedTensorVersioned)))),
 ]
 
 

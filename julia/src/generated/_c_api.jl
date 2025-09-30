@@ -67,6 +67,7 @@ struct mts_array_t
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
     destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     move_samples_from :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_sample_mapping_t}, UIntptr, UIntptr, UIntptr) -> mts_status_t =#
+    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{CDLManagedTensorVersioned}}) -> mts_status_t =#
 end
 
 
