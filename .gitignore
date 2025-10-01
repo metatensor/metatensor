@@ -12,3 +12,4 @@ build/
 htmlcov/
 .coverage*
 coverage.xml
+metatensor-core/include/cxx/metatensor.h
