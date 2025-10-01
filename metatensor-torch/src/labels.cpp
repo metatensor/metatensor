@@ -464,21 +464,21 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     }
 }
 
-torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
+std::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     const auto& labels = this->as_metatensor();
 
     int64_t position = -1;
     if (entry.isCustomClass()) {
         const auto& labels_entry = entry.toCustomClass<LabelsEntryHolder>();
         auto values = labels_entry->values().to(torch::kCPU).contiguous();
-        position = labels.position(
+        return labels.position(
             static_cast<const int32_t*>(values.data_ptr()),
             values.size(0)
         );
     } else if (entry.isTensor()) {
         auto tensor = normalize_int32_tensor(entry.toTensor(), 1, "entry passed to Labels::position");
         tensor = tensor.to(torch::kCPU).contiguous();
-        position = labels.position(
+        return labels.position(
             static_cast<const int32_t*>(tensor.data_ptr()),
             tensor.size(0)
         );
@@ -487,7 +487,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
         for (const auto& value: entry.toIntList()) {
             int32_values.push_back(static_cast<int32_t>(value));
         }
-        position = labels.position(int32_values);
+        return labels.position(int32_values);
     } else if (entry.isList()) {
         auto int32_values = std::vector<int32_t>();
         for (const auto& value: entry.toListRef()) {
@@ -500,7 +500,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
                 );
             }
         }
-        position = labels.position(int32_values);
+        return labels.position(int32_values);
     } else if (entry.isTuple()) {
         auto int32_values = std::vector<int32_t>();
         for (const auto& value: entry.toTupleRef().elements()) {
@@ -513,18 +513,12 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
                 );
             }
         }
-        position = labels.position(int32_values);
+        return labels.position(int32_values);
     } else {
         C10_THROW_ERROR(TypeError,
             "parameter to Labels::positions must be a LabelsEntry, tensor, or list/tuple of integers, "
             "got '" + entry.type()->str() + "' instead"
         );
-    }
-
-    if (position == -1) {
-        return {};
-    } else {
-       return position;
     }
 }
 

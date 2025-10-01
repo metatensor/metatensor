@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 
 #include <torch/script.h>
 
@@ -144,7 +145,7 @@ public:
     ///    - a 1-D torch::Tensor containing integers;
     ///    - a list of integers;
     ///    - a tuple of integers;
-    torch::optional<int64_t> position(torch::IValue entry) const;
+    std::optional<int64_t> position(torch::IValue entry) const;
 
     /// Print the names and values of these Labels to a string, including at
     /// most `max_entries` entries (set this to -1 to print all entries), and
