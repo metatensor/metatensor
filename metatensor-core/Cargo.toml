@@ -26,6 +26,7 @@ is_sorted = "0.1"
 
 # implementation of the MTS serialization format
 byteorder = {version = "1"}
+scopeguard = {version = "1.1"}
 num-traits = {version = "0.2", default-features = false}
 zip = {version = "2", default-features = false, features = ["deflate"]}
 dlpack = { git = "https://github.com/metatensor/dlpack.git", features=["ndarray"] }

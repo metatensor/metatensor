@@ -8,6 +8,7 @@ use zip::{ZipArchive, ZipWriter};
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, PathOrBuffer};
 use super::labels::{load_labels, save_labels};
+use dlpack::sys::DLDataTypeCode;
 
 use crate::{TensorBlock, Labels, Error, mts_array_t};
 
@@ -220,4 +221,147 @@ fn write_data<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<
     }
 
     return Ok(());
+}
+
+fn read_data_dlpack<R: std::io::Read>(
+    mut reader: R,
+    array: &mut mts_array_t
+) -> Result<(), Error> {
+    let header = Header::from_reader(&mut reader)?;
+    if header.fortran_order {
+        return Err(Error::Serialization("data can not be loaded from fortran-order arrays".into()));
+    }
+
+    if array.shape()? != header.shape {
+        return Err(Error::Serialization(format!(
+            "shape mismatch between the array and the file: got [{:?}] expected [{:?}]",
+            array.shape()?, header.shape
+        )));
+    }
+
+    let dl_tensor_ptr = array.as_dlpack()?;
+    let _dl_tensor_deleter = scopeguard::guard(dl_tensor_ptr, |ptr| {
+        if let Some(deleter) = unsafe { (*ptr).deleter } {
+            unsafe { deleter(ptr) };
+        }
+    });
+
+    let tensor = unsafe { &*dl_tensor_ptr };
+    let len: usize = header.shape.iter().product();
+    let npy_dtype = if let DataType::Scalar(s) = &header.type_descriptor {
+        s.clone()
+    } else {
+        return Err(Error::Serialization("compound npy dtypes are not supported".into()));
+    };
+
+    unsafe {
+        let code = tensor.dl_tensor.dtype.code;
+        let bits = tensor.dl_tensor.dtype.bits;
+        let ptr = (tensor.dl_tensor.data as *mut u8).add(tensor.dl_tensor.byte_offset as usize);
+
+        let expected_npy_dtype = dlpack_to_npy_descr(code, bits)?;
+        if !npy_dtype.ends_with(&expected_npy_dtype[1..]) {
+             return Err(Error::Serialization(format!(
+                "dtype mismatch: array requires '{}' but file contains '{}'",
+                expected_npy_dtype, npy_dtype
+            )));
+        }
+
+        let is_little_endian = npy_dtype.starts_with('<');
+
+        match (code, bits) {
+            (DLDataTypeCode::kDLFloat, 64) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut f64, len);
+                if is_little_endian {
+                    reader.read_f64_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_f64_into::<BigEndian>(slice)?;
+                }
+            },
+            (DLDataTypeCode::kDLFloat, 32) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut f32, len);
+                if is_little_endian {
+                    reader.read_f32_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_f32_into::<BigEndian>(slice)?;
+                }
+            },
+            (DLDataTypeCode::kDLInt, 32) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut i32, len);
+                if is_little_endian {
+                    reader.read_i32_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_i32_into::<BigEndian>(slice)?;
+                }
+            },
+            _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for reading: code {:?}, bits {:?}", code, bits))),
+        }
+    }
+
+    check_for_extra_bytes(&mut reader)?;
+    Ok(())
+}
+
+
+fn write_data_dlpack<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<(), Error> {
+    let dl_tensor_ptr = array.as_dlpack()?;
+    let _dl_tensor_deleter = scopeguard::guard(dl_tensor_ptr, |ptr| {
+        if let Some(deleter) = unsafe { (*ptr).deleter } {
+            unsafe { deleter(ptr) };
+        }
+    });
+
+    let tensor = unsafe { &*dl_tensor_ptr };
+    let (code, bits) = (tensor.dl_tensor.dtype.code, tensor.dl_tensor.dtype.bits);
+
+    let type_descriptor = dlpack_to_npy_descr(code, bits)?;
+
+    let header = Header {
+        type_descriptor: DataType::Scalar(type_descriptor.into()),
+        fortran_order: false,
+        shape: array.shape()?.to_vec(),
+    };
+    header.write(&mut *writer)?;
+
+    unsafe {
+        let len: usize = array.shape()?.iter().product();
+        let ptr = (tensor.dl_tensor.data as *const u8).add(tensor.dl_tensor.byte_offset as usize);
+
+        match (code, bits) {
+            (DLDataTypeCode::kDLFloat, 64) => {
+                let slice = std::slice::from_raw_parts(ptr as *const f64, len);
+                for &value in slice { writer.write_f64::<NativeEndian>(value)?; }
+            },
+            (DLDataTypeCode::kDLFloat, 32) => {
+                let slice = std::slice::from_raw_parts(ptr as *const f32, len);
+                for &value in slice { writer.write_f32::<NativeEndian>(value)?; }
+            },
+            (DLDataTypeCode::kDLInt, 32) => {
+                let slice = std::slice::from_raw_parts(ptr as *const i32, len);
+                for &value in slice { writer.write_i32::<NativeEndian>(value)?; }
+            },
+             _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for writing: code {:?}, bits {:?}", code, bits))),
+        }
+    }
+    Ok(())
+}
+
+fn dlpack_to_npy_descr(code: DLDataTypeCode, bits: u8) -> Result<String, Error> {
+    let endian = if cfg!(target_endian = "little") { "<" } else { ">" };
+    
+    let (type_char, type_size) = match (code, bits) {
+        (DLDataTypeCode::kDLInt, 8) => ("i", 1),
+        (DLDataTypeCode::kDLInt, 16) => ("i", 2),
+        (DLDataTypeCode::kDLInt, 32) => ("i", 4),
+        (DLDataTypeCode::kDLInt, 64) => ("i", 8),
+        (DLDataTypeCode::kDLUInt, 8) => ("u", 1),
+        (DLDataTypeCode::kDLUInt, 16) => ("u", 2),
+        (DLDataTypeCode::kDLUInt, 32) => ("u", 4),
+        (DLDataTypeCode::kDLUInt, 64) => ("u", 8),
+        (DLDataTypeCode::kDLFloat, 32) => ("f", 4),
+        (DLDataTypeCode::kDLFloat, 64) => ("f", 8),
+        _ => return Err(Error::Serialization(format!("unsupported DLPack dtype: code {:?}, bits {:?}", code, bits))),
+    };
+
+    Ok(format!("{}{}{}", endian, type_char, type_size))
 }
