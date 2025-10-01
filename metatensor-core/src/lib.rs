@@ -24,6 +24,9 @@ use self::blocks::TensorBlock;
 mod tensor;
 use self::tensor::TensorMap;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
 #[doc(hidden)]
 mod c_api;
 use c_api::mts_status_t;
@@ -41,6 +44,8 @@ pub enum Error {
     Io(std::io::Error),
     /// Serialization format error when loading/writing `TensorMap` to a file
     Serialization(String),
+    /// Operation not implemented
+    NotImplemented(String),
     /// External error, coming from a function used as a callback in `mts_array_t`
     External {
         status: mts_status_t,
@@ -56,6 +61,7 @@ impl std::fmt::Display for Error {
             Error::InvalidParameter(e) => write!(f, "invalid parameter: {}", e),
             Error::Io(e) => write!(f, "io error: {}", e),
             Error::Serialization(e) => write!(f, "serialization format error: {}", e),
+            Error::NotImplemented(e) => write!(f, "not implemented: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
             Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
             Error::Internal(e) => write!(f, "internal metatensor error (this is likely a bug, please report it): {}", e),
@@ -68,6 +74,7 @@ impl std::error::Error for Error {
         match self {
             Error::InvalidParameter(_) |
             Error::Serialization(_) |
+            Error::NotImplemented(_) |
             Error::Internal(_) |
             Error::BufferSize(_) |
             Error::External {..} => None,

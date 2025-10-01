@@ -132,7 +132,7 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        CHECK_THROWS_WITH(block.clone(), "external error: calling mts_array_t.create failed (status -1)");
+        CHECK_THROWS_WITH(block.clone(), "external error: calling mts_array_t.copy failed (status -1)");
     }
 
 

@@ -22,6 +22,12 @@ fn main() {
     config.documentation_style = cbindgen::DocumentationStyle::Doxy;
     config.line_endings = cbindgen::LineEndingStyle::LF;
     config.autogen_warning = Some(generated_comment.into());
+    let header = r#"
+#include <stddef.h>
+#include "dlpack/dlpack.h"
+    typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+"#;
+    config.header = Some(header.into());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)

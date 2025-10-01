@@ -369,7 +369,7 @@ impl TensorBlock {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::TestArray;
+    use crate::test_utils::TestArray;
 
     use super::*;
 
@@ -381,11 +381,11 @@ mod tests {
     fn no_components() {
         let samples = example_labels("samples", 4);
         let properties = example_labels("properties", 7);
-        let values = TestArray::new(vec![4, 7]);
+        let values = TestArray::new::<f64>(vec![4, 7]);
         let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert!(result.is_ok());
 
-        let values = TestArray::new(vec![3, 7]);
+        let values = TestArray::new::<f64>(vec![3, 7]);
         let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -393,7 +393,7 @@ mod tests {
             along axis 0 is 3 but we have 4 sample label entries"
         );
 
-        let values = TestArray::new(vec![4, 9]);
+        let values = TestArray::new::<f64>(vec![4, 9]);
         let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -401,7 +401,7 @@ mod tests {
             along axis 1 is 9 but we have 7 property label entries"
         );
 
-        let values = TestArray::new(vec![4, 1, 7]);
+        let values = TestArray::new::<f64>(vec![4, 1, 7]);
         let result = TensorBlock::new(values, samples, Vec::new(), properties);
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -418,17 +418,17 @@ mod tests {
 
         let samples = example_labels("samples", 3);
         let properties = example_labels("properties", 2);
-        let values = TestArray::new(vec![3, 4, 2]);
+        let values = TestArray::new::<f64>(vec![3, 4, 2]);
         let components = vec![Arc::clone(&component_1)];
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
-        let values = TestArray::new(vec![3, 4, 3, 2]);
+        let values = TestArray::new::<f64>(vec![3, 4, 3, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert!(result.is_ok());
 
-        let values = TestArray::new(vec![3, 4, 2]);
+        let values = TestArray::new::<f64>(vec![3, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
@@ -438,7 +438,7 @@ mod tests {
             components and 1 for properties)"
         );
 
-        let values = TestArray::new(vec![3, 4, 4, 2]);
+        let values = TestArray::new::<f64>(vec![3, 4, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_2)];
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
@@ -447,7 +447,7 @@ mod tests {
             along axis 2 is 4 but we have 3 entries for the corresponding component"
         );
 
-        let values = TestArray::new(vec![3, 4, 4, 2]);
+        let values = TestArray::new::<f64>(vec![3, 4, 4, 2]);
         let components = vec![Arc::clone(&component_1), Arc::clone(&component_1)];
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
@@ -456,7 +456,7 @@ mod tests {
             component names appear more than once in component labels"
         );
 
-        let values = TestArray::new(vec![3, 1, 2]);
+        let values = TestArray::new::<f64>(vec![3, 1, 2]);
         let component = Arc::new(Labels::new_i32(
             &["component_1", "component_2"],
             vec![0, 1],
@@ -469,7 +469,7 @@ mod tests {
             got 2: [component_1, component_2] for component 0"
         );
 
-        let values = TestArray::new(vec![3, 0, 2]);
+        let values = TestArray::new::<f64>(vec![3, 0, 2]);
         let component = Arc::new(Labels::new_i32(
             &["component"],
             vec![],
@@ -489,7 +489,7 @@ mod tests {
         fn values_without_components() {
             let samples = example_labels("samples", 4);
             let properties = example_labels("properties", 7);
-            let values = TestArray::new(vec![4, 7]);
+            let values = TestArray::new::<f64>(vec![4, 7]);
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
@@ -499,7 +499,7 @@ mod tests {
             ).expect("invalid labels"));
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 gradient_samples,
                 vec![],
                 properties.clone(),
@@ -507,7 +507,7 @@ mod tests {
             block.add_gradient("foo", gradient).unwrap();
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 5, 7]),
+                TestArray::new::<f64>(vec![3, 5, 7]),
                 example_labels("sample", 3),
                 vec![example_labels("component", 5)],
                 properties,
@@ -537,12 +537,12 @@ mod tests {
         fn errors() {
             let samples = example_labels("samples", 4);
             let properties = example_labels("properties", 7);
-            let values = TestArray::new(vec![4, 7]);
+            let values = TestArray::new::<f64>(vec![4, 7]);
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 example_labels("sample", 3),
                 vec![],
                 properties.clone(),
@@ -550,7 +550,7 @@ mod tests {
             block.add_gradient("gradient", gradient).unwrap();
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 example_labels("sample", 3),
                 vec![],
                 properties.clone(),
@@ -573,7 +573,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![0, 7]),
+                TestArray::new::<f64>(vec![0, 7]),
                 Arc::new(Labels::new(&[], vec![]).unwrap()),
                 vec![],
                 properties.clone(),
@@ -584,7 +584,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 example_labels("invalid", 3),
                 vec![],
                 properties.clone(),
@@ -595,7 +595,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 Arc::new(Labels::new_i32(&["sample"], vec![2, 1, -1]).unwrap()),
                 vec![],
                 properties.clone(),
@@ -606,7 +606,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 Arc::new(Labels::new_i32(&["sample"], vec![2, 1, 6]).unwrap()),
                 vec![],
                 properties.clone(),
@@ -617,7 +617,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 example_labels("sample", 3),
                 vec![],
                 example_labels("invalid", 7),
@@ -631,14 +631,14 @@ mod tests {
             let component = example_labels("component", 5);
             let properties = example_labels("properties", 7);
             let mut block = TensorBlock::new(
-                TestArray::new(vec![4, 5, 7]),
+                TestArray::new::<f64>(vec![4, 5, 7]),
                 example_labels("samples", 4),
                 vec![component.clone()],
                 properties.clone(),
             ).unwrap();
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 5, 5, 7]),
+                TestArray::new::<f64>(vec![3, 5, 5, 7]),
                 example_labels("sample", 3),
                 vec![component.clone(), example_labels("invalid", 5)],
                 properties.clone(),
@@ -652,7 +652,7 @@ mod tests {
             );
 
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 7]),
+                TestArray::new::<f64>(vec![3, 7]),
                 example_labels("sample", 3),
                 vec![],
                 properties.clone(),
@@ -668,7 +668,7 @@ mod tests {
             let component = example_labels("component", 5);
             let properties = example_labels("properties", 7);
             let mut block = TensorBlock::new(
-                TestArray::new(vec![4, 5, 7]),
+                TestArray::new::<f64>(vec![4, 5, 7]),
                 example_labels("samples", 4),
                 vec![component.clone()],
                 properties.clone(),
@@ -677,7 +677,7 @@ mod tests {
 
             let gradient_samples = example_labels("sample", 3);
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 5, 7]),
+                TestArray::new::<f64>(vec![3, 5, 7]),
                 gradient_samples.clone(),
                 vec![component.clone()],
                 properties.clone(),
@@ -687,7 +687,7 @@ mod tests {
 
             let component_2 = example_labels("component_2", 3);
             let gradient = TensorBlock::new(
-                TestArray::new(vec![3, 3, 5, 7]),
+                TestArray::new::<f64>(vec![3, 3, 5, 7]),
                 gradient_samples,
                 vec![component_2, component],
                 properties,

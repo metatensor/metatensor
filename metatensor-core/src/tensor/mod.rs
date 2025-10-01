@@ -275,7 +275,7 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::TestArray;
+    use crate::test_utils::TestArray;
 
     use super::*;
     use super::utils::example_labels;
@@ -284,14 +284,14 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
-            TestArray::new(vec![1, 1, 1]),
+            TestArray::new::<f64>(vec![1, 1, 1]),
             example_labels(&["samples"], &[0]),
             vec![example_labels(&["components"], &[0])],
             example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            TestArray::new(vec![2, 3, 1]),
+            TestArray::new::<f64>(vec![2, 3, 1]),
             example_labels(&["samples"], &[0, 1]),
             vec![example_labels(&["components"], &[0, 1, 2])],
             example_labels(&["properties"], &[0]),
@@ -305,14 +305,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            TestArray::new(vec![1, 1]),
+            TestArray::new::<f64>(vec![1, 1]),
             example_labels(&["samples"], &[0]),
             vec![],
             example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            TestArray::new(vec![2, 1]),
+            TestArray::new::<f64>(vec![2, 1]),
             example_labels(&["something_else"], &[0, 1]),
             vec![],
             example_labels(&["properties"], &[0]),
@@ -330,14 +330,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            TestArray::new(vec![1, 1, 1]),
+            TestArray::new::<f64>(vec![1, 1, 1]),
             example_labels(&["samples"], &[0]),
             vec![example_labels(&["components"], &[0])],
             example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            TestArray::new(vec![2, 1]),
+            TestArray::new::<f64>(vec![2, 1]),
             example_labels(&["samples"], &[0, 1]),
             vec![],
             example_labels(&["properties"], &[0]),
@@ -356,14 +356,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            TestArray::new(vec![1, 1, 1]),
+            TestArray::new::<f64>(vec![1, 1, 1]),
             example_labels(&["samples"], &[0]),
             vec![example_labels(&["components"], &[0])],
             example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            TestArray::new(vec![2, 3, 1]),
+            TestArray::new::<f64>(vec![2, 3, 1]),
             example_labels(&["samples"], &[0, 1]),
             vec![example_labels(&["something_else"], &[0, 1, 2])],
             example_labels(&["properties"], &[0]),
@@ -381,14 +381,14 @@ mod tests {
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
-            TestArray::new(vec![1, 1]),
+            TestArray::new::<f64>(vec![1, 1]),
             example_labels(&["samples"], &[0]),
             vec![],
             example_labels(&["properties"], &[0]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            TestArray::new(vec![2, 1]),
+            TestArray::new::<f64>(vec![2, 1]),
             example_labels(&["samples"], &[0, 1]),
             vec![],
             example_labels(&["something_else"], &[0]),
@@ -412,7 +412,7 @@ mod tests {
         let mut blocks = Vec::new();
         for _ in 0..6 {
             blocks.push(TensorBlock::new(
-                TestArray::new(vec![1, 1]),
+                TestArray::new::<f64>(vec![1, 1]),
                 example_labels(&["samples"], &[0]),
                 vec![],
                 example_labels(&["properties"], &[0]),

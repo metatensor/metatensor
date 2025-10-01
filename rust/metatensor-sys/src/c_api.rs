@@ -24,6 +24,329 @@ pub const MTS_IO_ERROR: i32 = 2;
 pub const MTS_SERIALIZATION_ERROR: i32 = 3;
 pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 pub const MTS_INTERNAL_ERROR: i32 = 255;
+pub const MTS_NOT_IMPLEMENTED_ERROR: i32 = 5;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct DLPackVersion {
+    pub major: u32,
+    pub minor: u32,
+}
+#[test]
+fn bindgen_test_layout_DLPackVersion() {
+    const UNINIT: ::std::mem::MaybeUninit<DLPackVersion> = ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<DLPackVersion>(),
+        8usize,
+        concat!("Size of: ", stringify!(DLPackVersion))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<DLPackVersion>(),
+        4usize,
+        concat!("Alignment of ", stringify!(DLPackVersion))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).major) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLPackVersion),
+            "::",
+            stringify!(major)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).minor) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLPackVersion),
+            "::",
+            stringify!(minor)
+        )
+    );
+}
+pub const DLDeviceType_kDLCPU: DLDeviceType = 1;
+pub const DLDeviceType_kDLCUDA: DLDeviceType = 2;
+pub const DLDeviceType_kDLCUDAHost: DLDeviceType = 3;
+pub const DLDeviceType_kDLOpenCL: DLDeviceType = 4;
+pub const DLDeviceType_kDLVulkan: DLDeviceType = 7;
+pub const DLDeviceType_kDLMetal: DLDeviceType = 8;
+pub const DLDeviceType_kDLVPI: DLDeviceType = 9;
+pub const DLDeviceType_kDLROCM: DLDeviceType = 10;
+pub const DLDeviceType_kDLROCMHost: DLDeviceType = 11;
+pub const DLDeviceType_kDLExtDev: DLDeviceType = 12;
+pub const DLDeviceType_kDLCUDAManaged: DLDeviceType = 13;
+pub const DLDeviceType_kDLOneAPI: DLDeviceType = 14;
+pub const DLDeviceType_kDLWebGPU: DLDeviceType = 15;
+pub const DLDeviceType_kDLHexagon: DLDeviceType = 16;
+pub const DLDeviceType_kDLMAIA: DLDeviceType = 17;
+pub const DLDeviceType_kDLTrn: DLDeviceType = 18;
+pub type DLDeviceType = ::std::os::raw::c_uint;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct DLDevice {
+    pub device_type: DLDeviceType,
+    pub device_id: i32,
+}
+#[test]
+fn bindgen_test_layout_DLDevice() {
+    const UNINIT: ::std::mem::MaybeUninit<DLDevice> = ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<DLDevice>(),
+        8usize,
+        concat!("Size of: ", stringify!(DLDevice))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<DLDevice>(),
+        4usize,
+        concat!("Alignment of ", stringify!(DLDevice))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).device_type) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLDevice),
+            "::",
+            stringify!(device_type)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).device_id) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLDevice),
+            "::",
+            stringify!(device_id)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct DLDataType {
+    pub code: u8,
+    pub bits: u8,
+    pub lanes: u16,
+}
+#[test]
+fn bindgen_test_layout_DLDataType() {
+    const UNINIT: ::std::mem::MaybeUninit<DLDataType> = ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<DLDataType>(),
+        4usize,
+        concat!("Size of: ", stringify!(DLDataType))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<DLDataType>(),
+        2usize,
+        concat!("Alignment of ", stringify!(DLDataType))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).code) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLDataType),
+            "::",
+            stringify!(code)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).bits) as usize - ptr as usize },
+        1usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLDataType),
+            "::",
+            stringify!(bits)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).lanes) as usize - ptr as usize },
+        2usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLDataType),
+            "::",
+            stringify!(lanes)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct DLTensor {
+    pub data: *mut ::std::os::raw::c_void,
+    pub device: DLDevice,
+    pub ndim: i32,
+    pub dtype: DLDataType,
+    pub shape: *mut i64,
+    pub strides: *mut i64,
+    pub byte_offset: u64,
+}
+#[test]
+fn bindgen_test_layout_DLTensor() {
+    const UNINIT: ::std::mem::MaybeUninit<DLTensor> = ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<DLTensor>(),
+        48usize,
+        concat!("Size of: ", stringify!(DLTensor))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<DLTensor>(),
+        8usize,
+        concat!("Alignment of ", stringify!(DLTensor))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).data) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(data)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).device) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(device)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).ndim) as usize - ptr as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(ndim)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).dtype) as usize - ptr as usize },
+        20usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(dtype)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(shape)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).strides) as usize - ptr as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(strides)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).byte_offset) as usize - ptr as usize },
+        40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLTensor),
+            "::",
+            stringify!(byte_offset)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct DLManagedTensorVersioned {
+    pub version: DLPackVersion,
+    pub manager_ctx: *mut ::std::os::raw::c_void,
+    pub deleter: ::std::option::Option<unsafe extern "C" fn(self_: *mut DLManagedTensorVersioned)>,
+    pub flags: u64,
+    pub dl_tensor: DLTensor,
+}
+#[test]
+fn bindgen_test_layout_DLManagedTensorVersioned() {
+    const UNINIT: ::std::mem::MaybeUninit<DLManagedTensorVersioned> =
+        ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<DLManagedTensorVersioned>(),
+        80usize,
+        concat!("Size of: ", stringify!(DLManagedTensorVersioned))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<DLManagedTensorVersioned>(),
+        8usize,
+        concat!("Alignment of ", stringify!(DLManagedTensorVersioned))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).version) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLManagedTensorVersioned),
+            "::",
+            stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).manager_ctx) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLManagedTensorVersioned),
+            "::",
+            stringify!(manager_ctx)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).deleter) as usize - ptr as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLManagedTensorVersioned),
+            "::",
+            stringify!(deleter)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLManagedTensorVersioned),
+            "::",
+            stringify!(flags)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).dl_tensor) as usize - ptr as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(DLManagedTensorVersioned),
+            "::",
+            stringify!(dl_tensor)
+        )
+    );
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_block_t {
@@ -213,6 +536,12 @@ pub struct mts_array_t {
             property_end: usize,
         ) -> mts_status_t,
     >,
+    pub as_dlpack: ::std::option::Option<
+        unsafe extern "C" fn(
+            array: *const ::std::os::raw::c_void,
+            dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+        ) -> mts_status_t,
+    >,
 }
 #[test]
 fn bindgen_test_layout_mts_array_t() {
@@ -220,7 +549,7 @@ fn bindgen_test_layout_mts_array_t() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<mts_array_t>(),
-        80usize,
+        88usize,
         concat!("Size of: ", stringify!(mts_array_t))
     );
     assert_eq!(
@@ -326,6 +655,16 @@ fn bindgen_test_layout_mts_array_t() {
             stringify!(mts_array_t),
             "::",
             stringify!(move_samples_from)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).as_dlpack) as usize - ptr as usize },
+        80usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(mts_array_t),
+            "::",
+            stringify!(as_dlpack)
         )
     );
 }
