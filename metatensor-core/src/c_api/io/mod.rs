@@ -18,7 +18,7 @@ mod tensor;
 /// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
 /// the data pointer and write to it.
 #[allow(non_camel_case_types)]
-type mts_create_array_callback_t = unsafe extern "C" fn(
+pub type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,
     shape_count: usize,
     array: *mut mts_array_t,

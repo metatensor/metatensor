@@ -17,6 +17,7 @@ mod data;
 mod blocks;
 mod tensor;
 mod io;
+pub use self::io::mts_create_array_callback_t;
 
 mod utils;
 

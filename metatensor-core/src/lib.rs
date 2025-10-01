@@ -24,6 +24,9 @@ use self::blocks::TensorBlock;
 mod tensor;
 use self::tensor::TensorMap;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
 #[doc(hidden)]
 mod c_api;
 use c_api::mts_status_t;

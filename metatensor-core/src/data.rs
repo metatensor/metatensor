@@ -647,82 +647,23 @@ impl mts_array_t {
 }
 
 #[cfg(test)]
-pub(crate) use self::tests::TestArray;
-
-#[cfg(test)]
 mod tests {
     use crate::c_api::MTS_NOT_IMPLEMENTED_ERROR;
+    use crate::test_utils::TestArray;
     use super::*;
     use dlpack::sys as dl;
-
-    fn mock_dlpack_tensor(shape: Vec<i64>, data: Vec<f64>) -> DLManagedTensorVersioned {
-        let data_ptr = Box::leak(data.into_boxed_slice()).as_mut_ptr();
-        let ndim = shape.len();
-        let shape_ptr = Box::leak(shape.into_boxed_slice()).as_mut_ptr();
-
-        unsafe extern "C" fn mock_deleter(managed: *mut DLManagedTensorVersioned) {
-            if managed.is_null() { return; }
-            let tensor = &(*managed).dl_tensor;
-
-            let shape_slice = std::slice::from_raw_parts(tensor.shape, tensor.ndim as usize);
-            let data_len = shape_slice.iter().product::<i64>() as usize;
-            let data_ptr = std::ptr::slice_from_raw_parts_mut(tensor.data as *mut f64, data_len);
-            let _ = Box::from_raw(data_ptr);
-
-            let shape_ptr = std::ptr::slice_from_raw_parts_mut(tensor.shape, tensor.ndim as usize);
-            let _ = Box::from_raw(shape_ptr);
-
-            let _ = Box::from_raw(managed);
-        }
-
-        DLManagedTensorVersioned {
-            version: dl::DLPackVersion { major: 1, minor: 0 },
-            manager_ctx: std::ptr::null_mut(),
-            deleter: Some(mock_deleter),
-            flags: 0,
-            dl_tensor: dl::DLTensor {
-                data: data_ptr as *mut c_void,
-                device: dl::DLDevice { device_type: dl::DLDeviceType::kDLCPU, device_id: 0 },
-                ndim: ndim as i32,
-                dtype: dl::DLDataType { code: DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 },
-                shape: shape_ptr,
-                strides: std::ptr::null_mut(),
-                byte_offset: 0,
-            },
-        }
-    }
-
-    pub struct TestArray;
-
-    impl TestArray {
-        #[allow(clippy::new_ret_no_self)]
-        pub(crate) fn new(shape: Vec<usize>) -> mts_array_t {
-            let shape_i64 = shape.iter().map(|&s| s as i64).collect();
-            let data = vec![0.0; shape.iter().product()];
-            let dl_tensor = mock_dlpack_tensor(shape_i64, data);
-            mts_array_t::from_dlpack(dl_tensor, "rust.TestArray")
-        }
-
-        #[allow(clippy::new_ret_no_self)]
-        pub(crate) fn new_other_origin(shape: Vec<usize>) -> mts_array_t {
-            let shape_i64 = shape.iter().map(|&s| s as i64).collect();
-            let data = vec![0.0; shape.iter().product()];
-            let dl_tensor = mock_dlpack_tensor(shape_i64, data);
-            mts_array_t::from_dlpack(dl_tensor, "rust.TestArrayOtherOrigin")
-        }
-    }
 
     #[test]
     fn facade_works() {
         let shape = vec![2, 3];
-        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let dl = mock_dlpack_tensor(shape.iter().map(|&s| s as i64).collect(), data.clone());
-        let array = mts_array_t::from_dlpack(dl, "rust.TestArray");
+        let array = TestArray::new::<f64>(shape);
 
-        let origin_id = array.origin().unwrap();
-        assert_eq!(get_data_origin(origin_id), "rust.TestArray");
+        assert_eq!(array.origin().unwrap().0, 1);
         assert_eq!(array.shape().unwrap(), &[2, 3]);
-        assert_eq!(array.data().unwrap(), &data);
+
+        // check that the deprecated `.data()` still works for f64
+        let data = array.data().unwrap();
+        assert_eq!(data, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
 
         let mut mut_array = array.raw_copy();
         let err = mut_array.reshape(&[6]).unwrap_err();
@@ -740,7 +681,7 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data: mts_array_t = TestArray::new(vec![3, 4, 5]);
+        let data: mts_array_t = TestArray::new::<f64>(vec![3, 4, 5]);
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
@@ -751,7 +692,7 @@ mod tests {
 
     #[test]
     fn as_dlpack_works() {
-        let array = TestArray::new(vec![10, 20]);
+        let array = TestArray::new::<f64>(vec![10, 20]);
         let dl_managed_tensor = array.as_dlpack().unwrap();
         assert!(!dl_managed_tensor.is_null());
 

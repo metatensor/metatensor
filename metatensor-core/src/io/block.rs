@@ -365,3 +365,51 @@ fn dlpack_to_npy_descr(code: DLDataTypeCode, bits: u8) -> Result<String, Error> 
 
     Ok(format!("{}{}{}", endian, type_char, type_size))
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::TestArray;
+    use std::io::Cursor;
+
+    macro_rules! test_io {
+        ($name:ident, $ty:ty) => {
+            #[test]
+            fn $name() {
+                let shape = vec![2, 3];
+                let (array, initial_data) = TestArray::new_typed::<$ty>(shape.clone(), "rust.TestArray");
+
+                let mut buffer = Vec::new();
+                write_data_dlpack(&mut Cursor::new(&mut buffer), &array).unwrap();
+
+                // create a new empty array and read the data into it
+                let (mut new_array, _) = TestArray::new_typed::<$ty>(shape.clone(), "rust.TestArray");
+                read_data_dlpack(Cursor::new(&buffer), &mut new_array).unwrap();
+
+                unsafe {
+                    let dl1_ptr = array.as_dlpack().unwrap();
+                    let dl2_ptr = new_array.as_dlpack().unwrap();
+
+                    let dl1 = &*dl1_ptr;
+                    let dl2 = &*dl2_ptr;
+
+                    let len = shape.iter().product();
+                    let data1 = std::slice::from_raw_parts(dl1.dl_tensor.data as *const $ty, len);
+                    let data2 = std::slice::from_raw_parts(dl2.dl_tensor.data as *const $ty, len);
+
+                    // round-trip
+                    assert_eq!(data1, &initial_data);
+                    assert_eq!(data2, &initial_data);
+
+                    if let Some(deleter) = dl1.deleter { deleter(dl1_ptr); }
+                    if let Some(deleter) = dl2.deleter { deleter(dl2_ptr); }
+                }
+            }
+        };
+    }
+
+    test_io!(dlpack_io_f64, f64);
+    test_io!(dlpack_io_f32, f32);
+    test_io!(dlpack_io_i32, i32);
+}
