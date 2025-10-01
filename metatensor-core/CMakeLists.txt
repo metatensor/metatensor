@@ -370,7 +370,7 @@ set_target_properties(metatensor::shared PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
-target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
 if (WIN32)
     set_target_properties(metatensor::shared PROPERTIES
@@ -384,7 +384,7 @@ set_target_properties(metatensor::static PROPERTIES
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
-target_compile_features(metatensor::static INTERFACE cxx_std_11)
+target_compile_features(metatensor::static INTERFACE cxx_std_17)
 
 
 if (BUILD_SHARED_LIBS)

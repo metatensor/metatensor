@@ -40,7 +40,7 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+    target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
     if (WIN32)
         if (NOT EXISTS ${METATENSOR_IMPLIB_LOCATION})
@@ -68,7 +68,7 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::static INTERFACE cxx_std_11)
+    target_compile_features(metatensor::static INTERFACE cxx_std_17)
 endif()
 
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
