@@ -40,3 +40,6 @@ mv "$ROOT_DIR/.no_op.rustfmt.toml" "$ROOT_DIR/rustfmt.toml"
 
 # Regenerate Julia bindings to the C API
 ./julia/scripts/generate-declarations.py
+
+# Regenerate single hpp for metatensor-core
+python scripts/generate_header.py metatensor-core/include/cxx/mts_source.hpp metatensor-core/include/metatensor.hpp
