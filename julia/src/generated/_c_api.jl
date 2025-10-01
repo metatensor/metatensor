@@ -18,7 +18,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
-mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}      # TODO: actual type
 
 # ====== Enf of manual definitions ====== #
 
@@ -34,13 +34,61 @@ MTS_NOT_IMPLEMENTED_ERROR = 5
 
 
 # ===== Enum definitions
+const kDLCPU = 1
+const kDLCUDA = 2
+const kDLCUDAHost = 3
+const kDLOpenCL = 4
+const kDLVulkan = 7
+const kDLMetal = 8
+const kDLVPI = 9
+const kDLROCM = 10
+const kDLROCMHost = 11
+const kDLExtDev = 12
+const kDLCUDAManaged = 13
+const kDLOneAPI = 14
+const kDLWebGPU = 15
+const kDLHexagon = 16
+const kDLMAIA = 17
+const kDLTrn = 18
 
 
 # ===== Struct definitions
+struct CDLPackVersion
+    major :: UInt32
+    minor :: UInt32
+end
+
+struct CDLDevice
+    device_type :: UInt32
+    device_id :: Int32
+end
+
+struct CDLDataType
+    code :: UInt8
+    bits :: UInt8
+    lanes :: UInt16
+end
+
+struct CDLTensor
+    data :: Ptr{Cvoid}
+    device :: CDLDevice
+    ndim :: Int32
+    dtype :: CDLDataType
+    shape :: Ptr{Int64}
+    strides :: Ptr{Int64}
+    byte_offset :: UInt64
+end
+
+struct CDLManagedTensorVersioned
+    # opaque struct
+end
+
 struct mts_block_t
+    # opaque struct
 end
 
 struct mts_tensormap_t
+    # opaque struct
 end
 
 struct mts_labels_t
@@ -78,7 +126,6 @@ function mts_disable_panic_printing()
     ccall((:mts_disable_panic_printing, libmetatensor), 
         Cvoid,
         (),
-        
     )
 end
 
@@ -86,7 +133,6 @@ function mts_version()
     ccall((:mts_version, libmetatensor), 
         Ptr{Cchar},
         (),
-        
     )
 end
 
@@ -94,7 +140,6 @@ function mts_last_error()
     ccall((:mts_last_error, libmetatensor), 
         Ptr{Cchar},
         (),
-        
     )
 end
 

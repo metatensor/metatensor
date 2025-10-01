@@ -11,6 +11,18 @@ METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
 
+DLPACK_TYPES = {
+    "DLPackVersion",
+    "DLDevice",
+    "DLDataType",
+    "DLTensor",
+    "DLManagedTensorVersioned",
+}
+
+DLPACK_ENUMS = {
+    "DLDeviceType",
+}
+
 
 class Function:
     def __init__(self, name, restype):
@@ -52,32 +64,59 @@ class AstVisitor(c_ast.NodeVisitor):
         if not node.name or not node.name.startswith("mts_"):
             return
 
+        # only visit function declarations
+        if not isinstance(node.type, c_ast.FuncDecl):
+            return
+
         function = Function(node.name, node.type.type)
-        for parameter in node.type.args.params:
-            function.add_arg(parameter.name, parameter.type)
+        if node.type.args:
+            for parameter in node.type.args.params:
+                # C functions with no arguments have a single `void` parameter
+                if isinstance(parameter.type, c_ast.TypeDecl) and isinstance(
+                    parameter.type.type, c_ast.IdentifierType
+                ):
+                    if parameter.type.type.names[0] == "void":
+                        continue
+                function.add_arg(parameter.name, parameter.type)
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not node.name.startswith("mts_") and node.name != "ManagedTensorVersioned":
+        if (
+            not node.name.startswith("mts_")
+            and node.name not in DLPACK_TYPES
+            and node.name not in DLPACK_ENUMS
+        ):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
-            # Get name and value for enum
             enum = Enum(node.name)
-            for enumerator in node.type.type.values.enumerators:
-                enum.add_value(enumerator.name, enumerator.value.value)
+            if node.type.type.values:
+                for enumerator in node.type.type.values.enumerators:
+                    enum.add_value(enumerator.name, enumerator.value.value)
             self.enums.append(enum)
 
         elif isinstance(node.type.type, c_ast.Struct):
+            # handle `typedef struct { ... } name;`
             struct = Struct(node.name)
             if node.type.type.decls is not None:
-                for _, member in node.type.type.children():
+                for member in node.type.type.decls:
                     struct.add_member(member.name, member.type)
 
             self.structs.append(struct)
 
         else:
             self.types[node.name] = node.type.type
+
+    def visit_Struct(self, node):
+        if node.name in DLPACK_TYPES and node.decls:
+            # check if we already have this struct from a typedef
+            if any(s.name == node.name for s in self.structs):
+                return
+
+            struct = Struct(node.name)
+            for member in node.decls:
+                struct.add_member(member.name, member.type)
+            self.structs.append(struct)
 
 
 def parse(file):
@@ -91,8 +130,13 @@ def parse(file):
         for line in fd:
             if "#define" in line:
                 split = line.split()
+                if len(split) < 3:
+                    continue
+
                 name = split[1]
-                if name == "METATENSOR_H":
+                if name == "METATENSOR_H" or not (
+                    name.startswith("MTS_") or name.startswith("DLPACK_")
+                ):
                     continue
                 value = split[2]
 
@@ -103,6 +147,7 @@ def parse(file):
 CTYPES_TO_JULIA = {
     "uintptr_t": "UIntptr",
     "uint8_t": "UInt8",
+    "uint16_t": "UInt16",
     "int32_t": "Int32",
     "uint32_t": "UInt32",
     "int64_t": "Int64",
@@ -111,9 +156,13 @@ CTYPES_TO_JULIA = {
 
 
 def c_type_name(name):
-    if name.startswith("mts_") or name == "ManagedTensorVersioned":
+    if name in DLPACK_ENUMS:
+        return "UInt32"
+    elif name.startswith("mts_"):
         return name
-    if name in CTYPES_TO_JULIA:
+    elif name in DLPACK_TYPES:
+        return f"C{name}"
+    elif name in CTYPES_TO_JULIA:
         return CTYPES_TO_JULIA[name]
     else:
         return "C" + name
@@ -132,9 +181,11 @@ def _typedecl_name(type):
 
 def funcdecl_to_ctypes(type):
     restype = type_to_julia(type.type)
-    args = [type_to_julia(t.type) for t in type.args.params]
+    args = []
+    if type.args:
+        args = [type_to_julia(t.type) for t in type.args.params]
 
-    return f'Ptr{{Cvoid}} #= ({", ".join(args)}) -> {restype} =#'
+    return f"Ptr{{Cvoid}} #= ({', '.join(args)}) -> {restype} =#"
 
 
 def type_to_julia(type):
@@ -171,21 +222,62 @@ def type_to_julia(type):
         elif isinstance(type, c_ast.FuncDecl):
             return funcdecl_to_ctypes(type)
 
-    raise Exception("Unknown type")
+    raise Exception(f"Unknown type: {type.__class__}")
 
 
 def generate_enums(file, enums):
     for enum in enums:
-        file.write(f"\n\n# enum {enum.name}\nconst {enum.name} = UInt32\n")
-        for name, value in enum.values.items():
-            file.write(f"const {name} = {enum.name}({value})\n")
+        # a bit of a hack to not generate julia enums for C enums
+        if not enum.name.startswith("mts_"):
+            for name, value in enum.values.items():
+                file.write(f"const {name} = {value}\n")
+        else:
+            file.write(f"\n\n# enum {enum.name}\nconst {enum.name} = UInt32\n")
+            for name, value in enum.values.items():
+                file.write(f"const {name} = {enum.name}({value})\n")
 
 
 def generate_structs(file, structs):
-    for struct in structs:
-        file.write(f"struct {struct.name}\n")
-        for name, type in struct.members.items():
-            file.write(f"    {name} :: {type_to_julia(type)}\n")
+    # sort structs to have dependencies defined before users
+    sorted_structs = []
+    names = [s.name for s in structs]
+    while len(sorted_structs) != len(structs):
+        newly_added = 0
+        for struct in structs:
+            if struct in sorted_structs:
+                continue
+
+            can_be_added = True
+            for member in struct.members.values():
+                # find the base type of the member
+                base_type = member
+                while isinstance(base_type, c_ast.PtrDecl):
+                    base_type = base_type.type
+
+                if isinstance(base_type, c_ast.TypeDecl) and isinstance(
+                    base_type.type, c_ast.Struct
+                ):
+                    member_name = base_type.type.name
+                    if member_name in names and member_name != struct.name:
+                        # is the dependency already in sorted_structs?
+                        if not any(s.name == member_name for s in sorted_structs):
+                            can_be_added = False
+                            break
+
+            if can_be_added:
+                sorted_structs.append(struct)
+                newly_added += 1
+
+        if newly_added == 0:
+            raise Exception("cyclic dependency in structs")
+
+    for struct in sorted_structs:
+        file.write(f"struct {c_type_name(struct.name)}\n")
+        if len(struct.members) == 0:
+            file.write("    # opaque struct\n")
+        else:
+            for name, type in struct.members.items():
+                file.write(f"    {name} :: {type_to_julia(type)}\n")
         file.write("end\n\n")
 
 
@@ -210,7 +302,10 @@ def generate_functions(file, functions):
         file.write(f"    ccall((:{function.name}, libmetatensor), \n")
         file.write(f"        {restype},\n")
         file.write(f"        {types_tuple},\n")
-        file.write(f"        {', '.join([a[0] for a in args])}\n    )\n")
+        if len(args) > 0:
+            file.write(f"        {', '.join([a[0] for a in args])}\n    )\n")
+        else:
+            file.write("    )\n")
         file.write("end\n")
 
 
@@ -247,7 +342,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
-mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}      # TODO: actual type
 
 # ====== Enf of manual definitions ====== #
 """
