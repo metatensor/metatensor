@@ -8,9 +8,8 @@ namespace metatensor {
         /// Create a new Error with the given `message`
         Error(const std::string& message): std::runtime_error(message) {}
     };
-} // namespace metatensor
 
-namespace metatensor::details {
+namespace details {
     /// Singleton class storing the last exception throw by a C++ callback.
     ///
     /// When passing callbacks from C++ to Rust, we need to convert exceptions
@@ -46,4 +45,6 @@ namespace metatensor::details {
 
     #include "error_handling.inl"
 
-} // namespace metatensor::details
+} // namespace details
+} // namespace metatensor
+
