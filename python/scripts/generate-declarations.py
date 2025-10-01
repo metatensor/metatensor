@@ -11,6 +11,18 @@ METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
 
+DLPACK_TYPES = {
+    "DLPackVersion",
+    "DLDevice",
+    "DLDataType",
+    "DLTensor",
+    "DLManagedTensorVersioned",
+}
+
+DLPACK_ENUMS = {
+    "DLDeviceType",
+}
+
 
 class Function:
     def __init__(self, name, restype):
@@ -52,33 +64,60 @@ class AstVisitor(c_ast.NodeVisitor):
         if not node.name or not node.name.startswith("mts_"):
             return
 
+        # only visit function declarations
+        if not isinstance(node.type, c_ast.FuncDecl):
+            return
+
         function = Function(node.name, node.type.type)
-        for parameter in node.type.args.params:
-            function.add_arg(parameter.type)
+        if node.type.args:
+            for parameter in node.type.args.params:
+                # C functions with no arguments have a single `void` parameter
+                if isinstance(parameter.type, c_ast.TypeDecl) and isinstance(
+                    parameter.type.type, c_ast.IdentifierType
+                ):
+                    if parameter.type.type.names[0] == "void":
+                        continue
+                function.add_arg(parameter.type)
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not node.name.startswith("mts_") and node.name != "ManagedTensorVersioned":
+        if (
+            not node.name.startswith("mts_")
+            and node.name not in DLPACK_TYPES
+            and node.name not in DLPACK_ENUMS
+        ):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
-            # Get name and value for enum
             enum = Enum(node.name)
-            for enumerator in node.type.type.values.enumerators:
-                enum.add_value(enumerator.name, enumerator.value.value)
+            if node.type.type.values:
+                for enumerator in node.type.type.values.enumerators:
+                    enum.add_value(enumerator.name, enumerator.value.value)
             self.enums.append(enum)
 
         elif isinstance(node.type.type, c_ast.Struct):
+            # handle `typedef struct { ... } name;`
             struct = Struct(node.name)
 
             if node.type.type.decls is not None:
-                for _, member in node.type.type.children():
+                for member in node.type.type.decls:
                     struct.add_member(member.name, member.type)
 
             self.structs.append(struct)
 
         else:
             self.types[node.name] = node.type.type
+
+    def visit_Struct(self, node):
+        if node.name in DLPACK_TYPES and node.decls:
+            # check if this struct has already been covered by a typedef
+            if any(s.name == node.name for s in self.structs):
+                return
+
+            struct = Struct(node.name)
+            for member in node.decls:
+                struct.add_member(member.name, member.type)
+            self.structs.append(struct)
 
 
 def parse(file):
@@ -92,8 +131,13 @@ def parse(file):
         for line in fd:
             if "#define" in line:
                 split = line.split()
+                if len(split) < 3:
+                    continue
+
                 name = split[1]
-                if name == "METATENSOR_H":
+                if name == "METATENSOR_H" or not (
+                    name.startswith("MTS_") or name.startswith("DLPACK_")
+                ):
                     continue
                 value = split[2]
 
@@ -102,7 +146,12 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name.startswith("mts_") or name == "ManagedTensorVersioned":
+    if name in DLPACK_ENUMS:
+        return "ctypes.c_int32"
+    # add a 'c_' prefix to DLPack types, but not to mts_ types
+    elif name in DLPACK_TYPES:
+        return f"c_{name}"
+    elif name.startswith("mts_"):
         return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
@@ -110,6 +159,8 @@ def c_type_name(name):
         return "None"
     elif name == "uint8_t":
         return "ctypes.c_uint8"
+    elif name == "uint16_t":
+        return "ctypes.c_uint16"
     elif name == "int32_t":
         return "ctypes.c_int32"
     elif name == "uint32_t":
@@ -135,7 +186,9 @@ def _typedecl_name(type):
 
 def funcdecl_to_ctypes(type):
     restype = type_to_ctypes(type.type)
-    args = [type_to_ctypes(t.type) for t in type.args.params]
+    args = []
+    if type.args:
+        args = [type_to_ctypes(t.type) for t in type.args.params]
 
     return f"CFUNCTYPE({restype}, {', '.join(args)})"
 
@@ -187,25 +240,63 @@ def type_to_ctypes(type):
         elif isinstance(type, c_ast.FuncDecl):
             return funcdecl_to_ctypes(type)
 
-    raise Exception("Unknown type")
+    raise Exception(f"Unknown type: {type.__class__}")
 
 
 def generate_enums(file, enums):
     for enum in enums:
-        file.write(f"\n\nclass {enum.name}(enum.Enum):\n")
-        for name, value in enum.values.items():
-            file.write(f"    {name} = {value}\n")
+        # a bit of a hack to not generate python enums for C enums
+        if not enum.name.startswith("mts_"):
+            for name, value in enum.values.items():
+                file.write(f"{name} = {value}\n")
+        else:
+            file.write(f"\n\nclass {c_type_name(enum.name)}(enum.Enum):\n")
+            for name, value in enum.values.items():
+                file.write(f"    {name} = {value}\n")
 
 
 def generate_structs(file, structs):
-    for struct in structs:
-        file.write(f"\n\nclass {struct.name}(ctypes.Structure):\n")
+    # sort structs to have dependencies defined before users
+    sorted_structs = []
+    names = [s.name for s in structs]
+    while len(sorted_structs) != len(structs):
+        newly_added = 0
+        for struct in structs:
+            if struct in sorted_structs:
+                continue
+
+            can_be_added = True
+            for member in struct.members.values():
+                # find the base type of the member
+                base_type = member
+                while isinstance(base_type, c_ast.PtrDecl):
+                    base_type = base_type.type
+
+                if isinstance(base_type, c_ast.TypeDecl) and isinstance(
+                    base_type.type, c_ast.Struct
+                ):
+                    member_name = base_type.type.name
+                    if member_name in names and member_name != struct.name:
+                        # is the dependency already in sorted_structs?
+                        if not any(s.name == member_name for s in sorted_structs):
+                            can_be_added = False
+                            break
+
+            if can_be_added:
+                sorted_structs.append(struct)
+                newly_added += 1
+
+        if newly_added == 0:
+            raise Exception("cyclic dependency in structs")
+
+    for struct in sorted_structs:
+        file.write(f"\n\nclass {c_type_name(struct.name)}(ctypes.Structure):\n")
         file.write("    pass\n")
 
         if len(struct.members) == 0:
             continue
 
-        file.write(f"\n{struct.name}._fields_ = [\n")
+        file.write(f"\n{c_type_name(struct.name)}._fields_ = [\n")
         for name, type in struct.members.items():
             file.write(f'    ("{name}", {type_to_ctypes(type)}),\n')
         file.write("]\n")
@@ -219,7 +310,6 @@ def generate_functions(file, functions):
         file.write(f"\n    lib.{function.name}.argtypes = [")
         args = [type_to_ctypes(arg) for arg in function.args]
 
-        # functions taking void parameter in C don't have any parameter
         if args == ["None"]:
             args = []
 
@@ -246,15 +336,15 @@ def generate_declarations():
     )
     with open(outpath, "w") as file:
         file.write(
-            """# fmt: off
+            '''# fmt: off
 # flake8: noqa
-\"\"\"
+"""
 This file declares the C-API corresponding to metatensor.h, in a way compatible
 with the ctypes Python module.
 
 This file is automatically generated by `python/scripts/generate-declarations.py`,
 do not edit it manually!
-\"\"\"
+"""
 
 import ctypes
 import enum
@@ -268,7 +358,7 @@ if arch == "32bit":
 elif arch == "64bit":
     c_uintptr_t = ctypes.c_uint64
 
-"""
+'''
         )
         for name, value in data.defines.items():
             file.write(f"{name} = {value}\n")
@@ -276,16 +366,15 @@ elif arch == "64bit":
 
         for name, c_type in data.types.items():
             if name == "mts_create_array_callback_t":
-                # will be generated below, it depends on the structs
                 continue
-            file.write(f"{name} = {type_to_ctypes(c_type)}\n")
+            file.write(f"{c_type_name(name)} = {type_to_ctypes(c_type)}\n")
 
         generate_enums(file, data.enums)
         generate_structs(file, data.structs)
 
         file.write("\n\n")
         callback_type = type_to_ctypes(data.types["mts_create_array_callback_t"])
-        file.write(f"mts_create_array_callback_t = {callback_type}\n")
+        file.write(f"{c_type_name('mts_create_array_callback_t')} = {callback_type}\n")
 
         generate_functions(file, data.functions)
 
