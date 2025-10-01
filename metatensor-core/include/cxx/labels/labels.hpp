@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstring>
 #include <initializer_list>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -211,28 +212,28 @@ public:
 
     /// Get the position of the `entry` in this set of Labels, or -1 if the
     /// entry is not part of these Labels.
-    int64_t position(std::initializer_list<int32_t> entry) const {
+    std::optional<int64_t> position(std::initializer_list<int32_t> entry) const {
         return this->position(entry.begin(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a fixed-size array as input
     template<size_t N>
-    int64_t position(const std::array<int32_t, N>& entry) const {
+    std::optional<int64_t> position(const std::array<int32_t, N>& entry) const {
         return this->position(entry.data(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a vector as input
-    int64_t position(const std::vector<int32_t>& entry) const {
+    std::optional<int64_t> position(const std::vector<int32_t>& entry) const {
         return this->position(entry.data(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a pointer and length as input
-    int64_t position(const int32_t* entry, size_t length) const {
+    std::optional<int64_t> position(const int32_t* entry, size_t length) const {
         assert(labels_.internal_ptr_ != nullptr);
 
         int64_t result = 0;
         details::check_status(mts_labels_position(labels_, entry, length, &result));
-        return result;
+        return (result != -1) ? std::optional<int64_t>(result) : std::nullopt;
     }
 
     /// Get the array of values for these Labels
