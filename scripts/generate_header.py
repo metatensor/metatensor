@@ -72,6 +72,12 @@ def expand_includes_recursively(
             # It's a quoted include "...", so we check if it's an internal file.
             potential_path = (resolved_path.parent / include_target_str).resolve()
 
+            # This is always installed
+            if include_target_str == "metatensor.h":
+                # So we also keep it
+                output_stream.write(line)
+                continue
+
             is_internal = False
             try:
                 # An include is internal if its resolved path is inside the project's
