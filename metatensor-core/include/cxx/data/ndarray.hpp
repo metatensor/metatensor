@@ -268,7 +268,16 @@ bool operator==(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     if (lhs.shape() != rhs.shape()) {
         return false;
     }
-    return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
+
+    if constexpr (std::is_floating_point_v<T>) {
+        // IEEE compatible equality for float, double, etc.
+        // Element-wise, safer way with correct NaN and +/-0.0 management.
+        const auto size = details::product(lhs.shape());
+        return std::equal(lhs.data(), lhs.data() + size, rhs.data());
+    } else {
+        // A fast, bitwise memory comparison is safe and efficient here.
+        return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
+    }
 }
 
 /// Compare this `NDArray` with another `NDarray`. The array are equal if
