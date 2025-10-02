@@ -267,8 +267,8 @@ if (CARGO_VERSION_CHANGED)
 endif()
 
 file(GLOB_RECURSE ALL_RUST_SOURCES
-    ${PROJECT_SOURCE_DIR}/Cargo.toml
-    ${PROJECT_SOURCE_DIR}/src/**.rs
+    ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/**.rs
 )
 
 add_library(metatensor::shared SHARED IMPORTED GLOBAL)
@@ -338,7 +338,7 @@ endif()
 add_custom_target(cargo-build-metatensor ALL
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
     COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
     BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
@@ -347,8 +347,8 @@ add_custom_target(cargo-build-metatensor ALL
 # Add `#define METATENSOR_VERSION_XXX` to the header
 add_custom_command(TARGET cargo-build-metatensor POST_BUILD
     COMMAND ${CMAKE_COMMAND}
-        -DMTS_SOURCE_DIR=${PROJECT_SOURCE_DIR}
-        -DMTS_BINARY_DIR=${PROJECT_BINARY_DIR}
+        -DMTS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -DMTS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
         -DMTS_VERSION=${METATENSOR_FULL_VERSION}
         -DMTS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         -DMTS_VERSION_MINOR=${PROJECT_VERSION_MINOR}
@@ -359,20 +359,20 @@ add_custom_command(TARGET cargo-build-metatensor POST_BUILD
 add_dependencies(metatensor::shared cargo-build-metatensor)
 add_dependencies(metatensor::static cargo-build-metatensor)
 set(METATENSOR_HEADERS
-    "${PROJECT_BINARY_DIR}/include/metatensor.h"
-    "${PROJECT_BINARY_DIR}/include/metatensor.hpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor.hpp"
 )
-set(METATENSOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/)
+set(METATENSOR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include/)
 file(MAKE_DIRECTORY ${METATENSOR_INCLUDE_DIR})
 
 file(GLOB_RECURSE METATENSOR_CXX_HEADERS
-    "${PROJECT_SOURCE_DIR}/include/cxx/*.hpp"
-    "${PROJECT_SOURCE_DIR}/include/cxx/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/cxx/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/cxx/*.h"
 )
 
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE_DIR};${PROJECT_SOURCE_DIR}/include"
+    INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::shared INTERFACE cxx_std_17)
@@ -385,7 +385,7 @@ endif()
 
 set_target_properties(metatensor::static PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE_DIR};${PROJECT_SOURCE_DIR}/include"
+    INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include"
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
@@ -403,8 +403,8 @@ endif()
 #------------------------------------------------------------------------------#
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
-    ${PROJECT_SOURCE_DIR}/cmake/metatensor-config.in.cmake
-    ${PROJECT_BINARY_DIR}/metatensor-config.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/metatensor-config.in.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/metatensor-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor
 )
 write_basic_package_version_file(
@@ -414,7 +414,7 @@ write_basic_package_version_file(
 )
 
 install(FILES ${METATENSOR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/metatensor)
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/cxx
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/cxx
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/metatensor
     FILES_MATCHING
     PATTERN "*.hpp"
@@ -446,7 +446,7 @@ if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR NOT BUILD_SHARED_LIBS)
 endif()
 
 install(FILES
-    ${PROJECT_BINARY_DIR}/metatensor-config-version.cmake
-    ${PROJECT_BINARY_DIR}/metatensor-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/metatensor-config-version.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/metatensor-config.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor
 )
