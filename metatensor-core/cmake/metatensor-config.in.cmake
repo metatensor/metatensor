@@ -1,6 +1,6 @@
 @PACKAGE_INIT@
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 include(FindPackageHandleStandardArgs)
 
@@ -71,14 +71,11 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
     target_compile_features(metatensor::static INTERFACE cxx_std_17)
 endif()
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
-    # Export either the shared or static library as the metatensor target
-    # This requires cmake 3.18+ to use ALIAS for non-GLOBAL IMPORTED targets
-    if (@BUILD_SHARED_LIBS@)
-        add_library(metatensor ALIAS metatensor::shared)
-    else()
-        add_library(metatensor ALIAS metatensor::static)
-    endif()
+# Export either the shared or static library as the metatensor target
+if (@BUILD_SHARED_LIBS@)
+    add_library(metatensor ALIAS metatensor::shared)
+else()
+    add_library(metatensor ALIAS metatensor::static)
 endif()
 
 

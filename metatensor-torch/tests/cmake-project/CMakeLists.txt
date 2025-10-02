@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 message(STATUS "Running with CMake version ${CMAKE_VERSION}")
 

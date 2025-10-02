@@ -33,11 +33,11 @@ jobs:
       matrix:
         include:
           - name: x86_64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
             cibw-arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04-arm
+            os: ubuntu-24.04-arm
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
@@ -72,7 +72,7 @@ jobs:
         run: python -m pip install cibuildwheel twine
 
       - name: build manylinux with rust docker image
-        if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
+        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
         run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
 
       - name: build metatensor-core wheel
@@ -104,14 +104,14 @@ jobs:
       matrix:
         torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8']
         arch: ['arm64', 'x86_64']
-        os: ['ubuntu-22.04', 'ubuntu-22.04-arm', 'macos-13', 'macos-14', 'windows-2022']
+        os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-13', 'macos-14', 'windows-2022']
         exclude:
           # remove mismatched arch-os combinations
           - {os: macos-13, arch: arm64}
           - {os: windows-2022, arch: arm64}
-          - {os: ubuntu-22.04, arch: arm64}
+          - {os: ubuntu-24.04, arch: arm64}
           - {os: macos-14, arch: x86_64}
-          - {os: ubuntu-22.04-arm, arch: x86_64}
+          - {os: ubuntu-24.04-arm, arch: x86_64}
           # arch x86_64 on macos is only supported for torch <2.3
           - {os: macos-13, arch: x86_64, torch-version: '2.3'}
           - {os: macos-13, arch: x86_64, torch-version: '2.4'}
@@ -122,12 +122,12 @@ jobs:
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             arch: x86_64
             rust-target: x86_64-unknown-linux-gnu
             cibw-arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04-arm
+            os: ubuntu-24.04-arm
             arch: arm64
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
@@ -175,7 +175,7 @@ jobs:
         run: python -m pip install cibuildwheel
 
       - name: build manylinux with rust docker image
-        if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
+        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
         run: |
           docker buildx build \
               -t rustc-manylinux_2_28_${{ matrix.cibw-arch }} \
@@ -217,16 +217,16 @@ jobs:
 
   merge-torch-wheels:
     needs: build-torch-wheels
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     name: merge metatensor-torch ${{ matrix.name }}
     strategy:
       matrix:
         include:
           - name: x86_64 Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             arch: x86_64
           - name: arm64 Linux
-            os: ubuntu-22.04-arm
+            os: ubuntu-24.04-arm
             arch: arm64
           - name: x86_64 macOS
             os: macos-13
@@ -290,7 +290,7 @@ jobs:
 
   build-others:
     name: Build other wheels/sdists
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       METATENSOR_NO_LOCAL_DEPS: "1"
     steps:
@@ -340,7 +340,7 @@ jobs:
   merge-and-release:
     name: Merge and release wheels/sdists
     needs: [build-core-wheels, merge-torch-wheels, build-others]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
@@ -444,7 +444,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
             libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.8.0%2Bcpu.zip
           - os: macos-14

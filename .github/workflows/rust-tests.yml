@@ -26,7 +26,7 @@ jobs:
       matrix:
         include:
           # test without any feature (i.e shared build)
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             extra-name: ", no features"
@@ -35,7 +35,7 @@ jobs:
             cmake-generator: Unix Makefiles
 
           # test with all features (i.e static build + ndarray)
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             cargo-test-flags: --release --all-features
@@ -45,14 +45,14 @@ jobs:
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          # check the build on a stock Ubuntu 20.04, which uses cmake 3.16, and
+          # check the build on a stock Ubuntu 22.04, which uses cmake 3.22, and
           # with our minimal supported rust version
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             rust-version: 1.74
-            container: ubuntu:20.04
+            container: ubuntu:22.04
             rust-target: x86_64-unknown-linux-gnu
             cargo-build-flags: --features=rayon
-            extra-name: ", cmake 3.16"
+            extra-name: ", cmake 3.22"
             cxx: g++
             cc: gcc
             cmake-generator: Unix Makefiles
@@ -85,7 +85,7 @@ jobs:
             cmake-generator: MinGW Makefiles
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: |
           apt update
           apt install -y software-properties-common
@@ -96,7 +96,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure git safe directory
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: git config --global --add safe.directory /__w/metatensor/metatensor
 
       - name: setup rust
@@ -136,7 +136,7 @@ jobs:
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     name: check C API declarations
     steps:
       - uses: actions/checkout@v5
@@ -173,7 +173,7 @@ jobs:
 
   # make sure no debug print stays in the code
   check-debug-prints:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     name: check leftover debug print
 
     steps:

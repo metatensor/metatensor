@@ -28,8 +28,9 @@ on metatensor:
 Additionally, you will need to install the following software, but you should
 not have to interact with them directly:
 
-- **CMake**: we need a CMake version of at least 3.16.
-- **a C++ compiler** we need a compiler supporting C++17. GCC >= 7, clang >= 5 and MSVC >= 19 should all work.
+- **CMake**: we need a CMake version of at least 3.22.
+- **a C++ compiler** we need a compiler supporting C++17. GCC >= 7, clang >= 5
+  and MSVC >= 19 should all work.
 
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest

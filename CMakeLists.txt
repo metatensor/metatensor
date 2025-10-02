@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 # This file is here to serve as a minimal CMakeLists.txt at the root of the
 # metatensor repository, allowing to easily include it inside other projects as

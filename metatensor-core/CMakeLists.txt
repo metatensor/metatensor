@@ -3,7 +3,7 @@
 # This API is implemented in Rust, in the metatensor-core crate, but Rust users
 # of the API should use the metatensor crate instead, wrapping metatensor-core in
 # an easier to use, idiomatic Rust API.
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 # Is metatensor the main project configured by the user? Or is this being used
 # as a submodule/subdirectory?
