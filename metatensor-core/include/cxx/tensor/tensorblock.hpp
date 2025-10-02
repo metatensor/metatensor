@@ -1,4 +1,10 @@
 #pragma once
+#include <cassert>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace metatensor {
 /// Basic building block for a tensor map.
 ///

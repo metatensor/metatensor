@@ -1,4 +1,11 @@
 #pragma once
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace metatensor {
 namespace details {
 

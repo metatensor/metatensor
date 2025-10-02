@@ -1,4 +1,11 @@
 #pragma once
+#include <array>
+#include <cassert>
+#include <cstring>
+#include <initializer_list>
+#include <string>
+#include <vector>
+
 namespace metatensor {
 
 /// It is possible to store some user-provided data inside `Labels`, and access

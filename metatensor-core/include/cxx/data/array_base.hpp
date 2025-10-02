@@ -1,4 +1,10 @@
 #pragma once
+#include <cassert>
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <vector>
+
 namespace metatensor {
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
 /// tensor map. The array itself if opaque to this library and can come from

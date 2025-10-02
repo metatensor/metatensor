@@ -1,4 +1,8 @@
 #pragma once
+#include <memory>
+#include <utility>
+#include <vector>
+
 namespace metatensor {
 /// An implementation of `DataArrayBase` containing no data.
 ///

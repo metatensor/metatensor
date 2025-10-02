@@ -1,4 +1,8 @@
 #pragma once
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace metatensor{
 namespace io {
     /// Save a `TensorMap` to the file at `path`.

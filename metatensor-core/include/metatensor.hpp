@@ -2,19 +2,6 @@
 #ifndef METATENSOR_HPP
 #define METATENSOR_HPP
 
-#include <array>
-#include <functional>
-#include <initializer_list>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <vector>
-
-#include <cassert>
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-
 #include "metatensor.h"
 
 #include "cxx/details/Error.hpp"

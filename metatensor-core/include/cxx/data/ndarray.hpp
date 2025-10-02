@@ -1,4 +1,13 @@
 #pragma once
+#include <array>
+#include <cassert>
+#include <cstring>
+#include <functional>
+#include <initializer_list>
+#include <string>
+#include <type_traits>
+#include <vector>
+
 namespace metatensor {
 /// Simple N-dimensional array interface
 ///
@@ -121,7 +130,7 @@ public:
         if (index.size() != shape_.size()) {
             throw Error(
                 "expected " + std::to_string(shape_.size()) +
-                " indexes in Labels::operator(), got " + std::to_string(index.size())
+                " indexes in NDArray::operator(), got " + std::to_string(index.size())
             );
         }
         return data_[details::linear_index(shape_, index)];

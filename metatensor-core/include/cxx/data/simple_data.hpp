@@ -1,4 +1,11 @@
 #pragma once
+#include <array>
+#include <cassert>
+#include <string>
+#include <typeinfo>
+#include <utility>
+#include <vector>
+
 namespace metatensor {
 /// Very basic implementation of DataArrayBase in C++.
 ///
