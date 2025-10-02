@@ -1,6 +1,5 @@
 #pragma once
-
-class Labels;
+namespace metatensor {
 
 /// It is possible to store some user-provided data inside `Labels`, and access
 /// it later. This class is used to take ownership of the data and corresponding
@@ -649,3 +648,4 @@ private:
 namespace details {
     #include "labels_from_cxx.inl"
 } // details
+} // namespace metatensor

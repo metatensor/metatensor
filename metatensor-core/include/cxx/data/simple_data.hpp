@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// Very basic implementation of DataArrayBase in C++.
 ///
 /// This is included as an example implementation of DataArrayBase, and to make
@@ -215,3 +216,4 @@ inline bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
     return !(lhs == rhs);
 }
+} // namespace metatensor

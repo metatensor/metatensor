@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// Basic building block for a tensor map.
 ///
 /// A single block contains a n-dimensional `mts_array_t` (or `DataArrayBase`),
@@ -430,3 +431,4 @@ private:
     mts_block_t* block_;
     bool is_view_;
 };
+} // namespace metatensor

@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// Simple N-dimensional array interface
 ///
 /// This class can either be a non-owning view inside some existing memory (for
@@ -267,3 +268,4 @@ template<typename T>
 bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     return !(lhs == rhs);
 }
+} // namespace metatensor

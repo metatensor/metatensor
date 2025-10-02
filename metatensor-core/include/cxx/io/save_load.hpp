@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor{
 namespace io {
     /// Save a `TensorMap` to the file at `path`.
     ///
@@ -187,3 +188,4 @@ namespace io {
     template <typename Buffer>
     Labels load_labels_buffer(const Buffer& buffer);
 } // namespace io
+} // namespace metatensor

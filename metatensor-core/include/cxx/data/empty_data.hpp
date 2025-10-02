@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// An implementation of `DataArrayBase` containing no data.
 ///
 /// This class only tracks it's shape, and can be used when only the metadata
@@ -60,3 +61,4 @@ public:
 private:
     std::vector<uintptr_t> shape_;
 };
+} // namespace metatensor

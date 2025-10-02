@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
 /// tensor map. The array itself if opaque to this library and can come from
 /// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
@@ -191,3 +192,4 @@ public:
         uintptr_t property_end
     ) = 0;
 };
+} // namespace metatensor

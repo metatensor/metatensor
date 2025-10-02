@@ -1,4 +1,7 @@
 #pragma once
+namespace metatensor {
+namespace details {
+
 /// Compute the product of all values in the `shape` vector
 inline size_t product(const std::vector<size_t>& shape) {
     size_t result = 1;
@@ -58,3 +61,6 @@ mts_status_t default_create_array(
     uintptr_t shape_count,
     mts_array_t* array
 );
+
+} // namespace details
+} // namespace metatensor

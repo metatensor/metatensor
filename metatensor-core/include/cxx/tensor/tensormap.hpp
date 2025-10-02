@@ -1,4 +1,5 @@
 #pragma once
+namespace metatensor {
 /// A TensorMap is the main user-facing class of this library, and can store any
 /// kind of data used in atomistic machine learning.
 ///
@@ -372,3 +373,4 @@ public:
 private:
     mts_tensormap_t* tensor_;
 };
+} // namespace metatensor
