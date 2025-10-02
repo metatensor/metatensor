@@ -946,7 +946,11 @@ WARN_LOGFILE           =
 
 INPUT                  = \
     ../metatensor-core/include/ \
-    ../metatensor-core/include/cxx \
+    ../metatensor-core/include/cxx/data \
+    ../metatensor-core/include/cxx/details \
+    ../metatensor-core/include/cxx/io \
+    ../metatensor-core/include/cxx/labels \
+    ../metatensor-core/include/cxx/tensor \
     ../metatensor-torch/include/metatensor \
     ../metatensor-torch/include/metatensor/torch
 
