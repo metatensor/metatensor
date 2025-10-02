@@ -58,7 +58,7 @@ public:
         };
     }
 
-    ~NDArray() {
+    ~NDArray() noexcept {
         deleter_(this->owned_data_);
     }
 

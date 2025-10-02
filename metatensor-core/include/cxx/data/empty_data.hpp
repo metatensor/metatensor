@@ -26,7 +26,7 @@ public:
     EmptyDataArray& operator=(EmptyDataArray&&) noexcept = default;
 
     mts_data_origin_t origin() const override {
-        mts_data_origin_t origin = 0;
+        static thread_local mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::EmptyDataArray", &origin);
         return origin;
     }
