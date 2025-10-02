@@ -15,7 +15,7 @@ endif()
 if (USE_CMAKE_SUBDIRECTORY)
     message(STATUS "Using metatensor with add_subdirectory")
     # build metatensor as part of this project
-    add_subdirectory(../../../ metatensor)
+    add_subdirectory(../../ metatensor)
 
     # load metatensor from the build path
     set(CMAKE_BUILD_RPATH "$<TARGET_FILE_DIR:metatensor::shared>")

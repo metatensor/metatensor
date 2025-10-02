@@ -1,4 +1,5 @@
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 #include <catch.hpp>
@@ -21,7 +22,7 @@ TEST_CASE("Labels") {
     CHECK(labels.names()[1] == std::string("bar"));
 
     CHECK(labels.position({3, 4}) == 1);
-    CHECK(labels.position({1, 4}) == -1);
+    CHECK(labels.position({1, 4}) == std::nullopt);
 
     const auto& values = labels.values();
     CHECK(values(0, 0) == 1);
