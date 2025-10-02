@@ -41,11 +41,11 @@ jobs:
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-13
+            os: macos-15-intel
             rust-target: x86_64-apple-darwin
             cibw-arch: x86_64
           - name: arm64 macOS
-            os: macos-14
+            os: macos-15
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
           - name: x86_64 Windows
@@ -104,21 +104,21 @@ jobs:
       matrix:
         torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8']
         arch: ['arm64', 'x86_64']
-        os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-13', 'macos-14', 'windows-2022']
+        os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-15', 'windows-2022']
         exclude:
           # remove mismatched arch-os combinations
-          - {os: macos-13, arch: arm64}
+          - {os: macos-15-intel, arch: arm64}
           - {os: windows-2022, arch: arm64}
           - {os: ubuntu-24.04, arch: arm64}
-          - {os: macos-14, arch: x86_64}
+          - {os: macos-15, arch: x86_64}
           - {os: ubuntu-24.04-arm, arch: x86_64}
           # arch x86_64 on macos is only supported for torch <2.3
-          - {os: macos-13, arch: x86_64, torch-version: '2.3'}
-          - {os: macos-13, arch: x86_64, torch-version: '2.4'}
-          - {os: macos-13, arch: x86_64, torch-version: '2.5'}
-          - {os: macos-13, arch: x86_64, torch-version: '2.6'}
-          - {os: macos-13, arch: x86_64, torch-version: '2.7'}
-          - {os: macos-13, arch: x86_64, torch-version: '2.8'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.3'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.4'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.5'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.6'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.7'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.8'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
@@ -132,12 +132,12 @@ jobs:
             rust-target: aarch64-unknown-linux-gnu
             cibw-arch: aarch64
           - name: x86_64 macOS
-            os: macos-13
+            os: macos-15-intel
             arch: x86_64
             rust-target: x86_64-apple-darwin
             cibw-arch: x86_64
           - name: arm64 macOS
-            os: macos-14
+            os: macos-15
             arch: arm64
             rust-target: aarch64-apple-darwin
             cibw-arch: arm64
@@ -229,10 +229,10 @@ jobs:
             os: ubuntu-24.04-arm
             arch: arm64
           - name: x86_64 macOS
-            os: macos-13
+            os: macos-15-intel
             arch: x86_64
           - name: arm64 macOS
-            os: macos-14
+            os: macos-15
             arch: arm64
           - name: x86_64 Windows
             os: windows-2022
@@ -447,7 +447,7 @@ jobs:
           - os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
             libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.8.0%2Bcpu.zip
-          - os: macos-14
+          - os: macos-15
             rust-target: aarch64-apple-darwin
             libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.8.0.zip
           - os: windows-2022

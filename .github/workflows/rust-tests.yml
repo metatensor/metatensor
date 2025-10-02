@@ -57,7 +57,7 @@ jobs:
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          - os: macos-14
+          - os: macos-15
             rust-version: stable
             rust-target: aarch64-apple-darwin
             cargo-test-flags: --features=rayon
