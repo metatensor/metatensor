@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 if (POLICY CMP0135)
     # Use download time as timestamp when extracting files from archives
@@ -160,38 +160,8 @@ file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MINOR ${PROJECT_VERSION_
 file(APPEND ${_path_} "/** Patch version number of metatensor-torch as an integer */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
 
-function(copy_if_different _src_ _dst_)
-    # file(COPY_FILE ...) was added in cmake 3.21, this emulates the same
-    # behavior on older versions
-    get_filename_component(_dst_dir_ ${_dst_} DIRECTORY)
-    get_filename_component(_src_name_ ${_src_} NAME)
-
-    if (EXISTS ${_dst_})
-        file(SHA1 ${_src_} new_hash)
-        file(SHA1 ${_dst_} old_hash)
-
-        if ("${new_hash}" STREQUAL "${old_hash}")
-            set(_do_copy_ FALSE)
-        else()
-            set(_do_copy_ TRUE)
-        endif()
-    else()
-        # The destination does not exist
-        set(_do_copy_ TRUE)
-    endif()
-
-    if (${_do_copy_})
-        file(COPY ${_src_} DESTINATION ${_dst_dir_})
-        file(RENAME ${_dst_dir_}/${_src_name_} ${_dst_})
-    endif()
-endfunction()
-
 set(_destination_ "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/version.h")
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
-    file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
-else()
-    copy_if_different(${_path_} ${_destination_})
-endif()
+file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
 
 if (METATENSOR_TORCH_TESTS)
     enable_testing()

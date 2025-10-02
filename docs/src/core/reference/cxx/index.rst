@@ -36,7 +36,7 @@ a ``cmake`` configuration file, allowing you to use ``metatensor`` like this
 
 .. code-block:: cmake
 
-    cmake_minimum_required(VERSION 3.16)
+    cmake_minimum_required(VERSION 3.22)
     project(my-project CXX)
 
     find_package(metatensor)

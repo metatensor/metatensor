@@ -17,14 +17,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             python-version: "3.9"
             torch-version: "2.1"
             numpy-version-pin: "<2.0"
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             python-version: "3.9"
             torch-version: "2.8"
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             python-version: "3.13"
             torch-version: "2.8"
           - os: macos-14
