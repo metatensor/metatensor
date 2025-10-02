@@ -68,7 +68,7 @@ jobs:
       # we get torch from pip to run the C++ test
       - name: setup Python
         if: matrix.container != 'ubuntu:22.04'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
