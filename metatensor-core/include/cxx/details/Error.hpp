@@ -1,5 +1,7 @@
 #pragma once
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace metatensor {
     /// Exception class used for all errors in metatensor
