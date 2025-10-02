@@ -1,6 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace metatensor {
@@ -8,7 +9,7 @@ namespace metatensor {
     class Error: public std::runtime_error {
     public:
         /// Create a new Error with the given `message`
-        Error(const std::string& message): std::runtime_error(message) {}
+        explicit Error(std::string_view message): std::runtime_error(std::string(message)) {}
     };
 
 namespace details {

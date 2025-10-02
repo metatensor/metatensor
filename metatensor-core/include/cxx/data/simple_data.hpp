@@ -2,6 +2,7 @@
 #include <array>
 #include <cassert>
 #include <string>
+#include <string_view>
 #include <typeinfo>
 #include <utility>
 #include <vector>
@@ -176,7 +177,7 @@ public:
 
         std::array<char, 64> buffer = {0};
         status = mts_get_data_origin(origin, buffer.data(), buffer.size());
-        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
+        if (status != MTS_SUCCESS || std::string_view(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 
@@ -197,7 +198,7 @@ public:
 
         std::array<char, 64> buffer = {0};
         status = mts_get_data_origin(origin, buffer.data(), buffer.size());
-        if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
+        if (status != MTS_SUCCESS || std::string_view(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 

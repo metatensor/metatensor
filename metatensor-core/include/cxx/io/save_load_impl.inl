@@ -1,5 +1,5 @@
-inline void save(const std::string& path, const TensorMap& tensor) {
-    details::check_status(mts_tensormap_save(path.c_str(), tensor.as_mts_tensormap_t()));
+inline void save(std::string_view path, const TensorMap& tensor) {
+    details::check_status(mts_tensormap_save(std::string(path).c_str(), tensor.as_mts_tensormap_t()));
 }
 
 template <typename Buffer>
@@ -36,8 +36,8 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& t
 
 /**************************************************************************/
 
-inline void save(const std::string& path, const TensorBlock& block) {
-    details::check_status(mts_block_save(path.c_str(), block.as_mts_block_t()));
+inline void save(std::string_view path, const TensorBlock& block) {
+    details::check_status(mts_block_save(std::string(path).c_str(), block.as_mts_block_t()));
 }
 
 template <typename Buffer>
@@ -74,8 +74,8 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorBlock&
 
 /**************************************************************************/
 
-inline void save(const std::string& path, const Labels& labels) {
-    details::check_status(mts_labels_save(path.c_str(), labels.as_mts_labels_t()));
+inline void save(std::string_view path, const Labels& labels) {
+    details::check_status(mts_labels_save(std::string(path).c_str(), labels.as_mts_labels_t()));
 }
 
 template <typename Buffer>
@@ -114,10 +114,10 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const Labels& labe
 /**************************************************************************/
 
 inline TensorMap load(
-    const std::string& path,
+    std::string_view path,
     mts_create_array_callback_t create_array
 ) {
-    auto* ptr = mts_tensormap_load(path.c_str(), create_array);
+    auto* ptr = mts_tensormap_load(std::string(path).c_str(), create_array);
     details::check_pointer(ptr);
     return TensorMap(ptr);
 }
@@ -152,10 +152,10 @@ TensorMap load_buffer(
 /**************************************************************************/
 
 inline TensorBlock load_block(
-    const std::string& path,
+    std::string_view path,
     mts_create_array_callback_t create_array
 ) {
-    auto* ptr = mts_block_load(path.c_str(), create_array);
+    auto* ptr = mts_block_load(std::string(path).c_str(), create_array);
     details::check_pointer(ptr);
     return TensorBlock(ptr);
 }
@@ -189,12 +189,12 @@ TensorBlock load_block_buffer(
 
 /**************************************************************************/
 
-inline Labels load_labels(const std::string& path) {
+inline Labels load_labels(std::string_view path) {
     mts_labels_t labels;
     std::memset(&labels, 0, sizeof(labels));
 
     details::check_status(mts_labels_load(
-        path.c_str(), &labels
+        std::string(path).c_str(), &labels
     ));
 
     return Labels(labels);

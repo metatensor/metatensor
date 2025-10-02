@@ -1,9 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
-namespace metatensor{
+namespace metatensor {
 namespace io {
     /// Save a `TensorMap` to the file at `path`.
     ///
@@ -15,7 +16,7 @@ namespace io {
     /// without compression (storage method is `STORED`), where each file is
     /// stored as a `.npy` array. See the C API documentation for more
     /// information on the format.
-    void save(const std::string& path, const TensorMap& tensor);
+    void save(std::string_view path, const TensorMap& tensor);
 
     /// Save a `TensorMap` to an in-memory buffer.
     ///
@@ -34,7 +35,7 @@ namespace io {
     /// If the file exists, it will be overwritten. The recomended file
     /// extension when saving data is `.mts`, to prevent confusion with generic
     /// `.npz` files.
-    void save(const std::string& path, const TensorBlock& block);
+    void save(std::string_view path, const TensorBlock& block);
 
     /// Save a `TensorBlock` to an in-memory buffer.
     ///
@@ -53,7 +54,7 @@ namespace io {
     /// If the file exists, it will be overwritten. The recomended file
     /// extension when saving data is `.mts`, to prevent confusion with generic
     /// `.npz` files.
-    void save(const std::string& path, const Labels& labels);
+    void save(std::string_view path, const Labels& labels);
 
     /// Save `Labels` to an in-memory buffer.
     ///
@@ -85,8 +86,9 @@ namespace io {
      * stored as a `.npy` array. See the C API documentation for more
      * information on the format.
      */
+    [[nodiscard]]
     TensorMap load(
-        const std::string& path,
+        std::string_view path,
         mts_create_array_callback_t create_array = details::default_create_array
     );
 
@@ -103,6 +105,7 @@ namespace io {
      *
      * \endverbatim
      */
+    [[nodiscard]]
     TensorMap load_buffer(
         const uint8_t* buffer,
         size_t buffer_count,
@@ -117,6 +120,7 @@ namespace io {
     /// contiguous data and an `item_type` with the same size as a `uint8_t` can
     /// work.
     template <typename Buffer>
+    [[nodiscard]]
     TensorMap load_buffer(
         const Buffer& buffer,
         mts_create_array_callback_t create_array = details::default_create_array
@@ -137,8 +141,9 @@ namespace io {
      * \endverbatim
      *
      */
+    [[nodiscard]]
     TensorBlock load_block(
-        const std::string& path,
+        std::string_view path,
         mts_create_array_callback_t create_array = details::default_create_array
     );
 
@@ -155,6 +160,7 @@ namespace io {
      *
      * \endverbatim
      */
+    [[nodiscard]]
     TensorBlock load_block_buffer(
         const uint8_t* buffer,
         size_t buffer_count,
@@ -169,6 +175,7 @@ namespace io {
     /// contiguous data and an `item_type` with the same size as a `uint8_t` can
     /// work.
     template <typename Buffer>
+    [[nodiscard]]
     TensorBlock load_block_buffer(
         const Buffer& buffer,
         mts_create_array_callback_t create_array = details::default_create_array
@@ -177,10 +184,12 @@ namespace io {
     /**************************************************************************/
 
     /// Load previously saved `Labels` from the given path.
-    Labels load_labels(const std::string& path);
+    [[nodiscard]]
+    Labels load_labels(std::string_view path);
 
     /// Load previously saved `Labels` from the given `buffer`, containing
     /// `buffer_count` elements.
+    [[nodiscard]]
     Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
 
     /// Load a previously saved `Labels` from the given `buffer`.
@@ -190,6 +199,7 @@ namespace io {
     /// contiguous data and an `item_type` with the same size as a `uint8_t` can
     /// work.
     template <typename Buffer>
+    [[nodiscard]]
     Labels load_labels_buffer(const Buffer& buffer);
 } // namespace io
 } // namespace metatensor

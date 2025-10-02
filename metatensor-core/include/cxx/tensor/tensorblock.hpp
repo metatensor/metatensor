@@ -351,7 +351,7 @@ public:
      *
      * \endverbatim
      */
-    void save(const std::string& path) const {
+    void save(std::string_view path) const {
         metatensor::io::save(path, *this);
     }
 
@@ -425,7 +425,7 @@ private:
     friend class TensorMap;
     friend class metatensor_torch::TensorBlockHolder;
     friend TensorBlock metatensor::io::load_block(
-        const std::string& path,
+        std::string_view path,
         mts_create_array_callback_t create_array
     );
     friend TensorBlock metatensor::io::load_block_buffer(

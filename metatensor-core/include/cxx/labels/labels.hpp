@@ -533,7 +533,7 @@ public:
      *
      * \endverbatim
      */
-    static Labels load(const std::string& path) {
+    static Labels load(std::string_view path) {
         return metatensor::io::load_labels(path);
     }
 
@@ -637,7 +637,7 @@ private:
         Labels(names, values.data(), values.shape()[0], assume_unique{}) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
-    friend Labels io::load_labels(const std::string &path);
+    friend Labels io::load_labels(std::string_view path);
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
     friend class TensorMap;
     friend class TensorBlock;
