@@ -206,7 +206,7 @@ private:
         using vector_t = std::vector<T>;
         auto vector = std::vector<T>();
         vector.reserve(data.size() * size);
-        for (auto row: std::move(data)) {
+        for (const auto& row : data) {
             if (row.size() != size) {
                 throw Error(
                     "invalid size for row: expected " + std::to_string(size) +
@@ -232,7 +232,7 @@ private:
 
     void validate() const {
         static_assert(
-            std::is_arithmetic<T>::value,
+            std::is_arithmetic_v<T>,
             "NDArray only works with integers and floating points"
         );
 

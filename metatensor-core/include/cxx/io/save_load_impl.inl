@@ -15,10 +15,10 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorMap& t
     auto* ptr = buffer.data();
     auto size = buffer.size();
 
-    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
-        auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
-        buffer->resize(new_size, '\0');
-        return buffer->data();
+    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) -> uint8_t* {
+        auto& buffer_ref = *reinterpret_cast<std::vector<uint8_t>*>(user_data);
+        buffer_ref.resize(new_size, '\0');
+        return buffer_ref.data();
     };
 
     details::check_status(mts_tensormap_save_buffer(
@@ -53,10 +53,10 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const TensorBlock&
     auto* ptr = buffer.data();
     auto size = buffer.size();
 
-    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
-        auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
-        buffer->resize(new_size, '\0');
-        return buffer->data();
+    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) -> uint8_t* {
+        auto& buffer_ref = *reinterpret_cast<std::vector<uint8_t>*>(user_data);
+        buffer_ref.resize(new_size, '\0');
+        return buffer_ref.data();
     };
 
     details::check_status(mts_block_save_buffer(
@@ -91,10 +91,10 @@ inline std::vector<uint8_t> save_buffer<std::vector<uint8_t>>(const Labels& labe
     auto* ptr = buffer.data();
     auto size = buffer.size();
 
-    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) {
-        auto* buffer = reinterpret_cast<std::vector<uint8_t>*>(user_data);
-        buffer->resize(new_size, '\0');
-        return buffer->data();
+    auto realloc = [](void* user_data, uint8_t*, uintptr_t new_size) -> uint8_t* {
+        auto& buffer_ref = *reinterpret_cast<std::vector<uint8_t>*>(user_data);
+        buffer_ref.resize(new_size, '\0');
+        return buffer_ref.data();
     };
 
     details::check_status(mts_labels_save_buffer(
