@@ -103,12 +103,14 @@ public:
     /// ```
     template<typename ...Args>
     T operator()(Args... args) const & {
-        auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
-        if (index.size() != shape_.size()) {
-            throw Error(
-                "expected " + std::to_string(shape_.size()) +
-                " indexes in NDArray::operator(), got " + std::to_string(index.size())
-            );
+        auto index = std::array<size_t, sizeof...(Args)>{static_cast<size_t>(args)...};
+        if constexpr (sizeof...(Args) != 0) {
+            if (index.size() != shape_.size()) {
+                throw Error(
+                    "expected " + std::to_string(shape_.size()) +
+                    " indexes in NDArray::operator(), got " + std::to_string(index.size())
+                );
+            }
         }
         return data_[details::linear_index(shape_, index)];
     }
@@ -126,12 +128,14 @@ public:
             throw Error("This NDArray is const, can not get non const access to it");
         }
 
-        auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
-        if (index.size() != shape_.size()) {
-            throw Error(
-                "expected " + std::to_string(shape_.size()) +
-                " indexes in NDArray::operator(), got " + std::to_string(index.size())
-            );
+        auto index = std::array<size_t, sizeof...(Args)>{static_cast<size_t>(args)...};
+        if constexpr (sizeof...(Args) != 0) {
+            if (index.size() != shape_.size()) {
+                throw Error(
+                    "expected " + std::to_string(shape_.size()) +
+                    " indexes in NDArray::operator(), got " + std::to_string(index.size())
+                );
+            }
         }
         return data_[details::linear_index(shape_, index)];
     }
