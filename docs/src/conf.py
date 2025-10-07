@@ -181,7 +181,10 @@ intersphinx_mapping = {
 }
 
 # sitemap/SEO settings
-html_baseurl = "https://docs.metatensor.org/metatensor/"
+html_baseurl = "https://docs.metatensor.org/latest/"
+version = ""
+release = "latest"
+sitemap_url_scheme = "{link}"
 
 # -- Options for HTML output -------------------------------------------------
 
