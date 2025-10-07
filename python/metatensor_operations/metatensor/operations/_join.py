@@ -249,7 +249,7 @@ def _join_block_samples(
 
         start = 0
         sample_shift = 0
-        for block, gradient in zip(blocks, gradients, strict=False):
+        for block, gradient in zip(blocks, gradients):
             stop = start + len(gradient.samples)
             new_values[start:stop] = gradient.values[:]
 

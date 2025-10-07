@@ -157,7 +157,7 @@ for ids, x, y in dataloader:
 # Create a directory to save the dummy x data to disk
 os.makedirs("data", exist_ok=True)
 
-for i, x in zip(sample_id, x_data, strict=False):
+for i, x in zip(sample_id, x_data):
     torch.save(x, f"data/x_{i}.pt")
 
 # %%

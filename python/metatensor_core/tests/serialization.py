@@ -347,7 +347,7 @@ def test_nested_gradients(tmpdir, use_numpy):
                 assert grad_grad.samples == loaded_grad_grad.samples
 
                 assert len(grad_grad.components) == len(loaded_grad_grad.components)
-                for a, b in zip(grad_grad.components, loaded_grad_grad.components, strict=False):
+                for a, b in zip(grad_grad.components, loaded_grad_grad.components):
                     assert a == b
 
                 assert grad_grad.properties == loaded_grad_grad.properties

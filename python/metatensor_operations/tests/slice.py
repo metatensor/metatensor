@@ -90,7 +90,7 @@ def _check_sliced_block_samples(block, sliced_block, systems_to_keep):
 
     # no components have been sliced
     assert len(sliced_block.components) == len(block.components)
-    for sliced_c, c in zip(sliced_block.components, block.components, strict=False):
+    for sliced_c, c in zip(sliced_block.components, block.components):
         assert np.all(sliced_c == c)
 
     # we have the right values
@@ -116,7 +116,7 @@ def _check_sliced_block_samples(block, sliced_block, systems_to_keep):
 
         # same components as the original
         assert len(gradient.components) == len(sliced_gradient.components)
-        for sliced_c, c in zip(sliced_gradient.components, gradient.components, strict=False):
+        for sliced_c, c in zip(sliced_gradient.components, gradient.components):
             assert np.all(sliced_c == c)
 
         expected = gradient.values[gradient_sample_filter]
@@ -137,7 +137,7 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
 
     # no components have been sliced
     assert len(sliced_block.components) == len(block.components)
-    for sliced_c, c in zip(sliced_block.components, block.components, strict=False):
+    for sliced_c, c in zip(sliced_block.components, block.components):
         assert np.all(sliced_c == c)
 
     # we have the right values
@@ -159,7 +159,7 @@ def _check_sliced_block_properties(block, sliced_block, radial_to_keep):
 
         # same components as the original
         assert len(gradient.components) == len(sliced_gradient.components)
-        for sliced_c, c in zip(sliced_gradient.components, gradient.components, strict=False):
+        for sliced_c, c in zip(sliced_gradient.components, gradient.components):
             assert np.all(sliced_c == c)
 
         # we have the right values

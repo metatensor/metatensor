@@ -108,15 +108,15 @@ def test_with_label_names(sample_names, component_names, property_names):
         )
     )
 
-    for actual_shape, expected in zip(block.values.shape, expected_shape, strict=False):
+    for actual_shape, expected in zip(block.values.shape, expected_shape):
         assert actual_shape == expected
 
     assert len(block.samples.names) == len(sample_names)
-    for actual_shape, expected in zip(block.samples.names, sample_names, strict=False):
+    for actual_shape, expected in zip(block.samples.names, sample_names):
         assert actual_shape == expected
 
     assert len(block.properties.names) == len(property_names)
-    for actual_shape, expected in zip(block.properties.names, property_names, strict=False):
+    for actual_shape, expected in zip(block.properties.names, property_names):
         assert actual_shape == expected
 
     assert len(block.components) == 5 - len(sample_names) - len(property_names)

@@ -25,7 +25,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
             "X and Y blocks in `solve` should have the same samples in the same order"
         )
 
-    for X_component, Y_component in zip(X.components, Y.components, strict=False):
+    for X_component, Y_component in zip(X.components, Y.components):
         if X_component != Y_component:
             raise ValueError(
                 "X and Y blocks in `solve` should have the same components \
