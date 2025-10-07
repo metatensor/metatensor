@@ -2,7 +2,6 @@ User-agent: *
 
 Disallow: /_sources/
 Disallow: /_datasets/
-Disallow: /_modules/
 
 Sitemap: https://docs.metatensor.org/latest/sitemap.xml
 

@@ -181,10 +181,9 @@ intersphinx_mapping = {
 }
 
 # sitemap/SEO settings
-html_baseurl = "https://docs.metatensor.org/latest/"
-version = ""
-release = "latest"
-sitemap_url_scheme = "{link}"
+html_baseurl = "https://docs.metatensor.org/latest/" # prefix for the sitemap
+sitemap_url_scheme = "{link}"    # avoids language settings
+html_extra_path = ["robots.txt"] # extra files to move
 
 # -- Options for HTML output -------------------------------------------------
 
