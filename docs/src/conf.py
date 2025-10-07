@@ -130,6 +130,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_sitemap",
     # third party extensions
     "sphinxcontrib.details.directive",
     "sphinx_gallery.gen_gallery",
@@ -178,6 +179,9 @@ intersphinx_mapping = {
     "featomic": ("https://metatensor.github.io/featomic/latest/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
+
+# sitemap/SEO settings
+html_baseurl = "https://docs.metatensor.org/metatensor/"
 
 # -- Options for HTML output -------------------------------------------------
 
