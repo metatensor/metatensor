@@ -159,7 +159,7 @@ def _check_blocks_impl(
             if len(a.components) != len(b.components):
                 return f"inputs to '{fname}' have a different number of components"
 
-            for c1, c2 in zip(a.components, b.components):
+            for c1, c2 in zip(a.components, b.components, strict=False):
                 if not c1 == c2:
                     return (
                         f"inputs to '{fname}' should have the same components, "
@@ -300,7 +300,7 @@ def _check_same_gradients_impl(
                     )
                     return err_msg + extra
 
-                for c1, c2 in zip(grad_a.components, grad_b.components):
+                for c1, c2 in zip(grad_a.components, grad_b.components, strict=False):
                     if not c1 == c2:
                         return err_msg + err_msg_1
             else:

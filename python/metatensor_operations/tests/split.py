@@ -26,7 +26,7 @@ def test_split_block_samples():
     assert len(splitted) == 3
     assert sum(len(b.samples) for b in splitted) == len(block.samples)
 
-    for split_block, expected_samples in zip(splitted, selections):
+    for split_block, expected_samples in zip(splitted, selections, strict=False):
         structure_values = np.unique(split_block.samples["system"]).reshape(-1, 1)
         assert np.all(structure_values == expected_samples.values)
 
@@ -102,8 +102,8 @@ def test_split_samples():
     for split_tensor in splitted:
         assert split_tensor.keys == tensor.keys
 
-    for split_tensor, expected_samples in zip(splitted, selections):
-        for split_block, block in zip(split_tensor, tensor):
+    for split_tensor, expected_samples in zip(splitted, selections, strict=False):
+        for split_block, block in zip(split_tensor, tensor, strict=False):
             split_structures = Labels(
                 ["system"],
                 np.unique(split_block.samples["system"]).reshape(-1, 1),
@@ -135,7 +135,7 @@ def test_split_block_properties():
     splitted = mts.split_block(block, axis="properties", selections=selections)
 
     assert len(splitted) == 3
-    for split_block, expected_properties in zip(splitted, selections):
+    for split_block, expected_properties in zip(splitted, selections, strict=False):
         # no changes to samples & components
         assert split_block.samples == block.samples
         assert split_block.components == block.components
@@ -178,8 +178,8 @@ def test_split_properties():
     for split_tensor in splitted:
         assert split_tensor.keys == tensor.keys
 
-    for split_tensor, expected_properties in zip(splitted, selections):
-        for split_block, block in zip(split_tensor, tensor):
+    for split_tensor, expected_properties in zip(splitted, selections, strict=False):
+        for split_block, block in zip(split_tensor, tensor, strict=False):
             # no changes to samples & components
             assert split_block.samples == block.samples
             assert split_block.components == block.components

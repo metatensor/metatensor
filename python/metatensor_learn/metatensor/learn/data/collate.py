@@ -31,7 +31,7 @@ def group(batch: List[NamedTuple]) -> NamedTuple:
     :return: a named tuple, with the named fields the same as in the original
         samples in the batch, but with the samples grouped by data field.
     """
-    return namedtuple("Batch", batch[0]._fields)(*list(zip(*batch)))
+    return namedtuple("Batch", batch[0]._fields)(*list(zip(*batch, strict=False)))
 
 
 def group_and_join(
@@ -87,7 +87,7 @@ def group_and_join(
         fields_to_join = names
     if join_kwargs is None:
         join_kwargs = {}
-    for name, field in zip(names, list(zip(*batch))):
+    for name, field in zip(names, list(zip(*batch, strict=False)), strict=False):
         if name == "sample_id":  # special case, keep as is
             data.append(field)
             continue

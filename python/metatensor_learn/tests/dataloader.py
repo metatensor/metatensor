@@ -39,7 +39,7 @@ def test_dataloader_indices(create_dataset, tmpdir):
         # Build dataloader from a random subset of sample indices
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-        for exp_idxs, batch in zip(expected_indices, dataloader):
+        for exp_idxs, batch in zip(expected_indices, dataloader, strict=False):
             assert (
                 np.sort(
                     mts.unique_metadata(
@@ -72,7 +72,7 @@ def test_dataloader_indices_indexed(create_dataset, tmpdir):
         # Build dataloader from a random subset of sample indices
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-        for exp_idxs, batch in zip(expected_indices, dataloader):
+        for exp_idxs, batch in zip(expected_indices, dataloader, strict=False):
             assert (
                 np.sort(
                     mts.unique_metadata(

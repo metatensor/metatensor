@@ -263,7 +263,7 @@ class ResidualNetwork(torch.nn.Module):
         # Build the module map as before
         hidden_layer_width = 32
         modules = []
-        for in_feats, out_props in zip(in_features, out_properties):
+        for in_feats, out_props in zip(in_features, out_properties, strict=False):
             module = torch.nn.Sequential(
                 torch.nn.LayerNorm(in_feats),
                 torch.nn.Linear(
