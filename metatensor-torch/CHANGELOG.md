@@ -20,6 +20,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Changed
 
 - We now requires at least cmake v3.22 to compile metatensor-torch
+- We now require Python >= 3.10
 
 ## [Version 0.8.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-09-24
 

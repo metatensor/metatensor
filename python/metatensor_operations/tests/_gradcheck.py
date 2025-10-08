@@ -74,7 +74,9 @@ def check_finite_differences(
                     if not np.allclose(fdiff, gradient, rtol=rtol, atol=atol):
                         components_str = ", ".join(
                             c[i].print()[1:-1]
-                            for i, c in zip(grad_components_i, gradients.components)
+                            for i, c in zip(
+                                grad_components_i, gradients.components, strict=True
+                            )
                         )
                         raise AssertionError(
                             f"Wrong gradient of {block.samples[sample_i].print()} "
