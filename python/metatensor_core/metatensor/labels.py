@@ -112,7 +112,7 @@ class LabelsEntry:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
         """
-        values = [f"{n}={v}" for n, v in zip(self.names, self.values)]
+        values = [f"{n}={v}" for n, v in zip(self.names, self.values, strict=True)]
         return f"({', '.join(values)})"
 
     def __repr__(self) -> str:

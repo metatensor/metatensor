@@ -331,26 +331,26 @@ def test_nested_gradients(tmpdir, use_numpy):
             assert gradient.gradients_list() == loaded_gradient.gradients_list()
 
             for parameter, grad_grad in gradient.gradients():
-                loaded_grad_grad = loaded_gradient.gradient(parameter)
+                loaded = loaded_gradient.gradient(parameter)
                 grad_grad_prefix = f"{grad_prefix}/gradients/{parameter}"
 
                 np.testing.assert_equal(
                     data[f"{grad_grad_prefix}/values"], grad_grad.values
                 )
-                np.testing.assert_equal(grad_grad.values, loaded_grad_grad.values)
+                np.testing.assert_equal(grad_grad.values, loaded.values)
 
                 assert (
                     _mts_labels(data[f"{grad_grad_prefix}/samples"])
                     == grad_grad.samples
                 )
 
-                assert grad_grad.samples == loaded_grad_grad.samples
+                assert grad_grad.samples == loaded.samples
 
-                assert len(grad_grad.components) == len(loaded_grad_grad.components)
-                for a, b in zip(grad_grad.components, loaded_grad_grad.components):
+                assert len(grad_grad.components) == len(loaded.components)
+                for a, b in zip(grad_grad.components, loaded.components, strict=True):
                     assert a == b
 
-                assert grad_grad.properties == loaded_grad_grad.properties
+                assert grad_grad.properties == loaded.properties
 
 
 def _mts_labels(data):
