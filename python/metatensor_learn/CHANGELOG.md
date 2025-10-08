@@ -17,6 +17,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- We now require Python >= 3.10
+
 ### Added
 
 - A custom class `metatensor.learn.nn.Module` that should be used instead of

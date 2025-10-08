@@ -17,6 +17,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- We now require Python >= 3.10
+
 ### Added
 
 - `join_blocks`, to join multiple blocks along samples or properties, with
