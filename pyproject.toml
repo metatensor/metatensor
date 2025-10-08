@@ -71,7 +71,7 @@ filterwarnings = [
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]
-ignore = ["B018", "B904", "B905"]
+ignore = ["B018", "B904"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
