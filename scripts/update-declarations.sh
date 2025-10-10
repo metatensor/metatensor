@@ -19,6 +19,7 @@ bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_ap
     --allowlist-type "^mts_.*" \
     --allowlist-var "^MTS_.*"\
     --must-use-type "mts_status_t" \
+    --rust-target "1.74" \
     --raw-line '#![allow(warnings)]
 //! Rust definition corresponding to metatensor-core C-API.
 //!
@@ -28,7 +29,8 @@ bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_ap
 #[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
 #[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
 #[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
-extern "C" {}'
+extern "C" {}' -- \
+    -I./scripts/include
 
 # Format the auto-generated rust code
 mv "$ROOT_DIR/rustfmt.toml" "$ROOT_DIR/.no_op.rustfmt.toml"

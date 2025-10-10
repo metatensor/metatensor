@@ -318,6 +318,7 @@ if __name__ == "__main__":
             "metatensor-core": [
                 "metatensor/core/lib/*",
                 "metatensor/core/include/*",
+                "metatensor/core/include/metatensor/*",
             ]
         },
     )

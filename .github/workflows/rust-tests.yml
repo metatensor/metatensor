@@ -160,7 +160,7 @@ jobs:
 
       - name: install bindgen
         run: |
-          cargo install bindgen-cli --version ^0.69
+          cargo install bindgen-cli --version ^0.72.1
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |

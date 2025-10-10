@@ -22,6 +22,7 @@ fn main() {
     config.documentation_style = cbindgen::DocumentationStyle::Doxy;
     config.line_endings = cbindgen::LineEndingStyle::LF;
     config.autogen_warning = Some(generated_comment.into());
+    config.includes.push("metatensor/version.h".into());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)

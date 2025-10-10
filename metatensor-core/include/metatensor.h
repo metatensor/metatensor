@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "metatensor/version.h"
 
 /**
  * Status code used when a function succeeded

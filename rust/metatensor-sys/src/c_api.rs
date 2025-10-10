@@ -51,62 +51,37 @@ fn bindgen_test_layout_mts_labels_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_labels_t>(),
         40usize,
-        concat!("Size of: ", stringify!(mts_labels_t))
+        "Size of mts_labels_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_labels_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_labels_t))
+        "Alignment of mts_labels_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).internal_ptr_) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(internal_ptr_)
-        )
+        "Offset of field: mts_labels_t::internal_ptr_"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).names) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(names)
-        )
+        "Offset of field: mts_labels_t::names"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).values) as usize - ptr as usize },
         16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(values)
-        )
+        "Offset of field: mts_labels_t::values"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).size) as usize - ptr as usize },
         24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(size)
-        )
+        "Offset of field: mts_labels_t::size"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).count) as usize - ptr as usize },
         32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(count)
-        )
+        "Offset of field: mts_labels_t::count"
     );
 }
 pub type mts_data_origin_t = u64;
@@ -123,32 +98,22 @@ fn bindgen_test_layout_mts_sample_mapping_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_sample_mapping_t>(),
         16usize,
-        concat!("Size of: ", stringify!(mts_sample_mapping_t))
+        "Size of mts_sample_mapping_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_sample_mapping_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_sample_mapping_t))
+        "Alignment of mts_sample_mapping_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).input) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_sample_mapping_t),
-            "::",
-            stringify!(input)
-        )
+        "Offset of field: mts_sample_mapping_t::input"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).output) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_sample_mapping_t),
-            "::",
-            stringify!(output)
-        )
+        "Offset of field: mts_sample_mapping_t::output"
     );
 }
 #[repr(C)]
@@ -221,112 +186,62 @@ fn bindgen_test_layout_mts_array_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_array_t>(),
         80usize,
-        concat!("Size of: ", stringify!(mts_array_t))
+        "Size of mts_array_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_array_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_array_t))
+        "Alignment of mts_array_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).ptr) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(ptr)
-        )
+        "Offset of field: mts_array_t::ptr"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(origin)
-        )
+        "Offset of field: mts_array_t::origin"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).data) as usize - ptr as usize },
         16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(data)
-        )
+        "Offset of field: mts_array_t::data"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
         24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(shape)
-        )
+        "Offset of field: mts_array_t::shape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
         32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(reshape)
-        )
+        "Offset of field: mts_array_t::reshape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
         40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(swap_axes)
-        )
+        "Offset of field: mts_array_t::swap_axes"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
         48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(create)
-        )
+        "Offset of field: mts_array_t::create"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
         56usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(copy)
-        )
+        "Offset of field: mts_array_t::copy"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
         64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(destroy)
-        )
+        "Offset of field: mts_array_t::destroy"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).move_samples_from) as usize - ptr as usize },
         72usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(move_samples_from)
-        )
+        "Offset of field: mts_array_t::move_samples_from"
     );
 }
 pub type mts_realloc_buffer_t = ::std::option::Option<

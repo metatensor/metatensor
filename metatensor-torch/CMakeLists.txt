@@ -151,7 +151,8 @@ target_compile_definitions(metatensor_torch PRIVATE metatensor_torch_EXPORTS)
 
 
 set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
-file(WRITE ${_path_} "/** Full version of metatensor-torch as a string */\n")
+file(WRITE ${_path_} "#pragma once\n\n")
+file(APPEND ${_path_} "/** Full version of metatensor-torch as a string */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION \"${METATENSOR_TORCH_FULL_VERSION}\"\n\n")
 file(APPEND ${_path_} "/** Major version number of metatensor-torch as an integer */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
