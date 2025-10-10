@@ -4,8 +4,11 @@ import os
 from pycparser import c_ast, parse_file
 
 
-ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
-FAKE_INCLUDES = os.path.join(ROOT, "python", "scripts", "include")
+ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+FAKE_INCLUDES = [
+    os.path.join(ROOT, "python", "scripts", "include"),
+    os.path.join(ROOT, "scripts", "include"),
+]
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
@@ -79,7 +82,9 @@ class AstVisitor(c_ast.NodeVisitor):
 
 
 def parse(file):
-    cpp_args = ["-E", "-I", FAKE_INCLUDES]
+    cpp_args = ["-E"]
+    for path in FAKE_INCLUDES:
+        cpp_args += ["-I", path]
     ast = parse_file(file, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     visitor = AstVisitor()

@@ -344,30 +344,28 @@ add_custom_target(cargo-build-metatensor ALL
     BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
 )
 
-# Add `#define METATENSOR_VERSION_XXX` to the header
-add_custom_command(TARGET cargo-build-metatensor POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-        -DMTS_SOURCE_DIR=${PROJECT_SOURCE_DIR}
-        -DMTS_BINARY_DIR=${PROJECT_BINARY_DIR}
-        -DMTS_VERSION=${METATENSOR_FULL_VERSION}
-        -DMTS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-        -DMTS_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-        -DMTS_VERSION_PATCH=${PROJECT_VERSION_PATCH}
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version-defines.cmake
-)
+# Auto-generate a header containing the version number as #define
+set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
+file(WRITE ${_path_} "#pragma once\n\n")
+file(APPEND ${_path_} "/** Full version of metatensor as a string */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION \"${METATENSOR_FULL_VERSION}\"\n\n")
+file(APPEND ${_path_} "/** Major version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
+file(APPEND ${_path_} "/** Minor version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_MINOR ${PROJECT_VERSION_MINOR}\n\n")
+file(APPEND ${_path_} "/** Patch version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
+
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/include/metatensor)
+set(_destination_ "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/version.h")
+file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
 
 add_dependencies(metatensor::shared cargo-build-metatensor)
 add_dependencies(metatensor::static cargo-build-metatensor)
-set(METATENSOR_HEADERS
-    "${PROJECT_BINARY_DIR}/include/metatensor.h"
-    "${PROJECT_BINARY_DIR}/include/metatensor.hpp"
-)
-set(METATENSOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/)
-file(MAKE_DIRECTORY ${METATENSOR_INCLUDE_DIR})
 
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}/include"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
 target_compile_features(metatensor::shared INTERFACE cxx_std_17)
@@ -380,7 +378,7 @@ endif()
 
 set_target_properties(metatensor::static PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}/include"
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
@@ -408,7 +406,10 @@ write_basic_package_version_file(
     COMPATIBILITY SameMinorVersion
 )
 
-install(FILES ${METATENSOR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "include/metatensor.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "include/metatensor.hpp" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY "include/metatensor" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/version.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/metatensor)
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
     if (WIN32)
