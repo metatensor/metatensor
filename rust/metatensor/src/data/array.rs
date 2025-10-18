@@ -1,6 +1,5 @@
 use std::ops::Range;
 use std::os::raw::c_void;
-
 use once_cell::sync::Lazy;
 
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
@@ -63,6 +62,13 @@ pub trait Array: std::any::Any + Send + Sync {
         samples: &[mts_sample_mapping_t],
         properties: Range<usize>,
     );
+
+    /// Get a DLPack view of this array.
+    /// 
+    /// Returns None if the array doesn't support DLPack conversion.
+    fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
+        None  // Default implementation returns None
+    }
 }
 
 impl From<Box<dyn Array>> for mts_array_t {
@@ -72,7 +78,7 @@ impl From<Box<dyn Array>> for mts_array_t {
         // not be casted to `*mut c_void`)
         let array = Box::new(array);
 
-        return mts_array_t {
+        mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
             data: Some(rust_array_data),
@@ -83,8 +89,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
             move_samples_from: Some(rust_array_move_samples_from),
-            // XXX(rg): implement
-            as_dlpack: None,
+            as_dlpack: Some(rust_array_as_dlpack),
         }
     }
 }
@@ -248,7 +253,37 @@ unsafe extern "C" fn rust_array_move_samples_from(
     })
 }
 
+/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_as_dlpack(
+    array: *const c_void,
+    dl_managed_tensor: *mut *mut metatensor_sys::DLManagedTensorVersioned,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, dl_managed_tensor);
+        let array = array.cast::<Box<dyn Array>>();
+        
+        let _ = if let Some(tensor) = (*array).as_dlpack() {
+            *dl_managed_tensor = tensor;
+            Ok(())
+        } else {
+            Err("DLPack conversion not implemented for this array type".to_string())
+        };
+    })
+}
+
 /******************************************************************************/
+
+// We need a function to convert dlpack::sys::DLManagedTensorVersioned to metatensor_sys::DLManagedTensorVersioned
+unsafe fn convert_dlpack_to_metatensor(tensor: *mut dlpack::sys::DLManagedTensorVersioned) -> *mut metatensor_sys::DLManagedTensorVersioned {
+    // Simply cast the pointer - this is safe because the memory layout is identical
+    // and both are FFI types coming from the same DLPack specification
+    tensor as *mut metatensor_sys::DLManagedTensorVersioned
+}
+
+// To manage lifetimes
+struct ArrayContext {
+    array: ndarray::ArrayD<f64>,
+}
 
 impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -308,6 +343,106 @@ impl Array for ndarray::ArrayD<f64> {
             output_location.assign(&value);
         }
     }
+
+    fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
+        // Create a DLPack tensor using the dlpack crate's functionality
+        let array_f64_view = self.view();
+
+        // Create a copy of the array since the DLPack tensor will own the memory
+        let array_clone = self.clone();
+
+        // Create and box the context
+        let ctx = Box::new(ArrayContext {
+            array: array_clone,
+        });
+        let ctx_ptr = Box::into_raw(ctx) as *mut c_void;
+
+        // Create a DLManagedTensorVersioned
+        let mut managed = dlpack::sys::DLManagedTensorVersioned {
+            version: dlpack::sys::DLPackVersion {
+                major: dlpack::sys::DLPACK_MAJOR_VERSION,
+                minor: dlpack::sys::DLPACK_MINOR_VERSION,
+            },
+            dl_tensor: dlpack::sys::DLTensor {
+                data: std::ptr::null_mut(),
+                device: dlpack::sys::DLDevice {
+                    device_type: dlpack::sys::DLDeviceType::kDLCPU,
+                    device_id: 0,
+                },
+                ndim: array_f64_view.ndim() as i32,
+                dtype: dlpack::sys::DLDataType {
+                    code: dlpack::sys::DLDataTypeCode::kDLFloat,
+                    bits: 64,
+                    lanes: 1,
+                },
+                shape: std::ptr::null_mut(),
+                strides: std::ptr::null_mut(),
+                byte_offset: 0,
+            },
+            manager_ctx: ctx_ptr,
+            deleter: Some(dlpack_deleter),
+            flags: 0,
+        };
+
+        unsafe {
+            // Set up the data pointer
+            let ctx = &*(ctx_ptr as *const ArrayContext);
+            managed.dl_tensor.data = ctx.array.as_ptr() as *mut c_void;
+
+            // Set up shape
+            let shape = ctx.array.shape();
+            let shape_vec: Vec<i64> = shape.iter().map(|&s| s as i64).collect();
+            let shape_ptr = Box::into_raw(shape_vec.into_boxed_slice()) as *mut i64;
+            managed.dl_tensor.shape = shape_ptr;
+
+            // Set up strides if needed
+            if !ctx.array.is_standard_layout() {
+                let strides = ctx.array.strides();
+                let strides_vec: Vec<i64> = strides.iter().map(|&s| s as i64).collect();
+                let strides_ptr = Box::into_raw(strides_vec.into_boxed_slice()) as *mut i64;
+                managed.dl_tensor.strides = strides_ptr;
+            }
+
+            // Convert to a raw pointer
+            let raw_ptr = Box::into_raw(Box::new(managed));
+            
+            // Convert to metatensor_sys type and return
+            Some(convert_dlpack_to_metatensor(raw_ptr))
+        }
+    }
+}
+
+// Deleter function for the DLPack tensor
+extern "C" fn dlpack_deleter(tensor: *mut dlpack::sys::DLManagedTensorVersioned) {
+    unsafe {
+        if !tensor.is_null() {
+            let tensor_ref = &mut *tensor;
+            
+            // Free the shape array
+            if !tensor_ref.dl_tensor.shape.is_null() {
+                let shape_len = tensor_ref.dl_tensor.ndim as usize;
+                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
+                    tensor_ref.dl_tensor.shape, shape_len
+                ));
+            }
+            
+            // Free the strides array
+            if !tensor_ref.dl_tensor.strides.is_null() {
+                let strides_len = tensor_ref.dl_tensor.ndim as usize;
+                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
+                    tensor_ref.dl_tensor.strides, strides_len
+                ));
+            }
+            
+            // Free the context that holds the ndarray
+            if !tensor_ref.manager_ctx.is_null() {
+                let _ = Box::from_raw(tensor_ref.manager_ctx as *mut ArrayContext);
+            }
+            
+            // Free the DLManagedTensorVersioned
+            let _ = Box::from_raw(tensor);
+        }
+    }
 }
 
 /******************************************************************************/
@@ -362,6 +497,10 @@ impl Array for EmptyArray {
 
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
+    }
+
+    fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
+        panic!("can not call Array::as_dlpack() for EmptyArray");
     }
 }
 
