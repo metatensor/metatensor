@@ -149,10 +149,9 @@ DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
     // Set up version info
     managed->version.major = 1;
     managed->version.minor = 0;
-    // Create a copy of the tensor to ensure it stays alive
-    // Store it in the manager_ctx so we can free it later
-    auto* tensor_copy = new at::Tensor(tensor_.clone());
-    managed->manager_ctx = tensor_copy;
+    // TODO(rg): can this just increase the ref count
+    auto* tensor_ref = new at::Tensor(tensor_);
+    managed->manager_ctx = tensor_ref;
     // Set up the DLTensor
     auto& dl_tensor = managed->dl_tensor;
     // Set device information
@@ -201,7 +200,7 @@ DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
         dl_tensor.dtype.bits = 64;
     }
     dl_tensor.dtype.lanes = 1;
-    // Set data pointer
+    // Point directly to the original tensor's data
     dl_tensor.data = tensor_.data_ptr();
     dl_tensor.byte_offset = 0;
     // Set up deleter
@@ -213,7 +212,6 @@ DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
             if (self->dl_tensor.strides) {
                 delete[] self->dl_tensor.strides;
             }
-            // Delete the PyTorch tensor
             delete static_cast<at::Tensor*>(self->manager_ctx);
             // Delete the managed tensor itself
             delete self;
