@@ -262,12 +262,14 @@ unsafe extern "C" fn rust_array_as_dlpack(
         check_pointers!(array, dl_managed_tensor);
         let array = array.cast::<Box<dyn Array>>();
         
-        let _ = if let Some(tensor) = (*array).as_dlpack() {
-            *dl_managed_tensor = tensor;
-            Ok(())
-        } else {
-            Err("DLPack conversion not implemented for this array type".to_string())
-        };
+        match (*array).as_dlpack() {
+            Some(tensor) => {
+                *dl_managed_tensor = tensor;
+            },
+            None => {
+                panic!("DLPack conversion not implemented for this array type");
+            }
+        }
     })
 }
 
