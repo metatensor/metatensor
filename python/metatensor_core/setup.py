@@ -315,11 +315,11 @@ if __name__ == "__main__":
             "sdist": sdist_generate_data,
         },
         package_data={
-         "metatensor-core": [
-             "metatensor/core/lib/*",
-             "metatensor/core/include/*",
-             "metatensor/core/include/metatensor/*",
-             "metatensor/core/include/vendored/**",
-         ]
+            "metatensor-core": [
+                "metatensor/core/lib/*",
+                "metatensor/core/include/*",
+                "metatensor/core/include/metatensor/*",
+                "metatensor/core/include/vendored/**",
+            ]
         },
     )
