@@ -18,20 +18,21 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             torch-version: "2.8"
             python-version: "3.13"
             cargo-test-flags: --release
             do-valgrind: true
 
-          - os: ubuntu-22.04
-            container: ubuntu:20.04
-            extra-name: ", cmake 3.16"
+          # check the build on a stock Ubuntu 22.04, which uses cmake 3.22
+          - os: ubuntu-24.04
+            container: ubuntu:22.04
+            extra-name: ", cmake 3.22"
             torch-version: "2.1"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
-          - os: macos-14
+          - os: macos-15
             torch-version: "2.8"
             python-version: "3.13"
             cargo-test-flags: --release
@@ -42,7 +43,7 @@ jobs:
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: |
           apt update
           apt install -y software-properties-common
@@ -56,7 +57,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure git safe directory
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: git config --global --add safe.directory /__w/metatensor/metatensor
 
       - name: setup rust
@@ -66,8 +67,8 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: setup Python
-        if: matrix.container != 'ubuntu:20.04'
-        uses: actions/setup-python@v5
+        if: matrix.container != 'ubuntu:22.04'
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 

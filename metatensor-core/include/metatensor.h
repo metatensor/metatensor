@@ -1,7 +1,7 @@
 
 #include <stddef.h>
 #include "dlpack/dlpack.h"
-    typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 
 #ifndef METATENSOR_H
@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "metatensor/version.h"
 
 /**
  * Status code used when a function succeeded

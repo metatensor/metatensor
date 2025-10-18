@@ -16,11 +16,6 @@ function(parse_version _version_ _major_ _minor_ _patch_ _rc_)
     set(${_patch_} ${CMAKE_MATCH_3} PARENT_SCOPE)
 endfunction()
 
-if (CMAKE_VERSION VERSION_LESS "3.17")
-    # CMAKE_CURRENT_FUNCTION_LIST_DIR was added in CMake 3.17
-    set(CMAKE_CURRENT_FUNCTION_LIST_DIR "${CMAKE_CURRENT_LIST_DIR}")
-endif()
-
 # Get the time of the last modification since the last tag/release, and a hash
 # of the latest commit/full state of a dirty repository
 function(git_version_info _tag_prefix_ _output_n_commits_ _output_git_hash_)

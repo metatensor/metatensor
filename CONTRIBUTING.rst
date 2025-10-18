@@ -21,16 +21,16 @@ on metatensor:
   use a version provided by your operating system. We need at least Rust version
   1.74 to build metatensor.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
-  We require a Python version of at least 3.9.
+  We require a Python version of at least 3.10.
 - **tox**: a Python test runner, see https://tox.readthedocs.io/en/latest/. You
   can install tox with ``pip install tox``.
 
 Additionally, you will need to install the following software, but you should
 not have to interact with them directly:
 
-- **CMake**: we need a CMake version of at least 3.16.
-- **a C++ compiler** we need a compiler supporting C++11 (C++17 for
-  ``metatensor-torch``). GCC >= 7, clang >= 5 and MSVC >= 19 should all work.
+- **CMake**: we need a CMake version of at least 3.22.
+- **a C++ compiler** we need a compiler supporting C++17. GCC >= 7, clang >= 5
+  and MSVC >= 19 should all work.
 
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest

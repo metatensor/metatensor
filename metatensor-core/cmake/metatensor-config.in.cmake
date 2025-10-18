@@ -1,6 +1,6 @@
 @PACKAGE_INIT@
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 include(FindPackageHandleStandardArgs)
 
@@ -27,9 +27,15 @@ if (NOT EXISTS ${METATENSOR_INCLUDE}/metatensor.h OR NOT EXISTS ${METATENSOR_INC
     message(FATAL_ERROR "could not find metatensor headers in '${METATENSOR_INCLUDE}', please re-install metatensor")
 endif()
 
-if (NOT EXISTS ${METATENSOR_INCLUDE}/vendored/dlpack/dlpack.h)
-    message(FATAL_ERROR "could not find vendored dlpack headers in '${METATENSOR_INCLUDE}', please re-install metatensor")
+if (NOT EXISTS ${METATENSOR_VENDORED_INCLUDE})
+    message(FATAL_ERROR "could not find vendored dlpack headers in '${METATENSOR_VENDORED_INCLUDE}', please re-install metatensor")
 endif()
+
+add_library(metatensor_interface INTERFACE IMPORTED)
+target_include_directories(metatensor_interface INTERFACE
+    ${METATENSOR_INCLUDE}
+    ${METATENSOR_VENDORED_INCLUDE}
+)
 
 # Shared library target
 if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
@@ -40,11 +46,14 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
     add_library(metatensor::shared SHARED IMPORTED)
     set_target_properties(metatensor::shared PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-        INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE};${METATENSOR_VENDORED_INCLUDE}"
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+    target_include_directories(metatensor::shared INTERFACE
+        ${METATENSOR_INCLUDE}
+        ${METATENSOR_VENDORED_INCLUDE}
+    )
+    target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
     if (WIN32)
         if (NOT EXISTS ${METATENSOR_IMPLIB_LOCATION})
@@ -67,27 +76,27 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
     add_library(metatensor::static STATIC IMPORTED)
     set_target_properties(metatensor::static PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-        INTERFACE_INCLUDE_DIRECTORIES "${METATENSOR_INCLUDE};${METATENSOR_VENDORED_INCLUDE}"
         INTERFACE_LINK_LIBRARIES "@CARGO_DEFAULT_LIBRARIES@"
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::static INTERFACE cxx_std_11)
+    target_include_directories(metatensor::static INTERFACE
+        ${METATENSOR_INCLUDE}
+        ${METATENSOR_VENDORED_INCLUDE}
+    )
+    target_compile_features(metatensor::static INTERFACE cxx_std_17)
 endif()
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
-    # Export either the shared or static library as the metatensor target
-    # This requires cmake 3.18+ to use ALIAS for non-GLOBAL IMPORTED targets
-    if (@BUILD_SHARED_LIBS@)
-        add_library(metatensor ALIAS metatensor::shared)
-    else()
-        add_library(metatensor ALIAS metatensor::static)
-    endif()
+# Export either the shared or static library as the metatensor target
+if (@BUILD_SHARED_LIBS@)
+    add_library(metatensor ALIAS metatensor::shared)
+else()
+    add_library(metatensor ALIAS metatensor::static)
 endif()
 
 
 if (@BUILD_SHARED_LIBS@)
-    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE METATENSOR_VENDORED_INCLUDE)
 else()
-    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE METATENSOR_VENDORED_INCLUDE)
 endif()

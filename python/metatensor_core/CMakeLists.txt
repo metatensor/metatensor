@@ -6,7 +6,7 @@
 # separate libmetatensor package), the second one is used everywhere else (for
 # local development builds and for the PyPI distribution).
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 project(metatensor-python NONE)
 
 option(METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB "Force the usage of an external version of metatensor-core" OFF)

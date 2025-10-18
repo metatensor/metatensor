@@ -11,7 +11,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 ENV RUST_BUILD_TARGET="aarch64-unknown-linux-gnu"
 
 # Install an older C++ compiler. The default compiler (gcc-14) introduces calls
-# to `__cxa_call_terminate` which is not available in ubuntu-22.04 libstdc++
+# to `__cxa_call_terminate` which is not available in ubuntu 22.04 libstdc++
 ARG DEVTOOLSET_VERSION=11
 RUN yum install -y gcc-toolset-${DEVTOOLSET_VERSION}-toolchain
 ENV PATH=/opt/rh/gcc-toolset-${DEVTOOLSET_VERSION}/root/usr/bin:$PATH
