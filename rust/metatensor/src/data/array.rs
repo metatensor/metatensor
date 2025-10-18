@@ -347,69 +347,17 @@ impl Array for ndarray::ArrayD<f64> {
     }
 
     fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
-        // Create a DLPack tensor using the dlpack crate's functionality
-        let array_f64_view = self.view();
+        // Use the existing TryFrom implementation from dlpack crate
+        use dlpack::sys;
 
-        // Create a copy of the array since the DLPack tensor will own the memory
-        let array_clone = self.clone();
+        let result: Result<sys::DLManagedTensorVersioned, _> = self.clone().try_into();
 
-        // Create and box the context
-        let ctx = Box::new(ArrayContext {
-            array: array_clone,
-        });
-        let ctx_ptr = Box::into_raw(ctx) as *mut c_void;
-
-        // Create a DLManagedTensorVersioned
-        let mut managed = dlpack::sys::DLManagedTensorVersioned {
-            version: dlpack::sys::DLPackVersion {
-                major: dlpack::sys::DLPACK_MAJOR_VERSION,
-                minor: dlpack::sys::DLPACK_MINOR_VERSION,
+        match result {
+            Ok(managed_tensor) => {
+                let raw_ptr = Box::into_raw(Box::new(managed_tensor));
+                Some(raw_ptr as *mut metatensor_sys::DLManagedTensorVersioned)
             },
-            dl_tensor: dlpack::sys::DLTensor {
-                data: std::ptr::null_mut(),
-                device: dlpack::sys::DLDevice {
-                    device_type: dlpack::sys::DLDeviceType::kDLCPU,
-                    device_id: 0,
-                },
-                ndim: array_f64_view.ndim() as i32,
-                dtype: dlpack::sys::DLDataType {
-                    code: dlpack::sys::DLDataTypeCode::kDLFloat,
-                    bits: 64,
-                    lanes: 1,
-                },
-                shape: std::ptr::null_mut(),
-                strides: std::ptr::null_mut(),
-                byte_offset: 0,
-            },
-            manager_ctx: ctx_ptr,
-            deleter: Some(dlpack_deleter),
-            flags: 0,
-        };
-
-        unsafe {
-            // Set up the data pointer
-            let ctx = &*(ctx_ptr as *const ArrayContext);
-            managed.dl_tensor.data = ctx.array.as_ptr() as *mut c_void;
-
-            // Set up shape
-            let shape = ctx.array.shape();
-            let shape_vec: Vec<i64> = shape.iter().map(|&s| s as i64).collect();
-            let shape_ptr = Box::into_raw(shape_vec.into_boxed_slice()) as *mut i64;
-            managed.dl_tensor.shape = shape_ptr;
-
-            // Set up strides if needed
-            if !ctx.array.is_standard_layout() {
-                let strides = ctx.array.strides();
-                let strides_vec: Vec<i64> = strides.iter().map(|&s| s as i64).collect();
-                let strides_ptr = Box::into_raw(strides_vec.into_boxed_slice()) as *mut i64;
-                managed.dl_tensor.strides = strides_ptr;
-            }
-
-            // Convert to a raw pointer
-            let raw_ptr = Box::into_raw(Box::new(managed));
-            
-            // Convert to metatensor_sys type and return
-            Some(convert_dlpack_to_metatensor(raw_ptr))
+            Err(_) => None
         }
     }
 }
