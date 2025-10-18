@@ -54,6 +54,8 @@ public:
 
     double* data() & override;
 
+    virtual DLManagedTensorVersioned* as_dlpack() const;
+
     const std::vector<uintptr_t>& shape() const & override;
 
     void reshape(std::vector<uintptr_t> shape) override;

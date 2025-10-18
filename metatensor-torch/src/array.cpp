@@ -143,3 +143,81 @@ void TorchDataArray::update_shape() {
         shape_.push_back(static_cast<uintptr_t>(size));
     }
 }
+
+DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
+    auto* managed = new DLManagedTensorVersioned();
+    // Set up version info
+    managed->version.major = 1;
+    managed->version.minor = 0;
+    // Create a copy of the tensor to ensure it stays alive
+    // Store it in the manager_ctx so we can free it later
+    auto* tensor_copy = new at::Tensor(tensor_.clone());
+    managed->manager_ctx = tensor_copy;
+    // Set up the DLTensor
+    auto& dl_tensor = managed->dl_tensor;
+    // Set device information
+    if (tensor_.is_cuda()) {
+        dl_tensor.device.device_type = DLDeviceType::kDLCUDA;
+        dl_tensor.device.device_id = tensor_.get_device();
+    } else {
+        dl_tensor.device.device_type = DLDeviceType::kDLCPU;
+        dl_tensor.device.device_id = 0;
+    }
+    // Set tensor dimensions
+    dl_tensor.ndim = tensor_.dim();
+    // Create shape array
+    int64_t* shape = new int64_t[dl_tensor.ndim];
+    for (int i = 0; i < dl_tensor.ndim; i++) {
+        shape[i] = tensor_.size(i);
+    }
+    dl_tensor.shape = shape;
+    // Create strides array if tensor is not contiguous
+    if (tensor_.is_contiguous()) {
+        dl_tensor.strides = nullptr;
+    } else {
+        int64_t* strides = new int64_t[dl_tensor.ndim];
+        for (int i = 0; i < dl_tensor.ndim; i++) {
+            strides[i] = tensor_.stride(i);
+        }
+        dl_tensor.strides = strides;
+    }
+    // Set data type
+    if (tensor_.scalar_type() == at::ScalarType::Float) {
+        dl_tensor.dtype.code = DLDataTypeCode::kDLFloat;
+        dl_tensor.dtype.bits = 32;
+    } else if (tensor_.scalar_type() == at::ScalarType::Double) {
+        dl_tensor.dtype.code = DLDataTypeCode::kDLFloat;
+        dl_tensor.dtype.bits = 64;
+    } else if (tensor_.scalar_type() == at::ScalarType::Int) {
+        dl_tensor.dtype.code = DLDataTypeCode::kDLInt;
+        dl_tensor.dtype.bits = 32;
+    } else if (tensor_.scalar_type() == at::ScalarType::Long) {
+        dl_tensor.dtype.code = DLDataTypeCode::kDLInt;
+        dl_tensor.dtype.bits = 64;
+    } else {
+        // For unsupported types, fall back to float64
+        // This should ideally log a warning
+        dl_tensor.dtype.code = DLDataTypeCode::kDLFloat;
+        dl_tensor.dtype.bits = 64;
+    }
+    dl_tensor.dtype.lanes = 1;
+    // Set data pointer
+    dl_tensor.data = tensor_.data_ptr();
+    dl_tensor.byte_offset = 0;
+    // Set up deleter
+    managed->deleter = [](DLManagedTensorVersioned* self) {
+        if (self) {
+            // Free the shape array
+            delete[] self->dl_tensor.shape;
+            // Free the strides array if allocated
+            if (self->dl_tensor.strides) {
+                delete[] self->dl_tensor.strides;
+            }
+            // Delete the PyTorch tensor
+            delete static_cast<at::Tensor*>(self->manager_ctx);
+            // Delete the managed tensor itself
+            delete self;
+        }
+    };
+    return managed;
+}
