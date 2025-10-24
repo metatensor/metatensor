@@ -255,7 +255,7 @@ impl TensorMap {
         return Ok(matching);
     }
 
-    /// Move the given dimensions from the component labels to the property labels
+    /// Move the all the given dimensions from the components to the properties
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
         let mut clone = self.try_clone()?;
@@ -265,7 +265,9 @@ impl TensorMap {
         }
 
         for block in &mut clone.blocks {
-            block.components_to_properties(dimensions)?;
+            for dimension in dimensions {
+                block.components_to_properties(dimension)?;
+            }
         }
 
         return Ok(clone);

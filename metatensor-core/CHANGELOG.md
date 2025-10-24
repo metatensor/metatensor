@@ -22,6 +22,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - We now requires at least cmake v3.22 to compile metatensor
 - We now require Python >= 3.10
 
+### Fixed
+
+- `TensorMap::components_to_properties` now properly handles multiple components
+  at once.
+
 ## [Version 0.1.17](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.17) - 2025-09-02
 
 ### Fixed
