@@ -377,6 +377,33 @@ def test_components_to_properties(tensor):
     assert tuple(block.properties[1]) == (1, 0)
     assert tuple(block.properties[2]) == (2, 0)
 
+    # tensor with more than one component
+    block = TensorBlock(
+        values=np.full((3, 1, 4, 2, 1), 1.0),
+        samples=Labels(["s"], np.array([[0], [2], [4]])),
+        components=[
+            Labels(["c1"], np.array([[42]])),
+            Labels(["c2"], np.array([[0], [1], [2], [3]])),
+            Labels(["c3"], np.array([[-2], [-1]])),
+        ],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+
+    tensor = TensorMap(Labels.single(), [block])
+
+    one_c = tensor.components_to_properties("c2")
+    assert one_c.block().properties == Labels(
+        ["c2", "p"], np.array([(0, 0), (1, 0), (2, 0), (3, 0)])
+    )
+
+    two_c = one_c.components_to_properties("c1")
+    assert two_c.block().properties == Labels(
+        ["c1", "c2", "p"], np.array([(42, 0, 0), (42, 1, 0), (42, 2, 0), (42, 3, 0)])
+    )
+
+    two_c_direct = tensor.components_to_properties(["c2", "c1"])
+    assert two_c.block().properties == two_c_direct.block().properties
+
 
 def test_empty_tensor():
     empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])

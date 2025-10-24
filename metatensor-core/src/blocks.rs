@@ -306,21 +306,18 @@ impl TensorBlock {
 
     /// Move components to properties for this block and all gradients in this
     /// block
-    pub(crate) fn components_to_properties(&mut self, dimensions: &[&str]) -> Result<(), Error> {
-        if dimensions.is_empty() {
-            return Ok(());
-        }
-
+    pub(crate) fn components_to_properties(&mut self, dimension: &str) -> Result<(), Error> {
         let mut component_axis = None;
         for (component_i, component) in self.components.iter().enumerate() {
-            if component.names() == dimensions {
+            assert_eq!(component.names().len(), 1);
+            if component.names()[0] == dimension {
                 component_axis = Some(component_i);
                 break;
             }
         }
 
         let component_axis = component_axis.ok_or_else(|| Error::InvalidParameter(format!(
-            "unable to find [{}] in the components ", dimensions.join(", ")
+            "unable to find '{}' in the components ", dimension
         )))?;
 
         let moved_component = self.components.0.remove(component_axis);
@@ -360,7 +357,7 @@ impl TensorBlock {
 
         // Repeat all the above for all gradient blocks
         for gradient in self.gradients.values_mut() {
-            gradient.components_to_properties(dimensions)?;
+            gradient.components_to_properties(dimension)?;
         }
 
         Ok(())

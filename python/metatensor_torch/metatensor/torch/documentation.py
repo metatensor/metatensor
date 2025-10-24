@@ -1224,8 +1224,7 @@ class TensorMap:
         Move the given ``dimensions`` from the component labels to the property
         labels for each block.
 
-        :param dimensions: name of the component dimensions to move to the
-            properties
+        :param dimensions: name of the component dimensions to move to the properties
         """
 
     def blocks_matching(self, selection: Labels) -> List[int]:
