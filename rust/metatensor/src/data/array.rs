@@ -275,18 +275,6 @@ unsafe extern "C" fn rust_array_as_dlpack(
 
 /******************************************************************************/
 
-// We need a function to convert dlpack::sys::DLManagedTensorVersioned to metatensor_sys::DLManagedTensorVersioned
-unsafe fn convert_dlpack_to_metatensor(tensor: *mut dlpack::sys::DLManagedTensorVersioned) -> *mut metatensor_sys::DLManagedTensorVersioned {
-    // Simply cast the pointer - this is safe because the memory layout is identical
-    // and both are FFI types coming from the same DLPack specification
-    tensor as *mut metatensor_sys::DLManagedTensorVersioned
-}
-
-// To manage lifetimes
-struct ArrayContext {
-    array: ndarray::ArrayD<f64>,
-}
-
 impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -347,50 +335,15 @@ impl Array for ndarray::ArrayD<f64> {
     }
 
     fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
-        // Use the existing TryFrom implementation from dlpack crate
-        use dlpack::sys;
-
-        let result: Result<sys::DLManagedTensorVersioned, _> = self.clone().try_into();
-
+        use dlpack::DLPackTensor;
+        let array_clone = self.clone();
+        let result: Result<DLPackTensor, _> = array_clone.try_into();
         match result {
-            Ok(managed_tensor) => {
-                let raw_ptr = Box::into_raw(Box::new(managed_tensor));
-                Some(raw_ptr as *mut metatensor_sys::DLManagedTensorVersioned)
+            Ok(dlpack_tensor) => {
+                let ptr = dlpack_tensor.into_raw() as *mut metatensor_sys::DLManagedTensorVersioned;
+                Some(ptr)
             },
-            Err(_) => None
-        }
-    }
-}
-
-// Deleter function for the DLPack tensor
-extern "C" fn dlpack_deleter(tensor: *mut dlpack::sys::DLManagedTensorVersioned) {
-    unsafe {
-        if !tensor.is_null() {
-            let tensor_ref = &mut *tensor;
-            
-            // Free the shape array
-            if !tensor_ref.dl_tensor.shape.is_null() {
-                let shape_len = tensor_ref.dl_tensor.ndim as usize;
-                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
-                    tensor_ref.dl_tensor.shape, shape_len
-                ));
-            }
-            
-            // Free the strides array
-            if !tensor_ref.dl_tensor.strides.is_null() {
-                let strides_len = tensor_ref.dl_tensor.ndim as usize;
-                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
-                    tensor_ref.dl_tensor.strides, strides_len
-                ));
-            }
-            
-            // Free the context that holds the ndarray
-            if !tensor_ref.manager_ctx.is_null() {
-                let _ = Box::from_raw(tensor_ref.manager_ctx as *mut ArrayContext);
-            }
-            
-            // Free the DLManagedTensorVersioned
-            let _ = Box::from_raw(tensor);
+            Err(_) => None,
         }
     }
 }

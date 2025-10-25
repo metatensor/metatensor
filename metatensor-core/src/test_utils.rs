@@ -1,31 +1,9 @@
 use std::ffi::c_void;
+use dlpack::GetDLPackDataType;
 use dlpack::sys as dl;
 use num_traits::NumCast;
 
 use crate::mts_array_t;
-
-pub trait AsDlPack {
-    fn to_dl_dtype() -> dl::DLDataType;
-}
-
-impl AsDlPack for f64 {
-    fn to_dl_dtype() -> dl::DLDataType {
-        dl::DLDataType { code: dl::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 }
-    }
-}
-
-impl AsDlPack for f32 {
-    fn to_dl_dtype() -> dl::DLDataType {
-        dl::DLDataType { code: dl::DLDataTypeCode::kDLFloat, bits: 32, lanes: 1 }
-    }
-}
-
-impl AsDlPack for i32 {
-    fn to_dl_dtype() -> dl::DLDataType {
-        dl::DLDataType { code: dl::DLDataTypeCode::kDLInt, bits: 32, lanes: 1 }
-    }
-}
-
 
 pub struct TestArray;
 
@@ -33,7 +11,7 @@ impl TestArray {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<T>(shape: Vec<usize>) -> mts_array_t
     where
-        T: Clone + Default + AsDlPack + NumCast
+        T: Clone + Default + GetDLPackDataType + NumCast
     {
         let mut data = vec![T::default(); shape.iter().product()];
         for i in 0..data.len() {
@@ -56,7 +34,7 @@ impl TestArray {
     #[allow(clippy::new_ret_no_self)]
     pub fn new_typed<T>(shape: Vec<usize>, origin_name: &str) -> (mts_array_t, Vec<T>)
     where
-        T: Clone + Default + AsDlPack + NumCast
+        T: Clone + Default + GetDLPackDataType + NumCast
     {
         let mut data = vec![T::default(); shape.iter().product()];
         for i in 0..data.len() {
@@ -72,7 +50,7 @@ impl TestArray {
 }
 
 
-fn mock_typed_dlpack_tensor<T: Clone + AsDlPack>(shape: Vec<i64>, data: Vec<T>) -> dl::DLManagedTensorVersioned {
+fn mock_typed_dlpack_tensor<T: Clone + GetDLPackDataType>(shape: Vec<i64>, data: Vec<T>) -> dl::DLManagedTensorVersioned {
     let data_ptr = Box::leak(data.into_boxed_slice()).as_mut_ptr();
     let ndim = shape.len();
     let shape_ptr = Box::leak(shape.into_boxed_slice()).as_mut_ptr();
@@ -100,7 +78,7 @@ fn mock_typed_dlpack_tensor<T: Clone + AsDlPack>(shape: Vec<i64>, data: Vec<T>) 
             data: data_ptr as *mut c_void,
             device: dl::DLDevice { device_type: dl::DLDeviceType::kDLCPU, device_id: 0 },
             ndim: ndim as i32,
-            dtype: T::to_dl_dtype(),
+            dtype: T::get_dlpack_data_type(),
             shape: shape_ptr,
             strides: std::ptr::null_mut(),
             byte_offset: 0,
