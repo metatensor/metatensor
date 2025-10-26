@@ -136,6 +136,7 @@ jobs:
           echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 
+      # XXX(rg): shouldn't we actually pass ${{ matrix.cargo-test-flags }} ?
       - name: run tests
         run: |
           cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
