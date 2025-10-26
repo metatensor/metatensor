@@ -66,11 +66,14 @@ jobs:
           toolchain: stable
 
       # we get torch from pip to run the C++ test
-      - name: setup Python
+      - name: Install uv
         if: matrix.container != 'ubuntu:22.04'
-        uses: actions/setup-python@v6
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          version: "0.9.0"
+          python-version: "3.13"
+          enable-cache: true
+          activate-environment: true
 
       - name: install valgrind
         if: matrix.do-valgrind
@@ -95,5 +98,7 @@ jobs:
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_INDEX_STRATEGY: unsafe-best-match
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}
