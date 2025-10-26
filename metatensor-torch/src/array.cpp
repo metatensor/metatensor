@@ -194,10 +194,7 @@ DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
         dl_tensor.dtype.code = DLDataTypeCode::kDLInt;
         dl_tensor.dtype.bits = 64;
     } else {
-        // For unsupported types, fall back to float64
-        // This should ideally log a warning
-        dl_tensor.dtype.code = DLDataTypeCode::kDLFloat;
-        dl_tensor.dtype.bits = 64;
+      throw std::runtime_error("Unsupported data type for DLPack conversion.");
     }
     dl_tensor.dtype.lanes = 1;
     // Point directly to the original tensor's data
