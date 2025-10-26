@@ -50,3 +50,6 @@ namespaces = true
 python_files = ["*.py"]
 testpaths = ["tests"]
 filterwarnings = ["error"]
+
+[tool.coverage.run]
+patch = ["subprocess"]

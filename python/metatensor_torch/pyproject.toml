@@ -62,3 +62,6 @@ filterwarnings = [
     "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
 ]
+
+[tool.coverage.run]
+patch = ["subprocess"]
