@@ -243,8 +243,8 @@ jobs:
             METATENSOR_NO_LOCAL_DEPS=${{ startsWith(github.ref, 'refs/tags/metatensor-torch-v') && '1' || '0' }}
             METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION=${{ matrix.torch-version }}.*
             PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
-            UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-            UV_INDEX_STRATEGY: unsafe-best-match
+            UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+            UV_INDEX_STRATEGY=unsafe-best-match
             MACOSX_DEPLOYMENT_TARGET=11
             METATENSOR_BUILD_TYPE=release
           # do not complain for missing libtorch.so or libmetatensor.so
