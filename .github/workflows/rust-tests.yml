@@ -188,7 +188,14 @@ jobs:
 
       - name: install bindgen conditionally
         run: |
-          cargo install --list | grep "bindgen-cli v0.72.1" || cargo install bindgen-cli --force --version ^0.72.1
+          if ! cargo install --list | grep "bindgen-cli v0.72.1"; then
+            echo "Installing bindgen-cli v0.72.1 from git to use Cargo.lock"
+            git clone --depth 1 --branch v0.72.1 https://github.com/rust-lang/rust-bindgen
+            # Install from the local git clone using its Cargo.lock file
+            # This pins an older 'toml' version compatible with Rust 1.74.1
+            cargo install --path rust-bindgen/bindgen-cli --locked --force
+            rm -rf rust-bindgen
+          fi
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
