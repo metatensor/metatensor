@@ -1,5 +1,10 @@
 name: Build Python wheels
 
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
 on:
   push:
     tags: ["*"]
@@ -71,9 +76,29 @@ jobs:
       - name: install dependencies
         run: python -m pip install cibuildwheel twine
 
+      - name: Set up Docker Buildx
+        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: (matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        run: docker build -t rustc-manylinux2014_${{ matrix.cibw-arch }} python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
+        uses: docker/build-push-action@v6
+        with:
+          context: python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
+          tags: rustc-manylinux2014_${{ matrix.cibw-arch }}:latest
+          # Use GitHub Actions cache for buildx layers
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: false # We only want to build and load the image
+          load: true # Load the image into the local Docker daemon
 
       - name: build metatensor-core wheel
         run: python -m cibuildwheel python/metatensor_core
@@ -174,12 +199,28 @@ jobs:
       - name: install dependencies
         run: python -m pip install cibuildwheel
 
+      - name: Set up Docker Buildx
+        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: (matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        run: |
-          docker buildx build \
-              -t rustc-manylinux_2_28_${{ matrix.cibw-arch }} \
-              python/scripts/rustc-manylinux_2_28_${{ matrix.cibw-arch }}
+        uses: docker/build-push-action@v6
+        with:
+          context: python/scripts/rustc-manylinux_2_28_${{ matrix.cibw-arch }}
+          tags: rustc-manylinux_2_28_${{ matrix.cibw-arch }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: false # We only want to build and load the image
+          load: true # Load the image into the local Docker daemon
 
       - name: build metatensor-torch wheel
         run: python -m cibuildwheel python/metatensor_torch
