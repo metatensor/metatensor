@@ -85,7 +85,7 @@ jobs:
         with:
           version: "0.9.0"
           python-version: "3.13"
-          enable-cache: false
+          enable-cache: true
           activate-environment: true
 
       - name: install valgrind
@@ -111,5 +111,7 @@ jobs:
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_INDEX_STRATEGY: unsafe-best-match
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}
