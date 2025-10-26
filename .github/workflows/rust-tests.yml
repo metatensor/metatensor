@@ -186,9 +186,9 @@ jobs:
         run: |
           uv pip install pycparser
 
-      - name: install bindgen
+      - name: install bindgen conditionally
         run: |
-          cargo install bindgen-cli --version ^0.72.1
+          cargo install --list | grep "bindgen-cli v0.72.1" || cargo install bindgen-cli --force --version ^0.72.1
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
