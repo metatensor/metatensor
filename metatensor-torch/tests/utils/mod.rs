@@ -1,5 +1,6 @@
 //! utility functions to run metatensor-torch tests from Cargo
 //! (used in `run-torch-tests.rs` and `torch-install-check.rs`)
+// TODO(rg): let this work with uv too
 
 #![allow(clippy::needless_return)]
 #![allow(dead_code)]

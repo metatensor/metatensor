@@ -85,7 +85,7 @@ jobs:
         with:
           version: "0.9.0"
           python-version: "3.13"
-          enable-cache: true
+          enable-cache: false
           activate-environment: true
 
       - name: install valgrind
