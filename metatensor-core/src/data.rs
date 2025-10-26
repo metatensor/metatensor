@@ -184,6 +184,8 @@ struct MtsArrayInternal {
 }
 
 impl mts_array_t {
+    // TODO(rg): until we decide to keep or remove this, it's still useful for tests
+    #[cfg(test)]
     pub fn from_dlpack(dl_tensor: DLManagedTensorVersioned, origin_name: &str) -> mts_array_t {
         let boxed_tensor = Box::new(dl_tensor);
         let internal_state = Box::new(MtsArrayInternal {
