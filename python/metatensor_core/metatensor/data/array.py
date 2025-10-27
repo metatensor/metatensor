@@ -3,7 +3,12 @@ from typing import Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, mts_array_t, mts_data_origin_t
+from .._c_api import c_DLManagedTensorVersioned as DLManagedTensorVersioned
+from .._c_api import (
+    c_uintptr_t,
+    mts_array_t,
+    mts_data_origin_t,
+)
 from ..utils import catch_exceptions
 
 
@@ -325,6 +330,72 @@ def _mts_array_move_samples_from(
     output[output_samples, ..., properties] = input[input_samples, ..., :]
 
 
+# Get functions from Python's C API
+_python_api = ctypes.pythonapi
+_python_api.PyCapsule_GetPointer.restype = ctypes.c_void_p
+_python_api.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+
+_python_api.PyCapsule_SetName.restype = ctypes.c_int
+_python_api.PyCapsule_SetName.argtypes = [ctypes.py_object, ctypes.c_char_p]
+
+_python_api.PyCapsule_GetName.restype = ctypes.c_char_p
+_python_api.PyCapsule_GetName.argtypes = [ctypes.py_object]
+
+_python_api.PyErr_Occurred.restype = ctypes.c_void_p
+_python_api.PyErr_Occurred.argtypes = []
+
+_python_api.PyErr_Clear.restype = None
+_python_api.PyErr_Clear.argtypes = []
+
+# DLPack capsule names
+DLPACK_VERSIONED_NAME = b"dltensor_versioned"
+USED_DLPACK_VERSIONED_NAME = b"used_dltensor_versioned"
+
+
+@catch_exceptions
+def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr):
+    """
+    Implementation of `mts_array_t.as_dlpack`.
+
+    This function calls the array's __dlpack__ method, gets the PyCapsule,
+    extracts the raw `DLManagedTensorVersioned*` pointer, and transfers
+    ownership to the C-API caller by renaming the capsule.
+    """
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    array = wrapper.array
+    capsule = array.__dlpack__(max_version=(1, 1))
+
+    # Check that the capsule is indeed a versioned DLPack tensor
+    capsule_name = _python_api.PyCapsule_GetName(capsule)
+    if capsule_name != DLPACK_VERSIONED_NAME:
+        raise ValueError(
+            f"expected DLPack capsule name '{DLPACK_VERSIONED_NAME.decode()}', "
+            f"but got '{capsule_name.decode()}'"
+        )
+
+    # Get the pointer
+    pointer = _python_api.PyCapsule_GetPointer(capsule, DLPACK_VERSIONED_NAME)
+    if not pointer:
+        if _python_api.PyErr_Occurred():
+            _python_api.PyErr_Clear()  # Clear the Python error
+        raise ValueError("PyCapsule_GetPointer returned NULL")
+
+    # Mark the capsule as used to transfer ownership to the C-side
+    status = _python_api.PyCapsule_SetName(capsule, USED_DLPACK_VERSIONED_NAME)
+    if status != 0:
+        if _python_api.PyErr_Occurred():
+            _python_api.PyErr_Clear()
+        raise ValueError("PyCapsule_SetName failed")
+
+    # Pass the raw pointer to the C-API.
+    # The capsule object `capsule` will be garbage collected, but its
+    # destructor will see the "used_" name and *not* free the tensor data,
+    # which is now owned by the `dl_managed_tensor_ptr_ptr[0]` pointer.
+    dl_managed_tensor_ptr_ptr[0] = ctypes.cast(
+        pointer, ctypes.POINTER(DLManagedTensorVersioned)
+    )
+
+
 def _cast_to_ctype_functype(function, field_name):
     for name, klass in mts_array_t._fields_:
         if name == field_name:
@@ -343,6 +414,7 @@ _MTS_ARRAY_DESTROY = _cast_to_ctype_functype(_mts_array_destroy, "destroy")
 _MTS_ARRAY_MOVE_SAMPLES_FROM = _cast_to_ctype_functype(
     _mts_array_move_samples_from, "move_samples_from"
 )
+_MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
 
 
 @catch_exceptions
@@ -373,4 +445,5 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     copy=_MTS_ARRAY_COPY,
     destroy=_MTS_ARRAY_DESTROY,
     move_samples_from=_MTS_ARRAY_MOVE_SAMPLES_FROM,
+    as_dlpack=_MTS_ARRAY_AS_DLPACK,
 )
