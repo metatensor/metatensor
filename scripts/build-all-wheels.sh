@@ -8,17 +8,24 @@ cd "$ROOT_DIR"
 TMP_DIR="$1"
 rm -rf "$TMP_DIR"/dist
 
+# build selector
+if command -v uv &> /dev/null
+then
+    BUILD_CMD="uv build --out-dir"
+else
+    BUILD_CMD="python -m build --outdir"
+fi
+
 # check building sdist from a checkout, and wheel from the sdist
-python -m build python/metatensor_core --outdir "$TMP_DIR"/dist
+$BUILD_CMD "$TMP_DIR"/dist python/metatensor_core
 
 # get the version of metatensor-core we just built
 METATENSOR_CORE_VERSION=$(basename "$(find "$TMP_DIR"/dist -name "metatensor-core-*.tar.gz")" | cut -d - -f 3)
 METATENSOR_CORE_VERSION=${METATENSOR_CORE_VERSION%.tar.gz}
 
-python -m build python/metatensor_operations --outdir "$TMP_DIR"/dist
-python -m build python/metatensor_learn --outdir "$TMP_DIR"/dist
-python -m build . --outdir "$TMP_DIR"/dist
-
+$BUILD_CMD "$TMP_DIR"/dist python/metatensor_operations
+$BUILD_CMD "$TMP_DIR"/dist python/metatensor_learn
+$BUILD_CMD "$TMP_DIR"/dist .
 # for metatensor-torch, we need a pre-built version of metatensor-core, so
 # we use the one we just generated and make it available to pip
 dir2pi --no-symlink "$TMP_DIR"/dist
@@ -31,6 +38,9 @@ fi
 
 PYPI_SERVER_PID=""
 function cleanup() {
+    # The kill command will automatically use the correct signal (TERM) by default
+    # adding -0 to prevent 'set -e' from failing if $PYPI_SERVER_PID is not a running process
+    kill -0 $PYPI_SERVER_PID &> /dev/null || true
     kill $PYPI_SERVER_PID
 }
 # Make sure to stop the Python server on script exit/cancellation
@@ -46,4 +56,4 @@ export METATENSOR_TORCH_BUILD_WITH_METATENSOR_CORE_VERSION="$METATENSOR_CORE_VER
 
 # build metatensor-torch, using metatensor-core from `PIP_EXTRA_INDEX_URL`
 # for the sdist => wheel build.
-python -m build python/metatensor_torch --outdir "$TMP_DIR/dist"
+$BUILD_CMD "$TMP_DIR"/dist python/metatensor_torch
