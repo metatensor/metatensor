@@ -331,6 +331,8 @@ def _mts_array_move_samples_from(
 
 
 # Get functions from Python's C API
+# This is basically vendored from pydlpack
+# consider a dep.
 _python_api = ctypes.pythonapi
 _python_api.PyCapsule_GetPointer.restype = ctypes.c_void_p
 _python_api.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
