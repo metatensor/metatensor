@@ -319,7 +319,6 @@ if __name__ == "__main__":
                 "metatensor/core/lib/*",
                 "metatensor/core/include/*",
                 "metatensor/core/include/metatensor/*",
-                "metatensor/core/include/vendored/**",
             ]
         },
     )
