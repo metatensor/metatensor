@@ -12,7 +12,6 @@ use dlpack::sys::DLDataTypeCode;
 
 use crate::{TensorBlock, Labels, Error, mts_array_t};
 
-
 /// Check if the file/buffer in `data` looks like it could contain serialized
 /// `TensorBlock`.
 pub fn looks_like_block_data(mut data: PathOrBuffer) -> bool {
@@ -82,7 +81,7 @@ pub(super) fn read_single_block<R, F>(
 {
     let path = format!("{}values.npy", prefix);
     let data_file = archive.by_name(&path).map_err(|e| (path, e))?;
-    let (data, shape) = read_data(data_file, &create_array)?;
+    let (data, shape) = read_data(data_file, create_array)?;
 
     let path = format!("{}samples.npy", prefix);
     let samples_file = archive.by_name(&path).map_err(|e| (path, e))?;
@@ -139,24 +138,32 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<
     }
 
     let shape = header.shape.clone();
+    let (array, shape) = read_data_dlpack(reader, create_array, shape)?;
+
+    Ok((array, shape))
+}
+
+/// Read a data array from the given reader using DLPack.
+fn read_data_dlpack<R, F>(
+    mut reader: R,
+    create_array: &F,
+    shape: Vec<usize>,
+) -> Result<(mts_array_t, Vec<usize>), Error>
+    where R: std::io::Read, F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
+{
     let array = create_array(shape.clone())?;
 
-    if array.shape()? != header.shape {
+    if array.shape()? != shape {
         return Err(Error::Serialization(format!(
             "shape mismatch between the array and the file: got [{:?}] expected [{:?}]",
-            array.shape()?, header.shape
+            array.shape()?, shape
         )));
     }
 
     let dl_tensor = array.as_dlpack()?;
     let tensor_ref = dl_tensor.as_ref();
 
-    let len: usize = header.shape.iter().product();
-    let npy_dtype = if let DataType::Scalar(s) = &header.type_descriptor {
-        s.clone()
-    } else {
-        return Err(Error::Serialization("compound npy dtypes are not supported".into()));
-    };
+    let len: usize = shape.iter().product();
 
     unsafe {
         let dtype = tensor_ref.raw.dtype;
@@ -164,40 +171,18 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<
         let bits = dtype.bits;
         let ptr = (tensor_ref.raw.data as *mut u8).add(tensor_ref.byte_offset());
 
-        let expected_npy_dtype = dlpack_to_npy_descr(code, bits)?;
-        if !npy_dtype.ends_with(&expected_npy_dtype[1..]) {
-            return Err(Error::Serialization(format!(
-                "dtype mismatch: array requires '{}' but file contains '{}'",
-                expected_npy_dtype, npy_dtype
-            )));
-        }
-
-        let is_little_endian = npy_dtype.starts_with('<');
-
         match (code, bits) {
             (DLDataTypeCode::kDLFloat, 64) => {
                 let slice = std::slice::from_raw_parts_mut(ptr as *mut f64, len);
-                if is_little_endian {
-                    reader.read_f64_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_f64_into::<BigEndian>(slice)?;
-                }
+                reader.read_f64_into::<LittleEndian>(slice)?;
             },
             (DLDataTypeCode::kDLFloat, 32) => {
                 let slice = std::slice::from_raw_parts_mut(ptr as *mut f32, len);
-                if is_little_endian {
-                    reader.read_f32_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_f32_into::<BigEndian>(slice)?;
-                }
+                reader.read_f32_into::<LittleEndian>(slice)?;
             },
             (DLDataTypeCode::kDLInt, 32) => {
                 let slice = std::slice::from_raw_parts_mut(ptr as *mut i32, len);
-                if is_little_endian {
-                    reader.read_i32_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_i32_into::<BigEndian>(slice)?;
-                }
+                reader.read_i32_into::<LittleEndian>(slice)?;
             },
             _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for reading: code {:?}, bits {:?}", code, bits))),
         }
@@ -205,7 +190,7 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<
 
     check_for_extra_bytes(&mut reader)?;
 
-    Ok((array, header.shape))
+    Ok((array, shape))
 }
 
 pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
@@ -325,12 +310,11 @@ mod tests {
                 write_data(&mut Cursor::new(&mut buffer), &array).unwrap();
 
                 // create a new empty array and read the data into it
-                let (mut new_array, _) = TestArray::new_typed::<$ty>(shape.clone(), "rust.TestArray");
                 let (read_array, _read_shape) = read_data(Cursor::new(&buffer), &|shape| Ok(TestArray::new_typed::<$ty>(shape, "rust.TestArray").0)).unwrap();
 
                 // Verify the data using DLPackTensor
                 let dl1 = array.as_dlpack().unwrap();
-                let dl2 = new_array.as_dlpack().unwrap();
+                let dl2 = read_array.as_dlpack().unwrap();
 
                 let len: usize = shape.iter().product();
                 unsafe {
