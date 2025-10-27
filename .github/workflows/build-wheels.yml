@@ -79,7 +79,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.0"
           python-version: "3.13"
           enable-cache: true
           activate-environment: true
@@ -196,7 +195,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.0"
           python-version: "3.13"
           enable-cache: true
           activate-environment: true
@@ -288,7 +286,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.0"
           python-version: "3.13"
           enable-cache: true
           activate-environment: true
@@ -342,7 +339,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.0"
           python-version: "3.13"
           enable-cache: true
           activate-environment: true
@@ -511,7 +507,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.0"
           python-version: "3.13"
           enable-cache: true
           activate-environment: true
