@@ -2,6 +2,7 @@ import ctypes
 from typing import Union
 
 import numpy as np
+from dlpack import Capsule
 
 from .._c_api import c_DLManagedTensorVersioned as DLManagedTensorVersioned
 from .._c_api import (
@@ -330,24 +331,7 @@ def _mts_array_move_samples_from(
     output[output_samples, ..., properties] = input[input_samples, ..., :]
 
 
-# Get functions from Python's C API
-_python_api = ctypes.pythonapi
-_python_api.PyCapsule_GetPointer.restype = ctypes.c_void_p
-_python_api.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
-
-_python_api.PyCapsule_SetName.restype = ctypes.c_int
-_python_api.PyCapsule_SetName.argtypes = [ctypes.py_object, ctypes.c_char_p]
-
-_python_api.PyCapsule_GetName.restype = ctypes.c_char_p
-_python_api.PyCapsule_GetName.argtypes = [ctypes.py_object]
-
-_python_api.PyErr_Occurred.restype = ctypes.c_void_p
-_python_api.PyErr_Occurred.argtypes = []
-
-_python_api.PyErr_Clear.restype = None
-_python_api.PyErr_Clear.argtypes = []
-
-# DLPack capsule names
+# DLPack capsule names, must be in bytes
 DLPACK_VERSIONED_NAME = b"dltensor_versioned"
 USED_DLPACK_VERSIONED_NAME = b"used_dltensor_versioned"
 
@@ -357,40 +341,48 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr):
     """
     Implementation of `mts_array_t.as_dlpack`.
 
-    This function calls the array's __dlpack__ method, gets the PyCapsule,
-    extracts the raw `DLManagedTensorVersioned*` pointer, and transfers
-    ownership to the C-API caller by renaming the capsule.
+    Uses pydlpack.Capsule to interact with the PyCapsule obtained from
+    the array's __dlpack__ method.
     """
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
     array = wrapper.array
-    capsule = array.__dlpack__(max_version=(1, 1))
+    capsule_obj = array.__dlpack__(max_version=(1, 1))
 
-    # Check that the capsule is indeed a versioned DLPack tensor
-    capsule_name = _python_api.PyCapsule_GetName(capsule)
-    if capsule_name != DLPACK_VERSIONED_NAME:
+    if capsule_obj is None:
+        raise ValueError("Failed to obtain DLPack capsule")
+
+    capsule_wrapper = Capsule(capsule_obj)
+
+    capsule_name_bytes = capsule_wrapper.get_name()
+    if capsule_name_bytes is None:
+        # get_name returns None if the C func returns NULL, encode if str
+        capsule_name_bytes = None
+    elif isinstance(capsule_name_bytes, str):
+        capsule_name_bytes = capsule_name_bytes.encode("utf-8")
+
+    if capsule_name_bytes != DLPACK_VERSIONED_NAME:
+        actual_name = (
+            capsule_name_bytes.decode() if capsule_name_bytes is not None else "None"
+        )
         raise ValueError(
             f"expected DLPack capsule name '{DLPACK_VERSIONED_NAME.decode()}', "
-            f"but got '{capsule_name.decode()}'"
+            f"but got '{actual_name}'"
         )
 
-    # Get the pointer
-    pointer = _python_api.PyCapsule_GetPointer(capsule, DLPACK_VERSIONED_NAME)
+    # Get the pointer using the capsule wrapper
+    # Note: Pass the name as bytes
+    pointer = capsule_wrapper.get_pointer(DLPACK_VERSIONED_NAME)
     if not pointer:
-        if _python_api.PyErr_Occurred():
-            _python_api.PyErr_Clear()  # Clear the Python error
-        raise ValueError("PyCapsule_GetPointer returned NULL")
+        # pydlpack.Capsule raises exceptions on failure, but check anyway
+        raise ValueError("Capsule.get_pointer returned NULL")
 
-    # Mark the capsule as used to transfer ownership to the C-side
-    status = _python_api.PyCapsule_SetName(capsule, USED_DLPACK_VERSIONED_NAME)
-    if status != 0:
-        if _python_api.PyErr_Occurred():
-            _python_api.PyErr_Clear()
-        raise ValueError("PyCapsule_SetName failed")
+    try:
+        capsule_wrapper.set_name(USED_DLPACK_VERSIONED_NAME)
+    except Exception as e:
+        # Catch potential errors from set_name
+        raise ValueError("Capsule.set_name failed") from e
 
-    # Pass the raw pointer to the C-API.
-    # The capsule object `capsule` will be garbage collected, but its
-    # destructor will see the "used_" name and *not* free the tensor data,
-    # which is now owned by the `dl_managed_tensor_ptr_ptr[0]` pointer.
+    # Pass the correctly cast pointer to the C-API.
     dl_managed_tensor_ptr_ptr[0] = ctypes.cast(
         pointer, ctypes.POINTER(DLManagedTensorVersioned)
     )
