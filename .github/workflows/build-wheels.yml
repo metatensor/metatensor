@@ -63,19 +63,6 @@ jobs:
           toolchain: stable
           target: ${{ matrix.rust-target }}
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.rust-target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.rust-target }}-cargo-
-
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
