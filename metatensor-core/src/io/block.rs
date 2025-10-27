@@ -138,27 +138,74 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<
         return Err(Error::Serialization("data can not be loaded from fortran-order arrays".into()));
     }
 
-    let shape = header.shape;
-    let mut array = create_array(shape.clone())?;
+    let shape = header.shape.clone();
+    let array = create_array(shape.clone())?;
 
-    match header.type_descriptor {
-        DataType::Scalar(s) if s == "<f8" => {
-            reader.read_f64_into::<LittleEndian>(array.data_mut()?)?;
-        }
-        DataType::Scalar(s) if s == ">f8" => {
-            reader.read_f64_into::<BigEndian>(array.data_mut()?)?;
-        }
-        _ => {
+    if array.shape()? != header.shape {
+        return Err(Error::Serialization(format!(
+            "shape mismatch between the array and the file: got [{:?}] expected [{:?}]",
+            array.shape()?, header.shape
+        )));
+    }
+
+    let dl_tensor = array.as_dlpack()?;
+    let tensor_ref = dl_tensor.as_ref();
+
+    let len: usize = header.shape.iter().product();
+    let npy_dtype = if let DataType::Scalar(s) = &header.type_descriptor {
+        s.clone()
+    } else {
+        return Err(Error::Serialization("compound npy dtypes are not supported".into()));
+    };
+
+    unsafe {
+        let dtype = tensor_ref.raw.dtype;
+        let code = dtype.code;
+        let bits = dtype.bits;
+        let ptr = (tensor_ref.raw.data as *mut u8).add(tensor_ref.byte_offset());
+
+        let expected_npy_dtype = dlpack_to_npy_descr(code, bits)?;
+        if !npy_dtype.ends_with(&expected_npy_dtype[1..]) {
             return Err(Error::Serialization(format!(
-                "unknown type for data array, expected 64-bit floating points, got {}",
-                header.type_descriptor
+                "dtype mismatch: array requires '{}' but file contains '{}'",
+                expected_npy_dtype, npy_dtype
             )));
+        }
+
+        let is_little_endian = npy_dtype.starts_with('<');
+
+        match (code, bits) {
+            (DLDataTypeCode::kDLFloat, 64) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut f64, len);
+                if is_little_endian {
+                    reader.read_f64_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_f64_into::<BigEndian>(slice)?;
+                }
+            },
+            (DLDataTypeCode::kDLFloat, 32) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut f32, len);
+                if is_little_endian {
+                    reader.read_f32_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_f32_into::<BigEndian>(slice)?;
+                }
+            },
+            (DLDataTypeCode::kDLInt, 32) => {
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut i32, len);
+                if is_little_endian {
+                    reader.read_i32_into::<LittleEndian>(slice)?;
+                } else {
+                    reader.read_i32_into::<BigEndian>(slice)?;
+                }
+            },
+            _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for reading: code {:?}, bits {:?}", code, bits))),
         }
     }
 
     check_for_extra_bytes(&mut reader)?;
 
-    return Ok((array, shape));
+    Ok((array, header.shape))
 }
 
 pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
@@ -202,117 +249,10 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
 
 // Write an array to the given writer, using numpy's NPY format
 fn write_data<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<(), Error> {
-    let type_descriptor = if cfg!(target_endian = "little") {
-        "<f8"
-    } else {
-        ">f8"
-    };
-
-    let header = Header {
-        type_descriptor: DataType::Scalar(type_descriptor.into()),
-        fortran_order: false,
-        shape: array.shape()?.to_vec(),
-    };
-
-    header.write(&mut *writer)?;
-
-    for &value in array.data()? {
-        writer.write_f64::<NativeEndian>(value)?;
-    }
-
-    return Ok(());
-}
-
-fn read_data_dlpack<R: std::io::Read>(
-    mut reader: R,
-    array: &mut mts_array_t
-) -> Result<(), Error> {
-    let header = Header::from_reader(&mut reader)?;
-    if header.fortran_order {
-        return Err(Error::Serialization("data can not be loaded from fortran-order arrays".into()));
-    }
-
-    if array.shape()? != header.shape {
-        return Err(Error::Serialization(format!(
-            "shape mismatch between the array and the file: got [{:?}] expected [{:?}]",
-            array.shape()?, header.shape
-        )));
-    }
-
-    let dl_tensor_ptr = array.as_dlpack()?;
-    let _dl_tensor_deleter = scopeguard::guard(dl_tensor_ptr, |ptr| {
-        if let Some(deleter) = unsafe { (*ptr).deleter } {
-            unsafe { deleter(ptr) };
-        }
-    });
-
-    let tensor = unsafe { &*dl_tensor_ptr };
-    let len: usize = header.shape.iter().product();
-    let npy_dtype = if let DataType::Scalar(s) = &header.type_descriptor {
-        s.clone()
-    } else {
-        return Err(Error::Serialization("compound npy dtypes are not supported".into()));
-    };
-
-    unsafe {
-        let code = tensor.dl_tensor.dtype.code;
-        let bits = tensor.dl_tensor.dtype.bits;
-        let ptr = (tensor.dl_tensor.data as *mut u8).add(tensor.dl_tensor.byte_offset as usize);
-
-        let expected_npy_dtype = dlpack_to_npy_descr(code, bits)?;
-        if !npy_dtype.ends_with(&expected_npy_dtype[1..]) {
-             return Err(Error::Serialization(format!(
-                "dtype mismatch: array requires '{}' but file contains '{}'",
-                expected_npy_dtype, npy_dtype
-            )));
-        }
-
-        let is_little_endian = npy_dtype.starts_with('<');
-
-        match (code, bits) {
-            (DLDataTypeCode::kDLFloat, 64) => {
-                let slice = std::slice::from_raw_parts_mut(ptr as *mut f64, len);
-                if is_little_endian {
-                    reader.read_f64_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_f64_into::<BigEndian>(slice)?;
-                }
-            },
-            (DLDataTypeCode::kDLFloat, 32) => {
-                let slice = std::slice::from_raw_parts_mut(ptr as *mut f32, len);
-                if is_little_endian {
-                    reader.read_f32_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_f32_into::<BigEndian>(slice)?;
-                }
-            },
-            (DLDataTypeCode::kDLInt, 32) => {
-                let slice = std::slice::from_raw_parts_mut(ptr as *mut i32, len);
-                if is_little_endian {
-                    reader.read_i32_into::<LittleEndian>(slice)?;
-                } else {
-                    reader.read_i32_into::<BigEndian>(slice)?;
-                }
-            },
-            _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for reading: code {:?}, bits {:?}", code, bits))),
-        }
-    }
-
-    check_for_extra_bytes(&mut reader)?;
-    Ok(())
-}
-
-
-fn write_data_dlpack<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<(), Error> {
-    let dl_tensor_ptr = array.as_dlpack()?;
-    let _dl_tensor_deleter = scopeguard::guard(dl_tensor_ptr, |ptr| {
-        if let Some(deleter) = unsafe { (*ptr).deleter } {
-            unsafe { deleter(ptr) };
-        }
-    });
-
-    let tensor = unsafe { &*dl_tensor_ptr };
-    let (code, bits) = (tensor.dl_tensor.dtype.code, tensor.dl_tensor.dtype.bits);
+    let dl_tensor = array.as_dlpack()?;
+    let tensor_ref = dl_tensor.as_ref();
+    let dtype = tensor_ref.raw.dtype;
+    let (code, bits) = (dtype.code, dtype.bits);
 
     let type_descriptor = dlpack_to_npy_descr(code, bits)?;
 
@@ -325,7 +265,8 @@ fn write_data_dlpack<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> 
 
     unsafe {
         let len: usize = array.shape()?.iter().product();
-        let ptr = (tensor.dl_tensor.data as *const u8).add(tensor.dl_tensor.byte_offset as usize);
+        let ptr = (tensor_ref.raw.data as *const u8)
+            .add(tensor_ref.byte_offset());
 
         match (code, bits) {
             (DLDataTypeCode::kDLFloat, 64) => {
@@ -340,7 +281,7 @@ fn write_data_dlpack<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> 
                 let slice = std::slice::from_raw_parts(ptr as *const i32, len);
                 for &value in slice { writer.write_i32::<NativeEndian>(value)?; }
             },
-             _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for writing: code {:?}, bits {:?}", code, bits))),
+            _ => return Err(Error::Serialization(format!("unsupported DLPack dtype for writing: code {:?}, bits {:?}", code, bits))),
         }
     }
     Ok(())
@@ -381,30 +322,29 @@ mod tests {
                 let (array, initial_data) = TestArray::new_typed::<$ty>(shape.clone(), "rust.TestArray");
 
                 let mut buffer = Vec::new();
-                write_data_dlpack(&mut Cursor::new(&mut buffer), &array).unwrap();
+                write_data(&mut Cursor::new(&mut buffer), &array).unwrap();
 
                 // create a new empty array and read the data into it
                 let (mut new_array, _) = TestArray::new_typed::<$ty>(shape.clone(), "rust.TestArray");
-                read_data_dlpack(Cursor::new(&buffer), &mut new_array).unwrap();
+                let (read_array, _read_shape) = read_data(Cursor::new(&buffer), &|shape| Ok(TestArray::new_typed::<$ty>(shape, "rust.TestArray").0)).unwrap();
 
+                // Verify the data using DLPackTensor
+                let dl1 = array.as_dlpack().unwrap();
+                let dl2 = new_array.as_dlpack().unwrap();
+
+                let len: usize = shape.iter().product();
                 unsafe {
-                    let dl1_ptr = array.as_dlpack().unwrap();
-                    let dl2_ptr = new_array.as_dlpack().unwrap();
-
-                    let dl1 = &*dl1_ptr;
-                    let dl2 = &*dl2_ptr;
-
-                    let len = shape.iter().product();
-                    let data1 = std::slice::from_raw_parts(dl1.dl_tensor.data as *const $ty, len);
-                    let data2 = std::slice::from_raw_parts(dl2.dl_tensor.data as *const $ty, len);
+                    let data1_ptr = dl1.data_ptr::<$ty>().unwrap();
+                    let data2_ptr = dl2.data_ptr::<$ty>().unwrap();
+                    
+                    let data1 = std::slice::from_raw_parts(data1_ptr, len);
+                    let data2 = std::slice::from_raw_parts(data2_ptr, len);
 
                     // round-trip
                     assert_eq!(data1, &initial_data);
                     assert_eq!(data2, &initial_data);
-
-                    if let Some(deleter) = dl1.deleter { deleter(dl1_ptr); }
-                    if let Some(deleter) = dl2.deleter { deleter(dl2_ptr); }
                 }
+                
             }
         };
     }
