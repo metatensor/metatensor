@@ -627,10 +627,10 @@ impl mts_array_t {
 
     /// Get a DLPack view of this array.
     ///
-    /// The returned pointer is valid until its `deleter` function is called.
-    /// The lifetime of the `DLManagedTensorVersioned` must not exceed the
-    /// lifetime of the `mts_array_t` it was created from.
-    pub fn as_dlpack(&self) -> Result<*mut DLManagedTensorVersioned, Error> {
+    /// The returned DLPackTensor is a view that borrows from this array.
+    /// The caller owns the returned DLPackTensor and must ensure this
+    /// `mts_array_t` outlives it.
+    pub fn as_dlpack(&self) -> Result<dlpack::DLPackTensor, Error> {
         let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
 
         let mut dl_managed_tensor = std::ptr::null_mut();
@@ -644,7 +644,21 @@ impl mts_array_t {
             });
         }
 
-        Ok(dl_managed_tensor)
+        if dl_managed_tensor.is_null() {
+            return Err(Error::InvalidParameter(
+                "mts_array_t.as_dlpack returned NULL".into()
+            ));
+        }
+
+        // Wrap the raw pointer in a DLPackTensor
+        // SAFETY: we just checked that the pointer is not null, and the
+        // function contract guarantees it points to a valid DLManagedTensorVersioned
+        let tensor = unsafe {
+            let ptr = std::ptr::NonNull::new_unchecked(dl_managed_tensor);
+            dlpack::DLPackTensor::from_ptr(ptr)
+        };
+
+        Ok(tensor)
     }
 }
 
@@ -653,7 +667,6 @@ mod tests {
     use crate::c_api::MTS_NOT_IMPLEMENTED_ERROR;
     use crate::test_utils::TestArray;
     use super::*;
-    use dlpack::sys as dl;
 
     #[test]
     fn facade_works() {
@@ -695,18 +708,9 @@ mod tests {
     #[test]
     fn as_dlpack_works() {
         let array = TestArray::new::<f64>(vec![10, 20]);
-        let dl_managed_tensor = array.as_dlpack().unwrap();
-        assert!(!dl_managed_tensor.is_null());
-
-        unsafe {
-            let tensor = &(*dl_managed_tensor).dl_tensor;
-            assert_eq!(tensor.ndim, 2);
-            let shape = std::slice::from_raw_parts(tensor.shape, tensor.ndim as usize);
-            assert_eq!(shape, &[10, 20]);
-
-            if let Some(deleter) = (*dl_managed_tensor).deleter {
-                deleter(dl_managed_tensor);
-            }
-        }
+        let dl_tensor = array.as_dlpack().unwrap();
+        
+        assert_eq!(dl_tensor.n_dims(), 2);
+        assert_eq!(dl_tensor.shape(), &[10, 20]);
     }
 }
