@@ -32,64 +32,6 @@ MTS_NOT_IMPLEMENTED_ERROR = 5
 mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
-kDLCPU = 1
-kDLCUDA = 2
-kDLCUDAHost = 3
-kDLOpenCL = 4
-kDLVulkan = 7
-kDLMetal = 8
-kDLVPI = 9
-kDLROCM = 10
-kDLROCMHost = 11
-kDLExtDev = 12
-kDLCUDAManaged = 13
-kDLOneAPI = 14
-kDLWebGPU = 15
-kDLHexagon = 16
-kDLMAIA = 17
-kDLTrn = 18
-
-
-class c_DLPackVersion(ctypes.Structure):
-    pass
-
-c_DLPackVersion._fields_ = [
-    ("major", ctypes.c_uint32),
-    ("minor", ctypes.c_uint32),
-]
-
-
-class c_DLDevice(ctypes.Structure):
-    pass
-
-c_DLDevice._fields_ = [
-    ("device_type", ctypes.c_int32),
-    ("device_id", ctypes.c_int32),
-]
-
-
-class c_DLDataType(ctypes.Structure):
-    pass
-
-c_DLDataType._fields_ = [
-    ("code", ctypes.c_uint8),
-    ("bits", ctypes.c_uint8),
-    ("lanes", ctypes.c_uint16),
-]
-
-
-class c_DLTensor(ctypes.Structure):
-    pass
-
-c_DLTensor._fields_ = [
-    ("data", ctypes.c_void_p),
-    ("device", c_DLDevice),
-    ("ndim", ctypes.c_int32),
-    ("dtype", c_DLDataType),
-    ("shape", POINTER(ctypes.c_int64)),
-    ("strides", POINTER(ctypes.c_int64)),
-    ("byte_offset", ctypes.c_uint64),
-]
 
 
 class c_DLManagedTensorVersioned(ctypes.Structure):

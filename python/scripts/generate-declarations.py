@@ -15,15 +15,7 @@ METATENSOR_HEADER = os.path.relpath(
 )
 
 DLPACK_TYPES = {
-    "DLPackVersion",
-    "DLDevice",
-    "DLDataType",
-    "DLTensor",
     "DLManagedTensorVersioned",
-}
-
-DLPACK_ENUMS = {
-    "DLDeviceType",
 }
 
 
@@ -84,11 +76,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if (
-            not node.name.startswith("mts_")
-            and node.name not in DLPACK_TYPES
-            and node.name not in DLPACK_ENUMS
-        ):
+        if not node.name.startswith("mts_") and node.name not in DLPACK_TYPES:
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -152,10 +140,8 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name in DLPACK_ENUMS:
-        return "ctypes.c_int32"
     # add a 'c_' prefix to DLPack types, but not to mts_ types
-    elif name in DLPACK_TYPES:
+    if name in DLPACK_TYPES:
         return f"c_{name}"
     elif name.startswith("mts_"):
         return name
