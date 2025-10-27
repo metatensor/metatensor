@@ -148,7 +148,7 @@ DLManagedTensorVersioned* metatensor_torch::TorchDataArray::as_dlpack() const {
     auto* managed = new DLManagedTensorVersioned();
     // Set up version info
     managed->version.major = 1;
-    managed->version.minor = 0;
+    managed->version.minor = 1;
     // TODO(rg): can this just increase the ref count
     auto* tensor_ref = new at::Tensor(tensor_);
     managed->manager_ctx = tensor_ref;
