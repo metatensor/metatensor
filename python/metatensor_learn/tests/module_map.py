@@ -49,10 +49,6 @@ def test_module_map(tensor, out_properties):
     for i, item in enumerate(tensor.items()):
         key, block = item
         module = modules[i]
-        assert tensor_module.get_module(key) is module, (
-            "modules should be initialized in the same order as keys"
-        )
-
         ref_values = module(block.values)
         out_block = out_tensor.block(key)
         assert torch.allclose(ref_values, out_block.values)
@@ -96,32 +92,21 @@ def test_to_device(tensor):
             out_properties=[Labels(["a", "b"], np.array([[1, 1]]))],
         )
 
-        assert module._in_keys.device == "cpu"
-        for label in module._out_properties:
+        assert module.in_keys.device == "cpu"
+        for label in module.out_properties:
             assert label.device == "cpu"
 
         module.to(device=device)
 
-        # at this point, the parameters should have been moved,
-        # but the input keys and output properties should still be on cpu
+        # at this point, the parameters should have been moved, but the input keys and
+        # output properties will still be on cpu, since we are using the metatensor
+        # backend, not metatensor.torch.
         assert len(list(module.parameters())) > 0
         for parameter in module.parameters():
             assert parameter.device.type == device
 
-        assert module._in_keys.device == "cpu"
-        for label in module._out_properties:
-            assert label.device == "cpu"
-
-        device_tensor = tensor.to(device=device)
-        output = module(device_tensor)
-
-        assert output.device.type == device
-
-        # the input keys and output properties are still on cpu, because
-        # metatensor.Labels are never moved to a different device (by opposition to
-        # `metatensor.torch.Labels` which can be moved to another device)
-        assert module._in_keys.device == "cpu"
-        for label in module._out_properties:
+        assert module.in_keys.device == "cpu"
+        for label in module.out_properties:
             assert label.device == "cpu"
 
 

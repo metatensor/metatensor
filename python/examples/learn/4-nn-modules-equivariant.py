@@ -20,11 +20,7 @@ import torch
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
-from metatensor.torch.learn.nn import (
-    EquivariantLinear,
-    InvariantReLU,
-    Sequential,
-)
+from metatensor.torch.learn import nn
 
 
 torch.manual_seed(42)
@@ -142,7 +138,7 @@ print(
 # to invariant blocks where ``o3_lambda = 0``. We will use the
 # :py:class:`~metatensor.torch.learn.nn.EquivariantLinear` module for this.
 in_keys = spherical_expansion.keys
-equi_linear = EquivariantLinear(
+equi_linear = nn.EquivariantLinear(
     in_keys=in_keys,
     in_features=[len(spherical_expansion[key].properties) for key in in_keys],
     out_features=1,  # for all blocks
@@ -185,18 +181,18 @@ print(per_system_predictions, per_system_predictions[0])
 # module.
 
 
-class EquivariantMLP(torch.nn.Module):
+class EquivariantMLP(nn.Module):
     """
     A simple equivariant MLP that maps per-atom features to per-structure targets.
     """
 
-    def __init__(self, mlp: torch.nn.Module):
+    def __init__(self, neural_network):
         super().__init__()
-        self.mlp = mlp
+        self.neural_network = neural_network
 
     def forward(self, features: TensorMap) -> TensorMap:
         # apply the multi-layer perceptron to the features
-        per_atom_predictions = self.mlp(features)
+        per_atom_predictions = self.neural_network(features)
 
         # densify the predictions in the "center_type" and "neighbor_type" key
         # dimensions
@@ -220,7 +216,7 @@ class EquivariantMLP(torch.nn.Module):
 
 # define a custom loss function for TensorMaps that computes the squared error and
 # reduces by a summation operation
-class TensorMapLoss(torch.nn.Module):
+class TensorMapLoss(nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and reduces by
     sum.
@@ -246,8 +242,8 @@ class TensorMapLoss(torch.nn.Module):
 
 # construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: torch.nn.Module,
-    loss_fn: torch.nn.Module,
+    model,
+    loss_fn,
     features: TensorMap,
     targets: TensorMap,
 ) -> None:
@@ -301,15 +297,15 @@ for key, block in prediction.items():
 
 # Let's build a new MLP with two linear layers and one activation function.
 hidden_layer_width = 64
-equi_mlp = Sequential(
+equi_mlp = nn.Sequential(
     in_keys,
-    EquivariantLinear(
+    nn.EquivariantLinear(
         in_keys=in_keys,
         in_features=[len(spherical_expansion[key].properties) for key in in_keys],
         out_features=hidden_layer_width,
     ),
-    InvariantReLU(in_keys),  # could also use InvariantTanh, InvariantSiLU
-    EquivariantLinear(
+    nn.InvariantReLU(in_keys),  # could also use InvariantTanh, InvariantSiLU
+    nn.EquivariantLinear(
         in_keys=in_keys,
         in_features=[hidden_layer_width for _ in in_keys],
         out_features=1,  # for all blocks

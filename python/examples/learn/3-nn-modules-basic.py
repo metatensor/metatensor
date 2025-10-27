@@ -24,7 +24,7 @@ import torch
 
 import metatensor.torch as mts
 from metatensor.torch import Labels, TensorMap
-from metatensor.torch.learn.nn import Linear, ReLU, Sequential
+from metatensor.torch.learn import nn
 
 
 torch.manual_seed(42)
@@ -65,8 +65,8 @@ loss_fn_torch = torch.nn.MSELoss(reduction="sum")
 
 # construct a basic training loop. For brevity we will not use datasets or dataloaders.
 def training_loop(
-    model: torch.nn.Module,
-    loss_fn: torch.nn.Module,
+    model,
+    loss_fn,
     features: Union[torch.Tensor, TensorMap],
     targets: Union[torch.Tensor, TensorMap],
 ) -> None:
@@ -145,7 +145,7 @@ else:
 # use metatensor-learn's Linear layer. We need to pass the target property's labels so
 # that the TensorMap for predictions is annotated with the correct metadata.
 in_keys = feature_tensormap.keys
-linear_mts = Linear(
+linear_mts = nn.Linear(
     in_keys=in_keys,
     in_features=in_features,
     out_properties=[block.properties for block in target_tensormap],
@@ -155,7 +155,7 @@ linear_mts = Linear(
 
 # define a custom loss function over TensorMaps that computes the squared error and
 # reduces by summation
-class TensorMapLoss(torch.nn.Module):
+class TensorMapLoss(nn.Module):
     """
     A custom loss function for TensorMaps that computes the squared error and
     reduces by summation.
@@ -191,16 +191,16 @@ training_loop(linear_mts, loss_fn_mts, feature_tensormap, target_tensormap)
 # module, along with some nonlinear activation modules. We only need to pass the
 # properties metadata for the output layer, for the hidden layers, we just pass the
 # layer dimension
-mlp_mts = Sequential(
+mlp_mts = nn.Sequential(
     in_keys,
-    Linear(
+    nn.Linear(
         in_keys=in_keys,
         in_features=in_features,
         out_features=hidden_layer_width,
         bias=True,
     ),
-    ReLU(in_keys=in_keys),  # can also use Tanh or SiLU
-    Linear(
+    nn.ReLU(in_keys=in_keys),  # can also use Tanh or SiLU
+    nn.Linear(
         in_keys=in_keys,
         in_features=hidden_layer_width,
         out_properties=[block.properties for block in target_tensormap],

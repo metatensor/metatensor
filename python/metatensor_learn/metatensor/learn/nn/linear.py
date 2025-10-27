@@ -1,10 +1,10 @@
 from typing import List, Optional, Union
 
 import torch
-from torch.nn import Module
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
