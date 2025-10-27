@@ -9,7 +9,7 @@ FAKE_INCLUDES = [
     os.path.join(ROOT, "python", "scripts", "include"),
     os.path.join(ROOT, "scripts", "include"),
 ]
-VENDORED_INCLUDES = os.path.join(ROOT, "metatensor-core", "include", "vendored")
+VENDORED_INCLUDES = os.path.join(ROOT, "metatensor-core", "include", "dlpack")
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )

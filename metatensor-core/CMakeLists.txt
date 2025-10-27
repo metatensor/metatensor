@@ -409,6 +409,7 @@ write_basic_package_version_file(
 install(FILES "include/metatensor.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES "include/metatensor.hpp" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(DIRECTORY "include/metatensor" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY "include/dlpack" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/version.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/metatensor)
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
@@ -438,10 +439,4 @@ install(FILES
     ${PROJECT_BINARY_DIR}/metatensor-config-version.cmake
     ${PROJECT_BINARY_DIR}/metatensor-config.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/metatensor
-)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/vendored/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/vendored"
-    FILES_MATCHING PATTERN "*.h"
 )

@@ -1,11 +1,6 @@
-
-#include <stddef.h>
-#include "dlpack/dlpack.h"
-typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
-
-
 #ifndef METATENSOR_H
 #define METATENSOR_H
+
 
 /* ============    Automatically generated file, DOT NOT EDIT.    ============== *
  *                                                                               *
@@ -13,12 +8,15 @@ typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
  *    using cbindgen. If you want to change this file (including documentation), *
  *    make the corresponding changes in the rust sources and regenerate it.      *
  * ============================================================================= */
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "dlpack/dlpack.h"
 
 /**
  * Status code used when a function succeeded
