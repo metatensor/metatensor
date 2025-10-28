@@ -34,11 +34,11 @@ jobs:
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          # test with all features (i.e static build + ndarray)
+          # test with all features (i.e static build + rayon + bench)
           - os: ubuntu-24.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
-            cargo-test-flags: --release --all-features
+            cargo-build-flags: --release --all-features
             do-valgrind: true
             extra-name: ", all features, release"
             cxx: g++
@@ -60,7 +60,7 @@ jobs:
           - os: macos-15
             rust-version: stable
             rust-target: aarch64-apple-darwin
-            cargo-test-flags: --features=rayon
+            cargo-build-flags: --features=rayon
             extra-name: ""
             cxx: clang++
             cc: clang
