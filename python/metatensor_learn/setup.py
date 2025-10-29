@@ -143,7 +143,7 @@ if __name__ == "__main__":
         install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-operations >=0.3.4,<0.4.0")
+        install_requires.append("metatensor-operations >=0.4.0,<0.5.0")
         install_requires.append("metatensor-core >=0.1.15,<0.2.0")
 
     setup(
