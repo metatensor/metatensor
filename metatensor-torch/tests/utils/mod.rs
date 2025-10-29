@@ -122,8 +122,8 @@ fn pip_install(
         }
         if no_build_isolation {
             cmd.arg("--no-build-isolation");
-        }
         // uv doesn't support --check-build-dependencies
+        }
         for p in packages {
             cmd.arg(p);
         }
