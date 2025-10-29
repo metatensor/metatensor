@@ -190,7 +190,11 @@ pub fn setup_metatensor_torch(python: &Path) {
 
     pip_install(
         python,
-        &["cmake", "packaging", "setuptools", "numpy"],
+        // this needs to be in sync with pyproject.toml
+        &["cmake",
+          "packaging>=23",
+          "setuptools>=77",
+          "numpy"],
         true, // upgrade
         false, // no_deps
         false, // no_build_isolation
