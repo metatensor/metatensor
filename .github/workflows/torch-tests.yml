@@ -75,10 +75,9 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: Install uv
-        if: matrix.container != 'ubuntu:22.04'
         uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: "3.11"
           enable-cache: true
           activate-environment: true
 
