@@ -65,9 +65,15 @@ jobs:
         with:
           toolchain: stable
 
+      - name: install jq for cargo-cache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Cache Rust dependencies
-      - uses: Leafwing-Studios/cargo-cache@v2
-        sweep-cache: true
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
 
       # we get torch from pip to run the C++ test
       - name: Install uv
@@ -81,7 +87,6 @@ jobs:
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
-          sudo apt-get update
           sudo apt-get install -y valgrind
 
       - name: Setup sccache

@@ -25,9 +25,13 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: install jq for cargo-cache
+        run: |
+          sudo apt-get install -y jq
       - name: Cache Rust dependencies
-      - uses: Leafwing-Studios/cargo-cache@v2
-        sweep-cache: true
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:

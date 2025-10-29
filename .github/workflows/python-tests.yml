@@ -50,9 +50,15 @@ jobs:
         with:
           toolchain: stable
 
+      - name: install jq for cargo-cache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Cache Rust dependencies
-      - uses: Leafwing-Studios/cargo-cache@v2
-        sweep-cache: true
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
