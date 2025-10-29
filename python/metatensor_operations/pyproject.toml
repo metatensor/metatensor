@@ -4,7 +4,7 @@ dynamic = ["version", "authors", "dependencies"]
 requires-python = ">=3.10"
 
 readme = "README.rst"
-license = "BSD-3-Clause"
+license = {file = "LICENSE"}
 description = "Operations to manipulate metatensor data types"
 
 keywords = ["machine learning", "molecular modeling"]
