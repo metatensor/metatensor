@@ -45,10 +45,8 @@ jobs:
         with:
           toolchain: stable
 
-      - name: install jq for cargo-cache
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+      - name: Grab jq for cargo-cache
+        uses: dcarbone/install-jq-action@v3
 
       - name: Cache Rust dependencies
         uses: Leafwing-Studios/cargo-cache@v2
