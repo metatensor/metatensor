@@ -20,7 +20,7 @@ fn find_uv() -> Option<PathBuf> {
     which::which("uv").ok()
 }
 
-/// Find the path to a Python 3 executable on the user system
+/// Find the path to the `python`or `python3` binary on the user system
 fn find_python() -> PathBuf {
     if let Ok(python) = which::which("python") {
         let output = Command::new(&python)
