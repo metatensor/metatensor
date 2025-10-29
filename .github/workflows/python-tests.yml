@@ -50,11 +50,9 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Grab jq for cargo-cache
-        uses: dcarbone/install-jq-action@v3
-
+      # xref: https://github.com/Leafwing-Studios/cargo-cache/pull/48
       - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2
+        uses: HaoZeke/cargo-cache@fixDeps
         with:
           sweep-cache: true
 
