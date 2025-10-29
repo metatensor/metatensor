@@ -74,6 +74,7 @@ pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
     if let Some(uv_bin) = find_uv() {
         let status = Command::new(&uv_bin)
             .arg("venv")
+            .arg("--clear")
             .arg(&build_dir)
             .status()
             .expect("failed to run uv venv");
