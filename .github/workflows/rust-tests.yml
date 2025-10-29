@@ -106,17 +106,8 @@ jobs:
           target: ${{ matrix.rust-target }}
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.rust-target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.rust-target }}-cargo-
+      - uses: Leafwing-Studios/cargo-cache@v2
+        sweep-cache: true
 
       - name: install valgrind
         if: matrix.do-valgrind
@@ -170,17 +161,8 @@ jobs:
           components: rustfmt
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.rust-target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.rust-target }}-cargo-
+      - uses: Leafwing-Studios/cargo-cache@v2
+        sweep-cache: true
 
       - name: install python dependencies
         run: |
