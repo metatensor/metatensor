@@ -4,7 +4,7 @@ dynamic = ["version", "authors"]
 requires-python = ">=3.10"
 
 readme = "README.rst"
-license = {file = "LICENSE"}
+license = "BSD-3-Clause"
 description = "Python bindings for metatensor"
 
 dependencies = ["numpy"]
@@ -35,7 +35,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=77",
+    "setuptools >=80",
     "packaging >=23",
     "cmake",
 ]

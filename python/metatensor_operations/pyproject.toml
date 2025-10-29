@@ -4,7 +4,7 @@ dynamic = ["version", "authors", "dependencies"]
 requires-python = ">=3.10"
 
 readme = "README.rst"
-license = {file = "LICENSE"}
+license = "BSD-3-Clause"
 description = "Operations to manipulate metatensor data types"
 
 keywords = ["machine learning", "molecular modeling"]
@@ -33,7 +33,7 @@ changelog = "https://docs.metatensor.org/latest/operations/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=77",
+    "setuptools >=80",
     "packaging >=23",
 ]
 build-backend = "setuptools.build_meta"
