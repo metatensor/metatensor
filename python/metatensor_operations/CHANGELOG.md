@@ -17,17 +17,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-### Changed
-
-- We now require Python >= 3.10
+## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.4.0) - 2025-10-29
 
 ### Added
 
 - `join_blocks`, to join multiple blocks along samples or properties, with
   similar semantics to `join`
+- `drop_empty_blocks` to remove all empty blocks from a TensorMap
 
 ### Changed
 
+- We now require Python >= 3.10
 - `join` was rewritten and made faster. As part of this, we had to change the
   API: `sort_samples` is not an option anymore, and `remove_tensor_name: bool`
   was replaced by `add_dimension: Optional[str]=None`. You can set
