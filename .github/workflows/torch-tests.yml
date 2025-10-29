@@ -103,6 +103,7 @@ jobs:
         run: cargo test --package metatensor-torch ${{ matrix.cargo-test-flags }}
         env:
           # Use the CPU only version of torch when building/running the code
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}
