@@ -117,6 +117,9 @@ fn pip_install(
         cmd.arg("pip").arg("install").arg("--python").arg(python);
         if upgrade {
             cmd.arg("--upgrade");
+            // xref: https://github.com/metatensor/metatensor/pull/997#discussion_r2473540252
+            cmd.arg("--index-strategy");
+            cmd.arg("unsafe-best-match");
         }
         if no_deps {
             cmd.arg("--no-deps");
