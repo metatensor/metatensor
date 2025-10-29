@@ -47,7 +47,7 @@ packages = []
 [tool.coverage.paths]
 # path remapping for coverage. `coverage` will map path matching the second
 # string to the first string.
-core = ["python/metatensor_core/", ".tox/*/.venv/lib/python*/site-packages/"]
+core = ["python/metatensor_core/", ".tox/*/*/lib/python*/site-packages/"]
 torch = ["python/metatensor_torch/", ".tox/*/.venv/lib/python*/site-packages/"]
 operations = ["python/metatensor_operations/", ".tox/*/.venv/lib/python*/site-packages/"]
 learn = ["python/metatensor_learn/", ".tox/*/.venv/lib/python*/site-packages/"]
