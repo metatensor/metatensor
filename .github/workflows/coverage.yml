@@ -100,7 +100,6 @@ jobs:
         env:
             # Use the CPU only version of torch when building/running the code
             UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-            UV_INDEX_STRATEGY: unsafe-best-match
 
       - name: upload to codecov.io
         uses: codecov/codecov-action@v5
