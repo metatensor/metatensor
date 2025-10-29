@@ -110,7 +110,6 @@ fn pip_install(
     upgrade: bool,
     no_deps: bool,
     no_build_isolation: bool,
-    check_build_deps: bool,
 ) {
     if let Some(uv_bin) = find_uv() {
         let mut cmd = Command::new(&uv_bin);
@@ -140,9 +139,8 @@ fn pip_install(
             cmd.arg("--no-deps");
         }
         if no_build_isolation {
+            // If pip, add both supported options
             cmd.arg("--no-build-isolation");
-        }
-        if check_build_deps {
             cmd.arg("--check-build-dependencies");
         }
         for p in packages {
@@ -163,7 +161,6 @@ pub fn setup_pytorch(python: &Path) -> PathBuf {
         false, // upgrade
         false, // no_deps
         false, // no_build_isolation
-        false, // check_build_deps
     );
 
     let output = Command::new(python)
@@ -193,7 +190,6 @@ pub fn setup_metatensor_torch(python: &Path) {
         true, // upgrade
         false, // no_deps
         false, // no_build_isolation
-        false, // check_build_deps
     );
 
     let mut metatensor_core_python = source_dir.clone();
@@ -204,7 +200,6 @@ pub fn setup_metatensor_torch(python: &Path) {
         false, // upgrade
         true,  // no_deps
         true,  // no_build_isolation
-        true,  // check_build_deps
     );
 
     let mut metatensor_torch_python = source_dir.clone();
@@ -215,7 +210,6 @@ pub fn setup_metatensor_torch(python: &Path) {
         false, // upgrade
         true,  // no_deps
         true,  // no_build_isolation
-        true,  // check_build_deps
     );
 }
 
