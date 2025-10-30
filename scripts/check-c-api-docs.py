@@ -14,6 +14,7 @@ FAKE_INCLUDES = [
     os.path.join(ROOT, "python", "scripts", "include"),
     os.path.join(ROOT, "scripts", "include"),
 ]
+VENDORED_INCLUDES = os.path.join(ROOT, "metatensor-core", "include", "dlpack")
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
@@ -67,13 +68,14 @@ def all_functions():
     cpp_args = ["-E"]
     for path in FAKE_INCLUDES:
         cpp_args += ["-I", path]
+    cpp_args += ["-I", VENDORED_INCLUDES]
     ast = parse_file(METATENSOR_HEADER, use_cpp=True, cpp_path="gcc", cpp_args=cpp_args)
 
     functions = []
 
     class AstVisitor(c_ast.NodeVisitor):
         def visit_Decl(self, node):
-            if not node.name.startswith("mts_"):
+            if not node.name or not node.name.startswith("mts_"):
                 return
 
             functions.append(node.name)

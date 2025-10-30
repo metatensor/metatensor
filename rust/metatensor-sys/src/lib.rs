@@ -87,6 +87,8 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            // XXX(rg): implement
+            as_dlpack: None,
         }
     }
 

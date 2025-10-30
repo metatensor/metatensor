@@ -8,14 +8,16 @@ use once_cell::sync::Lazy;
 mod status;
 pub use self::status::{catch_unwind, mts_status_t};
 
-#[cfg(test)]
-pub use self::status::MTS_SUCCESS;
+// #[cfg(test)]
+// TODO(rg): remember to add this back..
+pub use self::status::{MTS_SUCCESS,MTS_NOT_IMPLEMENTED_ERROR,MTS_INVALID_PARAMETER_ERROR};
 
 mod labels;
 mod data;
 mod blocks;
 mod tensor;
 mod io;
+pub use self::io::mts_create_array_callback_t;
 
 mod utils;
 

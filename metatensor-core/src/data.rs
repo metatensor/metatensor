@@ -3,6 +3,7 @@ use std::os::raw::c_void;
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
+use dlpack::sys::{DLManagedTensorVersioned, DLDataTypeCode};
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -163,6 +164,147 @@ pub struct mts_array_t {
         property_start: usize,
         property_end: usize,
     ) -> mts_status_t>,
+
+    /// Get a DLPack view of the underlying data.
+    ///
+    /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
+    /// responsible for calling its `deleter` function when the tensor is no
+    /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+    /// exceed the lifetime of the `mts_array_t` it was created from.
+    as_dlpack: Option<unsafe extern "C" fn(
+        array: *const c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+    ) -> mts_status_t>,
+}
+
+// DLPack data-transfer only form
+struct MtsArrayInternal {
+    tensor: *mut DLManagedTensorVersioned,
+    origin_id: mts_data_origin_t,
+}
+
+impl mts_array_t {
+    // TODO(rg): until we decide to keep or remove this, it's still useful for tests
+    #[cfg(test)]
+    pub fn from_dlpack(dl_tensor: DLManagedTensorVersioned, origin_name: &str) -> mts_array_t {
+        let boxed_tensor = Box::new(dl_tensor);
+        let internal_state = Box::new(MtsArrayInternal {
+            tensor: Box::into_raw(boxed_tensor),
+            origin_id: register_data_origin(origin_name.into()),
+        });
+        mts_array_t {
+            ptr: Box::into_raw(internal_state) as *mut c_void,
+            origin: Some(shims::origin),
+            data: Some(shims::data),
+            shape: Some(shims::shape),
+            reshape: Some(shims::reshape_unsupported),
+            swap_axes: Some(shims::swap_axes_unsupported),
+            create: Some(shims::create_unsupported),
+            copy: Some(shims::copy_unsupported),
+            destroy: Some(shims::destroy),
+            move_samples_from: None,
+            as_dlpack: Some(shims::as_dlpack),
+        }
+    }
+}
+
+
+mod shims {
+    use super::*;
+    use crate::c_api::{MTS_SUCCESS,MTS_INVALID_PARAMETER_ERROR,MTS_NOT_IMPLEMENTED_ERROR};
+
+    fn log_deprecation() {
+        eprintln!("Warning: This array operation is deprecated and will be removed.");
+    }
+
+    pub(super) unsafe extern "C" fn origin(array: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        *origin = internal.origin_id;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn data(array: *mut c_void, data: *mut *mut f64) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let dl = &(*internal.tensor).dl_tensor;
+        if dl.dtype.code != DLDataTypeCode::kDLFloat || dl.dtype.bits != 64 {
+            return mts_status_t(MTS_INVALID_PARAMETER_ERROR);
+        }
+        *data = (dl.data as *mut u8).add(dl.byte_offset as usize) as *mut f64;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn shape(array: *const c_void, shape: *mut *const usize, count: *mut usize) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let dl = &(*internal.tensor).dl_tensor;
+        *shape = dl.shape as *const usize;
+        *count = dl.ndim as usize;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn destroy(array: *mut c_void) {
+        if array.is_null() { return; }
+        let internal_boxed = Box::from_raw(array as *mut MtsArrayInternal);
+        let tensor_ptr = internal_boxed.tensor;
+        if let Some(deleter) = (*tensor_ptr).deleter {
+            deleter(tensor_ptr);
+        } else {
+            let _ = Box::from_raw(tensor_ptr);
+        }
+    }
+
+    pub(super) unsafe extern "C" fn as_dlpack(
+        array: *const c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+    ) -> mts_status_t {
+        let internal = &*(array as *const MtsArrayInternal);
+        let original_tensor = &*internal.tensor;
+        let original_dltensor = &original_tensor.dl_tensor;
+
+        let new_dltensor = dlpack::sys::DLTensor {
+            data: original_dltensor.data,
+            device: original_dltensor.device,
+            ndim: original_dltensor.ndim,
+            dtype: original_dltensor.dtype,
+            shape: original_dltensor.shape,
+            strides: original_dltensor.strides,
+            byte_offset: original_dltensor.byte_offset,
+        };
+
+        let new_tensor_struct = DLManagedTensorVersioned {
+            version: original_tensor.version,
+            manager_ctx: original_tensor.manager_ctx,
+            deleter: original_tensor.deleter,
+            flags: original_tensor.flags,
+            dl_tensor: new_dltensor,
+        };
+
+        let view = Box::new(new_tensor_struct);
+        let raw_view = Box::into_raw(view);
+
+        unsafe extern "C" fn view_deleter(managed: *mut DLManagedTensorVersioned) {
+            if !managed.is_null() {
+                let _ = Box::from_raw(managed);
+            }
+        }
+        (*raw_view).deleter = Some(view_deleter);
+        (*raw_view).manager_ctx = std::ptr::null_mut();
+
+        *dl_managed_tensor = raw_view;
+        mts_status_t(MTS_SUCCESS)
+    }
+
+    pub(super) unsafe extern "C" fn reshape_unsupported(_: *mut c_void, _: *const usize, _: usize) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn swap_axes_unsupported(_: *mut c_void, _: usize, _: usize) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn create_unsupported(_: *const c_void, _: *const usize, _: usize, _: *mut mts_array_t) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
+    pub(super) unsafe extern "C" fn copy_unsupported(_: *const c_void, _: *mut mts_array_t) -> mts_status_t {
+        log_deprecation(); mts_status_t(MTS_NOT_IMPLEMENTED_ERROR)
+    }
 }
 
 /// Representation of a single sample moved from an array to another one
@@ -218,6 +360,7 @@ impl mts_array_t {
             // do not copy destroy, the user should never call it
             destroy: None,
             move_samples_from: self.move_samples_from,
+            as_dlpack: self.as_dlpack,
         }
     }
 
@@ -234,6 +377,7 @@ impl mts_array_t {
             copy: None,
             destroy: None,
             move_samples_from: None,
+            as_dlpack: None,
         }
     }
 
@@ -256,12 +400,10 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[deprecated(note="use `as_dlpack` instead")]
     pub fn data(&self) -> Result<&[f64], Error> {
         let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
+        let len = shape.iter().product();
 
         let function = self.data.expect("mts_array_t.data function is NULL");
 
@@ -294,12 +436,10 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[deprecated(note="use `as_dlpack` instead")]
     pub fn data_mut(&mut self) -> Result<&mut [f64], Error> {
         let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
+        let len = shape.iter().product();
 
         let function = self.data.expect("mts_array_t.data function is NULL");
 
@@ -439,7 +579,7 @@ impl mts_array_t {
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
+                status, context: "calling mts_array_t.copy failed".into()
             });
         }
 
@@ -484,105 +624,65 @@ impl mts_array_t {
 
         return Ok(());
     }
+
+    /// Get a DLPack view of this array.
+    ///
+    /// The returned DLPackTensor is a view that borrows from this array.
+    /// The caller owns the returned DLPackTensor and must ensure this
+    /// `mts_array_t` outlives it.
+    pub fn as_dlpack(&self) -> Result<dlpack::DLPackTensor, Error> {
+        let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
+
+        let mut dl_managed_tensor = std::ptr::null_mut();
+        let status = unsafe {
+            function(self.ptr, &mut dl_managed_tensor)
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.as_dlpack failed".into()
+            });
+        }
+
+        if dl_managed_tensor.is_null() {
+            return Err(Error::InvalidParameter(
+                "mts_array_t.as_dlpack returned NULL".into()
+            ));
+        }
+
+        // Wrap the raw pointer in a DLPackTensor
+        // SAFETY: we just checked that the pointer is not null, and the
+        // function contract guarantees it points to a valid DLManagedTensorVersioned
+        let tensor = unsafe {
+            let ptr = std::ptr::NonNull::new_unchecked(dl_managed_tensor);
+            dlpack::DLPackTensor::from_ptr(ptr)
+        };
+
+        Ok(tensor)
+    }
 }
 
 #[cfg(test)]
-pub(crate) use self::tests::TestArray;
-
-#[cfg(test)]
 mod tests {
-    use crate::c_api::MTS_SUCCESS;
-
+    use crate::c_api::MTS_NOT_IMPLEMENTED_ERROR;
+    use crate::test_utils::TestArray;
     use super::*;
 
-    pub struct TestArray {
-        shape: Vec<usize>,
-    }
+    #[test]
+    fn facade_works() {
+        let shape = vec![2, 3];
+        let array = TestArray::new::<f64>(shape);
 
-    impl TestArray {
-        #[allow(clippy::new_ret_no_self)]
-        pub fn new(shape: Vec<usize>) -> mts_array_t {
-            let array = Box::new(TestArray {shape});
+        assert_eq!(array.origin().unwrap().0, 1);
+        assert_eq!(array.shape().unwrap(), &[2, 3]);
 
-            return mts_array_t {
-                ptr: Box::into_raw(array).cast(),
-                origin: Some(TestArray::origin),
-                data: None,
-                shape: Some(TestArray::shape),
-                reshape: Some(TestArray::reshape),
-                swap_axes: Some(TestArray::swap_axes),
-                create: None,
-                copy: None,
-                destroy: Some(TestArray::destroy),
-                move_samples_from: None,
-            }
-        }
+        // check that the deprecated `.data()` still works for f64
+        let data = array.data().unwrap();
+        assert_eq!(data, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
 
-        pub fn new_other_origin(shape: Vec<usize>) -> mts_array_t {
-            let array = Box::new(TestArray {shape});
-
-            return mts_array_t {
-                ptr: Box::into_raw(array).cast(),
-                origin: Some(TestArray::other_origin),
-                data: None,
-                shape: Some(TestArray::shape),
-                reshape: Some(TestArray::reshape),
-                swap_axes: Some(TestArray::swap_axes),
-                create: None,
-                copy: None,
-                destroy: Some(TestArray::destroy),
-                move_samples_from: None,
-            }
-        }
-
-        unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArray".into());
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn shape(ptr: *const c_void, shape: *mut *const usize, shape_count: *mut usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            *shape = (*ptr).shape.as_ptr();
-            *shape_count = (*ptr).shape.len();
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn reshape(ptr: *mut c_void, shape_ptr: *const usize, shape_count: usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            let shape = &mut (*ptr).shape;
-            shape.clear();
-
-            for i in 0..shape_count {
-                shape.push(shape_ptr.add(i).read());
-            }
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn swap_axes(ptr: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t {
-            let ptr = ptr.cast::<TestArray>();
-
-            let shape = &mut (*ptr).shape;
-            shape.swap(axis_1, axis_2);
-
-            return mts_status_t(MTS_SUCCESS);
-        }
-
-        unsafe extern "C" fn destroy(ptr: *mut c_void) {
-            let ptr = ptr.cast::<TestArray>();
-            let boxed = Box::from_raw(ptr);
-            std::mem::drop(boxed);
-        }
+        let mut mut_array = array.raw_copy();
+        let err = mut_array.reshape(&[6]).unwrap_err();
+        assert!(matches!(err, Error::External { status, .. } if status.0 == MTS_NOT_IMPLEMENTED_ERROR));
     }
 
     #[test]
@@ -596,12 +696,21 @@ mod tests {
 
     #[test]
     fn debug() {
-        let data: mts_array_t = TestArray::new(vec![3, 4, 5]);
+        let data: mts_array_t = TestArray::new::<f64>(vec![3, 4, 5]);
 
         let debug_format = format!("{:?}", data);
         assert_eq!(debug_format, format!(
             "mts_array_t {{ ptr: {:?}, origin: Some(\"rust.TestArray\"), shape: Some([3, 4, 5]), .. }}",
             data.ptr
         ));
+    }
+
+    #[test]
+    fn as_dlpack_works() {
+        let array = TestArray::new::<f64>(vec![10, 20]);
+        let dl_tensor = array.as_dlpack().unwrap();
+        
+        assert_eq!(dl_tensor.n_dims(), 2);
+        assert_eq!(dl_tensor.shape(), &[10, 20]);
     }
 }

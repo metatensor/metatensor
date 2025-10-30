@@ -426,6 +426,14 @@ public:
             }, array, data);
         };
 
+        array.as_dlpack = [](const void* array, DLManagedTensorVersioned** dl_managed_tensor) {
+            return details::catch_exceptions([](const void* array, DLManagedTensorVersioned** dl_managed_tensor){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                *dl_managed_tensor = cxx_array->as_dlpack();
+                return MTS_SUCCESS;
+            }, array, dl_managed_tensor);
+        };
+
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
             return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -487,6 +495,12 @@ public:
     /// origin with `mts_register_data_origin`, and use it for all compatible
     /// arrays.
     virtual mts_data_origin_t origin() const = 0;
+
+    /// Get a DLPack representation of this array
+    ///
+    /// The returned pointer is owned by the caller and should be freed
+    /// using its deleter function when no longer needed.
+    virtual DLManagedTensorVersioned* as_dlpack() const = 0;
 
     /// Make a copy of this DataArrayBase and return the new array. The new
     /// array is expected to have the same data origin and parameters (data
@@ -736,6 +750,35 @@ public:
         return dynamic_cast<const SimpleDataArray&>(*base);
     }
 
+    DLManagedTensorVersioned* as_dlpack() const override {
+        auto* managed = new DLManagedTensorVersioned();
+        managed->version.major = 1;
+        managed->version.minor = 0;
+        auto& tensor = managed->dl_tensor;
+        tensor.device.device_type = DLDeviceType::kDLCPU;
+        tensor.device.device_id = 0;
+        tensor.ndim = static_cast<int32_t>(shape_.size());
+        int64_t* shape = new int64_t[shape_.size()];
+        for (size_t i = 0; i < shape_.size(); i++) {
+            shape[i] = static_cast<int64_t>(shape_[i]);
+        }
+        tensor.shape = shape;
+        tensor.strides = nullptr;
+        tensor.dtype.code = DLDataTypeCode::kDLFloat;
+        tensor.dtype.bits = 64;
+        tensor.dtype.lanes = 1;
+        tensor.data = const_cast<void*>(static_cast<const void*>(data_.data()));
+        tensor.byte_offset = 0;
+        managed->manager_ctx = shape;
+        managed->deleter = [](DLManagedTensorVersioned* self) {
+            if (self) {
+                delete[] static_cast<int64_t*>(self->manager_ctx);
+                delete self;
+            }
+        };
+        return managed;
+    }
+
 private:
     std::vector<uintptr_t> shape_;
     std::vector<double> data_;
@@ -811,6 +854,10 @@ public:
 
     void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
         throw metatensor::Error("can not call `move_samples_from` for an EmptyDataArray");
+    }
+
+    DLManagedTensorVersioned* as_dlpack() const override {
+        throw metatensor::Error("EmptyDataArray does not support as_dlpack");
     }
 
 private:

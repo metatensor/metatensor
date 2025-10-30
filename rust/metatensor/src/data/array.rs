@@ -1,9 +1,11 @@
 use std::ops::Range;
 use std::os::raw::c_void;
-
 use once_cell::sync::Lazy;
 
-use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
+use metatensor_sys::{
+    mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t,
+    DLDevice, DLDeviceType_kDLCPU, DLDataType, DLTensor, DLManagedTensorVersioned, DLPackVersion,
+};
 
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
@@ -63,6 +65,11 @@ pub trait Array: std::any::Any + Send + Sync {
         samples: &[mts_sample_mapping_t],
         properties: Range<usize>,
     );
+
+    /// Get a DLPack view of this array.
+    fn as_dlpack(&self) -> Option<*mut metatensor_sys::DLManagedTensorVersioned> {
+        panic!("Have to implement as_dlpack");
+    }
 }
 
 impl From<Box<dyn Array>> for mts_array_t {
@@ -72,7 +79,7 @@ impl From<Box<dyn Array>> for mts_array_t {
         // not be casted to `*mut c_void`)
         let array = Box::new(array);
 
-        return mts_array_t {
+        mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
             data: Some(rust_array_data),
@@ -83,6 +90,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
             move_samples_from: Some(rust_array_move_samples_from),
+            as_dlpack: Some(rust_array_as_dlpack),
         }
     }
 }
@@ -246,7 +254,48 @@ unsafe extern "C" fn rust_array_move_samples_from(
     })
 }
 
+/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_as_dlpack(
+    array: *const c_void,
+    dl_managed_tensor: *mut *mut metatensor_sys::DLManagedTensorVersioned,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, dl_managed_tensor);
+        let array = array.cast::<Box<dyn Array>>();
+        
+        match (*array).as_dlpack() {
+            Some(tensor) => {
+                *dl_managed_tensor = tensor;
+            },
+            None => {
+                panic!("DLPack conversion not implemented for this array type");
+            }
+        }
+    })
+}
+
 /******************************************************************************/
+
+// This struct holds the shape vector,
+// ensuring it lives long enough for the DLPack tensor.
+struct NdArrayManager {
+    shape: Vec<i64>,
+}
+
+unsafe extern "C" fn ndarray_deleter(dl_managed_tensor: *mut DLManagedTensorVersioned) {
+    if dl_managed_tensor.is_null() {
+        return;
+    }
+
+    // Reconstruct and drop the manager context (which holds the shape)
+    let manager_ptr = (*dl_managed_tensor).manager_ctx;
+    if !manager_ptr.is_null() {
+        let _ = Box::from_raw(manager_ptr as *mut NdArrayManager);
+    }
+
+    // Reconstruct and drop the DLManagedTensorVersioned struct itself
+    let _ = Box::from_raw(dl_managed_tensor);
+}
 
 impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -306,6 +355,34 @@ impl Array for ndarray::ArrayD<f64> {
             output_location.assign(&value);
         }
     }
+
+    fn as_dlpack(&self) -> Option<*mut DLManagedTensorVersioned> {
+        if !self.is_standard_layout() {
+            panic!("array is not contiguous (standard layout), can not create DLPack tensor");
+        }
+        let manager_ctx = Box::new(NdArrayManager {
+            shape: self.shape().iter().map(|&s| s as i64).collect(),
+        });
+        let data_ptr = self.as_ptr() as *mut c_void;
+        let shape_ptr = manager_ctx.as_ref().shape.as_ptr() as *mut i64;
+        let dl_tensor = DLTensor {
+            data: data_ptr,
+            device: DLDevice { device_type: DLDeviceType_kDLCPU, device_id: 0 },
+            ndim: self.ndim() as i32,
+            dtype: DLDataType { code: 2, bits: 64, lanes: 1 }, // 2 = kDLFloat (f64)
+            shape: shape_ptr,
+            strides: std::ptr::null_mut(), // C-contiguous
+            byte_offset: 0,
+        };
+        let managed_tensor = Box::new(DLManagedTensorVersioned {
+            version: DLPackVersion { major: 1, minor: 0 },
+            manager_ctx: Box::into_raw(manager_ctx) as *mut c_void,
+            deleter: Some(ndarray_deleter),
+            flags: 0,
+            dl_tensor: dl_tensor,
+        });
+        Some(Box::into_raw(managed_tensor))
+    }
 }
 
 /******************************************************************************/
@@ -360,6 +437,33 @@ impl Array for EmptyArray {
 
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
+    }
+
+    fn as_dlpack(&self) -> Option<*mut DLManagedTensorVersioned> {
+        let manager_ctx = Box::new(NdArrayManager {
+            shape: self.shape.iter().map(|&s| s as i64).collect(),
+        });
+
+        let manager_ref = manager_ctx.as_ref();
+        let shape_ptr = manager_ref.shape.as_ptr() as *mut i64;
+        let ndim = manager_ref.shape.len();
+        let dl_tensor = DLTensor {
+            data: std::ptr::null_mut(),
+            device: DLDevice { device_type: DLDeviceType_kDLCPU, device_id: 0 },
+            ndim: ndim as i32,
+            dtype: DLDataType { code: 2, bits: 64, lanes: 1 },
+            shape: shape_ptr,
+            strides: std::ptr::null_mut(),
+            byte_offset: 0,
+        };
+        let managed_tensor = Box::new(DLManagedTensorVersioned {
+            version: DLPackVersion { major: 1, minor: 0 },
+            manager_ctx: Box::into_raw(manager_ctx) as *mut c_void,
+            deleter: Some(ndarray_deleter),
+            flags: 0,
+            dl_tensor: dl_tensor,
+        });
+        Some(Box::into_raw(managed_tensor))
     }
 }
 

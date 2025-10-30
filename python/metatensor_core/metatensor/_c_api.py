@@ -26,11 +26,16 @@ MTS_IO_ERROR = 2
 MTS_SERIALIZATION_ERROR = 3
 MTS_BUFFER_SIZE_ERROR = 254
 MTS_INTERNAL_ERROR = 255
+MTS_NOT_IMPLEMENTED_ERROR = 5
 
 
 mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
+
+
+class c_DLManagedTensorVersioned(ctypes.Structure):
+    pass
 
 
 class mts_block_t(ctypes.Structure):
@@ -76,6 +81,7 @@ mts_array_t._fields_ = [
     ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
     ("move_samples_from", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_sample_mapping_t), c_uintptr_t, c_uintptr_t, c_uintptr_t)),
+    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_DLManagedTensorVersioned)))),
 ]
 
 

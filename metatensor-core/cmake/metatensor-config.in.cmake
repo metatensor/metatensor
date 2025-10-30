@@ -21,11 +21,21 @@ endif()
 
 set(METATENSOR_STATIC_LOCATION ${METATENSOR_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@METATENSOR_STATIC_LIB_NAME@)
 set(METATENSOR_INCLUDE ${METATENSOR_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@/)
+set(METATENSOR_DLPACK_INCLUDE ${METATENSOR_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@/dlpack)
 
 if (NOT EXISTS ${METATENSOR_INCLUDE}/metatensor.h OR NOT EXISTS ${METATENSOR_INCLUDE}/metatensor.hpp)
     message(FATAL_ERROR "could not find metatensor headers in '${METATENSOR_INCLUDE}', please re-install metatensor")
 endif()
 
+if (NOT EXISTS ${METATENSOR_DLPACK_INCLUDE})
+    message(FATAL_ERROR "could not find vendored dlpack headers in '${METATENSOR_DLPACK_INCLUDE}', please re-install metatensor")
+endif()
+
+add_library(metatensor_interface INTERFACE IMPORTED)
+target_include_directories(metatensor_interface INTERFACE
+    ${METATENSOR_INCLUDE}
+    ${METATENSOR_DLPACK_INCLUDE}
+)
 
 # Shared library target
 if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
@@ -36,10 +46,13 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
     add_library(metatensor::shared SHARED IMPORTED)
     set_target_properties(metatensor::shared PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-        INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
+    target_include_directories(metatensor::shared INTERFACE
+        ${METATENSOR_INCLUDE}
+        ${METATENSOR_DLPACK_INCLUDE}
+    )
     target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
     if (WIN32)
@@ -63,11 +76,14 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
     add_library(metatensor::static STATIC IMPORTED)
     set_target_properties(metatensor::static PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-        INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
         INTERFACE_LINK_LIBRARIES "@CARGO_DEFAULT_LIBRARIES@"
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
+    target_include_directories(metatensor::static INTERFACE
+        ${METATENSOR_INCLUDE}
+        ${METATENSOR_DLPACK_INCLUDE}
+    )
     target_compile_features(metatensor::static INTERFACE cxx_std_17)
 endif()
 
@@ -80,7 +96,7 @@ endif()
 
 
 if (@BUILD_SHARED_LIBS@)
-    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE METATENSOR_DLPACK_INCLUDE)
 else()
-    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE METATENSOR_DLPACK_INCLUDE)
 endif()

@@ -18,7 +18,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
-mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}      # TODO: actual type
 
 # ====== Enf of manual definitions ====== #
 
@@ -30,16 +30,23 @@ MTS_IO_ERROR = 2
 MTS_SERIALIZATION_ERROR = 3
 MTS_BUFFER_SIZE_ERROR = 254
 MTS_INTERNAL_ERROR = 255
+MTS_NOT_IMPLEMENTED_ERROR = 5
 
 
 # ===== Enum definitions
 
 
 # ===== Struct definitions
+struct CDLManagedTensorVersioned
+    # opaque struct
+end
+
 struct mts_block_t
+    # opaque struct
 end
 
 struct mts_tensormap_t
+    # opaque struct
 end
 
 struct mts_labels_t
@@ -66,6 +73,7 @@ struct mts_array_t
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
     destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     move_samples_from :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_sample_mapping_t}, UIntptr, UIntptr, UIntptr) -> mts_status_t =#
+    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{CDLManagedTensorVersioned}}) -> mts_status_t =#
 end
 
 
@@ -76,7 +84,6 @@ function mts_disable_panic_printing()
     ccall((:mts_disable_panic_printing, libmetatensor), 
         Cvoid,
         (),
-        
     )
 end
 
@@ -84,7 +91,6 @@ function mts_version()
     ccall((:mts_version, libmetatensor), 
         Ptr{Cchar},
         (),
-        
     )
 end
 
@@ -92,7 +98,6 @@ function mts_last_error()
     ccall((:mts_last_error, libmetatensor), 
         Ptr{Cchar},
         (),
-        
     )
 end
 

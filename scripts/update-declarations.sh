@@ -30,7 +30,8 @@ bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_ap
 #[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
 #[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
 extern "C" {}' -- \
-    -I./scripts/include
+    -I./scripts/include \
+    -Imetatensor-core/include/vendored
 
 # Format the auto-generated rust code
 mv "$ROOT_DIR/rustfmt.toml" "$ROOT_DIR/.no_op.rustfmt.toml"

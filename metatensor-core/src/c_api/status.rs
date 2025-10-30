@@ -51,6 +51,8 @@ pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 /// inside metatensor itself
 pub const MTS_INTERNAL_ERROR: i32 = 255;
 
+// Status code for an operation not yet implemented
+pub const MTS_NOT_IMPLEMENTED_ERROR: i32 = 5;
 
 impl From<Error> for mts_status_t {
     #[allow(clippy::match_same_arms)]
@@ -62,6 +64,7 @@ impl From<Error> for mts_status_t {
             Error::InvalidParameter(_) => mts_status_t(MTS_INVALID_PARAMETER_ERROR),
             Error::Io(_) => mts_status_t(MTS_IO_ERROR),
             Error::Serialization(_) => mts_status_t(MTS_SERIALIZATION_ERROR),
+            Error::NotImplemented(_) => mts_status_t(MTS_NOT_IMPLEMENTED_ERROR),
             Error::BufferSize(_) => mts_status_t(MTS_BUFFER_SIZE_ERROR),
             Error::External {status, .. } => status,
             Error::Internal(_) => mts_status_t(MTS_INTERNAL_ERROR),
