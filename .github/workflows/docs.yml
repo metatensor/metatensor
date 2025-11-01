@@ -40,7 +40,7 @@ jobs:
         run: tox -e docs
 
       - name: store documentation as github artifact to be downloaded by users
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docs
           path: docs/build/html/*
