@@ -246,18 +246,35 @@ fn write_data<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<
         return Ok(());
     }
 
+    // check dtype lanes == 1 (no vector lanes)
+    let lanes = tensor_ref.raw.dtype.lanes;
+    if lanes != 1 {
+        return Err(Error::Serialization(format!(
+            "unsupported DLPack dtype: lanes != 1 ({})", lanes
+        )));
+    }
+
     // Calculate total bytes using the DLPack metadata
     // NOTE(rg): won't work if types are not byte aligned
-    let element_bytes = (bits / 8) as usize;
-    let total_bytes = num_elements * element_bytes;
+    let element_bytes = (bits as usize) / 8;
+    let total_bytes = num_elements
+        .checked_mul(element_bytes)
+        .ok_or_else(|| Error::Serialization("size overflow".into()))?;
 
-    // Grab the data ptr
-    let data_ptr = tensor_ref.raw.data.wrapping_add(tensor_ref.byte_offset());
+    // Get the base data pointer (void*) and add byte_offset in bytes.
+    let raw = &tensor_ref.raw;
+    let base_ptr = raw.data as *const u8;
+    let offset_bytes = tensor_ref.raw.byte_offset as usize;
 
-    // Write!
-    let data_slice = unsafe {
-        std::slice::from_raw_parts(data_ptr as *const u8, total_bytes)
-    };
+    // pointer arithmetic in bytes:
+    let data_ptr = unsafe { base_ptr.add(offset_bytes) };
+
+    if data_ptr.is_null() {
+        return Ok(());
+    }
+
+    // create byte slice and write
+    let data_slice = unsafe { std::slice::from_raw_parts(data_ptr, total_bytes) };
     writer.write_all(data_slice)?;
 
     return Ok(());
