@@ -182,7 +182,7 @@ TEST_CASE("TensorMap") {
     SECTION("clone") {
         auto blocks = std::vector<TensorBlock>();
         blocks.push_back(TensorBlock(
-            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 2})),
+            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({"properties"}, {{5}, {3}})
@@ -312,13 +312,13 @@ TensorMap test_tensor_map() {
     components.emplace_back(Labels({"component"}, {{0}}));
 
     auto block_1 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 1, 1}, 1.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 1, 1}, 1.0)),
         Labels({"samples"}, {{0}, {2}, {4}}),
         components,
         Labels({"properties"}, {{0}})
     );
     auto gradient_1 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({2, 1, 1}, 11.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 1, 1}, 11.0)),
         Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}),
         components,
         Labels({"properties"}, {{0}})
@@ -328,13 +328,13 @@ TensorMap test_tensor_map() {
     blocks.emplace_back(std::move(block_1));
 
     auto block_2 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 1, 3}, 2.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 1, 3}, 2.0)),
         Labels({"samples"}, {{0}, {1}, {3}}),
         components,
         Labels({"properties"}, {{3}, {4}, {5}})
     );
     auto gradient_2 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 1, 3}, 12.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 1, 3}, 12.0)),
         Labels({"sample", "parameter"}, {{0, -2}, {0, 3}, {2, -2}}),
         components,
         Labels({"properties"}, {{3}, {4}, {5}})
@@ -346,13 +346,13 @@ TensorMap test_tensor_map() {
     components = std::vector<Labels>();
     components.emplace_back(Labels({"component"}, {{0}, {1}, {2}}));
     auto block_3 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({4, 3, 1}, 3.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({4, 3, 1}, 3.0)),
         Labels({"samples"}, {{0}, {3}, {6}, {8}}),
         components,
         Labels({"properties"}, {{0}})
     );
     auto gradient_3 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({1, 3, 1}, 13.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({1, 3, 1}, 13.0)),
         Labels({"sample", "parameter"}, {{1, -2}}),
         components,
         Labels({"properties"}, {{0}})
@@ -362,13 +362,13 @@ TensorMap test_tensor_map() {
     blocks.emplace_back(std::move(block_3));
 
     auto block_4 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({4, 3, 1}, 4.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({4, 3, 1}, 4.0)),
         Labels({"samples"}, {{0}, {1}, {2}, {5}}),
         components,
         Labels({"properties"}, {{0}})
     );
     auto gradient_4 = TensorBlock(
-        std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({2, 3, 1}, 14.0)),
+        std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 3, 1}, 14.0)),
         Labels({"sample", "parameter"}, {{0, 1}, {3, 3}}),
         components,
         Labels({"properties"}, {{0}})
@@ -394,7 +394,7 @@ mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_cou
 
     CUSTOM_CREATE_ARRAY_CALL_COUNT += 1;
 
-    auto cxx_array = std::unique_ptr<DataArrayBase>(SimpleDataArray::make(shape));
+    auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
     *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
 
     return MTS_SUCCESS;
