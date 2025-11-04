@@ -96,8 +96,13 @@ impl std::io::Write for ExternalBuffer {
             std::slice::from_raw_parts_mut(start, remaining_space as usize)
         };
 
-        let count = output.write(buf)?;
-        assert_eq!(count, buf.len(), "failed to write full buffer to slice");
+        // get pointer to start of free region and copy bytes directly (memcpy)
+        let start = unsafe { (*self.data).offset(self.current as isize) };
+        unsafe {
+            std::ptr::copy_nonoverlapping(buf.as_ptr(), start as *mut u8, buf.len());
+        }
+        let count = buf.len();
+
         self.current = self.current.saturating_add(count as u64);
 
         if self.current > self.writen {
