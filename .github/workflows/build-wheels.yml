@@ -113,7 +113,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8']
+        torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-15', 'windows-2022']
         exclude:
@@ -124,12 +124,14 @@ jobs:
           - {os: macos-15, arch: x86_64}
           - {os: ubuntu-24.04-arm, arch: x86_64}
           # arch x86_64 on macos is only supported for torch <2.3
+          # so this list of exclusions grows with each new version
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.3'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.4'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.5'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.6'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.7'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.8'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.9'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
@@ -166,6 +168,7 @@ jobs:
           - {torch-version: '2.6', cibw-python: 'cp312-*'}
           - {torch-version: '2.7', cibw-python: 'cp312-*'}
           - {torch-version: '2.8', cibw-python: 'cp312-*'}
+          - {torch-version: '2.9', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -465,13 +468,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.8.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.9.0%2Bcpu.zip
           - os: macos-15
             rust-target: aarch64-apple-darwin
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.8.0.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.9.0.zip
           - os: windows-2022
             rust-target: x86_64-pc-windows-msvc
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.8.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.9.0%2Bcpu.zip
     steps:
       - uses: actions/checkout@v5
         with:

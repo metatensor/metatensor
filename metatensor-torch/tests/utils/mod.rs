@@ -90,7 +90,7 @@ pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
 /// Download PyTorch in a Python virtualenv, and return the
 /// CMAKE_PREFIX_PATH for the corresponding libtorch
 pub fn setup_pytorch(python: &Path) -> PathBuf {
-    let torch_version = std::env::var("METATENSOR_TESTS_TORCH_VERSION").unwrap_or("2.8".into());
+    let torch_version = std::env::var("METATENSOR_TESTS_TORCH_VERSION").unwrap_or("2.9".into());
     let status = Command::new(python)
         .arg("-m")
         .arg("pip")
