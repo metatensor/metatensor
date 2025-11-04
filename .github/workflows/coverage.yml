@@ -63,9 +63,8 @@ jobs:
           path: .tox
           key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
 
-      # xref: https://github.com/Leafwing-Studios/cargo-cache/pull/48
       - name: Cache Rust dependencies
-        uses: HaoZeke/cargo-cache@fixDeps
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
           sweep-cache: true
 

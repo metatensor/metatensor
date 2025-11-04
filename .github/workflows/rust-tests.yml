@@ -105,9 +105,8 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
           target: ${{ matrix.rust-target }}
 
-      # xref: https://github.com/Leafwing-Studios/cargo-cache/pull/48
       - name: Cache Rust dependencies
-        uses: HaoZeke/cargo-cache@fixDeps
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
           sweep-cache: true
 
@@ -160,9 +159,8 @@ jobs:
           target: x86_64-unknown-linux-gnu
           components: rustfmt
 
-      # xref: https://github.com/Leafwing-Studios/cargo-cache/pull/48
       - name: Cache Rust dependencies
-        uses: HaoZeke/cargo-cache@fixDeps
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
           sweep-cache: true
 
