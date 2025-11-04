@@ -791,7 +791,11 @@ public:
     DLManagedTensorVersioned *as_dlpack() override {
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto self = this->shared_from_this();
+        auto self = weak_from_this().lock();
+        if (!self){
+          throw std::runtime_error("as_dlpack requires objects to be owned by "
+                                   "std::shared_ptr, consider using the ::make() method");
+        }
         auto ctx = std::make_unique<DLPackContext<SimpleDataArray>>();
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         // Populate stuff
@@ -885,7 +889,12 @@ public:
     DLManagedTensorVersioned* as_dlpack() override {
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto self = this->shared_from_this();
+        auto self = weak_from_this().lock();
+        if (!self){
+        throw std::runtime_error(
+            "as_dlpack() requires the array to be owned by std::shared_ptr; "
+            "create the array with std::make_shared or use the class factory");
+    }
         auto ctx = std::make_unique<DLPackContext<EmptyDataArray>>();
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         // Populate stuff
