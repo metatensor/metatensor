@@ -1,3 +1,4 @@
+use dlpack::sys::DLManagedTensorVersioned;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
@@ -91,6 +92,18 @@ pub struct mts_array_t {
     data: Option<unsafe extern "C" fn(
         array: *mut c_void,
         data: *mut *mut f64,
+    ) -> mts_status_t>,
+
+
+    /// Get a DLPack representation of the underlying data.
+    ///
+    /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
+    /// responsible for calling its `deleter` function when the tensor is no
+    /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+    /// exceed the lifetime of the `mts_array_t` it was created from.
+    as_dlpack: Option<unsafe extern "C" fn(
+        array: *mut c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -210,6 +223,7 @@ impl mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
             data: self.data,
+            as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -227,6 +241,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             data: None,
+            as_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -508,6 +523,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -525,6 +541,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
