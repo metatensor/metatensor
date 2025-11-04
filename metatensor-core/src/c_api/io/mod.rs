@@ -88,7 +88,7 @@ impl std::io::Write for ExternalBuffer {
             }
 
             self.allocated = new_size;
-            remaining_space = self.allocated - self.current;
+            remaining_space = self.allocated.saturating_sub(self.current);
         }
 
         let mut output = unsafe {
@@ -96,9 +96,9 @@ impl std::io::Write for ExternalBuffer {
             std::slice::from_raw_parts_mut(start, remaining_space as usize)
         };
 
-        let count = output.write(buf).expect("failed to write to pre-allocated slice");
-        assert_eq!(count, buf.len());
-        self.current += count as u64;
+        let count = output.write(buf)?;
+        assert_eq!(count, buf.len(), "failed to write full buffer to slice");
+        self.current = self.current.saturating_add(count as u64);
 
         if self.current > self.writen {
             self.writen = self.current;
