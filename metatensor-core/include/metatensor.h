@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "dlpack/dlpack.h"
 
 /**
  * Status code used when a function succeeded
