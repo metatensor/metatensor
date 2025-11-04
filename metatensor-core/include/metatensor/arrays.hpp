@@ -1,13 +1,15 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
-#include <initializer_list>
-#include <string>
-#include <type_traits>
 #include <cassert>
 #include <cstring>
 #include <functional>
+#include <initializer_list>
 #include <memory>
+#include <numeric>
+#include <string>
+#include <type_traits>
 #include <vector>
 
 #include <metatensor.h>
@@ -16,6 +18,38 @@
 
 namespace metatensor {
 namespace details {
+    /**
+    * @brief This C++ struct bundles all resources the DLTensor needs.
+    *
+    * An instance of this struct will be what manager_ctx points to.
+    * It uses std::vector to hold shape and strides, which handles its
+    * own heap memory via RAII, along with a templated owning class.
+    */
+    template <typename TOwner>
+    struct DLPackContext {
+        std::shared_ptr<TOwner> owner;
+        std::vector<int64_t> shape;
+        std::vector<int64_t> strides;
+    };
+
+    /**
+    * @brief The templated C-style deleter required by DLPack.
+    *
+    * This template will be instantiated for each C++ owner type,
+    * creating a unique C function pointer (e.g., DLPackDeleter<SimpleDataArray>)
+    * that knows exactly which type to static_cast and delete.
+    */
+    template <typename TOwner>
+    void DLPackDeleter(DLManagedTensorVersioned* self){
+        if(self){
+          // Cast the manager_ctx back to the C++ type and delete it.
+          // This will basically call ~DLPackContext() and free the vectors
+          delete static_cast<DLPackContext<TOwner>*>(self->manager_ctx);
+          // delete the struct itself
+          delete self;
+       }
+    }
+    
     /// Compute the product of all values in the `shape` vector
     inline size_t product(const std::vector<size_t>& shape) {
         size_t result = 1;
@@ -426,6 +460,17 @@ public:
             }, array, data);
         };
 
+        array.as_dlpack = [](void* array,
+                             DLManagedTensorVersioned** dl_managed_tensor) {
+            return details::catch_exceptions(
+                [](void* array, DLManagedTensorVersioned** dl_managed_tensor) {
+                    auto* cxx_array = static_cast<DataArrayBase*>(array);
+                    *dl_managed_tensor = cxx_array->as_dlpack();
+                    return MTS_SUCCESS;
+                },
+                array, dl_managed_tensor);
+        };
+
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
             return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -488,6 +533,12 @@ public:
     /// arrays.
     virtual mts_data_origin_t origin() const = 0;
 
+    /// Get a DLPack representation of this array
+    ///
+    /// The returned pointer is owned by the caller and should be freed
+    /// using its deleter function when no longer needed.
+    virtual DLManagedTensorVersioned* as_dlpack() = 0;
+
     /// Make a copy of this DataArrayBase and return the new array. The new
     /// array is expected to have the same data origin and parameters (data
     /// type, data location, etc.)
@@ -544,7 +595,8 @@ public:
 /// metatensor usable without additional dependencies. For other uses cases, it
 /// might be better to implement DataArrayBase on your data, using
 /// functionalities from `Eigen`, `Boost.Array`, etc.
-class SimpleDataArray: public metatensor::DataArrayBase {
+class SimpleDataArray : public metatensor::DataArrayBase,
+                        public std::enable_shared_from_this<SimpleDataArray> {
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
@@ -734,6 +786,48 @@ public:
 
         const auto* base = static_cast<const DataArrayBase*>(array.ptr);
         return dynamic_cast<const SimpleDataArray&>(*base);
+    }
+
+    DLManagedTensorVersioned *as_dlpack() override {
+        using metatensor::details::DLPackContext;
+        using metatensor::details::DLPackDeleter;
+        auto self = this->shared_from_this();
+        auto ctx = std::make_unique<DLPackContext<SimpleDataArray>>();
+        auto managed = std::make_unique<DLManagedTensorVersioned>();
+        // Populate stuff
+        ctx->owner = std::move(self);
+        ctx->shape.resize(this->shape_.size());
+        std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
+                       [](uintptr_t s) { return static_cast<int64_t>(s); });
+        // Calculate C-contiguous strides
+        ctx->strides.resize(this->shape_.size());
+        if (!this->shape_.empty()) {
+            ctx->strides.back() = 1;
+            for (int i = static_cast<int>(this->shape_.size()) - 2; i >= 0; --i) {
+                ctx->strides[i] = ctx->strides[i + 1] * ctx->shape[i + 1];
+            }
+        }
+
+        // Fill in DLManagedTensorVersioned stuff
+        managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        managed->flags = 0; // Not read-only
+        managed->deleter = DLPackDeleter<SimpleDataArray>;
+
+        // Fill the DLTensor View
+        auto &tensor = managed->dl_tensor;
+        tensor.device = {kDLCPU, 0};
+        tensor.ndim = static_cast<int32_t>(this->shape_.size());
+        tensor.dtype = {kDLFloat, 64, 1};
+        tensor.byte_offset = 0;
+
+        // The DLPack C API is not const-correct.
+        tensor.data = const_cast<double *>(ctx->owner->data_.data());
+        tensor.shape = ctx->shape.data();
+        tensor.strides = ctx->strides.data();
+
+        // Transfer Ownership to C pointers
+        managed->manager_ctx = ctx.release();
+        return managed.release();
     }
 
 private:
