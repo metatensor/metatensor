@@ -1,7 +1,9 @@
 use dlpack::sys::DLManagedTensorVersioned;
+use dlpack::DLPackTensor;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
+use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
@@ -344,6 +346,26 @@ impl mts_array_t {
         };
 
         return Ok(data);
+    }
+
+
+    pub fn as_dlpack(&self) -> Result<DLPackTensor, Error> {
+        // Get the C function pointer from the vtable slot
+        let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
+        // ... and fill structure
+        let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+        let status = unsafe { function(self.ptr, &mut dl_managed_tensor) };
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.as_dlpack failed".into()
+            });
+        }
+        assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
+        let ptr = NonNull::new(dl_managed_tensor).expect("pointer is null, this should not happen");
+        let tensor = unsafe {
+            DLPackTensor::from_ptr(ptr)
+        };
+        return Ok(tensor);
     }
 
     /// Get the shape of this array
