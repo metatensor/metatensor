@@ -105,3 +105,108 @@ TEST_CASE("Data Array") {
 
     array.destroy(array.ptr);
 }
+
+TEST_CASE("SimpleDataArray as_dlpack produces valid DLManagedTensorVersioned") {
+    // Create a shared_ptr-managed SimpleDataArray (shared_from_this requires
+    // shared ownership)
+    auto s_arr =
+        std::make_shared<SimpleDataArray>(std::vector<uintptr_t>{2, 3, 4});
+
+    // Mutate one element so we can check that data pointer points to that
+    // storage
+    {
+        auto view = s_arr->view();
+        view(1, 1, 0) = 42.5;
+    }
+
+    // Call as_dlpack and validate contents
+    DLManagedTensorVersioned *managed = s_arr->as_dlpack();
+    REQUIRE(managed != nullptr);
+
+    // Validate tensor view
+    const DLTensor &t = managed->dl_tensor;
+    CHECK(t.device.device_type == kDLCPU);
+    CHECK(t.device.device_id == 0);
+    CHECK(t.ndim == 3);
+    CHECK(t.shape != nullptr);
+    CHECK(t.strides != nullptr);
+    // shape matches {2,3,4}
+    CHECK(t.shape[0] == 2);
+    CHECK(t.shape[1] == 3);
+    CHECK(t.shape[2] == 4);
+    // C-contiguous strides in elements: {12,4,1}
+    CHECK(t.strides[0] == 12);
+    CHECK(t.strides[1] == 4);
+    CHECK(t.strides[2] == 1);
+
+    // data pointer non-null and points to double storage
+    REQUIRE(t.data != nullptr);
+    // Check that the value set earlier is observed at the flattened index for
+    // (1,1,0) flattened idx = 1* (3*4) + 1*4 + 0 = 12 + 4 = 16
+    double *pdata = static_cast<double *>(t.data);
+    CHECK(pdata[16] == Approx(42.5));
+
+    // The manager_ctx should hold a shared_ptr owner, preventing destruction
+    // while managed exists. Destroy via deleter and ensure no crashes.
+    managed->deleter(managed);
+    // After deleter returns we must not touch managed or its manager_ctx.
+}
+
+TEST_CASE("EmptyDataArray as_dlpack produces valid DLManagedTensorVersioned "
+          "with null data") {
+    // Create a shared_ptr-managed EmptyDataArray
+    auto e_arr =
+        std::make_shared<EmptyDataArray>(std::vector<uintptr_t>{2, 3, 4});
+
+    // Call as_dlpack
+    DLManagedTensorVersioned *managed = e_arr->as_dlpack();
+    REQUIRE(managed != nullptr);
+
+    const DLTensor &t = managed->dl_tensor;
+    CHECK(t.device.device_type == kDLCPU);
+    CHECK(t.ndim == 3);
+    CHECK(t.shape != nullptr);
+    CHECK(t.strides != nullptr);
+    // data pointer must be nullptr for EmptyDataArray per current
+    // implementation
+    CHECK(t.data == nullptr);
+
+    // Check shape/strides correctness
+    CHECK(t.shape[0] == 2);
+    CHECK(t.shape[1] == 3);
+    CHECK(t.shape[2] == 4);
+    // strides {12,4,1}
+    CHECK(t.strides[0] == 12);
+    CHECK(t.strides[1] == 4);
+    CHECK(t.strides[2] == 1);
+
+    // Destroy using deleter
+    managed->deleter(managed);
+}
+
+TEST_CASE("as_dlpack requires object to be owned by std::shared_ptr "
+          "(shared_from_this precondition)") {
+    // If an object is not managed by shared_ptr, shared_from_this will throw.
+    // Create a SimpleDataArray with a plain new (unique_ptr), then call
+    // as_dlpack on the raw object. We expect std::bad_weak_ptr to be thrown (or
+    // an implementation-defined exception from shared_from_this).
+    auto raw = new SimpleDataArray(std::vector<uintptr_t>{2, 2});
+    try {
+        // Calling shared_from_this() inside as_dlpack should throw
+        DLManagedTensorVersioned *m = raw->as_dlpack();
+        // If it didn't throw, be sure to clean up to avoid leaks
+        if (m) {
+            m->deleter(m);
+        }
+        // If no exception thrown, mark test failure
+        FAIL("Expected shared_from_this to throw when object is not owned by "
+             "std::shared_ptr");
+    } catch (const std::bad_weak_ptr &) {
+        SUCCEED("shared_from_this correctly threw std::bad_weak_ptr");
+    } catch (...) {
+        // any other exception type is acceptable but note it
+        SUCCEED("shared_from_this threw an exception (not std::bad_weak_ptr) "
+                "as expected");
+    }
+    delete raw;
+}
