@@ -853,7 +853,8 @@ inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 ///
 /// This class only tracks it's shape, and can be used when only the metadata
 /// of a `TensorBlock` is important, leaving the data unspecified.
-class EmptyDataArray: public metatensor::DataArrayBase {
+class EmptyDataArray: public metatensor::DataArrayBase,
+                      public std::enable_shared_from_this<EmptyDataArray> {
 public:
     /// Create ae `EmptyDataArray` with the given `shape`
     EmptyDataArray(std::vector<uintptr_t> shape):
@@ -878,6 +879,49 @@ public:
 
     double* data() & override {
         throw metatensor::Error("can not call `data` for an EmptyDataArray");
+    }
+
+
+    DLManagedTensorVersioned* as_dlpack() override {
+        using metatensor::details::DLPackContext;
+        using metatensor::details::DLPackDeleter;
+        auto self = this->shared_from_this();
+        auto ctx = std::make_unique<DLPackContext<EmptyDataArray>>();
+        auto managed = std::make_unique<DLManagedTensorVersioned>();
+        // Populate stuff
+        ctx->owner = std::move(self);
+        ctx->shape.resize(this->shape_.size());
+        std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
+                       [](uintptr_t s) { return static_cast<int64_t>(s); });
+        // Calculate C-contiguous strides
+        ctx->strides.resize(this->shape_.size());
+        if (!this->shape_.empty()) {
+            ctx->strides.back() = 1;
+            for (int i = static_cast<int>(this->shape_.size()) - 2; i >= 0; --i) {
+                ctx->strides[i] = ctx->strides[i + 1] * ctx->shape[i + 1];
+            }
+        }
+
+        // Fill in DLManagedTensorVersioned stuff
+        managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        managed->flags = 0; // Not read-only
+        managed->deleter = DLPackDeleter<SimpleDataArray>;
+
+        // Fill the DLTensor View
+        auto &tensor = managed->dl_tensor;
+        tensor.device = {kDLCPU, 0};
+        tensor.ndim = static_cast<int32_t>(this->shape_.size());
+        tensor.dtype = {kDLFloat, 64, 1};
+        tensor.byte_offset = 0;
+
+        // There is no data here..
+        tensor.data = nullptr;
+        tensor.shape = ctx->shape.data();
+        tensor.strides = ctx->strides.data();
+
+        // Transfer Ownership to C pointers
+        managed->manager_ctx = ctx.release();
+        return managed.release();
     }
 
     const std::vector<uintptr_t>& shape() const & override {
