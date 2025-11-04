@@ -406,20 +406,23 @@ public:
     ///
     /// The `mts_array_t` takes ownership of the data, which should be released
     /// with `mts_array_t::destroy`.
-    static mts_array_t to_mts_array_t(std::unique_ptr<DataArrayBase> data) {
+    static mts_array_t to_mts_array_t(std::shared_ptr<DataArrayBase> data) {
         mts_array_t array;
         std::memset(&array, 0, sizeof(array));
 
-        array.ptr = data.release();
+        // Allocate the shared_ptr on the heap and store that
+        auto* owner_ptr = new std::shared_ptr<DataArrayBase>(std::move(data));
+        array.ptr = static_cast<void*>(owner_ptr);
 
         array.destroy = [](void* array) {
-            auto ptr = std::unique_ptr<DataArrayBase>(static_cast<DataArrayBase*>(array));
-            // let ptr go out of scope
+            auto ptr = static_cast<std::shared_ptr<DataArrayBase>*>(array);
+            delete ptr; // decrement the ref count
         };
 
         array.origin = [](const void* array, mts_data_origin_t* origin) {
             return details::catch_exceptions([](const void* array, mts_data_origin_t* origin){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 *origin = cxx_array->origin();
                 return MTS_SUCCESS;
             }, array, origin);
@@ -427,34 +430,35 @@ public:
 
         array.copy = [](const void* array, mts_array_t* new_array) {
             return details::catch_exceptions([](const void* array, mts_array_t* new_array){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 auto copy = cxx_array->copy();
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
+                *new_array = DataArrayBase::to_mts_array_t(std::shared_ptr<DataArrayBase>(std::move(copy)));
                 return MTS_SUCCESS;
             }, array, new_array);
         };
 
         array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
-            return details::catch_exceptions([](
-                const void* array,
-                const uintptr_t* shape,
-                uintptr_t shape_count,
-                mts_array_t* new_array
-            ) {
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                auto cxx_shape = std::vector<size_t>();
-                for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
-                    cxx_shape.push_back(static_cast<size_t>(shape[i]));
-                }
-                auto copy = cxx_array->create(std::move(cxx_shape));
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-                return MTS_SUCCESS;
-            }, array, shape, shape_count, new_array);
+            return details::catch_exceptions(
+                [&](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
+                    const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                    auto* cxx_array = owner->get();
+                    auto cxx_shape = std::vector<size_t>();
+                    for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
+                        cxx_shape.push_back(static_cast<size_t>(shape[i]));
+                    }
+                    auto copy = cxx_array->create(std::move(cxx_shape));
+                    *new_array = DataArrayBase::to_mts_array_t(std::shared_ptr<DataArrayBase>(std::move(copy)));
+                    return MTS_SUCCESS;
+                },
+                array, shape, shape_count, new_array
+            );
         };
 
         array.data = [](void* array, double** data) {
             return details::catch_exceptions([](void* array, double** data){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 *data = cxx_array->data();
                 return MTS_SUCCESS;
             }, array, data);
@@ -464,7 +468,8 @@ public:
                              DLManagedTensorVersioned** dl_managed_tensor) {
             return details::catch_exceptions(
                 [](void* array, DLManagedTensorVersioned** dl_managed_tensor) {
-                    auto* cxx_array = static_cast<DataArrayBase*>(array);
+                    const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                    auto* cxx_array = owner->get();
                     *dl_managed_tensor = cxx_array->as_dlpack();
                     return MTS_SUCCESS;
                 },
@@ -473,7 +478,8 @@ public:
 
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
             return details::catch_exceptions([](const void* array, const uintptr_t** shape, uintptr_t* shape_count){
-                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 const auto& cxx_shape = cxx_array->shape();
                 *shape = cxx_shape.data();
                 *shape_count = static_cast<uintptr_t>(cxx_shape.size());
@@ -483,7 +489,8 @@ public:
 
         array.reshape = [](void* array, const uintptr_t* shape, uintptr_t shape_count) {
             return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
                 cxx_array->reshape(std::move(cxx_shape));
                 return MTS_SUCCESS;
@@ -492,7 +499,8 @@ public:
 
         array.swap_axes = [](void* array, uintptr_t axis_1, uintptr_t axis_2) {
             return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 cxx_array->swap_axes(axis_1, axis_2);
                 return MTS_SUCCESS;
             }, array, axis_1, axis_2);
@@ -514,7 +522,8 @@ public:
                 uintptr_t property_start,
                 uintptr_t property_end
             ) {
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
+                const auto* owner = static_cast<const std::shared_ptr<DataArrayBase>*>(array);
+                auto* cxx_array = owner->get();
                 const auto* cxx_input = static_cast<const DataArrayBase*>(input);
                 auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
 
@@ -597,16 +606,18 @@ public:
 /// functionalities from `Eigen`, `Boost.Array`, etc.
 class SimpleDataArray : public metatensor::DataArrayBase,
                         public std::enable_shared_from_this<SimpleDataArray> {
+private:
+    struct passkey{};
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
-    SimpleDataArray(std::vector<uintptr_t> shape, double value = 0.0):
+    SimpleDataArray(passkey, std::vector<uintptr_t> shape, double value = 0.0):
         shape_(std::move(shape)), data_(details::product(shape_), value) {}
 
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
     /// The data is interpreted as a row-major n-dimensional array.
-    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<double> data):
+    SimpleDataArray(passkey, std::vector<uintptr_t> shape, std::vector<double> data):
         shape_(std::move(shape)),
         data_(std::move(data))
     {
@@ -625,6 +636,12 @@ public:
     SimpleDataArray(SimpleDataArray&&) noexcept = default;
     /// SimpleDataArray can be move-assigned
     SimpleDataArray& operator=(SimpleDataArray&&) noexcept = default;
+
+    /// Perfect forwarding factory function to make SimpleDataArray
+    template <typename... Args>
+    static std::shared_ptr<SimpleDataArray> make(Args&&... args) {
+      return std::make_shared<SimpleDataArray>(passkey{}, std::forward<Args>(args)...);
+    }
 
     mts_data_origin_t origin() const override {
         mts_data_origin_t origin = 0;
@@ -668,7 +685,10 @@ public:
     }
 
     std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
+        return std::make_unique<SimpleDataArray>(
+            passkey{},
+            std::move(shape)
+        );
     }
 
     void move_samples_from(
@@ -890,11 +910,11 @@ public:
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
         auto self = weak_from_this().lock();
-        if (!self){
-        throw std::runtime_error(
-            "as_dlpack() requires the array to be owned by std::shared_ptr; "
-            "create the array with std::make_shared or use the class factory");
-    }
+        if (!self) {
+            throw std::runtime_error(
+                "as_dlpack() requires the array to be owned by std::shared_ptr; "
+                "create the array with std::make_shared or use the class factory");
+        }
         auto ctx = std::make_unique<DLPackContext<EmptyDataArray>>();
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         // Populate stuff
@@ -914,7 +934,7 @@ public:
         // Fill in DLManagedTensorVersioned stuff
         managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         managed->flags = 0; // Not read-only
-        managed->deleter = DLPackDeleter<SimpleDataArray>;
+        managed->deleter = DLPackDeleter<EmptyDataArray>;
 
         // Fill the DLTensor View
         auto &tensor = managed->dl_tensor;
@@ -977,8 +997,8 @@ inline mts_status_t details::default_create_array(
             shape.push_back(static_cast<size_t>(shape_ptr[i]));
         }
 
-        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
-        *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
+        auto cxx_array = SimpleDataArray::make(shape);
+        *array = DataArrayBase::to_mts_array_t(cxx_array);
 
         return MTS_SUCCESS;
     }, shape_ptr, shape_count, array);

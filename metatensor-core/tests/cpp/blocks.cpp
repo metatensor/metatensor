@@ -11,7 +11,7 @@ static void check_loaded_block(metatensor::TensorBlock& block);
 TEST_CASE("Blocks") {
     SECTION("no components") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({"properties"}, {{5}, {3}})
@@ -33,7 +33,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component_1"}, {{-1}, {0}, {1}}));
         components.emplace_back(Labels({"component_2"}, {{-4}, {1}}));
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             Labels({"properties"}, {{5}, {3}})
@@ -60,7 +60,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
         auto properties = Labels({"properties"}, {{5}, {3}});
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             properties
@@ -71,7 +71,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
 
         auto gradient = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 1, 3, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({2, 1, 3, 2})),
             Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}),
             components,
             properties
@@ -106,7 +106,7 @@ TEST_CASE("Blocks") {
 
     SECTION("clone") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({"properties"}, {{5}, {3}})
@@ -141,7 +141,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component_1"}, {{-1}, {0}, {1}}));
         components.emplace_back(Labels({"component_2"}, {{-4}, {1}}));
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             Labels({"properties"}, {{5}, {3}})
@@ -170,7 +170,7 @@ TEST_CASE("Blocks") {
 
     SECTION("empty labels") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 0})),
+            std::unique_ptr<SimpleDataArray>(SimpleDataArray::make({3, 0})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({}, {})

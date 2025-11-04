@@ -109,8 +109,7 @@ TEST_CASE("Data Array") {
 TEST_CASE("SimpleDataArray as_dlpack produces valid DLManagedTensorVersioned") {
     // Create a shared_ptr-managed SimpleDataArray (shared_from_this requires
     // shared ownership)
-    auto s_arr =
-        std::make_shared<SimpleDataArray>(std::vector<uintptr_t>{2, 3, 4});
+    auto s_arr = SimpleDataArray::make(std::vector<uintptr_t>{2, 3, 4});
 
     // Mutate one element so we can check that data pointer points to that
     // storage
@@ -182,31 +181,4 @@ TEST_CASE("EmptyDataArray as_dlpack produces valid DLManagedTensorVersioned "
 
     // Destroy using deleter
     managed->deleter(managed);
-}
-
-TEST_CASE("as_dlpack requires object to be owned by std::shared_ptr "
-          "(shared_from_this precondition)") {
-    // If an object is not managed by shared_ptr, shared_from_this will throw.
-    // Create a SimpleDataArray with a plain new (unique_ptr), then call
-    // as_dlpack on the raw object. We expect std::bad_weak_ptr to be thrown (or
-    // an implementation-defined exception from shared_from_this).
-    auto raw = new SimpleDataArray(std::vector<uintptr_t>{2, 2});
-    try {
-        // Calling shared_from_this() inside as_dlpack should throw
-        DLManagedTensorVersioned *m = raw->as_dlpack();
-        // If it didn't throw, be sure to clean up to avoid leaks
-        if (m) {
-            m->deleter(m);
-        }
-        // If no exception thrown, mark test failure
-        FAIL("Expected shared_from_this to throw when object is not owned by "
-             "std::shared_ptr");
-    } catch (const std::bad_weak_ptr &) {
-        SUCCEED("shared_from_this correctly threw std::bad_weak_ptr");
-    } catch (...) {
-        // any other exception type is acceptable but note it
-        SUCCEED("shared_from_this threw an exception (not std::bad_weak_ptr) "
-                "as expected");
-    }
-    delete raw;
 }
