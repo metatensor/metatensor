@@ -2,8 +2,9 @@ use std::io::BufReader;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
+use byteorder::{LittleEndian, ReadBytesExt, BigEndian};
 use zip::{ZipArchive, ZipWriter};
+use dlpack::sys::DLDataTypeCode;
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, PathOrBuffer};
@@ -199,25 +200,65 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
     Ok(())
 }
 
-// Write an array to the given writer, using numpy's NPY format
-fn write_data<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<(), Error> {
-    let type_descriptor = if cfg!(target_endian = "little") {
-        "<f8"
-    } else {
-        ">f8"
+fn dlpack_to_npy_descr(code: DLDataTypeCode, bits: u8) -> Result<String, Error> {
+    let endian = if cfg!(target_endian = "little") { "<" } else { ">" };
+
+    let (type_char, type_size) = match (code, bits) {
+        (DLDataTypeCode::kDLInt, 8) => ("i", 1),
+        (DLDataTypeCode::kDLInt, 16) => ("i", 2),
+        (DLDataTypeCode::kDLInt, 32) => ("i", 4),
+        (DLDataTypeCode::kDLInt, 64) => ("i", 8),
+        (DLDataTypeCode::kDLUInt, 8) => ("u", 1),
+        (DLDataTypeCode::kDLUInt, 16) => ("u", 2),
+        (DLDataTypeCode::kDLUInt, 32) => ("u", 4),
+        (DLDataTypeCode::kDLUInt, 64) => ("u", 8),
+        (DLDataTypeCode::kDLFloat, 32) => ("f", 4),
+        (DLDataTypeCode::kDLFloat, 64) => ("f", 8),
+        _ => return Err(Error::Serialization(
+            format!("unsupported DLPack dtype: code {:?}, bits {:?}", code, bits)
+                                            )
+        ),
     };
 
+    Ok(format!("{}{}{}", endian, type_char, type_size))
+}
+
+// Write an array to the given writer, using numpy's NPY format
+fn write_data<W: std::io::Write>(writer: &mut W, array: &mts_array_t) -> Result<(), Error> {
+    let dl_tensor = array.as_dlpack()?;
+    let tensor_ref = dl_tensor.as_ref();
+    let dtype = tensor_ref.raw.dtype;
+    let (code, bits) = (dtype.code, dtype.bits);
+
+    let tdesc = dlpack_to_npy_descr(code, bits)?;
+
     let header = Header {
-        type_descriptor: DataType::Scalar(type_descriptor.into()),
+        type_descriptor: DataType::Scalar(tdesc.into()),
         fortran_order: false,
         shape: array.shape()?.to_vec(),
     };
 
     header.write(&mut *writer)?;
 
-    for &value in array.data()? {
-        writer.write_f64::<NativeEndian>(value)?;
+    // Get metadata for size and pointer for data
+    let num_elements: usize = header.shape.iter().product();
+    if num_elements == 0 {
+        return Ok(());
     }
+
+    // Calculate total bytes using the DLPack metadata
+    // NOTE(rg): won't work if types are not byte aligned
+    let element_bytes = (bits / 8) as usize;
+    let total_bytes = num_elements * element_bytes;
+
+    // Grab the data ptr
+    let data_ptr = tensor_ref.raw.data.wrapping_add(tensor_ref.byte_offset());
+
+    // Write!
+    let data_slice = unsafe {
+        std::slice::from_raw_parts(data_ptr as *const u8, total_bytes)
+    };
+    writer.write_all(data_slice)?;
 
     return Ok(());
 }
