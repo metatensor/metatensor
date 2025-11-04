@@ -7,7 +7,6 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -21,13 +20,9 @@ namespace details {
     /**
     * @brief This C++ struct bundles all resources the DLTensor needs.
     *
-    * An instance of this struct will be what manager_ctx points to.
-    * It uses std::vector to hold shape and strides, which handles its
-    * own heap memory via RAII, along with a templated owning class.
+    * Stores metdata.
     */
-    template <typename TOwner>
     struct DLPackContext {
-        std::shared_ptr<TOwner> owner;
         std::vector<int64_t> shape;
         std::vector<int64_t> strides;
     };
@@ -35,16 +30,16 @@ namespace details {
     /**
     * @brief The templated C-style deleter required by DLPack.
     *
-    * This template will be instantiated for each C++ owner type,
-    * creating a unique C function pointer (e.g., DLPackDeleter<SimpleDataArray>)
-    * that knows exactly which type to static_cast and delete.
+    * Removes metadata.
     */
-    template <typename TOwner>
-    void DLPackDeleter(DLManagedTensorVersioned* self){
+    DLPACK_EXTERN_C void DLPackDeleter(DLManagedTensorVersioned* self){
         if(self){
           // Cast the manager_ctx back to the C++ type and delete it.
           // This will basically call ~DLPackContext() and free the vectors
-          delete static_cast<DLPackContext<TOwner>*>(self->manager_ctx);
+          auto ctx = static_cast<DLPackContext*>(self->manager_ctx);
+          // defensive clear to avoid reusing after free
+          self->manager_ctx = nullptr;
+          if (ctx) delete ctx;
           // delete the struct itself
           delete self;
        }
@@ -595,8 +590,7 @@ public:
 /// metatensor usable without additional dependencies. For other uses cases, it
 /// might be better to implement DataArrayBase on your data, using
 /// functionalities from `Eigen`, `Boost.Array`, etc.
-class SimpleDataArray : public metatensor::DataArrayBase,
-                        public std::enable_shared_from_this<SimpleDataArray> {
+class SimpleDataArray : public metatensor::DataArrayBase {
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
@@ -791,15 +785,9 @@ public:
     DLManagedTensorVersioned *as_dlpack() override {
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto self = weak_from_this().lock();
-        if (!self){
-          throw std::runtime_error("as_dlpack requires objects to be owned by "
-                                   "std::shared_ptr, consider using the ::make() method");
-        }
-        auto ctx = std::make_unique<DLPackContext<SimpleDataArray>>();
+        auto ctx = std::make_unique<DLPackContext>();
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         // Populate stuff
-        ctx->owner = std::move(self);
         ctx->shape.resize(this->shape_.size());
         std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
                        [](uintptr_t s) { return static_cast<int64_t>(s); });
@@ -815,7 +803,7 @@ public:
         // Fill in DLManagedTensorVersioned stuff
         managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         managed->flags = 0; // Not read-only
-        managed->deleter = DLPackDeleter<SimpleDataArray>;
+        managed->deleter = DLPackDeleter;
 
         // Fill the DLTensor View
         auto &tensor = managed->dl_tensor;
@@ -824,10 +812,17 @@ public:
         tensor.dtype = {kDLFloat, 64, 1};
         tensor.byte_offset = 0;
 
-        // The DLPack C API is not const-correct.
-        tensor.data = const_cast<double *>(ctx->owner->data_.data());
-        tensor.shape = ctx->shape.data();
-        tensor.strides = ctx->strides.data();
+        // NOTE(rg): this is a borrow, and is safe only because we explicitly
+        // request that people kindly DO NOT let the resulting object outlive
+        // the backing mts_array_t
+        tensor.data = const_cast<double *>(this->data_.data());
+        if (tensor.ndim == 0) {
+            tensor.shape = nullptr;
+            tensor.strides = nullptr;
+        } else {
+            tensor.shape = ctx->shape.data();
+            tensor.strides = ctx->strides.empty() ? nullptr : ctx->strides.data();
+        }
 
         // Transfer Ownership to C pointers
         managed->manager_ctx = ctx.release();
@@ -857,8 +852,7 @@ inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
 ///
 /// This class only tracks it's shape, and can be used when only the metadata
 /// of a `TensorBlock` is important, leaving the data unspecified.
-class EmptyDataArray: public metatensor::DataArrayBase,
-                      public std::enable_shared_from_this<EmptyDataArray> {
+class EmptyDataArray: public metatensor::DataArrayBase {
 public:
     /// Create ae `EmptyDataArray` with the given `shape`
     EmptyDataArray(std::vector<uintptr_t> shape):
@@ -889,16 +883,10 @@ public:
     DLManagedTensorVersioned* as_dlpack() override {
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto self = weak_from_this().lock();
-        if (!self){
-        throw std::runtime_error(
-            "as_dlpack() requires the array to be owned by std::shared_ptr; "
-            "create the array with std::make_shared or use the class factory");
-    }
-        auto ctx = std::make_unique<DLPackContext<EmptyDataArray>>();
+
+        auto ctx = std::make_unique<DLPackContext>();
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         // Populate stuff
-        ctx->owner = std::move(self);
         ctx->shape.resize(this->shape_.size());
         std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
                        [](uintptr_t s) { return static_cast<int64_t>(s); });
@@ -914,7 +902,7 @@ public:
         // Fill in DLManagedTensorVersioned stuff
         managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         managed->flags = 0; // Not read-only
-        managed->deleter = DLPackDeleter<SimpleDataArray>;
+        managed->deleter = DLPackDeleter;
 
         // Fill the DLTensor View
         auto &tensor = managed->dl_tensor;
@@ -923,10 +911,15 @@ public:
         tensor.dtype = {kDLFloat, 64, 1};
         tensor.byte_offset = 0;
 
-        // There is no data here..
+        // There is no data here.. so.. always safe
         tensor.data = nullptr;
-        tensor.shape = ctx->shape.data();
-        tensor.strides = ctx->strides.data();
+        if (tensor.ndim == 0) {
+            tensor.shape = nullptr;
+            tensor.strides = nullptr;
+        } else {
+            tensor.shape = ctx->shape.data();
+            tensor.strides = ctx->strides.empty() ? nullptr : ctx->strides.data();
+        }
 
         // Transfer Ownership to C pointers
         managed->manager_ctx = ctx.release();
