@@ -27,6 +27,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
     `mts_tensormap_info_keys`
   - in C++, you can use `TensorMap::set_info`, `TensorMap::get_info` and
     `TensorMap::info`
+  - in Python, you can use `TensorMap.set_info`, `TensorMap.get_info` and
+    `TensorMap.info`
 
 ### Changed
 
