@@ -881,49 +881,11 @@ public:
 
 
     DLManagedTensorVersioned* as_dlpack() override {
-        using metatensor::details::DLPackContext;
-        using metatensor::details::DLPackDeleter;
-
-        auto ctx = std::make_unique<DLPackContext>();
-        auto managed = std::make_unique<DLManagedTensorVersioned>();
-        // Populate stuff
-        ctx->shape.resize(this->shape_.size());
-        std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
-                       [](uintptr_t s) { return static_cast<int64_t>(s); });
-        // Calculate C-contiguous strides
-        ctx->strides.resize(this->shape_.size());
-        if (!this->shape_.empty()) {
-            ctx->strides.back() = 1;
-            for (int i = static_cast<int>(this->shape_.size()) - 2; i >= 0; --i) {
-                ctx->strides[i] = ctx->strides[i + 1] * ctx->shape[i + 1];
-            }
-        }
-
-        // Fill in DLManagedTensorVersioned stuff
-        managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        managed->flags = 0; // Not read-only
-        managed->deleter = DLPackDeleter;
-
-        // Fill the DLTensor View
-        auto &tensor = managed->dl_tensor;
-        tensor.device = {kDLCPU, 0};
-        tensor.ndim = static_cast<int32_t>(this->shape_.size());
-        tensor.dtype = {kDLFloat, 64, 1};
-        tensor.byte_offset = 0;
-
-        // There is no data here.. so.. always safe
-        tensor.data = nullptr;
-        if (tensor.ndim == 0) {
-            tensor.shape = nullptr;
-            tensor.strides = nullptr;
-        } else {
-            tensor.shape = ctx->shape.data();
-            tensor.strides = ctx->strides.empty() ? nullptr : ctx->strides.data();
-        }
-
-        // Transfer Ownership to C pointers
-        managed->manager_ctx = ctx.release();
-        return managed.release();
+        // TODO(rg): still not 100% sure about this, we should be able to do
+        // something useful here, but @luthaf points out correctly that there's
+        // no way to stop callers from trying to use DLManagedTensorVersioned.data
+        // which would be a nullptr...
+        throw metatensor::Error("can not call `as_dlpack` for an EmptyDataArray");
     }
 
     const std::vector<uintptr_t>& shape() const & override {
