@@ -601,3 +601,24 @@ torch::Tensor TensorMapHolder::save_buffer() const {
         options
     );
 }
+
+void TensorMapHolder::set_info(std::string key, std::string value) {
+    this->tensor_.set_info(key, value);
+}
+
+torch::optional<std::string> TensorMapHolder::get_info(std::string key) const {
+    auto value = this->tensor_.get_info(key);
+    if (value.has_value()) {
+        return torch::optional<std::string>(std::move(value.value()));
+    } else {
+        return torch::nullopt;
+    }
+}
+
+torch::Dict<std::string, std::string> TensorMapHolder::info() const {
+    auto result = torch::Dict<std::string, std::string>();
+    for (auto it: this->tensor_.info()) {
+        result.insert(it.first, std::move(it.second));
+    }
+    return result;
+}

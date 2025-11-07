@@ -482,7 +482,7 @@ public:
     }
 
     /// Get the info value associated with `key` for this `TensorMap`.
-    std::optional<std::string> get_info(const std::string& key) {
+    std::optional<std::string> get_info(const std::string& key) const {
         const char* value = nullptr;
         details::check_status(mts_tensormap_get_info(tensor_, key.c_str(), &value));
 
