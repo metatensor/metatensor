@@ -665,15 +665,15 @@ class TensorMapWrap:
         return self._c.to(dtype=dtype, device=device, arrays=arrays)
 
     @staticmethod
-    def load(path: str) -> TensorMap:
-        return TensorMap.load(path)
+    def load(file: str) -> TensorMap:
+        return TensorMap.load(file=file)
 
     @staticmethod
     def load_buffer(buffer: torch.Tensor) -> TensorMap:
-        return TensorMap.load_buffer(buffer)
+        return TensorMap.load_buffer(buffer=buffer)
 
-    def save(self, path: str):
-        return self._c.save(path)
+    def save(self, file: str):
+        return self._c.save(file=file)
 
     def save_buffer(self) -> torch.Tensor:
         return self._c.save_buffer()
