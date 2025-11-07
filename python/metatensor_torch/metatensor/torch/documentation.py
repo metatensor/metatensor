@@ -326,12 +326,12 @@ class Labels:
         """
 
     @staticmethod
-    def load(path: str) -> "Labels":
+    def load(file: str) -> "Labels":
         """
-        Load a serialized :py:class:`Labels` from the file at ``path``, this is
+        Load a serialized :py:class:`Labels` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_labels`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorMap`
+        :param file: Path of the file containing a saved :py:class:`TensorMap`
 
         .. warning::
 
@@ -371,12 +371,12 @@ class Labels:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save these :py:class:`Labels` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
@@ -967,12 +967,12 @@ class TensorBlock:
         """
 
     @staticmethod
-    def load(path: str) -> "TensorBlock":
+    def load(file: str) -> "TensorBlock":
         """
-        Load a serialized :py:class:`TensorBlock` from the file at ``path``, this is
+        Load a serialized :py:class:`TensorBlock` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_block`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorBlock`
+        :param file: Path of the file containing a saved :py:class:`TensorBlock`
 
         .. warning::
 
@@ -1012,12 +1012,12 @@ class TensorBlock:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save this :py:class:`TensorBlock` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
@@ -1074,12 +1074,12 @@ class TensorMap:
         """
 
     @staticmethod
-    def load(path: str) -> "TensorMap":
+    def load(file: str) -> "TensorMap":
         """
-        Load a serialized :py:class:`TensorMap` from the file at ``path``, this is
+        Load a serialized :py:class:`TensorMap` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorMap`
+        :param file: Path of the file containing a saved :py:class:`TensorMap`
 
         .. warning::
 
@@ -1119,12 +1119,12 @@ class TensorMap:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save this :py:class:`TensorMap` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
