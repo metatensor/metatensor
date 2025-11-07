@@ -17,6 +17,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+
+- It is now possible to store and retrieve global metatadata about a TensorMap,
+  in the form of string key/value pairs. You can use `TensorMap::set_info`,
+  `TensorMap::get_info` and `TensorMap::info` to manipulate this information.
+
 ## [Version 0.8.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-11-05
 
 ### Changed

@@ -678,6 +678,15 @@ class TensorMapWrap:
     def save_buffer(self) -> torch.Tensor:
         return self._c.save_buffer()
 
+    def set_info(self, key: str, value: str):
+        return self._c.set_info(key=key, value=value)
+
+    def get_info(self, key: str) -> Optional[str]:
+        return self._c.get_info(key=key)
+
+    def info(self) -> Dict[str, str]:
+        return self._c.info()
+
 
 def test_script():
     class TestModule(torch.nn.Module):

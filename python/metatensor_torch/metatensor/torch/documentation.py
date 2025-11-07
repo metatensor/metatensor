@@ -1368,6 +1368,29 @@ class TensorMap:
             data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
 
+    def set_info(self, key: str, value: str):
+        """
+        Set or update the info (i.e. global metadata) ``value`` associated with ``key``
+        for this :py:class:`TensorMap`.
+
+        :param key: key of the info
+        :param value: value of the info
+        """
+
+    def get_info(self, key: str) -> Optional[str]:
+        """
+        Get the info (i.e. global metadata) with the given ``key`` for this
+        :py:class:`TensorMap`.
+
+        :param key: key of the info to retrieve
+        :return: value of the info, or :py:obj:`None` if the info does not exist
+        """
+
+    def info(self) -> Dict[str, str]:
+        """
+        Get all the key/value info pairs stored in this :py:class:`TensorMap`.
+        """
+
 
 def version() -> str:
     """Get the version of the underlying metatensor_torch library"""

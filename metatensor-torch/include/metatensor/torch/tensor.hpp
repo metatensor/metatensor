@@ -183,6 +183,17 @@ public:
     /// `torch::Tensor` of bytes)
     torch::Tensor save_buffer() const;
 
+    /// Set or update the info (i.e. global metadata) `value` associated with
+    /// `key` for this `TensorMap`.
+    void set_info(std::string key, std::string value);
+
+    /// Get the info (i.e. global metadata) with the given `key` for this
+    /// `TensorMap`.
+    torch::optional<std::string> get_info(std::string key) const;
+
+    /// Get all the key/value info pairs stored in this `TensorMap`.
+    torch::Dict<std::string, std::string> info() const;
+
 private:
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;

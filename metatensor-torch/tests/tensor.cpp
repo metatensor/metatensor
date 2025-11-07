@@ -171,6 +171,28 @@ TEST_CASE("TensorMap") {
             )
         );
     }
+
+    SECTION("info") {
+        auto tensor = test_tensor_map();
+        tensor->set_info("creator", "metatensor-torch test");
+        tensor->set_info("version", "1.0");
+
+        auto creator = tensor->get_info("creator");
+        REQUIRE(creator.has_value());
+        CHECK(creator.value() == "metatensor-torch test");
+
+        auto version = tensor->get_info("version");
+        REQUIRE(version.has_value());
+        CHECK(version.value() == "1.0");
+
+        auto missing = tensor->get_info("missing_key");
+        CHECK(!missing.has_value());
+
+        auto info = tensor->info();
+        CHECK(info.size() == 2);
+        CHECK(info.at("creator") == "metatensor-torch test");
+        CHECK(info.at("version") == "1.0");
+    }
 }
 
 TEST_CASE("TensorMap serialization") {
