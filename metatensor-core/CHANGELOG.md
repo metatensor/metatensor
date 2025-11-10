@@ -17,6 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- `TensorMap::unsafe_from_ptr` to replace the `TensorMap(mts_tensormap_t*)`
+  constructor, for symmetry with the `TensorBlock` API. The constructor is now
+  deprecated and will be removed in a future version.
+- `Labels::unsafe_from_ptr` to create a C++ object from an existing
+  `mts_labels_t` pointer.
+- `TensorMap::unsafe_view_from_ptr` to create a C++ view of an existing
+  TensorMap, as well as `TensorMap::is_view` and `TensorBlock::is_view`.
+- `Labels::release`, `TensorBlock::release`, and `TensorMap::release` to take
+  back ownership of the underlying C API pointers.
+
 ## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.0) - 2026-05-13
 
 ### metatensor-core C

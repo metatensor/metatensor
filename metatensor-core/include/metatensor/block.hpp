@@ -17,6 +17,32 @@ namespace metatensor_torch {
 }
 
 namespace metatensor {
+
+namespace details {
+    inline mts_block_t* create_block(
+        std::unique_ptr<DataArrayBase> values,
+        const Labels& samples,
+        const std::vector<Labels>& components,
+        const Labels& properties
+    ) {
+        auto c_components = std::vector<const mts_labels_t*>();
+        for (const auto& component: components) {
+            c_components.push_back(component.as_mts_labels_t());
+        }
+        auto* block = mts_block(
+            DataArrayBase::to_mts_array(std::move(values)).release(),
+            samples.as_mts_labels_t(),
+            c_components.data(),
+            c_components.size(),
+            properties.as_mts_labels_t()
+        );
+
+        check_pointer(block);
+
+        return block;
+    }
+}
+
 /// Basic building block for a tensor map.
 ///
 /// A single block contains an n-dimensional `mts_array_t` (or `DataArrayBase`),
@@ -43,24 +69,7 @@ public:
         const Labels& samples,
         const std::vector<Labels>& components,
         const Labels& properties
-    ):
-        block_(nullptr),
-        is_view_(false)
-    {
-        auto c_components = std::vector<const mts_labels_t*>();
-        for (const auto& component: components) {
-            c_components.push_back(component.as_mts_labels_t());
-        }
-        block_ = mts_block(
-            DataArrayBase::to_mts_array(std::move(values)).release(),
-            samples.as_mts_labels_t(),
-            c_components.data(),
-            c_components.size(),
-            properties.as_mts_labels_t()
-        );
-
-        details::check_pointer(block_);
-    }
+    ): TensorBlock(details::create_block(std::move(values), samples, components, properties), /*view*/ false) {}
 
     ~TensorBlock() {
         if (!is_view_) {
@@ -135,6 +144,11 @@ public:
         DLDataType dtype;
         details::check_status(mts_block_dtype(this->as_mts_block_t(), &dtype));
         return dtype;
+    }
+
+    /// Check if this block is a view (i.e. does not own the underlying data).
+    bool is_view() const {
+        return is_view_;
     }
 
     /// Get the values in this block as a DLPackArray.
@@ -258,20 +272,22 @@ public:
     mts_block_t* as_mts_block_t() & {
         if (block_ == nullptr) {
             throw Error(
-                "Can not access this TensorBlock, it has been moved inside a "
-                "TensorMap or another TensorBlock"
+                "Can not access this TensorBlock, it has been released or "
+                "moved inside a TensorMap or another TensorBlock"
             );
         }
 
         return block_;
     }
 
-    /// const version of `as_mts_block_t`
+    /// Get the const `mts_block_t` pointer corresponding to this block.
+    ///
+    /// The block pointer is still managed by the current `TensorBlock`
     const mts_block_t* as_mts_block_t() const & {
         if (block_ == nullptr) {
             throw Error(
-                "Can not access this TensorBlock, it has been moved inside a "
-                "TensorMap or another TensorBlock"
+                "Can not access this TensorBlock, it has been released or "
+                "moved inside a TensorMap or another TensorBlock"
             );
         }
 
@@ -282,19 +298,29 @@ public:
 
     /// Create a new TensorBlock taking ownership of a raw `mts_block_t` pointer.
     static TensorBlock unsafe_from_ptr(mts_block_t* ptr) {
-        auto block = TensorBlock();
-        block.block_ = ptr;
-        block.is_view_ = false;
-        return block;
+        return TensorBlock(ptr, /*view=*/false);
     }
 
     /// Create a new TensorBlock which is a view corresponding to a raw
     /// `mts_block_t` pointer.
+    ///
+    /// The view does not own the underlying data and will not free the
+    /// corresponding memory. Callers of this functions are still responsible
+    /// for freeing the block pointer when it is no longer needed.
     static TensorBlock unsafe_view_from_ptr(mts_block_t* ptr) {
-        auto block = TensorBlock();
-        block.block_ = ptr;
-        block.is_view_ = true;
-        return block;
+        return TensorBlock(ptr, /*view=*/true);
+    }
+
+    /// Release the `mts_block_t` pointer corresponding to this `TensorBlock`.
+    ///
+    /// The block pointer is **no longer** managed by the current `TensorBlock`,
+    /// and should manually be freed when no longer required.
+    mts_block_t* release() {
+        this->check_not_view("release");
+        auto* ptr = block_;
+        block_ = nullptr;
+        is_view_ = true;
+        return ptr;
     }
 
     /// Get a raw `MtsArray` corresponding to the values in this block.
@@ -312,7 +338,7 @@ public:
     Labels labels(uintptr_t axis) const {
         const auto* ptr = mts_block_labels(this->as_mts_block_t(), axis);
         details::check_pointer(ptr);
-        return Labels(ptr);
+        return Labels::unsafe_from_ptr(ptr);
     }
 
     /// Get the shape of the value array for this block
@@ -419,11 +445,11 @@ public:
 
 private:
     /// Constructor of a TensorBlock not associated with anything
-    explicit TensorBlock(): block_(nullptr), is_view_(true) {}
+    explicit TensorBlock(): TensorBlock(nullptr, /*view=*/true) {}
 
     /// Create a C++ TensorBlock from a C `mts_block_t` pointer. The C++
-    /// block takes ownership of the C pointer.
-    explicit TensorBlock(mts_block_t* block): block_(block), is_view_(false) {}
+    /// block takes ownership of the C pointer if `view` is false.
+    explicit TensorBlock(mts_block_t* block, bool view): block_(block), is_view_(view) {}
 
     /// Get the `MtsArray` for this block.
     ///
@@ -448,18 +474,6 @@ private:
                 " on this block since it is inside a TensorMap or another TensorBlock"
             );
         }
-    }
-
-    /// Release the `mts_block_t` pointer corresponding to this `TensorBlock`.
-    ///
-    /// The block pointer is **no longer** managed by the current `TensorBlock`,
-    /// and should manually be freed when no longer required.
-    mts_block_t* release() {
-        this->check_not_view("release");
-        auto* ptr = block_;
-        block_ = nullptr;
-        is_view_ = false;
-        return ptr;
     }
 
     friend class TensorMap;

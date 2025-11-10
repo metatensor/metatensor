@@ -62,6 +62,26 @@ TEST_CASE("Labels") {
     CHECK(empty.count() == 0);
 }
 
+TEST_CASE("ownership transfer") {
+    auto original = Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 6}});
+
+    const auto* raw = original.release();
+    CHECK_THROWS_WITH(
+        original.as_mts_labels_t(),
+        "Can not access these Labels, they have been released"
+    );
+
+    auto recovered = Labels::unsafe_from_ptr(raw);
+    CHECK(recovered == Labels({"foo", "bar"}, {{1, 2}, {3, 4}, {5, 6}}));
+
+    raw = recovered.release();
+    CHECK_THROWS_WITH(
+        recovered.as_mts_labels_t(),
+        "Can not access these Labels, they have been released"
+    );
+    REQUIRE(mts_labels_free(raw) == MTS_SUCCESS);
+}
+
 
 TEST_CASE("Set operations") {
     SECTION("union") {
