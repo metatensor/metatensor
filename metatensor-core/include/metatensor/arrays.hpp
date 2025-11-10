@@ -295,7 +295,7 @@ private:
 
     void validate() const {
         static_assert(
-            std::is_arithmetic<T>::value,
+            std::is_arithmetic_v<T>,
             "NDArray only works with integers and floating points"
         );
 
