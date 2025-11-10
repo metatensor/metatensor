@@ -25,12 +25,18 @@ namespace details {
     struct DLPackContext {
         std::vector<int64_t> shape;
         std::vector<int64_t> strides;
+        // TODO(rg): template to constrained numerics later
+        // template <typename T,
+        // typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+        // Keep a shared pointer to the backing buffer so exported DLPack
+        // objects are valid even if the original mts_array is gone
+        std::shared_ptr<std::vector<double>> data;
     };
 
     /**
-    * @brief The templated C-style deleter required by DLPack.
+    * @brief The C-style deleter required by DLPack.
     *
-    * Removes metadata.
+    * Removes metadata and decrements shared pointer.
     */
     DLPACK_EXTERN_C void DLPackDeleter(DLManagedTensorVersioned* self){
         if(self){
@@ -800,6 +806,11 @@ public:
             }
         }
 
+        // Copy the backing data into a shared buffer so the DLPack view keeps a
+        // reference to a valid contiguous buffer even if the SimpleDataArray
+        // itself is destroyed.
+        ctx->data = std::make_shared<std::vector<double>>(this->data_);
+
         // Fill in DLManagedTensorVersioned stuff
         managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         managed->flags = 0; // Not read-only
@@ -812,10 +823,10 @@ public:
         tensor.dtype = {kDLFloat, 64, 1};
         tensor.byte_offset = 0;
 
-        // NOTE(rg): this is a borrow, and is safe only because we explicitly
-        // request that people kindly DO NOT let the resulting object outlive
-        // the backing mts_array_t
-        tensor.data = const_cast<double *>(this->data_.data());
+        // tensor.data now points into ctx->data's underlying vector.
+        // DLPackContext (and therefore the shared_ptr) is owned by
+        // managed->manager_ctx, which will be deleted by DLPackDeleter.
+        tensor.data = const_cast<double *>(ctx->data->data());
         if (tensor.ndim == 0) {
             tensor.shape = nullptr;
             tensor.strides = nullptr;
