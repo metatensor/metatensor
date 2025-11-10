@@ -28,6 +28,7 @@ TEST_CASE("TensorMap") {
 
         // block by index
         auto block = tensor.block_by_id(2);
+        CHECK(block.is_view());
         const auto values = block.values();
         CHECK(values(0, 0, 0) == 3);
     }
@@ -318,6 +319,42 @@ TEST_CASE("TensorMap") {
         auto status = mts_set_last_error(nullptr, nullptr, nullptr, nullptr);
         CHECK(status == MTS_SUCCESS);
     }
+}
+
+TEST_CASE("TensorMap ownership transfer") {
+    auto tensor = test_tensor_map();
+
+    auto* raw = tensor.release();
+    CHECK_THROWS_WITH(
+        tensor.as_mts_tensormap_t(),
+        "Can not access this TensorMap, it has been released"
+    );
+
+    auto recovered = TensorMap::unsafe_from_ptr(raw);
+    CHECK(recovered.keys() == Labels({"key_1", "key_2"}, {{0, 0}, {1, 0}, {2, 2}, {2, 3}}));
+
+    raw = recovered.release();
+    CHECK_THROWS_WITH(
+        recovered.as_mts_tensormap_t(),
+        "Can not access this TensorMap, it has been released"
+    );
+    REQUIRE(mts_tensormap_free(raw) == MTS_SUCCESS);
+}
+
+TEST_CASE("TensorMap unsafe views") {
+    auto owner = test_tensor_map();
+
+    CHECK_FALSE(owner.is_view());
+
+    auto* raw = owner.as_mts_tensormap_t();
+    auto view = TensorMap::unsafe_view_from_ptr(raw);
+
+    CHECK(view.is_view());
+    CHECK(view.keys() == owner.keys());
+    CHECK_THROWS_WITH(
+        view.release(),
+        "can not call TensorMap::release on this TensorMap since it is a view"
+    );
 }
 
 

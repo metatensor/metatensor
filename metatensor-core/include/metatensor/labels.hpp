@@ -185,8 +185,30 @@ public:
     }
 
     /// Get the underlying `mts_labels_t` pointer
+    ///
+    /// The pointer is still managed by the current `Labels`
     const mts_labels_t* as_mts_labels_t() const {
+        if (labels_ == nullptr) {
+            throw Error(
+                "Can not access these Labels, they have been released"
+            );
+        }
         return labels_;
+    }
+
+    /// Create a new Labels taking ownership of a raw `mts_labels_t` pointer.
+    static Labels unsafe_from_ptr(const mts_labels_t* ptr) {
+        return Labels(ptr);
+    }
+
+    /// Release the `mts_labels_t` pointer corresponding to this `Labels`.
+    ///
+    /// The pointer is **no longer** managed by the current `Labels`,
+    /// and should manually be freed when no longer required.
+    const mts_labels_t* release() {
+        const auto* ptr = this->labels_;
+        this->labels_ = nullptr;
+        return ptr;
     }
 
     /// Get the position of the `entry` in this set of Labels, or `std::nullopt`
@@ -696,8 +718,6 @@ private:
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
     friend Labels io::load_labels(const std::string &path);
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
-    friend class TensorMap;
-    friend class TensorBlock;
 
     friend class metatensor_torch::LabelsHolder;
 

@@ -78,7 +78,9 @@ TEST_CASE("Blocks") {
 
         CHECK(block.gradients_list() == std::vector<std::string>{"parameter"});
 
-        auto gradient_mts_array = block.gradient("parameter").mts_array();
+        auto gradient_view = block.gradient("parameter");
+        CHECK(gradient_view.is_view());
+        auto gradient_mts_array = gradient_view.mts_array();
         CHECK(gradient_mts_array.shape() == std::vector<size_t>{2, 1, 3, 2});
 
         gradient = block.gradient("parameter");
@@ -249,6 +251,53 @@ TEST_CASE("values<T>() with non-double types") {
             Catch::Matchers::Contains("dtype mismatch")
         );
     }
+}
+
+TEST_CASE("TensorBlock ownership transfer") {
+    auto block = TensorBlock(
+        std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({3, 2}, 1.0)),
+        Labels({"samples"}, {{0}, {1}, {4}}),
+        {},
+        Labels({"properties"}, {{5}, {3}})
+    );
+
+    auto* raw = block.release();
+    CHECK_THROWS_WITH(
+        block.as_mts_block_t(),
+        "Can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
+    );
+
+    auto recovered = TensorBlock::unsafe_from_ptr(raw);
+    CHECK(recovered.samples() == Labels({"samples"}, {{0}, {1}, {4}}));
+    CHECK(recovered.properties() == Labels({"properties"}, {{5}, {3}}));
+
+    raw = recovered.release();
+    CHECK_THROWS_WITH(
+        recovered.as_mts_block_t(),
+        "Can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
+    );
+    REQUIRE(mts_block_free(raw) == MTS_SUCCESS);
+}
+
+TEST_CASE("TensorBlock unsafe views") {
+    auto owner = TensorBlock(
+        std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 1}, 3.0)),
+        Labels({"samples"}, {{0}, {1}}),
+        {},
+        Labels({"properties"}, {{0}})
+    );
+
+    CHECK_FALSE(owner.is_view());
+
+    auto* raw = owner.as_mts_block_t();
+    auto view = TensorBlock::unsafe_view_from_ptr(raw);
+
+    CHECK(view.is_view());
+    CHECK(view.samples() == Labels({"samples"}, {{0}, {1}}));
+    CHECK_THROWS_WITH(
+        view.release(),
+        "can not call TensorBlock::release on this block since it is inside a TensorMap or another TensorBlock"
+    );
 }
 
 TEST_CASE("Serialization") {

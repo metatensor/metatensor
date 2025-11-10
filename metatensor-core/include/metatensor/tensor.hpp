@@ -121,7 +121,7 @@ private:
 class TensorMap final {
 public:
     /// Create a new TensorMap with the given `keys` and `blocks`
-    TensorMap(Labels keys, std::vector<TensorBlock> blocks) {
+    TensorMap(Labels keys, std::vector<TensorBlock> blocks): tensor_(nullptr), is_view_(false) {
         auto c_blocks = std::vector<mts_block_t*>();
         for (auto& block: blocks) {
             // We will move the data inside the new map, let's release the
@@ -139,7 +139,9 @@ public:
     }
 
     ~TensorMap() {
-        mts_tensormap_free(tensor_);
+        if (!is_view_) {
+            mts_tensormap_free(tensor_);
+        }
     }
 
     /// TensorMap can NOT be copy constructed, use TensorMap::clone instead
@@ -148,16 +150,20 @@ public:
     TensorMap& operator=(const TensorMap&) = delete;
 
     /// TensorMap can be move constructed
-    TensorMap(TensorMap&& other) noexcept : TensorMap(nullptr) {
+    TensorMap(TensorMap&& other) noexcept : TensorMap() {
         *this = std::move(other);
     }
 
     /// TensorMap can be move assigned
     TensorMap& operator=(TensorMap&& other) noexcept {
-        mts_tensormap_free(tensor_);
+        if (!is_view_) {
+            mts_tensormap_free(tensor_);
+        }
 
         this->tensor_ = other.tensor_;
+        this->is_view_ = other.is_view_;
         other.tensor_ = nullptr;
+        other.is_view_ = true;
 
         return *this;
     }
@@ -166,7 +172,7 @@ public:
     TensorMap clone() const {
         auto* copy = mts_tensormap_copy(this->tensor_);
         details::check_pointer(copy);
-        return TensorMap(copy);
+        return TensorMap::unsafe_from_ptr(copy);
     }
 
     /// Get a copy of the metadata in this `TensorMap` (i.e. keys, samples,
@@ -209,11 +215,16 @@ public:
         return dtype;
     }
 
+    /// Check if this TensorMap is a view (i.e. does not own the underlying data).
+    bool is_view() const {
+        return is_view_;
+    }
+
     /// Get the set of keys labeling the blocks in this tensor map
     Labels keys() const {
         const auto* ptr = mts_tensormap_keys(tensor_);
         details::check_pointer(ptr);
-        return Labels(ptr);
+        return Labels::unsafe_from_ptr(ptr);
     }
 
     /// Get a block inside this TensorMap by its index/the index of the
@@ -276,7 +287,7 @@ public:
         );
 
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
@@ -372,7 +383,7 @@ public:
         );
 
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
@@ -451,7 +462,7 @@ public:
             c_dimensions.size()
         );
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// Call `components_to_properties` with a single dimension
@@ -463,7 +474,7 @@ public:
             1
         );
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /*!
@@ -566,6 +577,11 @@ public:
     ///
     /// The tensor map pointer is still managed by the current `TensorMap`
     mts_tensormap_t* as_mts_tensormap_t() & {
+        if (tensor_ == nullptr) {
+            throw Error(
+                "Can not access this TensorMap, it has been released"
+            );
+        }
         return tensor_;
     }
 
@@ -573,14 +589,47 @@ public:
     ///
     /// The tensor map pointer is still managed by the current `TensorMap`
     const mts_tensormap_t* as_mts_tensormap_t() const & {
+        if (tensor_ == nullptr) {
+            throw Error(
+                "Can not access this TensorMap, it has been released"
+            );
+        }
         return tensor_;
     }
 
     mts_tensormap_t* as_mts_tensormap_t() && = delete;
 
+    /// Create a new TensorBlock taking ownership of a raw `mts_block_t` pointer.
+    static TensorMap unsafe_from_ptr(mts_tensormap_t* ptr) {
+        return TensorMap(ptr, /*view=*/false);
+    }
+
+    /// Create a new TensorMap which is a view corresponding to a raw
+    /// `mts_tensormap_t` pointer.
+    ///
+    /// The view does not own the underlying data and will not free the
+    /// corresponding memory. Callers of this functions are still responsible
+    /// for freeing the tensor map pointer when it is no longer needed.
+    static TensorMap unsafe_view_from_ptr(mts_tensormap_t* ptr) {
+        return TensorMap(ptr, /*view=*/true);
+    }
+
+    /// Release the `mts_tensormap_t` pointer corresponding to this `TensorMap`.
+    ///
+    /// The block pointer is **no longer** managed by the current `TensorMap`,
+    /// and should manually be freed when no longer required.
+    mts_tensormap_t* release() {
+        this->check_not_view("release");
+        auto* ptr = this->tensor_;
+        this->tensor_ = nullptr;
+        this->is_view_ = true;
+        return ptr;
+    }
+
     /// Create a C++ TensorMap from a C `mts_tensormap_t` pointer. The C++
     /// tensor map takes ownership of the C pointer.
-    explicit TensorMap(mts_tensormap_t* tensor): tensor_(tensor) {}
+    [[deprecated("this will be removed in the next version, use TensorMap::unsafe_from_ptr instead")]]
+    explicit TensorMap(mts_tensormap_t* tensor): tensor_(tensor), is_view_(false) {}
 
     /// Set or update the info `value` associated with `key` for this `TensorMap`.
     void set_info(const std::string& key, const std::string& value) {
@@ -605,7 +654,20 @@ public:
     }
 
 private:
+    TensorMap(): TensorMap(nullptr, true) {}
+    explicit TensorMap(mts_tensormap_t* tensor, bool view): tensor_(tensor), is_view_(view) {}
+
+    void check_not_view(const char* method_name) const {
+        if (is_view_) {
+            throw Error(
+                "can not call TensorMap::" + std::string(method_name) +
+                " on this TensorMap since it is a view"
+            );
+        }
+    }
+
     mts_tensormap_t* tensor_;
+    bool is_view_;
 };
 
 } // namespace metatensor
