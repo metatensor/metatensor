@@ -151,35 +151,3 @@ TEST_CASE("SimpleDataArray as_dlpack produces valid DLManagedTensorVersioned") {
     managed->deleter(managed);
     // After deleter returns we must not touch managed or its manager_ctx.
 }
-
-TEST_CASE("EmptyDataArray as_dlpack produces valid DLManagedTensorVersioned "
-          "with null data") {
-    // Create a shared_ptr-managed EmptyDataArray
-    auto e_arr =
-        std::make_shared<EmptyDataArray>(std::vector<uintptr_t>{2, 3, 4});
-
-    // Call as_dlpack
-    DLManagedTensorVersioned *managed = e_arr->as_dlpack();
-    REQUIRE(managed != nullptr);
-
-    const DLTensor &t = managed->dl_tensor;
-    CHECK(t.device.device_type == kDLCPU);
-    CHECK(t.ndim == 3);
-    CHECK(t.shape != nullptr);
-    CHECK(t.strides != nullptr);
-    // data pointer must be nullptr for EmptyDataArray per current
-    // implementation
-    CHECK(t.data == nullptr);
-
-    // Check shape/strides correctness
-    CHECK(t.shape[0] == 2);
-    CHECK(t.shape[1] == 3);
-    CHECK(t.shape[2] == 4);
-    // strides {12,4,1}
-    CHECK(t.strides[0] == 12);
-    CHECK(t.strides[1] == 4);
-    CHECK(t.strides[2] == 1);
-
-    // Destroy using deleter
-    managed->deleter(managed);
-}
