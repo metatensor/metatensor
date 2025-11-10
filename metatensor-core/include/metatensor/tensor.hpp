@@ -186,8 +186,8 @@ public:
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
-    TensorMap keys_to_properties(const std::string& key_to_move, bool sort_samples = true) const {
-        return keys_to_properties(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_properties(std::string key_to_move, bool sort_samples = true) const {
+        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, sort_samples);
     }
 
     /// Merge blocks with the same value for selected keys dimensions along the
@@ -231,8 +231,8 @@ public:
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
-    TensorMap keys_to_samples(const std::string& key_to_move, bool sort_samples = true) const {
-        return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_samples(std::string key_to_move, bool sort_samples = true) const {
+        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, sort_samples);
     }
 
     /// Move the given `dimensions` from the component labels to the property
