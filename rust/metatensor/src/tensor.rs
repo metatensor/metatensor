@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
@@ -457,6 +457,75 @@ impl TensorMap {
             inner: self.keys().par_iter().zip_eq(blocks)
         }
     }
+
+    /// Set or update the info (i.e. global metadata) `value` associated with
+    /// `key` for this `TensorMap`.
+    pub fn set_info(&mut self, key: &str, value: &str) {
+        let mut key = key.to_owned().into_bytes();
+        key.push(b'\0');
+
+        let mut value = value.to_owned().into_bytes();
+        value.push(b'\0');
+
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_set_info(
+                self.ptr, key.as_ptr().cast(), value.as_ptr().cast()
+            )).expect("failed to set info");
+        }
+    }
+
+    /// Get the info (i.e. global metadata) with the given `key` for this
+    /// `TensorMap`.
+    pub fn get_info(&self, key: &str) -> Option<&str> {
+        let mut key = key.to_owned().into_bytes();
+        key.push(b'\0');
+
+        let mut value = std::ptr::null();
+
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_get_info(
+                self.ptr, key.as_ptr().cast(), &mut value
+            )).expect("failed to set info");
+        }
+
+        if value.is_null() {
+            return None;
+        }
+
+        let c_str = unsafe { CStr::from_ptr(value) };
+        return Some(c_str.to_str().expect("invalid UTF-8 string"));
+    }
+
+    /// Get an iterator over all the key/value info pairs stored in this
+    /// `TensorMap`.
+    pub fn info(&self) -> TensorMapInfoIter<'_> {
+        let mut keys = std::ptr::null();
+        let mut count = 0;
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_info_keys(
+                self.ptr,
+                &mut keys,
+                &mut count,
+            )).expect("failed to get info keys");
+        };
+
+        let keys = unsafe {
+            std::slice::from_raw_parts(keys, count)
+        };
+        let keys = keys.iter()
+            .map(|&k| {
+                let c_str = unsafe { CStr::from_ptr(k) };
+                c_str.to_str().expect("invalid UTF-8 string")
+            })
+            .collect::<Vec<_>>();
+
+        TensorMapInfoIter {
+            keys: keys,
+            tensor: self,
+            index: 0,
+            count,
+        }
+    }
 }
 
 /******************************************************************************/
@@ -618,6 +687,45 @@ impl rayon::iter::IndexedParallelIterator for TensorMapParIterMut<'_> {
 
 /******************************************************************************/
 
+/// Iterator over info key/value pairs in a `TensorMap`
+pub struct TensorMapInfoIter<'a> {
+    keys: Vec<&'a str>,
+    tensor: &'a TensorMap,
+    index: usize,
+    count: usize,
+}
+
+impl<'a> Iterator for TensorMapInfoIter<'a> {
+    type Item = (&'a str, &'a str);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.count {
+            return None;
+        }
+        let key = self.keys[self.index];
+        let value = self.tensor.get_info(key).expect("missing info");
+        self.index += 1;
+        return Some((key, value));
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.count, Some(self.count))
+    }
+}
+
+impl ExactSizeIterator for TensorMapInfoIter<'_> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.count
+    }
+}
+
+impl FusedIterator for TensorMapInfoIter<'_> {}
+
+
+/******************************************************************************/
+
 #[cfg(test)]
 #[allow(clippy::float_cmp)]
 mod tests {
@@ -718,5 +826,25 @@ mod tests {
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         });
+    }
+
+    #[test]
+    fn info() {
+        let mut tensor = test_tensor();
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("version", "1.0");
+
+        assert_eq!(tensor.get_info("creator").unwrap(), "unit test");
+        assert_eq!(tensor.get_info("version").unwrap(), "1.0");
+        assert!(tensor.get_info("missing").is_none());
+
+        let mut info_iter = tensor.info();
+        let (key, value) = info_iter.next().unwrap();
+        assert_eq!(key, "creator");
+        assert_eq!(value, "unit test");
+        let (key, value) = info_iter.next().unwrap();
+        assert_eq!(key, "version");
+        assert_eq!(value, "1.0");
+        assert!(info_iter.next().is_none());
     }
 }
