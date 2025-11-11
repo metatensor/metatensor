@@ -106,48 +106,124 @@ TEST_CASE("Data Array") {
     array.destroy(array.ptr);
 }
 
-TEST_CASE("SimpleDataArray as_dlpack produces valid DLManagedTensorVersioned") {
-    // Create a shared_ptr-managed SimpleDataArray (shared_from_this requires
-    // shared ownership)
-    auto s_arr =
-        std::make_shared<SimpleDataArray<double>>(std::vector<uintptr_t>{2, 3, 4});
+TEST_CASE("SimpleDataArray<double) - data() and as_dlpack()") {
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
+    auto array = DataArrayBase::to_mts_array_t(std::move(data));
 
-    // Mutate one element so we can check that data pointer points to that
-    // storage
+    // mutate via view and check C API data() works for double
     {
-        auto view = s_arr->view();
-        view(1, 1, 0) = 42.5;
+        auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
+        view(1, 1, 0) = 1.2345;
+
+        double* data_ptr = nullptr;
+        auto status = array.data(array.ptr, &data_ptr);
+        CHECK(status == MTS_SUCCESS);
+        REQUIRE(data_ptr != nullptr);
+        // flattened index (1,1,0) = 1*(3*4) + 1*4 + 0 = 16
+        CHECK(data_ptr[16] == Approx(1.2345));
     }
 
-    // Call as_dlpack and validate contents
-    DLManagedTensorVersioned *managed = s_arr->as_dlpack();
-    REQUIRE(managed != nullptr);
+    // as_dlpack -> check dtype and data
+    {
+        auto s = static_cast<SimpleDataArray<double>*>(array.ptr);
+        DLManagedTensorVersioned* managed = s->as_dlpack();
+        REQUIRE(managed != nullptr);
 
-    // Validate tensor view
-    const DLTensor &t = managed->dl_tensor;
-    CHECK(t.device.device_type == kDLCPU);
-    CHECK(t.device.device_id == 0);
-    CHECK(t.ndim == 3);
-    CHECK(t.shape != nullptr);
-    CHECK(t.strides != nullptr);
-    // shape matches {2,3,4}
-    CHECK(t.shape[0] == 2);
-    CHECK(t.shape[1] == 3);
-    CHECK(t.shape[2] == 4);
-    // C-contiguous strides in elements: {12,4,1}
-    CHECK(t.strides[0] == 12);
-    CHECK(t.strides[1] == 4);
-    CHECK(t.strides[2] == 1);
+        const DLTensor& t = managed->dl_tensor;
+        CHECK(t.device.device_type == kDLCPU);
+        CHECK(t.device.device_id == 0);
+        CHECK(t.ndim == 3);
+        REQUIRE(t.shape != nullptr);
+        REQUIRE(t.strides != nullptr);
+        CHECK(t.shape[0] == 2);
+        CHECK(t.shape[1] == 3);
+        CHECK(t.shape[2] == 4);
+        CHECK(t.strides[0] == 12);
+        CHECK(t.strides[1] == 4);
+        CHECK(t.strides[2] == 1);
 
-    // data pointer non-null and points to double storage
-    REQUIRE(t.data != nullptr);
-    // Check that the value set earlier is observed at the flattened index for
-    // (1,1,0) flattened idx = 1* (3*4) + 1*4 + 0 = 12 + 4 = 16
-    double *pdata = static_cast<double *>(t.data);
-    CHECK(pdata[16] == Approx(42.5));
+        CHECK(t.dtype.code == kDLFloat);
+        CHECK(t.dtype.bits == 64u);
+        CHECK(t.dtype.lanes == 1u);
 
-    // The manager_ctx should hold a shared_ptr owner, preventing destruction
-    // while managed exists. Destroy via deleter and ensure no crashes.
-    managed->deleter(managed);
-    // After deleter returns we must not touch managed or its manager_ctx.
+        REQUIRE(t.data != nullptr);
+        double* pdata = static_cast<double*>(t.data);
+        CHECK(pdata[16] == Approx(1.2345));
+
+        // free managed tensor using its deleter (should not crash)
+        managed->deleter(managed);
+    }
+
+    array.destroy(array.ptr);
+}
+
+TEST_CASE("SimpleDataArray<float) - as_dlpack() and C API data() refusal") {
+    // Create float-backed array via C++ class, expose through mts_array_t
+    auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3, 4}));
+    auto array = DataArrayBase::to_mts_array_t(std::move(data));
+
+    // C API data() expects double* and should fail for float-backed arrays
+    {
+        double* data_ptr = nullptr;
+        auto status = array.data(array.ptr, &data_ptr);
+        CHECK(status != MTS_SUCCESS); // should not succeed
+    }
+
+    // But as_dlpack should provide a valid float-typed DLPack view
+    {
+        auto s = static_cast<SimpleDataArray<float>*>(array.ptr);
+        auto view = s->view();
+        view(1, 1, 0) = 3.1415f;
+
+        DLManagedTensorVersioned* managed = s->as_dlpack();
+        REQUIRE(managed != nullptr);
+
+        const DLTensor& t = managed->dl_tensor;
+        CHECK(t.dtype.code == kDLFloat);
+        CHECK(t.dtype.bits == 32u);
+        CHECK(t.dtype.lanes == 1u);
+
+        REQUIRE(t.data != nullptr);
+        float* pdata = static_cast<float*>(t.data);
+        CHECK(pdata[16] == Approx(3.1415f));
+
+        managed->deleter(managed);
+    }
+
+    array.destroy(array.ptr);
+}
+
+TEST_CASE("SimpleDataArray<int32_t) - as_dlpack() and C API data() refusal") {
+    auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3, 4}));
+    auto array = DataArrayBase::to_mts_array_t(std::move(data));
+
+    // C API should refuse to return double* for int32 array
+    {
+        double* data_ptr = nullptr;
+        auto status = array.data(array.ptr, &data_ptr);
+        CHECK(status != MTS_SUCCESS);
+    }
+
+    // DLPack view should be int32
+    {
+        auto s = static_cast<SimpleDataArray<int32_t>*>(array.ptr);
+        auto view = s->view();
+        view(1, 1, 0) = 42;
+
+        DLManagedTensorVersioned* managed = s->as_dlpack();
+        REQUIRE(managed != nullptr);
+
+        const DLTensor& t = managed->dl_tensor;
+        CHECK(t.dtype.code == kDLInt);
+        CHECK(t.dtype.bits == 32u);
+        CHECK(t.dtype.lanes == 1u);
+
+        REQUIRE(t.data != nullptr);
+        int32_t* pdata = static_cast<int32_t*>(t.data);
+        CHECK(pdata[16] == 42);
+
+        managed->deleter(managed);
+    }
+
+    array.destroy(array.ptr);
 }
