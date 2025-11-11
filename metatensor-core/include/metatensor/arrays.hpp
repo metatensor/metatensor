@@ -20,17 +20,18 @@ namespace details {
     /**
     * @brief This C++ struct bundles all resources the DLTensor needs.
     *
-    * Stores metdata.
+    * Stores metadata.
     */
-    struct DLPackContext {
+    struct DLPackContextBase {
         std::vector<int64_t> shape;
         std::vector<int64_t> strides;
-        // TODO(rg): template to constrained numerics later
-        // template <typename T,
-        // typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-        // Keep a shared pointer to the backing buffer so exported DLPack
-        // objects are valid even if the original mts_array is gone
-        std::shared_ptr<std::vector<double>> data;
+        virtual ~DLPackContextBase() = default;
+    };
+
+    // Templated derived context which owns a typed shared buffer.
+    template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    struct DLPackContext : DLPackContextBase {
+        std::shared_ptr<std::vector<T>> data;
     };
 
     /**
@@ -39,16 +40,14 @@ namespace details {
     * Removes metadata and decrements shared pointer.
     */
     DLPACK_EXTERN_C void DLPackDeleter(DLManagedTensorVersioned* self){
-        if(self){
-          // Cast the manager_ctx back to the C++ type and delete it.
-          // This will basically call ~DLPackContext() and free the vectors
-          auto ctx = static_cast<DLPackContext*>(self->manager_ctx);
-          // defensive clear to avoid reusing after free
-          self->manager_ctx = nullptr;
-          if (ctx) delete ctx;
-          // delete the struct itself
-          delete self;
-       }
+        if (self) {
+            // manager_ctx points to a DLPackContextBase (allocated with new)
+            auto ctx = static_cast<DLPackContextBase*>(self->manager_ctx);
+            // defensive clear to avoid reusing after free
+            self->manager_ctx = nullptr;
+            if (ctx) delete ctx;  // polymorphic delete will destroy derived DLPackContext<T>
+            delete self;
+        }
     }
     
     /// Compute the product of all values in the `shape` vector
@@ -596,17 +595,18 @@ public:
 /// metatensor usable without additional dependencies. For other uses cases, it
 /// might be better to implement DataArrayBase on your data, using
 /// functionalities from `Eigen`, `Boost.Array`, etc.
+template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 class SimpleDataArray : public metatensor::DataArrayBase {
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
-    SimpleDataArray(std::vector<uintptr_t> shape, double value = 0.0):
+    SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
         shape_(std::move(shape)), data_(details::product(shape_), value) {}
 
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
     /// The data is interpreted as a row-major n-dimensional array.
-    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<double> data):
+    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<T> data):
         shape_(std::move(shape)),
         data_(std::move(data))
     {
@@ -632,8 +632,17 @@ public:
         return origin;
     }
 
+    // DataArrayBase expects `double* data() &` as the public C-facing API.
+    // For the generic templated implementation we provide the required override.
+    // If T == double we return the actual buffer; otherwise we throw to signal
+    // that the generic double* accessor is not available for other element types,
+    // and recommend as_dlpack instead.
     double* data() & override {
-        return data_.data();
+        if constexpr (std::is_same_v<T, double>) {
+            return reinterpret_cast<double*>(data_.data());
+        } else {
+            throw Error("DataArrayBase::data() is only available for double SimpleDataArray, use as_dlpack");
+        }
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -648,11 +657,11 @@ public:
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
-        auto new_data = std::vector<double>(details::product(shape_), 0.0);
+        auto new_data = std::vector<T>(details::product(shape_), T{});
         auto new_shape = shape_;
         std::swap(new_shape[axis_1], new_shape[axis_2]);
 
-        for (size_t i=0; i<details::product(shape_); i++) {
+        for (size_t i = 0; i < details::product(shape_); i++) {
             auto index = details::cartesian_index(shape_, i);
             std::swap(index[axis_1], index[axis_2]);
 
@@ -677,7 +686,7 @@ public:
         uintptr_t property_start,
         uintptr_t property_end
     ) override {
-        const auto& input_array = dynamic_cast<const SimpleDataArray&>(input);
+        const auto& input_array = dynamic_cast<const SimpleDataArray<T>&>(input);
         assert(input_array.shape_.size() == this->shape_.size());
 
         size_t property_count = property_end - property_start;
@@ -693,7 +702,7 @@ public:
 
             if (property_dim == 1) {
                 // no components
-                for (size_t property_i=0; property_i<property_count; property_i++) {
+                for (size_t property_i = 0; property_i < property_count; property_i++) {
                     input_index[property_dim] = property_i;
                     output_index[property_dim] = property_i + property_start;
 
@@ -702,17 +711,17 @@ public:
                 }
             } else {
                 auto last_component_dim = shape_.size() - 2;
-                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                for (size_t component_i = 1; component_i < shape_.size() - 1; component_i++) {
                     input_index[component_i] = 0;
                 }
 
                 bool done = false;
                 while (!done) {
-                    for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                    for (size_t component_i = 1; component_i < shape_.size() - 1; component_i++) {
                         output_index[component_i] = input_index[component_i];
                     }
 
-                    for (size_t property_i=0; property_i<property_count; property_i++) {
+                    for (size_t property_i = 0; property_i < property_count; property_i++) {
                         input_index[property_dim] = property_i;
                         output_index[property_dim] = property_i + property_start;
 
@@ -721,7 +730,7 @@ public:
                     }
 
                     input_index[last_component_dim] += 1;
-                    for (size_t component_i=last_component_dim; component_i>2; component_i--) {
+                    for (size_t component_i = last_component_dim; component_i > 2; component_i--) {
                         if (input_index[component_i] >= shape_[component_i]) {
                             input_index[component_i] = 0;
                             input_index[component_i - 1] += 1;
@@ -737,19 +746,19 @@ public:
     }
 
     /// Get a const view of the data managed by this SimpleDataArray
-    NDArray<double> view() const {
-        return NDArray<double>(data_.data(), shape_);
+    NDArray<T> view() const {
+        return NDArray<T>(data_.data(), shape_);
     }
 
     /// Get a mutable view of the data managed by this SimpleDataArray
-    NDArray<double> view() {
-        return NDArray<double>(data_.data(), shape_);
+    NDArray<T> view() {
+        return NDArray<T>(data_.data(), shape_);
     }
 
-    /// Extract a reference to SimpleDataArray out of an `mts_array_t`.
+    /// Extract a reference to SimpleDataArray<T> out of an `mts_array_t`.
     ///
     /// This function fails if the `mts_array_t` does not contain a
-    /// SimpleDataArray.
+    /// SimpleDataArray origin.
     static SimpleDataArray& from_mts_array(mts_array_t& array) {
         mts_data_origin_t origin = 0;
         auto status = array.origin(array.ptr, &origin);
@@ -767,7 +776,7 @@ public:
         return dynamic_cast<SimpleDataArray&>(*base);
     }
 
-    /// Extract a const reference to SimpleDataArray out of an `mts_array_t`.
+    /// Extract a const reference to SimpleDataArray<T> out of an `mts_array_t`.
     ///
     /// This function fails if the `mts_array_t` does not contain a
     /// SimpleDataArray.
@@ -791,13 +800,12 @@ public:
     DLManagedTensorVersioned *as_dlpack() override {
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto ctx = std::make_unique<DLPackContext>();
-        auto managed = std::make_unique<DLManagedTensorVersioned>();
-        // Populate stuff
+        auto ctx = std::make_unique<DLPackContext<T>>();
+        // fill shape
         ctx->shape.resize(this->shape_.size());
         std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
                        [](uintptr_t s) { return static_cast<int64_t>(s); });
-        // Calculate C-contiguous strides
+        // fill strides (C contiguous, element strides)
         ctx->strides.resize(this->shape_.size());
         if (!this->shape_.empty()) {
             ctx->strides.back() = 1;
@@ -806,27 +814,40 @@ public:
             }
         }
 
-        // Copy the backing data into a shared buffer so the DLPack view keeps a
-        // reference to a valid contiguous buffer even if the SimpleDataArray
-        // itself is destroyed.
-        ctx->data = std::make_shared<std::vector<double>>(this->data_);
+        // create the shared buffer from this->data_ (copies into shared vector)
+        ctx->data = std::make_shared<std::vector<T>>(this->data_);
 
-        // Fill in DLManagedTensorVersioned stuff
+        // Create DL managed container
+        auto managed = std::make_unique<DLManagedTensorVersioned>();
         managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        managed->flags = 0; // Not read-only
+        managed->flags = 0;
         managed->deleter = DLPackDeleter;
 
         // Fill the DLTensor View
         auto &tensor = managed->dl_tensor;
         tensor.device = {kDLCPU, 0};
         tensor.ndim = static_cast<int32_t>(this->shape_.size());
-        tensor.dtype = {kDLFloat, 64, 1};
+
+        if constexpr (std::is_floating_point<T>::value) {
+            tensor.dtype.code = kDLFloat;
+            tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
+            tensor.dtype.lanes = 1;
+        } else if constexpr (std::is_integral<T>::value) {
+            if constexpr (std::is_signed<T>::value) {
+                tensor.dtype.code = kDLInt;
+            } else {
+                tensor.dtype.code = kDLUInt;
+            }
+            tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
+            tensor.dtype.lanes = 1;
+        } else {
+            static_assert(std::is_arithmetic<T>::value, "unsupported tensor element type");
+        }
+
         tensor.byte_offset = 0;
 
         // tensor.data now points into ctx->data's underlying vector.
-        // DLPackContext (and therefore the shared_ptr) is owned by
-        // managed->manager_ctx, which will be deleted by DLPackDeleter.
-        tensor.data = const_cast<double *>(ctx->data->data());
+        tensor.data = const_cast<void*>(static_cast<const void*>(ctx->data->data()));
         if (tensor.ndim == 0) {
             tensor.shape = nullptr;
             tensor.strides = nullptr;
@@ -835,27 +856,29 @@ public:
             tensor.strides = ctx->strides.empty() ? nullptr : ctx->strides.data();
         }
 
-        // Transfer Ownership to C pointers
-        managed->manager_ctx = ctx.release();
+        // Transfer Ownership to C pointers (release unique_ptr)
+        managed->manager_ctx = static_cast<void*>(ctx.release());
         return managed.release();
     }
 
 private:
     std::vector<uintptr_t> shape_;
-    std::vector<double> data_;
+    std::vector<T> data_;
 
-    friend bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs);
+    // Friend equality operator template so it can access private members
+    template <typename U>
+    friend bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs);
 };
 
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-inline bool operator==(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
+// Equality operator template for SimpleDataArray<T>
+template <typename U>
+inline bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
+    static_assert(std::is_arithmetic_v<U>, "SimpleDataArray only works with arithmetic types");
     return lhs.shape_ == rhs.shape_ && lhs.data_ == rhs.data_;
 }
 
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-inline bool operator!=(const SimpleDataArray& lhs, const SimpleDataArray& rhs) {
+template <typename U>
+inline bool operator!=(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
     return !(lhs == rhs);
 }
 
