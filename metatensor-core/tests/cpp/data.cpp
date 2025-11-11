@@ -6,7 +6,7 @@
 using namespace metatensor;
 
 TEST_CASE("Data Array") {
-    auto data = std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 3, 4}));
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
 
     SECTION("origin") {
@@ -21,7 +21,7 @@ TEST_CASE("Data Array") {
     }
 
     SECTION("data") {
-        auto view = static_cast<SimpleDataArray*>(array.ptr)->view();
+        auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
         view(1, 1, 0) = 3;
 
         double* data_ptr = nullptr;
@@ -110,7 +110,7 @@ TEST_CASE("SimpleDataArray as_dlpack produces valid DLManagedTensorVersioned") {
     // Create a shared_ptr-managed SimpleDataArray (shared_from_this requires
     // shared ownership)
     auto s_arr =
-        std::make_shared<SimpleDataArray>(std::vector<uintptr_t>{2, 3, 4});
+        std::make_shared<SimpleDataArray<double>>(std::vector<uintptr_t>{2, 3, 4});
 
     // Mutate one element so we can check that data pointer points to that
     // storage

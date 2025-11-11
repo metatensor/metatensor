@@ -966,7 +966,7 @@ inline mts_status_t details::default_create_array(
             shape.push_back(static_cast<size_t>(shape_ptr[i]));
         }
 
-        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray(shape));
+        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray<double>(shape));
         *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
 
         return MTS_SUCCESS;
