@@ -56,18 +56,20 @@ struct ExternalBuffer {
 impl std::io::Write for ExternalBuffer {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let mut remaining_space = self.allocated - self.current;
+        let mut remaining_space = self.allocated.saturating_sub(self.current);
 
         if (remaining_space as usize) < buf.len() {
-            // find the new size to be able to fit all the data
-            let mut new_size = 0;
-            while (remaining_space as usize) < buf.len() {
-                new_size = if self.allocated == 0 {
-                    1024
-                } else {
-                    2 * self.allocated
-                };
-                remaining_space = new_size - self.current;
+            // doubling until we have enough room
+            let mut new_size = if self.allocated == 0 { 256u64 } else { self.allocated };
+            while ((new_size - self.current) as usize)  < buf.len() {
+                new_size = new_size.saturating_mul(2);
+                // avoid infinite loop on overflow
+                if new_size == 0 {
+                   return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "requested allocation size overflow",
+                    ));
+                }
             }
 
             let new_ptr = unsafe {
@@ -86,6 +88,7 @@ impl std::io::Write for ExternalBuffer {
             }
 
             self.allocated = new_size;
+            remaining_space = self.allocated.saturating_sub(self.current);
         }
 
         let mut output = unsafe {
@@ -93,9 +96,14 @@ impl std::io::Write for ExternalBuffer {
             std::slice::from_raw_parts_mut(start, remaining_space as usize)
         };
 
-        let count = output.write(buf).expect("failed to write to pre-allocated slice");
-        assert_eq!(count, buf.len());
-        self.current += count as u64;
+        // get pointer to start of free region and copy bytes directly (memcpy)
+        let start = unsafe { (*self.data).offset(self.current as isize) };
+        unsafe {
+            std::ptr::copy_nonoverlapping(buf.as_ptr(), start as *mut u8, buf.len());
+        }
+        let count = buf.len();
+
+        self.current = self.current.saturating_add(count as u64);
 
         if self.current > self.writen {
             self.writen = self.current;
