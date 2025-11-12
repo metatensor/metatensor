@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+from pathlib import Path
 
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
@@ -21,13 +23,14 @@ def warn_and_exit(message, exit_code=0):
     sys.exit(exit_code)
 
 
-def run_subprocess(args, check=True, env=None):
+def run_subprocess(args, check=True, env=None, cwd=None):
     output = subprocess.run(
         args,
         capture_output=True,
         encoding="utf8",
         check=False,
         env=env,
+        cwd=cwd,
     )
 
     if check and output.returncode != 0:
@@ -72,9 +75,67 @@ def n_commits_since_last_tag(tag_prefix):
     return n_commits
 
 
+def acquire_git_index_lock(lock: Path, timeout=2.0, poll=1e-3) -> bool:
+    start = time.time()
+    while True:
+        try:
+            with lock.open(mode="x") as f:
+                f.write(str(os.getpid()))
+            return True
+        except FileExistsError:
+            if time.time() - start > timeout:
+                return False
+            time.sleep(poll)
+
+
+def update_git_index():
+    gitdir = Path(
+        subprocess.run(
+            ["git", "rev-parse", "--git-dir"], capture_output=True, encoding="utf8"
+        ).stdout.strip()
+    )
+    lock = gitdir / "index.lock"
+
+    # create a temp file inside the git dir and close its fd immediately
+    fd, tmp_path = tempfile.mkstemp(prefix="index.", dir=str(gitdir))
+    os.close(fd)
+
+    created_lock = False
+    try:
+        shutil.copyfile(gitdir / "index", tmp_path)
+        # Run update-index against a temporary index file WITHOUT holding index.lock.
+        env = os.environ.copy()
+        env["GIT_INDEX_FILE"] = tmp_path
+        run_subprocess(
+            ["git", "update-index", "-q", "--really-refresh"],
+            env=env,
+            cwd=gitdir.parent.absolute(),
+        )
+
+        # Now acquire the real index lock and swap the updated temp index in place.
+        if not acquire_git_index_lock(lock):
+            raise RuntimeError("could not acquire index.lock")
+        created_lock = True
+
+        # Atomically replace the real index with our updated temp index
+        os.replace(tmp_path, str(gitdir / "index"))
+    finally:
+        # remove the lock only if we created it
+        if created_lock:
+            try:
+                lock.unlink()
+            except Exception:
+                pass
+        # cleanup temp file if it still exists
+        try:
+            Path(tmp_path).unlink()
+        except Exception:
+            pass
+
+
 def git_hash_all_code():
     # make sure the index is up to date before doing `git diff-index`
-    run_subprocess(["git", "update-index", "-q", "--really-refresh"])
+    update_git_index()
 
     output = subprocess.run(
         ["git", "diff-index", "--quiet", "HEAD", "--"],
