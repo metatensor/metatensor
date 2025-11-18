@@ -131,11 +131,7 @@ def _reduce_over_samples_block(
         block_values, shape=(new_samples.shape[0],) + other_shape
     )
 
-    _dispatch.index_add(
-        values_sum,
-        block_values,
-        index,
-    )
+    _dispatch.rows_add(values_sum, block_values, index)
 
     # pre-declare variables that we'll need to use outside of the if block below
     values_mean = _dispatch.empty_like(values_sum, [0])
@@ -151,10 +147,8 @@ def _reduce_over_samples_block(
                 block_values, shape=(new_samples.shape[0],) + other_shape
             )
 
-            _dispatch.index_add(
-                values_var,
-                (block_values - values_mean[index]) ** 2,
-                index,
+            _dispatch.rows_add(
+                values_var, (block_values - values_mean[index]) ** 2, index
             )
             values_var = values_var / bincount
 
@@ -223,7 +217,7 @@ def _reduce_over_samples_block(
             gradient_values,
             shape=(new_gradient_samples.shape[0],) + other_shape,
         )
-        _dispatch.index_add(gradient_values_result, gradient_values, index_gradient)
+        _dispatch.rows_add(gradient_values_result, gradient_values, index_gradient)
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
@@ -242,10 +236,8 @@ def _reduce_over_samples_block(
                     gradient_values,
                     shape=(new_gradient_samples.shape[0],) + other_shape,
                 )
-                _dispatch.index_add(
-                    values_grad_result,
-                    values_times_gradient_values,
-                    index_gradient,
+                _dispatch.rows_add(
+                    values_grad_result, values_times_gradient_values, index_gradient
                 )
 
                 values_grad_result = values_grad_result / bincount
