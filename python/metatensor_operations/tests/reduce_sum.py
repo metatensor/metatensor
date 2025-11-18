@@ -88,8 +88,69 @@ def test_sum_samples_block():
         )
 
 
-def test_reduction_block_two_samples():
-    block_1 = TensorBlock(
+def test_sum_properties_block():
+    tensor_se = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    bl1 = tensor_ps[0]
+
+    # check both passing a list and a single string for property names
+    reduce_tensor_se = mts.sum_over_properties(tensor_se, property_names=["n"])
+    reduce_tensor_ps = mts.sum_over_properties(tensor_ps, property_names="l")
+
+    # checks that reduction over a block is the same as the tensormap operation
+    reduce_block_se = mts.sum_over_properties_block(
+        tensor_se.block(0), property_names="n"
+    )
+    assert np.allclose(reduce_block_se.values, reduce_tensor_se.block(0).values)
+
+    assert np.all(
+        np.sum(bl1.values[:, ::16], axis=-1) == reduce_tensor_ps.block(0).values[:, 0]
+    )
+    assert np.all(
+        np.sum(bl1.values[:, 2::16], axis=-1) == reduce_tensor_ps.block(0).values[:, 2]
+    )
+    assert np.all(
+        np.sum(bl1.values[:, 5::16], axis=-1) == reduce_tensor_ps.block(0).values[:, 5]
+    )
+    assert np.all(
+        np.sum(bl1.values[:, 8::16], axis=-1) == reduce_tensor_ps.block(0).values[:, 8]
+    )
+    assert np.all(
+        np.sum(bl1.values[:, 9::16], axis=-1) == reduce_tensor_ps.block(0).values[:, 9]
+    )
+
+    # Test the gradients
+    gr1 = tensor_ps[0].gradient("positions").values
+
+    assert np.all(
+        np.sum(gr1[..., ::16], axis=-1)
+        == reduce_tensor_ps.block(0).gradient("positions").values[..., 0]
+    )
+    assert np.all(
+        np.sum(gr1[..., 2::16], axis=-1)
+        == reduce_tensor_ps.block(0).gradient("positions").values[..., 2]
+    )
+
+    assert np.all(
+        np.sum(gr1[..., 3::16], axis=-1)
+        == reduce_tensor_ps.block(0).gradient("positions").values[..., 3]
+    )
+
+    assert np.all(
+        np.sum(gr1[..., 14::16], axis=-1)
+        == reduce_tensor_ps.block(0).gradient("positions").values[..., 14]
+    )
+
+    for ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
+        assert np.all(
+            np.sum(bl2.values, axis=-1, keepdims=True)[..., 0]
+            == reduce_tensor_se.block(ii).values[..., 0]
+        )
+
+
+def test_reduction_block_multi_samples():
+    """Test sum over samples for multiple dimensions simultaneously"""
+    block = TensorBlock(
         values=np.array(
             [
                 [1, 2, 4],
@@ -103,7 +164,7 @@ def test_reduction_block_two_samples():
             ]
         ),
         samples=Labels(
-            ["samples1", "samples2", "samples3"],
+            ["s1", "s2", "s3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -122,11 +183,11 @@ def test_reduction_block_two_samples():
     )
 
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
-    X = TensorMap(keys, [block_1])
+    X = TensorMap(keys, [block])
 
-    reduce_X_12 = mts.sum_over_samples(X, sample_names="samples3")
-    reduce_X_23 = mts.sum_over_samples(X, sample_names=["samples1"])
-    reduce_X_2 = mts.sum_over_samples(X, sample_names=["samples1", "samples3"])
+    reduce_X_12 = mts.sum_over_samples(X, sample_names="s3")
+    reduce_X_23 = mts.sum_over_samples(X, sample_names=["s1"])
+    reduce_X_2 = mts.sum_over_samples(X, sample_names=["s1", "s3"])
 
     assert np.all(
         np.sum(X.block(0).values[:3], axis=0) == reduce_X_12.block(0).values[0]
@@ -161,17 +222,107 @@ def test_reduction_block_two_samples():
     assert reduce_X_2.block(0).properties == X.block(0).properties
 
     samples_12 = Labels(
-        names=["samples1", "samples2"],
+        names=["s1", "s2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
     samples_23 = Labels(
-        names=["samples2", "samples3"],
+        names=["s2", "s3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
-    samples_2 = Labels(
-        names=["samples2"],
-        values=np.array([[0], [1]]),
-    )
+    samples_2 = Labels(names=["s2"], values=np.array([[0], [1]]))
     assert reduce_X_12.block(0).samples == samples_12
     assert reduce_X_23.block(0).samples == samples_23
     assert reduce_X_2.block(0).samples == samples_2
+
+
+def test_reduction_block_multi_properties():
+    """Test sum over properties for multiple dimensions simultaneously"""
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [1, 2, 4],
+                [3, 5, 6],
+                [-1.3, 26.7, 4.54],
+                [3.5, 5.3, 6.87],
+                [6.1, 35.2, 44.5],
+                [7.3, -7.65, 6.45],
+                [11, 276.0, 4.09],
+                [33, 55.5, -5.6],
+            ]
+        ).T,
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
+        components=[],
+        properties=Labels(
+            ["p1", "p2", "p3"],
+            np.array(
+                [
+                    [0, 0, 0],
+                    [0, 0, 1],
+                    [0, 0, 2],
+                    [0, 1, 1],
+                    [0, 1, 0],
+                    [2, 1, 1],
+                    [1, 1, 1],
+                    [1, 0, 0],
+                ],
+            ),
+        ),
+    )
+
+    keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
+    X = TensorMap(keys, [block_1])
+
+    reduce_X_12 = mts.sum_over_properties(X, property_names="p3")
+    reduce_X_23 = mts.sum_over_properties(X, property_names=["p1"])
+    reduce_X_2 = mts.sum_over_properties(X, property_names=["p1", "p3"])
+
+    assert np.all(
+        np.sum(X.block(0).values[..., :3], axis=-1)
+        == reduce_X_12.block(0).values[..., 0]
+    )
+    assert np.all(
+        np.sum(X.block(0).values[..., 3:5], axis=-1)
+        == reduce_X_12.block(0).values[..., 1]
+    )
+    assert np.all(X.block(0).values[..., 5] == reduce_X_12.block(0).values[..., 4])
+    assert np.all(X.block(0).values[..., 6] == reduce_X_12.block(0).values[..., 3])
+    assert np.all(X.block(0).values[..., 7] == reduce_X_12.block(0).values[..., 2])
+
+    assert np.all(
+        np.sum(X.block(0).values[..., [0, 7]], axis=-1)
+        == reduce_X_23.block(0).values[..., 0]
+    )
+    assert np.all(
+        np.sum(X.block(0).values[..., [3, 5, 6]], axis=-1)
+        == reduce_X_23.block(0).values[..., 4]
+    )
+
+    assert np.all(X.block(0).values[..., 1] == reduce_X_23.block(0).values[..., 1])
+    assert np.all(X.block(0).values[..., 2] == reduce_X_23.block(0).values[..., 2])
+    assert np.all(X.block(0).values[..., 4] == reduce_X_23.block(0).values[..., 3])
+
+    assert np.all(
+        np.sum(X.block(0).values[..., [0, 1, 2, 7]], axis=-1)
+        == reduce_X_2.block(0).values[..., 0]
+    )
+    assert np.all(
+        np.sum(X.block(0).values[..., 3:7], axis=-1)
+        == reduce_X_2.block(0).values[..., 1]
+    )
+    # check metadata
+    assert reduce_X_12.block(0).samples == X.block(0).samples
+    assert reduce_X_23.block(0).samples == X.block(0).samples
+    assert reduce_X_2.block(0).samples == X.block(0).samples
+
+    properties_12 = Labels(
+        names=["p1", "p2"],
+        values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
+    )
+    properties_23 = Labels(
+        names=["p2", "p3"],
+        values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
+    )
+    properties_2 = Labels(names=["p2"], values=np.array([[0], [1]]))
+    assert reduce_X_12.block(0).properties == properties_12
+    assert reduce_X_23.block(0).properties == properties_23
+    assert reduce_X_2.block(0).properties == properties_2
