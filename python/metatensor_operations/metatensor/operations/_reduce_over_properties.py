@@ -220,19 +220,19 @@ def _reduce_over_properties_block(
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
-                    for i, p in enumerate(new_gradient_properties):
-                        property = int(p[0])
+                    print(f"{new_gradient_properties = }")
+                    for i, _ in enumerate(new_gradient_properties):
                         shape = (-1,) + (1,) * (gradient_values_result[..., i].ndim - 1)
                         if torch_jit_is_scripting():
                             gradient_values_result[..., i] = (
                                 values_grad_result[..., i]
                                 - (
                                     gradient_values_result[..., i]
-                                    * values_mean[..., property][
+                                    * values_mean[..., i][
                                         gradient.samples["sample"]
                                     ].reshape(shape)
                                 )
-                            ) / values_result[..., property][
+                            ) / values_result[..., i][
                                 gradient.samples["sample"]
                             ].reshape(
                                 shape
@@ -244,11 +244,11 @@ def _reduce_over_properties_block(
                                     values_grad_result[..., i]
                                     - (
                                         gradient_values_result[..., i]
-                                        * values_mean[..., property][
+                                        * values_mean[..., i][
                                             gradient.samples["sample"]
                                         ].reshape(shape)
                                     )
-                                ) / values_result[..., property][
+                                ) / values_result[..., i][
                                     gradient.samples["sample"]
                                 ].reshape(
                                     shape
