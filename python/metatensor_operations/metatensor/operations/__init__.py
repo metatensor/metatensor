@@ -53,6 +53,16 @@ from ._one_hot import one_hot  # noqa: F401
 from ._ones_like import ones_like, ones_like_block  # noqa: F401
 from ._pow import pow  # noqa: F401
 from ._random_like import random_uniform_like, random_uniform_like_block  # noqa: F401
+from ._reduce_over_properties import (  # noqa: F401
+    mean_over_properties,
+    mean_over_properties_block,
+    std_over_properties,
+    std_over_properties_block,
+    sum_over_properties,
+    sum_over_properties_block,
+    var_over_properties,
+    var_over_properties_block,
+)
 from ._reduce_over_samples import (  # noqa: F401
     mean_over_samples,
     mean_over_samples_block,

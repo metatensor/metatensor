@@ -95,10 +95,7 @@ def _reduce_over_properties_block(
         index = index.reshape(-1)
 
     block_values = block.values
-    shape = tuple(
-        d if i != 1 else new_properties.shape[0]
-        for i, d in enumerate(block_values.shape)
-    )
+    shape = (block_values.shape)[:-1] + (new_properties.shape[0],)
     values_sum = _dispatch.zeros_like(block_values, shape=shape)
 
     column_add(values_sum, block_values, index)
@@ -118,7 +115,7 @@ def _reduce_over_properties_block(
 
             column_add(
                 values_var,
-                (block_values - values_mean[:, index]) ** 2,
+                (block_values - values_mean[..., index]) ** 2,
                 index,
             )
             values_var = values_var / bincount
@@ -173,8 +170,6 @@ def _reduce_over_properties_block(
                 ),
             )
             continue
-
-        gradient_properties = gradient.properties
 
         new_gradient_properties, index_gradient = result_block.properties.values, index
         index_gradient = index_gradient.reshape(-1)
@@ -237,7 +232,11 @@ def _reduce_over_properties_block(
                                         gradient.samples["sample"]
                                     ].reshape(shape)
                                 )
-                            ) / values_result[..., property]
+                            ) / values_result[..., property][
+                                gradient.samples["sample"]
+                            ].reshape(
+                                shape
+                            )
                         else:
                             # only numpy raise a warning for division by zero
                             with np.errstate(divide="ignore", invalid="ignore"):
@@ -249,7 +248,11 @@ def _reduce_over_properties_block(
                                             gradient.samples["sample"]
                                         ].reshape(shape)
                                     )
-                                ) / values_result[..., property]
+                                ) / values_result[..., property][
+                                    gradient.samples["sample"]
+                                ].reshape(
+                                    shape
+                                )
 
                         gradient_values_result[..., i] = _dispatch.nan_to_num(
                             gradient_values_result[..., i],
@@ -318,6 +321,81 @@ def _reduce_over_properties(
             )
         )
     return TensorMap(tensor.keys, blocks)
+
+
+@torch_jit_script
+def sum_over_properties_block(
+    block: TensorBlock, property_names: Union[List[str], str]
+) -> TensorBlock:
+    """Sum a :py:class:`TensorBlock`, combining the properties
+    according to ``property_names``.
+
+    This function creates a new :py:class:`TensorBlock` in which each property is
+    obtained summing over the ``property_names`` indices, so that the resulting
+    :py:class:`TensorBlock` does not have those indices.
+
+    ``property_names`` indicates over which dimensions in the properties the sum is
+    performed. It accept either a single string or a list of the string with the
+    property names corresponding to the directions along which the sum is
+    performed. A single string is equivalent to a list with a single element:
+    ``property_names = "i"`` is the same as ``property_names = ["i"]``.
+
+    :param block:
+        input :py:class:`TensorBlock`
+    :param property_names:
+        names of properties to sum over
+
+    :returns:
+        a :py:class:`TensorBlock` containing the reduced values and property labels
+
+    >>> from metatensor import Labels, TensorBlock, TensorMap
+    >>> block = TensorBlock(
+    ...     values=np.array(
+    ...         [
+    ...             [1, 3, 7, 10],
+    ...             [2, 5, 8, 11],
+    ...             [4, 6, 9, 12],
+    ...         ]
+    ...     ),
+    ...     propertys=Labels(
+    ...         ["system", "atom"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...                 [1, 0],
+    ...             ]
+    ...         ),
+    ...     ),
+    ...     components=[],
+    ...     properties=Labels(
+    ...         ["i", "j"],
+    ...         np.array(
+    ...             [
+    ...                 [0, 0],
+    ...                 [0, 1],
+    ...                 [1, 0],
+    ...                 [1, 1],
+    ...             ]
+    ...         ),
+    ...     ),
+    ... )
+    >>> block_sum = sum_over_properties_block(block, property_names="j")
+    >>> print(block_sum.properties)
+    Labels(
+          i
+          0
+          1
+    )
+    >>> print(block_sum.values)
+    [[ 4, 17]
+     [ 7, 19]
+     [10, 21]]
+    """
+
+    return _reduce_over_properties_block(
+        block=block, property_names=property_names, reduction="sum"
+    )
 
 
 @torch_jit_script
