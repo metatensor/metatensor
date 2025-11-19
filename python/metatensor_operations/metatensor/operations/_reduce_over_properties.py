@@ -80,7 +80,36 @@ def _reduce_over_properties_block(
     ]
 
     if len(block.properties) == 0:
-        raise NotImplementedError
+        properties = Labels(
+            remaining_property_names,
+            _dispatch.zeros_like(block.values, [0, len(remaining_property_names)]),
+        )
+
+        result_block = TensorBlock(
+            values=block.values,
+            samples=block.samples,
+            components=block.components,
+            properties=properties,
+        )
+
+        # The gradient does not change because the only thing that matters for
+        # the gradients are the samples to which they are connected, but in this
+        # case there are no samples in the TensorBlock
+        for parameter, gradient in block.gradients():
+            if len(gradient.gradients_list()) != 0:
+                raise NotImplementedError("gradients of gradients are not supported")
+
+            result_block.add_gradient(
+                parameter=parameter,
+                gradient=TensorBlock(
+                    values=gradient.values,
+                    samples=gradient.samples,
+                    components=gradient.components,
+                    properties=gradient.properties,
+                ),
+            )
+
+        return result_block
 
     # get which properties will still be there after reduction
     if len(remaining_property_names) == 0:
