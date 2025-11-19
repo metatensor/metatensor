@@ -1,7 +1,6 @@
 from typing import List, Optional, Union
 
 import numpy as np
-import torch
 
 from . import _dispatch
 from ._backend import (
@@ -16,6 +15,7 @@ from ._backend import (
 def column_add(output_array, input_array, index):
     _dispatch._index_array_checks(index)
     if isinstance(input_array, _dispatch.TorchTensor):
+        import torch
         if not isinstance(index, _dispatch.TorchTensor):
             index = torch.tensor(index).to(device=input_array.device)
 
@@ -246,7 +246,6 @@ def _reduce_over_properties_block(
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
-                    print(f"{new_gradient_properties = }")
                     for i, _ in enumerate(new_gradient_properties):
                         shape = (-1,) + (1,) * (gradient_values_result[..., i].ndim - 1)
                         if torch_jit_is_scripting():
