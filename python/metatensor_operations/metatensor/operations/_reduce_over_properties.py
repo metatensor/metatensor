@@ -12,22 +12,6 @@ from ._backend import (
 )
 
 
-def column_add(output_array, input_array, index):
-    _dispatch._index_array_checks(index)
-    if isinstance(input_array, _dispatch.TorchTensor):
-        import torch
-        if not isinstance(index, _dispatch.TorchTensor):
-            index = torch.tensor(index).to(device=input_array.device)
-
-        _dispatch._check_all_torch_tensor([output_array, input_array, index])
-        output_array.index_add_(-1, index, input_array)
-    elif isinstance(input_array, np.ndarray):
-        _dispatch._check_all_np_ndarray([output_array, input_array, index])
-        np.add.at(output_array, (..., index), input_array)
-    else:
-        raise TypeError(_dispatch.UNKNOWN_ARRAY_TYPE)
-
-
 def _reduce_over_properties_block(
     block: TensorBlock,
     property_names: Union[List[str], str],
@@ -61,11 +45,11 @@ def _reduce_over_properties_block(
 
     remaining_properties = None
     if remaining_properties is None:
-        remaining_property_names = []
-        for s_name in block_properties.names:
-            if s_name in property_names_list:
+        remaining_property_names: List[str] = []
+        for p_name in block_properties.names:
+            if p_name in property_names_list:
                 continue
-            remaining_property_names.append(s_name)
+            remaining_property_names.append(p_name)
     else:
         remaining_property_names = remaining_properties
 
@@ -126,24 +110,24 @@ def _reduce_over_properties_block(
     shape = (block_values.shape)[:-1] + (new_properties.shape[0],)
     values_sum = _dispatch.zeros_like(block_values, shape=shape)
 
-    column_add(values_sum, block_values, index)
+    _dispatch.column_add(values_sum, block_values, index)
 
     values_mean = _dispatch.empty_like(values_sum, [0])
     values_result = _dispatch.empty_like(values_sum, [0])
 
     if reduction == "mean" or reduction == "std" or reduction == "var":
         bincount = _dispatch.make_like(_dispatch.bincount(index), values_sum)
-        bincount = bincount.reshape(
-            tuple(1 if i != 1 else -1 for i, d in enumerate(block_values.shape))
-        )
+        bin_shape = list(block_values.shape)
+        bin_shape = [(-1 if i == 1 else 1) for i in range(len(shape))]
+        bincount = bincount.reshape(bin_shape)
         values_mean = values_sum / bincount
 
         if reduction == "std" or reduction == "var":
             values_var = _dispatch.zeros_like(block_values, shape=shape)
-
-            column_add(
+            _dispatch.column_add(
                 values_var,
-                (block_values - values_mean[..., index]) ** 2,
+                (block_values - _dispatch._slice_over_last_dim(values_mean, index))
+                ** 2,
                 index,
             )
             values_var = values_var / bincount
@@ -208,7 +192,7 @@ def _reduce_over_properties_block(
             gradient_values,
             shape=other_shape + (new_gradient_properties.shape[0],),
         )
-        column_add(gradient_values_result, gradient_values, index_gradient)
+        _dispatch.column_add(gradient_values_result, gradient_values, index_gradient)
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
@@ -227,54 +211,70 @@ def _reduce_over_properties_block(
                     gradient_values,
                     shape=other_shape + (new_gradient_properties.shape[0],),
                 )
-                column_add(
+                _dispatch.column_add(
                     values_grad_result,
                     values_times_gradient_values,
                     index_gradient,
                 )
 
                 values_grad_result = values_grad_result / bincount
+                sample_indices = gradient.samples.values[:, 0]
                 if reduction == "var":
-                    for i, p in enumerate(new_gradient_properties):
-                        shape = (-1,) + (1,) * (gradient_values_result[..., i].ndim - 1)
-                        gradient_values_result[..., i] = gradient_values_result[
-                            ..., i
-                        ] * values_mean[..., int(p[0])][
-                            gradient.samples["sample"]
-                        ].reshape(shape)
+                    for i, _ in enumerate(new_gradient_properties):
+                        shape = (-1,) + (1,) * (gradient_values_result.ndim - 2)
+                        gradient_values_result = _dispatch.scatter_last_dim(
+                            gradient_values_result,
+                            i,
+                            _dispatch._slice_over_last_dim(gradient_values_result, i)
+                            * _dispatch._slice_over_last_dim(values_mean, i)[
+                                sample_indices
+                            ].reshape(shape),
+                        )
                     gradient_values_result = 2 * (
                         values_grad_result - gradient_values_result
                     )
                 else:  # std
                     for i, _ in enumerate(new_gradient_properties):
-                        shape = (-1,) + (1,) * (gradient_values_result[..., i].ndim - 1)
+                        shape = (-1,) + (1,) * (gradient_values_result.ndim - 2)
                         if torch_jit_is_scripting():
-                            gradient_values_result[..., i] = (
-                                values_grad_result[..., i]
-                                - (
-                                    gradient_values_result[..., i]
-                                    * values_mean[..., i][
-                                        gradient.samples["sample"]
-                                    ].reshape(shape)
+                            gradient_values_result = _dispatch.scatter_last_dim(
+                                gradient_values_result,
+                                i,
+                                _dispatch._slice_over_last_dim(
+                                    gradient_values_result, i
                                 )
-                            ) / values_result[..., i][
-                                gradient.samples["sample"]
-                            ].reshape(shape)
+                                * _dispatch._slice_over_last_dim(values_mean, i)[
+                                    sample_indices
+                                ].reshape(shape)
+                                / _dispatch._slice_over_last_dim(values_result, i)[
+                                    sample_indices
+                                ].reshape(shape),
+                            )
                         else:
+                            # no need to be torchscript compatible, let's keep it simple
                             # only numpy raise a warning for division by zero
                             with np.errstate(divide="ignore", invalid="ignore"):
                                 gradient_values_result[..., i] = (
                                     values_grad_result[..., i]
                                     - (
                                         gradient_values_result[..., i]
-                                        * values_mean[..., i][
-                                            gradient.samples["sample"]
-                                        ].reshape(shape)
+                                        * values_mean[..., i][sample_indices].reshape(
+                                            shape
+                                        )
                                     )
-                                ) / values_result[..., i][
-                                    gradient.samples["sample"]
-                                ].reshape(shape)
-
+                                ) / values_result[..., i][sample_indices].reshape(shape)
+                        gradient_values_result = _dispatch.scatter_last_dim(
+                            gradient_values_result,
+                            i,
+                            _dispatch.nan_to_num(
+                                _dispatch._slice_over_last_dim(
+                                    gradient_values_result, i
+                                ),
+                                nan=0.0,
+                                posinf=0.0,
+                                neginf=0.0,
+                            ),
+                        )
                         gradient_values_result[..., i] = _dispatch.nan_to_num(
                             gradient_values_result[..., i],
                             nan=0.0,
@@ -378,7 +378,7 @@ def sum_over_properties_block(
     ...             [4, 6, 9, 12],
     ...         ]
     ...     ),
-    ...     propertys=Labels(
+    ...     samples=Labels(
     ...         ["system", "atom"],
     ...         np.array(
     ...             [
@@ -404,14 +404,14 @@ def sum_over_properties_block(
     >>> block_sum = sum_over_properties_block(block, property_names="j")
     >>> print(block_sum.properties)
     Labels(
-          i
-          0
-          1
+        i
+        0
+        1
     )
     >>> print(block_sum.values)
-    [[ 4, 17]
-     [ 7, 19]
-     [10, 21]]
+    [[ 4 17]
+     [ 7 19]
+     [10 21]]
     """
 
     return _reduce_over_properties_block(
@@ -456,7 +456,7 @@ def sum_over_properties(
     ...             [4, 6, 9, 12],
     ...         ]
     ...     ),
-    ...     propertys=Labels(
+    ...     samples=Labels(
     ...         ["system", "atom"],
     ...         np.array(
     ...             [
@@ -491,14 +491,14 @@ def sum_over_properties(
         gradients: None
     >>> print(tensor_sum.block(0).properties)
     Labels(
-          i
-          0
-          1
+        i
+        0
+        1
     )
     >>> print(tensor_sum.block(0).values)
-    [[ 4, 17],
-     [ 7, 19],
-     [10, 21]]
+    [[ 4 17]
+     [ 7 19]
+     [10 21]]
     """
 
     return _reduce_over_properties(
