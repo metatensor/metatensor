@@ -99,23 +99,24 @@ def test_mean_properties_block():
     )
 
     assert np.allclose(
-        np.mean(bl1.values[..., 1::16], axis=-1), reduce_block_ps.values[..., 1],
+        np.mean(bl1.values[..., 1::16], axis=-1),
+        reduce_block_ps.values[..., 1],
     )
 
     assert np.allclose(
-        np.mean(bl1.values[..., 5::16], axis=-1), reduce_block_ps.values[..., 5],
+        np.mean(bl1.values[..., 5::16], axis=-1),
+        reduce_block_ps.values[..., 5],
     )
-
 
     assert np.allclose(
-        np.mean(bl1.values[..., 8::16], axis=-1), reduce_block_ps.values[..., 8],
+        np.mean(bl1.values[..., 8::16], axis=-1),
+        reduce_block_ps.values[..., 8],
     )
-
 
     assert np.allclose(
-        np.mean(bl1.values[..., 9::16], axis=-1), reduce_block_ps.values[..., 9],
+        np.mean(bl1.values[..., 9::16], axis=-1),
+        reduce_block_ps.values[..., 9],
     )
-
 
     # Test the gradients
     gradient = bl1.gradient("positions").values
@@ -141,10 +142,11 @@ def test_mean_properties_block():
         rtol=1e-13,
     )
 
-    for ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
+    for _, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
         reduce_block_se = mts.mean_over_properties_block(bl2, property_names="n")
         assert np.all(
-            np.mean(bl2.values, axis=-1, keepdims=True)[..., 0] == reduce_block_se.values[..., 0]
+            np.mean(bl2.values, axis=-1, keepdims=True)[..., 0]
+            == reduce_block_se.values[..., 0]
         )
 
 
@@ -250,10 +252,10 @@ def test_reduction_block_two_properties():
                 [33, 55.5, -5.6],
             ]
         ).T,
-        samples=Labels(["p"], np.array([[0], [1], [5]])),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
         components=[],
         properties=Labels(
-            ["samples1", "samples2", "samples3"],
+            ["properties1", "properties2", "properties3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -269,9 +271,15 @@ def test_reduction_block_two_properties():
         ),
     )
 
-    reduce_block_12 = mts.mean_over_properties_block(block_1, property_names=["samples3"])
-    reduce_block_23 = mts.mean_over_properties_block(block_1, property_names="samples1")
-    reduce_block_2 = mts.mean_over_properties_block(block_1, property_names=["samples1", "samples3"])
+    reduce_block_12 = mts.mean_over_properties_block(
+        block_1, property_names=["properties3"]
+    )
+    reduce_block_23 = mts.mean_over_properties_block(
+        block_1, property_names="properties1"
+    )
+    reduce_block_2 = mts.mean_over_properties_block(
+        block_1, property_names=["properties1", "properties3"]
+    )
 
     assert np.allclose(
         np.mean(block_1.values[..., :3], axis=-1),
@@ -312,18 +320,18 @@ def test_reduction_block_two_properties():
     assert reduce_block_23.samples == block_1.samples
     assert reduce_block_2.samples == block_1.samples
 
-    samples_12 = Labels(
-        names=["samples1", "samples2"],
+    properties_12 = Labels(
+        names=["properties1", "properties2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
-    samples_23 = Labels(
-        names=["samples2", "samples3"],
+    properties_23 = Labels(
+        names=["properties2", "properties3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
-    samples_2 = Labels(
-        names=["samples2"],
+    properties_2 = Labels(
+        names=["properties2"],
         values=np.array([[0], [1]]),
     )
-    assert reduce_block_12.properties == samples_12
-    assert reduce_block_23.properties == samples_23
-    assert reduce_block_2.properties == samples_2
+    assert reduce_block_12.properties == properties_12
+    assert reduce_block_23.properties == properties_23
+    assert reduce_block_2.properties == properties_2

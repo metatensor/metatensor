@@ -95,18 +95,10 @@ def test_sum_properties_block():
     reduce_block_ps = mts.sum_over_properties_block(bl1, property_names="l")
 
     assert np.all(np.sum(bl1.values[:, ::16], axis=-1) == reduce_block_ps.values[:, 0])
-    assert np.all(
-        np.sum(bl1.values[:, 2::16], axis=-1) == reduce_block_ps.values[:, 2]
-    )
-    assert np.all(
-        np.sum(bl1.values[:, 5::16], axis=-1) == reduce_block_ps.values[:, 5]
-    )
-    assert np.all(
-        np.sum(bl1.values[:, 8::16], axis=-1) == reduce_block_ps.values[:, 8]
-    )
-    assert np.all(
-        np.sum(bl1.values[:, 9::16], axis=-1) == reduce_block_ps.values[:, 9]
-    )
+    assert np.all(np.sum(bl1.values[:, 2::16], axis=-1) == reduce_block_ps.values[:, 2])
+    assert np.all(np.sum(bl1.values[:, 5::16], axis=-1) == reduce_block_ps.values[:, 5])
+    assert np.all(np.sum(bl1.values[:, 8::16], axis=-1) == reduce_block_ps.values[:, 8])
+    assert np.all(np.sum(bl1.values[:, 9::16], axis=-1) == reduce_block_ps.values[:, 9])
 
     # Test the gradients
     gr1 = tensor_ps[0].gradient("positions").values
@@ -130,13 +122,12 @@ def test_sum_properties_block():
         == reduce_block_ps.gradient("positions").values[..., 14]
     )
 
-
     for _, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
         reduce_block_se = mts.sum_over_properties_block(bl2, property_names=["n"])
         assert np.all(
-            np.sum(bl2.values, axis=-1, keepdims=True)[..., 0] == reduce_block_se.values[..., 0]
+            np.sum(bl2.values, axis=-1, keepdims=True)[..., 0]
+            == reduce_block_se.values[..., 0]
         )
-
 
 
 def test_reduction_block_two_samples():
@@ -241,10 +232,10 @@ def test_reduction_block_two_properties():
                 [33, 55.5, -5.6],
             ]
         ).T,
-        samples=Labels(["p"], np.array([[0], [1], [5]])),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
         components=[],
         properties=Labels(
-            ["samples1", "samples2", "samples3"],
+            ["properties1", "properties2", "properties3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -260,9 +251,15 @@ def test_reduction_block_two_properties():
         ),
     )
 
-    reduce_block_12 = mts.sum_over_properties_block(block_1, property_names="samples3")
-    reduce_block_23 = mts.sum_over_properties_block(block_1, property_names=["samples1"])
-    reduce_block_2 = mts.sum_over_properties_block(block_1, property_names=["samples1", "samples3"])
+    reduce_block_12 = mts.sum_over_properties_block(
+        block_1, property_names="properties3"
+    )
+    reduce_block_23 = mts.sum_over_properties_block(
+        block_1, property_names=["properties1"]
+    )
+    reduce_block_2 = mts.sum_over_properties_block(
+        block_1, property_names=["properties1", "properties3"]
+    )
 
     assert np.all(
         np.sum(block_1.values[..., :3], axis=-1) == reduce_block_12.values[..., 0]
@@ -278,7 +275,8 @@ def test_reduction_block_two_properties():
         np.sum(block_1.values[..., [0, 7]], axis=-1) == reduce_block_23.values[..., 0]
     )
     assert np.all(
-        np.sum(block_1.values[..., [3, 5, 6]], axis=-1) == reduce_block_23.values[..., 4]
+        np.sum(block_1.values[..., [3, 5, 6]], axis=-1)
+        == reduce_block_23.values[..., 4]
     )
 
     assert np.all(block_1.values[..., 1] == reduce_block_23.values[..., 1])
@@ -286,7 +284,8 @@ def test_reduction_block_two_properties():
     assert np.all(block_1.values[..., 4] == reduce_block_23.values[..., 3])
 
     assert np.all(
-        np.sum(block_1.values[..., [0, 1, 2, 7]], axis=-1) == reduce_block_2.values[..., 0]
+        np.sum(block_1.values[..., [0, 1, 2, 7]], axis=-1)
+        == reduce_block_2.values[..., 0]
     )
     assert np.all(
         np.sum(block_1.values[..., 3:7], axis=-1) == reduce_block_2.values[..., 1]
@@ -296,18 +295,18 @@ def test_reduction_block_two_properties():
     assert reduce_block_23.samples == block_1.samples
     assert reduce_block_2.samples == block_1.samples
 
-    samples_12 = Labels(
-        names=["samples1", "samples2"],
+    properties_12 = Labels(
+        names=["properties1", "properties2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
-    samples_23 = Labels(
-        names=["samples2", "samples3"],
+    properties_23 = Labels(
+        names=["properties2", "properties3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
-    samples_2 = Labels(
-        names=["samples2"],
+    properties_2 = Labels(
+        names=["properties2"],
         values=np.array([[0], [1]]),
     )
-    assert reduce_block_12.properties == samples_12
-    assert reduce_block_23.properties == samples_23
-    assert reduce_block_2.properties == samples_2
+    assert reduce_block_12.properties == properties_12
+    assert reduce_block_23.properties == properties_23
+    assert reduce_block_2.properties == properties_2

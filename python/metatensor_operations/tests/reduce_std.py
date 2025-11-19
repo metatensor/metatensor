@@ -350,10 +350,10 @@ def test_reduction_block_two_properties():
                 [4.0, 6.0, 4.54, 6.87, 44.5, 6.45, 4.09, -5.6],
             ]
         ),
-        samples=Labels(["p"], np.array([[0], [1], [5]])),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
         components=[],
         properties=Labels(
-            ["s_1", "s_2", "s_3"],
+            ["p_1", "p_2", "p_3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -372,9 +372,9 @@ def test_reduction_block_two_properties():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = mts.std_over_properties(X, property_names=["s_3"])
-    reduce_X_23 = mts.std_over_properties(X, property_names="s_1")
-    reduce_X_2 = mts.std_over_properties(X, property_names=["s_1", "s_3"])
+    reduce_X_12 = mts.std_over_properties(X, property_names=["p_3"])
+    reduce_X_23 = mts.std_over_properties(X, property_names="p_1")
+    reduce_X_2 = mts.std_over_properties(X, property_names=["p_1", "p_3"])
 
     assert np.allclose(
         np.std(X.block(0).values[..., :3], axis=-1),
@@ -391,7 +391,8 @@ def test_reduction_block_two_properties():
     assert np.all(np.array([0.0]) == reduce_X_12.block(0).values[..., 2])
 
     assert np.all(
-        np.std(X.block(0).values[..., [0, 7]], axis=-1) == reduce_X_23.block(0).values[..., 0]
+        np.std(X.block(0).values[..., [0, 7]], axis=-1)
+        == reduce_X_23.block(0).values[..., 0]
     )
     assert np.allclose(
         np.std(X.block(0).values[..., [3, 5, 6]], axis=-1),
@@ -409,7 +410,8 @@ def test_reduction_block_two_properties():
         rtol=1e-13,
     )
     assert np.all(
-        np.std(X.block(0).values[..., 3:7], axis=-1) == reduce_X_2.block(0).values[..., 1]
+        np.std(X.block(0).values[..., 3:7], axis=-1)
+        == reduce_X_2.block(0).values[..., 1]
     )
 
     # check metadata
@@ -418,15 +420,15 @@ def test_reduction_block_two_properties():
     assert reduce_X_2.block(0).samples == X.block(0).samples
 
     properties_12 = Labels(
-        names=["s_1", "s_2"],
+        names=["p_1", "p_2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
     properties_23 = Labels(
-        names=["s_2", "s_3"],
+        names=["p_2", "p_3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
     properties_2 = Labels(
-        names=["s_2"],
+        names=["p_2"],
         values=np.array([[0], [1]]),
     )
     assert reduce_X_12.block(0).properties == properties_12
@@ -522,7 +524,7 @@ def test_reduction_of_one_element_properties():
     # Gradients
     grad_properties_label = Labels(["s_2"], np.array([[0], [1], [2]]))
 
-    # assert std_X[0].gradient("g").properties == grad_properties_label
+    assert std_X[0].gradient("g").properties == grad_properties_label
     assert np.all(X[0].gradient("g").values == add_X[0].gradient("g").values)
     assert np.all(X[0].gradient("g").values == mean_X[0].gradient("g").values)
     assert np.all(np.zeros((3, 3)) == std_X[0].gradient("g").values)

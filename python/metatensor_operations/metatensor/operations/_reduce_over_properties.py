@@ -12,8 +12,6 @@ from ._backend import (
     torch_jit_script,
 )
 
-from typing import Union, List, Optional
-
 
 def column_add(output_array, input_array, index):
     _dispatch._index_array_checks(index)
@@ -46,7 +44,8 @@ def _reduce_over_properties_block(
     :param block:
         input block
     :param property_names:
-        names of properties to reduce over. it is ignored if remaining_properties is given
+        names of properties to reduce over. it is ignored if remaining_properties is
+        given
     :param remaining_properties:
         names of properties that should remain after reducing reduce over.
         it is computed automatically from property_names if missing or set to None
@@ -242,9 +241,7 @@ def _reduce_over_properties_block(
                             ..., i
                         ] * values_mean[..., int(p[0])][
                             gradient.samples["sample"]
-                        ].reshape(
-                            shape
-                        )
+                        ].reshape(shape)
                     gradient_values_result = 2 * (
                         values_grad_result - gradient_values_result
                     )
@@ -263,9 +260,7 @@ def _reduce_over_properties_block(
                                 )
                             ) / values_result[..., i][
                                 gradient.samples["sample"]
-                            ].reshape(
-                                shape
-                            )
+                            ].reshape(shape)
                         else:
                             # only numpy raise a warning for division by zero
                             with np.errstate(divide="ignore", invalid="ignore"):
@@ -279,9 +274,7 @@ def _reduce_over_properties_block(
                                     )
                                 ) / values_result[..., i][
                                     gradient.samples["sample"]
-                                ].reshape(
-                                    shape
-                                )
+                                ].reshape(shape)
 
                         gradient_values_result[..., i] = _dispatch.nan_to_num(
                             gradient_values_result[..., i],
@@ -432,7 +425,8 @@ def sum_over_properties(
     tensor: TensorMap, property_names: Union[List[str], str]
 ) -> TensorMap:
     """
-    Sum a :py:class:`TensorMap`, combining the properties according to ``property_names``.
+    Sum a :py:class:`TensorMap`, combining the properties according to
+    ``property_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys
     as as the input ``tensor``. Each :py:class:`TensorBlock` is obtained summing the
@@ -540,13 +534,13 @@ def mean_over_properties_block(
 def mean_over_properties(
     tensor: TensorMap, property_names: Union[str, List[str]]
 ) -> TensorMap:
-    """Compute the mean of a :py:class:`TensorMap`, combining the properties according to
-    ``property_names``.
+    """Compute the mean of a :py:class:`TensorMap`, combining the properties according
+    to ``property_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
-    as the input ``tensor``, and each :py:class:`TensorBlock` is obtained
-    averaging the corresponding input :py:class:`TensorBlock` over the ``property_names``
-    indices.
+    the input ``tensor``, and each :py:class:`TensorBlock` is obtained
+    averaging the corresponding input :py:class:`TensorBlock` over the
+    ``property_names`` indices.
 
     ``property_names`` indicates over which dimensions in the properties the mean is
     performed. It accept either a single string or a list of the string with the
@@ -593,8 +587,8 @@ def std_over_properties_block(
 def std_over_properties(
     tensor: TensorMap, property_names: Union[str, List[str]]
 ) -> TensorMap:
-    r"""Compute the standard deviation of a :py:class:`TensorMap`, combining the properties
-    according to ``property_names``.
+    r"""Compute the standard deviation of a :py:class:`TensorMap`, combining the
+    properties according to ``property_names``.
 
     This function creates a new :py:class:`TensorMap` with the same keys as
     as the input ``tensor``, and each :py:class:`TensorBlock` is obtained

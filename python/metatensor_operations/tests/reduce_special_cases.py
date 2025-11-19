@@ -115,8 +115,12 @@ def test_reduction_all_properties():
         assert mts.equal_metadata(sum_X, std_X)
         assert mts.equal_metadata(mean_X, var_X)
 
-        assert torch.all(sum_X[0].values == torch.sum(X[0].values, axis=1, keepdims=True))
-        assert torch.all(mean_X[0].values == torch.mean(X[0].values, axis=1, keepdims=True))
+        assert torch.all(
+            sum_X[0].values == torch.sum(X[0].values, axis=1, keepdims=True)
+        )
+        assert torch.all(
+            mean_X[0].values == torch.mean(X[0].values, axis=1, keepdims=True)
+        )
         assert torch.allclose(
             std_X[0].values, torch.std(X[0].values, correction=0, axis=1, keepdims=True)
         )

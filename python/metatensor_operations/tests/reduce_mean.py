@@ -115,27 +115,29 @@ def test_mean_properties_block():
     reduce_tensor_ps = mts.mean_over_properties(tensor_ps, property_names=["l"])
 
     assert np.allclose(
-        np.mean(bl1.values[..., ::16], axis=-1), reduce_tensor_ps.block(0).values[..., 0]
+        np.mean(bl1.values[..., ::16], axis=-1),
+        reduce_tensor_ps.block(0).values[..., 0],
     )
 
     assert np.allclose(
-        np.mean(bl1.values[..., 1::16], axis=-1), reduce_tensor_ps.block(0).values[..., 1],
+        np.mean(bl1.values[..., 1::16], axis=-1),
+        reduce_tensor_ps.block(0).values[..., 1],
     )
 
     assert np.allclose(
-        np.mean(bl1.values[..., 5::16], axis=-1), reduce_tensor_ps.block(0).values[..., 5],
+        np.mean(bl1.values[..., 5::16], axis=-1),
+        reduce_tensor_ps.block(0).values[..., 5],
     )
-
 
     assert np.allclose(
-        np.mean(bl1.values[..., 8::16], axis=-1), reduce_tensor_ps.block(0).values[..., 8],
+        np.mean(bl1.values[..., 8::16], axis=-1),
+        reduce_tensor_ps.block(0).values[..., 8],
     )
-
 
     assert np.allclose(
-        np.mean(bl1.values[..., 9::16], axis=-1), reduce_tensor_ps.block(0).values[..., 9],
+        np.mean(bl1.values[..., 9::16], axis=-1),
+        reduce_tensor_ps.block(0).values[..., 9],
     )
-
 
     # Test the gradients
     gradient = tensor_ps[0].gradient("positions").values
@@ -163,7 +165,8 @@ def test_mean_properties_block():
 
     for ii, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
         assert np.all(
-            np.mean(bl2.values, axis=-1, keepdims=True)[..., 0] == reduce_tensor_se.block(ii).values[..., 0]
+            np.mean(bl2.values, axis=-1, keepdims=True)[..., 0]
+            == reduce_tensor_se.block(ii).values[..., 0]
         )
 
 
@@ -277,10 +280,10 @@ def test_reduction_block_two_properties():
                 [33, 55.5, -5.6],
             ]
         ).T,
-        samples=Labels(["p"], np.array([[0], [1], [5]])),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
         components=[],
         properties=Labels(
-            ["samples1", "samples2", "samples3"],
+            ["properties1", "properties2", "properties3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -299,9 +302,11 @@ def test_reduction_block_two_properties():
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0]]))
     X = TensorMap(keys, [block_1])
 
-    reduce_X_12 = mts.mean_over_properties(X, property_names=["samples3"])
-    reduce_X_23 = mts.mean_over_properties(X, property_names="samples1")
-    reduce_X_2 = mts.mean_over_properties(X, property_names=["samples1", "samples3"])
+    reduce_X_12 = mts.mean_over_properties(X, property_names=["properties3"])
+    reduce_X_23 = mts.mean_over_properties(X, property_names="properties1")
+    reduce_X_2 = mts.mean_over_properties(
+        X, property_names=["properties1", "properties3"]
+    )
 
     assert np.allclose(
         np.mean(X.block(0).values[..., :3], axis=-1),
@@ -310,14 +315,16 @@ def test_reduction_block_two_properties():
     )
 
     assert np.all(
-        np.mean(X.block(0).values[..., 3:5], axis=-1) == reduce_X_12.block(0).values[..., 1]
+        np.mean(X.block(0).values[..., 3:5], axis=-1)
+        == reduce_X_12.block(0).values[..., 1]
     )
     assert np.all(X.block(0).values[..., 5] == reduce_X_12.block(0).values[..., 4])
     assert np.all(X.block(0).values[..., 6] == reduce_X_12.block(0).values[..., 3])
     assert np.all(X.block(0).values[..., 7] == reduce_X_12.block(0).values[..., 2])
 
     assert np.all(
-        np.mean(X.block(0).values[..., [0, 7]], axis=-1) == reduce_X_23.block(0).values[..., 0]
+        np.mean(X.block(0).values[..., [0, 7]], axis=-1)
+        == reduce_X_23.block(0).values[..., 0]
     )
     assert np.allclose(
         np.mean(X.block(0).values[..., [3, 5, 6]], axis=-1),
@@ -334,7 +341,8 @@ def test_reduction_block_two_properties():
         == reduce_X_2.block(0).values[..., 0]
     )
     assert np.all(
-        np.mean(X.block(0).values[..., 3:7], axis=-1) == reduce_X_2.block(0).values[..., 1]
+        np.mean(X.block(0).values[..., 3:7], axis=-1)
+        == reduce_X_2.block(0).values[..., 1]
     )
 
     # check metadata
@@ -342,18 +350,18 @@ def test_reduction_block_two_properties():
     assert reduce_X_23.block(0).samples == X.block(0).samples
     assert reduce_X_2.block(0).samples == X.block(0).samples
 
-    samples_12 = Labels(
-        names=["samples1", "samples2"],
+    properties_12 = Labels(
+        names=["properties1", "properties2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
-    samples_23 = Labels(
-        names=["samples2", "samples3"],
+    properties_23 = Labels(
+        names=["properties2", "properties3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
-    samples_2 = Labels(
-        names=["samples2"],
+    properties_2 = Labels(
+        names=["properties2"],
         values=np.array([[0], [1]]),
     )
-    assert reduce_X_12.block(0).properties == samples_12
-    assert reduce_X_23.block(0).properties == samples_23
-    assert reduce_X_2.block(0).properties == samples_2
+    assert reduce_X_12.block(0).properties == properties_12
+    assert reduce_X_23.block(0).properties == properties_23
+    assert reduce_X_2.block(0).properties == properties_2

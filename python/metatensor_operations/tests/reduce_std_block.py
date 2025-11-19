@@ -343,10 +343,10 @@ def test_reduction_block_two_properties():
                 [4.0, 6.0, 4.54, 6.87, 44.5, 6.45, 4.09, -5.6],
             ]
         ),
-        samples=Labels(["p"], np.array([[0], [1], [5]])),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
         components=[],
         properties=Labels(
-            ["s_1", "s_2", "s_3"],
+            ["p_1", "p_2", "p_3"],
             np.array(
                 [
                     [0, 0, 0],
@@ -362,9 +362,9 @@ def test_reduction_block_two_properties():
         ),
     )
 
-    reduce_bl_12 = mts.std_over_properties_block(block_1, property_names=["s_3"])
-    reduce_bl_23 = mts.std_over_properties_block(block_1, property_names="s_1")
-    reduce_bl_2 = mts.std_over_properties_block(block_1, property_names=["s_1", "s_3"])
+    reduce_bl_12 = mts.std_over_properties_block(block_1, property_names=["p_3"])
+    reduce_bl_23 = mts.std_over_properties_block(block_1, property_names="p_1")
+    reduce_bl_2 = mts.std_over_properties_block(block_1, property_names=["p_1", "p_3"])
 
     assert np.allclose(
         np.std(block_1.values[..., :3], axis=-1),
@@ -408,15 +408,15 @@ def test_reduction_block_two_properties():
     assert reduce_bl_2.samples == block_1.samples
 
     properties_12 = Labels(
-        names=["s_1", "s_2"],
+        names=["p_1", "p_2"],
         values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
     )
     properties_23 = Labels(
-        names=["s_2", "s_3"],
+        names=["p_2", "p_3"],
         values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
     )
     properties_2 = Labels(
-        names=["s_2"],
+        names=["p_2"],
         values=np.array([[0], [1]]),
     )
     assert reduce_bl_12.properties == properties_12
