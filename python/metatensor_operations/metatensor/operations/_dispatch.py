@@ -757,6 +757,7 @@ def sign(array):
 
 
 def _slice_over_last_dim(array, index: Union[int, TorchTensor]):
+    """Equivalent to array[..., index]"""
     if isinstance(array, TorchTensor):
         if isinstance(index, int):
             index = torch.tensor([index]).to(device=array.device)
