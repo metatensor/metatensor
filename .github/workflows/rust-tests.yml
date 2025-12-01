@@ -91,7 +91,7 @@ jobs:
           apt install -y software-properties-common
           apt install -y cmake make gcc g++ git curl
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -143,10 +143,10 @@ jobs:
     runs-on: ubuntu-24.04
     name: check C API declarations
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
           enable-cache: true
@@ -194,7 +194,7 @@ jobs:
     name: check leftover debug print
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: install ripgrep
         run: |

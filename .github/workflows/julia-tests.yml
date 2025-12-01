@@ -31,7 +31,7 @@ jobs:
           # - os: windows-2022
           #   julia-version: "1.9"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
