@@ -22,8 +22,8 @@ def _reduce_over_properties_block(
     Create a new :py:class:`TensorBlock` reducing the ``properties`` among the
     selected ``properties``.
 
-    The output :py:class:`TensorBlocks` have the same components of the input
-    one. "sum", "mean", "std" or "var" reductions can be performed.
+    The output :py:class:`TensorBlocks` have the same components as the input.
+    "sum", "mean", "std" or "var" reductions can be performed.
 
     :param block:
         input block
