@@ -52,7 +52,7 @@ jobs:
 
           update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -72,7 +72,7 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
           enable-cache: true
