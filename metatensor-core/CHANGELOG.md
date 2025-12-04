@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.18](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.18) - 2025-12-04
+
 ### Added
 
 - It is now possible to store and retrieve global metatadata about a TensorMap,
