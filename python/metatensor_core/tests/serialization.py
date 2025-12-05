@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import pickle
 from pathlib import Path
@@ -124,6 +125,7 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             else:
                 buffer = tensor.save_buffer(use_numpy=use_numpy)
 
+            size = len(buffer)
             file = io.BytesIO(buffer)
 
         else:
@@ -133,6 +135,9 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             else:
                 tensor.save(file, use_numpy=use_numpy)
 
+            size = os.path.getsize(file)
+
+        assert size == 8718
         data = np.load(file)
 
     assert len(data.keys()) == 29
@@ -581,3 +586,20 @@ def test_save_block_buffer(block):
     assert loaded.samples == block.samples
     assert loaded.components[0] == block.components[0]
     assert loaded.properties == block.properties
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_save_load_info(tensor, use_numpy):
+    tensor.set_info("test", "value")
+
+    buffer = mts.io.save_buffer(tensor, use_numpy=use_numpy)
+    assert len(buffer) == 8853
+
+    data = np.load(io.BytesIO(buffer))
+
+    assert json.loads(data["info.json"].decode("utf8")) == {"test": "value"}
+
+    # check that loading back works both with and without numpy
+    for use_numpy_load in (False, True):
+        loaded = mts.io.load_buffer(buffer, use_numpy=use_numpy_load)
+        assert loaded.get_info("test") == "value"
