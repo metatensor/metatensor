@@ -10,12 +10,12 @@ import numpy as np
 from . import data
 from ._c_api import c_uintptr_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
+from ._html_stylesheet import _stylesheet
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
 from .labels import Labels, LabelsEntry
 from .status import _check_pointer
 from .utils import _to_arguments_parse
-
 
 class TensorMap:
     """
@@ -154,6 +154,71 @@ class TensorMap:
 
     def __str__(self) -> str:
         return self.print(-1)
+    
+    def _repr_html_(self) -> str:
+        # Find out the number of keys and blocks, and whether we should use the plural.
+        n_keys = len(self.keys.names)
+        plural_keys = "s" if n_keys != 1 else ""
+        n_blocks = len(self)
+        plural_blocks = "s" if n_blocks != 1 else ""
+
+        def _get_html_block(keys: Labels, block: TensorBlock, wrapper_class: str = "") -> str:
+            """
+            HTML for each TensorBlock in the TensorMap.
+
+            It contains not only the TensorBlock representation but also
+            the keys that map to that particular block.  
+            """
+
+            return f"""
+            <div class="tensormap-blockrow {wrapper_class}">
+            <details> 
+                <summary>
+                    <div class='tensormap-keysheader'>
+                        {tuple(keys.values.tolist())}
+                    </div>
+                    <div class='tensormap-blockheader'> {block._short_repr().replace('<', '&lt').replace('>', '&gt')}</div>
+                </summary>
+                <div class='tensormap-blockcollapsible'>
+                    <div class='tensormap-blockkeys'>
+                        {''.join('<div>' + k + ": " + str(v) + '</div>' for k, v in zip(keys.names, keys.values))}
+                    </div>
+                    <div class='tensormap-blockrepr'>
+                        {block._repr_html_(add_stylesheet=False)}
+                    </div>
+                </div>
+            </details>
+            </div>
+            """
+
+        def _get_html_blocks():
+            html = ""
+            i = 0
+            # Go block by block and include it in the string.
+            for keys, block in self.items():
+                
+                oddclass = "odd" if i % 2 == 0 else "even"
+                firstlast = {0: "first", n_blocks - 1: "last"}.get(i, "")
+            
+                html += _get_html_block(keys, block, wrapper_class=oddclass + " " + firstlast)
+
+                i += 1
+
+            return html
+
+        return f"""
+        <div class='tensormap-container'>
+            <div class='tensormap-header'>metatensor.{self.__class__.__name__}</div>
+            <div class='tensormap-keyscontainer'>{n_keys} key{plural_keys}: ({', '.join(self.keys.names)}{',' if n_keys == 1 else ''})</div>
+            <div class='tensormap-blockscontainer'>
+                <div style='padding:0 0 5px 0'>{len(self)} block{plural_blocks}:</div>
+                <div class='tensormap-blockslist'>
+                    {_get_html_blocks()}
+                </div>
+            </div>
+        </div>
+        <style>{_stylesheet}</style>
+        """
 
     def __getitem__(self, selection) -> TensorBlock:
         """This is equivalent to self.block(selection)"""
@@ -653,10 +718,50 @@ class TensorMap:
         :param max_keys: how many keys to include in the output. Use ``-1`` to include
             all keys.
         """
+        # Find out the number of keys and blocks, and whether we should use the plural.
+        n_keys = len(self.keys.names)
+        plural_keys = "s" if n_keys != 1 else ""
+        n_blocks = len(self)
+        plural_blocks = "s" if n_blocks != 1 else ""
 
-        result = f"TensorMap with {len(self)} blocks\nkeys:"
-        result += self.keys.print(max_entries=max_keys, indent=5)
-        return result
+        # Write the repr until the part where the blocks are listed
+        repr_ = f"<{self.__class__.__name__}"
+        repr_ += f"\n    {n_keys} key{plural_keys}: ({', '.join(self.keys.names)}{',' if n_keys == 1 else ''})"
+        repr_ += f"\n    {n_blocks} block{plural_blocks}:"
+
+        # Determine the real max keys (the minimum is 2)
+        if max_keys < 0:
+            max_keys = n_blocks
+        max_keys = max(2, max_keys)
+        
+        # Find out how many blocks are we going to display before and after "..."
+        if max_keys < n_blocks:
+            n_after = max_keys // 2
+            n_before = max_keys - n_after
+        else:
+            n_before = n_blocks + 1
+            n_after = 0
+
+        # Go block by block and include it in the string.
+        i = 0
+        while i < n_blocks:
+            keys = self.keys[i]
+            block = self.block_by_id(i)
+            repr_ += f"\n      {tuple(keys.values.tolist())}: {block._short_repr()}"
+
+            if i == n_before - 1:
+                # We are done printing the blocks before "..."
+                # Write "..." and then move on to the final blocks (skip hidden ones).
+                repr_ += f"\n      ..."
+                i = n_blocks - n_after
+            else:
+                # If no special condition, just move to next block
+                i += 1
+
+        # Finalize the repr
+        repr_ += "\n>"
+
+        return repr_
 
     @property
     def device(self) -> Device:
