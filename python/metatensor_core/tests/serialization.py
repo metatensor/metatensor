@@ -124,6 +124,7 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             else:
                 buffer = tensor.save_buffer(use_numpy=use_numpy)
 
+            size = len(buffer)
             file = io.BytesIO(buffer)
 
         else:
@@ -133,6 +134,9 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             else:
                 tensor.save(file, use_numpy=use_numpy)
 
+            size = os.path.getsize(file)
+
+        assert size == 8718
         data = np.load(file)
 
     assert len(data.keys()) == 29
