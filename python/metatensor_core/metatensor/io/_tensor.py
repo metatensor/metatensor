@@ -1,7 +1,9 @@
 import ctypes
 import io
+import json
 import pathlib
 import warnings
+import zipfile
 from typing import BinaryIO, Union
 
 import numpy as np
@@ -157,6 +159,14 @@ def _save_tensor(
                 np.savez(fd, **all_entries)
         else:
             np.savez(file, **all_entries)
+
+        info = tensor.info()
+        if len(info) > 0:
+            with zipfile.ZipFile(file, mode="a") as zf:
+                with zf.open("info.json", mode="w", force_zip64=True) as info_file:
+                    info_str = json.dumps(info, indent=2)
+                    info_file.write(info_str.encode("utf8"))
+
     else:
         lib = _get_library()
         if isinstance(file, str):
@@ -220,4 +230,11 @@ def _tensor_from_mts(file):
         block = _single_block_from_mts(prefix, dictionary, properties)
         blocks.append(block)
 
-    return TensorMap(keys, blocks)
+    tensor = TensorMap(keys, blocks)
+
+    if "info.json" in dictionary:
+        info_json = dictionary["info.json"].decode("utf8")
+        for name, value in json.loads(info_json).items():
+            tensor.set_info(str(name), str(value))
+
+    return tensor
