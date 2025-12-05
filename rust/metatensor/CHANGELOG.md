@@ -15,6 +15,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.3) - 2025-12-05
+
 ### Added
 
 - It is now possible to store and retrieve global metatadata about a TensorMap,
