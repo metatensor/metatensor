@@ -12,6 +12,9 @@ except ImportError:
 
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
+from metatensor.operations import _dispatch
+
+from . import _gradcheck
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -343,3 +346,68 @@ def test_zeros_property_block_gradient():
     assert mts.equal_metadata(tensor_sum, tensor_mean)
     assert mts.equal_metadata(tensor_sum, tensor_var)
     assert mts.equal_metadata(tensor_sum, tensor_std)
+
+
+def tensor_for_finite_differences(array, parameter) -> TensorMap:
+    """
+    Creates a TensorMap from a set of cartesian vectors according to the function:
+
+    .. math::
+
+        f(x, y, z) = x^3 + y^3 + z^3
+
+        \\nabla f = (3x^2, 3y^2, 3z^2)
+
+    The gradients are stored with the given ``parameter`` name.
+    """
+    n_samples = array.shape[0]
+    n_properties = array.shape[-1]
+    assert array.shape == (n_samples, 3, n_properties)
+
+    values = _dispatch.sum(array**3, axis=1)
+    values_grad = 3 * array**2
+
+    block = mts.TensorBlock(
+        values,
+        Labels.range("s", 10),
+        [],
+        Labels(
+            ["p_1", "p_2"], np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]])
+        ),
+    )
+    block.add_gradient(
+        parameter=parameter,
+        gradient=TensorBlock(
+            values=values_grad.reshape(n_samples, 3, n_properties),
+            samples=Labels.range("sample", len(values)),
+            components=[Labels.range("xyz", 3)],
+            properties=block.properties,
+        ),
+    )
+
+    return TensorMap(Labels.range("_", 1), [block])
+
+
+def test_finite_difference():
+    def sum(array):
+        tensor = tensor_for_finite_differences(array, parameter="g")
+        return mts.sum_over_properties(tensor, "p_1")
+
+    def mean(array):
+        tensor = tensor_for_finite_differences(array, parameter="g")
+        return mts.mean_over_properties(tensor, "p_1")
+
+    def var(array):
+        tensor = tensor_for_finite_differences(array, parameter="g")
+        return mts.var_over_properties(tensor, "p_1")
+
+    def std(array):
+        tensor = tensor_for_finite_differences(array, parameter="g")
+        return mts.std_over_properties(tensor, "p_1")
+
+    rng = np.random.default_rng(seed=123456)
+    array = rng.random((10, 3, 6))
+    _gradcheck.check_finite_differences(sum, array, parameter="g")
+    _gradcheck.check_finite_differences(mean, array, parameter="g")
+    _gradcheck.check_finite_differences(var, array, parameter="g")
+    _gradcheck.check_finite_differences(std, array, parameter="g")
