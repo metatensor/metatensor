@@ -47,6 +47,10 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 endif()
 
 function(check_compatible_versions _actual_ _requested_)
+    if(${_actual_} VERSION_LESS ${_requested_})
+        message(FATAL_ERROR "Incompatible versions: we need ${_requested_}, but we got ${_actual_}")
+    endif()
+
     if(${_actual_} MATCHES "^([0-9]+)\\.([0-9]+)")
         set(_actual_major_ "${CMAKE_MATCH_1}")
         set(_actual_minor_ "${CMAKE_MATCH_2}")
@@ -81,7 +85,7 @@ if (NOT "$ENV{METATENSOR_NO_LOCAL_DEPS}" STREQUAL "1")
 else()
     set(METATENSOR_CORE_FULL_VERSION ${REQUIRED_METATENSOR_VERSION})
 endif()
-string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*)\\.([0-9]*).*" "\\1.\\2.\\3" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
 
 # Either metatensor is built as part of the same CMake project, or we try to
 # find the corresponding CMake package
