@@ -25,7 +25,7 @@ jobs:
       CXX: clang++-${{ matrix.llvm-version }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: setup LLVM
         run: |
@@ -35,10 +35,12 @@ jobs:
             sudo apt-get update
             sudo apt install --no-install-recommends clang-${{ matrix.llvm-version }}
 
-      - name: setup Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
+          enable-cache: true
+          activate-environment: true
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -52,14 +54,19 @@ jobs:
 
       - name: install python dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox coverage
+          uv tool install tox --with tox-uv
+          uv pip install coverage
 
       - name: cache tox environments
         uses: actions/cache@v4
         with:
           path: .tox
           key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
+
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
 
       - name: setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -93,7 +100,7 @@ jobs:
             --output-path rust_codecov.json
         env:
             # Use the CPU only version of torch when building/running the code
-            PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+            UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
 
       - name: upload to codecov.io
         uses: codecov/codecov-action@v5

@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            torch-version: "2.8"
+            torch-version: "2.9"
             python-version: "3.13"
             cargo-test-flags: --release
             do-valgrind: true
@@ -33,12 +33,12 @@ jobs:
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
           - os: macos-15
-            torch-version: "2.8"
+            torch-version: "2.9"
             python-version: "3.13"
             cargo-test-flags: --release
 
           - os: windows-2022
-            torch-version: "2.8"
+            torch-version: "2.9"
             python-version: "3.13"
             cargo-test-flags: --release
     steps:
@@ -52,7 +52,7 @@ jobs:
 
           update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -65,17 +65,22 @@ jobs:
         with:
           toolchain: stable
 
-      # we get torch from pip to run the C++ test
-      - name: setup Python
-        if: matrix.container != 'ubuntu:22.04'
-        uses: actions/setup-python@v6
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
-          python-version: ${{ matrix.python-version }}
+          sweep-cache: true
+
+      # we get torch from pip to run the C++ test
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          activate-environment: true
 
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
-          sudo apt-get update
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
@@ -95,5 +100,6 @@ jobs:
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}

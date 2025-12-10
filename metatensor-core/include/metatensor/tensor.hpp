@@ -2,8 +2,11 @@
 
 #include <cassert>
 #include <cstring>
+
 #include <string>
 #include <vector>
+#include <optional>
+#include <string_view>
 
 #include <metatensor.h>
 
@@ -12,6 +15,96 @@
 #include "./block.hpp"
 
 namespace metatensor {
+
+namespace details {
+
+/// An iterator for TensorMap info key/values.
+///
+/// This class is not intended for direct usage, only through the
+/// `TensorMap::info()` function. The iterator yields
+/// `std::pair<std::string_view, std::string_view>`.
+///
+/// This class and any element obtained by iteration are only valid as long as
+/// the underlying `TensorMap` is alive, and no changes are made to the info
+/// map. If you need to keep the data longer, you should make a copy of the key
+/// and value strings.
+///
+/// ```cpp
+/// for (auto [key, value]: tensor_map.info()) {
+///     // do something with key and value
+/// }
+/// ```
+class TensorMapInfo {
+public:
+    /// @private Create an iterator for the given `tensor`
+    explicit TensorMapInfo(mts_tensormap_t* tensor) : tensor_(tensor) {
+        details::check_status(mts_tensormap_info_keys(
+            tensor_,
+            &keys_,
+            &count_
+        ));
+    }
+
+    /// @private
+    class iterator {
+    public:
+        // iterator traits
+        using difference_type = std::ptrdiff_t;
+        using value_type = std::pair<std::string_view, std::string_view>;
+        using pointer = const value_type*;
+        using reference = value_type;
+        using iterator_category = std::forward_iterator_tag;
+
+        iterator& operator++() {
+            index_ += 1;
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator retval = *this;
+            ++(*this);
+            return retval;
+        }
+
+        bool operator==(iterator other) const {
+            return tensor_ == other.tensor_ && index_ == other.index_;
+        }
+
+        bool operator!=(iterator other) const {return !(*this == other);}
+
+        value_type operator*() {
+            const char* value = nullptr;
+            details::check_status(mts_tensormap_get_info(tensor_, keys_[index_], &value));
+            return std::pair(keys_[index_], value);
+        }
+
+    private:
+        friend class TensorMapInfo;
+        iterator(mts_tensormap_t* tensor, const char* const* keys, uintptr_t index):
+            tensor_(tensor), keys_(keys), index_(index) {}
+
+        mts_tensormap_t* tensor_;
+        const char* const* keys_;
+        uintptr_t index_;
+    };
+
+    /// Get an iterator for the first element of the `TensorMap` info
+    iterator begin() const {
+        return iterator(tensor_, keys_, 0);
+    }
+
+    /// Get an iterator for the last element of the `TensorMap` info
+    iterator end() const {
+        return iterator(tensor_, nullptr, count_);
+    }
+
+private:
+    mts_tensormap_t* tensor_;
+    const char* const* keys_;
+    uintptr_t count_;
+};
+
+}
 
 /// A TensorMap is the main user-facing class of this library, and can store any
 /// kind of data used in atomistic machine learning.
@@ -186,8 +279,8 @@ public:
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
-    TensorMap keys_to_properties(const std::string& key_to_move, bool sort_samples = true) const {
-        return keys_to_properties(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_properties(std::string key_to_move, bool sort_samples = true) const {
+        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, sort_samples);
     }
 
     /// Merge blocks with the same value for selected keys dimensions along the
@@ -231,8 +324,8 @@ public:
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
-    TensorMap keys_to_samples(const std::string& key_to_move, bool sort_samples = true) const {
-        return keys_to_samples(std::vector<std::string>{key_to_move}, sort_samples);
+    TensorMap keys_to_samples(std::string key_to_move, bool sort_samples = true) const {
+        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, sort_samples);
     }
 
     /// Move the given `dimensions` from the component labels to the property
@@ -382,6 +475,28 @@ public:
     /// Create a C++ TensorMap from a C `mts_tensormap_t` pointer. The C++
     /// tensor map takes ownership of the C pointer.
     explicit TensorMap(mts_tensormap_t* tensor): tensor_(tensor) {}
+
+    /// Set or update the info `value` associated with `key` for this `TensorMap`.
+    void set_info(const std::string& key, const std::string& value) {
+        details::check_status(mts_tensormap_set_info(tensor_, key.c_str(), value.c_str()));
+    }
+
+    /// Get the info value associated with `key` for this `TensorMap`.
+    std::optional<std::string> get_info(const std::string& key) const {
+        const char* value = nullptr;
+        details::check_status(mts_tensormap_get_info(tensor_, key.c_str(), &value));
+
+        if (value == nullptr) {
+            return std::nullopt;
+        } else {
+            return std::string(value);
+        }
+    }
+
+    /// Get an iterator over all the info key/values for this `TensorMap`.
+    details::TensorMapInfo info() const {
+        return details::TensorMapInfo(this->tensor_);
+    }
 
 private:
     mts_tensormap_t* tensor_;

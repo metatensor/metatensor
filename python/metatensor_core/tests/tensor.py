@@ -570,3 +570,24 @@ def test_to():
                 moved = tensor.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type
+
+
+def test_info(tensor):
+    assert tensor.info() == {}
+
+    tensor.set_info("creator", "unit test")
+    tensor.set_info("description", "a test tensor map")
+
+    assert tensor.get_info("creator") == "unit test"
+    assert tensor.get_info("description") == "a test tensor map"
+
+    expected_info = {"creator": "unit test", "description": "a test tensor map"}
+    assert tensor.info() == expected_info
+
+    tensor.set_info("description", "an updated description")
+    assert tensor.get_info("description") == "an updated description"
+
+    expected_info = {"creator": "unit test", "description": "an updated description"}
+    assert tensor.info() == expected_info
+
+    assert tensor.get_info("missing") is None

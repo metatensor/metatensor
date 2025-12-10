@@ -336,6 +336,30 @@ function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_mov
     )
 end
 
+function mts_tensormap_set_info(tensor::Ptr{mts_tensormap_t}, key::Ptr{Cchar}, value::Ptr{Cchar})
+    ccall((:mts_tensormap_set_info, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Cchar}, Ptr{Cchar},),
+        tensor, key, value
+    )
+end
+
+function mts_tensormap_get_info(tensor::Ptr{mts_tensormap_t}, key::Ptr{Cchar}, value::Ptr{Ptr{Cchar}})
+    ccall((:mts_tensormap_get_info, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Cchar}, Ptr{Ptr{Cchar}},),
+        tensor, key, value
+    )
+end
+
+function mts_tensormap_info_keys(tensor::Ptr{mts_tensormap_t}, keys::Ptr{Ptr{Ptr{Cchar}}}, keys_count::Ptr{UIntptr})
+    ccall((:mts_tensormap_info_keys, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Ptr{Ptr{Cchar}}}, Ptr{UIntptr},),
+        tensor, keys, keys_count
+    )
+end
+
 function mts_labels_load(path::Ptr{Cchar}, labels::Ptr{mts_labels_t})
     ccall((:mts_labels_load, libmetatensor), 
         mts_status_t,

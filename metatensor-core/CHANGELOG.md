@@ -17,6 +17,21 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.18](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.18) - 2025-12-04
+
+### Added
+
+- It is now possible to store and retrieve global metatadata about a TensorMap,
+  in the form of string key/value pairs. The following API are available to
+  manipulate this information:
+
+  - in C, you can use `mts_tensormap_set_info`, `mts_tensormap_get_info` and
+    `mts_tensormap_info_keys`
+  - in C++, you can use `TensorMap::set_info`, `TensorMap::get_info` and
+    `TensorMap::info`
+  - in Python, you can use `TensorMap.set_info`, `TensorMap.get_info` and
+    `TensorMap.info`
+
 ### Changed
 
 - We now requires at least cmake v3.22 to compile metatensor

@@ -417,6 +417,17 @@ class TensorBlockWrap:
     ) -> TensorBlock:
         return self._c.to(dtype=dtype, device=device, arrays=arrays)
 
+    @staticmethod
+    def load(file: str) -> TensorBlock:
+        return TensorBlock.load(file=file)
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> TensorBlock:
+        return TensorBlock.load_buffer(buffer=buffer)
+
+    def save(self, file: str):
+        return self._c.save(file=file)
+
 
 def test_script():
     class TestModule(torch.nn.Module):

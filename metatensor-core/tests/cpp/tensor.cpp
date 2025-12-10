@@ -1,6 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <map>
 
 #include <catch.hpp>
 
@@ -38,6 +39,26 @@ TEST_CASE("TensorMap") {
         CHECK(matching.size() == 2);
         CHECK(matching[0] == 0);
         CHECK(matching[1] == 1);
+    }
+
+    SECTION("info") {
+        auto tensor = test_tensor_map();
+
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("description", "a test tensor map");
+
+        CHECK(tensor.get_info("creator") == "unit test");
+        CHECK(tensor.get_info("description") == "a test tensor map");
+        CHECK(tensor.get_info("missing") == std::nullopt);
+
+        auto info_iter = tensor.info();
+        CHECK(info_iter.begin() != info_iter.end());
+        std::map<std::string, std::string> info_map;
+        for (auto pair: info_iter) {
+            info_map.emplace(pair.first, pair.second);
+        }
+        CHECK(info_map["creator"] == "unit test");
+        CHECK(info_map["description"] == "a test tensor map");
     }
 
     SECTION("keys_to_samples") {
@@ -276,6 +297,9 @@ TEST_CASE("TensorMap serialization") {
         tensor = metatensor::io::load_buffer(buffer);
         check_loaded_tensor(tensor);
 
+        // info.json is only created when the info is defined for this file
+        CHECK(buffer.find("info.json") == std::string::npos);
+
         auto saved = tensor.save_buffer<std::string>();
         REQUIRE(saved.size() == buffer.size());
         CHECK(saved == buffer);
@@ -301,6 +325,21 @@ TEST_CASE("TensorMap serialization") {
         CHECK(saved == std::string(raw_buffer, raw_buffer + buflen));
 
         std::free(raw_buffer);
+    }
+
+    SECTION("loading and saving the extra info") {
+        auto tensor = TensorMap::load(TEST_DATA_MTS_PATH);
+
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("description", "a test tensor map");
+
+        auto buffer = tensor.save_buffer<std::string>();
+        auto loaded = TensorMap::load_buffer(buffer);
+
+        CHECK(buffer.find("info.json") != std::string::npos);
+
+        CHECK(loaded.get_info("creator") == "unit test");
+        CHECK(loaded.get_info("description") == "a test tensor map");
     }
 }
 

@@ -53,6 +53,9 @@ use super::mts_create_array_callback_t;
 ///                                                     /   data.npy
 /// ```
 ///
+/// Finally, the info (i.e. global metadata) of the `TensorMap` is stored inside
+/// the `info.json` file, unless empty.
+///
 /// @param path path to the file as a NULL-terminated UTF-8 string
 /// @param create_array callback function that will be used to create data
 ///                     arrays inside each block

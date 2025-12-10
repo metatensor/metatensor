@@ -3,7 +3,7 @@ import ctypes
 import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import BinaryIO, Dict, List, Sequence, Union
+from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
@@ -712,6 +712,47 @@ class TensorMap:
                 )
 
         return TensorMap(self.keys, blocks)
+
+    def set_info(self, key: str, value: str):
+        """
+        Set or update the info (i.e. global metadata) ``value`` associated with ``key``
+        for this :py:class:`TensorMap`.
+
+        :param key: key of the info
+        :param value: value of the info
+        """
+        self._lib.mts_tensormap_set_info(
+            self._ptr, key.encode("utf8"), value.encode("utf8")
+        )
+
+    def get_info(self, key: str) -> Optional[str]:
+        """
+        Get the info (i.e. global metadata) with the given ``key`` for this
+        :py:class:`TensorMap`.
+
+        :param key: key of the info to retrieve
+        :return: value of the info, or :py:obj:`None` if the info does not exist
+        """
+        value = ctypes.c_char_p()
+        self._lib.mts_tensormap_get_info(self._ptr, key.encode("utf8"), value)
+
+        if value.value:
+            return value.value.decode("utf8")
+        else:
+            return None
+
+    def info(self) -> Dict[str, str]:
+        """
+        Get all the key/value info pairs stored in this :py:class:`TensorMap`.
+        """
+        keys = ctypes.POINTER(ctypes.c_char_p)()
+        count = c_uintptr_t()
+        self._lib.mts_tensormap_info_keys(self._ptr, keys, count)
+        result = {}
+        for i in range(count.value):
+            key = keys[i].decode("utf8")
+            result[key] = self.get_info(key)
+        return result
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

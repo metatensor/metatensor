@@ -290,6 +290,13 @@ TORCH_LIBRARY(metatensor, m) {
         .def("components_to_properties", &TensorMapHolder::components_to_properties, DOCSTRING,
             {torch::arg("dimensions")}
         )
+        .def("set_info", &TensorMapHolder::set_info, DOCSTRING,
+            {torch::arg("key"), torch::arg("value")}
+        )
+        .def("get_info", &TensorMapHolder::get_info, DOCSTRING,
+            {torch::arg("key")}
+        )
+        .def("info", &TensorMapHolder::info)
         .def_property("sample_names", &TensorMapHolder::sample_names)
         .def_property("component_names", &TensorMapHolder::component_names)
         .def_property("property_names", &TensorMapHolder::property_names)

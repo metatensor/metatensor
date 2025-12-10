@@ -303,6 +303,27 @@ def setup_functions(lib):
     ]
     lib.mts_tensormap_keys_to_samples.restype = POINTER(mts_tensormap_t)
 
+    lib.mts_tensormap_set_info.argtypes = [
+        POINTER(mts_tensormap_t),
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+    ]
+    lib.mts_tensormap_set_info.restype = _check_status
+
+    lib.mts_tensormap_get_info.argtypes = [
+        POINTER(mts_tensormap_t),
+        ctypes.c_char_p,
+        POINTER(ctypes.c_char_p),
+    ]
+    lib.mts_tensormap_get_info.restype = _check_status
+
+    lib.mts_tensormap_info_keys.argtypes = [
+        POINTER(mts_tensormap_t),
+        POINTER(POINTER(ctypes.c_char_p)),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_tensormap_info_keys.restype = _check_status
+
     lib.mts_labels_load.argtypes = [
         ctypes.c_char_p,
         POINTER(mts_labels_t),

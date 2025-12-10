@@ -54,7 +54,7 @@ pub use self::block::LazyMetadata;
 
 mod tensor;
 pub use self::tensor::TensorMap;
-pub use self::tensor::{TensorMapIter, TensorMapIterMut};
+pub use self::tensor::{TensorMapIter, TensorMapIterMut, TensorMapInfoIter};
 #[cfg(feature = "rayon")]
 pub use self::tensor::{TensorMapParIter, TensorMapParIterMut};
 

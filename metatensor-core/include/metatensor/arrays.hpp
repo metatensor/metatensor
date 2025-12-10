@@ -329,7 +329,7 @@ private:
 
     void validate() const {
         static_assert(
-            std::is_arithmetic<T>::value,
+            std::is_arithmetic_v<T>,
             "NDArray only works with integers and floating points"
         );
 
@@ -369,7 +369,22 @@ bool operator==(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     if (lhs.shape() != rhs.shape()) {
         return false;
     }
-    return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
+
+    if (std::is_integral_v<T>) {
+        // compare integers with memcmp
+        return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
+    } else {
+        // make sure to handle NaN and ±0.0 correctly when comparing floating
+        // point data and everything else
+        const auto* lhs_ptr = lhs.data();
+        const auto* rhs_ptr = rhs.data();
+        for (size_t i=0; i<details::product(lhs.shape()); i++) {
+            if (lhs_ptr[i] != rhs_ptr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 /// Compare this `NDArray` with another `NDarray`. The array are equal if

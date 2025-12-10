@@ -644,6 +644,17 @@ class LabelsWrap:
     def rename(self, old: str, new: str) -> Labels:
         return self._c.rename(old=old, new=new)
 
+    @staticmethod
+    def load(file: str) -> Labels:
+        return Labels.load(file=file)
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> Labels:
+        return Labels.load_buffer(buffer=buffer)
+
+    def save(self, file: str):
+        return self._c.save(file=file)
+
 
 class LabelsEntryWrap:
     def __init__(self):
