@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "metatensor/dlpack/dlpack.h"
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
  * Status code used when a function succeeded
