@@ -135,6 +135,114 @@ def test_std_samples_block():
         )
 
 
+def test_std_properties_block():
+    tensor_se = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor_ps = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor_se = mts.remove_gradients(tensor_se)
+
+    bl1 = tensor_ps[0]
+
+    reduce_bl_ps = mts.std_over_properties_block(bl1, property_names=["l"])
+
+    assert np.allclose(
+        np.std(bl1.values[..., ::16], axis=-1),
+        reduce_bl_ps.values[..., 0],
+        rtol=1e-13,
+    )
+
+    assert np.allclose(
+        np.std(bl1.values[..., 1::16], axis=-1),
+        reduce_bl_ps.values[..., 1],
+        rtol=1e-13,
+    )
+    assert np.allclose(
+        np.std(bl1.values[..., 5::16], axis=-1),
+        reduce_bl_ps.values[..., 5],
+        rtol=1e-13,
+    )
+    assert np.allclose(
+        np.std(bl1.values[..., 8::16], axis=-1),
+        reduce_bl_ps.values[..., 8],
+        rtol=1e-13,
+    )
+    assert np.allclose(
+        np.std(bl1.values[..., 15::16], axis=-1),
+        reduce_bl_ps.values[..., 15],
+        rtol=1e-13,
+    )
+
+    # Test the gradients
+    gr1 = bl1.gradient("positions")
+    sample_idx = gr1.samples["sample"]
+    other_dims = len(gr1.values.shape) - 2
+    assert np.allclose(
+        (
+            (
+                gr1.values[..., ::16]
+                * bl1.values[:, ::16][sample_idx].reshape(
+                    (len(sample_idx),) + (1,) * other_dims + (-1,)
+                )
+            ).mean(axis=-1)
+            - gr1.values[..., ::16].mean(axis=-1)
+            * bl1.values[:, ::16].mean(axis=-1)[sample_idx][:, None]
+        )
+        / bl1.values[:, ::16].std(axis=-1)[sample_idx][:, None],
+        reduce_bl_ps.gradient("positions").values[..., 0],
+    )
+
+    assert np.allclose(
+        (
+            (
+                gr1.values[..., 1::16]
+                * bl1.values[:, 1::16][sample_idx].reshape(
+                    (len(sample_idx),) + (1,) * other_dims + (-1,)
+                )
+            ).mean(axis=-1)
+            - gr1.values[..., 1::16].mean(axis=-1)
+            * bl1.values[:, 1::16].mean(axis=-1)[sample_idx][:, None]
+        )
+        / bl1.values[:, 1::16].std(axis=-1)[sample_idx][:, None],
+        reduce_bl_ps.gradient("positions").values[..., 1],
+    )
+    assert np.allclose(
+        (
+            (
+                gr1.values[..., 5::16]
+                * bl1.values[:, 5::16][sample_idx].reshape(
+                    (len(sample_idx),) + (1,) * other_dims + (-1,)
+                )
+            ).mean(axis=-1)
+            - gr1.values[..., 5::16].mean(axis=-1)
+            * bl1.values[:, 5::16].mean(axis=-1)[sample_idx][:, None]
+        )
+        / bl1.values[:, 5::16].std(axis=-1)[sample_idx][:, None],
+        reduce_bl_ps.gradient("positions").values[..., 5],
+    )
+
+    assert np.allclose(
+        (
+            (
+                gr1.values[..., 15::16]
+                * bl1.values[:, 15::16][sample_idx].reshape(
+                    (len(sample_idx),) + (1,) * other_dims + (-1,)
+                )
+            ).mean(axis=-1)
+            - gr1.values[..., 15::16].mean(axis=-1)
+            * bl1.values[:, 15::16].mean(axis=-1)[sample_idx][:, None]
+        )
+        / bl1.values[:, 15::16].std(axis=-1)[sample_idx][:, None],
+        reduce_bl_ps.gradient("positions").values[..., 15],
+    )
+
+    for _, bl2 in enumerate([tensor_se[0], tensor_se[1], tensor_se[2], tensor_se[3]]):
+        reduce_bl_se = mts.std_over_properties_block(bl2, property_names="n")
+        assert np.allclose(
+            np.std(bl2.values, axis=-1, keepdims=True),
+            reduce_bl_se.values,
+            rtol=1e-13,
+        )
+
+
 def test_reduction_block_two_samples():
     block = TensorBlock(
         values=np.array(
@@ -224,6 +332,96 @@ def test_reduction_block_two_samples():
     assert reduce_block_12.samples == samples_12
     assert reduce_block_23.samples == samples_23
     assert reduce_block_2.samples == samples_2
+
+
+def test_reduction_block_two_properties():
+    block_1 = TensorBlock(
+        values=np.array(
+            [
+                [1.0, 3.0, -1.3, 3.5, 6.1, 7.3, 11.0, 33.0],
+                [2.0, 5.0, 26.7, 5.3, 35.2, -7.65, 276.0, 55.5],
+                [4.0, 6.0, 4.54, 6.87, 44.5, 6.45, 4.09, -5.6],
+            ]
+        ),
+        samples=Labels(["s"], np.array([[0], [1], [5]])),
+        components=[],
+        properties=Labels(
+            ["p_1", "p_2", "p_3"],
+            np.array(
+                [
+                    [0, 0, 0],
+                    [0, 0, 1],
+                    [0, 0, 2],
+                    [0, 1, 1],
+                    [0, 1, 0],
+                    [2, 1, 1],
+                    [1, 1, 1],
+                    [1, 0, 0],
+                ],
+            ),
+        ),
+    )
+
+    reduce_bl_12 = mts.std_over_properties_block(block_1, property_names=["p_3"])
+    reduce_bl_23 = mts.std_over_properties_block(block_1, property_names="p_1")
+    reduce_bl_2 = mts.std_over_properties_block(block_1, property_names=["p_1", "p_3"])
+
+    assert np.allclose(
+        np.std(block_1.values[..., :3], axis=-1),
+        reduce_bl_12.values[..., 0],
+        rtol=1e-13,
+    )
+    assert np.allclose(
+        np.std(block_1.values[..., 3:5], axis=-1),
+        reduce_bl_12.values[..., 1],
+        rtol=1e-13,
+    )
+    assert np.all(np.array([0.0]) == reduce_bl_12.values[..., 4])
+    assert np.all(np.array([0.0]) == reduce_bl_12.values[..., 3])
+    assert np.all(np.array([0.0]) == reduce_bl_12.values[..., 2])
+
+    assert np.all(
+        np.std(block_1.values[..., [0, 7]], axis=-1) == reduce_bl_23.values[..., 0]
+    )
+    assert np.allclose(
+        np.std(block_1.values[..., [3, 5, 6]], axis=-1),
+        reduce_bl_23.values[..., 4],
+        rtol=1e-13,
+    )
+
+    assert np.all(np.array([0.0]) == reduce_bl_23.values[..., 1])
+    assert np.all(np.array([0.0]) == reduce_bl_23.values[..., 2])
+    assert np.all(np.array([0.0]) == reduce_bl_23.values[..., 3])
+
+    assert np.allclose(
+        np.std(block_1.values[..., [0, 1, 2, 7]], axis=-1),
+        reduce_bl_2.values[..., 0],
+        rtol=1e-13,
+    )
+    assert np.all(
+        np.std(block_1.values[..., 3:7], axis=-1) == reduce_bl_2.values[..., 1]
+    )
+
+    # check metadata
+    assert reduce_bl_12.samples == block_1.samples
+    assert reduce_bl_23.samples == block_1.samples
+    assert reduce_bl_2.samples == block_1.samples
+
+    properties_12 = Labels(
+        names=["p_1", "p_2"],
+        values=np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 1]]),
+    )
+    properties_23 = Labels(
+        names=["p_2", "p_3"],
+        values=np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1]]),
+    )
+    properties_2 = Labels(
+        names=["p_2"],
+        values=np.array([[0], [1]]),
+    )
+    assert reduce_bl_12.properties == properties_12
+    assert reduce_bl_23.properties == properties_23
+    assert reduce_bl_2.properties == properties_2
 
 
 def get_XdX(block, gradient, der_index):

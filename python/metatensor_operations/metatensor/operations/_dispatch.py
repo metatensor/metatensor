@@ -377,6 +377,21 @@ def make_contiguous(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def column_add(output_array, input_array, index):
+    _index_array_checks(index)
+    if isinstance(input_array, TorchTensor):
+        if not isinstance(index, TorchTensor):
+            index = torch.tensor(index).to(device=input_array.device)
+
+        _check_all_torch_tensor([output_array, input_array, index])
+        output_array.index_add_(-1, index, input_array)
+    elif isinstance(input_array, np.ndarray):
+        _check_all_np_ndarray([output_array, input_array, index])
+        np.add.at(output_array, (..., index), input_array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def copy(array):
     """Returns a copy of ``array``.
     The new data is not shared with the original array"""
@@ -707,6 +722,23 @@ def requires_grad(array, value: bool):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def scatter_last_dim(array, index: int, value):
+    """
+    Equivalent to array[..., index] = value, make the torch equivalent of the numpy
+    implementation torchscript compatible.
+    """
+    if isinstance(array, TorchTensor):
+        index = torch.tensor([index]).to(device=array.device)
+        dim = array.ndim - 1
+        size = [s for s in array.shape[:-1]] + [-1]
+        return array.scatter(dim, index.unsqueeze(0).expand(size), value)
+    elif isinstance(array, np.ndarray):
+        array[..., index] = value
+        return array
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def sign(array):
     """
     Returns an indication of the sign of the elements in the array.
@@ -720,6 +752,18 @@ def sign(array):
             return array / np.abs(array)
         else:
             return np.sign(array)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def _slice_over_last_dim(array, index: Union[int, TorchTensor]):
+    """Equivalent to array[..., index]"""
+    if isinstance(array, TorchTensor):
+        if isinstance(index, int):
+            index = torch.tensor([index]).to(device=array.device)
+        return array.index_select(-1, torch.as_tensor(index))
+    elif isinstance(array, np.ndarray):
+        return np.take(array, index, axis=-1)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

@@ -24,7 +24,12 @@ def check_finite_differences(
     other dimensions of the ``array``.
     """
     n_samples = array.shape[0]
-    n_grad_components = array.shape[1:]
+    if len(array.shape) == 2:
+        n_grad_components = array.shape[1:]
+    elif len(array.shape) == 3:
+        n_grad_components = array.shape[1:-1]
+    else:
+        raise NotImplementedError
 
     reference = function(array)
 
