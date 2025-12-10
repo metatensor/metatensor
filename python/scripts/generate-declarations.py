@@ -120,6 +120,8 @@ def c_type_name(name):
         return "ctypes.c_int64"
     elif name == "uint64_t":
         return "ctypes.c_uint64"
+    elif name == "DLManagedTensorVersioned":
+        return "ctypes.c_void_p"
     else:
         return "ctypes.c_" + name
 
