@@ -1,5 +1,5 @@
-use dlpack::sys::DLManagedTensorVersioned;
-use dlpack::DLPackTensor;
+use dlpk::sys::DLManagedTensorVersioned;
+use dlpk::DLPackTensor;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;

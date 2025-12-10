@@ -45,4 +45,4 @@ toml_writer = "=1.0.2"
 [dev-dependencies]
 lazy_static = "1"
 which = "8"
-dlpack = { git = "https://github.com/metatensor/dlpack.git", features=["ndarray"] }
+dlpk = {version = "0.1.0", default-features = false, features = ["ndarray"]}

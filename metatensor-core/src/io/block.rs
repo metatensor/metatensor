@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian};
 use zip::{ZipArchive, ZipWriter};
-use dlpack::sys::DLDataTypeCode;
+use dlpk::sys::DLDataTypeCode;
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, PathOrBuffer};
