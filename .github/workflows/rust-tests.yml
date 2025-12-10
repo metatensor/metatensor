@@ -105,11 +105,6 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
           target: ${{ matrix.rust-target }}
 
-      - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2.6.1
-        with:
-          sweep-cache: true
-
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
@@ -158,11 +153,6 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-gnu
           components: rustfmt
-
-      - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2.6.1
-        with:
-          sweep-cache: true
 
       - name: install python dependencies
         run: |

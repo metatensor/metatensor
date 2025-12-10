@@ -27,11 +27,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2.6.1
-        with:
-          sweep-cache: true
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:

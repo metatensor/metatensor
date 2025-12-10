@@ -63,11 +63,6 @@ jobs:
           path: .tox
           key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
 
-      - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2.6.1
-        with:
-          sweep-cache: true
-
       - name: setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
