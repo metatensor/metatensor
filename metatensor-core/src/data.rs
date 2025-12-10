@@ -352,7 +352,7 @@ impl mts_array_t {
         // C function pointer from the vtable slot
         let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
         // ... and fill structure
-        let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+        let mut dl_managed_tensor = std::ptr::null_mut();
         let status = unsafe { function(self.ptr, &mut dl_managed_tensor) };
         if !status.is_success() {
             return Err(Error::External {
