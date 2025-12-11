@@ -1,8 +1,10 @@
+import ctypes
 import gc
 import os
 import weakref
 
 import numpy as np
+import pytest
 from numpy.testing import assert_equal
 
 
@@ -13,15 +15,27 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-import ctypes
-
 import metatensor
 from metatensor._c_api import (
     MTS_SUCCESS,
+    DLDevice,
+    DLManagedTensorVersioned,
+    DLPackVersion,
     c_uintptr_t,
     mts_array_t,
     mts_sample_mapping_t,
 )
+
+
+# Kanged from the metatensor-torch _test_utils
+def can_use_mps_backend():
+    return (
+        # Github Actions M1 runners don't have a GPU accessible
+        os.environ.get("GITHUB_ACTIONS") is None
+        and hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_built()
+        and torch.backends.mps.is_available()
+    )
 
 
 def free_mts_array(array):
@@ -153,6 +167,65 @@ class MtsArrayMixin:
 
         free_mts_array(mts_array)
         free_mts_array(mts_array_other)
+
+    def get_available_devices():
+        devices = [("cpu", DLDevice(1, 0))]
+        if HAS_TORCH and torch.cuda.is_available():
+            devices.append(("cuda", DLDevice(2, 0)))
+        if can_use_mps_backend():
+            devices.append(("mps", DLDevice(8, 0)))
+        return devices
+
+    @pytest.mark.parametrize("device, dldevice", get_available_devices())
+    def test_dlpack(self, device, dldevice):
+        # Create a sample array
+        array = self.create_array((2, 3))
+        if self.expected_origin() == "metatensor.data.array.numpy" and device != "cpu":
+            pytest.skip("NumPy only supports CPU")
+        if not device:
+            pytest.skip()
+        if isinstance(array, torch.Tensor):
+            array = torch.asarray(array, device=device)
+        mts_array = metatensor.data.create_mts_array(array)
+
+        # Prepare a pointer to receive the DLManagedTensorVersioned
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        version = DLPackVersion(1, 0)
+
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            dldevice,
+            None,  # stream
+            version,
+        )
+
+        # Check we got a valid pointer back
+        assert status == MTS_SUCCESS
+        assert bool(dl_managed_ptr)
+
+        # Dereference to check contents
+        managed = dl_managed_ptr.contents
+        dl_tensor = managed.dl_tensor
+
+        # Verify Metadata
+        assert managed.version.major == 1
+        assert managed.version.minor == 0
+        assert dl_tensor.ndim == 2
+        assert dl_tensor.shape[0] == 2
+        assert dl_tensor.shape[1] == 3
+
+        # Verify Data Pointer matches the source array
+        if self.expected_origin() == "metatensor.data.array.numpy":
+            assert dl_tensor.data == array.ctypes.data
+        elif self.expected_origin() == "metatensor.data.array.torch":
+            assert dl_tensor.data == array.data_ptr()
+
+        # IMPORTANT: Call the deleter to cleanup the C-side resources (and refcounts)
+        # This emulates what a consumer (like another library) would do.
+        managed.deleter(dl_managed_ptr)
+
+        free_mts_array(mts_array)
 
 
 class TestNumpyData(MtsArrayMixin):
