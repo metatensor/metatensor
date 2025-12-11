@@ -6,7 +6,7 @@
 using namespace metatensor;
 
 TEST_CASE("Data Array") {
-    auto data = std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 3, 4}));
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
 
     SECTION("origin") {
@@ -21,7 +21,7 @@ TEST_CASE("Data Array") {
     }
 
     SECTION("data") {
-        auto view = static_cast<SimpleDataArray*>(array.ptr)->view();
+        auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
         view(1, 1, 0) = 3;
 
         double* data_ptr = nullptr;

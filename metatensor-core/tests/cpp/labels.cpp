@@ -211,7 +211,7 @@ TEST_CASE("User data") {
 
         // check we can recover user data from Labels inside a TensorBlock
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 2})),
             labels,
             {},
             Labels({"properties"}, {{5}, {3}})
