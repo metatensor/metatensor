@@ -1,9 +1,12 @@
 use std::ops::Range;
 use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
+use metatensor_sys::DLManagedTensorVersioned;
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
+use dlpk::DLPackTensor;
 
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
@@ -63,6 +66,10 @@ pub trait Array: std::any::Any + Send + Sync {
         samples: &[mts_sample_mapping_t],
         properties: Range<usize>,
     );
+
+    /// Convert the array to a DLPack pointer.
+    /// The returned pointer is owned by the caller (and cleaned up via its deleter).
+    fn as_dlpack(&self) -> *mut DLManagedTensorVersioned;
 }
 
 impl From<Box<dyn Array>> for mts_array_t {
@@ -76,7 +83,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
             data: Some(rust_array_data),
-            as_dlpack: None,
+            as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
             swap_axes: Some(rust_array_swap_axes),
@@ -247,7 +254,18 @@ unsafe extern "C" fn rust_array_move_samples_from(
     })
 }
 
-/******************************************************************************/
+/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_as_dlpack(
+    array: *mut c_void,
+    out: *mut *mut metatensor_sys::DLManagedTensorVersioned,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, out);
+        let array = array.cast::<Box<dyn Array>>();
+        let dlpack_ptr = (*array).as_dlpack();
+        *out = dlpack_ptr.cast();
+    })
+}
 
 impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -307,6 +325,18 @@ impl Array for ndarray::ArrayD<f64> {
             output_location.assign(&value);
         }
     }
+
+    fn as_dlpack(&self) -> *mut DLManagedTensorVersioned {
+        // TODO(rg): this needs to use a ref-counted underlying object like in
+        // C++ for now, just clone to ensure ownership.
+        let array_copy = self.clone();
+        let tensor: DLPackTensor = array_copy.try_into().expect("failed to convert ndarray to DLPack");
+        // DLPackTensor ==> `#[repr(transparent)]` wrapper around `NonNull`.
+        // transmute "forgets" the DLPackTensor (preventing Drop) to get the inner pointer.
+        // Transfers ownership of the `DLManagedTensorVersioned` (and the data context) to the caller.
+        let raw: NonNull<DLManagedTensorVersioned> = unsafe { std::mem::transmute(tensor) };
+        raw.as_ptr()
+    }
 }
 
 /******************************************************************************/
@@ -362,13 +392,21 @@ impl Array for EmptyArray {
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
     }
+    
+    fn as_dlpack(&self) -> *mut DLManagedTensorVersioned {
+        panic!("can not call Array::as_dlpack() for EmptyArray");
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use metatensor_sys::*;
+    use dlpk::sys::DLDataTypeCode;
+    use metatensor_sys::DLManagedTensorVersioned;
+    use metatensor_sys::MTS_SUCCESS;
+    use metatensor_sys::mts_array_t;
+    use metatensor_sys::mts_register_data_origin;
+    use crate::Array;
 
-    use super::*;
 
     #[test]
     fn ndarray_as_mts_array() {
@@ -405,4 +443,30 @@ mod tests {
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
         assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
     }
+
+    #[test]
+    fn ndarray_as_mts_array_dlpack() {
+        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
+        // Wrap it in the C-API struct
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        unsafe {
+            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+            let status = (mts_array.as_dlpack.unwrap())(mts_array.ptr, &mut dl_managed);
+            assert_eq!(status, MTS_SUCCESS);
+            assert!(!dl_managed.is_null());
+            let tensor = (*dl_managed).dl_tensor;
+            assert_eq!(tensor.ndim, 3);
+            assert_eq!(*tensor.shape.offset(0), 4);
+            assert_eq!(*tensor.shape.offset(1), 5);
+            assert_eq!(*tensor.shape.offset(2), 6);
+            // The dtype for f64 is kDLFloat (2) with 64 bits
+            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLFloat as u8);
+            assert_eq!(tensor.dtype.bits, 64);
+            // Clean up using the provided deleter
+            if let Some(deleter) = (*dl_managed).deleter {
+                deleter(dl_managed);
+            }
+        }
+    }
+
 }
