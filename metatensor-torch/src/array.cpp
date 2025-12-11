@@ -6,6 +6,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/array.hpp"
+#include <ATen/DLConvertor.h>
 
 using namespace metatensor_torch;
 
@@ -75,10 +76,66 @@ double* TorchDataArray::data() & {
     return static_cast<double*>(this->tensor_.data_ptr());
 }
 
-DLManagedTensorVersioned *TorchDataArray::as_dlpack(DLDevice device, void* stream, DLPackVersion max_version) {
-    // XXX(rg): implement in a subsequent PR
-    // ^- the only annoyance involves the legacy struct returned by the PyTorch API
-    C10_THROW_ERROR(ValueError, "not implemented");
+// Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
+// TODO(rg): shouldn't be required later
+static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
+    if (self) {
+        // Retrieve the legacy tensor stored in the context
+        auto* legacy_tensor = static_cast<DLManagedTensor*>(self->manager_ctx);
+        // Use the legacy deleter to free the internal ATen resources
+        if (legacy_tensor && legacy_tensor->deleter) {
+            legacy_tensor->deleter(legacy_tensor);
+        }
+        // Free the versioned wrapper
+        delete self;
+    }
+}
+
+DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, void* stream, DLPackVersion max_version) {
+    // Uses the existing ATen API to get a legacy DLManagedTensor.
+    // TODO(rg): this should eventually just be
+    // return at::toDLPackVersioned(this->tensor_);
+    // https://github.com/pytorch/pytorch/blob/2.9.1/aten/src/ATen/DLConvertor.cpp
+    // ... until then.
+    // NOTE(rg): maybe the version check should be extracted, copied verbatim from SimpleDataArray<T> impl
+    DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    bool major_mismatch = max_version.major != mta_version.major;
+    bool minor_too_old  = max_version.minor < mta_version.minor;
+    if (major_mismatch || minor_too_old) {
+        throw metatensor::Error("TorchDataArray supports DLPack version " +
+                                std::to_string(mta_version.major) + "." +
+                                std::to_string(mta_version.minor) +
+                                ". Caller requested incompatible version " +
+                                std::to_string(max_version.major) + "." +
+                                std::to_string(max_version.minor));
+    }
+
+    // Legacy dlpack interface for maximal Torch compatibility
+    DLManagedTensor* legacy_tensor = at::toDLPack(this->tensor_);
+    // Compare the device
+    if (legacy_tensor->dl_tensor.device.device_type != device.device_type ||
+        legacy_tensor->dl_tensor.device.device_id != device.device_id) {
+
+        // Cleanup the legacy tensor we just created before throwing
+        if (legacy_tensor->deleter) {
+            legacy_tensor->deleter(legacy_tensor);
+        }
+
+        throw metatensor::Error(
+            "TorchDataArray: Requested device does not match tensor device");
+    }
+    // Wrap into a versioned struct
+    auto* versioned_tensor = new DLManagedTensorVersioned();
+    versioned_tensor->version = mta_version;
+    // Setup context, keeping the legacy variant for the deleter
+    versioned_tensor->manager_ctx = legacy_tensor;
+    versioned_tensor->deleter = dlpack_versioned_deleter;
+    versioned_tensor->flags = 0;
+    // Copy metadata
+    versioned_tensor->dl_tensor = legacy_tensor->dl_tensor;
+    // Explicitly voiding stream since at::toDLPack doesn't accept it anyway
+    (void)stream;
+    return versioned_tensor;
 }
 
 const std::vector<uintptr_t>& TorchDataArray::shape() const & {
