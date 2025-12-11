@@ -62,4 +62,117 @@ TEST_CASE("Arrays") {
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));
         CHECK(created_ptr->tensor().dtype() == torch::kF64);
     }
+
+    SECTION("DLPack conversion") {
+        // Common
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+
+        // Basic Conversion & Metadata Check
+        {
+            auto dl_managed = array.as_dlpack(cpu_device, nullptr, version);
+
+            // Check version
+            CHECK(dl_managed->version.major == DLPACK_MAJOR_VERSION);
+            CHECK(dl_managed->version.minor == DLPACK_MINOR_VERSION);
+
+            // Check DLTensor fields
+            auto &dl_tensor = dl_managed->dl_tensor;
+            CHECK(dl_tensor.ndim == 3);
+            CHECK(dl_tensor.shape[0] == 2);
+            CHECK(dl_tensor.shape[1] == 3);
+            CHECK(dl_tensor.shape[2] == 4);
+
+            // Check Data Type (kF64 -> kDLFloat, 64 bits)
+            CHECK(dl_tensor.dtype.code == kDLFloat);
+            CHECK(dl_tensor.dtype.bits == 64);
+            CHECK(dl_tensor.dtype.lanes == 1);
+
+            // Check Data Pointer Equality
+            // The DLPack pointer should point to the same memory as the Torch
+            // tensor
+            CHECK(dl_tensor.data == array.tensor().data_ptr());
+
+            dl_managed->deleter(dl_managed);
+        }
+
+        // Different data types (e.g., Int32)
+        {
+            auto int_tensor = torch::tensor(
+                {1, 2, 3}, torch::TensorOptions().dtype(torch::kInt32));
+            auto int_array = TorchDataArray(int_tensor);
+            auto dl_managed = int_array.as_dlpack(cpu_device, nullptr, version);
+
+            CHECK(dl_managed->dl_tensor.dtype.code == kDLInt);
+            CHECK(dl_managed->dl_tensor.dtype.bits == 32);
+
+            dl_managed->deleter(dl_managed);
+        }
+
+        // Device Mismatch Check (New Test)
+        {
+            // Requesting CUDA from a CPU tensor should fail
+            DLDevice cuda_device = {kDLCUDA, 0};
+            CHECK_THROWS_WITH(
+                array.as_dlpack(cuda_device, nullptr, version),
+                Catch::Matchers::Contains("Requested device does not match"));
+        }
+
+        // Stride verification (Non-contiguous memory)
+        {
+            // Create a non-contiguous tensor by slicing
+            auto base_tensor =
+                torch::zeros({10, 10}, torch::TensorOptions().dtype(torch::kF64));
+            // Take every 2nd element along both dimensions
+            auto sliced_tensor = base_tensor.slice(0, 0, 10, 2).slice(1, 0, 10, 2);
+            auto sliced_array = TorchDataArray(sliced_tensor);
+
+            auto dl_managed = sliced_array.as_dlpack(cpu_device, nullptr, version);
+            auto &dl_tensor = dl_managed->dl_tensor;
+
+            CHECK(dl_tensor.ndim == 2);
+            CHECK(dl_tensor.shape[0] == 5);
+            CHECK(dl_tensor.shape[1] == 5);
+
+            // Torch strides are usually (stride_0, stride_1).
+            // For a 10x10 tensor, row stride is 10, col stride is 1.
+            // Slicing every 2nd element makes strides: 20 and 2.
+            CHECK(dl_tensor.strides[0] == 20);
+            CHECK(dl_tensor.strides[1] == 2);
+
+            dl_managed->deleter(dl_managed);
+        }
+
+        // Lifetime & Ownership Check
+        {
+            // We want to ensure the data persists even if the original
+            // TorchDataArray dies, provided the DLPack struct is still alive.
+
+            DLManagedTensorVersioned *dl_managed = nullptr;
+            void *raw_data_ptr = nullptr;
+
+            {
+                // Inner scope: Create array and get DLPack
+                auto temp_tensor =
+                    torch::ones({5}, torch::TensorOptions().dtype(torch::kF64));
+                auto temp_array = TorchDataArray(temp_tensor);
+
+                dl_managed = temp_array.as_dlpack(cpu_device, nullptr, version);
+                raw_data_ptr = dl_managed->dl_tensor.data;
+
+                // Sanity check before scope exit
+                auto *data = static_cast<double *>(raw_data_ptr);
+                CHECK(data[0] == 1.0);
+            }
+            // temp_array is now destroyed.
+            // However, dl_managed should still hold a reference to the storage
+            // so data can be read.
+
+            auto *data = static_cast<double *>(raw_data_ptr);
+            CHECK(data[0] == 1.0);
+            CHECK(data[4] == 1.0);
+
+            dl_managed->deleter(dl_managed);
+        }
+    }
 }
