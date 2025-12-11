@@ -25,7 +25,7 @@ the operations with PyTorch:
   are available in the ``metatensor.torch`` module.
 
 .. _PyTorch: https://pytorch.org/
-.. _torch.autograd: https://pytorch.org/docs/stable/autograd.html
+.. _torch.autograd: https://docs.pytorch.org/docs/stable/autograd.html
 
 
 Handling of gradients in the operations
