@@ -32,6 +32,53 @@ mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
+# ============================================================================ #
+# DLPack types
+# ============================================================================ #
+
+class c_DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class c_DLDataType(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_uint8),
+        ("bits", ctypes.c_uint8),
+        ("lanes", ctypes.c_uint16),
+    ]
+
+class c_DLTensor(ctypes.Structure):
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("device", c_DLDevice),
+        ("ndim", ctypes.c_int32),
+        ("dtype", c_DLDataType),
+        ("shape", POINTER(ctypes.c_int64)),
+        ("strides", POINTER(ctypes.c_int64)),
+        ("byte_offset", ctypes.c_uint64),
+    ]
+
+class c_DLManagedTensorVersionedVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
+
+class c_DLManagedTensorVersioned(ctypes.Structure):
+    pass
+
+_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(c_DLManagedTensorVersioned))
+
+c_DLManagedTensorVersioned._fields_ = [
+    ("version", c_DLManagedTensorVersionedVersion),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", _DLManagedTensorVersionedDeleter),
+    ("flags", ctypes.c_uint64),
+    ("dl_tensor", c_DLTensor),
+]
+
 
 class mts_block_t(ctypes.Structure):
     pass
@@ -69,7 +116,7 @@ mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_double)))),
-    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_void_p)))),
+    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_DLManagedTensorVersioned)))),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
