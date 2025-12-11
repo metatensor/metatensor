@@ -101,7 +101,7 @@ namespace details {
      *
      * Destroys metadata and decrements the shared pointer.
      */
-    DLPACK_EXTERN_C void DLPackDeleter(DLManagedTensorVersioned* self){
+    DLPACK_EXTERN_C inline void DLPackDeleter(DLManagedTensorVersioned* self){
         if (self){
             // manager_ctx points to a DLPackContextBase (allocated with new)
             auto ctx = static_cast<DLPackContextBase*>(self->manager_ctx);
