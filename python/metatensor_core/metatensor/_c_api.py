@@ -20,18 +20,6 @@ if arch == "32bit":
 elif arch == "64bit":
     c_uintptr_t = ctypes.c_uint64
 
-
-class DLDevice(ctypes.Structure):
-    _fields_ = [
-        ("device_type", ctypes.c_int32),
-        ("device_id", ctypes.c_int32),
-    ]
-
-class DLPackVersion(ctypes.Structure):
-    _fields_ = [
-        ("major", ctypes.c_uint32),
-        ("minor", ctypes.c_uint32),
-    ]
 MTS_SUCCESS = 0
 MTS_INVALID_PARAMETER_ERROR = 1
 MTS_IO_ERROR = 2
@@ -43,6 +31,52 @@ MTS_INTERNAL_ERROR = 255
 mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
+
+# ============================================================================ #
+# DLPack types
+# ============================================================================ #
+class DLPackVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
+
+class DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class DLDataType(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_uint8),
+        ("bits", ctypes.c_uint8),
+        ("lanes", ctypes.c_uint16),
+    ]
+
+class DLTensor(ctypes.Structure):
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("device", DLDevice),
+        ("ndim", ctypes.c_int32),
+        ("dtype", DLDataType),
+        ("shape", POINTER(ctypes.c_int64)),
+        ("strides", POINTER(ctypes.c_int64)),
+        ("byte_offset", ctypes.c_uint64),
+    ]
+
+class DLManagedTensorVersioned(ctypes.Structure):
+    pass
+
+_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))
+
+DLManagedTensorVersioned._fields_ = [
+    ("version", DLPackVersion),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", _DLManagedTensorVersionedDeleter),
+    ("flags", ctypes.c_uint64),
+    ("dl_tensor", DLTensor),
+]
 
 
 class mts_block_t(ctypes.Structure):
@@ -81,7 +115,7 @@ mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_double)))),
-    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_void_p)), DLDevice, POINTER(ctypes.c_int64), DLPackVersion)),
+    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)), DLDevice, POINTER(ctypes.c_int64), DLPackVersion)),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
