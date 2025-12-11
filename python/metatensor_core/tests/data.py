@@ -1,9 +1,11 @@
 import ctypes
 import gc
 import os
+import sys
 import weakref
 
 import numpy as np
+import pytest
 from numpy.testing import assert_equal
 
 
@@ -154,6 +156,11 @@ class MtsArrayMixin:
         free_mts_array(mts_array)
         free_mts_array(mts_array_other)
 
+    @pytest.mark.skipif(
+        sys.version_info.major < 3
+        or (sys.version_info.major == 3 and sys.version_info.minor < 13),
+        reason="Requires Python 3.13 or newer for DLPack feature compatibility.",
+    )
     def test_dlpack(self):
         # Create a sample array
         array = self.create_array((2, 3))
