@@ -6,6 +6,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/array.hpp"
+#include <ATen/DLConvertor.h>
 
 using namespace metatensor_torch;
 
@@ -73,6 +74,40 @@ double* TorchDataArray::data() & {
     }
 
     return static_cast<double*>(this->tensor_.data_ptr());
+}
+
+// Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
+// TODO(rg): shouldn't be required later
+static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
+    if (self) {
+        // Retrieve the legacy tensor stored in the context
+        auto* legacy_tensor = static_cast<DLManagedTensor*>(self->manager_ctx);
+        // Use the legacy deleter to free the internal ATen resources
+        if (legacy_tensor && legacy_tensor->deleter) {
+            legacy_tensor->deleter(legacy_tensor);
+        }
+        // Free the versioned wrapper
+        delete self;
+    }
+}
+
+DLManagedTensorVersioned* TorchDataArray::as_dlpack() {
+    // Uses the existing ATen API to get a legacy DLManagedTensor.
+    // TODO(rg): this should eventually just be
+    // return at::toDLPackVersioned(this->tensor_);
+    // https://github.com/pytorch/pytorch/blob/2.9.1/aten/src/ATen/DLConvertor.cpp
+    // ... until then.
+    DLManagedTensor* legacy_tensor = at::toDLPack(this->tensor_);
+    auto* versioned_tensor = new DLManagedTensorVersioned();
+    versioned_tensor->version.major = 1;
+    versioned_tensor->version.minor = 2;
+    //  Setup context
+    versioned_tensor->manager_ctx = legacy_tensor;
+    versioned_tensor->deleter = dlpack_versioned_deleter;
+    versioned_tensor->flags = 0;
+    // Copy metadata
+    versioned_tensor->dl_tensor = legacy_tensor->dl_tensor;
+    return versioned_tensor;
 }
 
 const std::vector<uintptr_t>& TorchDataArray::shape() const & {

@@ -80,6 +80,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             data: None,
+            as_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
