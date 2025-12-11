@@ -12,6 +12,7 @@ C++ API reference
     :tag-prefix: metatensor-core-v
     :url-suffix: core/reference/cxx/index.html
 
+    .. version:: 0.1.19
     .. version:: 0.1.18
     .. version:: 0.1.17
     .. version:: 0.1.16

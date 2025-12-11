@@ -17,6 +17,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.19](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.19) - 2025-12-11
+
+### Fixed
+
+- Reset the size of the buffer produced by `mts_tensormap_save_buffer`,
+  `mts_block_save_buffer`, and `mts_labels_save_buffer` to the same size as
+  v0.1.17
+
 ## [Version 0.1.18](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.18) - 2025-12-04
 
 ### Added
