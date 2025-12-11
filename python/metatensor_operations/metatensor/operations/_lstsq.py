@@ -92,8 +92,8 @@ def lstsq(
 
     :param driver:
         Used only in torch (ignored if numpy is used), see
-        https://pytorch.org/docs/stable/generated/torch.linalg.lstsq.html for a
-        full description
+        https://docs.pytorch.org/docs/stable/generated/torch.linalg.lstsq.html
+        for a full description
 
     :return: a :py:class:`TensorMap` with the same keys of ``Y`` and ``X``, and
         where each :py:class:`TensorBlock` has: the ``sample`` equal to the

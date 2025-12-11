@@ -163,4 +163,4 @@ from ``metatensor-core`` and all functions from ``metatensor-operations``.
 .. _bindgen: https://rust-lang.github.io/rust-bindgen/
 .. _ctypes: https://docs.python.org/3/library/ctypes.html
 .. _distributions: https://packaging.python.org/en/latest/glossary/#term-Distribution-Package
-.. _TorchScript: https://pytorch.org/docs/stable/jit.html
+.. _TorchScript: https://docs.pytorch.org/docs/stable/jit.html

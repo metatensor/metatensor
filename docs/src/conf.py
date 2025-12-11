@@ -175,8 +175,8 @@ breathe_domain_by_extension = {
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
-    "featomic": ("https://metatensor.github.io/featomic/latest/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
+    "featomic": ("http://docs.metatensor.org/featomic/latest/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 

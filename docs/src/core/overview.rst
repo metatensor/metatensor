@@ -165,7 +165,7 @@ data arrays.
     abstract base class in C++, and the `metatensor::Array`_ trait in Rust.
 
 .. _Numpy's ndarray: https://numpy.org/doc/stable/reference/arrays.ndarray.html
-.. _PyTorch's Tensor: https://pytorch.org/docs/stable/tensors.html
+.. _PyTorch's Tensor: https://docs.pytorch.org/docs/stable/tensors.html
 .. _Rust's ndarray: https://docs.rs/ndarray/
 .. _metatensor::Array: ../reference/rust/metatensor/trait.Array.html
 
