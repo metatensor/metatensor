@@ -1,8 +1,11 @@
+import ctypes
 import gc
 import os
+import sys
 import weakref
 
 import numpy as np
+import pytest
 from numpy.testing import assert_equal
 
 
@@ -13,11 +16,10 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-import ctypes
-
 import metatensor
 from metatensor._c_api import (
     MTS_SUCCESS,
+    c_DLManagedTensorVersioned,
     c_uintptr_t,
     mts_array_t,
     mts_sample_mapping_t,
@@ -153,6 +155,48 @@ class MtsArrayMixin:
 
         free_mts_array(mts_array)
         free_mts_array(mts_array_other)
+
+    @pytest.mark.skipif(
+        sys.version_info.major < 3
+        or (sys.version_info.major == 3 and sys.version_info.minor < 13),
+        reason="Requires Python 3.13 or newer for DLPack feature compatibility.",
+    )
+    def test_dlpack(self):
+        # Create a sample array
+        array = self.create_array((2, 3))
+        mts_array = metatensor.data.create_mts_array(array)
+
+        # Prepare a double pointer to receive the DLManagedTensorVersioned
+        dl_managed_ptr = ctypes.POINTER(c_DLManagedTensorVersioned)()
+
+        # Call the as_dlpack callback via ctypes
+        mts_array.as_dlpack(mts_array.ptr, ctypes.byref(dl_managed_ptr))
+
+        # Check we got a valid pointer back
+        assert bool(dl_managed_ptr)
+
+        # Dereference to check contents
+        managed = dl_managed_ptr.contents
+        dl_tensor = managed.dl_tensor
+
+        # Verify Metadata
+        assert managed.version.major == 1
+        assert managed.version.minor == 0
+        assert dl_tensor.ndim == 2
+        assert dl_tensor.shape[0] == 2
+        assert dl_tensor.shape[1] == 3
+
+        # Verify Data Pointer matches the source array
+        if self.expected_origin() == "metatensor.data.array.numpy":
+            assert dl_tensor.data == array.ctypes.data
+        elif self.expected_origin() == "metatensor.data.array.torch":
+            assert dl_tensor.data == array.data_ptr()
+
+        # IMPORTANT: Call the deleter to cleanup the C-side resources (and refcounts)
+        # This emulates what a consumer (like another library) would do.
+        managed.deleter(dl_managed_ptr)
+
+        free_mts_array(mts_array)
 
 
 class TestNumpyData(MtsArrayMixin):

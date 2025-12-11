@@ -603,3 +603,31 @@ def test_save_load_info(tensor, use_numpy):
     for use_numpy_load in (False, True):
         loaded = mts.io.load_buffer(buffer, use_numpy=use_numpy_load)
         assert loaded.get_info("test") == "value"
+
+
+@pytest.mark.parametrize("dtype", [np.int32, np.float32, np.float64])
+def test_save_dtypes(tmp_path, dtype):
+    if np.issubdtype(dtype, np.integer):
+        data = np.array([[1, 2, 3], [4, 5, 6]], dtype=dtype)
+    else:
+        data = np.array([[1.1, 2.2], [3.3, 4.4]], dtype=dtype)
+    block = TensorBlock(
+        values=data,
+        samples=Labels(["s"], np.array([[0], [1]], dtype=np.int32)),
+        components=[],
+        properties=Labels(
+            ["p"], np.arange(data.shape[1], dtype=np.int32).reshape(-1, 1)
+        ),
+    )
+    keys = Labels(["key"], np.array([[0]], dtype=np.int32))
+    tensor = TensorMap(keys, [block])
+    # Python -> C-API -> Rust -> DLPack -> serialization
+    file_path = tmp_path / f"test_dtype_{dtype.__name__}.mts"
+    mts.save(file_path, tensor, use_numpy=False)
+    # Verify with NumPy
+    # TODO(rg): let the loader handle types too
+    # .mts files are ZIP archives of .npy files.
+    archive = np.load(file_path)
+    vals_loaded = archive["blocks/0/values"]
+    assert vals_loaded.dtype == dtype
+    np.testing.assert_array_equal(vals_loaded, data)

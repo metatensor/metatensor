@@ -1,6 +1,9 @@
+use dlpk::sys::DLManagedTensorVersioned;
+use dlpk::DLPackTensor;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
+use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
@@ -91,6 +94,17 @@ pub struct mts_array_t {
     data: Option<unsafe extern "C" fn(
         array: *mut c_void,
         data: *mut *mut f64,
+    ) -> mts_status_t>,
+
+    /// Get a DLPack representation of the underlying data.
+    ///
+    /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
+    /// responsible for calling its `deleter` function when the tensor is no
+    /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+    /// exceed the lifetime of the `mts_array_t` it was created from.
+    as_dlpack: Option<unsafe extern "C" fn(
+        array: *mut c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -210,6 +224,7 @@ impl mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
             data: self.data,
+            as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -227,6 +242,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             data: None,
+            as_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -329,6 +345,26 @@ impl mts_array_t {
         };
 
         return Ok(data);
+    }
+
+    /// Get a dlpack representation of the data
+    pub fn as_dlpack(&self) -> Result<DLPackTensor, Error> {
+        // C function pointer from the vtable slot
+        let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
+        // ... and fill structure
+        let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+        let status = unsafe { function(self.ptr, &mut dl_managed_tensor) };
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.as_dlpack failed".into()
+            });
+        }
+        assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
+        let ptr = NonNull::new(dl_managed_tensor).expect("pointer is null, this should not happen");
+        let tensor = unsafe {
+            DLPackTensor::from_ptr(ptr)
+        };
+        return Ok(tensor);
     }
 
     /// Get the shape of this array
@@ -508,6 +544,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -525,6 +562,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
