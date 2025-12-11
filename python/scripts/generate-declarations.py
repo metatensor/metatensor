@@ -120,6 +120,8 @@ def c_type_name(name):
         return "ctypes.c_int64"
     elif name == "uint64_t":
         return "ctypes.c_uint64"
+    elif name == "DLManagedTensorVersioned":
+        return "c_DLManagedTensorVersioned"
     else:
         return "ctypes.c_" + name
 
@@ -281,6 +283,57 @@ elif arch == "64bit":
                 # will be generated below, it depends on the structs
                 continue
             file.write(f"{name} = {type_to_ctypes(c_type)}\n")
+
+        # --- Manual definitions for the DLPack structs (ala pydlpack) ---
+        file.write("""
+# ============================================================================ #
+# DLPack types
+# ============================================================================ #
+
+class c_DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class c_DLDataType(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_uint8),
+        ("bits", ctypes.c_uint8),
+        ("lanes", ctypes.c_uint16),
+    ]
+
+class c_DLTensor(ctypes.Structure):
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("device", c_DLDevice),
+        ("ndim", ctypes.c_int32),
+        ("dtype", c_DLDataType),
+        ("shape", POINTER(ctypes.c_int64)),
+        ("strides", POINTER(ctypes.c_int64)),
+        ("byte_offset", ctypes.c_uint64),
+    ]
+
+class c_DLManagedTensorVersionedVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
+
+class c_DLManagedTensorVersioned(ctypes.Structure):
+    pass
+
+_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(c_DLManagedTensorVersioned))
+
+c_DLManagedTensorVersioned._fields_ = [
+    ("version", c_DLManagedTensorVersionedVersion),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", _DLManagedTensorVersionedDeleter),
+    ("flags", ctypes.c_uint64),
+    ("dl_tensor", c_DLTensor),
+]
+""")
+        # -----------------------------------------------------
 
         generate_enums(file, data.enums)
         generate_structs(file, data.structs)
