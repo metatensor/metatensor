@@ -25,6 +25,9 @@ default = []
 # use the static build of metatensor-core instead of the shared one
 static = []
 
+[dependencies]
+dlpk = "0.1.0"
+
 [build-dependencies]
 cmake = "0.1"
 which = "8"
