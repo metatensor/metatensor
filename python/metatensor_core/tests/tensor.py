@@ -590,4 +590,7 @@ def test_info(tensor):
     expected_info = {"creator": "unit test", "description": "an updated description"}
     assert tensor.info() == expected_info
 
+    moved_tensor = tensor.to("cpu")
+    assert moved_tensor.info() == expected_info
+
     assert tensor.get_info("missing") is None

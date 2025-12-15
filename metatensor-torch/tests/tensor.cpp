@@ -193,7 +193,7 @@ TEST_CASE("TensorMap") {
         CHECK(info.at("creator") == "metatensor-torch test");
         CHECK(info.at("version") == "1.0");
 
-        auto moved_tensor = tensor.to(torch::kMeta);
+        auto moved_tensor = tensor->to(torch::kF32);
         auto new_info = moved_tensor->info();
         CHECK(new_info.size() == 2);
         CHECK(new_info.at("creator") == "metatensor-torch test");
