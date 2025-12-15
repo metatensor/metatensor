@@ -138,6 +138,9 @@ pub struct mts_array_t {
         unsafe extern "C" fn(
             array: *mut ::std::os::raw::c_void,
             dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+            device: DLDevice,
+            stream: *mut ::std::os::raw::c_void,
+            max_version: DLPackVersion,
         ) -> mts_status_t,
     >,
     pub shape: ::std::option::Option<

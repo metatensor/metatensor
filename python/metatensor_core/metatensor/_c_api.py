@@ -20,6 +20,18 @@ if arch == "32bit":
 elif arch == "64bit":
     c_uintptr_t = ctypes.c_uint64
 
+
+class DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class DLPackVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
 MTS_SUCCESS = 0
 MTS_INVALID_PARAMETER_ERROR = 1
 MTS_IO_ERROR = 2
@@ -69,7 +81,7 @@ mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_double)))),
-    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_void_p)))),
+    ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(ctypes.c_void_p)), DLDevice, ctypes.c_void_p, DLPackVersion)),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),

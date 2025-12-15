@@ -12,6 +12,19 @@ FAKE_INCLUDES = [
 METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
+DLPACK_DEFINITIONS = """
+class DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class DLPackVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
+"""
 
 
 class Function:
@@ -120,7 +133,12 @@ def c_type_name(name):
         return "ctypes.c_int64"
     elif name == "uint64_t":
         return "ctypes.c_uint64"
+    elif name == "DLDevice":
+        return "DLDevice"
+    elif name == "DLPackVersion":
+        return "DLPackVersion"
     elif name == "DLManagedTensorVersioned":
+        # Opaque handle in the API
         return "ctypes.c_void_p"
     else:
         return "ctypes.c_" + name
@@ -274,6 +292,7 @@ elif arch == "64bit":
 
 """
         )
+        file.write(DLPACK_DEFINITIONS)
         for name, value in data.defines.items():
             file.write(f"{name} = {value}\n")
         file.write("\n\n")
