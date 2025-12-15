@@ -176,7 +176,11 @@ typedef struct mts_array_t {
    * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
    * exceed the lifetime of the `mts_array_t` it was created from.
    */
-  mts_status_t (*as_dlpack)(void *array, DLManagedTensorVersioned **dl_managed_tensor);
+  mts_status_t (*as_dlpack)(void *array,
+                            DLManagedTensorVersioned **dl_managed_tensor,
+                            DLDevice device,
+                            void *stream,
+                            DLPackVersion max_version);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in

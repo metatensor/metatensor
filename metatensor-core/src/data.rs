@@ -1,4 +1,4 @@
-use dlpk::sys::DLManagedTensorVersioned;
+use dlpk::sys::*;
 use dlpk::DLPackTensor;
 use std::ops::Range;
 use std::os::raw::c_void;
@@ -98,6 +98,20 @@ pub struct mts_array_t {
 
     /// Get a DLPack representation of the underlying data.
     ///
+    /// This function exports the array as a `DLManagedTensorVersioned` struct
+    /// into `*dl_managed_tensor`, following the DLPack data interchange
+    /// standard.
+    ///
+    /// The `device` parameter specifies the desired DLPack device type. If this
+    /// differs from the array's current device, the implementation should
+    /// attempt to make the data accessible on the requested device (e.g., by
+    /// copying).
+    ///
+    /// The `stream` parameter is a pointer to a stream (e.g., `cudaStream_t`)
+    /// provided by the caller to ensure safe execution. If `NULL`, the producer
+    /// assumes the legacy default stream. `max_version` specifies the maximum
+    /// DLPack version the caller supports.
+    ///
     /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
     /// responsible for calling its `deleter` function when the tensor is no
     /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
@@ -105,6 +119,9 @@ pub struct mts_array_t {
     as_dlpack: Option<unsafe extern "C" fn(
         array: *mut c_void,
         dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+        device: DLDevice,
+        stream: *mut c_void,
+        max_version: DLPackVersion,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -348,12 +365,17 @@ impl mts_array_t {
     }
 
     /// Get a dlpack representation of the data
-    pub fn as_dlpack(&self) -> Result<DLPackTensor, Error> {
+    pub fn as_dlpack(&self,
+                     device: DLDevice,
+                     stream: *mut c_void,
+                     max_version: DLPackVersion) -> Result<DLPackTensor, Error> {
         // C function pointer from the vtable slot
         let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
         // ... and fill structure
-        let mut dl_managed_tensor = std::ptr::null_mut();
-        let status = unsafe { function(self.ptr, &mut dl_managed_tensor) };
+        let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+        let status = unsafe {
+            function(self.ptr, &mut dl_managed_tensor, device, stream, max_version)
+        };
         if !status.is_success() {
             return Err(Error::External {
                 status, context: "calling mts_array_t.as_dlpack failed".into()
