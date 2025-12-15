@@ -711,10 +711,10 @@ class TensorMap:
                     )
                 )
 
-        tmap = TensorMap(self.keys, blocks)
+        tensor = TensorMap(self.keys, blocks)
         for key, value in self.info().items():
-            tmap.set_info(key, value)
-        return tmap
+            tensor.set_info(key, value)
+        return tensor
 
     def set_info(self, key: str, value: str):
         """
