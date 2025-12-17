@@ -593,4 +593,13 @@ def test_info(tensor):
     moved_tensor = tensor.to("cpu")
     assert moved_tensor.info() == expected_info
 
+    k2p_tensor = tensor.keys_to_properties("key_1")
+    assert k2p_tensor.info() == expected_info
+
+    k2s_tensor = tensor.keys_to_samples("key_2", sort_samples=True)
+    assert k2s_tensor.info() == expected_info
+
+    c2p_tensor = tensor.components_to_properties("c")
+    assert c2p_tensor.info() == expected_info
+
     assert tensor.get_info("missing") is None

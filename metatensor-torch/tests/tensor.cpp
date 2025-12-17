@@ -198,6 +198,24 @@ TEST_CASE("TensorMap") {
         CHECK(new_info.size() == 2);
         CHECK(new_info.at("creator") == "metatensor-torch test");
         CHECK(new_info.at("version") == "1.0");
+
+        auto k2p_tensor = test_tensor_map()->keys_to_properties("key_1", /*sort_samples*/ true);
+        auto k2p_new_info = moved_tensor->info();
+        CHECK(k2p_new_info.size() == 2);
+        CHECK(k2p_new_info.at("creator") == "metatensor-torch test");
+        CHECK(k2p_new_info.at("version") == "1.0");
+
+        auto k2s_tensor = test_tensor_map()->keys_to_samples("key_2", /* sort_samples */ true);
+        auto k2s_new_info = moved_tensor->info();
+        CHECK(k2s_new_info.size() == 2);
+        CHECK(k2s_new_info.at("creator") == "metatensor-torch test");
+        CHECK(k2s_new_info.at("version") == "1.0");
+
+        auto c2p_tensor = test_tensor_map()->components_to_properties("component");
+        auto c2p_new_info = moved_tensor->info();
+        CHECK(c2p_new_info.size() == 2);
+        CHECK(c2p_new_info.at("creator") == "metatensor-torch test");
+        CHECK(c2p_new_info.at("version") == "1.0");
     }
 }
 

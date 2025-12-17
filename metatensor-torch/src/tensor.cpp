@@ -349,12 +349,20 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_properties first argument");
         auto tensor = tensor_.keys_to_properties(selection, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(torch::nullopt, device);
+        auto new_tensor = result->to(torch::nullopt, device);
+        for (auto it: this->tensor_.info()) {
+            new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+        }
+        return new_tensor
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(torch::nullopt, device);
+        auto new_tensor = result->to(torch::nullopt, device);
+        for (auto it: this->tensor_.info()) {
+            new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+        }
+        return new_tensor
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_properties first argument must be a `str`, list of `str` or `Labels`"
@@ -368,12 +376,20 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_samples first argument");
         auto tensor = tensor_.keys_to_samples(selection, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(torch::nullopt, device);
+        auto new_tensor = result->to(torch::nullopt, device);
+        for (auto it: this->tensor_.info()) {
+            new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+        }
+        return new_tensor
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-        return result->to(torch::nullopt, device);
+        auto new_tensor = result->to(torch::nullopt, device);
+        for (auto it: this->tensor_.info()) {
+            new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+        }
+        return new_tensor
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_samples first argument must be a `str`, list of `str` or `Labels`"
@@ -386,7 +402,11 @@ TensorMap TensorMapHolder::components_to_properties(torch::IValue dimensions) co
     auto selection = extract_list_str(dimensions, "TensorMap::components_to_properties argument");
     auto tensor = this->tensor_.components_to_properties(selection);
     auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
-    return result->to(torch::nullopt, device);
+    auto new_tensor = result->to(torch::nullopt, device);
+    for (auto it: this->tensor_.info()) {
+        new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+    }
+    return new_tensor
 }
 
 static std::vector<std::string> labels_names(const metatensor::TensorBlock& block, size_t dimension) {
