@@ -353,7 +353,7 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
         for (auto it: this->tensor_.info()) {
             new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
         }
-        return new_tensor
+        return new_tensor;
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), sort_samples);
@@ -362,7 +362,7 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
         for (auto it: this->tensor_.info()) {
             new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
         }
-        return new_tensor
+        return new_tensor;
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_properties first argument must be a `str`, list of `str` or `Labels`"
@@ -380,7 +380,7 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort
         for (auto it: this->tensor_.info()) {
             new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
         }
-        return new_tensor
+        return new_tensor;
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
         auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), sort_samples);
@@ -389,7 +389,7 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort
         for (auto it: this->tensor_.info()) {
             new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
         }
-        return new_tensor
+        return new_tensor;
     } else {
         C10_THROW_ERROR(TypeError,
             "TensorMap::keys_to_samples first argument must be a `str`, list of `str` or `Labels`"
@@ -406,7 +406,7 @@ TensorMap TensorMapHolder::components_to_properties(torch::IValue dimensions) co
     for (auto it: this->tensor_.info()) {
         new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
     }
-    return new_tensor
+    return new_tensor;
 }
 
 static std::vector<std::string> labels_names(const metatensor::TensorBlock& block, size_t dimension) {

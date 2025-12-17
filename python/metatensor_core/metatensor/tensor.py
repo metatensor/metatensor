@@ -545,7 +545,10 @@ class TensorMap:
         ptr = self._lib.mts_tensormap_keys_to_samples(
             self._ptr, keys_to_move._as_mts_labels_t(), sort_samples
         )
-        return TensorMap._from_ptr(ptr)
+        tensor = TensorMap._from_ptr(ptr)
+        for key, value in self.info().items():
+            tensor.set_info(key, value)
+        return tensor
 
     def components_to_properties(
         self, dimensions: Union[str, Sequence[str]]
