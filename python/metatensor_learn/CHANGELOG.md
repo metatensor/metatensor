@@ -17,10 +17,6 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-### Fixed
-- Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
-  `components_to_properties`, and `key_to_properties` are called
-
 ## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.4.0) - 2025-10-29
 
 ### Changed
