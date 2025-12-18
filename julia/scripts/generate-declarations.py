@@ -106,6 +106,7 @@ def parse(file):
 CTYPES_TO_JULIA = {
     "uintptr_t": "UIntptr",
     "uint8_t": "UInt8",
+    "uint16_t": "UInt16",
     "int32_t": "Int32",
     "uint32_t": "UInt32",
     "int64_t": "Int64",
