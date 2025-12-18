@@ -23,6 +23,8 @@ fn main() {
     config.line_endings = cbindgen::LineEndingStyle::LF;
     config.autogen_warning = Some(generated_comment.into());
     config.includes.push("metatensor/version.h".into());
+    config.includes.push("metatensor/dlpack/dlpack.h".into());
+    config.after_includes = Some("typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;".into());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)

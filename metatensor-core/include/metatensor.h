@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "metatensor/dlpack/dlpack.h"
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
  * Status code used when a function succeeded
@@ -166,6 +168,49 @@ typedef struct mts_array_t {
    * C-contiguous array.
    */
   mts_status_t (*data)(void *array, double **data);
+  /**
+   * Get a DLPack representation of the underlying data.
+   *
+   * This function exports the array as a `DLManagedTensorVersioned` struct
+   * into `*dl_managed_tensor`, following the DLPack data interchange
+   * standard.
+   *
+   * The `device` parameter specifies the desired DLPack device type. If this
+   * differs from the array's current device, the implementation should
+   * attempt to make the data accessible on the requested device (e.g., by
+   * copying).
+   *
+   * The `stream` parameter is a pointer to an integer representing a
+   * device-specific stream or queue. If this is `NULL`, the implementation
+   * should use the default stream for the specified device. If this is `-1`,
+   * no synchronization should be performed. Some devices have specific
+   * stream values:
+   * - For CUDA devices, `1` represents the legacy default stream, `2` the
+   *   per-thread default stream. Any value above `2` indicates the stream
+   *   number. `0` is not allowed as it could mean the same as `NULL`, `1` or
+   *   `2`.
+   * - For ROCm devices, `0` represents the default stream, any value above
+   *   `2` indicates the stream number. `1` and `2` are not allowed.
+   *
+   * See also the documentation of `__dlpack__` for more information about
+   * streams:
+   * <https://data-apis.org/array-api/latest/API_specification/generated/array_api.array.__dlpack__.html>
+   *
+   * `max_version` specifies the maximum DLPack API version the caller
+   * supports. The implementation should try to return a tensor compatible
+   * with this version, but this is not guaranteed, and the caller should
+   * check the returned tensor's version.
+   *
+   * The returned `DLManagedTensorVersioned` is owned by the caller, who is
+   * responsible for calling its `deleter` function when the tensor is no
+   * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+   * exceed the lifetime of the `mts_array_t` it was created from.
+   */
+  mts_status_t (*as_dlpack)(void *array,
+                            DLManagedTensorVersioned **dl_managed_tensor,
+                            DLDevice device,
+                            const int64_t *stream,
+                            DLPackVersion max_version);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in

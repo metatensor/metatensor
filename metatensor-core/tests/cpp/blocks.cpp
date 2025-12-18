@@ -11,14 +11,14 @@ static void check_loaded_block(metatensor::TensorBlock& block);
 TEST_CASE("Blocks") {
     SECTION("no components") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({"properties"}, {{5}, {3}})
         );
 
         auto values_mts_array = block.mts_array();
-        CHECK(SimpleDataArray::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 2});
+        CHECK(SimpleDataArray<double>::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 2});
 
         auto values = block.values();
         CHECK(values.shape() == std::vector<size_t>{3, 2});
@@ -33,14 +33,14 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component_1"}, {{-1}, {0}, {1}}));
         components.emplace_back(Labels({"component_2"}, {{-4}, {1}}));
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             Labels({"properties"}, {{5}, {3}})
         );
 
         auto values_mts_array = block.mts_array();
-        CHECK(SimpleDataArray::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 3, 2, 2});
+        CHECK(SimpleDataArray<double>::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 3, 2, 2});
 
         auto values = block.values();
         CHECK(values.shape() == std::vector<size_t>{3, 3, 2, 2});
@@ -60,7 +60,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
         auto properties = Labels({"properties"}, {{5}, {3}});
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             properties
@@ -71,7 +71,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component"}, {{-1}, {0}, {1}}));
 
         auto gradient = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({2, 1, 3, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 1, 3, 2})),
             Labels({"sample", "parameter"}, {{0, -2}, {2, 3}}),
             components,
             properties
@@ -81,11 +81,11 @@ TEST_CASE("Blocks") {
         CHECK(block.gradients_list() == std::vector<std::string>{"parameter"});
 
         auto gradient_mts_array = block.gradient("parameter").mts_array();
-        CHECK(SimpleDataArray::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
+        CHECK(SimpleDataArray<double>::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
 
         gradient = block.gradient("parameter");
         gradient_mts_array = gradient.mts_array();
-        CHECK(SimpleDataArray::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
+        CHECK(SimpleDataArray<double>::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
         auto data = gradient.values();
         CHECK(data.shape() == std::vector<size_t>{2, 1, 3, 2});
 
@@ -106,7 +106,7 @@ TEST_CASE("Blocks") {
 
     SECTION("clone") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({"properties"}, {{5}, {3}})
@@ -116,9 +116,9 @@ TEST_CASE("Blocks") {
         auto clone = block.clone();
 
 
-        class BrokenDataArray: public metatensor::SimpleDataArray {
+        class BrokenDataArray: public metatensor::SimpleDataArray<double> {
         public:
-            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray(std::move(shape)) {}
+            BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray<double>(std::move(shape)) {}
 
             std::unique_ptr<DataArrayBase> copy() const override {
                 throw std::runtime_error("can not copy this!");
@@ -141,7 +141,7 @@ TEST_CASE("Blocks") {
         components.emplace_back(Labels({"component_1"}, {{-1}, {0}, {1}}));
         components.emplace_back(Labels({"component_2"}, {{-4}, {1}}));
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 3, 2, 2})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 3, 2, 2})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             components,
             Labels({"properties"}, {{5}, {3}})
@@ -170,7 +170,7 @@ TEST_CASE("Blocks") {
 
     SECTION("empty labels") {
         auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray>(new SimpleDataArray({3, 0})),
+            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 0})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
             Labels({}, {})
