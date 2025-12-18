@@ -17,14 +17,17 @@ bindgen ./metatensor-core/include/metatensor.h -o ./rust/metatensor-sys/src/c_ap
     --merge-extern-blocks \
     --allowlist-function "^mts_.*" \
     --allowlist-type "^mts_.*" \
-    --allowlist-var "^MTS_.*"\
+    --allowlist-var "^MTS_.*" \
     --must-use-type "mts_status_t" \
+    --blocklist-type "DL.*" \
     --rust-target "1.74" \
     --raw-line '#![allow(warnings)]
 //! Rust definition corresponding to metatensor-core C-API.
 //!
 //! This module is exported for advanced users of the metatensor crate, but
 //! should not be needed by most.
+
+use dlpk::sys::*;
 
 #[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
 #[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]

@@ -69,7 +69,8 @@ namespace metatensor {
         template<typename Function, typename ...Args>
         inline mts_status_t catch_exceptions(Function function, Args ...args) {
             try {
-                return function(std::move(args)...);
+                function(std::move(args)...);
+                return MTS_SUCCESS;
             } catch (const std::exception& e) {
                 details::LastCxxError::set_message(e.what());
                 return -1;
