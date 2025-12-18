@@ -1,8 +1,12 @@
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
+use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
+
+use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+use dlpk::DLPackTensor;
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -91,6 +95,50 @@ pub struct mts_array_t {
     data: Option<unsafe extern "C" fn(
         array: *mut c_void,
         data: *mut *mut f64,
+    ) -> mts_status_t>,
+
+    /// Get a DLPack representation of the underlying data.
+    ///
+    /// This function exports the array as a `DLManagedTensorVersioned` struct
+    /// into `*dl_managed_tensor`, following the DLPack data interchange
+    /// standard.
+    ///
+    /// The `device` parameter specifies the desired DLPack device type. If this
+    /// differs from the array's current device, the implementation should
+    /// attempt to make the data accessible on the requested device (e.g., by
+    /// copying).
+    ///
+    /// The `stream` parameter is a pointer to an integer representing a
+    /// device-specific stream or queue. If this is `NULL`, the implementation
+    /// should use the default stream for the specified device. If this is `-1`,
+    /// no synchronization should be performed. Some devices have specific
+    /// stream values:
+    /// - For CUDA devices, `1` represents the legacy default stream, `2` the
+    ///   per-thread default stream. Any value above `2` indicates the stream
+    ///   number. `0` is not allowed as it could mean the same as `NULL`, `1` or
+    ///   `2`.
+    /// - For ROCm devices, `0` represents the default stream, any value above
+    ///   `2` indicates the stream number. `1` and `2` are not allowed.
+    ///
+    /// See also the documentation of `__dlpack__` for more information about
+    /// streams:
+    /// <https://data-apis.org/array-api/latest/API_specification/generated/array_api.array.__dlpack__.html>
+    ///
+    /// `max_version` specifies the maximum DLPack API version the caller
+    /// supports. The implementation should try to return a tensor compatible
+    /// with this version, but this is not guaranteed, and the caller should
+    /// check the returned tensor's version.
+    ///
+    /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
+    /// responsible for calling its `deleter` function when the tensor is no
+    /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+    /// exceed the lifetime of the `mts_array_t` it was created from.
+    as_dlpack: Option<unsafe extern "C" fn(
+        array: *mut c_void,
+        dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+        device: DLDevice,
+        stream: *const i64,
+        max_version: DLPackVersion,
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
@@ -210,6 +258,7 @@ impl mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
             data: self.data,
+            as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -227,6 +276,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             data: None,
+            as_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -329,6 +379,38 @@ impl mts_array_t {
         };
 
         return Ok(data);
+    }
+
+    /// Get a dlpack representation of the data
+    pub fn as_dlpack(
+        &self,
+        device: DLDevice,
+        stream: Option<i64>,
+        max_version: DLPackVersion
+    ) -> Result<DLPackTensor, Error> {
+        // C function pointer from the vtable slot
+        let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
+        // ... and fill structure
+        let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+
+        let stream_c = match stream {
+            Some(s) => &s as *const i64,
+            None => std::ptr::null(),
+        };
+        let status = unsafe {
+            function(self.ptr, &mut dl_managed_tensor, device, stream_c, max_version)
+        };
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.as_dlpack failed".into()
+            });
+        }
+        assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
+        let ptr = NonNull::new(dl_managed_tensor).expect("pointer is null, this should not happen");
+        let tensor = unsafe {
+            DLPackTensor::from_ptr(ptr)
+        };
+        return Ok(tensor);
     }
 
     /// Get the shape of this array
@@ -508,6 +590,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -525,6 +608,7 @@ mod tests {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
                 data: None,
+                as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
