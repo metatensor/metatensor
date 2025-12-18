@@ -545,10 +545,7 @@ class TensorMap:
         ptr = self._lib.mts_tensormap_keys_to_samples(
             self._ptr, keys_to_move._as_mts_labels_t(), sort_samples
         )
-        tensor = TensorMap._from_ptr(ptr)
-        for key, value in self.info().items():
-            tensor.set_info(key, value)
-        return tensor
+        return TensorMap._from_ptr(ptr)
 
     def components_to_properties(
         self, dimensions: Union[str, Sequence[str]]
@@ -564,10 +561,7 @@ class TensorMap:
         ptr = self._lib.mts_tensormap_components_to_properties(
             self._ptr, c_dimensions, c_dimensions._length_
         )
-        tensor = TensorMap._from_ptr(ptr)
-        for key, value in self.info().items():
-            tensor.set_info(key, value)
-        return tensor
+        return TensorMap._from_ptr(ptr)
 
     def keys_to_properties(
         self,
@@ -619,10 +613,7 @@ class TensorMap:
         ptr = self._lib.mts_tensormap_keys_to_properties(
             self._ptr, keys_to_move._as_mts_labels_t(), sort_samples
         )
-        tensor = TensorMap._from_ptr(ptr)
-        for key, value in self.info().items():
-            tensor.set_info(key, value)
-        return tensor
+        return TensorMap._from_ptr(ptr)
 
     @property
     def sample_names(self) -> List[str]:
