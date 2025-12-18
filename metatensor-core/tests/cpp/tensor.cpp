@@ -61,19 +61,21 @@ TEST_CASE("TensorMap") {
         CHECK(info_map["creator"] == "unit test");
         CHECK(info_map["description"] == "a test tensor map");
 
-        std::set<std::string> expected_keys = {"creator", "version"};
+        std::set<std::string> expected_keys = {"creator", "description"};
         std::set<std::string> actual_keys;
         auto k2p_tensor = tensor.keys_to_properties("key_1", /*sort_samples*/ true);
         auto k2p_new_info = k2p_tensor.info();
         for (auto [key, value]: k2p_new_info) {
-            actual_keys.insert(std::string(key));
-            if (key == "creator") {
-                CHECK(value == "metatensor-torch test");
-            } else if (key == "version")
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
             {
-                CHECK(value == "1.0");
-            } else{
-                FAIL("unexpected info key: " << key);
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
             }
         }
         REQUIRE(actual_keys == expected_keys);
@@ -82,14 +84,16 @@ TEST_CASE("TensorMap") {
         auto k2s_tensor = tensor.keys_to_samples("key_2", /* sort_samples */ true);
         auto k2s_new_info = k2s_tensor.info();
         for (auto [key, value]: k2s_new_info) {
-            actual_keys.insert(std::string(key));
-            if (key == "creator") {
-                CHECK(value == "metatensor-torch test");
-            } else if (key == "version")
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
             {
-                CHECK(value == "1.0");
-            } else{
-                FAIL("unexpected info key: " << key);
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
             }
         }
         REQUIRE(actual_keys == expected_keys);
@@ -98,14 +102,16 @@ TEST_CASE("TensorMap") {
         auto c2p_tensor = tensor.components_to_properties("component");
         auto c2p_new_info = c2p_tensor.info();
         for (auto [key, value]: c2p_new_info) {
-            actual_keys.insert(std::string(key));
-            if (key == "creator") {
-                CHECK(value == "metatensor-torch test");
-            } else if (key == "version")
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
             {
-                CHECK(value == "1.0");
-            } else{
-                FAIL("unexpected info key: " << key);
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
             }
         }
         REQUIRE(actual_keys == expected_keys);
