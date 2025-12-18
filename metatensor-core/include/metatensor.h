@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "metatensor/dlpack/dlpack.h"
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
  * Status code used when a function succeeded
@@ -166,6 +168,33 @@ typedef struct mts_array_t {
    * C-contiguous array.
    */
   mts_status_t (*data)(void *array, double **data);
+  /**
+   * Get a DLPack representation of the underlying data.
+   *
+   * This function exports the array as a `DLManagedTensorVersioned` struct
+   * into `*dl_managed_tensor`, following the DLPack data interchange
+   * standard.
+   *
+   * The `device` parameter specifies the desired DLPack device type. If this
+   * differs from the array's current device, the implementation should
+   * attempt to make the data accessible on the requested device (e.g., by
+   * copying).
+   *
+   * The `stream` parameter is a pointer to a stream (e.g., `cudaStream_t`)
+   * provided by the caller to ensure safe execution. If `NULL`, the producer
+   * assumes the legacy default stream. `max_version` specifies the maximum
+   * DLPack version the caller supports.
+   *
+   * The returned `DLManagedTensorVersioned` is owned by the caller, who is
+   * responsible for calling its `deleter` function when the tensor is no
+   * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+   * exceed the lifetime of the `mts_array_t` it was created from.
+   */
+  mts_status_t (*as_dlpack)(void *array,
+                            DLManagedTensorVersioned **dl_managed_tensor,
+                            DLDevice device,
+                            void *stream,
+                            DLPackVersion max_version);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
