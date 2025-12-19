@@ -335,7 +335,7 @@ if (NOT "$ENV{RUSTC_WRAPPER}" STREQUAL "")
     list(APPEND CARGO_ENV "RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}")
 endif()
 # IMPLIB makes it appear as though a target isn't built in Unix, so it triggers a rebuild and makes libraries that are linking with this one relink
-set(METATENSOR_OUTPUTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} $<$<PLATFORM_ID:Windows>:${METATENSOR_IMPLIB_LOCATION}>)
+set(METATENSOR_OUTPUTS ${METATENSOR_STATIC_LOCATION} $<$<BOOL:${BUILD_SHARED_LIBS}>:${METATENSOR_SHARED_LOCATION}> $<$<PLATFORM_ID:Windows>:${METATENSOR_IMPLIB_LOCATION}>)
 add_custom_command(
     OUTPUT ${METATENSOR_OUTPUTS}
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
