@@ -334,14 +334,19 @@ endif()
 if (NOT "$ENV{RUSTC_WRAPPER}" STREQUAL "")
     list(APPEND CARGO_ENV "RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}")
 endif()
-
-add_custom_target(cargo-build-metatensor ALL
+# IMPLIB makes it appear as though a target isn't built in Unix, so it triggers a rebuild and makes libraries that are linking with this one relink
+set(METATENSOR_OUTPUTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} $<$<PLATFORM_ID:Windows>:${METATENSOR_IMPLIB_LOCATION}>)
+add_custom_command(
+    OUTPUT ${METATENSOR_OUTPUTS}
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
     COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
-    BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
+    VERBATIM
+)
+add_custom_target(cargo-build-metatensor ALL
+    DEPENDS ${METATENSOR_OUTPUTS}
 )
 
 # Auto-generate a header containing the version number as #define
