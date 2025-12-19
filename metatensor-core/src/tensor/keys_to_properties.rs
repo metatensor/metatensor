@@ -113,8 +113,11 @@ impl TensorMap {
                 new_blocks.push(block);
             }
         }
-
-        return TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks);
+        let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
+        for (k, v) in &self.info {
+            tensor.add_info(k, v.clone());
+        }
+        return Ok(tensor);
     }
 }
 
