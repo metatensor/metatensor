@@ -478,7 +478,11 @@ TensorMap TensorMapHolder::to(
         auto torch_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
         new_blocks.emplace_back(torch_block->to(dtype, device, non_blocking));
     }
-    return torch::make_intrusive<TensorMapHolder>(this->keys()->to(device, non_blocking), new_blocks);
+    auto new_tensor = torch::make_intrusive<TensorMapHolder>(this->keys()->to(device, non_blocking), new_blocks);
+    for (auto it: this->tensor_.info()) {
+        new_tensor->tensor_.set_info(std::string(it.first), std::string(it.second));
+    }
+    return new_tensor;
 }
 
 
