@@ -313,19 +313,6 @@ if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
-if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
-    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
-    set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
-else()
-    if (BUILD_SHARED_LIBS)
-        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
-        set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME}")
-    else()
-        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
-        set(FILES_CREATED_BY_CARGO "${METATENSOR_STATIC_LIB_NAME}")
-    endif()
-endif()
-
 # Set environement variables for cargo build
 set(CARGO_ENV "METATENSOR_FULL_VERSION=${METATENSOR_FULL_VERSION}")
 if (NOT "${CMAKE_OSX_DEPLOYMENT_TARGET}" STREQUAL "")
@@ -334,10 +321,28 @@ endif()
 if (NOT "$ENV{RUSTC_WRAPPER}" STREQUAL "")
     list(APPEND CARGO_ENV "RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}")
 endif()
-# IMPLIB makes it appear as though a target isn't built in Unix, so it triggers a rebuild and makes libraries that are linking with this one relink
-set(METATENSOR_OUTPUTS ${METATENSOR_STATIC_LOCATION} $<$<BOOL:${BUILD_SHARED_LIBS}>:${METATENSOR_SHARED_LOCATION}> $<$<PLATFORM_ID:Windows>:${METATENSOR_IMPLIB_LOCATION}>)
+
+if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
+    set(FILES_CREATED_BY_CARGO ${METATENSOR_SHARED_LIB_NAME} ${METATENSOR_STATIC_LIB_NAME})
+    if (WIN32)
+        list(APPEND FILES_CREATED_BY_CARGO ${METATENSOR_IMPLIB_NAME})
+    endif()
+else()
+    if (BUILD_SHARED_LIBS)
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
+        set(FILES_CREATED_BY_CARGO ${METATENSOR_SHARED_LIB_NAME})
+        if (WIN32)
+            list(APPEND FILES_CREATED_BY_CARGO ${METATENSOR_IMPLIB_NAME})
+        endif()
+    else()
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
+        set(FILES_CREATED_BY_CARGO ${METATENSOR_STATIC_LIB_NAME})
+    endif()
+endif()
+
 add_custom_command(
-    OUTPUT ${METATENSOR_OUTPUTS}
+    OUTPUT ${FILES_CREATED_BY_CARGO}
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -345,9 +350,7 @@ add_custom_command(
     COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
     VERBATIM
 )
-add_custom_target(cargo-build-metatensor ALL
-    DEPENDS ${METATENSOR_OUTPUTS}
-)
+add_custom_target(cargo-build-metatensor ALL DEPENDS ${FILES_CREATED_BY_CARGO})
 
 # Auto-generate a header containing the version number as #define
 set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
