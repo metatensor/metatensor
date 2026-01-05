@@ -313,7 +313,7 @@ if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
-# Set environement variables for cargo build
+# Set environment variables for cargo build
 set(CARGO_ENV "METATENSOR_FULL_VERSION=${METATENSOR_FULL_VERSION}")
 if (NOT "${CMAKE_OSX_DEPLOYMENT_TARGET}" STREQUAL "")
     list(APPEND CARGO_ENV "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
@@ -324,33 +324,40 @@ endif()
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
     set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
-    set(FILES_CREATED_BY_CARGO ${METATENSOR_SHARED_LIB_NAME} ${METATENSOR_STATIC_LIB_NAME})
+    set(CARGO_OUTPUTS ${METATENSOR_SHARED_LOCATION} ${METATENSOR_STATIC_LOCATION})
     if (WIN32)
-        list(APPEND FILES_CREATED_BY_CARGO ${METATENSOR_IMPLIB_NAME})
+        list(APPEND CARGO_OUTPUTS ${METATENSOR_IMPLIB_LOCATION})
+        set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME}, ${METATENSOR_STATIC_LIB_NAME}, and ${METATENSOR_IMPLIB_NAME}")
+    else()
+        set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
     endif()
 else()
     if (BUILD_SHARED_LIBS)
         set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
-        set(FILES_CREATED_BY_CARGO ${METATENSOR_SHARED_LIB_NAME})
+        set(CARGO_OUTPUTS ${METATENSOR_SHARED_LOCATION})
         if (WIN32)
-            list(APPEND FILES_CREATED_BY_CARGO ${METATENSOR_IMPLIB_NAME})
+            list(APPEND CARGO_OUTPUTS ${METATENSOR_IMPLIB_LOCATION})
+            set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_IMPLIB_NAME}")
+        else()
+            set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME}")
         endif()
     else()
         set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
-        set(FILES_CREATED_BY_CARGO ${METATENSOR_STATIC_LIB_NAME})
+        set(CARGO_OUTPUTS ${METATENSOR_STATIC_LOCATION})
+        set(FILE_CREATED_MESSAGE "${METATENSOR_STATIC_LIB_NAME}")
     endif()
 endif()
 
 add_custom_command(
-    OUTPUT ${FILES_CREATED_BY_CARGO}
+    OUTPUT ${CARGO_OUTPUTS}
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
-    COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
+    COMMENT "Building ${FILE_CREATED_MESSAGE} with cargo"
     VERBATIM
 )
-add_custom_target(cargo-build-metatensor ALL DEPENDS ${FILES_CREATED_BY_CARGO})
+add_custom_target(cargo-build-metatensor ALL DEPENDS ${CARGO_OUTPUTS})
 
 # Auto-generate a header containing the version number as #define
 set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
