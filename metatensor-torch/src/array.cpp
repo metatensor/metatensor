@@ -75,6 +75,12 @@ double* TorchDataArray::data() & {
     return static_cast<double*>(this->tensor_.data_ptr());
 }
 
+DLManagedTensorVersioned *TorchDataArray::as_dlpack(DLDevice device, void* stream, DLPackVersion max_version) {
+    // XXX(rg): implement in a subsequent PR
+    // ^- the only annoyance involves the legacy struct returned by the PyTorch API
+    C10_THROW_ERROR(ValueError, "not implemented");
+}
+
 const std::vector<uintptr_t>& TorchDataArray::shape() const & {
     return shape_;
 }
