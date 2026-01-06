@@ -107,10 +107,8 @@ namespace details {
             auto* ctx = static_cast<DLPackContextBase*>(self->manager_ctx);
             // avoid reuse after free
             self->manager_ctx = nullptr;
-            // delete is polymorphic so it will destroys the derived DLPackContext<T> 
-            if (ctx != nullptr) {
-                delete ctx;
-            }
+            // delete is polymorphic so it will destroys the derived DLPackContext<T>
+            delete ctx;
             delete self;
         }
     }
@@ -483,17 +481,21 @@ public:
             }, array, data);
         };
 
-        array.as_dlpack = [](void *array,
-                             DLManagedTensorVersioned **dl_managed_tensor,
-                             DLDevice device,
-                             void *stream,
-                             DLPackVersion max_version) {
+        array.as_dlpack = [](
+            void *array,
+            DLManagedTensorVersioned **dl_managed_tensor,
+            DLDevice device,
+            void *stream,
+            DLPackVersion max_version
+        ) {
             return details::catch_exceptions(
-                [](void *array,
-                   DLManagedTensorVersioned **dl_managed_tensor,
-                   DLDevice device,
-                   void *stream,
-                   DLPackVersion max_version) {
+                [](
+                    void *array,
+                    DLManagedTensorVersioned **dl_managed_tensor,
+                    DLDevice device,
+                    void *stream,
+                    DLPackVersion max_version
+                ) {
                     auto *cxx_arr = static_cast<DataArrayBase *>(array);
                     *dl_managed_tensor = cxx_arr->as_dlpack(device, stream, max_version);
                     return MTS_SUCCESS;
@@ -567,9 +569,11 @@ public:
     ///
     /// The returned pointer is owned by the caller and should be freed
     /// using its deleter function when no longer needed.
-    virtual DLManagedTensorVersioned* as_dlpack(DLDevice device, 
-                                                void* stream, 
-                                                DLPackVersion max_version) = 0;
+    virtual DLManagedTensorVersioned* as_dlpack(
+        DLDevice device,
+        void* stream,
+        DLPackVersion max_version
+    ) = 0;
 
     /// Make a copy of this DataArrayBase and return the new array. The new
     /// array is expected to have the same data origin and parameters (data
@@ -824,9 +828,13 @@ public:
         return dynamic_cast<const SimpleDataArray&>(*base);
     }
 
-        DLManagedTensorVersioned *as_dlpack(DLDevice device, 
-                                            void* stream, 
-                                            DLPackVersion max_version) override {
+    DLManagedTensorVersioned *as_dlpack(
+        DLDevice device,
+        void* stream,
+        DLPackVersion max_version
+    ) override {
+        (void)stream; // unused
+
         if (device.device_type != kDLCPU) {
             throw Error("SimpleDataArray only supports CPU device (kDLCPU)");
         }
@@ -836,12 +844,14 @@ public:
         bool major_mismatch = max_version.major != mta_version.major;
         bool minor_too_old  = max_version.minor < mta_version.minor;
         if (major_mismatch || minor_too_old) {
-            throw Error("SimpleDataArray supports DLPack version " + 
-                        std::to_string(mta_version.major) + "." + 
-                        std::to_string(mta_version.minor) + 
-                        ". Caller requested incompatible version " + 
-                        std::to_string(max_version.major) + "." + 
-                        std::to_string(max_version.minor));
+            throw Error(
+                "SimpleDataArray supports DLPack version " +
+                std::to_string(mta_version.major) + "." +
+                std::to_string(mta_version.minor) +
+                ". Caller requested incompatible version " +
+                std::to_string(max_version.major) + "." +
+                std::to_string(max_version.minor)
+            );
         }
 
         using metatensor::details::DLPackContext;
@@ -855,8 +865,8 @@ public:
         ctx->strides.resize(this->shape_.size());
         if (!this->shape_.empty()) {
             ctx->strides.back() = 1;
-            for (int i = static_cast<int>(this->shape_.size()) - 2; i >= 0; --i) {
-                ctx->strides[i] = ctx->strides[i + 1] * ctx->shape[i + 1];
+            for (size_t i = this->shape_.size() - 1; i > 0; --i) {
+                ctx->strides[i - 1] = ctx->strides[i] * ctx->shape[i];
             }
         }
         // point to existing data and setup manager
@@ -902,7 +912,7 @@ public:
         // Transfer Ownership to C pointers (release unique_ptr)
         managed->manager_ctx = static_cast<void*>(ctx.release());
         return managed.release();
-    }   
+    }
 
 private:
     std::vector<uintptr_t> shape_;
