@@ -127,7 +127,7 @@ TEST_CASE("SimpleDataArray<double) - data() and as_dlpack()") {
     {
         auto s = static_cast<SimpleDataArray<double>*>(array.ptr);
         DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {1, 1};
+        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
         REQUIRE(managed != nullptr);
 
@@ -178,7 +178,7 @@ TEST_CASE("SimpleDataArray<float) - as_dlpack() and C API data() refusal") {
         view(1, 1, 0) = 3.1415f;
 
         DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {1, 1};
+        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
         REQUIRE(managed != nullptr);
 
@@ -215,7 +215,7 @@ TEST_CASE("SimpleDataArray<int32_t) - as_dlpack() and C API data() refusal") {
         view(1, 1, 0) = 42;
 
         DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {1, 1};
+        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
         REQUIRE(managed != nullptr);
 
@@ -242,23 +242,31 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     DLDevice cpu_device = {kDLCPU, 0};
 
     // Case 1: Request an older, incompatible version (0.1)
-    // The implementation supports 1.0, so this must fail.
+    // The implementation supports 1.1, so this must fail.
     DLPackVersion old_version = {0, 1};
     CHECK_THROWS_WITH(
         s->as_dlpack(cpu_device, nullptr, old_version), 
-        Catch::Matchers::Contains("SimpleDataArray supports DLPack version 1.0")
+        Catch::Matchers::Contains("SimpleDataArray supports DLPack version")
     );
 
     // Case 2: Request a newer version (2.0)
-    // Succeed because 1.0 is compatible with 2.0
-    DLPackVersion new_version = {2, 0};
+    // Succeed because 1.5 is compatible with 1.0
+    DLPackVersion new_version = {1, 5};
     DLManagedTensorVersioned* managed = nullptr;
     CHECK_NOTHROW(managed = s->as_dlpack(cpu_device, nullptr, new_version));
+
+    // Case 3: Request an ABI breaking version (2.0)
+    // Succeed because 1.5 is compatible with 1.0
+    DLPackVersion too_new_version = {2, 0};
+    CHECK_THROWS_WITH(
+        s->as_dlpack(cpu_device, nullptr, too_new_version), 
+        Catch::Matchers::Contains("Caller requested incompatible version")
+    );
     
-    // Verify we got back the implementation version, not 2.0
+    // Verify we got back the implementation version, not the requested one 
     REQUIRE(managed != nullptr);
-    CHECK(managed->version.major == 1);
-    CHECK(managed->version.minor == 1);
+    CHECK(managed->version.major == DLPACK_MAJOR_VERSION);
+    CHECK(managed->version.minor == DLPACK_MINOR_VERSION);
 
     managed->deleter(managed);
     array.destroy(array.ptr);

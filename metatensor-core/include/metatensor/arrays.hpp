@@ -831,15 +831,17 @@ public:
             throw Error("SimpleDataArray only supports CPU device (kDLCPU)");
         }
 
-        DLPackVersion mta_version = {1, 1};
-        // Caller's ceiling (max_version) must be lower than our floor (mta_version).
-        bool incompatible_caller = max_version.major < mta_version.major || 
-            (max_version.major == mta_version.major && max_version.minor < mta_version.minor);
-        if (incompatible_caller) {
-            throw Error("SimpleDataArray supports DLPack version 1.0. "
-                        "Caller requested an older version (" + 
+        DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        // SEMVER, so major must match, minor(caller) must be >= minor(us)
+        bool major_mismatch = max_version.major != mta_version.major;
+        bool minor_too_old  = max_version.minor < mta_version.minor;
+        if (major_mismatch || minor_too_old) {
+            throw Error("SimpleDataArray supports DLPack version " + 
+                        std::to_string(mta_version.major) + "." + 
+                        std::to_string(mta_version.minor) + 
+                        ". Caller requested incompatible version " + 
                         std::to_string(max_version.major) + "." + 
-                        std::to_string(max_version.minor) + ").");
+                        std::to_string(max_version.minor));
         }
 
         using metatensor::details::DLPackContext;
