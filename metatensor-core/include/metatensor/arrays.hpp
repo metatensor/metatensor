@@ -869,12 +869,12 @@ public:
         tensor.device = {kDLCPU, 0};
         tensor.ndim = static_cast<int32_t>(this->shape_.size());
 
-        if constexpr (std::is_floating_point<T>::value) {
+        if (std::is_floating_point_v<T>) {
             tensor.dtype.code = kDLFloat;
             tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
             tensor.dtype.lanes = 1;
-        } else if constexpr (std::is_integral<T>::value) {
-            if constexpr (std::is_signed<T>::value) {
+        } else if (std::is_integral_v<T>) {
+            if (std::is_signed_v<T>) {
                 tensor.dtype.code = kDLInt;
             } else {
                 tensor.dtype.code = kDLUInt;
@@ -882,7 +882,7 @@ public:
             tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
             tensor.dtype.lanes = 1;
         } else {
-            static_assert(std::is_arithmetic<T>::value, "unsupported tensor element type");
+            static_assert(std::is_arithmetic_v<T>, "unsupported tensor element type");
         }
 
         tensor.byte_offset = 0;
