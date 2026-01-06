@@ -830,6 +830,18 @@ public:
         if (device.device_type != kDLCPU) {
             throw Error("SimpleDataArray only supports CPU device (kDLCPU)");
         }
+
+        DLPackVersion mta_version = {1, 1};
+        // Caller's ceiling (max_version) must be lower than our floor (mta_version).
+        bool incompatible_caller = max_version.major < mta_version.major || 
+            (max_version.major == mta_version.major && max_version.minor < mta_version.minor);
+        if (incompatible_caller) {
+            throw Error("SimpleDataArray supports DLPack version 1.0. "
+                        "Caller requested an older version (" + 
+                        std::to_string(max_version.major) + "." + 
+                        std::to_string(max_version.minor) + ").");
+        }
+
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
         auto ctx = std::make_unique<DLPackContext<T>>();
@@ -848,7 +860,7 @@ public:
         // copy into shared vector and setup manager
         ctx->data = std::make_shared<std::vector<T>>(this->data_);
         auto managed = std::make_unique<DLManagedTensorVersioned>();
-        managed->version = max_version;
+        managed->version = mta_version;
         managed->flags = 0;
         managed->deleter = DLPackDeleter;
 
