@@ -442,7 +442,6 @@ public:
             return details::catch_exceptions([](const void* array, mts_data_origin_t* origin){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 *origin = cxx_array->origin();
-                return MTS_SUCCESS;
             }, array, origin);
         };
 
@@ -451,7 +450,6 @@ public:
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 auto copy = cxx_array->copy();
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-                return MTS_SUCCESS;
             }, array, new_array);
         };
 
@@ -469,7 +467,6 @@ public:
                 }
                 auto copy = cxx_array->create(std::move(cxx_shape));
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-                return MTS_SUCCESS;
             }, array, shape, shape_count, new_array);
         };
 
@@ -477,7 +474,6 @@ public:
             return details::catch_exceptions([](void* array, double** data){
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 *data = cxx_array->data();
-                return MTS_SUCCESS;
             }, array, data);
         };
 
@@ -498,7 +494,6 @@ public:
                 ) {
                     auto *cxx_arr = static_cast<DataArrayBase *>(array);
                     *dl_managed_tensor = cxx_arr->as_dlpack(device, stream, max_version);
-                    return MTS_SUCCESS;
                 },
                 array, dl_managed_tensor, device, stream, max_version);
         };
@@ -509,7 +504,6 @@ public:
                 const auto& cxx_shape = cxx_array->shape();
                 *shape = cxx_shape.data();
                 *shape_count = static_cast<uintptr_t>(cxx_shape.size());
-                return MTS_SUCCESS;
             }, array, shape, shape_count);
         };
 
@@ -518,7 +512,6 @@ public:
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
                 cxx_array->reshape(std::move(cxx_shape));
-                return MTS_SUCCESS;
             }, array, shape, shape_count);
         };
 
@@ -526,7 +519,6 @@ public:
             return details::catch_exceptions([](void* array, uintptr_t axis_1, uintptr_t axis_2){
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 cxx_array->swap_axes(axis_1, axis_2);
-                return MTS_SUCCESS;
             }, array, axis_1, axis_2);
         };
 
@@ -551,7 +543,6 @@ public:
                 auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
 
                 cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
-                return MTS_SUCCESS;
             }, array, input, samples, samples_count, property_start, property_end);
         };
 

@@ -33,8 +33,6 @@ mts_status_t metatensor_torch::details::create_torch_array(
 
         auto cxx_array = std::unique_ptr<metatensor::DataArrayBase>(new TorchDataArray(tensor));
         *array = metatensor::DataArrayBase::to_mts_array_t(std::move(cxx_array));
-
-        return MTS_SUCCESS;
     }, shape_ptr, shape_count, array);
 }
 
