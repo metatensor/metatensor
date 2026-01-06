@@ -102,13 +102,15 @@ namespace details {
      * Destroys metadata and decrements the shared pointer.
      */
     DLPACK_EXTERN_C inline void DLPackDeleter(DLManagedTensorVersioned* self){
-        if (self){
+        if (self != nullptr) {
             // manager_ctx points to a DLPackContextBase (allocated with new)
-            auto ctx = static_cast<DLPackContextBase*>(self->manager_ctx);
+            auto* ctx = static_cast<DLPackContextBase*>(self->manager_ctx);
             // avoid reuse after free
             self->manager_ctx = nullptr;
-            // delete -> polymorphic so destroys derived DLPackContext<T> 
-            if (ctx) delete ctx;
+            // delete is polymorphic so it will destroys the derived DLPackContext<T> 
+            if (ctx != nullptr) {
+                delete ctx;
+            }
             delete self;
         }
     }
@@ -826,7 +828,7 @@ public:
                                             void* stream, 
                                             DLPackVersion max_version) override {
         if (device.device_type != kDLCPU) {
-            throw Error("SimpleDataArray only supports CPU generation (kDLCPU)");
+            throw Error("SimpleDataArray only supports CPU device (kDLCPU)");
         }
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
@@ -900,7 +902,6 @@ private:
 /// data.
 template<typename U>
 inline bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
-    static_assert(std::is_arithmetic_v<U>, "SimpleDataArray only works with arithmetic types");
     return lhs.shape_ == rhs.shape_ && lhs.data_ == rhs.data_;
 }
 
@@ -908,7 +909,6 @@ inline bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& 
 /// data.
 template<typename U>
 inline bool operator!=(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
-    static_assert(std::is_arithmetic_v<U>, "SimpleDataArray only works with arithmetic types");
     return !(lhs == rhs);
 }
 
