@@ -633,16 +633,16 @@ public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
         SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
-        shape_(std::move(shape)), data_(details::product(shape_), value) {}
+        shape_(std::move(shape)), data_(std::make_shared<std::vector<T>>(details::product(shape_), value)) {}
 
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
     /// The data is interpreted as a row-major n-dimensional array.
     SimpleDataArray(std::vector<uintptr_t> shape, std::vector<T> data):
         shape_(std::move(shape)),
-        data_(std::move(data))
+        data_(std::make_shared<std::vector<T>>(std::move(data)))
     {
-        if (data_.size() != details::product(shape_)) {
+        if (data_->size() != details::product(shape_)) {
             throw Error("the shape and size of the data don't match in SimpleDataArray");
         }
     }
@@ -666,7 +666,7 @@ public:
 
     double* data() & override {
         if constexpr(std::is_same_v<T, double>){
-            return reinterpret_cast<double*>(data_.data());
+            return reinterpret_cast<double*>(data_->data());
         } else {
             throw Error("data() needs double, use as_dlpack instead");
         }
@@ -692,11 +692,11 @@ public:
             auto index = details::cartesian_index(shape_, i);
             std::swap(index[axis_1], index[axis_2]);
 
-            new_data[details::linear_index(new_shape, index)] = data_[i];
+            new_data[details::linear_index(new_shape, index)] = (*data_)[i];
         }
 
         shape_ = std::move(new_shape);
-        data_ = std::move(new_data);
+        data_ = std::make_shared<std::vector<T>>(std::move(new_data));
     }
 
     std::unique_ptr<DataArrayBase> copy() const override {
@@ -733,8 +733,8 @@ public:
                     input_index[property_dim] = property_i;
                     output_index[property_dim] = property_i + property_start;
 
-                    auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
-                    this->data_[details::linear_index(shape_, output_index)] = value;
+                    auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
+                    (*this->data_)[details::linear_index(shape_, output_index)] = value;
                 }
             } else {
                 auto last_component_dim = shape_.size() - 2;
@@ -752,8 +752,8 @@ public:
                         input_index[property_dim] = property_i;
                         output_index[property_dim] = property_i + property_start;
 
-                        auto value = input_array.data_[details::linear_index(input_array.shape_, input_index)];
-                        this->data_[details::linear_index(shape_, output_index)] = value;
+                        auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
+                        (*this->data_)[details::linear_index(shape_, output_index)] = value;
                     }
 
                     input_index[last_component_dim] += 1;
@@ -774,12 +774,12 @@ public:
 
     /// Get a const view of the data managed by this SimpleDataArray
     NDArray<T> view() const {
-        return NDArray<T>(data_.data(), shape_);
+        return NDArray<T>(data_->data(), shape_);
     }
 
     /// Get a mutable view of the data managed by this SimpleDataArray
     NDArray<T> view() {
-        return NDArray<T>(data_.data(), shape_);
+        return NDArray<T>(data_->data(), shape_);
     }
 
     /// Extract a reference to SimpleDataArray out of an `mts_array_t`.
@@ -857,8 +857,8 @@ public:
                 ctx->strides[i] = ctx->strides[i + 1] * ctx->shape[i + 1];
             }
         }
-        // copy into shared vector and setup manager
-        ctx->data = std::make_shared<std::vector<T>>(this->data_);
+        // point to existing data and setup manager
+        ctx->data = this->data_;
         auto managed = std::make_unique<DLManagedTensorVersioned>();
         managed->version = mta_version;
         managed->flags = 0;
@@ -904,7 +904,7 @@ public:
 
 private:
     std::vector<uintptr_t> shape_;
-    std::vector<T> data_;
+    std::shared_ptr<std::vector<T>> data_;
 
     template <typename U>
     friend bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs);
@@ -914,7 +914,7 @@ private:
 /// data.
 template<typename U>
 inline bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
-    return lhs.shape_ == rhs.shape_ && lhs.data_ == rhs.data_;
+    return lhs.shape_ == rhs.shape_ && *lhs.data_ == *rhs.data_;
 }
 
 /// Two SimpleDataArray compare as equal if they have the exact same shape and
