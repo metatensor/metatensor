@@ -77,7 +77,7 @@ double* TorchDataArray::data() & {
 }
 
 // Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
-// TODO(rg): shouldn't be required later
+// TODO(rg): shouldn't be required later, we we shift to at::toDLPackVersioned()
 static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
     if (self) {
         // Retrieve the legacy tensor stored in the context
@@ -91,16 +91,17 @@ static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
     }
 }
 
-DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, void* stream, DLPackVersion max_version) {
+DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
+                                                    void* stream,
+                                                    DLPackVersion max_version) {
     // Uses the existing ATen API to get a legacy DLManagedTensor.
     // TODO(rg): this should eventually just be
     // return at::toDLPackVersioned(this->tensor_);
     // https://github.com/pytorch/pytorch/blob/2.9.1/aten/src/ATen/DLConvertor.cpp
     // ... until then.
-    // NOTE(rg): maybe the version check should be extracted, copied verbatim from SimpleDataArray<T> impl
     DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
     bool major_mismatch = max_version.major != mta_version.major;
-    bool minor_too_old  = max_version.minor < mta_version.minor;
+    bool minor_too_old = max_version.minor < mta_version.minor;
     if (major_mismatch || minor_too_old) {
         throw metatensor::Error("TorchDataArray supports DLPack version " +
                                 std::to_string(mta_version.major) + "." +
