@@ -174,5 +174,74 @@ TEST_CASE("Arrays") {
 
             dl_managed->deleter(dl_managed);
         }
+
+        // Version Compatibility Checks
+        {
+            // Major version mismatch
+            // If the caller requests a different major version, it should fail.
+            DLPackVersion bad_major = {DLPACK_MAJOR_VERSION + 1, DLPACK_MINOR_VERSION};
+            CHECK_THROWS_WITH(
+                array.as_dlpack(cpu_device, nullptr, bad_major),
+                Catch::Matchers::Contains("Caller requested incompatible version")
+            );
+
+            // Minor version too old
+            // If the caller supports a lower max minor version than the tensor provides,
+            // we must ensure it throws (as per logic: max_version.minor < mta_version.minor).
+            if (DLPACK_MINOR_VERSION > 0) {
+                DLPackVersion old_minor = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION - 1};
+                CHECK_THROWS_WITH(
+                    array.as_dlpack(cpu_device, nullptr, old_minor),
+                    Catch::Matchers::Contains("Caller requested incompatible version")
+                );
+            }
+        }
+
+        // Stream Validation on CPU
+        {
+            // Passing a stream (non-null) to a CPU tensor should throw an error.
+            void* fake_stream = reinterpret_cast<void*>(0x1234);
+            CHECK_THROWS_WITH(
+                array.as_dlpack(cpu_device, fake_stream, version),
+                Catch::Matchers::Contains("Stream must be NULL for CPU tensors")
+            );
+        }
+
+#ifdef USE_CUDA
+        // CUDA Stream Handling (Conditional)
+        if (torch::cuda::is_available()) {
+            // Create a CUDA tensor
+            auto opts = torch::TensorOptions().dtype(torch::kF64).device(torch::kCUDA);
+            auto cuda_tensor = torch::rand({10, 10}, opts);
+            auto cuda_array = TorchDataArray(cuda_tensor);
+            
+            DLDevice cuda_device = {kDLCUDA, (int)cuda_tensor.device().index()};
+
+            // Success: passing nullptr stream to CUDA is valid (uses default stream)
+            {
+                auto dl_managed = cuda_array.as_dlpack(cuda_device, nullptr, version);
+                CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+                dl_managed->deleter(dl_managed);
+            }
+
+            // Success: passing a valid stream
+            {
+                c10::cuda::CUDAStream stream = c10::cuda::getStreamFromPool();
+                void* stream_ptr = static_cast<void*>(stream.stream());
+                
+                auto dl_managed = cuda_array.as_dlpack(cuda_device, stream_ptr, version);
+                CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+                dl_managed->deleter(dl_managed);
+            }
+            
+            // Error: Wrong device type requested for CUDA tensor
+            {
+                CHECK_THROWS_WITH(
+                    cuda_array.as_dlpack(cpu_device, nullptr, version),
+                    Catch::Matchers::Contains("Requested device does not match")
+                );
+            }
+        }
+#endif
     }
 }

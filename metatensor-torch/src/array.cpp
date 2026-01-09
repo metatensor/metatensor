@@ -7,6 +7,10 @@
 
 #include "metatensor/torch/array.hpp"
 #include <ATen/DLConvertor.h>
+#ifdef USE_CUDA
+#include <c10/cuda/CUDAStream.h>
+#include <c10/cuda/CUDAFunctions.h>
+#endif
 
 using namespace metatensor_torch;
 
@@ -110,6 +114,36 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
                                 std::to_string(max_version.major) + "." +
                                 std::to_string(max_version.minor));
     }
+    // Stream sync ala:
+    // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
+    if (tensor().is_cuda()) {
+#ifdef USE_CUDA
+        c10::DeviceIndex device_index = tensor().device().index();
+
+        at::cuda::CUDAStream current_stream = at::cuda::getCurrentCUDAStream(device_index);
+
+        at::cuda::CUDAStream target_stream = at::cuda::getDefaultCUDAStream(device_index);
+
+        if (stream != nullptr) {
+            using stream_ptr_t = std::decay_t<decltype(std::declval<at::cuda::CUDAStream>().stream())>;
+            auto raw_stream = static_cast<stream_ptr_t>(stream);
+            target_stream = at::cuda::getStreamFromExternal(raw_stream, device_index);
+        }
+
+        if (current_stream != target_stream) {
+            // Record event on current stream
+            at::cuda::CUDAEvent event;
+            event.record(current_stream);
+            event.block(target_stream);
+        }
+#else
+        throw metatensor::Error("TorchDataArray: Attempted to export a CUDA tensor, "
+                                "but metatensor-torch was compiled without CUDA support.");
+#endif
+    } else if (stream != nullptr) {
+        throw metatensor::Error(
+            "TorchDataArray: Stream must be NULL for CPU tensors");
+    }
 
     // Legacy dlpack interface for maximal Torch compatibility
     DLManagedTensor* legacy_tensor = at::toDLPack(this->tensor_);
@@ -134,8 +168,6 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
     versioned_tensor->flags = 0;
     // Copy metadata
     versioned_tensor->dl_tensor = legacy_tensor->dl_tensor;
-    // Explicitly voiding stream since at::toDLPack doesn't accept it anyway
-    (void)stream;
     return versioned_tensor;
 }
 
