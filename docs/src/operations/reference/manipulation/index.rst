@@ -14,5 +14,6 @@ Manipulation operations
     remove_gradients() <remove-gradients>
     requires_grad() <requires-grad>
     samples reduction <samples-reduction>
+    properties reduction <properties-reduction>
     slice() <slice>
     split() <split>
