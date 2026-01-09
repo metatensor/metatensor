@@ -86,9 +86,10 @@ pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result
     for name in labels.names() {
         if cfg!(target_endian = "little") {
             type_descriptor.push((name.into(), "<i4".into()));
-        } else {
-            assert!(cfg!(target_endian = "big"));
+        } else if cfg!(target_endian = "big") {
             type_descriptor.push((name.into(), ">i4".into()));
+        } else {
+            unreachable!("unknown target endianness");
         }
     }
 
