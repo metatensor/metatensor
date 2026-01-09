@@ -109,15 +109,6 @@ TEST_CASE("Arrays") {
             dl_managed->deleter(dl_managed);
         }
 
-        // Device Mismatch Check (New Test)
-        {
-            // Requesting CUDA from a CPU tensor should fail
-            DLDevice cuda_device = {kDLCUDA, 0};
-            CHECK_THROWS_WITH(
-                array.as_dlpack(cuda_device, nullptr, version),
-                Catch::Matchers::Contains("Requested device does not match"));
-        }
-
         // Stride verification (Non-contiguous memory)
         {
             // Create a non-contiguous tensor by slicing
@@ -240,6 +231,42 @@ TEST_CASE("Arrays") {
                     cuda_array.as_dlpack(cpu_device, nullptr, version),
                     Catch::Matchers::Contains("Requested device does not match")
                 );
+            }
+        }
+        if (torch::cuda::is_available()) {
+            // Setup a CUDA tensor
+            auto opts = torch::TensorOptions().dtype(torch::kF64).device(torch::kCUDA);
+            auto cuda_tensor = torch::rand({10, 10}, opts);
+            auto cuda_array = TorchDataArray(cuda_tensor);
+            
+            DLDevice cuda_device = {kDLCUDA, (int)cuda_tensor.device().index()};
+
+            // 1. CUDA -> CUDA (Same device)
+            {
+                auto dl_managed = cuda_array.as_dlpack(cuda_device, nullptr, version);
+                CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+                dl_managed->deleter(dl_managed);
+            }
+
+            // 2. CUDA -> CPU (Explicit Transfer)
+            // This used to throw, now it should succeed by copying data.
+            {
+                auto dl_managed = cuda_array.as_dlpack(cpu_device, nullptr, version);
+                
+                CHECK(dl_managed->dl_tensor.device.device_type == kDLCPU);
+                
+                // Verify data is readable on CPU
+                double* data = static_cast<double*>(dl_managed->dl_tensor.data);
+                CHECK(data != nullptr); // Just check pointer validity
+                
+                dl_managed->deleter(dl_managed);
+            }
+
+            // 3. CPU -> CUDA (Explicit Transfer)
+            {
+                auto dl_managed = array.as_dlpack(cuda_device, nullptr, version);
+                CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+                dl_managed->deleter(dl_managed);
             }
         }
 #endif

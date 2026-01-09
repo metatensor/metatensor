@@ -95,6 +95,57 @@ static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
     }
 }
 
+namespace {
+
+torch::Device dlpack_device_to_torch(DLDevice device) {
+    torch::DeviceType type;
+    // Reference:
+    // https://github.com/pytorch/pytorch/blob/3eddf049221fc04c2ac9d4af53c00305484ef325/c10/core/Device.cpp#L13-L38
+
+    switch (device.device_type) {
+    case kDLCPU:
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDA:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLCUDAHost:
+        // PyTorch treats pinned CUDA memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDAManaged:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLROCM:
+        type = torch::DeviceType::HIP;
+        break;
+    case kDLROCMHost:
+        // PyTorch treats pinned ROCm memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLMetal:
+        type = torch::DeviceType::MPS;
+        break;
+    case kDLOneAPI:
+        type = torch::DeviceType::XPU;
+        break;
+    case kDLTrn:
+        type = torch::DeviceType::XLA;
+        break;
+    case kDLVulkan:
+        type = torch::DeviceType::Vulkan;
+        break;
+    default:
+        throw metatensor::Error(
+            "TorchDataArray: Unsupported or unmapped DLPack device type: " +
+            std::to_string(device.device_type));
+    }
+
+    return torch::Device(type);
+}
+
+} // namespace
+
 DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
                                                     void* stream,
                                                     DLPackVersion max_version) {
@@ -114,11 +165,19 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
                                 std::to_string(max_version.major) + "." +
                                 std::to_string(max_version.minor));
     }
+    torch::Device target_device = dlpack_device_to_torch(device);
+    torch::Tensor tensor_to_pack = this->tensor_;
+
+    if (tensor_to_pack.device() != target_device) {
+        // consumers should handle synchronization via the stream, but this is
+        // the default argument.
+        tensor_to_pack = tensor_to_pack.to(target_device, /*non_blocking=*/false);
+    }
     // Stream sync ala:
     // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
-    if (tensor().is_cuda()) {
+    if (tensor_to_pack.is_cuda()) {
 #ifdef USE_CUDA
-        c10::DeviceIndex device_index = tensor().device().index();
+        c10::DeviceIndex device_index = tensor_to_pack.device().index();
 
         at::cuda::CUDAStream current_stream = at::cuda::getCurrentCUDAStream(device_index);
 
@@ -146,7 +205,7 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device,
     }
 
     // Legacy dlpack interface for maximal Torch compatibility
-    DLManagedTensor* legacy_tensor = at::toDLPack(this->tensor_);
+    DLManagedTensor* legacy_tensor = at::toDLPack(tensor_to_pack);
     // Compare the device
     if (legacy_tensor->dl_tensor.device.device_type != device.device_type ||
         legacy_tensor->dl_tensor.device.device_id != device.device_id) {
