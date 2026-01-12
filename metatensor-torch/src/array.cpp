@@ -6,6 +6,7 @@
 #include <metatensor.hpp>
 
 #include "metatensor/torch/array.hpp"
+#include <ATen/DLConvertor.h>
 
 using namespace metatensor_torch;
 
@@ -75,10 +76,160 @@ double* TorchDataArray::data() & {
     return static_cast<double*>(this->tensor_.data_ptr());
 }
 
-DLManagedTensorVersioned *TorchDataArray::as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) {
-    // XXX(rg): implement in a subsequent PR
-    // ^- the only annoyance involves the legacy struct returned by the PyTorch API
-    C10_THROW_ERROR(ValueError, "not implemented");
+// Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
+// TODO(rg): shouldn't be required later, we we shift to at::toDLPackVersioned()
+static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
+    if (self != nullptr) {
+        // Retrieve the legacy tensor stored in the context
+        auto* legacy_tensor = static_cast<DLManagedTensor*>(self->manager_ctx);
+        // Use the legacy deleter to free the internal ATen resources
+        if (legacy_tensor != nullptr && legacy_tensor->deleter != nullptr) {
+            legacy_tensor->deleter(legacy_tensor);
+        }
+        // Free the versioned wrapper
+        delete self;
+    }
+}
+
+namespace {
+
+torch::Device dlpack_device_to_torch(DLDevice device) {
+    torch::DeviceType type;
+    // Reference:
+    // https://github.com/pytorch/pytorch/blob/3eddf049221fc04c2ac9d4af53c00305484ef325/c10/core/Device.cpp#L13-L38
+
+    switch (device.device_type) {
+    case kDLCPU:
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDA:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLCUDAHost:
+        // PyTorch treats pinned CUDA memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDAManaged:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLROCM:
+        type = torch::DeviceType::HIP;
+        break;
+    case kDLROCMHost:
+        // PyTorch treats pinned ROCm memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLMetal:
+        type = torch::DeviceType::MPS;
+        break;
+    case kDLOneAPI:
+        type = torch::DeviceType::XPU;
+        break;
+    case kDLTrn:
+        type = torch::DeviceType::XLA;
+        break;
+    case kDLVulkan:
+        type = torch::DeviceType::Vulkan;
+        break;
+    default:
+        throw metatensor::Error(
+            "TorchDataArray: Unsupported or unmapped DLPack device type: " +
+            std::to_string(device.device_type));
+    }
+
+    return torch::Device(type);
+}
+
+} // namespace
+
+DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) {
+    // Uses the existing ATen API to get a legacy DLManagedTensor.
+    // TODO(rg): this should eventually just be
+    // return at::toDLPackVersioned(this->tensor_);
+    // https://github.com/pytorch/pytorch/blob/2.9.1/aten/src/ATen/DLConvertor.cpp
+    // ... until then.
+    DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    bool major_mismatch = max_version.major != mta_version.major;
+    bool minor_too_old = max_version.minor < mta_version.minor;
+    if (major_mismatch || minor_too_old) {
+        throw metatensor::Error("TorchDataArray supports DLPack version " +
+                                std::to_string(mta_version.major) + "." +
+                                std::to_string(mta_version.minor) +
+                                ". Caller requested incompatible version " +
+                                std::to_string(max_version.major) + "." +
+                                std::to_string(max_version.minor));
+    }
+    torch::Device target_device = dlpack_device_to_torch(device);
+    torch::Tensor tensor_to_pack = this->tensor_;
+
+    if (tensor_to_pack.device() != target_device) {
+        // consumers should handle synchronization via the stream, but this is
+        // the default argument.
+        tensor_to_pack = tensor_to_pack.to(target_device, /*non_blocking=*/false);
+    }
+
+    // Stream sync ala:
+    // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
+    if (tensor_to_pack.is_cuda()) {
+        if (stream != nullptr && *stream != 0) {
+            throw metatensor::Error("TorchDataArray: CUDA stream support is not implemented yet");
+        }
+
+        // No implementation for now, since the functions we need are in
+        // libtorch_cuda.so, which makes linking complicated for pre-built wheels.
+
+        // auto device = tensor_to_pack.device();
+
+        // auto current_stream = at::cuda::getCurrentCUDAStream(device.index());
+        // auto target_stream = at::cuda::getCurrentCUDAStream(device.index());
+
+        // if (stream != nullptr) {
+        //     auto c10_stream = c10::Stream(c10::Stream::UNSAFE, device, c10::StreamId(*stream));
+        //     target_stream = at::cuda::getStreamFromExternal(
+        //         at::cuda::CUDAStream(c10_stream),
+        //         device.index()
+        //     );
+        // }
+
+        // if (current_stream != target_stream) {
+        //     // Record event on current stream
+        //     auto event = c10::Event(c10::DeviceType::CUDA);
+        //     event.record(current_stream);
+
+        //     // and make the target stream wait for it
+        //     event.block(target_stream);
+        // }
+    } else if (tensor_to_pack.is_cpu() && stream != nullptr) {
+        throw metatensor::Error(
+            "TorchDataArray: Stream must be NULL for CPU tensors");
+    } else {
+        // ignore stream for all other devices for now
+    }
+
+    // Legacy dlpack interface for maximal Torch compatibility
+    DLManagedTensor* legacy_tensor = at::toDLPack(tensor_to_pack);
+    // Compare the device
+    if (legacy_tensor->dl_tensor.device.device_type != device.device_type ||
+        legacy_tensor->dl_tensor.device.device_id != device.device_id) {
+
+        // Cleanup the legacy tensor we just created before throwing
+        if (legacy_tensor->deleter != nullptr) {
+            legacy_tensor->deleter(legacy_tensor);
+        }
+
+        throw metatensor::Error(
+            "TorchDataArray: Requested device does not match tensor device");
+    }
+    // Wrap into a versioned struct
+    auto* versioned_tensor = new DLManagedTensorVersioned();
+    versioned_tensor->version = mta_version;
+    // Setup context, keeping the legacy variant for the deleter
+    versioned_tensor->manager_ctx = legacy_tensor;
+    versioned_tensor->deleter = dlpack_versioned_deleter;
+    versioned_tensor->flags = 0;
+    // Copy metadata
+    versioned_tensor->dl_tensor = legacy_tensor->dl_tensor;
+    return versioned_tensor;
 }
 
 const std::vector<uintptr_t>& TorchDataArray::shape() const & {
