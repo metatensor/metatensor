@@ -1,11 +1,12 @@
-use dlpk::sys::*;
-use dlpk::DLPackTensor;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
 use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
+
+use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+use dlpk::DLPackTensor;
 
 use crate::c_api::mts_status_t;
 use crate::Error;
@@ -107,10 +108,26 @@ pub struct mts_array_t {
     /// attempt to make the data accessible on the requested device (e.g., by
     /// copying).
     ///
-    /// The `stream` parameter is a pointer to a stream (e.g., `cudaStream_t`)
-    /// provided by the caller to ensure safe execution. If `NULL`, the producer
-    /// assumes the legacy default stream. `max_version` specifies the maximum
-    /// DLPack version the caller supports.
+    /// The `stream` parameter is a pointer to an integer representing a
+    /// device-specific stream or queue. If this is `NULL`, the implementation
+    /// should use the default stream for the specified device. If this is `-1`,
+    /// no synchronization should be performed. Some devices have specific
+    /// stream values:
+    /// - For CUDA devices, `1` represents the legacy default stream, `2` the
+    ///   per-thread default stream. Any value above `2` indicates the stream
+    ///   number. `0` is not allowed as it could mean the same as `NULL`, `1` or
+    ///   `2`.
+    /// - For ROCm devices, `0` represents the default stream, any value above
+    ///   `2` indicates the stream number. `1` and `2` are not allowed.
+    ///
+    /// See also the documentation of `__dlpack__` for more information about
+    /// streams:
+    /// <https://data-apis.org/array-api/latest/API_specification/generated/array_api.array.__dlpack__.html>
+    ///
+    /// `max_version` specifies the maximum DLPack API version the caller
+    /// supports. The implementation should try to return a tensor compatible
+    /// with this version, but this is not guaranteed, and the caller should
+    /// check the returned tensor's version.
     ///
     /// The returned `DLManagedTensorVersioned` is owned by the caller, who is
     /// responsible for calling its `deleter` function when the tensor is no
@@ -120,7 +137,7 @@ pub struct mts_array_t {
         array: *mut c_void,
         dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
         device: DLDevice,
-        stream: *mut c_void,
+        stream: *const i64,
         max_version: DLPackVersion,
     ) -> mts_status_t>,
 
@@ -365,16 +382,23 @@ impl mts_array_t {
     }
 
     /// Get a dlpack representation of the data
-    pub fn as_dlpack(&self,
-                     device: DLDevice,
-                     stream: *mut c_void,
-                     max_version: DLPackVersion) -> Result<DLPackTensor, Error> {
+    pub fn as_dlpack(
+        &self,
+        device: DLDevice,
+        stream: Option<i64>,
+        max_version: DLPackVersion
+    ) -> Result<DLPackTensor, Error> {
         // C function pointer from the vtable slot
         let function = self.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
         // ... and fill structure
         let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+
+        let stream_c = match stream {
+            Some(s) => &s as *const i64,
+            None => std::ptr::null(),
+        };
         let status = unsafe {
-            function(self.ptr, &mut dl_managed_tensor, device, stream, max_version)
+            function(self.ptr, &mut dl_managed_tensor, device, stream_c, max_version)
         };
         if !status.is_success() {
             return Err(Error::External {

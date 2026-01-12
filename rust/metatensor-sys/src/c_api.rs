@@ -139,7 +139,7 @@ pub struct mts_array_t {
             array: *mut ::std::os::raw::c_void,
             dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
             device: DLDevice,
-            stream: *mut ::std::os::raw::c_void,
+            stream: *const i64,
             max_version: DLPackVersion,
         ) -> mts_status_t,
     >,
