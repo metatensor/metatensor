@@ -59,7 +59,7 @@ struct mts_array_t
     ptr :: Ptr{Cvoid}
     origin :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_data_origin_t}) -> mts_status_t =#
     data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{Cdouble}}) -> mts_status_t =#
-    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{CDLManagedTensorVersioned}}, CDLDevice, Ptr{Cvoid}, CDLPackVersion) -> mts_status_t =#
+    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{CDLManagedTensorVersioned}}, CDLDevice, Ptr{Int64}, CDLPackVersion) -> mts_status_t =#
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#

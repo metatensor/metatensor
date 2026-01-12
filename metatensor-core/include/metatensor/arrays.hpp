@@ -481,7 +481,7 @@ public:
             void *array,
             DLManagedTensorVersioned **dl_managed_tensor,
             DLDevice device,
-            void *stream,
+            const int64_t *stream,
             DLPackVersion max_version
         ) {
             return details::catch_exceptions(
@@ -489,7 +489,7 @@ public:
                     void *array,
                     DLManagedTensorVersioned **dl_managed_tensor,
                     DLDevice device,
-                    void *stream,
+                    const int64_t *stream,
                     DLPackVersion max_version
                 ) {
                     auto *cxx_arr = static_cast<DataArrayBase *>(array);
@@ -560,9 +560,12 @@ public:
     ///
     /// The returned pointer is owned by the caller and should be freed
     /// using its deleter function when no longer needed.
+    ///
+    /// See the documentation of `mts_array_t::as_dlpack` for more details about
+    /// the parameters.
     virtual DLManagedTensorVersioned* as_dlpack(
         DLDevice device,
-        void* stream,
+        const int64_t* stream,
         DLPackVersion max_version
     ) = 0;
 
@@ -821,13 +824,15 @@ public:
 
     DLManagedTensorVersioned *as_dlpack(
         DLDevice device,
-        void* stream,
+        const int64_t* stream,
         DLPackVersion max_version
     ) override {
-        (void)stream; // unused
-
         if (device.device_type != kDLCPU) {
             throw Error("SimpleDataArray only supports CPU device (kDLCPU)");
+        }
+
+        if (stream != nullptr) {
+            throw Error("`stream` must be null for CPU data");
         }
 
         DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
@@ -958,7 +963,7 @@ public:
         throw metatensor::Error("can not call `data` for an EmptyDataArray");
     }
 
-    DLManagedTensorVersioned *as_dlpack(DLDevice, void*, DLPackVersion) override {
+    DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {
         throw metatensor::Error("can not call `as_dlpack` for an EmtpyDataArray");
     }
 
