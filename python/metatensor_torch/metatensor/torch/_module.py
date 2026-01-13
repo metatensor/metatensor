@@ -176,8 +176,8 @@ def _parse_rsm_attributes(string):
             elif line.endswith("}"):
                 # we are done
                 return attributes
-            else:
-                raise RuntimeError(f"failed to parse line in attributes: '{line}'")
+            # else:
+            #     raise RuntimeError(f"failed to parse line in attributes: '{line}'")
 
     raise RuntimeError(f"failed to parse attributes section in:\n{string}")
 
