@@ -76,7 +76,7 @@ class BufferModule(torch.nn.Module):
 class ParameterModule(torch.nn.Module):
     def __init__(self, name):
         super().__init__()
-        self.register_parameter(name, torch.nn.Parameter(torch.rand(3, 4)))
+        self.register_parameter(name, torch.nn.Parameter(torch.rand(3, 4, dtype=torch.float64)))
 
 
 class EverythingModule(torch.nn.Module):
