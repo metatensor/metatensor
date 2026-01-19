@@ -473,6 +473,14 @@ Rust using `rustup`_ or the package manager of your operating system.
             cmake --build . --target install
 
 
+Getting started
+---------------
+
+Now that you have installed metatensor, you should have a look at the overview
+of the main concepts in metatensor at :ref:`core concepts overview
+<core-classes-overview>`. You can also explore the :ref:`core tutorials
+<core-tutorials>`, which will guide you through the main features of metatensor.
+
 
 .. _pip: https://pip.pypa.io
 .. _CMake: https://cmake.org

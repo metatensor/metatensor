@@ -25,8 +25,8 @@
     :alt: C++
 
 .. |Rust-32x32| image:: /../static/images/logo-rust.*
-    :width: 32px
-    :height: 32px
+    :width: 40px
+    :height: 40px
     :alt: Rust
 
 .. |Rust-16x16| image:: /../static/images/logo-rust.*
@@ -35,8 +35,8 @@
     :alt: Rust
 
 .. |Python-32x32| image:: /../static/images/logo-python.*
-    :width: 32px
-    :height: 32px
+    :width: 30px
+    :height: 30px
     :alt: Python
 
 .. |Python-16x16| image:: /../static/images/logo-python.*
