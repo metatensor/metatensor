@@ -31,6 +31,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - We now requires at least cmake v3.22 to compile metatensor-torch
 - We now require Python >= 3.10
+- The lowest supported version of PyTorch was increased from v2.1 to v2.2
 
 ### Added
 

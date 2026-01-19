@@ -28,7 +28,7 @@ jobs:
           - os: ubuntu-24.04
             container: ubuntu:22.04
             extra-name: ", cmake 3.22"
-            torch-version: "2.1"
+            torch-version: "2.2"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
