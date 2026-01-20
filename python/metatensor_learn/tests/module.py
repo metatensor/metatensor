@@ -15,11 +15,17 @@ from metatensor.learn import nn  # noqa: E402
 from . import _tests_utils  # noqa: E402
 
 
-DEVICES_TO_TEST = []
-if _tests_utils.can_use_mps_backend():
-    DEVICES_TO_TEST.append("mps")
-if torch.cuda.is_available():
-    DEVICES_TO_TEST.append("cuda")
+@pytest.fixture(scope="module")
+def devices_to_test():
+    """Get a list of non-CPU devices available for testing."""
+
+    devices = []
+    if _tests_utils.can_use_mps_backend():
+        devices.append("mps")
+    if torch.cuda.is_available():
+        devices.append("cuda")
+
+    return devices
 
 
 def _create_block(sample_name):
@@ -102,7 +108,7 @@ class EverythingModule(nn.Module):
         self.c = TensorModule(name)
 
 
-def test_to():
+def test_to(devices_to_test):
     def check_device_dtype(module, device, dtype):
         assert module.labels.device == "cpu"
 
@@ -157,7 +163,7 @@ def test_to():
         message="Values and labels for this block are on different devices",
     )
 
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = module.to(device=device)
         check_device_dtype(module, device, torch.float32)
 
@@ -181,7 +187,7 @@ def test_to():
     module = module.to(dtype=torch.float32)
     check_device_dtype(module.sub_module, "cpu", torch.float32)
 
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = module.to(device=device)
         check_device_dtype(module.sub_module, device, torch.float32)
 
@@ -330,7 +336,7 @@ def _check_serialized_device(value, device):
     assert value[2].device.type == device
 
 
-def test_state_dict_block_device_dtype(tmpdir):
+def test_state_dict_block_device_dtype(tmpdir, devices_to_test):
     # Test loading from a different dtype
     module = BlockModule("test")
     module = module.to(dtype=torch.float32)
@@ -364,7 +370,7 @@ def test_state_dict_block_device_dtype(tmpdir):
     )
 
     # Test loading from a different device
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = BlockModule("test")
         module = module.to(dtype=torch.float32)
         module = module.to(device=device)
@@ -475,7 +481,7 @@ def test_state_dict_tensor(tmpdir):
     assert module.sub_module.tensor.keys.names == ["test"]
 
 
-def test_state_dict_tensor_device_dtype(tmpdir):
+def test_state_dict_tensor_device_dtype(tmpdir, devices_to_test):
     # Test loading from a different dtype
     module = TensorModule("test")
     module = module.to(dtype=torch.float32)
@@ -510,7 +516,7 @@ def test_state_dict_tensor_device_dtype(tmpdir):
     )
 
     # Test loading from a different device
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = TensorModule("test")
         module = module.to(dtype=torch.float32)
         module = module.to(device=device)

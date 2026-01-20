@@ -10,11 +10,15 @@ from metatensor.torch.learn import nn
 from . import _tests_utils
 
 
-DEVICES_TO_TEST = []
-if _tests_utils.can_use_mps_backend():
-    DEVICES_TO_TEST.append("mps")
-if torch.cuda.is_available():
-    DEVICES_TO_TEST.append("cuda")
+@pytest.fixture(scope="module")
+def devices_to_test():
+    """Get a list of non-CPU devices available for testing."""
+    devices = []
+    if _tests_utils.can_use_mps_backend():
+        devices.append("mps")
+    if torch.cuda.is_available():
+        devices.append("cuda")
+    return devices
 
 
 def _create_block(sample_name):
@@ -140,7 +144,7 @@ class EverythingModule(nn.Module):
 
 
 @pytest.mark.parametrize("scripted", [True, False])
-def test_to(scripted):
+def test_to(scripted, devices_to_test):
     def check_device_dtype(module, device, dtype):
         assert module.labels.device.type == device
 
@@ -193,7 +197,7 @@ def test_to(scripted):
     module = module.to(dtype=torch.float32)
     check_device_dtype(module, "cpu", dtype_to_int(torch.float32))
 
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = module.to(device=device)
         check_device_dtype(module, device, dtype_to_int(torch.float32))
 
@@ -220,7 +224,7 @@ def test_to(scripted):
     module = module.to(dtype=torch.float32)
     check_device_dtype(module.sub_module, "cpu", dtype_to_int(torch.float32))
 
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = module.to(device=device)
         check_device_dtype(module.sub_module, device, dtype_to_int(torch.float32))
 
@@ -381,7 +385,7 @@ def test_state_dict_block():
     assert module.sub_module.nested["dict"][42][0][0].samples.names == ["test"]
 
 
-def test_state_dict_block_device_dtype(tmpdir):
+def test_state_dict_block_device_dtype(tmpdir, devices_to_test):
     # Test loading from a different dtype
     module = BlockModule("test")
     module = module.to(dtype=torch.float32)
@@ -412,7 +416,7 @@ def test_state_dict_block_device_dtype(tmpdir):
     assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float32)
 
     # Test loading from a different device
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = BlockModule("test")
         module = module.to(dtype=torch.float32)
         module = module.to(device=device)
@@ -524,7 +528,7 @@ def test_state_dict_tensor(tmpdir):
     assert module.sub_module.tensor.keys.names == ["test"]
 
 
-def test_state_dict_tensorr_device_dtype(tmpdir):
+def test_state_dict_tensorr_device_dtype(tmpdir, devices_to_test):
     # Test loading from a different dtype
     module = TensorModule("test")
     module = module.to(dtype=torch.float32)
@@ -555,7 +559,7 @@ def test_state_dict_tensorr_device_dtype(tmpdir):
     assert module.nested["dict"][42][0][0].dtype == dtype_to_int(torch.float32)
 
     # Test loading from a different device
-    for device in DEVICES_TO_TEST:
+    for device in devices_to_test:
         module = TensorModule("test")
         module = module.to(dtype=torch.float32)
         module = module.to(device=device)
