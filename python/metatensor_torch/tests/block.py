@@ -339,7 +339,7 @@ if os.environ.get("PYTORCH_JIT") == "0":
 
 else:
 
-    @torch.compile
+    @torch.jit.script
     def check_dtype(block: TensorBlock, dtype: torch.dtype):
         assert block.dtype == dtype
 
@@ -435,4 +435,4 @@ def test_script():
             return x
 
     module = TestModule()
-    module = torch.compile(module)
+    module = torch.jit.script(module)

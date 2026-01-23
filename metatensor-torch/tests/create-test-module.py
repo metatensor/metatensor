@@ -86,4 +86,4 @@ class EverythingModule(torch.nn.Module):
 
 
 module = EverythingModule("test")
-torch.compile(module).save("test-module.pt")
+torch.jit.script(module).save("test-module.pt")

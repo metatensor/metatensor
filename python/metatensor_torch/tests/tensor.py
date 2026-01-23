@@ -563,7 +563,7 @@ if os.environ.get("PYTORCH_JIT") == "0":
 
 else:
 
-    @torch.compile
+    @torch.jit.script
     def check_dtype(tensor: TensorMap, dtype: torch.dtype):
         assert tensor.dtype == dtype
 
@@ -694,7 +694,7 @@ def test_script():
             return x
 
     module = TestModule()
-    module = torch.compile(module)
+    module = torch.jit.script(module)
 
 
 class Issue349(torch.nn.Module):
@@ -723,5 +723,5 @@ def test_script_variable_scoping(tensor):
     assert problematic(tensor).item() == 42.0
 
     # This segfaults
-    scripted = torch.compile(problematic)
+    scripted = torch.jit.script(problematic)
     assert scripted(tensor).item() == 42.0

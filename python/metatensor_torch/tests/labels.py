@@ -700,11 +700,11 @@ def test_script():
             return x
 
     module = TestModule()
-    module = torch.compile(module)
+    module = torch.jit.script(module)
 
     class TestModuleEntry(torch.nn.Module):
         def forward(self, x: LabelsEntryWrap) -> LabelsEntryWrap:
             return x
 
     module = TestModuleEntry()
-    module = torch.compile(module)
+    module = torch.jit.script(module)

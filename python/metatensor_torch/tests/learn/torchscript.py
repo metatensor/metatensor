@@ -51,14 +51,14 @@ def tensor_no_grad():
 def check_module_torch_script(module, tensor):
     """Tests output of module is invariant to torchscripting"""
     ref_tensor = module(tensor)
-    module_scripted = torch.compile(module)
+    module_scripted = torch.jit.script(module)
     out_tensor = module_scripted(tensor)
     mts.allclose_raise(ref_tensor, out_tensor)
 
 
 def check_module_save_load(module):
     """Tests save and load of module"""
-    module_scripted = torch.compile(module)
+    module_scripted = torch.jit.script(module)
     with io.BytesIO() as buffer:
         torch.jit.save(module_scripted, buffer)
         buffer.seek(0)

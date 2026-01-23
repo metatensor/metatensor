@@ -365,9 +365,9 @@ class Serialization:
 def test_script():
     # check that the operators definition (in register.cpp) match what we expect
     # (defined in `Serialization`)
-    _ = torch.compile(Serialization)
+    _ = torch.jit.script(Serialization)
 
-    @torch.compile
+    @torch.jit.script
     def test_function(labels: Labels):
         torch.ops.metatensor.save("tmp.mts", labels)
 
