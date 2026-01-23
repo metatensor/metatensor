@@ -1,8 +1,14 @@
+import warnings
 from typing import Union
 
 import torch
 
 from metatensor.torch import Labels, TensorBlock, TensorMap
+
+
+warnings.filterwarnings(
+    "ignore", message=".*torch.jit.script.*is deprecated", category=DeprecationWarning
+)
 
 
 def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename: str):
