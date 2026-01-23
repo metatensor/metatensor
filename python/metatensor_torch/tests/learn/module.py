@@ -190,7 +190,7 @@ def test_to(scripted, devices_to_test):
 
     module = EverythingModule("test")
     if scripted:
-        module = torch.jit.script(module)
+        module = torch.compile(module)
 
     check_device_dtype(module, "cpu", dtype_to_int(torch.float64))
 
@@ -217,7 +217,7 @@ def test_to(scripted, devices_to_test):
 
     module = Recursive("test")
     if scripted:
-        module = torch.jit.script(module)
+        module = torch.compile(module)
 
     check_device_dtype(module.sub_module, "cpu", dtype_to_int(torch.float64))
 
@@ -239,19 +239,19 @@ def test_to(scripted, devices_to_test):
 
 def test_torchscript():
     module = LabelsModule("test")
-    scripted = torch.jit.script(module)
+    scripted = torch.compile(module)
     assert scripted(0)._type().name() == "Labels"
 
     module = BlockModule("test")
-    scripted = torch.jit.script(module)
+    scripted = torch.compile(module)
     assert scripted(0)._type().name() == "TensorBlock"
 
     module = TensorModule("test")
-    scripted = torch.jit.script(module)
+    scripted = torch.compile(module)
     assert scripted(0)._type().name() == "TensorMap"
 
 
-@torch.jit.script
+@torch.compile
 def dtype_to_int(dtype: torch.dtype):
     return dtype
 

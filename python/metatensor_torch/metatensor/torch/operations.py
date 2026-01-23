@@ -67,7 +67,7 @@ if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
     module.__dict__["torch_jit_script"] = lambda u: u
 else:
     module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
-    module.__dict__["torch_jit_script"] = torch.jit.script
+    module.__dict__["torch_jit_script"] = torch.compile
 
 module.__dict__["torch_jit_annotate"] = torch.jit.annotate
 

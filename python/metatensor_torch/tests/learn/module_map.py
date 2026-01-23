@@ -97,7 +97,7 @@ def test_to_device(tensor, torch_script):
         )
 
         if torch_script:
-            module = torch.jit.script(module)
+            module = torch.compile(module)
 
         assert module._in_keys.device.type == "cpu"
         for label in module._out_properties:
@@ -127,13 +127,13 @@ def test_torchscript(tensor):
     tensor_module = ModuleMap(tensor.keys, modules)
     ref_tensor = tensor_module(tensor)
 
-    tensor_module_script = torch.jit.script(tensor_module)
+    tensor_module_script = torch.compile(tensor_module)
     out_tensor = tensor_module_script(tensor)
 
     allclose_raise(ref_tensor, out_tensor)
 
     # test save load
-    scripted = torch.jit.script(tensor_module_script)
+    scripted = torch.compile(tensor_module_script)
     with io.BytesIO() as buffer:
         torch.jit.save(scripted, buffer)
         buffer.seek(0)
