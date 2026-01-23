@@ -59,7 +59,11 @@ def test_copy():
 
     # We should have exactly 2 references to the object: one in this function,
     # and one passed to `sys.getrefcount`
-    assert sys.getrefcount(tensor) == 2
+    if sys.version_info >= (3, 14):
+        # Python 3.14 has an optimization to avoid temporary references
+        assert sys.getrefcount(tensor) == 1
+    else:
+        assert sys.getrefcount(tensor) == 2
 
     del tensor
 
