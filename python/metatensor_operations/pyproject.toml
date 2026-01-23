@@ -52,4 +52,6 @@ testpaths = ["tests"]
 filterwarnings = [
     "error",
     "ignore:`torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.:DeprecationWarning",
+    "ignore:`torch.jit.save` is deprecated. Please switch to `torch.export`.:DeprecationWarning",
+    "ignore:`torch.jit.load` is deprecated. Please switch to `torch.export`.:DeprecationWarning",
 ]
