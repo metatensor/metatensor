@@ -23,16 +23,16 @@ jobs:
             numpy-version-pin: "<2.0"
           - os: ubuntu-24.04
             python-version: "3.10"
-            torch-version: "2.9"
+            torch-version: "2.10"
           - os: ubuntu-24.04
             python-version: "3.13"
-            torch-version: "2.9"
+            torch-version: "2.10"
           - os: macos-15
             python-version: "3.13"
-            torch-version: "2.9"
+            torch-version: "2.10"
           - os: windows-2022
             python-version: "3.13"
-            torch-version: "2.9"
+            torch-version: "2.10"
     steps:
       - uses: actions/checkout@v6
         with:

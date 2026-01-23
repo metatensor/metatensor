@@ -115,7 +115,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9']
+        torch-version: ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '2.10']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-15', 'windows-2022']
         exclude:
@@ -134,6 +134,7 @@ jobs:
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.7'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.8'}
           - {os: macos-15-intel, arch: x86_64, torch-version: '2.9'}
+          - {os: macos-15-intel, arch: x86_64, torch-version: '2.10'}
         include:
           # add `cibw-arch` and `rust-target` to the different configurations
           - name: x86_64 Linux
@@ -171,6 +172,7 @@ jobs:
           - {torch-version: '2.7', cibw-python: 'cp312-*'}
           - {torch-version: '2.8', cibw-python: 'cp312-*'}
           - {torch-version: '2.9', cibw-python: 'cp312-*'}
+          - {torch-version: '2.10', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -476,13 +478,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.9.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.10.0%2Bcpu.zip
           - os: macos-15
             rust-target: aarch64-apple-darwin
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.9.0.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.10.0.zip
           - os: windows-2022
             rust-target: x86_64-pc-windows-msvc
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.9.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.10.0%2Bcpu.zip
     steps:
       - uses: actions/checkout@v6
         with:

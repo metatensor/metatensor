@@ -158,7 +158,7 @@ fn pip_install(
 /// Download PyTorch in a Python virtualenv, and return the
 /// CMAKE_PREFIX_PATH for the corresponding libtorch
 pub fn setup_pytorch(python: &Path) -> PathBuf {
-    let torch_version = std::env::var("METATENSOR_TESTS_TORCH_VERSION").unwrap_or("2.9".into());
+    let torch_version = std::env::var("METATENSOR_TESTS_TORCH_VERSION").unwrap_or("2.10".into());
     pip_install(
         python,
         &[&format!("torch=={}.*", torch_version)],

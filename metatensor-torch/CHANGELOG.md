@@ -17,6 +17,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+- Added support for PyTorch v2.10
+
 ## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-12-05
 
 ### Added
