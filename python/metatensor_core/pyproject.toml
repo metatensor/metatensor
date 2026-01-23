@@ -52,4 +52,7 @@ namespaces = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    "ignore:`torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.:DeprecationWarning",
+]
