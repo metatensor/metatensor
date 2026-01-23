@@ -20,7 +20,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             torch-version: "2.10"
-            python-version: "3.13"
+            python-version: "3.14"
             cargo-test-flags: --release
             do-valgrind: true
 
@@ -34,12 +34,12 @@ jobs:
 
           - os: macos-15
             torch-version: "2.10"
-            python-version: "3.13"
+            python-version: "3.14"
             cargo-test-flags: --release
 
           - os: windows-2022
             torch-version: "2.10"
-            python-version: "3.13"
+            python-version: "3.14"
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
