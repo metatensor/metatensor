@@ -1,18 +1,12 @@
 import importlib
 import os
 import sys
-import warnings
 from typing import Union
 
 import torch
 
 import metatensor.operations
 from metatensor.torch import Labels, TensorBlock, TensorMap
-
-
-warnings.filterwarnings(
-    "ignore", message=".*torch.jit.script.*is deprecated", category=DeprecationWarning
-)
 
 
 #                       CAREFUL ADVENTURER, HERE BE DRAGONS!

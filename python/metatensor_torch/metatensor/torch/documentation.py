@@ -1,12 +1,6 @@
-import warnings
 from typing import Dict, List, Optional, Tuple, Union, overload
 
 import torch
-
-
-warnings.filterwarnings(
-    "ignore", message=".*torch.jit.script.*is deprecated", category=DeprecationWarning
-)
 
 
 # These classes do not contain the actual code (see the C++ code in the root
