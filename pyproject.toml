@@ -65,6 +65,7 @@ filterwarnings = [
     "ignore:`metatensor.torch.atomistic` now lives in `metatomic.torch`, please update your code",
     "ignore:`metatensor.torch.atomistic.io` now lives in `metatomic.torch.io`, please update your code",
     "ignore:`metatensor.torch.atomistic.ase_calculator` now lives in `metatomic.torch.ase_calculator`, please update your code",
+    "ignore:`torch\\.jit.*` is deprecated.*:DeprecationWarning",
 ]
 
 ### ======================================================================== ###
