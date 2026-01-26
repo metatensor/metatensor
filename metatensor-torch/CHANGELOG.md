@@ -17,10 +17,23 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.8.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.4) - 2026-01-26
+
+<!-- Possible sections for each package:
+
+### Added
+
+### Fixed
+
+### Changed
+
+### Removed
+-->
+
 ### Added
 - Added support for PyTorch v2.10
 
-## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-12-05
+## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.3) - 2025-12-05
 
 ### Added
 
@@ -28,7 +41,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   in the form of string key/value pairs. You can use `TensorMap::set_info`,
   `TensorMap::get_info` and `TensorMap::info` to manipulate this information.
 
-## [Version 0.8.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-11-05
+## [Version 0.8.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.2) - 2025-11-05
 
 ### Changed
 
