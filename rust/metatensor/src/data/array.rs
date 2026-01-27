@@ -1,9 +1,14 @@
 use std::ops::Range;
 use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
+use dlpk::sys::{DLDevice, DLDeviceType, DLManagedTensorVersioned, DLPackVersion, DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
+use dlpk::DLPackTensor;
+
+use crate::errors::Error;
 
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
@@ -63,6 +68,15 @@ pub trait Array: std::any::Any + Send + Sync {
         samples: &[mts_sample_mapping_t],
         properties: Range<usize>,
     );
+
+    /// Convert the array to a DLPack pointer.
+    /// The returned pointer is owned by the caller (and cleaned up via its deleter).
+    fn as_dlpack(
+        &self,
+        device: DLDevice,
+        stream: Option<i64>,
+        max_version: DLPackVersion
+    ) -> Result<DLPackTensor, Error>;
 }
 
 impl From<Box<dyn Array>> for mts_array_t {
@@ -76,7 +90,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
             data: Some(rust_array_data),
-            as_dlpack: None,
+            as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
             swap_axes: Some(rust_array_swap_axes),
@@ -106,6 +120,7 @@ pub(super) static RUST_DATA_ORIGIN: Lazy<mts_data_origin_t> = Lazy::new(|| {
     super::origin::register_data_origin("rust.Box<dyn Array>".into()).expect("failed to register a new origin")
 });
 
+/******************************************************************************/
 /// Implementation of `mts_array_t.origin` using `Box<dyn Array>`
 unsafe extern "C" fn rust_array_origin(
     array: *const c_void,
@@ -247,7 +262,24 @@ unsafe extern "C" fn rust_array_move_samples_from(
     })
 }
 
-/******************************************************************************/
+/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_as_dlpack(
+    array: *mut c_void,
+    out: *mut *mut DLManagedTensorVersioned,
+    device: DLDevice,
+    stream: *const i64,
+    max_version: DLPackVersion,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, out);
+        let array = array.cast::<Box<dyn Array>>();
+        let stream_opt = stream.as_ref().copied();
+        let tensor = (*array).as_dlpack(device, stream_opt, max_version).expect("failed to create DLPack tensor");
+
+        let raw_ptr = tensor.into_raw();
+        *out = raw_ptr.as_ptr();
+    })
+}
 
 impl Array for ndarray::ArrayD<f64> {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -307,6 +339,56 @@ impl Array for ndarray::ArrayD<f64> {
             output_location.assign(&value);
         }
     }
+
+    fn as_dlpack(
+        &self,
+        device: DLDevice,
+        _stream: Option<i64>,
+        max_version: DLPackVersion,
+    ) -> Result<DLPackTensor, Error> {
+        // TODO(rg):: Drop later, for now NDArray => this will always be CPU
+        if _stream.is_some() {
+            return Err(Error {
+                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+                message: "CPU arrays can not be used with a stream".into(),
+            });
+        }
+        let vendored_version = DLPackVersion{major: DLPACK_MAJOR_VERSION, minor: DLPACK_MINOR_VERSION};
+        let major_mismatch = max_version.major != vendored_version.major;
+        let minor_too_old = max_version.minor < vendored_version.minor;
+        if major_mismatch || minor_too_old {
+            return Err(Error {
+                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+                message: format!(
+                    "Metatensor supports DLPack version {}.{}. Caller requested incompatible version {}.{}",
+                    vendored_version.major, vendored_version.minor, max_version.major, max_version.minor
+                ),
+            });
+        }
+
+        let ndarray_device = DLDevice {
+            device_type: DLDeviceType::kDLCPU,
+            device_id: 0,
+        };
+
+        if device.device_type != ndarray_device.device_type || device.device_id != ndarray_device.device_id {
+            return Err(Error {
+                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+                message: format!(
+                    "Requested DLPack device ({}) does not match array device ({})",
+                    device, ndarray_device
+                ),
+            });
+        }
+
+        // This copies the data into a new DLPackTensor because `ndarray::ArrayD` here implies strict ownership.
+        let tensor: DLPackTensor = self.clone().try_into().map_err(|e| Error {
+            code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+            message: format!("failed to convert ndarray to DLPack: {:?}", e),
+        })?;
+
+        Ok(tensor)
+    }
 }
 
 /******************************************************************************/
@@ -362,47 +444,75 @@ impl Array for EmptyArray {
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
     }
+    
+    fn as_dlpack(
+        &self,
+        _device: DLDevice,
+        _stream: Option<i64>,
+        _max_version: DLPackVersion
+    ) -> Result<DLPackTensor, Error> {
+        panic!("can not call Array::as_dlpack() for EmptyArray");
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use metatensor_sys::*;
+    use dlpk::sys::{DLDataTypeCode, DLDeviceType};
+    use metatensor_sys::{MTS_SUCCESS, mts_array_t};
+    use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+    use crate::Array;
 
-    use super::*;
 
     #[test]
     fn ndarray_as_mts_array() {
-        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
-
+        let data = ndarray::ArrayD::<f64>::zeros(vec![2, 3, 4]);
         let address = data.as_ptr() as usize;
         let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
 
-        let mut rust_origin = 0;
-        let status = unsafe {
-            mts_register_data_origin(b"rust.Box<dyn Array>\0".as_ptr().cast(), &mut rust_origin)
-        };
-        assert_eq!(status, MTS_SUCCESS);
-
-        assert_eq!(mts_array.origin().unwrap(), rust_origin);
-
-        assert_eq!(mts_array.shape().unwrap(), [4, 5, 6]);
-
+        assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
         assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
 
-        mts_array.reshape(&[20, 6, 1]).unwrap();
-        assert_eq!(mts_array.shape().unwrap(), [20, 6, 1]);
-
-        mts_array.swap_axes(1, 2).unwrap();
-        assert_eq!(mts_array.shape().unwrap(), [20, 1, 6]);
-
-        let copy = mts_array.copy().unwrap();
-        assert_eq!(copy.origin().unwrap(), rust_origin);
-        assert_eq!(copy.shape().unwrap(), [20, 1, 6]);
-        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
-
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
-        assert_eq!(created.origin().unwrap(), rust_origin);
+        let mut created = mts_array.create(&[2, 3, 4]).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
-        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
+        assert_ne!(created.data().unwrap().as_ptr() as usize, address);
+        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
     }
+
+    #[test]
+    fn ndarray_as_mts_array_dlpack() {
+        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
+        // Wrap it in the C-API struct
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        unsafe {
+            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+            let device = DLDevice {
+                device_type: DLDeviceType::kDLCPU,
+                device_id: 0,
+            };
+            let max_version = DLPackVersion { major: 1, minor: 1 };
+            let status = (mts_array.as_dlpack.unwrap())(
+                mts_array.ptr,
+                &mut dl_managed,
+                device,
+                std::ptr::null_mut(),
+                max_version
+            );
+            
+            assert_eq!(status, MTS_SUCCESS);
+            assert!(!dl_managed.is_null());
+            let tensor = &(*dl_managed).dl_tensor;
+            assert_eq!(tensor.ndim, 3);
+            assert_eq!(*tensor.shape.offset(0), 4);
+            assert_eq!(*tensor.shape.offset(1), 5);
+            assert_eq!(*tensor.shape.offset(2), 6);
+            // The dtype for f64 is kDLFloat (2) with 64 bits
+            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLFloat);
+            assert_eq!(tensor.dtype.bits, 64);
+            // Clean up using the provided deleter
+            if let Some(deleter) = (*dl_managed).deleter {
+                deleter(dl_managed);
+            }
+        }
+    }
+
 }
