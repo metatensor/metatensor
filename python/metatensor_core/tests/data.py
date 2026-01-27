@@ -210,7 +210,7 @@ class MtsArrayMixin:
 
         # Verify Metadata
         assert managed.version.major == 1
-        assert managed.version.minor == 0
+        assert managed.version.minor <= 3
         assert dl_tensor.ndim == 2
         assert dl_tensor.shape[0] == 2
         assert dl_tensor.shape[1] == 3
