@@ -3,7 +3,7 @@
 
 use metatensor::{LabelsBuilder, Labels, TensorBlock, TensorMap};
 
-use ndarray::ArrayD;
+use ndarray::ArcArray;
 
 pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
     let mut builder = LabelsBuilder::new(names);
@@ -27,7 +27,7 @@ pub fn example_block(
 
     let shape = vec![samples.count(), components[0].count(), properties.count()];
     let mut block = TensorBlock::new(
-        ArrayD::from_elem(shape, values),
+        ArcArray::from_elem(shape, values),
         &samples,
         &components,
         &properties,
@@ -37,7 +37,7 @@ pub fn example_block(
 
     let shape = vec![gradient_samples.count(), components[0].count(), properties.count()];
     let gradient = TensorBlock::new(
-        ArrayD::from_elem(shape, gradient_values),
+        ArcArray::from_elem(shape, gradient_values),
         &gradient_samples,
         &components,
         &properties,

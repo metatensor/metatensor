@@ -1,5 +1,6 @@
 use crate::c_api::mts_array_t;
 use crate::data::origin::get_data_origin;
+use ndarray::{ArcArray, IxDyn};
 
 use super::Array;
 
@@ -67,21 +68,21 @@ impl<'a> ArrayRef<'a> {
         }
     }
 
-    /// Get the data in this `ArrayRef` as a `ndarray::ArrayD`. This function
-    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArrayD`.
+    /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
+    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_array(&self) -> &ndarray::ArrayD<f64> {
-        self.as_any().downcast_ref().expect("this is not a ndarray::ArrayD")
+    pub fn as_array(&self) -> &ArcArray<f64, IxDyn> {
+        self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
-    /// Transform this `ArrayRef` into a reference to an `ndarray::ArrayD`,
+    /// Transform this `ArrayRef` into a reference to an `ndarray::ArcArray`,
     /// keeping the lifetime of the `ArrayRef`.
     ///
     /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArrayD`.
+    /// `ndarray::ArcArray`.
     #[inline]
-    pub fn to_array(self) -> &'a ndarray::ArrayD<f64> {
-        self.to_any().downcast_ref().expect("this is not a ndarray::ArrayD")
+    pub fn to_array(self) -> &'a ArcArray<f64, IxDyn> {
+        self.to_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
     /// Get the raw underlying `mts_array_t`
@@ -196,39 +197,39 @@ impl<'a> ArrayRefMut<'a> {
         }
     }
 
-    /// Get the data in this `ArrayRef` as a `ndarray::ArrayD`. This function
-    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArrayD`.
+    /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
+    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_array(&self) -> &ndarray::ArrayD<f64> {
-        self.as_any().downcast_ref().expect("this is not a ndarray::ArrayD")
+    pub fn as_array(&self) -> &ArcArray<f64, IxDyn> {
+        self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
-    /// Transform this `ArrayRefMut` into a reference to an `ndarray::ArrayD`,
+    /// Transform this `ArrayRefMut` into a reference to an `ndarray::ArcArray`,
     /// keeping the lifetime of the `ArrayRefMut`.
     ///
     /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArrayD`.
+    /// `ndarray::ArcArray`.
     #[inline]
-    pub fn to_array(&self) -> &ndarray::ArrayD<f64> {
-        self.to_any().downcast_ref().expect("this is not a ndarray::ArrayD")
+    pub fn to_array(&self) -> &ArcArray<f64, IxDyn> {
+        self.to_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
     /// Get the data in this `ArrayRef` as a mutable reference to an
-    /// `ndarray::ArrayD`. This function will panic if the data in this
-    /// `mts_array_t` is not a `ndarray::ArrayD`.
+    /// `ndarray::ArcArray`. This function will panic if the data in this
+    /// `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_array_mut(&mut self) -> &mut ndarray::ArrayD<f64> {
-        self.as_any_mut().downcast_mut().expect("this is not a ndarray::ArrayD")
+    pub fn as_array_mut(&mut self) -> &mut ArcArray<f64, IxDyn> {
+        self.as_any_mut().downcast_mut().expect("this is not a ndarray::ArcArray")
     }
 
     /// Transform this `ArrayRefMut` into a mutable reference to an
-    /// `ndarray::ArrayD`, keeping the lifetime of the `ArrayRefMut`.
+    /// `ndarray::ArcArray`, keeping the lifetime of the `ArrayRefMut`.
     ///
     /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArrayD`.
+    /// `ndarray::ArcArray`.
     #[inline]
-    pub fn to_array_mut(self) -> &'a mut ndarray::ArrayD<f64> {
-        self.to_any_mut().downcast_mut().expect("this is not a ndarray::ArrayD")
+    pub fn to_array_mut(self) -> &'a mut ArcArray<f64, IxDyn> {
+        self.to_any_mut().downcast_mut().expect("this is not a ndarray::ArcArray")
     }
 
     /// Get the raw underlying `mts_array_t`
