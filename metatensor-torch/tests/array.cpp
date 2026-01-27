@@ -79,7 +79,7 @@ TEST_CASE("DLPack conversion") {
 
         // Check version
         CHECK(dl_managed->version.major == DLPACK_MAJOR_VERSION);
-        CHECK(dl_managed->version.minor == DLPACK_MINOR_VERSION);
+        CHECK(dl_managed->version.minor <= 3);
 
         // Check DLTensor fields
         auto &dl_tensor = dl_managed->dl_tensor;

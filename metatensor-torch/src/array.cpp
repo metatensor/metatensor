@@ -150,8 +150,8 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
     // ... until then.
     DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
     bool major_mismatch = max_version.major != mta_version.major;
-    bool minor_too_old = max_version.minor < mta_version.minor;
-    if (major_mismatch || minor_too_old) {
+    bool minor_too_high = max_version.minor < mta_version.minor;
+    if (major_mismatch || minor_too_high) {
         throw metatensor::Error("TorchDataArray supports DLPack version " +
                                 std::to_string(mta_version.major) + "." +
                                 std::to_string(mta_version.minor) +
