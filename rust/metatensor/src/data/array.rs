@@ -346,7 +346,7 @@ impl Array for ndarray::ArrayD<f64> {
         _stream: Option<i64>,
         max_version: DLPackVersion,
     ) -> Result<DLPackTensor, Error> {
-        // TODO(rg):: Drop later, for now NDArray => this will always be CPU
+        // TODO:: Drop later, for now NDArray => this will always be CPU
         if _stream.is_some() {
             return Err(Error {
                 code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
@@ -355,8 +355,8 @@ impl Array for ndarray::ArrayD<f64> {
         }
         let vendored_version = DLPackVersion{major: DLPACK_MAJOR_VERSION, minor: DLPACK_MINOR_VERSION};
         let major_mismatch = max_version.major != vendored_version.major;
-        let minor_too_old = max_version.minor < vendored_version.minor;
-        if major_mismatch || minor_too_old {
+        let minor_too_high = max_version.minor < vendored_version.minor;
+        if major_mismatch || minor_too_high {
             return Err(Error {
                 code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
                 message: format!(

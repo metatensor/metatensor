@@ -836,10 +836,10 @@ public:
         }
 
         DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        // SEMVER, so major must match, minor(caller) must be >= minor(us)
+        // SEMVER, so major must match, and the MTA minor must be below the minor(caller)
         bool major_mismatch = max_version.major != mta_version.major;
-        bool minor_too_old  = max_version.minor < mta_version.minor;
-        if (major_mismatch || minor_too_old) {
+        bool minor_too_high = max_version.minor < mta_version.minor;
+        if (major_mismatch || minor_too_high) {
             throw Error(
                 "SimpleDataArray supports DLPack version " +
                 std::to_string(mta_version.major) + "." +
