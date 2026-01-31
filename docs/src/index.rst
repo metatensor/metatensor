@@ -38,8 +38,6 @@ store gradients, keeping them together with the associated values.
         :columns: 12 12 6 6
         :margin: 0 3 0 0
 
-        Learn about the core goals of metatensor:
-
         - be an exchange format for structured atomistic data;
         - provide efficient storage and manipulation of sparse arrays;
         - offer tools to build custom machine learning models.
