@@ -42,8 +42,8 @@ build-backend = "setuptools.build_meta"
 zip-safe = true
 
 [tool.setuptools.packages.find]
-include = ["metatensor*"]
-namespaces = true
+include = ["metatensor_operations*", "metatensor_operations"]
+namespaces = false
 
 ### ======================================================================== ###
 [tool.pytest.ini_options]

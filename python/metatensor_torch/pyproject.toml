@@ -48,8 +48,8 @@ backend-path = ["build-backend"]
 zip-safe = false
 
 [tool.setuptools.packages.find]
-include = ["metatensor*"]
-namespaces = true
+include = ["metatensor_torch*", "metatensor_torch"]
+namespaces = false
 
 ### ======================================================================== ###
 [tool.pytest.ini_options]
