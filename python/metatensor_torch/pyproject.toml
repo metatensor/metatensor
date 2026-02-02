@@ -48,7 +48,7 @@ backend-path = ["build-backend"]
 zip-safe = false
 
 [tool.setuptools.packages.find]
-include = ["metatensor_torch*", "metatensor_torch"]
+include = ["metatensor_torch"]
 namespaces = false
 
 ### ======================================================================== ###
