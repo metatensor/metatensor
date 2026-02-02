@@ -55,12 +55,8 @@ except ImportError:
 
 if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa: F401
+    from .operations import *  # noqa: F401, F403
 
-    _ops = sys.modules["metatensor.torch.operations"]
-    for _name in getattr(
-        _ops, "__all__", [n for n in dir(_ops) if not n.startswith("_")]
-    ):
-        globals()[_name] = getattr(_ops, _name)
 else:
     # __getattr__ is called when a module attribute can not be found, we use it to
     # give the user a better error message if they don't have metatensor-operations
