@@ -11,7 +11,7 @@ How do I use environment variables to control tests?
 
 You can customize test execution by setting specific environment variables in your 
 shell. This provides a lighter alternative to the :ref:`devdoc-local-ci` setup.
-Please refer to :ref:`devdoc-get-started` for a full list of supported variables 
+Please refer to :ref:`running-tests` for a full list of supported variables 
 and their descriptions.
 
 .. important::
@@ -46,7 +46,7 @@ See :ref:`devdoc-local-ci` for setup and usage instructions.
    ``--action-offline-mode`` after the first run will help.
 
 Often it makes sense for better logs to change ``tox.ini``, for instance to
-remove `` --quiet`` from ``uv build``.
+temporarily remove `` --quiet`` from ``uv build``.
 
 How do I run just the NumPy < 2.0 tests?
 ----------------------------------------
@@ -127,7 +127,7 @@ For local development, consider rebuilding the enviroments:
 .. code-block:: bash
 
     # remove compiled artifacts for new torch
-    $GITROOT/scripts/clean-python.sh
+    ./scripts/clean-python.sh
     # explicitly regenerate (or run tests directly)
     tox --recreate
 
