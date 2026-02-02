@@ -122,6 +122,22 @@ Follow a PyTorch upgrade PR. Then make a new release.
    * - Handling deprecations
      - `v2.10 <https://github.com/metatensor/metatensor/pull/1041>`_
 
+For local development, consider rebuilding the enviroments:
+
+.. code-block:: bash
+
+    # remove compiled artifacts for new torch
+    $GITROOT/scripts/clean-python.sh
+    # explicitly regenerate (or run tests directly)
+    tox --recreate
+
+This prevents errors along the lines of:
+
+.. code-block:: bash
+
+    found incompatible torch version: metatensor-torch was built against v2.9.1
+        but we found v2.10.0
+
 How do I organize my commits for a Pull Request?
 ------------------------------------------------
 
