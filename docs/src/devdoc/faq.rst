@@ -9,31 +9,19 @@ with the ecosystem.
 How do I use environment variables to control tests?
 ----------------------------------------------------
 
-The ``tox`` configuration supports several environment variables to customize
-test execution. Setting these directly in your shell provides a less hermetic
-but much lighter way to approximate the configurations found in the :ref:`devdoc-local-ci`
-without the overhead of Docker containers.
-
-.. list-table::
-   :widths: 40 60
-   :header-rows: 1
-
-   * - Variable
-     - Description
-   * - ``METATENSOR_TESTS_TORCH_VERSION``
-     - Sets the ``torch`` version (e.g., ``"2.2"``).
-   * - ``METATENSOR_TESTS_NUMPY_VERSION_PIN``
-     - Pins the ``numpy`` version (e.g., ``"<2.0"``).
-   * - ``PIP_EXTRA_INDEX_URL``
-     - Provides an additional URL to find packages (e.g., for CPU-only torch).
-   * - ``METATENSOR_BUILD_TYPE``
-     - Set to ``release`` to compile Rust components with optimizations.
+You can customize test execution by setting specific environment variables in your 
+shell. This provides a lighter alternative to the :ref:`devdoc-local-ci` setup.
+Please refer to :ref:`devdoc-get-started` for a full list of supported variables 
+and their descriptions.
 
 .. important::
 
    When running ``tox`` locally, your host Python version must be compatible
    with the ``torch`` version you request. For example, some versions of
    ``torch`` do not support Python 3.14.
+
+How do I change the Python version used for local tests?
+--------------------------------------------------------
 
 If you encounter dependency resolution errors, ensure you are using a compatible
 Python interpreter. You can use ``tox`` within a specific Python environment:
@@ -56,6 +44,9 @@ See :ref:`devdoc-local-ci` for setup and usage instructions.
 
    These can be rather heavy for users without workstations. Using
    ``--action-offline-mode`` after the first run will help.
+
+Often it makes sense for better logs to change ``tox.ini``, for instance to
+remove `` --quiet`` from ``uv build``.
 
 How do I run just the NumPy < 2.0 tests?
 ----------------------------------------
