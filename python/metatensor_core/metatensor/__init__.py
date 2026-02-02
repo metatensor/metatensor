@@ -30,7 +30,6 @@ from .version import __version__  # noqa: F401
 
 # Define the map between old namespace paths and new flat packages
 _PACKAGE_MAP = {
-    "metatensor": "metatensor_core",
     "metatensor.operations": "metatensor_operations",
     "metatensor.learn": "metatensor_learn",
     "metatensor.torch": "metatensor_torch",

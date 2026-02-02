@@ -354,7 +354,6 @@ if __name__ == "__main__":
                 "torch-*/bin/*",
                 "torch-*/lib/*",
                 "torch-*/include/*",
-                "_build_versions.py",
             ]
         },
     )
