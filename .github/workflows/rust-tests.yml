@@ -116,11 +116,13 @@ jobs:
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
+        if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
           version: "v0.10.0"
 
       - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV

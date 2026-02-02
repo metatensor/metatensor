@@ -92,6 +92,8 @@ changes:
 
 .. _create a fork: https://docs.github.com/en/github/getting-started-with-github/fork-a-repo
 
+ .. _running-tests:
+
 Running tests
 -------------
 

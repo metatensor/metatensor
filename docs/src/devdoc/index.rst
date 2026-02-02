@@ -12,6 +12,9 @@ This developer documentation contains the following sections:
    with one another.
 3. The :ref:`devdoc-versions` section explains how we manage the version numbers
    of all the packages in the metatensor repository.
+4. :ref:`devdoc-local-ci` explains how to run the GitHub Actions pipeline on
+   your local machine for faster debugging.
+5. :ref:`devdoc-faq` covers some common questsions and workflows.
 
 .. toctree::
    :maxdepth: 2
@@ -19,6 +22,8 @@ This developer documentation contains the following sections:
    get-started
    architecture
    versions
+   local-ci
+   faq
 
 Development team
 ----------------

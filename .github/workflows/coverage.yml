@@ -69,11 +69,13 @@ jobs:
           sweep-cache: true
 
       - name: setup sccache
+        if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
           version: "v0.10.0"
 
       - name: setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
