@@ -14,6 +14,10 @@
 # only declares dependencies on `metatensor-core` and `metatensor-operation`; as well
 # an an optional dependency on `metatensor-torch`.
 
+import importlib
+import sys
+import warnings
+
 from . import utils  # noqa: F401
 from .block import TensorBlock  # noqa: F401
 from .data import DeviceWarning  # noqa: F401
@@ -24,31 +28,45 @@ from .tensor import TensorMap  # noqa: F401
 from .version import __version__  # noqa: F401
 
 
-try:
-    from . import operations  # noqa: F401
+# Define the map between old namespace paths and new flat packages
+_PACKAGE_MAP = {
+    "metatensor.operations": "metatensor_operations",
+    "metatensor.learn": "metatensor_learn",
+    "metatensor.torch": "metatensor_torch",
+}
 
-    HAS_METATENSOR_OPERATIONS = True
-except ImportError:
-    HAS_METATENSOR_OPERATIONS = False
+# Register aliases in sys.modules to allow `import metatensor.torch` syntax
+for namespace_path, flat_name in _PACKAGE_MAP.items():
+    try:
+        # Attempt to import the actual flat package
+        pkg = importlib.import_module(flat_name)
+        # Alias it in sys.modules so python thinks metatensor.x is loaded
+        sys.modules[namespace_path] = pkg
+    except ImportError as e:
+        # Don't fail hard if optional packages are missing
+        if "No module named" not in str(e):
+            warnings.warn(f"Failed to import {flat_name}: {e}", stacklevel=2)
+
+# Re-export operations symbols into the top-level namespace
+if "metatensor.operations" in sys.modules:
+    from metatensor_operations import *  # noqa: F401, F403
 
 
-if HAS_METATENSOR_OPERATIONS:
-    from .operations import *  # noqa: F401, F403
+def __getattr__(name):
+    # Handle attribute access (e.g. metatensor.torch) via the map
+    # This catches cases where the import wasn't explicit
+    full_name = f"metatensor.{name}"
+    if full_name in _PACKAGE_MAP:
+        flat_name = _PACKAGE_MAP[full_name]
+        try:
+            return importlib.import_module(flat_name)
+        except ImportError as e:
+            raise AttributeError(
+                f"metatensor.{name} is not defined, are you sure you have the "
+                f"{flat_name.replace('_', '-')} package installed?"
+            ) from e
 
-else:
-    # __getattr__ is called when a module attribute can not be found, we use it to give
-    # the user a better error message if they don't have metatensor-operations
-    def __getattr__(name):
-        raise AttributeError(
-            f"metatensor.{name} is not defined, are you sure you have the "
-            "metatensor-operations package installed?"
-        )
-
-
-try:
-    from . import learn  # noqa: F401
-except ImportError:
-    pass
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [

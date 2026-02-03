@@ -47,7 +47,7 @@ class cmake_ext(build_ext):
 
         source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
-        install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor/torch")
+        install_dir = os.path.join(os.path.realpath(self.build_lib), "metatensor_torch")
 
         os.makedirs(build_dir, exist_ok=True)
 
@@ -350,10 +350,10 @@ if __name__ == "__main__":
             "sdist": sdist_generate_data,
         },
         package_data={
-            "metatensor-torch": [
-                "metatensor/torch*/bin/*",
-                "metatensor/torch*/lib/*",
-                "metatensor/torch*/include/*",
+            "metatensor_torch": [
+                "torch-*/bin/*",
+                "torch-*/lib/*",
+                "torch-*/include/*",
             ]
         },
     )
