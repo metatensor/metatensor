@@ -47,10 +47,6 @@ backend-path = ["build-backend"]
 [tool.setuptools]
 zip-safe = false
 
-[tool.setuptools.packages.find]
-include = ["metatensor*"]
-namespaces = true
-
 ### ======================================================================== ###
 [tool.pytest.ini_options]
 python_files = ["*.py"]
