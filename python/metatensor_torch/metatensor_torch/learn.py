@@ -2,10 +2,10 @@ import importlib
 import sys
 from typing import Union
 
+import metatensor_learn
 import torch
 
-import metatensor.learn
-from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
+from . import Labels, LabelsEntry, TensorBlock, TensorMap
 
 
 # ==================================================================================== #
@@ -63,11 +63,13 @@ spec = importlib.util.spec_from_file_location(
     # create a module with this name
     "metatensor.torch.learn",
     # using the code from there
-    metatensor.learn.__file__,
+    metatensor_learn.__file__,
 )
 
 module = importlib.util.module_from_spec(spec)
 # override `metatensor.torch.learn` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
+# also register as metatensor.learn for backward compat with flat package layout
+sys.modules["metatensor.learn"] = module
 spec.loader.exec_module(module)

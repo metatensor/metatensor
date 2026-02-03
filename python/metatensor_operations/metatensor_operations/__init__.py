@@ -1,7 +1,10 @@
 import importlib.metadata
+import sys
 
 
 __version__ = importlib.metadata.version("metatensor-operations")
+
+sys.modules["metatensor.operations"] = sys.modules[__name__]
 
 
 from ._abs import abs  # noqa: F401
