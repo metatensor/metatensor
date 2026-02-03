@@ -41,10 +41,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 zip-safe = true
 
-[tool.setuptools.packages.find]
-include = ["metatensor_learn"]
-namespaces = false
-
 ### ======================================================================== ###
 [tool.pytest.ini_options]
 python_files = ["*.py"]
