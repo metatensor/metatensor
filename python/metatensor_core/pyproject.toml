@@ -46,7 +46,7 @@ zip-safe = false
 
 [tool.setuptools.packages.find]
 include = ["metatensor*"]
-namespaces = true
+namespaces = false
 
 ### ======================================================================== ###
 [tool.pytest.ini_options]
