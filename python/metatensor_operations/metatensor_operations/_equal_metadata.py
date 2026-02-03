@@ -244,7 +244,7 @@ def equal_metadata_raise(
     >>> mts.equal_metadata_raise(tensor_1, tensor_2)
     Traceback (most recent call last):
         ...
-    metatensor.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
+    metatensor_operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
 should have the same properties, but they are not the same or not in the same order
     >>> mts.equal_metadata_raise(
     ...     tensor_1,
@@ -364,7 +364,7 @@ def equal_metadata_block_raise(
     >>> mts.equal_metadata_block_raise(block_1, block_2)
     Traceback (most recent call last):
         ...
-    metatensor.operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
+    metatensor_operations._utils.NotEqualError: inputs to 'equal_metadata_block_raise' \
 should have the same properties, but they are not the same or not in the same order
     >>> mts.equal_metadata_block_raise(
     ...     block_1, block_2, check=("samples", "components")
