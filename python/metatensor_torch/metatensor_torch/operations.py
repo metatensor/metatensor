@@ -3,10 +3,10 @@ import os
 import sys
 from typing import Union
 
+import metatensor_operations
 import torch
 
-import metatensor.operations
-from metatensor.torch import Labels, TensorBlock, TensorMap
+from . import Labels, TensorBlock, TensorMap
 
 
 #                       CAREFUL ADVENTURER, HERE BE DRAGONS!
@@ -106,11 +106,13 @@ spec = importlib.util.spec_from_file_location(
     # create a module with this name
     "metatensor.torch.operations",
     # using the code from there
-    metatensor.operations.__file__,
+    metatensor_operations.__file__,
 )
 
 module = importlib.util.module_from_spec(spec)
 # override `metatensor.torch.operations` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
+# also register as metatensor.operations for backward compat with flat package layout
+sys.modules["metatensor.operations"] = module
 spec.loader.exec_module(module)

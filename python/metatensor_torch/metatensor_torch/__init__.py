@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import TYPE_CHECKING
 
 import torch
@@ -7,6 +8,8 @@ from . import utils  # noqa: F401
 from ._c_lib import _load_library
 from .version import __version__  # noqa: F401
 
+
+sys.modules["metatensor.torch"] = sys.modules[__name__]
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
     from .documentation import (
@@ -35,7 +38,7 @@ else:
     load_labels_buffer = torch.ops.metatensor.load_labels_buffer
     save_buffer = torch.ops.metatensor.save_buffer
 
-from .serialization import (  # noqa: F401
+from .serialization import (  # noqa: F401, E402
     load,
     load_block,
     load_labels,
@@ -44,7 +47,7 @@ from .serialization import (  # noqa: F401
 
 
 try:
-    import metatensor.operations  # noqa: F401
+    import metatensor_operations  # noqa: F401, E402
 
     HAS_METATENSOR_OPERATIONS = True
 except ImportError:
@@ -52,7 +55,12 @@ except ImportError:
 
 if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa: F401
-    from .operations import *  # noqa: F401, F403
+
+    _ops = sys.modules["metatensor.torch.operations"]
+    for _name in getattr(
+        _ops, "__all__", [n for n in dir(_ops) if not n.startswith("_")]
+    ):
+        globals()[_name] = getattr(_ops, _name)
 else:
     # __getattr__ is called when a module attribute can not be found, we use it to
     # give the user a better error message if they don't have metatensor-operations
@@ -64,16 +72,15 @@ else:
 
 
 try:
-    import metatensor.learn  # noqa: F401
+    import metatensor_learn  # noqa: F401
 
     from . import learn  # noqa: F401
-
 except ImportError:
     pass
 
 
-from . import atomistic  # noqa: F401
-from ._module import _patch_torch_jit_module
+from . import atomistic  # noqa: F401, E402
+from ._module import _patch_torch_jit_module  # noqa:  E402
 
 
 _patch_torch_jit_module()

@@ -249,7 +249,7 @@ def allclose_raise(
     >>> mts.allclose_raise(tensor_1, tensor_2)
     Traceback (most recent call last):
         ...
-    metatensor.operations._utils.NotEqualError: blocks for key (key=0) are different: \
+    metatensor_operations._utils.NotEqualError: blocks for key (key=0) are different: \
 values are not allclose
 
     call :py:func:`metatensor.allclose_raise()` again, but use ``equal_nan=True`` and
@@ -397,7 +397,7 @@ def allclose_block_raise(
     >>> mts.allclose_block_raise(block_1, block_2)
     Traceback (most recent call last):
         ...
-    metatensor.operations._utils.NotEqualError: inputs to 'allclose' should have the \
+    metatensor_operations._utils.NotEqualError: inputs to 'allclose' should have the \
 same properties, but they are not the same or not in the same order
     """
     message = _allclose_block_impl(

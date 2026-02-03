@@ -1,7 +1,10 @@
 import importlib.metadata
+import sys
 
 
 __version__ = importlib.metadata.version("metatensor-learn")
+
+sys.modules["metatensor.learn"] = sys.modules[__name__]
 
 try:
     import torch  # noqa
