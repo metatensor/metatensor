@@ -10,13 +10,6 @@ import torch
 StrSequence = Union[str, List[str], Tuple[str, ...]]
 
 
-THIS_CODE_SHOULD_NOT_RUN = RuntimeError(
-    "This is the documentation-only version of this class, it should not be used at "
-    "runtime. If you see this error while running examples, check above for the actual "
-    "error message."
-)
-
-
 class LabelsEntry:
     """A single entry (i.e. row) in a set of :py:class:`Labels`.
 
@@ -47,7 +40,6 @@ class LabelsEntry:
     @property
     def names(self) -> List[str]:
         """names of the dimensions for this Labels entry"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def values(self) -> torch.Tensor:
@@ -64,35 +56,29 @@ class LabelsEntry:
             Any modification to this tensor can break the underlying data structure, or
             make it out of sync with the ``values``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def print(self) -> str:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __len__(self) -> int:
         """number of dimensions in this labels entry"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __getitem__(self, dimension: Union[str, int]) -> int:
         """get the value associated with the dimension in this entry"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __eq__(self, other: "LabelsEntry") -> bool:
         """
         check if ``self`` and ``other`` are equal (same dimensions/names and
         same values)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __ne__(self, other: "LabelsEntry") -> bool:
         """
         check if ``self`` and ``other`` are not equal (different dimensions/names or
         different values)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
 
 class Labels:
@@ -181,12 +167,10 @@ class Labels:
         :param values: values of the labels, this needs to be a 2-dimensional
                        array of integers.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def names(self) -> List[str]:
         """names of the dimensions for these :py:class:`Labels`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def values(self) -> torch.Tensor:
@@ -203,7 +187,6 @@ class Labels:
             Any modification to this tensor can break the underlying data structure, or
             make it out of sync with the ``values``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def single() -> "Labels":
@@ -226,7 +209,6 @@ class Labels:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def empty(names: StrSequence) -> "Labels":
@@ -237,7 +219,6 @@ class Labels:
                       is transformed into a list with one element, i.e.
                       ``names="a"`` is the same as ``names=["a"]``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def range(name: str, end: int) -> "Labels":
@@ -275,19 +256,17 @@ class Labels:
                 [5],
                 [6]], dtype=torch.int32)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __len__(self) -> int:
         """number of entries in these labels"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @overload
     def __getitem__(self, dimension: str) -> torch.Tensor:
-        raise THIS_CODE_SHOULD_NOT_RUN
+        pass
 
     @overload
     def __getitem__(self, index: int) -> LabelsEntry:
-        raise THIS_CODE_SHOULD_NOT_RUN
+        pass
 
     def __getitem__(self, index):
         """
@@ -297,27 +276,23 @@ class Labels:
         When indexing with an integer, get the corresponding row/labels entry (i.e.
         :py:func:`Labels.entry`).
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __contains__(
         self, entry: Union[LabelsEntry, torch.Tensor, List[int], Tuple[int, ...]]
     ) -> bool:
         """check if these :py:class:`Labels` contain the given ``entry``"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __eq__(self, other: "Labels") -> bool:
         """
         check if two set of labels are equal (same dimension names and same
         values)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __ne__(self, other: "Labels") -> bool:
         """
         check if two set of labels are not equal (different dimension names or
         different values)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load(file: str) -> "Labels":
@@ -341,7 +316,6 @@ class Labels:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load_buffer(buffer: torch.Tensor) -> "Labels":
@@ -365,7 +339,6 @@ class Labels:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save(self, file: str):
         """
@@ -375,14 +348,12 @@ class Labels:
         :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save_buffer(self) -> torch.Tensor:
         """
         Save these :py:class:`Labels` to an in-memory buffer, this is equivalent to
         :py:func:`metatensor.torch.save_buffer`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def append(self, name: str, values: torch.Tensor) -> "Labels":
         """Append a new dimension to the end of the :py:class:`Labels`.
@@ -404,7 +375,6 @@ class Labels:
             42   10
         )
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def insert(self, index: int, name: str, values: torch.Tensor) -> "Labels":
         """Insert a new dimension before ``index`` in the :py:class:`Labels`.
@@ -427,7 +397,6 @@ class Labels:
             10   42
         )
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def permute(self, dimensions_indexes: List[int]) -> "Labels":
         """Permute dimensions according to ``dimensions_indexes`` in the
@@ -452,7 +421,6 @@ class Labels:
              3   42   10
         )
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def remove(self, name: str) -> "Labels":
         """Remove ``name`` from the dimensions of the :py:class:`Labels`.
@@ -492,7 +460,6 @@ class Labels:
         ...     print(e)
         invalid parameter: can not have the same label entry multiple times: [42] is already present
         """  # noqa E501
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def rename(self, old: str, new: str) -> "Labels":
         """Rename the ``old`` dimension to ``new`` in the :py:class:`Labels`.
@@ -515,7 +482,6 @@ class Labels:
             42
         )
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def to(self, device: Union[str, torch.device], non_blocking=False) -> "Labels":
         """
@@ -523,12 +489,10 @@ class Labels:
         ``True``, this tries to move the data asynchronously. See
         :py:meth:`torch.Tensor.to` for more information.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def device(self) -> torch.device:
         """get the current device used for the values of these Labels"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def position(
         self, entry: Union[LabelsEntry, torch.Tensor, List[int], Tuple[int, ...]]
@@ -538,7 +502,6 @@ class Labels:
         :py:class:`Labels`, or ``None`` if the entry is not present in the
         labels.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def union(self, other: "Labels") -> "Labels":
         """
@@ -547,7 +510,6 @@ class Labels:
         If you want to know where entries in ``self`` and ``other`` ends up in the
         union, you can use :py:meth:`Labels.union_and_mapping`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def union_and_mapping(
         self, other: "Labels"
@@ -563,7 +525,6 @@ class Labels:
             :py:class:`torch.Tensor` containing the position in the union of the
             entries from ``other``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def intersection(self, other: "Labels") -> "Labels":
         """
@@ -572,7 +533,6 @@ class Labels:
         If you want to know where entries in ``self`` and ``other`` ends up in the
         intersection, you can use :py:meth:`Labels.intersection_and_mapping`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def intersection_and_mapping(
         self, other: "Labels"
@@ -589,7 +549,6 @@ class Labels:
             of the entries from ``other``. If entries in ``self`` or ``other`` are not
             used in the output, the mapping for them is set to ``-1``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def difference(self, other: "Labels") -> "Labels":
         """
@@ -598,7 +557,6 @@ class Labels:
         If you want to know where entries in ``self`` ends up in the difference, you can
         use :py:meth:`Labels.difference_and_mapping`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", torch.Tensor]:
         """
@@ -612,7 +570,6 @@ class Labels:
             entries in ``self`` are not used in the output, the mapping for these is set
             to ``-1``.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def select(self, selection: "Labels") -> torch.Tensor:
         """
@@ -638,7 +595,6 @@ class Labels:
         :return: 1-dimensional tensor containing the integer indices of selected
             entries
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def print(self, max_entries: int, indent: int) -> str:
         """print these :py:class:`Labels` to a string
@@ -646,11 +602,9 @@ class Labels:
         :param max_entries: how many entries to print, use ``-1`` to print everything
         :param indent: indent the output by ``indent`` spaces
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def entry(self, index: int) -> LabelsEntry:
         """get a single entry in these labels, see also :py:func:`Labels.__getitem__`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def column(self, dimension: str) -> torch.Tensor:
         """
@@ -661,7 +615,6 @@ class Labels:
 
             :py:func:`Labels.__getitem__` as the main way to use this function
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
 
 class TensorBlock:
@@ -720,26 +673,20 @@ class TensorBlock:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __len__(self) -> int:
-        """
-        Get the length of the values stored in this block (i.e. the number of samples in
-        the :py:class:`TensorBlock`).
-        """
-        raise THIS_CODE_SHOULD_NOT_RUN
+        """Get the length of the values stored in this block
+        (i.e. the number of samples in the :py:class:`TensorBlock`)"""
 
     @property
     def shape(self):
         """
         Get the shape of the values  array in this block.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def values(self) -> torch.Tensor:
         """get the values for this block"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def samples(self) -> Labels:
@@ -749,7 +696,6 @@ class TensorBlock:
         The entries in these labels describe the first dimension of the
         ``values`` array.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def components(self) -> List[Labels]:
@@ -759,7 +705,6 @@ class TensorBlock:
         The entries in these labels describe intermediate dimensions of the
         ``values`` array.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def properties(self) -> Labels:
@@ -770,11 +715,9 @@ class TensorBlock:
         ``values`` array. The properties are guaranteed to be the same for
         values and gradients in the same block.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def copy(self) -> "TensorBlock":
         """get a deep copy of this block, including all the data and metadata"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def add_gradient(self, parameter: str, gradient: "TensorBlock"):
         """
@@ -823,7 +766,6 @@ class TensorBlock:
             gradients: ['parameter']
         <BLANKLINE>
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def gradient(self, parameter: str) -> "TensorBlock":
         """
@@ -881,11 +823,9 @@ class TensorBlock:
             gradients: None
         <BLANKLINE>
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def gradients_list(self) -> List[str]:
         """get a list of all gradients defined in this block"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def has_gradient(self, parameter: str) -> bool:
         """
@@ -895,11 +835,9 @@ class TensorBlock:
         :param parameter: check for gradients with respect to this ``parameter``
             (e.g. ``positions``, ``cell``, ...)
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def gradients(self) -> List[Tuple[str, "TensorBlock"]]:
         """Get a list of all (parameter, gradients) pairs defined in this block."""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def dtype(self) -> torch.dtype:
@@ -950,7 +888,6 @@ class TensorBlock:
                 print(dtype_equal(block, torch.float32))
                 # will output 'True'
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def device(self) -> torch.device:
@@ -958,7 +895,6 @@ class TensorBlock:
         Get the device of all the values and gradient arrays stored inside this
         :py:class:`TensorBlock`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def to(
         self,
@@ -981,7 +917,6 @@ class TensorBlock:
         :param bool non_blocking: If this is ``True``, the function tries to move the
             data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load(file: str) -> "TensorBlock":
@@ -1005,7 +940,6 @@ class TensorBlock:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load_buffer(buffer: torch.Tensor) -> "TensorBlock":
@@ -1029,7 +963,6 @@ class TensorBlock:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save(self, file: str):
         """
@@ -1039,14 +972,12 @@ class TensorBlock:
         :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save_buffer(self) -> torch.Tensor:
         """
         Save this :py:class:`TensorBlock` to an in-memory buffer, this is equivalent to
         :py:func:`metatensor.torch.save_buffer`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
 
 class TensorMap:
@@ -1071,16 +1002,13 @@ class TensorMap:
         :param keys: keys associated with each block
         :param blocks: set of blocks containing the actual data
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def keys(self) -> Labels:
         """the set of keys labeling the blocks in this :py:class:`TensorMap`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __len__(self) -> int:
         """get the number of key/block pairs in this :py:class:`TensorMap`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def __getitem__(
         self,
@@ -1090,14 +1018,12 @@ class TensorMap:
         Get a single block with indexing syntax. This calls :py:func:`TensorMap.block`
         directly.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def copy(self) -> "TensorMap":
         """
         get a deep copy of this :py:class:`TensorMap`, including all the data
         and metadata
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load(file: str) -> "TensorMap":
@@ -1121,7 +1047,6 @@ class TensorMap:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
     def load_buffer(buffer: torch.Tensor) -> "TensorMap":
@@ -1145,7 +1070,6 @@ class TensorMap:
 
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save(self, file: str):
         """
@@ -1155,23 +1079,19 @@ class TensorMap:
         :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def save_buffer(self) -> torch.Tensor:
         """
         Save this :py:class:`TensorMap` to an in-memory buffer, this is equivalent to
         :py:func:`metatensor.torch.save_buffer`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def items(self) -> List[Tuple[LabelsEntry, TensorBlock]]:
         """get an iterator over (key, block) pairs in this :py:class:`TensorMap`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def keys_to_samples(
         self,
         keys_to_move: Union[StrSequence, Labels],
-        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1198,19 +1118,14 @@ class TensorMap:
         properties values.
 
         :param keys_to_move: description of the keys to move
-        :param fill_value: scalar value used to fill missing entries in the
-            merged blocks. Accepts any numeric type (int, float, bool).
-            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def keys_to_properties(
         self,
         keys_to_move: Union[StrSequence, Labels],
-        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1240,7 +1155,7 @@ class TensorMap:
         ``keys_to_move``, blocks with properties ``p=1, 2`` will result in
         ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no
         block/missing sample) for a given property in the merged block, then the
-        value will be set to the ``fill_value``.
+        value will be set to zero.
 
         When using a non empty :py:class:`Labels` for ``keys_to_move``, the
         properties labels of all the merged blocks must take the same values.
@@ -1251,14 +1166,10 @@ class TensorMap:
         kept in the order in which they appear in the blocks.
 
         :param keys_to_move: description of the keys to move
-        :param fill_value: scalar value used to fill missing entries in the
-            merged blocks. Accepts any numeric type (int, float, bool).
-            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def components_to_properties(self, dimensions: StrSequence) -> "TensorMap":
         """
@@ -1267,7 +1178,6 @@ class TensorMap:
 
         :param dimensions: name of the component dimensions to move to the properties
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def blocks_matching(self, selection: Labels) -> List[int]:
         """
@@ -1279,7 +1189,6 @@ class TensorMap:
 
         The ``selection`` should contain a single entry.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def block_by_id(self, index: int) -> TensorBlock:
         """
@@ -1287,7 +1196,6 @@ class TensorMap:
 
         :param index: index of the block to retrieve
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def blocks_by_id(self, indices: List[int]) -> List[TensorBlock]:
         """
@@ -1295,7 +1203,6 @@ class TensorMap:
 
         :param indices: indices of the block to retrieve
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def block(
         self,
@@ -1322,7 +1229,6 @@ class TensorMap:
 
         :param selection: description of the block to extract
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def blocks(
         self,
@@ -1354,22 +1260,18 @@ class TensorMap:
 
         :param selection: description of the blocks to extract
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def sample_names(self) -> List[str]:
         """names of the samples for all blocks in this tensor map"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def component_names(self) -> List[str]:
         """names of the components for all blocks in this tensor map"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def property_names(self) -> List[str]:
         """names of the properties for all blocks in this tensor map"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def print(self, max_keys: int) -> str:
         """
@@ -1379,12 +1281,10 @@ class TensorMap:
         :param max_keys: how many keys to include in the output. Use ``-1`` to
             include all keys.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def device(self) -> torch.device:
         """get the device of all the arrays stored inside this :py:class:`TensorMap`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     @property
     def dtype(self) -> torch.dtype:
@@ -1397,7 +1297,6 @@ class TensorMap:
             an integer, which can not be compared with :py:class:`torch.dtype`
             instances. See :py:attr:`TensorBlock.dtype` for more information.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def to(
         self,
@@ -1420,7 +1319,6 @@ class TensorMap:
         :param bool non_blocking: If this is ``True``, the function tries to move the
             data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def set_info(self, key: str, value: str):
         """
@@ -1430,7 +1328,6 @@ class TensorMap:
         :param key: key of the info
         :param value: value of the info
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def get_info(self, key: str) -> Optional[str]:
         """
@@ -1440,18 +1337,15 @@ class TensorMap:
         :param key: key of the info to retrieve
         :return: value of the info, or :py:obj:`None` if the info does not exist
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
     def info(self) -> Dict[str, str]:
         """
         Get all the key/value info pairs stored in this :py:class:`TensorMap`.
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def version() -> str:
     """Get the version of the underlying metatensor_torch library"""
-    raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def dtype_name(dtype: torch.dtype) -> str:
@@ -1461,7 +1355,6 @@ def dtype_name(dtype: torch.dtype) -> str:
     This is intended to be used in error message in TorchScript mode, where all dtypes
     are converted to integers.
     """
-    raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def load_buffer(buffer: torch.Tensor) -> TensorMap:
@@ -1471,7 +1364,6 @@ def load_buffer(buffer: torch.Tensor) -> TensorMap:
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
     """
-    raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def load_block_buffer(buffer: torch.Tensor) -> TensorBlock:
@@ -1481,7 +1373,6 @@ def load_block_buffer(buffer: torch.Tensor) -> TensorBlock:
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
     """
-    raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def load_labels_buffer(buffer: torch.Tensor) -> Labels:
@@ -1491,7 +1382,6 @@ def load_labels_buffer(buffer: torch.Tensor) -> Labels:
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
     """
-    raise THIS_CODE_SHOULD_NOT_RUN
 
 
 def save_buffer(data: Union[TensorMap, TensorBlock, Labels]) -> torch.Tensor:
@@ -1502,4 +1392,3 @@ def save_buffer(data: Union[TensorMap, TensorBlock, Labels]) -> torch.Tensor:
 
     :param data: data to serialize and save
     """
-    raise THIS_CODE_SHOULD_NOT_RUN
