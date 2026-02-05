@@ -167,58 +167,6 @@ def test_dimensions_manipulation():
         label.permute([2, 0])
 
 
-def test_view():
-    labels = Labels(names=("aaa", "bbb"), values=np.array([[1, 2], [3, 4]]))
-
-    assert not labels.is_view()
-
-    view = labels.view("aaa")
-    assert view.is_view()
-    assert view.names == ["aaa"]
-    np.testing.assert_equal(view.values, np.array([[1], [3]]))
-
-    view = labels.view("bbb")
-    assert view.names == ["bbb"]
-    np.testing.assert_equal(view.values, np.array([[2], [4]]))
-
-    view = labels.view(["bbb"])
-    assert view.is_view()
-    assert view.names == ["bbb"]
-    np.testing.assert_equal(view.values, np.array([[2], [4]]))
-
-    view = labels.view(["bbb", "aaa"])
-    assert view.is_view()
-    assert view.names == ["bbb", "aaa"]
-    np.testing.assert_equal(view.values, np.array([[2, 1], [4, 3]]))
-
-    view = labels.view(["aaa", "aaa", "aaa"])
-    assert view.names == ["aaa", "aaa", "aaa"]
-    np.testing.assert_equal(view.values, np.array([[1, 1, 1], [3, 3, 3]]))
-
-    message = "'ccc' not found in the dimensions of these Labels"
-    with pytest.raises(ValueError, match=message):
-        labels.view("ccc")
-
-    message = "Labels names must be strings, got <class 'int'> instead"
-    with pytest.raises(TypeError, match=message):
-        labels.view((1, 2))
-
-    view = labels.view("aaa")
-    message = "can not call `position` on a Labels view, call `to_owned` before"
-    with pytest.raises(ValueError, match=message):
-        view.position([1])
-
-    owned = view.to_owned()
-    assert not owned.is_view()
-    assert owned.position([1]) == 0
-    assert owned.position([-1]) is None
-
-    view = labels.view(["aaa", "aaa"])
-    message = "invalid parameter: labels names must be unique, got 'aaa' multiple times"
-    with pytest.raises(MetatensorError, match=message):
-        view.to_owned()
-
-
 def test_repr():
     labels = Labels(names=("aaa", "bbb"), values=np.array([[1, 2], [3, 4]]))
 
@@ -269,10 +217,6 @@ def test_repr():
      6    6"""
     assert labels.print(max_entries=3, indent=3) == expected
 
-    labels = Labels(names=("aaa", "bbb"), values=np.array([[0, 0], [0, 1]]))
-    expected = "LabelsView(\n    bbb\n     0\n     1\n)"
-    assert str(labels.view("bbb")) == expected
-
     labels = Labels(
         names=("aaa", "bbb"), values=np.array([[111111111, 2], [3, 444444444]])
     )
@@ -313,7 +257,9 @@ def test_indexing():
     with pytest.raises(IndexError, match=message):
         labels[-7]
 
-    message = "column names must be a string, got <class 'float'> instead"
+    message = (
+        "Labels can only be indexed by a single string or integer, got <class 'float'>"
+    )
     with pytest.raises(TypeError, match=message):
         labels[3.4]
 

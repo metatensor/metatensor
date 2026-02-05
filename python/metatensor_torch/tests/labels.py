@@ -79,58 +79,6 @@ def test_constructor_errors():
         _ = Labels(names="not an ident", values=torch.tensor([[0]]))
 
 
-def test_view():
-    labels = Labels(names=("aaa", "bbb"), values=torch.tensor([[1, 2], [3, 4]]))
-
-    assert not labels.is_view()
-
-    view = labels.view("aaa")
-    assert view.is_view()
-    assert view.names == ["aaa"]
-    assert torch.all(view.values == torch.tensor([[1], [3]]))
-
-    view = labels.view("bbb")
-    assert view.names == ["bbb"]
-    assert torch.all(view.values == torch.tensor([[2], [4]]))
-
-    view = labels.view(["bbb"])
-    assert view.is_view()
-    assert view.names == ["bbb"]
-    assert torch.all(view.values == torch.tensor([[2], [4]]))
-
-    view = labels.view(["bbb", "aaa"])
-    assert view.is_view()
-    assert view.names == ["bbb", "aaa"]
-    assert torch.all(view.values == torch.tensor([[2, 1], [4, 3]]))
-
-    view = labels.view(["aaa", "aaa", "aaa"])
-    assert view.names == ["aaa", "aaa", "aaa"]
-    assert torch.all(view.values == torch.tensor([[1, 1, 1], [3, 3, 3]]))
-
-    message = "'ccc' not found in the dimensions of these Labels"
-    with pytest.raises(ValueError, match=message):
-        labels.view("ccc")
-
-    message = "names must be a tuple of strings, got element with type 'int' instead"
-    with pytest.raises(TypeError, match=message):
-        labels.view((1, 2))
-
-    view = labels.view("aaa")
-    message = "can not call this function on Labels view, call to_owned first"
-    with pytest.raises(ValueError, match=message):
-        view.position([1])
-
-    owned = view.to_owned()
-    assert not owned.is_view()
-    assert owned.position([1]) == 0
-    assert owned.position([-1]) is None
-
-    view = labels.view(["aaa", "aaa"])
-    message = "invalid parameter: labels names must be unique, got 'aaa' multiple times"
-    with pytest.raises(RuntimeError, match=message):
-        view.to_owned()
-
-
 def test_repr():
     labels = Labels(names=("aaa", "bbb"), values=torch.tensor([[1, 2], [3, 4]]))
 
@@ -181,10 +129,6 @@ def test_repr():
       ...
      6    6"""
     assert labels.print(max_entries=3, indent=3) == expected
-
-    labels = Labels(names=("aaa", "bbb"), values=torch.tensor([[0, 0], [0, 1]]))
-    expected = "LabelsView(\n    bbb\n     0\n     1\n)"
-    assert str(labels.view("bbb")) == expected
 
     labels = Labels(
         names=("aaa", "bbb"), values=torch.tensor([[111111111, 2], [3, 444444444]])
@@ -339,10 +283,6 @@ def test_position():
     other_labels = Labels(names=("a", "b"), values=torch.tensor([[0, 1], [2, 3]]))
     assert labels.position(other_labels[0]) == 1
     assert labels.position(other_labels[1]) is None
-
-    # make sure nothing breaks when using the same column multiple time in a view
-    view = other_labels.view(["a", "a"])
-    assert labels.position(view[0]) == 0
 
     message = (
         "parameter to Labels::positions must be a LabelsEntry, tensor, "
@@ -589,17 +529,11 @@ class LabelsWrap:
     def print_(self, max_entries: int, indent: int) -> str:
         return self._c.print(max_entries=max_entries, indent=indent)
 
-    def to_owned(self) -> Labels:
-        return self._c.to_owned()
-
     def entry(self, index: int) -> LabelsEntry:
         return self._c.entry(index=index)
 
     def column(self, dimension: str) -> torch.Tensor:
         return self._c.column(dimension=dimension)
-
-    def view(self, names: Union[str, List[str]]) -> Labels:
-        return self._c.view(names=names)
 
     def single(self) -> Labels:
         return Labels.single()
