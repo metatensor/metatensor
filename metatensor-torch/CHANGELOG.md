@@ -29,26 +29,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
-### Removed
+
 - `LabelsView` has been removed, and with it the following functions:
-  + `to_view()`
-  + `to_owned()`
-  + `view()`
-  + `__getitem__(list[str])`
-
-Migrations involve, for example:
-
-```python
-all_values = []
-# BEFORE -- now no longer present
-all_values.append(block.samples.view(names).values)
-# TO --
-indices = [block.samples.names.index(n) for n in names]
-all_values.append(block.samples.values[:, indices])
-```
-
-.. and otherwise using the `Labels.column` API.
-
+  `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
+  `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
 ## [Version 0.8.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.4) - 2026-01-26
 ### Added
 - Added support for PyTorch v2.10
