@@ -23,10 +23,26 @@ def _unique_from_blocks(
     all_values = []
     for block in blocks:
         if axis == "samples":
-            all_values.append(block.samples.view(names).values)
+            indices: List[int] = []
+            for n in names:
+                if n in block.samples.names:
+                    indices.append(block.samples.names.index(n))
+                else:
+                    raise ValueError(
+                        f"'{n}' not found in the dimensions of these Labels"
+                    )
+            all_values.append(block.samples.values[:, indices])
         else:
             assert axis == "properties"
-            all_values.append(block.properties.view(names).values)
+            indices: List[int] = []
+            for n in names:
+                if n in block.properties.names:
+                    indices.append(block.properties.names.index(n))
+                else:
+                    raise ValueError(
+                        f"'{n}' not found in the dimensions of these Labels"
+                    )
+            all_values.append(block.properties.values[:, indices])
 
     unique_values = _dispatch.unique(_dispatch.concatenate(all_values, axis=0), axis=0)
     return Labels(
