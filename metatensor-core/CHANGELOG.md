@@ -22,23 +22,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `components_to_properties`, and `key_to_properties` are called
 
 #### Removed
+
 - `LabelsView` has been removed, and with it the following functions:
-  + `to_view()`
-  + `to_owned()`
-  + `view()`
-  + `__getitem__(list[str])`
-
-Migrations involve, for example:
-
-```python
-# BEFORE -- now no longer present
-for p in split_block.properties.view(expected_properties.names):
-# TO --
-indices = [split_block.properties.names.index(n) for n in expected_properties.names]
-for p in split_block.properties.values[:, indices]:
-```
-
-.. and otherwise using the `Labels.column` API.
+  `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
+  `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
 
 ## [Version 0.1.19](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.19) - 2025-12-11
 
