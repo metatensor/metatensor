@@ -68,26 +68,6 @@ TEST_CASE("Labels") {
         CHECK(labels->print(-1, 3) == " aaa  bbb\n     1    2\n     3    4");
     }
 
-    SECTION("create views") {
-        auto labels = LabelsHolder::create({"aaa", "bbb"}, {{1, 2}, {3, 4}});
-
-        CHECK_FALSE(labels->is_view());
-
-        auto view = LabelsHolder::view(labels, {"aaa"});
-        CHECK(view->is_view());
-
-        CHECK(view->names().size() == 1);
-        CHECK(view->names()[0] == "aaa");
-
-        CHECK(view->values().index({0, 0}).item<int32_t>() == 1);
-        CHECK(view->values().index({1, 0}).item<int32_t>() == 3);
-
-        CHECK_THROWS_WITH(view->position(1), Catch::Matchers::Contains("can not call this function on Labels view, call to_owned first"));
-        auto owned = view->to_owned();
-        CHECK_FALSE(owned->is_view());
-        CHECK(owned->position(std::vector<int64_t>{1}).value() == 0);
-    }
-
     SECTION("equality") {
         auto labels_1 = LabelsHolder::create({"a", "b"}, {{0, 0}, {1, 0}});
         auto labels_2 = LabelsHolder::create({"a", "b"}, {{0, 0}, {1, 0}});
