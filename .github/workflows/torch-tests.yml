@@ -81,7 +81,9 @@ jobs:
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
-          sudo apt-get install -y valgrind
+          sudo snap install valgrind --classic
+          sudo apt-get update
+          sudo apt-get install -y libc6-dbg --fix-missing
 
       - name: Setup sccache
         if: ${{ !env.ACT }}
