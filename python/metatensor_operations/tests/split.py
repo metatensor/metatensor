@@ -140,12 +140,16 @@ def test_split_block_properties():
         assert split_block.samples == block.samples
         assert split_block.components == block.components
 
-        for p in split_block.properties.view(expected_properties.names):
+        indices = [
+            split_block.properties.names.index(n) for n in expected_properties.names
+        ]
+        for p in split_block.properties.values[:, indices]:
             assert p in expected_properties
 
         # check that the values where split in the right way
         mask = np.zeros(len(block.properties), dtype=bool)
-        for i, p in enumerate(block.properties.view(expected_properties.names)):
+        indices = [block.properties.names.index(n) for n in expected_properties.names]
+        for i, p in enumerate(block.properties.values[:, indices]):
             mask[i] = p in expected_properties
 
         assert np.all(split_block.values == block.values[..., mask])
@@ -184,7 +188,10 @@ def test_split_properties():
             assert split_block.samples == block.samples
             assert split_block.components == block.components
 
-            for p in split_block.properties.view(expected_properties.names):
+            indices = [
+                split_block.properties.names.index(n) for n in expected_properties.names
+            ]
+            for p in split_block.properties.values[:, indices]:
                 assert p in expected_properties
 
     # an empty list of selections gets you an empty list of blocks

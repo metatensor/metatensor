@@ -178,36 +178,6 @@ Labels LabelsHolder::create(
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(torch_values));
 }
 
-LabelsHolder::LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView):
-    names_(std::move(names)),
-    values_(std::move(values)),
-    labels_(torch::nullopt)
-{}
-
-Labels LabelsHolder::view(const Labels& labels, std::vector<std::string> names) {
-    if (names.empty()) {
-        C10_THROW_ERROR(ValueError,
-            "can not index Labels with an empty list of dimension names"
-        );
-    }
-
-    auto dimensions = std::vector<int64_t>();
-    for (const auto& name: names) {
-        auto it = std::find(std::begin(labels->names_), std::end(labels->names_), name);
-        if (it == std::end(labels->names_)) {
-            C10_THROW_ERROR(ValueError,
-                "'" + name + "' not found in the dimensions of these Labels"
-            );
-        }
-
-        auto index = std::distance(std::begin(labels->names_), it);
-        dimensions.push_back(static_cast<int64_t>(index));
-    }
-
-    auto new_values = labels->values_.index({torch::indexing::Slice(), torch::tensor(dimensions)});
-    return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(new_values), CreateView{});
-}
-
 LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)) {
     // extract the names
     for (const auto* name: this->labels_->names()) {
@@ -286,21 +256,7 @@ torch::Tensor LabelsHolder::column(std::string dimension) {
 }
 
 const metatensor::Labels& LabelsHolder::as_metatensor() const {
-    if (!labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     return labels_.value();
-}
-
-Labels LabelsHolder::to_owned() const {
-    if (labels_.has_value()) {
-        return torch::make_intrusive<LabelsHolder>(*this);
-    } else {
-        return torch::make_intrusive<LabelsHolder>(this->names_, values_);
-    }
 }
 
 Labels LabelsHolder::append(std::string name, torch::Tensor values) const {
@@ -529,12 +485,6 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
 }
 
 Labels LabelsHolder::set_union(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -548,12 +498,6 @@ Labels LabelsHolder::set_union(const Labels& other) const {
 }
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -582,12 +526,6 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
 }
 
 Labels LabelsHolder::set_intersection(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -601,12 +539,6 @@ Labels LabelsHolder::set_intersection(const Labels& other) const {
 }
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -635,12 +567,6 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
 }
 
 Labels LabelsHolder::set_difference(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -654,12 +580,6 @@ Labels LabelsHolder::set_difference(const Labels& other) const {
 }
 
 std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Labels& other) const {
-    if (!labels_.has_value() || !other->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != other->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -684,12 +604,6 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
 }
 
 torch::Tensor LabelsHolder::select(const Labels& selection) const {
-    if (!labels_.has_value() || !selection->labels_.has_value()) {
-        C10_THROW_ERROR(ValueError,
-            "can not call this function on Labels view, call to_owned first"
-        );
-    }
-
     auto device = this->values_.device();
     if (device != selection->values_.device()) {
         C10_THROW_ERROR(ValueError,
@@ -863,25 +777,13 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
 
 std::string LabelsHolder::str() const {
     auto output = std::ostringstream();
-    if (labels_.has_value()) {
-        output << "Labels(\n   ";
-    } else {
-        output << "LabelsView(\n   ";
-    }
-
-    output << this->print(4, 3) << "\n)";
+    output << "Labels(\n   " << this->print(4, 3) << "\n)";
     return output.str();
 }
 
 std::string LabelsHolder::repr() const {
     auto output = std::ostringstream();
-    if (labels_.has_value()) {
-        output << "Labels(\n   ";
-    } else {
-        output << "LabelsView(\n   ";
-    }
-
-    output << this->print(-1, 3) << "\n)";
+    output << "Labels(\n   " << this->print(-1, 3) << "\n)";
     return output.str();
 }
 

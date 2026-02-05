@@ -21,6 +21,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
   `components_to_properties`, and `key_to_properties` are called
 
+#### Removed
+
+- `LabelsView` has been removed, and with it the following functions:
+  `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
+  `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
+
 ## [Version 0.1.19](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.19) - 2025-12-11
 
 ### Fixed
