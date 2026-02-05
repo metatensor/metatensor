@@ -163,10 +163,6 @@ TORCH_LIBRARY(metatensor, m) {
         .def_static("load_buffer", &LabelsHolder::load_buffer)
         .def("entry", labels_entry, DOCSTRING, {torch::arg("index")})
         .def("column", &LabelsHolder::column, DOCSTRING, {torch::arg("dimension")})
-        .def("view", [](const Labels& self, torch::IValue names) {
-            auto names_vector = metatensor_torch::details::normalize_names(std::move(names), "names");
-            return LabelsHolder::view(self, std::move(names_vector));
-        }, DOCSTRING, {torch::arg("names")})
         .def_property("names", &LabelsHolder::names)
         .def_property("values", &LabelsHolder::values)
         .def("append", &LabelsHolder::append, DOCSTRING, {torch::arg("name"), torch::arg("values")})
@@ -185,8 +181,6 @@ TORCH_LIBRARY(metatensor, m) {
         .def("print", &LabelsHolder::print, DOCSTRING,
             {torch::arg("max_entries"), torch::arg("indent") = 0}
         )
-        .def("is_view", &LabelsHolder::is_view)
-        .def("to_owned", &LabelsHolder::to_owned)
         .def("union", &LabelsHolder::set_union, DOCSTRING, {torch::arg("other")})
         .def("union_and_mapping", &LabelsHolder::union_and_mapping, DOCSTRING, {torch::arg("other")})
         .def("intersection", &LabelsHolder::set_intersection, DOCSTRING, {torch::arg("other")})

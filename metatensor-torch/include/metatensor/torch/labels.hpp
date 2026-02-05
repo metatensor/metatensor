@@ -63,9 +63,6 @@ public:
         const std::vector<std::initializer_list<int32_t>>& values
     );
 
-    /// Get a view of `labels` corresponding to only the given columns names
-    static Labels view(const Labels& labels, std::vector<std::string> names);
-
     /// Create Labels with a single entry, and a single dimension named `"_"`
     static Labels single();
 
@@ -160,20 +157,6 @@ public:
     /// Get the underlying metatensor::Labels
     const metatensor::Labels& as_metatensor() const;
 
-    /// Is this a view inside existing Labels or an owned Labels?
-    bool is_view() const {
-        return !labels_.has_value();
-    }
-
-    /// Transform a view of Labels into owned Labels, which can be further given
-    /// to metatensor functions. This does nothing if the Labels are already
-    /// owned.
-
-    // A view is created by the `view` function (also `__getitem__` in Python),
-    // and does not have a corresponding `metatensor::Labels` (`labels_` is
-    // `nullopt`)
-    Labels to_owned() const;
-
     /// Get the union of `this` and `other`
     Labels set_union(const Labels& other) const;
 
@@ -225,13 +208,6 @@ private:
     /// main constructor, checking everything in debug mode & registering the
     /// `values` as user data for the `labels`.
     LabelsHolder(std::vector<std::string> names, torch::Tensor values, metatensor::Labels labels);
-
-    /// marker type to differentiate the private constructor below from the main
-    /// one
-    struct CreateView {};
-
-    /// Create a view for an existing `LabelsHolder`
-    LabelsHolder(std::vector<std::string> names, torch::Tensor values, CreateView);
 
     friend class torch::intrusive_ptr<LabelsHolder>;
 
