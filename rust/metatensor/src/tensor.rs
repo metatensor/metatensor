@@ -733,21 +733,21 @@ mod tests {
 
     fn test_tensor() -> TensorMap {
         let block_1 = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
+            ndarray::ArrayD::from_elem(vec![2, 3], 1.0).into_shared(),
             &Labels::new(["samples"], &[[0], [1]]),
             &[],
             &Labels::new(["properties"], &[[-2], [0], [1]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![1, 1], 3.0),
+            ndarray::ArrayD::from_elem(vec![1, 1], 3.0).into_shared(),
             &Labels::new(["samples"], &[[1]]),
             &[],
             &Labels::new(["properties"], &[[1]]),
         ).unwrap();
 
         let block_3 = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![3, 2], -4.0),
+            ndarray::ArrayD::from_elem(vec![3, 2], -4.0).into_shared(),
             &Labels::new(["samples"], &[[0], [1], [3]]),
             &[],
             &Labels::new(["properties"], &[[-2], [1]]),

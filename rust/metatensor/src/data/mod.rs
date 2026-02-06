@@ -19,7 +19,7 @@ mod tests {
 
     #[test]
     fn shape() {
-        let array = Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0)) as Box<dyn Array>;
+        let array = Box::new(ArrayD::from_elem(vec![3, 4, 2], 1.0).into_shared()) as Box<dyn Array>;
         let mut array = unsafe { ArrayRefMut::new(array.into()) };
 
         assert_eq!(array.as_raw().shape().unwrap(), [3, 4, 2]);
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn create() {
-        let array = Box::new(ArrayD::from_elem(vec![4, 2], 1.0)) as Box<dyn Array>;
+        let array = Box::new(ArrayD::from_elem(vec![4, 2], 1.0).into_shared()) as Box<dyn Array>;
         let array = unsafe { ArrayRef::from_raw(array.into()) };
 
         assert_eq!(get_data_origin(array.as_raw().origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn move_samples_from() {
-        let array = Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0)) as Box<dyn Array>;
+        let array = Box::new(ArrayD::from_elem(vec![3, 2, 2, 4], 1.0).into_shared()) as Box<dyn Array>;
         let array = unsafe { ArrayRef::from_raw(array.into()) };
 
         let mut other = unsafe { ArrayRefMut::new(array.as_raw().create(&[1, 2, 2, 8]).unwrap()) };

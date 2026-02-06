@@ -27,7 +27,7 @@ pub fn example_block(
 
     let shape = vec![samples.count(), components[0].count(), properties.count()];
     let mut block = TensorBlock::new(
-        ArrayD::from_elem(shape, values),
+        ArrayD::from_elem(shape, values).into_shared(),
         &samples,
         &components,
         &properties,
@@ -37,7 +37,7 @@ pub fn example_block(
 
     let shape = vec![gradient_samples.count(), components[0].count(), properties.count()];
     let gradient = TensorBlock::new(
-        ArrayD::from_elem(shape, gradient_values),
+        ArrayD::from_elem(shape, gradient_values).into_shared(),
         &gradient_samples,
         &components,
         &properties,

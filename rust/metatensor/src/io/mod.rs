@@ -48,6 +48,6 @@ unsafe extern "C" fn create_ndarray(
         assert!(shape_count != 0);
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
         let array = ndarray::ArrayD::from_elem(shape, 0.0);
-        *c_array = (Box::new(array) as Box<dyn Array>).into();
+        *c_array = (Box::new(array.into_shared()) as Box<dyn Array>).into();
     })
 }

@@ -238,17 +238,17 @@ mod tests {
     fn gradients() {
         let properties = Labels::new(["p"], &[[-2], [0], [1]]);
         let mut block = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
+            ndarray::ArrayD::from_elem(vec![2, 3], 1.0).into_shared(),
             &Labels::new(["s"], &[[0], [1]]), &[], &properties,
         ).unwrap();
 
         block.add_gradient("g", TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 3], -1.0),
+            ndarray::ArrayD::from_elem(vec![2, 3], -1.0).into_shared(),
             &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
         ).unwrap()).unwrap();
 
         block.add_gradient("f", TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 3], -2.0),
+            ndarray::ArrayD::from_elem(vec![2, 3], -2.0).into_shared(),
             &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
         ).unwrap()).unwrap();
 
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn block_data() {
         let mut block = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0),
+            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0).into_shared(),
             &Labels::new(["samples"], &[[0], [1]]),
             &[Labels::new(["component"], &[[0]])],
             &Labels::new(["properties"], &[[-2], [0], [1]]),

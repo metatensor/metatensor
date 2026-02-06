@@ -1,10 +1,9 @@
 use std::ops::Range;
 use std::os::raw::c_void;
-use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
-use dlpk::sys::{DLDevice, DLDeviceType, DLManagedTensorVersioned, DLPackVersion, DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+use dlpk::sys::{DLDevice, DLDeviceType, DLManagedTensorVersioned, DLPackVersion};
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
 use dlpk::DLPackTensor;
 
@@ -281,7 +280,7 @@ unsafe extern "C" fn rust_array_as_dlpack(
     })
 }
 
-impl Array for ndarray::ArrayD<f64> {
+impl Array for ndarray::ArcArray<f64, ndarray::IxDyn> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -291,15 +290,21 @@ impl Array for ndarray::ArrayD<f64> {
     }
 
     fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::Array::from_elem(shape, 0.0));
+        return Box::new(ndarray::ArcArray::from_elem(shape, 0.0));
     }
 
     fn copy(&self) -> Box<dyn Array> {
-        return Box::new(self.clone());
+        return Box::new(self.to_owned().into_shared());
     }
 
     fn data(&mut self) -> &mut [f64] {
-        return self.as_slice_mut().expect("array is not contiguous")
+        // COPY-ON-WRITE LOGIC:
+        // as_slice_mut() returns None if the array is shared (ref_count > 1).
+        // If so, deep copy to get unique ownership, then get the slice.
+        if self.as_slice_mut().is_none() {
+             *self = self.to_owned().into_shared();
+        }
+        self.as_slice_mut().expect("array is not contiguous")
     }
 
     fn shape(&self) -> &[usize] {
@@ -307,9 +312,8 @@ impl Array for ndarray::ArrayD<f64> {
     }
 
     fn reshape(&mut self, shape: &[usize]) {
-        let mut array = std::mem::take(self);
-        array = array.to_shape(shape).expect("invalid shape").to_owned();
-        std::mem::swap(self, &mut array);
+        let reshaped = self.to_shape(shape).expect("invalid shape");
+        *self = reshaped.to_owned().into_shared();
     }
 
     fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
@@ -327,7 +331,7 @@ impl Array for ndarray::ArrayD<f64> {
         // -2 since we also remove one axis with `index_axis_mut` below
         let property_axis = self.shape().len() - 2;
 
-        let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
+        let input = input.as_any().downcast_ref::<ndarray::ArcArray<f64, ndarray::IxDyn>>().expect("input must be a ndarray");
         for sample in samples {
             let value = input.index_axis(Axis(0), sample.input);
 
@@ -353,7 +357,7 @@ impl Array for ndarray::ArrayD<f64> {
                 message: "CPU arrays can not be used with a stream".into(),
             });
         }
-        let vendored_version = DLPackVersion{major: DLPACK_MAJOR_VERSION, minor: DLPACK_MINOR_VERSION};
+        let vendored_version = DLPackVersion::current();
         let major_mismatch = max_version.major != vendored_version.major;
         let minor_too_high = max_version.minor < vendored_version.minor;
         if major_mismatch || minor_too_high {
@@ -381,8 +385,7 @@ impl Array for ndarray::ArrayD<f64> {
             });
         }
 
-        // This copies the data into a new DLPackTensor because `ndarray::ArrayD` here implies strict ownership.
-        let tensor: DLPackTensor = self.clone().try_into().map_err(|e| Error {
+        let tensor: DLPackTensor = self.try_into().map_err(|e| Error {
             code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
             message: format!("failed to convert ndarray to DLPack: {:?}", e),
         })?;
@@ -457,9 +460,8 @@ impl Array for EmptyArray {
 
 #[cfg(test)]
 mod tests {
-    use dlpk::sys::{DLDataTypeCode, DLDeviceType};
     use metatensor_sys::{MTS_SUCCESS, mts_array_t};
-    use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+    use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion, DLDataTypeCode};
     use crate::Array;
 
 
@@ -467,7 +469,7 @@ mod tests {
     fn ndarray_as_mts_array() {
         let data = ndarray::ArrayD::<f64>::zeros(vec![2, 3, 4]);
         let address = data.as_ptr() as usize;
-        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        let mut mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
         assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
@@ -482,14 +484,11 @@ mod tests {
     fn ndarray_as_mts_array_dlpack() {
         let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
         // Wrap it in the C-API struct
-        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        let mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
-            let device = DLDevice {
-                device_type: DLDeviceType::kDLCPU,
-                device_id: 0,
-            };
-            let max_version = DLPackVersion { major: 1, minor: 1 };
+            let device = DLDevice::cpu();
+            let max_version = DLPackVersion { major: 1, minor: 9 };
             let status = (mts_array.as_dlpack.unwrap())(
                 mts_array.ptr,
                 &mut dl_managed,
@@ -514,5 +513,4 @@ mod tests {
             }
         }
     }
-
 }

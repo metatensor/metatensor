@@ -8,14 +8,14 @@ use utils::example_labels;
 #[test]
 fn one_component() {
     let mut block = TensorBlock::new(
-        ArrayD::from_elem(vec![3, 2, 3], 1.0),
+        ArrayD::from_elem(vec![3, 2, 3], 1.0).into_shared(),
         &example_labels(vec!["samples"], vec![[0], [1], [2]]),
         &[example_labels(vec!["components"], vec![[0], [1]])],
         &example_labels(vec!["properties"], vec![[0], [1], [2]]),
     ).unwrap();
 
     let gradient = TensorBlock::new(
-        ArrayD::from_elem(vec![2, 2, 3], 11.0),
+        ArrayD::from_elem(vec![2, 2, 3], 11.0).into_shared(),
         &example_labels(vec!["sample", "parameter"], vec![[0, 2], [1, 2]]),
         &[example_labels(vec!["components"], vec![[0], [1]])],
         &example_labels(vec!["properties"], vec![[0], [1], [2]]),
@@ -59,7 +59,7 @@ fn multiple_components() {
     let data = ArrayD::from_shape_vec(vec![2, 2, 3, 2], vec![
         1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0,
         -1.0, 1.0, -2.0, 2.0, -3.0, 3.0, -4.0, 4.0, -5.0, 5.0, -6.0, 6.0,
-    ]).unwrap();
+    ]).unwrap().into_shared();
 
     let components = [
         example_labels(vec!["component_1"], vec![[0], [1]]),
@@ -75,7 +75,7 @@ fn multiple_components() {
     ).unwrap();
 
     let gradient = TensorBlock::new(
-        ArrayD::from_elem(vec![3, 2, 3, 2], 11.0),
+        ArrayD::from_elem(vec![3, 2, 3, 2], 11.0).into_shared(),
         &example_labels(vec!["sample", "parameter"], vec![[0, 2], [0, 3], [1, 2]]),
         &components,
         &properties,

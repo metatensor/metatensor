@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn block() {
         let block = TensorBlock::new(
-            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0),
+            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0).into_shared(),
             &Labels::new(["samples"], &[[0], [1]]),
             &[Labels::new(["component"], &[[0]])],
             &Labels::new(["properties"], &[[-2], [0], [1]]),
