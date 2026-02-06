@@ -1,9 +1,11 @@
 use std::ops::Range;
 use std::os::raw::c_void;
+use std::any::TypeId;
 
 use once_cell::sync::Lazy;
 
 use dlpk::sys::{DLDevice, DLDeviceType, DLManagedTensorVersioned, DLPackVersion};
+use dlpk::GetDLPackDataType;
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
 use dlpk::DLPackTensor;
 
@@ -280,7 +282,10 @@ unsafe extern "C" fn rust_array_as_dlpack(
     })
 }
 
-impl Array for ndarray::ArcArray<f64, ndarray::IxDyn> {
+impl<T> Array for ndarray::ArcArray<T, ndarray::IxDyn>
+where
+    T: 'static + Send + Sync + Clone + Default + GetDLPackDataType,
+{
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -290,7 +295,7 @@ impl Array for ndarray::ArcArray<f64, ndarray::IxDyn> {
     }
 
     fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::ArcArray::from_elem(shape, 0.0));
+        return Box::new(ndarray::ArcArray::from_elem(shape, T::default()));
     }
 
     fn copy(&self) -> Box<dyn Array> {
@@ -298,13 +303,26 @@ impl Array for ndarray::ArcArray<f64, ndarray::IxDyn> {
     }
 
     fn data(&mut self) -> &mut [f64] {
+        if TypeId::of::<T>() != TypeId::of::<f64>() {
+            panic!("Array::data() is only supported for f64 arrays");
+        }
+
         // COPY-ON-WRITE LOGIC:
         // as_slice_mut() returns None if the array is shared (ref_count > 1).
         // If so, deep copy to get unique ownership, then get the slice.
         if self.as_slice_mut().is_none() {
              *self = self.to_owned().into_shared();
         }
-        self.as_slice_mut().expect("array is not contiguous")
+
+        let slice = self.as_slice_mut().expect("array is not contiguous");
+
+        // Safety: We checked that T is f64 above using TypeId.
+        // It is safe to cast the pointer and reinterpret the slice.
+        unsafe {
+            let ptr = slice.as_mut_ptr() as *mut f64;
+            let len = slice.len();
+            std::slice::from_raw_parts_mut(ptr, len)
+        }
     }
 
     fn shape(&self) -> &[usize] {
@@ -331,7 +349,7 @@ impl Array for ndarray::ArcArray<f64, ndarray::IxDyn> {
         // -2 since we also remove one axis with `index_axis_mut` below
         let property_axis = self.shape().len() - 2;
 
-        let input = input.as_any().downcast_ref::<ndarray::ArcArray<f64, ndarray::IxDyn>>().expect("input must be a ndarray");
+        let input = input.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>().expect("input must be a ndarray of the same type");
         for sample in samples {
             let value = input.index_axis(Axis(0), sample.input);
 
@@ -509,6 +527,59 @@ mod tests {
             assert_eq!(tensor.dtype.bits, 64);
             // Clean up using the provided deleter
             if let Some(deleter) = (*dl_managed).deleter {
+                deleter(dl_managed);
+            }
+        }
+    }
+
+    #[test]
+    fn ndarray_generic_support() {
+        let data = ndarray::ArrayD::<i32>::from_elem(vec![2, 2], 42);
+        let mut mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
+
+        assert_eq!(mts_array.shape().unwrap(), [2, 2]);
+
+        // Calling data() should fail gracefully (return Error, not crash test)
+        // The panic in `data()` is caught by catch_unwind in the C-API wrapper
+        assert!(mts_array.data().is_err());
+
+        // Should still be able to export as DLPack
+        unsafe {
+            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+            let status = (mts_array.as_dlpack.unwrap())(
+                mts_array.ptr,
+                &mut dl_managed,
+                DLDevice::cpu(),
+                std::ptr::null_mut(),
+                DLPackVersion::current()
+            );
+            assert_eq!(status, MTS_SUCCESS);
+            
+            let tensor = &(*dl_managed).dl_tensor;
+            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLInt);
+            assert_eq!(tensor.dtype.bits, 32);
+
+            if let Some(deleter) = (*dl_managed).deleter {
+                deleter(dl_managed);
+            }
+        }
+
+        // And creation should make an array of the same type (i32)
+        let created = mts_array.create(&[1, 1]).unwrap();
+        unsafe {
+            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
+            let status = (created.as_dlpack.unwrap())(
+                created.ptr,
+                &mut dl_managed,
+                DLDevice::cpu(),
+                std::ptr::null_mut(),
+                DLPackVersion::current()
+            );
+            assert_eq!(status, MTS_SUCCESS);
+            let tensor = &(*dl_managed).dl_tensor;
+            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLInt);
+
+             if let Some(deleter) = (*dl_managed).deleter {
                 deleter(dl_managed);
             }
         }
