@@ -299,7 +299,7 @@ where
     }
 
     fn copy(&self) -> Box<dyn Array> {
-        return Box::new(self.to_owned().into_shared());
+        return Box::new(self.clone());
     }
 
     fn data(&mut self) -> &mut [f64] {
@@ -311,7 +311,7 @@ where
         // as_slice_mut() returns None if the array is shared (ref_count > 1).
         // If so, deep copy to get unique ownership, then get the slice.
         if self.as_slice_mut().is_none() {
-             *self = self.to_owned().into_shared();
+             *self = self.clone();
         }
 
         let slice = self.as_slice_mut().expect("array is not contiguous");
@@ -330,8 +330,7 @@ where
     }
 
     fn reshape(&mut self, shape: &[usize]) {
-        let reshaped = self.to_shape(shape).expect("invalid shape");
-        *self = reshaped.to_owned().into_shared();
+        *self = self.to_shape(shape).expect("invalid shape").to_shared();
     }
 
     fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
@@ -485,9 +484,9 @@ mod tests {
 
     #[test]
     fn ndarray_as_mts_array() {
-        let data = ndarray::ArrayD::<f64>::zeros(vec![2, 3, 4]);
+        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3, 4]);
         let address = data.as_ptr() as usize;
-        let mut mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
+        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
         assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
@@ -500,9 +499,9 @@ mod tests {
 
     #[test]
     fn ndarray_as_mts_array_dlpack() {
-        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
+        let data = ndarray::ArcArray::<f64, _>::zeros(vec![4, 5, 6]);
         // Wrap it in the C-API struct
-        let mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
             let device = DLDevice::cpu();
@@ -534,8 +533,8 @@ mod tests {
 
     #[test]
     fn ndarray_generic_support() {
-        let data = ndarray::ArrayD::<i32>::from_elem(vec![2, 2], 42);
-        let mut mts_array = mts_array_t::from(Box::new(data.into_shared()) as Box<dyn Array>);
+        let data = ndarray::ArcArray::<i32, _>::from_elem(vec![2, 2], 42);
+        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 2]);
 
