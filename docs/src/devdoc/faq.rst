@@ -162,3 +162,34 @@ We prefer a clean history with logical commits. If your branch has many small
       git reset --soft upstream/main
       git add -p  # selectively add changes
       git commit -m "logical commit message"
+
+How do I pin stuff for the Rust MSRV?
+-------------------------------------
+
+Follow an `upgrade PR <https://github.com/metatensor/metatensor/pull/1053>`_.
+Update `the issue <https://github.com/metatensor/metatensor/issues/957>`_.
+
+To find the offending dependency and determine where to pin the version,
+consider:
+
+.. code-block:: bash
+
+    cargo tree # to find where the offending 
+
+For handling these issues it may be worthwhile to have a local copy of our MSRV, for 1.74, for instance:
+
+.. code-block:: bash
+
+    rustup toolchain install "1.74"
+    # run tests / see breakage
+    cargo +1.74 test
+    # nail down the dependency
+    cargo +1.74 tree
+
+.. note::
+
+   If a direct dependency is not the source of the pin, i.e a dependency of a
+   dependency needs to be pinned, the *actual* dependency must be pinned.
+   Concretely, if *X depends on Y* and **Y needs to be pinned**, use ``cargo
+   tree`` to find the **last compatible X and pin that**, setting a pin for Y
+   will not pass CI!!
