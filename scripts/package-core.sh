@@ -14,6 +14,9 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 rm -rf "$ROOT_DIR/target/package"
 cd "$ROOT_DIR/metatensor-core"
 
+# print the version of cargo we use for debugging purposes.
+cargo --version
+
 # Package metatensor-core using cargo tools, and add a file for
 # `n_commits_since_last_tag`
 cargo package --allow-dirty --no-verify

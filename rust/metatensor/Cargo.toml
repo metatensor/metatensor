@@ -34,7 +34,8 @@ static = ["metatensor-sys/static"]
 bench = ["dep:criterion"]
 
 [dev-dependencies]
-tempfile = "3"
+# pin for compatibility with rustc 1.74
+tempfile = "=3.24.0"
 
 
 [[bench]]
