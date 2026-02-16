@@ -117,3 +117,25 @@ def wrap_unversioned_as_versioned(unversioned_ptr):
     )
 
     return versioned_ptr
+
+
+# ============================================================================ #
+# PyCapsule creation for DLPack export
+# ============================================================================ #
+
+PYTHON_API.PyCapsule_New.restype = ctypes.py_object
+PYTHON_API.PyCapsule_New.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
+
+
+def make_dlpack_versioned_capsule(dl_managed_versioned_ptr):
+    """
+    Create a PyCapsule wrapping a ``DLManagedTensorVersioned`` pointer.
+
+    The returned capsule can be passed to ``np.from_dlpack()`` or
+    ``torch.from_dlpack()``.  The consumer is expected to take ownership
+    (renaming the capsule to ``"used_dltensor_versioned"``).
+    """
+    ptr_value = ctypes.cast(dl_managed_versioned_ptr, ctypes.c_void_p).value
+    if not ptr_value:
+        raise ValueError("DLManagedTensorVersioned pointer is null")
+    return PYTHON_API.PyCapsule_New(ptr_value, DLPACK_VERSIONED_NAME, None)

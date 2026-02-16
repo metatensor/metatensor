@@ -179,6 +179,28 @@ def load_block_buffer_custom_array(
     return TensorBlock._from_ptr(ptr, parent=None)
 
 
+def load_block_mmap(path: Union[str, pathlib.Path]) -> TensorBlock:
+    """
+    Load a previously saved :py:class:`TensorBlock` from the given path using
+    memory-mapped I/O. Arrays are created internally as read-only mmap-backed arrays.
+
+    :param path: path of the file to load
+    """
+    from ..data.extract import _ensure_mmap_origin_registered
+
+    lib = _get_library()
+    _ensure_mmap_origin_registered()
+
+    if isinstance(path, pathlib.Path):
+        path = str(path)
+
+    path = path.encode("utf8")
+
+    ptr = lib.mts_block_load_mmap(path)
+
+    return TensorBlock._from_ptr(ptr, parent=None)
+
+
 def _save_block(
     file: Union[str, pathlib.Path, BinaryIO],
     block: TensorBlock,
