@@ -56,18 +56,19 @@ struct ExternalBuffer {
 impl std::io::Write for ExternalBuffer {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let mut remaining_space = self.allocated - self.current;
+        let remaining_space = self.allocated.saturating_sub(self.current);
 
         if (remaining_space as usize) < buf.len() {
-            // find the new size to be able to fit all the data
-            let mut new_size = 0;
-            while (remaining_space as usize) < buf.len() {
-                new_size = if self.allocated == 0 {
-                    1024
-                } else {
-                    2 * self.allocated
-                };
-                remaining_space = new_size - self.current;
+            let required_size = self.current.saturating_add(buf.len() as u64);
+            let mut new_size = if self.allocated == 0 { 1024 } else { self.allocated };
+            while new_size < required_size {
+                new_size = new_size.saturating_mul(2);
+                if new_size == 0 {
+                     return Err(std::io::Error::new(
+                         std::io::ErrorKind::OutOfMemory,
+                         "requested allocation size overflow",
+                     ));
+                }
             }
 
             let new_ptr = unsafe {
@@ -90,7 +91,8 @@ impl std::io::Write for ExternalBuffer {
 
         let mut output = unsafe {
             let start = (*self.data).offset(self.current as isize);
-            std::slice::from_raw_parts_mut(start, remaining_space as usize)
+            // allocated >= current + buf.len()
+            std::slice::from_raw_parts_mut(start, buf.len())
         };
 
         let count = output.write(buf).expect("failed to write to pre-allocated slice");
