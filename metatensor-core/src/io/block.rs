@@ -130,7 +130,7 @@ pub(super) fn read_single_block<R, F>(
 
 /// Parse an NPY type descriptor string (e.g. `"<f8"`) into a DLPack data type code,
 /// bit width, and byte order.
-fn npy_descr_to_dtype(descr: &str) -> Result<(DLDataTypeCode, u8, Endianness), Error> {
+pub(super) fn npy_descr_to_dtype(descr: &str) -> Result<(DLDataTypeCode, u8, Endianness), Error> {
     if descr.len() < 3 {
         return Err(Error::Serialization(format!("invalid type descriptor: {}", descr)));
     }
