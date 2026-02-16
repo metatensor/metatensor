@@ -306,6 +306,7 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[allow(dead_code)]
     pub fn data(&self) -> Result<&[f64], Error> {
         let shape = self.shape()?;
         let mut len = 1;
@@ -344,6 +345,7 @@ impl mts_array_t {
     }
 
     /// Get the underlying data for this array.
+    #[allow(dead_code)]
     pub fn data_mut(&mut self) -> Result<&mut [f64], Error> {
         let shape = self.shape()?;
         let mut len = 1;
