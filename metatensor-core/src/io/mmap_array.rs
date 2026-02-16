@@ -4,10 +4,9 @@ use std::sync::Arc;
 use memmap2::Mmap;
 
 use dlpk::sys::{
-    DLDataType, DLDataTypeCode, DLDevice, DLManagedTensorVersioned,
+    DLDataType, DLDevice, DLManagedTensorVersioned,
     DLPackVersion, DLTensor, DLPACK_FLAG_BITMASK_READ_ONLY,
 };
-use dlpk::DLPackTensor;
 
 use crate::c_api::mts_status_t;
 use crate::data::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, register_data_origin};
@@ -21,6 +20,76 @@ enum ArrayTag {
     Mmap = 1,
     Created = 2,
 }
+
+// ============================================================================
+// AlignedBytes: 8-byte aligned byte storage for dtype-generic arrays
+// ============================================================================
+
+/// Byte storage backed by `Vec<u64>` for guaranteed 8-byte alignment.
+/// This covers all common numeric dtypes (f64, f32, f16, i64, i32, i16, i8, u8).
+struct AlignedBytes {
+    storage: Vec<u64>,
+    byte_len: usize,
+}
+
+impl AlignedBytes {
+    fn zeroed(byte_len: usize) -> Self {
+        let n_u64 = (byte_len + 7) / 8;
+        AlignedBytes {
+            storage: vec![0u64; n_u64],
+            byte_len,
+        }
+    }
+
+    /// Copy raw bytes (potentially unaligned) into aligned storage.
+    fn from_raw(src: *const u8, len: usize) -> Self {
+        let n_u64 = (len + 7) / 8;
+        let mut storage = vec![0u64; n_u64];
+        if len > 0 {
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    src,
+                    storage.as_mut_ptr() as *mut u8,
+                    len,
+                );
+            }
+        }
+        AlignedBytes { storage, byte_len: len }
+    }
+
+    fn as_ptr(&self) -> *const u8 {
+        self.storage.as_ptr() as *const u8
+    }
+
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        unsafe { std::slice::from_raw_parts_mut(self.storage.as_mut_ptr() as *mut u8, self.byte_len) }
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.as_ptr(), self.byte_len) }
+    }
+}
+
+impl Clone for AlignedBytes {
+    fn clone(&self) -> Self {
+        AlignedBytes {
+            storage: self.storage.clone(),
+            byte_len: self.byte_len,
+        }
+    }
+}
+
+// ============================================================================
+// Helper: element size from DLDataType
+// ============================================================================
+
+fn element_size(dtype: &DLDataType) -> usize {
+    (dtype.bits as usize / 8) * dtype.lanes as usize
+}
+
+// ============================================================================
+// MmapArray: read-only view into memory-mapped file
+// ============================================================================
 
 #[repr(C)]
 pub(crate) struct MmapArray {
@@ -78,9 +147,13 @@ impl MmapArray {
     }
 }
 
+// ============================================================================
+// MmapArray callbacks
+// ============================================================================
+
 /// Context stored in the DLManagedTensorVersioned's manager_ctx.
 /// When the deleter is called, this is dropped, which decrements the Arc refcount.
-struct DlpackContext {
+struct MmapDlpackContext {
     _mmap: Arc<Mmap>,
     /// Owned aligned copy of the data when the mmap offset is not properly
     /// aligned for the element type. `None` when zero-copy is possible.
@@ -146,15 +219,14 @@ unsafe extern "C" fn mmap_array_as_dlpack(
             }
         }
 
-        let element_bytes = (array.dl_dtype.bits as usize / 8)
-            * array.dl_dtype.lanes as usize;
+        let elem_bytes = element_size(&array.dl_dtype);
 
         // Check if the mmap data is properly aligned for the element type.
         // If not, copy into an aligned buffer (Vec<u64> guarantees 8-byte alignment).
         let raw_ptr = array.data_ptr();
         let (data_ptr, aligned_data) = if array.data_len == 0 {
             (std::ptr::null_mut(), None)
-        } else if element_bytes <= 1 || raw_ptr as usize % element_bytes == 0 {
+        } else if elem_bytes <= 1 || raw_ptr as usize % elem_bytes == 0 {
             // Properly aligned — zero-copy from the mmap
             (raw_ptr as *mut c_void, None)
         } else {
@@ -169,7 +241,7 @@ unsafe extern "C" fn mmap_array_as_dlpack(
             (buf.as_ptr() as *mut c_void, Some(buf))
         };
 
-        let mut ctx = Box::new(DlpackContext {
+        let mut ctx = Box::new(MmapDlpackContext {
             _mmap: Arc::clone(&array.mmap),
             _aligned_data: aligned_data,
             shape: shape_i64,
@@ -203,25 +275,21 @@ unsafe extern "C" fn mmap_dlpack_deleter(managed: *mut DLManagedTensorVersioned)
     if !managed.is_null() {
         let managed = Box::from_raw(managed);
         if !managed.manager_ctx.is_null() {
-            drop(Box::from_raw(managed.manager_ctx.cast::<DlpackContext>()));
+            drop(Box::from_raw(managed.manager_ctx.cast::<MmapDlpackContext>()));
         }
     }
 }
 
 unsafe extern "C" fn mmap_array_create(
-    _array: *const c_void,
+    array: *const c_void,
     shape_ptr: *const usize,
     shape_count: usize,
     new_array: *mut mts_array_t,
 ) -> mts_status_t {
     crate::c_api::catch_unwind(move || {
+        let source = &*array.cast::<MmapArray>();
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
-        let array = ndarray::ArcArray::from_elem(shape, 0.0_f64);
-        let boxed = Box::new(MmapCreatedArray {
-            tag: ArrayTag::Created,
-            array,
-            shape: shape.to_vec(),
-        });
+        let boxed = new_created_array(shape, source.dl_dtype);
         *new_array = boxed.into_mts_array();
         Ok(())
     })
@@ -233,44 +301,14 @@ unsafe extern "C" fn mmap_array_copy(
 ) -> mts_status_t {
     crate::c_api::catch_unwind(move || {
         let array = &*array.cast::<MmapArray>();
-
-        let data_slice = std::slice::from_raw_parts(
-            array.data_ptr(),
-            array.data_len,
-        );
-
-        let element_bytes = (array.dl_dtype.bits as usize / 8) * array.dl_dtype.lanes as usize;
-        let num_elements: usize = array.shape.iter().product();
-
-        if element_bytes == 8 && array.dl_dtype.code == DLDataTypeCode::kDLFloat {
-            // f64 fast path — use copy_nonoverlapping to handle unaligned mmap data
-            let mut dst = vec![0.0f64; num_elements];
-            std::ptr::copy_nonoverlapping(
-                data_slice.as_ptr(),
-                dst.as_mut_ptr() as *mut u8,
-                array.data_len,
-            );
-            let owned = ndarray::ArcArray::from_shape_vec(
-                ndarray::IxDyn(&array.shape),
-                dst,
-            ).map_err(|e| Error::Internal(format!("shape mismatch in mmap_array_copy: {}", e)))?;
-            let boxed = Box::new(MmapCreatedArray {
-                tag: ArrayTag::Created,
-                array: owned,
-                shape: array.shape.clone(),
-            });
-            *new_array = boxed.into_mts_array();
-        } else {
-            // Generic path: copy raw bytes
-            let owned_data = data_slice.to_vec();
-            let boxed = Box::new(OwnedBytesArray {
-                data: owned_data,
-                shape: array.shape.clone(),
-                dl_dtype: array.dl_dtype,
-            });
-            *new_array = boxed.into_mts_array();
-        }
-
+        let data = AlignedBytes::from_raw(array.data_ptr(), array.data_len);
+        let boxed = Box::new(MmapCreatedArray {
+            tag: ArrayTag::Created,
+            data: Arc::new(data),
+            shape: array.shape.clone(),
+            dl_dtype: array.dl_dtype,
+        });
+        *new_array = boxed.into_mts_array();
         Ok(())
     })
 }
@@ -282,14 +320,15 @@ unsafe extern "C" fn mmap_array_destroy(array: *mut c_void) {
 }
 
 // ============================================================================
-// MmapCreatedArray: writable f64 array for operations like keys_to_properties
+// MmapCreatedArray: dtype-generic writable array for operations
 // ============================================================================
 
 #[repr(C)]
 struct MmapCreatedArray {
     tag: ArrayTag,
-    array: ndarray::ArcArray<f64, ndarray::IxDyn>,
+    data: Arc<AlignedBytes>,
     shape: Vec<usize>,
+    dl_dtype: DLDataType,
 }
 
 unsafe impl Send for MmapCreatedArray {}
@@ -300,7 +339,7 @@ impl MmapCreatedArray {
         mts_array_t {
             ptr: Box::into_raw(self).cast(),
             origin: Some(created_array_origin),
-            data: Some(created_array_data),
+            data: None,
             as_dlpack: Some(created_array_as_dlpack),
             shape: Some(created_array_shape),
             reshape: Some(created_array_reshape),
@@ -313,44 +352,28 @@ impl MmapCreatedArray {
     }
 }
 
+/// Create a zeroed MmapCreatedArray with the given shape and dtype.
+fn new_created_array(shape: &[usize], dl_dtype: DLDataType) -> Box<MmapCreatedArray> {
+    let elem = element_size(&dl_dtype);
+    let total_bytes = shape.iter().product::<usize>() * elem;
+    Box::new(MmapCreatedArray {
+        tag: ArrayTag::Created,
+        data: Arc::new(AlignedBytes::zeroed(total_bytes)),
+        shape: shape.to_vec(),
+        dl_dtype,
+    })
+}
+
+// ============================================================================
+// MmapCreatedArray callbacks
+// ============================================================================
+
 unsafe extern "C" fn created_array_origin(
     _array: *const c_void,
     origin: *mut mts_data_origin_t,
 ) -> mts_status_t {
     *origin = register_data_origin("metatensor.MmapArray".into());
     mts_status_t(0)
-}
-
-unsafe extern "C" fn created_array_data(
-    array: *mut c_void,
-    data: *mut *mut f64,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let array = &mut *array.cast::<MmapCreatedArray>();
-        let arr = array.array.as_slice_memory_order_mut()
-            .ok_or_else(|| Error::Internal("created array is not contiguous".into()))?;
-        *data = arr.as_mut_ptr();
-        Ok(())
-    })
-}
-
-unsafe extern "C" fn created_array_as_dlpack(
-    array: *mut c_void,
-    dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
-    _device: DLDevice,
-    _stream: *const i64,
-    _max_version: DLPackVersion,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let array = &*array.cast::<MmapCreatedArray>();
-
-        let tensor: DLPackTensor = (&array.array).try_into().map_err(|e| {
-            Error::InvalidParameter(format!("failed to convert to DLPack: {:?}", e))
-        })?;
-
-        *dl_managed_tensor = tensor.into_raw().as_ptr();
-        Ok(())
-    })
 }
 
 unsafe extern "C" fn created_array_shape(
@@ -364,210 +387,15 @@ unsafe extern "C" fn created_array_shape(
     mts_status_t(0)
 }
 
-unsafe extern "C" fn created_array_reshape(
-    array: *mut c_void,
-    shape_ptr: *const usize,
-    shape_count: usize,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let array = &mut *array.cast::<MmapCreatedArray>();
-        let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
-        array.array = array.array.clone().into_shape_with_order(ndarray::IxDyn(shape))
-            .map_err(|e| Error::Internal(format!("reshape failed: {}", e)))?;
-        array.shape = shape.to_vec();
-        Ok(())
-    })
-}
-
-unsafe extern "C" fn created_array_swap_axes(
-    array: *mut c_void,
-    axis_1: usize,
-    axis_2: usize,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let array = &mut *array.cast::<MmapCreatedArray>();
-        array.array.swap_axes(axis_1, axis_2);
-        array.shape.swap(axis_1, axis_2);
-        Ok(())
-    })
-}
-
-unsafe extern "C" fn created_array_create(
-    _array: *const c_void,
-    shape_ptr: *const usize,
-    shape_count: usize,
-    new_array: *mut mts_array_t,
-) -> mts_status_t {
-    mmap_array_create(std::ptr::null(), shape_ptr, shape_count, new_array)
-}
-
-unsafe extern "C" fn created_array_copy(
-    array: *const c_void,
-    new_array: *mut mts_array_t,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let array = &*array.cast::<MmapCreatedArray>();
-        let boxed = Box::new(MmapCreatedArray {
-            tag: ArrayTag::Created,
-            array: array.array.clone(),
-            shape: array.shape.clone(),
-        });
-        *new_array = boxed.into_mts_array();
-        Ok(())
-    })
-}
-
-/// Shared logic for moving samples from an input f64 slice into the output ndarray.
-unsafe fn move_samples_impl(
-    output: &mut MmapCreatedArray,
-    input_flat: &[f64],
-    input_shape: &[usize],
-    samples: &[mts_sample_mapping_t],
-    property_start: usize,
-    property_end: usize,
-) -> Result<(), Error> {
-    let n_properties = property_end - property_start;
-    let output_n_properties = *output.shape.last().unwrap_or(&0);
-    let input_n_properties = *input_shape.last().unwrap_or(&0);
-
-    let n_middle: usize = if output.shape.len() > 2 {
-        output.shape[1..output.shape.len() - 1].iter().product()
-    } else {
-        1
-    };
-
-    let input_row_len: usize = if input_shape.len() > 1 {
-        input_shape[1..].iter().product()
-    } else {
-        1
-    };
-
-    for sample in samples {
-        let in_row_start = sample.input * input_row_len;
-        let in_row = &input_flat[in_row_start..in_row_start + input_row_len];
-
-        let mut output_row = output.array.index_axis_mut(ndarray::Axis(0), sample.output);
-        let output_flat = output_row.as_slice_mut().ok_or_else(|| {
-            Error::Internal("output array is not contiguous".into())
-        })?;
-
-        for mid in 0..n_middle {
-            let out_start = mid * output_n_properties + property_start;
-            let in_start = mid * input_n_properties;
-            output_flat[out_start..out_start + n_properties]
-                .copy_from_slice(&in_row[in_start..in_start + n_properties]);
-        }
-    }
-    Ok(())
-}
-
-unsafe extern "C" fn created_array_move_samples_from(
-    output: *mut c_void,
-    input: *const c_void,
-    samples: *const mts_sample_mapping_t,
-    samples_count: usize,
-    property_start: usize,
-    property_end: usize,
-) -> mts_status_t {
-    crate::c_api::catch_unwind(move || {
-        let output = &mut *output.cast::<MmapCreatedArray>();
-        let samples = std::slice::from_raw_parts(samples, samples_count);
-
-        // Read the tag at offset 0 to determine the concrete input type.
-        let tag = *(input as *const ArrayTag);
-        match tag {
-            ArrayTag::Created => {
-                let input = &*input.cast::<MmapCreatedArray>();
-                let input_flat = input.array.as_slice_memory_order().ok_or_else(|| {
-                    Error::Internal("input array is not contiguous".into())
-                })?;
-                move_samples_impl(
-                    output, input_flat, &input.shape,
-                    samples, property_start, property_end,
-                )
-            }
-            ArrayTag::Mmap => {
-                let input = &*input.cast::<MmapArray>();
-                let num_elements: usize = input.shape.iter().product();
-                // Alignment-safe copy from mmap into a temporary f64 buffer
-                let mut buf = vec![0.0f64; num_elements];
-                std::ptr::copy_nonoverlapping(
-                    input.data_ptr(),
-                    buf.as_mut_ptr() as *mut u8,
-                    input.data_len,
-                );
-                move_samples_impl(
-                    output, &buf, &input.shape,
-                    samples, property_start, property_end,
-                )
-            }
-        }
-    })
-}
-
-unsafe extern "C" fn created_array_destroy(array: *mut c_void) {
-    if !array.is_null() {
-        drop(Box::from_raw(array.cast::<MmapCreatedArray>()));
-    }
-}
-
-// ============================================================================
-// OwnedBytesArray: for generic dtype copy from mmap
-// ============================================================================
-
-struct OwnedBytesArray {
-    data: Vec<u8>,
-    shape: Vec<usize>,
-    dl_dtype: DLDataType,
-}
-
-unsafe impl Send for OwnedBytesArray {}
-unsafe impl Sync for OwnedBytesArray {}
-
-struct OwnedBytesDlpackContext {
-    _data: Vec<u8>,
+/// DLPack context for MmapCreatedArray. Holds an Arc to the shared data
+/// so the backing bytes remain valid for the lifetime of the DLPack tensor.
+struct CreatedDlpackContext {
+    _data: Arc<AlignedBytes>,
     shape: Vec<i64>,
     strides: Vec<i64>,
 }
 
-impl OwnedBytesArray {
-    fn into_mts_array(self: Box<Self>) -> mts_array_t {
-        mts_array_t {
-            ptr: Box::into_raw(self).cast(),
-            origin: Some(owned_bytes_origin),
-            data: None,
-            as_dlpack: Some(owned_bytes_as_dlpack),
-            shape: Some(owned_bytes_shape),
-            reshape: None,
-            swap_axes: None,
-            create: Some(owned_bytes_create),
-            copy: Some(owned_bytes_copy),
-            destroy: Some(owned_bytes_destroy),
-            move_samples_from: None,
-        }
-    }
-}
-
-unsafe extern "C" fn owned_bytes_origin(
-    _array: *const c_void,
-    origin: *mut mts_data_origin_t,
-) -> mts_status_t {
-    *origin = register_data_origin("metatensor.MmapArray".into());
-    mts_status_t(0)
-}
-
-unsafe extern "C" fn owned_bytes_shape(
-    array: *const c_void,
-    shape: *mut *const usize,
-    shape_count: *mut usize,
-) -> mts_status_t {
-    let array = &*array.cast::<OwnedBytesArray>();
-    *shape = array.shape.as_ptr();
-    *shape_count = array.shape.len();
-    mts_status_t(0)
-}
-
-unsafe extern "C" fn owned_bytes_as_dlpack(
+unsafe extern "C" fn created_array_as_dlpack(
     array: *mut c_void,
     dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
     device: DLDevice,
@@ -575,7 +403,7 @@ unsafe extern "C" fn owned_bytes_as_dlpack(
     max_version: DLPackVersion,
 ) -> mts_status_t {
     crate::c_api::catch_unwind(move || {
-        let array = &*array.cast::<OwnedBytesArray>();
+        let array = &*array.cast::<MmapCreatedArray>();
 
         let current_version = DLPackVersion::current();
         if max_version.major != current_version.major {
@@ -588,7 +416,7 @@ unsafe extern "C" fn owned_bytes_as_dlpack(
         let cpu = DLDevice::cpu();
         if device.device_type != cpu.device_type || device.device_id != cpu.device_id {
             return Err(Error::InvalidParameter(
-                "OwnedBytesArray only supports CPU device".into()
+                "MmapCreatedArray only supports CPU device".into()
             ));
         }
 
@@ -602,14 +430,14 @@ unsafe extern "C" fn owned_bytes_as_dlpack(
             }
         }
 
-        let data_ptr = if array.data.is_empty() {
+        let data_ptr = if array.data.byte_len == 0 {
             std::ptr::null_mut()
         } else {
             array.data.as_ptr() as *mut c_void
         };
 
-        let mut ctx = Box::new(OwnedBytesDlpackContext {
-            _data: array.data.clone(),
+        let mut ctx = Box::new(CreatedDlpackContext {
+            _data: Arc::clone(&array.data),
             shape: shape_i64,
             strides: strides_i64,
         });
@@ -627,7 +455,7 @@ unsafe extern "C" fn owned_bytes_as_dlpack(
         let managed = Box::new(DLManagedTensorVersioned {
             version: current_version,
             manager_ctx: Box::into_raw(ctx).cast(),
-            deleter: Some(owned_bytes_dlpack_deleter),
+            deleter: Some(created_dlpack_deleter),
             flags: 0,
             dl_tensor,
         });
@@ -637,32 +465,132 @@ unsafe extern "C" fn owned_bytes_as_dlpack(
     })
 }
 
-unsafe extern "C" fn owned_bytes_dlpack_deleter(managed: *mut DLManagedTensorVersioned) {
+unsafe extern "C" fn created_dlpack_deleter(managed: *mut DLManagedTensorVersioned) {
     if !managed.is_null() {
         let managed = Box::from_raw(managed);
         if !managed.manager_ctx.is_null() {
-            drop(Box::from_raw(managed.manager_ctx.cast::<OwnedBytesDlpackContext>()));
+            drop(Box::from_raw(managed.manager_ctx.cast::<CreatedDlpackContext>()));
         }
     }
 }
 
-unsafe extern "C" fn owned_bytes_create(
-    _array: *const c_void,
+unsafe extern "C" fn created_array_reshape(
+    array: *mut c_void,
+    shape_ptr: *const usize,
+    shape_count: usize,
+) -> mts_status_t {
+    crate::c_api::catch_unwind(move || {
+        let array = &mut *array.cast::<MmapCreatedArray>();
+        let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
+
+        let old_elements: usize = array.shape.iter().product();
+        let new_elements: usize = shape.iter().product();
+        if old_elements != new_elements {
+            return Err(Error::Internal(format!(
+                "cannot reshape: {} elements to {} elements",
+                old_elements, new_elements
+            )));
+        }
+
+        array.shape = shape.to_vec();
+        Ok(())
+    })
+}
+
+unsafe extern "C" fn created_array_swap_axes(
+    array: *mut c_void,
+    axis_1: usize,
+    axis_2: usize,
+) -> mts_status_t {
+    crate::c_api::catch_unwind(move || {
+        let array = &mut *array.cast::<MmapCreatedArray>();
+        if axis_1 == axis_2 {
+            return Ok(());
+        }
+
+        let elem = element_size(&array.dl_dtype);
+        let ndim = array.shape.len();
+        let total_elements: usize = array.shape.iter().product();
+        if total_elements == 0 {
+            array.shape.swap(axis_1, axis_2);
+            return Ok(());
+        }
+
+        // Compute C-contiguous strides for original shape (in elements)
+        let mut strides = vec![1usize; ndim];
+        for i in (0..ndim - 1).rev() {
+            strides[i] = strides[i + 1] * array.shape[i + 1];
+        }
+
+        // New shape after swap
+        let mut new_shape = array.shape.clone();
+        new_shape.swap(axis_1, axis_2);
+
+        // New strides for the transposed shape
+        let mut new_strides = vec![1usize; ndim];
+        for i in (0..ndim - 1).rev() {
+            new_strides[i] = new_strides[i + 1] * new_shape[i + 1];
+        }
+
+        // Physical transpose: copy each element to its new position.
+        // We snapshot the source bytes first, then write into the buffer.
+        let data = Arc::make_mut(&mut array.data);
+        let src_bytes = data.as_slice().to_vec();
+        let dst = data.as_mut_slice();
+
+        let mut indices = vec![0usize; ndim];
+        for flat_idx in 0..total_elements {
+            // Decompose flat_idx into multi-dimensional indices
+            let mut remaining = flat_idx;
+            for d in 0..ndim {
+                indices[d] = remaining / strides[d];
+                remaining %= strides[d];
+            }
+
+            // Swap the two axis indices
+            indices.swap(axis_1, axis_2);
+
+            // Compute destination flat index in the new layout
+            let mut dst_flat = 0;
+            for d in 0..ndim {
+                dst_flat += indices[d] * new_strides[d];
+            }
+
+            let src_off = flat_idx * elem;
+            let dst_off = dst_flat * elem;
+            dst[dst_off..dst_off + elem]
+                .copy_from_slice(&src_bytes[src_off..src_off + elem]);
+        }
+
+        array.shape = new_shape;
+        Ok(())
+    })
+}
+
+unsafe extern "C" fn created_array_create(
+    array: *const c_void,
     shape_ptr: *const usize,
     shape_count: usize,
     new_array: *mut mts_array_t,
 ) -> mts_status_t {
-    mmap_array_create(std::ptr::null(), shape_ptr, shape_count, new_array)
+    crate::c_api::catch_unwind(move || {
+        let source = &*array.cast::<MmapCreatedArray>();
+        let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
+        let boxed = new_created_array(shape, source.dl_dtype);
+        *new_array = boxed.into_mts_array();
+        Ok(())
+    })
 }
 
-unsafe extern "C" fn owned_bytes_copy(
+unsafe extern "C" fn created_array_copy(
     array: *const c_void,
     new_array: *mut mts_array_t,
 ) -> mts_status_t {
     crate::c_api::catch_unwind(move || {
-        let array = &*array.cast::<OwnedBytesArray>();
-        let boxed = Box::new(OwnedBytesArray {
-            data: array.data.clone(),
+        let array = &*array.cast::<MmapCreatedArray>();
+        let boxed = Box::new(MmapCreatedArray {
+            tag: ArrayTag::Created,
+            data: Arc::new((*array.data).clone()),
             shape: array.shape.clone(),
             dl_dtype: array.dl_dtype,
         });
@@ -671,8 +599,104 @@ unsafe extern "C" fn owned_bytes_copy(
     })
 }
 
-unsafe extern "C" fn owned_bytes_destroy(array: *mut c_void) {
+// ============================================================================
+// Byte-level sample moving (dtype-generic)
+// ============================================================================
+
+/// Move samples from `input_data` into `output_data` at the byte level.
+///
+/// Both input and output are C-contiguous byte buffers. The copy respects the
+/// multi-dimensional layout: for each sample mapping, it copies the property
+/// slice `[property_start..property_end]` across all middle (component)
+/// dimensions.
+unsafe fn move_samples_impl(
+    output_data: &mut [u8],
+    output_shape: &[usize],
+    input_data: *const u8,
+    input_shape: &[usize],
+    elem: usize,
+    samples: &[mts_sample_mapping_t],
+    property_start: usize,
+    property_end: usize,
+) -> Result<(), Error> {
+    let n_properties = property_end - property_start;
+    let output_n_properties = *output_shape.last().unwrap_or(&0);
+    let input_n_properties = *input_shape.last().unwrap_or(&0);
+
+    let n_middle: usize = if output_shape.len() > 2 {
+        output_shape[1..output_shape.len() - 1].iter().product()
+    } else {
+        1
+    };
+
+    let input_row_elements: usize = if input_shape.len() > 1 {
+        input_shape[1..].iter().product()
+    } else {
+        1
+    };
+
+    let output_row_elements: usize = if output_shape.len() > 1 {
+        output_shape[1..].iter().product()
+    } else {
+        1
+    };
+
+    for sample in samples {
+        let in_row_byte = sample.input * input_row_elements * elem;
+        let out_row_byte = sample.output * output_row_elements * elem;
+
+        for mid in 0..n_middle {
+            let out_off = out_row_byte + (mid * output_n_properties + property_start) * elem;
+            let in_off = in_row_byte + mid * input_n_properties * elem;
+            let copy_len = n_properties * elem;
+            std::ptr::copy_nonoverlapping(
+                input_data.add(in_off),
+                output_data.as_mut_ptr().add(out_off),
+                copy_len,
+            );
+        }
+    }
+    Ok(())
+}
+
+unsafe extern "C" fn created_array_move_samples_from(
+    output: *mut c_void,
+    input: *const c_void,
+    samples: *const mts_sample_mapping_t,
+    samples_count: usize,
+    property_start: usize,
+    property_end: usize,
+) -> mts_status_t {
+    crate::c_api::catch_unwind(move || {
+        let output = &mut *output.cast::<MmapCreatedArray>();
+        let samples = std::slice::from_raw_parts(samples, samples_count);
+        let elem = element_size(&output.dl_dtype);
+
+        // Read the tag at offset 0 to determine the concrete input type.
+        let tag = *(input as *const ArrayTag);
+        let (input_data, input_shape): (*const u8, &[usize]) = match tag {
+            ArrayTag::Created => {
+                let inp = &*input.cast::<MmapCreatedArray>();
+                (inp.data.as_ptr(), &inp.shape)
+            }
+            ArrayTag::Mmap => {
+                let inp = &*input.cast::<MmapArray>();
+                (inp.data_ptr(), &inp.shape)
+            }
+        };
+
+        let data = Arc::make_mut(&mut output.data);
+        move_samples_impl(
+            data.as_mut_slice(), &output.shape,
+            input_data, input_shape,
+            elem,
+            samples, property_start, property_end,
+        )
+    })
+}
+
+unsafe extern "C" fn created_array_destroy(array: *mut c_void) {
     if !array.is_null() {
-        drop(Box::from_raw(array.cast::<OwnedBytesArray>()));
+        drop(Box::from_raw(array.cast::<MmapCreatedArray>()));
     }
 }
