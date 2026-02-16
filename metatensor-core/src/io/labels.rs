@@ -3,7 +3,7 @@ use std::io::BufReader;
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 
 use super::npy_header::{Header, DataType};
-use super::{check_for_extra_bytes, PathOrBuffer};
+use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
 use crate::labels::LabelValue;
 use crate::{Error, Labels};
 
@@ -55,8 +55,9 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 
     let mut data = vec![0; header.shape[0] * names.len()];
     match endianness {
-        Endianness::LittleEndian => reader.read_i32_into::<LittleEndian>(&mut data)?,
-        Endianness::BigEndian => reader.read_i32_into::<BigEndian>(&mut data)?,
+        Endianness::Little => reader.read_i32_into::<LittleEndian>(&mut data)?,
+        Endianness::Big => reader.read_i32_into::<BigEndian>(&mut data)?,
+        Endianness::Native => reader.read_i32_into::<NativeEndian>(&mut data)?,
     }
 
     check_for_extra_bytes(&mut reader)?;
@@ -82,15 +83,10 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 /// files. The recomended file extension when saving data is `.mts`, to prevent
 /// confusion with generic `.npz` files.
 pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result<(), Error> {
+    let endian = native_endian_prefix();
     let mut type_descriptor = Vec::new();
     for name in labels.names() {
-        if cfg!(target_endian = "little") {
-            type_descriptor.push((name.into(), "<i4".into()));
-        } else if cfg!(target_endian = "big") {
-            type_descriptor.push((name.into(), ">i4".into()));
-        } else {
-            unreachable!("unknown target endianness");
-        }
+        type_descriptor.push((name.into(), format!("{}i4", endian)));
     }
 
     let header = Header {
@@ -109,12 +105,6 @@ pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result
     return Ok(());
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Endianness {
-    BigEndian,
-    LittleEndian,
-}
-
 /// Check that the given type descriptor matches the expected one for Labels and
 /// return the corresponding set of names & endianness.
 fn check_type_descriptor(desc: &DataType) -> Result<(Vec<&str>, Endianness), Error> {
@@ -128,18 +118,18 @@ fn check_type_descriptor(desc: &DataType) -> Result<(Vec<&str>, Endianness), Err
             for (name, typ) in list {
                 if endianness.is_none() {
                     if typ == "<i4" {
-                        endianness = Some(Endianness::LittleEndian);
+                        endianness = Some(Endianness::Little);
                     } else if typ == ">i4" {
-                        endianness = Some(Endianness::BigEndian);
+                        endianness = Some(Endianness::Big);
                     }
                 }
 
                 if typ == "<i4" {
-                    if endianness != Some(Endianness::LittleEndian) {
+                    if endianness != Some(Endianness::Little) {
                         return Err(error);
                     }
                 } else if typ == ">i4" {
-                    if endianness != Some(Endianness::BigEndian) {
+                    if endianness != Some(Endianness::Big) {
                         return Err(error);
                     }
                 } else {
