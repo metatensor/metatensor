@@ -425,24 +425,72 @@ TEST_CASE("TensorMap mmap loading") {
         CHECK(tensor.keys().count() == 27);
     }
 
-    SECTION("load_mmap works with keys_to_properties") {
+    SECTION("partial file reading — accessing individual blocks") {
         auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
-        // components_to_properties first since blocks have different component sizes
+        // accessing blocks one at a time exercises lazy page-in:
+        // only the data for each accessed block needs to be faulted in
+        for (uintptr_t i = 0; i < tensor.keys().count(); i++) {
+            auto block = tensor.block_by_id(i);
+            auto shape = block.values_shape();
+            CHECK(shape.size() >= 2);
+            CHECK(shape[0] > 0);
+        }
+    }
+
+    SECTION("components_to_properties") {
+        auto mmap = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+        auto result = mmap.components_to_properties("o3_mu");
+
+        // components_to_properties should flatten the component dimension
+        // into properties, so blocks should have fewer dimensions
+        CHECK(result.keys().count() == 27);
+        for (uintptr_t i = 0; i < result.keys().count(); i++) {
+            auto block = result.block_by_id(i);
+            // values shape should be 2-d (samples x properties) after
+            // flattening the component
+            CHECK(block.values_shape().size() == 2);
+            CHECK(block.values_shape()[0] > 0);
+            CHECK(block.properties().count() > 0);
+        }
+    }
+
+    SECTION("keys_to_properties (after components_to_properties)") {
+        auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
         auto unified = tensor.components_to_properties("o3_mu");
         auto merged = unified.keys_to_properties("o3_lambda");
         CHECK(merged.keys().count() < tensor.keys().count());
     }
 
-    SECTION("load_mmap works with clone") {
+    SECTION("keys_to_samples") {
+        auto mmap = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+        auto result = mmap.keys_to_samples("center_type");
+
+        // merging center_type into samples should reduce the number of keys
+        CHECK(result.keys().count() < mmap.keys().count());
+        for (uintptr_t i = 0; i < result.keys().count(); i++) {
+            auto block = result.block_by_id(i);
+            CHECK(block.values_shape()[0] > 0);
+        }
+    }
+
+    SECTION("clone") {
         auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
         auto clone = tensor.clone();
         CHECK(clone.keys() == tensor.keys());
+        for (uintptr_t i = 0; i < tensor.keys().count(); i++) {
+            CHECK(tensor.block_by_id(i).values_shape() == clone.block_by_id(i).values_shape());
+        }
     }
 
-    SECTION("load_mmap works with save") {
-        auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
-        auto buffer = tensor.save_buffer();
-        CHECK(buffer.size() > 0);
+    SECTION("save roundtrip produces identical bytes") {
+        auto regular = TensorMap::load(TEST_DATA_MTS_PATH);
+        auto mmap = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+
+        auto regular_buf = regular.save_buffer();
+        auto mmap_buf = mmap.save_buffer();
+
+        CHECK(regular_buf.size() == mmap_buf.size());
+        CHECK(regular_buf == mmap_buf);
     }
 }
 
@@ -461,10 +509,21 @@ TEST_CASE("TensorBlock mmap loading") {
         CHECK(block.values_shape() == std::vector<uintptr_t>{9, 5, 3});
     }
 
-    SECTION("load_block_mmap gradient access") {
+    SECTION("gradient access") {
         auto block = TensorBlock::load_mmap(TEST_BLOCK_MTS_PATH);
         auto gradient = block.gradient("positions");
         CHECK(gradient.values_shape() == std::vector<uintptr_t>{59, 3, 5, 3});
+    }
+
+    SECTION("save roundtrip produces identical bytes") {
+        auto block_regular = TensorBlock::load(TEST_BLOCK_MTS_PATH);
+        auto block_mmap = TensorBlock::load_mmap(TEST_BLOCK_MTS_PATH);
+
+        auto regular_buf = block_regular.save_buffer();
+        auto mmap_buf = block_mmap.save_buffer();
+
+        CHECK(regular_buf.size() == mmap_buf.size());
+        CHECK(regular_buf == mmap_buf);
     }
 }
 
