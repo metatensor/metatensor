@@ -336,6 +336,60 @@ def test_pickle_labels(tmpdir, labels_path):
     check_labels(loaded)
 
 
+def test_load_mmap(tensor_path):
+    """Test that load_mmap returns data matching regular load."""
+    loaded = mts.load_mmap(tensor_path)
+    check_tensor(loaded)
+
+    # using Path
+    loaded = mts.load_mmap(Path(tensor_path))
+    check_tensor(loaded)
+
+
+def test_load_mmap_type_error():
+    """Test that load_mmap rejects file-like objects."""
+    with pytest.raises(TypeError, match="load_mmap only supports file paths"):
+        mts.load_mmap(42)  # type: ignore
+
+
+def test_load_block_mmap(block_path):
+    """Test that load_block_mmap returns data matching regular load."""
+    loaded = mts.load_block_mmap(block_path)
+    check_block(loaded)
+
+    # using Path
+    loaded = mts.load_block_mmap(Path(block_path))
+    check_block(loaded)
+
+
+def test_load_block_mmap_type_error():
+    """Test that load_block_mmap rejects file-like objects."""
+    with pytest.raises(TypeError, match="load_block_mmap only supports file paths"):
+        mts.load_block_mmap(42)  # type: ignore
+
+
+def test_mmap_operations_compatibility(tensor_path):
+    """Test that mmap-loaded data works with operations like save."""
+    tensor = mts.load_mmap(tensor_path)
+
+    # Block access should work (exercises partial file reading —
+    # only the accessed block's data needs to be paged in)
+    for i in range(len(tensor.keys)):
+        block = tensor.block_by_id(i)
+        assert block.values.shape[0] > 0
+
+    # Clone
+    clone = tensor.copy()
+    assert clone.keys == tensor.keys
+
+    # Save roundtrip
+    buffer = mts.save_buffer(tensor)
+    assert buffer.shape[0] > 0
+
+    reloaded = mts.load_buffer(buffer)
+    check_tensor(reloaded)
+
+
 class Serialization:
     def load(self, file: str) -> TensorMap:
         return mts.load(file=file)
@@ -343,11 +397,17 @@ class Serialization:
     def load_buffer(self, buffer: torch.Tensor) -> TensorMap:
         return mts.load_buffer(buffer=buffer)
 
+    def load_mmap(self, file: str) -> TensorMap:
+        return mts.load_mmap(file=file)
+
     def load_block(self, file: str) -> TensorBlock:
         return mts.load_block(file=file)
 
     def load_block_buffer(self, buffer: torch.Tensor) -> TensorBlock:
         return mts.load_block_buffer(buffer=buffer)
+
+    def load_block_mmap(self, file: str) -> TensorBlock:
+        return mts.load_block_mmap(file=file)
 
     def load_labels(self, file: str) -> Labels:
         return mts.load_labels(file=file)

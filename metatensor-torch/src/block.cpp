@@ -135,6 +135,65 @@ TensorBlock TensorBlockHolder::to_positional(
     return this->to(parsed_dtype, parsed_device, non_blocking);
 }
 
+/// Convert a DLDataType to a torch ScalarType
+static torch::ScalarType dlpack_dtype_to_torch(DLDataType dtype) {
+    if (dtype.lanes != 1) {
+        C10_THROW_ERROR(ValueError, "unsupported DLPack dtype with lanes != 1");
+    }
+    if (dtype.code == kDLFloat) {
+        switch (dtype.bits) {
+            case 16: return torch::kFloat16;
+            case 32: return torch::kFloat32;
+            case 64: return torch::kFloat64;
+        }
+    } else if (dtype.code == kDLInt) {
+        switch (dtype.bits) {
+            case 8: return torch::kInt8;
+            case 16: return torch::kInt16;
+            case 32: return torch::kInt32;
+            case 64: return torch::kInt64;
+        }
+    } else if (dtype.code == kDLUInt) {
+        switch (dtype.bits) {
+            case 8: return torch::kUInt8;
+        }
+    }
+    C10_THROW_ERROR(ValueError,
+        "unsupported DLPack dtype (code=" + std::to_string(dtype.code) +
+        ", bits=" + std::to_string(dtype.bits) + ")"
+    );
+}
+
+/// Create a torch::Tensor from a DLManagedTensorVersioned obtained via as_dlpack.
+/// The tensor takes ownership of the DLPack managed tensor (calling its deleter
+/// when the torch tensor is destroyed).
+static torch::Tensor tensor_from_dlpack_versioned(DLManagedTensorVersioned* dlm) {
+    auto& dl_tensor = dlm->dl_tensor;
+    void* data = static_cast<char*>(dl_tensor.data) + dl_tensor.byte_offset;
+
+    auto dtype = dlpack_dtype_to_torch(dl_tensor.dtype);
+    auto sizes = std::vector<int64_t>(dl_tensor.shape, dl_tensor.shape + dl_tensor.ndim);
+    auto options = torch::TensorOptions().dtype(dtype).device(torch::kCPU);
+
+    // Custom deleter: when the torch tensor is destroyed, clean up the
+    // DLManagedTensorVersioned (which in turn releases its reference to
+    // the underlying mmap or other backing store).
+    auto deleter = [dlm](void*) {
+        if (dlm && dlm->deleter) {
+            dlm->deleter(dlm);
+        }
+    };
+
+    if (dl_tensor.strides != nullptr) {
+        auto strides = std::vector<int64_t>(
+            dl_tensor.strides, dl_tensor.strides + dl_tensor.ndim
+        );
+        return torch::from_blob(data, sizes, strides, deleter, options);
+    } else {
+        return torch::from_blob(data, sizes, deleter, options);
+    }
+}
+
 torch::Tensor TensorBlockHolder::values() const {
     // const_cast is fine here, because the returned torch::Tensor does not
     // allow modifications to the underlying mts_array (only to the values
@@ -143,21 +202,35 @@ torch::Tensor TensorBlockHolder::values() const {
 
     mts_data_origin_t origin = 0;
     metatensor::details::check_status(array.origin(array.ptr, &origin));
-    if (origin != TORCH_DATA_ORIGIN) {
+
+    if (origin == TORCH_DATA_ORIGIN) {
+        auto* ptr = static_cast<metatensor::DataArrayBase*>(array.ptr);
+        auto* wrapper = dynamic_cast<TorchDataArray*>(ptr);
+        if (wrapper == nullptr) {
+            C10_THROW_ERROR(ValueError,
+                "this TensorBlock does not contain a C++ torch Tensor"
+            );
+        }
+        return wrapper->tensor();
+    }
+
+    // Fallback: use DLPack for non-torch arrays (e.g. mmap-backed arrays)
+    if (array.as_dlpack == nullptr) {
         C10_THROW_ERROR(ValueError,
-            "this TensorBlock does not contain a C++ torch Tensor"
+            "this TensorBlock contains an array that is neither a C++ torch "
+            "Tensor nor supports DLPack"
         );
     }
 
-    auto* ptr = static_cast<metatensor::DataArrayBase*>(array.ptr);
-    auto* wrapper = dynamic_cast<TorchDataArray*>(ptr);
-    if (wrapper == nullptr) {
-        C10_THROW_ERROR(ValueError,
-            "this TensorBlock does not contain a C++ torch Tensor"
-        );
-    }
+    DLManagedTensorVersioned* dlm = nullptr;
+    DLDevice device = {kDLCPU, 0};
+    int64_t stream = 0;
+    DLPackVersion version = {1, 0};
 
-    return wrapper->tensor();
+    auto status = array.as_dlpack(array.ptr, &dlm, device, &stream, version);
+    metatensor::details::check_status(status);
+
+    return tensor_from_dlpack_versioned(dlm);
 }
 
 Labels TensorBlockHolder::labels(uintptr_t axis) const {
@@ -293,6 +366,15 @@ TensorBlock TensorBlockHolder::load(const std::string& path) {
     return torch::make_intrusive<TensorBlockHolder>(
         TensorBlockHolder(
             metatensor::io::load_block(path, details::create_torch_array),
+            /*parent=*/torch::IValue()
+        )
+    );
+}
+
+TensorBlock TensorBlockHolder::load_mmap(const std::string& path) {
+    return torch::make_intrusive<TensorBlockHolder>(
+        TensorBlockHolder(
+            metatensor::io::load_block_mmap(path),
             /*parent=*/torch::IValue()
         )
     );
