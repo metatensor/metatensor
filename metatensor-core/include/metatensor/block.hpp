@@ -374,6 +374,22 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
+     * Load a previously saved ``TensorBlock`` from the given path using
+     * memory-mapped I/O. Arrays are created internally as read-only
+     * mmap-backed arrays.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_block_mmap`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorBlock load_mmap(const std::string& path) {
+        return metatensor::io::load_block_mmap(path);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
      * Save this ``TensorBlock`` to the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
@@ -462,6 +478,9 @@ private:
         const uint8_t* buffer,
         size_t buffer_count,
         mts_create_array_callback_t create_array
+    );
+    friend TensorBlock metatensor::io::load_block_mmap(
+        const std::string& path
     );
 
     mts_block_t* block_;
