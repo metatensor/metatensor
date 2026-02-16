@@ -4,10 +4,10 @@ use std::any::TypeId;
 
 use once_cell::sync::Lazy;
 
-use dlpk::sys::{DLDevice, DLDeviceType, DLManagedTensorVersioned, DLPackVersion};
-use dlpk::GetDLPackDataType;
+use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
-use dlpk::DLPackTensor;
+use dlpk::{DLPackTensor, GetDLPackDataType};
+
 
 use crate::errors::Error;
 
@@ -387,10 +387,7 @@ where
             });
         }
 
-        let ndarray_device = DLDevice {
-            device_type: DLDeviceType::kDLCPU,
-            device_id: 0,
-        };
+        let ndarray_device = DLDevice::cpu();
 
         if device.device_type != ndarray_device.device_type || device.device_id != ndarray_device.device_id {
             return Err(Error {
@@ -505,7 +502,10 @@ mod tests {
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
             let device = DLDevice::cpu();
-            let max_version = DLPackVersion { major: 1, minor: 9 };
+            // max_version is the consumer's maximum supported version; it must
+            // be strictly >= the library's version, so use current + 1 minor
+            let current = DLPackVersion::current();
+            let max_version = DLPackVersion { major: current.major, minor: current.minor + 1 };
             let status = (mts_array.as_dlpack.unwrap())(
                 mts_array.ptr,
                 &mut dl_managed,
