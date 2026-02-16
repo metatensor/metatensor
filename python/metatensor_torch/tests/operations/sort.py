@@ -3,15 +3,14 @@ import os
 
 import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
 def test_sort():
     # Very minimal test, mainly checking that the code runs
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -23,17 +22,17 @@ def test_sort():
             "qm7-power-spectrum.mts",
         )
     )
-    sorted_tensor = metatensor.torch.sort(tensor)
+    sorted_tensor = mts.sort(tensor)
 
     # right output type
     assert isinstance(sorted_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert sorted_tensor._type().name() == "TensorMap"
+    assert sorted_tensor._type().name() == "TensorMap"
 
 
-def test_save():
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
+def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.sort, buffer)
+        torch.jit.save(mts.sort, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)
 
@@ -201,26 +200,24 @@ def tensor_sorted_descending():
 
 
 def test_sort_ascending(tensor, tensor_sorted_ascending):
-    metatensor.torch.allclose_block_raise(
-        metatensor.torch.sort_block(tensor.block(0)), tensor_sorted_ascending.block(1)
+    mts.allclose_block_raise(
+        mts.sort_block(tensor.block(0)), tensor_sorted_ascending.block(1)
     )
-    metatensor.torch.allclose_block_raise(
-        metatensor.torch.sort_block(tensor.block(1)), tensor_sorted_ascending.block(0)
+    mts.allclose_block_raise(
+        mts.sort_block(tensor.block(1)), tensor_sorted_ascending.block(0)
     )
 
-    metatensor.torch.allclose_raise(
-        metatensor.torch.sort(tensor), tensor_sorted_ascending
-    )
+    mts.allclose_raise(mts.sort(tensor), tensor_sorted_ascending)
 
 
 def test_sort_descending(tensor, tensor_sorted_descending):
-    metatensor.torch.allclose_block_raise(
+    mts.allclose_block_raise(
         tensor_sorted_descending.block(0),
-        metatensor.torch.sort_block(tensor.block(0), descending=True),
+        mts.sort_block(tensor.block(0), descending=True),
     )
-    metatensor.torch.allclose_block_raise(
+    mts.allclose_block_raise(
         tensor_sorted_descending.block(0),
-        metatensor.torch.sort_block(tensor.block(0), descending=True),
+        mts.sort_block(tensor.block(0), descending=True),
     )
 
 
@@ -294,5 +291,5 @@ def test_high_numb():
             ),
         ],
     )
-    sorted = metatensor.torch.sort(tensor)
-    metatensor.torch.allclose_raise(sorted, tensor_order)
+    sorted = mts.sort(tensor)
+    mts.allclose_raise(sorted, tensor_order)

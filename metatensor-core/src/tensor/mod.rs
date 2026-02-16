@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
+use std::ffi::CString;
 
+use crate::utils::ConstCString;
 use crate::TensorBlock;
 use crate::{Labels, Error};
 use crate::get_data_origin;
@@ -24,7 +26,10 @@ mod keys_to_properties;
 pub struct TensorMap {
     keys: Arc<Labels>,
     blocks: Vec<TensorBlock>,
-    // TODO: arbitrary tensor-level metadata? e.g. using `HashMap<String, String>`
+
+    info: BTreeMap<String, ConstCString>,
+    // all the keys from `info`, as C-compatible strings
+    info_keys: Vec<ConstCString>
 }
 
 fn check_labels_names(
@@ -100,7 +105,7 @@ struct GradientMap<'a> {
 }
 
 impl GradientMap<'_> {
-    fn new(block: &TensorBlock) -> GradientMap {
+    fn new(block: &TensorBlock) -> GradientMap<'_> {
         // generate gradient information for a block
         let mut gradients = HashMap::new();
         for (gradient_name, sub_gradient) in block.gradients() {
@@ -127,7 +132,7 @@ impl TensorMap {
         if blocks.len() != keys.count() {
             return Err(Error::InvalidParameter(format!(
                 "expected the same number of blocks as the number of \
-                entries in the keys ({}) when creating a tensor, got {}",
+                entries in the keys ({}) when creating a `TensorMap`, got {}",
                 keys.count(), blocks.len()
             )))
         }
@@ -171,6 +176,8 @@ impl TensorMap {
         Ok(TensorMap {
             keys: keys,
             blocks,
+            info: BTreeMap::new(),
+            info_keys: Vec::new(),
         })
     }
 
@@ -184,7 +191,9 @@ impl TensorMap {
 
         return Ok(TensorMap {
             keys: Arc::clone(&self.keys),
-            blocks
+            blocks,
+            info: self.info.clone(),
+            info_keys: self.info_keys.clone()
         });
     }
 
@@ -255,7 +264,7 @@ impl TensorMap {
         return Ok(matching);
     }
 
-    /// Move the given dimensions from the component labels to the property labels
+    /// Move the all the given dimensions from the components to the properties
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
         let mut clone = self.try_clone()?;
@@ -265,10 +274,39 @@ impl TensorMap {
         }
 
         for block in &mut clone.blocks {
-            block.components_to_properties(dimensions)?;
+            for dimension in dimensions {
+                block.components_to_properties(dimension)?;
+            }
         }
 
         return Ok(clone);
+    }
+
+    /// Get the info map associated with this `TensorMap`.
+    pub fn info(&self) -> &BTreeMap<String, ConstCString> {
+        &self.info
+    }
+
+    /// Get the list of info keys as C-compatible strings
+    pub fn info_keys_c(&self) -> &[ConstCString] {
+        &self.info_keys
+    }
+
+    /// Get the info value associated with `key` for this `TensorMap`.
+    pub fn get_info(&self, key: &str) -> Option<&ConstCString> {
+        self.info.get(key)
+    }
+
+    /// Set the info value associated with `key` for this `TensorMap`.
+    pub fn add_info(&mut self, key: &str, value: ConstCString) {
+        if !self.info.contains_key(key) {
+            self.info_keys.push(
+                ConstCString::new(
+                    CString::new(key.to_owned()).expect("invalid C string")
+                )
+            );
+        }
+        self.info.insert(key.to_owned(), value);
     }
 }
 
@@ -302,6 +340,12 @@ mod tests {
             vec![block_1, block_2],
         );
         assert!(result.is_ok());
+        // also check we have an empty info block
+        let mut result = result.unwrap();
+        assert!(result.info.is_empty());
+        // also check we can set info
+        result.info.insert("key".to_string(),
+                          ConstCString::new(CString::new("value").expect("CString::new failed")));
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
@@ -425,33 +469,33 @@ mod tests {
 
         let tensor = TensorMap::new(keys, blocks).unwrap();
 
-        let selection = Labels::new(&["key_1", "key_2"], vec![1, 1]).unwrap();
+        let selection = Labels::new_i32(&["key_1", "key_2"], vec![1, 1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2]
         );
 
-        let selection = Labels::new(&["key_1"], vec![1]).unwrap();
+        let selection = Labels::new_i32(&["key_1"], vec![1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2, 3]
         );
 
-        let selection = Labels::new(&["key_1"], Vec::<i32>::new()).unwrap();
+        let selection = Labels::new_i32(&["key_1"], vec![]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 0"
         );
 
-        let selection = Labels::new(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
+        let selection = Labels::new_i32(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 2"
         );
 
-        let selection = Labels::new(&["key_3"], vec![1]).unwrap();
+        let selection = Labels::new_i32(&["key_3"], vec![1]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),

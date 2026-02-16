@@ -6,8 +6,8 @@ a custom language defined inside of the C++ version of [PyTorch](PyTorch.org/)
 ## Installation
 
 See the overall documentation for the [installation
-instructions](https://docs.metatensor.org/latest/get-started/installation.html#installing-the-torchscript-bindings).
+instructions](https://docs.metatensor.org/latest/installation.html#install-torch-cxx).
 
 ## Documentation
 
-The API documentation is available [online](https://docs.metatensor.org/latest/reference/torch/cxx/index.html).
+The API documentation is available [online](https://docs.metatensor.org/latest/torch/reference/cxx/index.html).

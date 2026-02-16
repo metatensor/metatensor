@@ -12,6 +12,14 @@ C++ API reference
     :tag-prefix: metatensor-core-v
     :url-suffix: core/reference/cxx/index.html
 
+    .. version:: 0.1.19
+    .. version:: 0.1.18
+    .. version:: 0.1.17
+    .. version:: 0.1.16
+    .. version:: 0.1.15
+    .. version:: 0.1.14
+    .. version:: 0.1.13
+    .. version:: 0.1.12
     .. version:: 0.1.11
     .. version:: 0.1.10
     .. version:: 0.1.9
@@ -21,16 +29,16 @@ C++ API reference
     .. version:: 0.1.4
     .. version:: 0.1.3
 
-Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-core>`.
-You can the provided classes and functions in your own code by :ref:`installing
-the corresponding shared library and header <install-c>`, and then including
-``metatensor.hpp`` and linking with ``-lmetatensor``. Alternatively, we provide
-a cmake package config file, allowing you to do use metatensor like this (after
-installation):
+Metatensor offers a C++ API, built on top of the :ref:`C API <c-api-core>`.  You
+can the provided classes and functions in your own code by :ref:`installing the
+corresponding shared library and header <install-c>`, and then including
+``metatensor.hpp`` and linking with ``-lmetatensor``.  Alternatively, we provide
+a ``cmake`` configuration file, allowing you to use ``metatensor`` like this
+(after installation):
 
 .. code-block:: cmake
 
-    cmake_minimum_required(VERSION 3.16)
+    cmake_minimum_required(VERSION 3.22)
     project(my-project CXX)
 
     find_package(metatensor)
@@ -49,8 +57,9 @@ installation):
 
     # alternatively, you can explicitly use the static or shared build of
     # metatensor. Unless you have a very specific need for a static build, we
-    # recommend using the shared version of metatensor: this will allow to pass
-    # data from your code to any other code using metatensor.
+    # recommend using the shared version of metatensor: this will allow you to
+    # pass data from your code to other codes which use the same metatensor
+    # shared library.
 
     # target_link_libraries(my-exe metatensor::shared)
     # target_link_libraries(my-exe metatensor::static)

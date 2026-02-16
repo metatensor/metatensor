@@ -112,7 +112,7 @@ class LabelsEntry:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
         """
-        values = [f"{n}={v}" for n, v in zip(self.names, self.values)]
+        values = [f"{n}={v}" for n, v in zip(self.names, self.values, strict=True)]
         return f"({', '.join(values)})"
 
     def __repr__(self) -> str:
@@ -266,7 +266,12 @@ class Labels:
     True
     """
 
-    def __init__(self, names: Union[str, Sequence[str]], values: np.ndarray):
+    def __init__(
+        self,
+        names: Union[str, Sequence[str]],
+        values: np.ndarray,
+        assume_unique: bool = False,
+    ):
         """
         :param names: names of the dimensions in the new labels. A single string
                       is transformed into a list with one element, i.e.
@@ -274,6 +279,11 @@ class Labels:
 
         :param values: values of the labels, this needs to be a 2-dimensional
                        array of integers.
+
+        :param assume_unique: skip uniqueness checks inside metatensor. This
+                              should only be set to ``True`` if you can
+                              ensure that label entries are already unique,
+                              either by construction or because you checked.
         """
 
         names = _normalize_names_type(names)
@@ -309,7 +319,9 @@ class Labels:
             raise TypeError("Labels values must be convertible to integers") from e
 
         self._lib = _get_library()
-        self._labels = _create_new_labels(self._lib, names, values)
+        self._labels = _create_new_labels(
+            self._lib, names, values, assume_unique=assume_unique
+        )
         self._names = names
         self._cached_values = None
 
@@ -697,7 +709,7 @@ class Labels:
         ...     label.remove(name="bar")
         ... except MetatensorError as e:
         ...     print(e)
-        invalid parameter: can not have the same label entry multiple time: [42] is already present
+        invalid parameter: can not have the same label entry multiple times: [42] is already present
         """  # noqa E501
         if name not in self.names:
             raise ValueError(f"'{name}' not found in the dimensions of these Labels")
@@ -741,12 +753,14 @@ class Labels:
 
         return Labels(names=names, values=self.values)
 
-    def to(self, device) -> "Labels":
+    def to(self, device, non_blocking=False) -> "Labels":
         """
-        Move the values for these Labels to the given ``device``.
+        Move the values for these Labels to the given ``device``. ``non_blocking`` is
+        ignored.
 
-        In the Python version of metatensor, this returns the original labels.
-        Defined for compatibility with the TorchScript version of metatensor.
+        In the Python version of metatensor, this returns the original labels without
+        change. This function is defined for compatibility with the TorchScript version
+        of metatensor.
         """
         return self
 
@@ -788,6 +802,87 @@ class Labels:
             return result.value
         else:
             return None
+
+    def difference(self, other: "Labels") -> "Labels":
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` and ``other`` ends up in the
+        difference, you can use :py:meth:`Labels.difference_and_mapping`.
+
+        >>> import numpy as np
+        >>> from metatensor import Labels
+        >>> first = Labels(
+        ...     names=["a", "b"], values=np.array([[0, 1], [1, 3], [0, 3], [2, 2]])
+        ... )
+        >>> second = Labels(
+        ...     names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2], [2, 1]])
+        ... )
+        >>> first.difference(second)
+        Labels(
+            a  b
+            0  1
+            2  2
+        )
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `difference` with Labels view, call `to_owned` before"
+            )
+
+        output = mts_labels_t()
+        self._lib.mts_labels_difference(
+            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0
+        )
+
+        return Labels._from_mts_labels_t(output)
+
+    def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", np.ndarray]:
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the difference where each entry of
+        the input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the difference, and a :py:class:`numpy.ndarray`
+            containing the position in the difference of the entries from ``self``.
+
+        >>> import numpy as np
+        >>> from metatensor import Labels
+        >>> first = Labels(
+        ...     names=["a", "b"], values=np.array([[0, 1], [1, 3], [0, 3], [2, 2]])
+        ... )
+        >>> second = Labels(
+        ...     names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2], [2, 1]])
+        ... )
+        >>> difference, mapping_1 = first.difference_and_mapping(second)
+        >>> difference
+        Labels(
+            a  b
+            0  1
+            2  2
+        )
+        >>> print(mapping_1)
+        [ 0 -1 -1  1]
+        """
+        if self.is_view() or other.is_view():
+            raise ValueError(
+                "can not call `difference_and_mapping` with Labels view, "
+                "call `to_owned` before"
+            )
+
+        output = mts_labels_t()
+        first_mapping = np.zeros(len(self), dtype=np.int64)
+
+        self._lib.mts_labels_difference(
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            output,
+            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            len(first_mapping),
+        )
+
+        return Labels._from_mts_labels_t(output), first_mapping
 
     def union(self, other: "Labels") -> "Labels":
         """
@@ -1086,7 +1181,9 @@ class Labels:
 
     def to_owned(self) -> "Labels":
         """convert a view to owned labels, which implement the full API"""
-        labels = _create_new_labels(self._lib, self._names, self.values)
+        labels = _create_new_labels(
+            self._lib, self._names, self.values, assume_unique=False
+        )
         return Labels._from_mts_labels_t(labels)
 
 
@@ -1118,7 +1215,9 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
     return names
 
 
-def _create_new_labels(lib, names: List[str], values: np.ndarray) -> mts_labels_t:
+def _create_new_labels(
+    lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
+) -> mts_labels_t:
     labels = mts_labels_t()
 
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
@@ -1131,7 +1230,10 @@ def _create_new_labels(lib, names: List[str], values: np.ndarray) -> mts_labels_
 
     labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
     labels.count = values.shape[0]
-    lib.mts_labels_create(labels)
+    if assume_unique:
+        lib.mts_labels_create_assume_unique(labels)
+    else:
+        lib.mts_labels_create(labels)
 
     return labels
 

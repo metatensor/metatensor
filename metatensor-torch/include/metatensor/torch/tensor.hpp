@@ -17,9 +17,6 @@ class TensorMapHolder;
 /// TorchScript will always manipulate `TensorMapHolder` through a `torch::intrusive_ptr`
 using TensorMap = torch::intrusive_ptr<TensorMapHolder>;
 
-// for backward compatibility, to remove later
-using TorchTensorMap = TensorMap;
-
 /// Wrapper around `metatensor::TensorMap` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
@@ -146,7 +143,8 @@ public:
     /// Move this `TensorMap` to the given `dtype` and `device`.
     TensorMap to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
-        torch::optional<torch::Device> device = torch::nullopt
+        torch::optional<torch::Device> device = torch::nullopt,
+        bool non_blocking = false
     ) const;
 
     /// Wrapper of the `to` function to enable using it with positional
@@ -162,7 +160,8 @@ public:
         torch::IValue positional_2,
         torch::optional<torch::Dtype> dtype,
         torch::optional<torch::Device> device,
-        torch::optional<std::string> arrays
+        torch::optional<std::string> arrays,
+        bool non_blocking = false
     ) const;
 
     /// Get the underlying metatensor TensorMap
@@ -183,6 +182,17 @@ public:
     /// Serialize and save a TensorMap to an in-memory buffer (represented as a
     /// `torch::Tensor` of bytes)
     torch::Tensor save_buffer() const;
+
+    /// Set or update the info (i.e. global metadata) `value` associated with
+    /// `key` for this `TensorMap`.
+    void set_info(std::string key, std::string value);
+
+    /// Get the info (i.e. global metadata) with the given `key` for this
+    /// `TensorMap`.
+    torch::optional<std::string> get_info(std::string key) const;
+
+    /// Get all the key/value info pairs stored in this `TensorMap`.
+    torch::Dict<std::string, std::string> info() const;
 
 private:
     /// Underlying metatensor TensorMap

@@ -112,6 +112,14 @@ function mts_labels_create(labels::Ptr{mts_labels_t})
     )
 end
 
+function mts_labels_create_assume_unique(labels::Ptr{mts_labels_t})
+    ccall((:mts_labels_create_assume_unique, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_labels_t},),
+        labels
+    )
+end
+
 function mts_labels_set_user_data(labels::mts_labels_t, user_data::Ptr{Cvoid}, user_data_delete::Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#)
     ccall((:mts_labels_set_user_data, libmetatensor), 
         mts_status_t,
@@ -149,6 +157,14 @@ function mts_labels_intersection(first::mts_labels_t, second::mts_labels_t, resu
         mts_status_t,
         (mts_labels_t, mts_labels_t, Ptr{mts_labels_t}, Ptr{Int64}, UIntptr, Ptr{Int64}, UIntptr,),
         first, second, result, first_mapping, first_mapping_count, second_mapping, second_mapping_count
+    )
+end
+
+function mts_labels_difference(first::mts_labels_t, second::mts_labels_t, result::Ptr{mts_labels_t}, first_mapping::Ptr{Int64}, first_mapping_count::UIntptr)
+    ccall((:mts_labels_difference, libmetatensor), 
+        mts_status_t,
+        (mts_labels_t, mts_labels_t, Ptr{mts_labels_t}, Ptr{Int64}, UIntptr,),
+        first, second, result, first_mapping, first_mapping_count
     )
 end
 
@@ -317,6 +333,30 @@ function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_mov
         Ptr{mts_tensormap_t},
         (Ptr{mts_tensormap_t}, mts_labels_t, Cbool,),
         tensor, keys_to_move, sort_samples
+    )
+end
+
+function mts_tensormap_set_info(tensor::Ptr{mts_tensormap_t}, key::Ptr{Cchar}, value::Ptr{Cchar})
+    ccall((:mts_tensormap_set_info, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Cchar}, Ptr{Cchar},),
+        tensor, key, value
+    )
+end
+
+function mts_tensormap_get_info(tensor::Ptr{mts_tensormap_t}, key::Ptr{Cchar}, value::Ptr{Ptr{Cchar}})
+    ccall((:mts_tensormap_get_info, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Cchar}, Ptr{Ptr{Cchar}},),
+        tensor, key, value
+    )
+end
+
+function mts_tensormap_info_keys(tensor::Ptr{mts_tensormap_t}, keys::Ptr{Ptr{Ptr{Cchar}}}, keys_count::Ptr{UIntptr})
+    ccall((:mts_tensormap_info_keys, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{Ptr{Ptr{Cchar}}}, Ptr{UIntptr},),
+        tensor, keys, keys_count
     )
 end
 

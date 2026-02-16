@@ -3,7 +3,8 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
+from metatensor import Labels
 
 
 torch = pytest.importorskip("torch")
@@ -20,9 +21,9 @@ DATA_ROOT = os.path.join(
 
 @pytest.fixture
 def tensor():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
     tensor = tensor.to(arrays="torch")
-    tensor = metatensor.remove_gradients(tensor)
+    tensor = mts.remove_gradients(tensor)
     return tensor
 
 
@@ -72,9 +73,7 @@ def test_sequential_mlp(tensor):
     )
 
     prediction = model(tensor)
-    assert metatensor.equal_metadata(
-        prediction, tensor, check=["samples", "components"]
-    )
+    assert mts.equal_metadata(prediction, tensor, check=["samples", "components"])
 
 
 def test_sequential_equi_mlp(tensor, wigner_d_real):
@@ -86,9 +85,7 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
     in_invariant_features = [
         len(tensor.block(key).properties) for key in in_keys if key["o3_lambda"] == 0
     ]
-    invariant_keys = metatensor.Labels(
-        ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
-    )
+    invariant_keys = Labels(["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1))
 
     model = nn.Sequential(
         in_keys,
@@ -128,9 +125,7 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
     )
 
     prediction = model(tensor)
-    assert metatensor.equal_metadata(
-        prediction, tensor, check=["samples", "components"]
-    )
+    assert mts.equal_metadata(prediction, tensor, check=["samples", "components"])
 
     # Test equivariance
     # Define input and rotated input
@@ -138,4 +133,4 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
     fRx = model(Rx)
     Rfx = wigner_d_real.transform_tensormap_o3(prediction)
 
-    assert metatensor.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+    assert mts.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)

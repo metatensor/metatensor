@@ -18,43 +18,46 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            torch-version: 1.12.*
-            python-version: "3.10"
+          - os: ubuntu-24.04
+            torch-version: "2.10"
+            python-version: "3.13"
             cargo-test-flags: --release
             do-valgrind: true
 
-          - os: ubuntu-20.04
-            container: ubuntu:20.04
-            extra-name: ", cmake 3.16"
-            torch-version: 2.5.*
-            python-version: "3.12"
+          # check the build on a stock Ubuntu 22.04, which uses cmake 3.22
+          - os: ubuntu-24.04
+            container: ubuntu:22.04
+            extra-name: ", cmake 3.22"
+            torch-version: "2.1"
             cargo-test-flags: ""
             cxx-flags: -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -g
 
-          - os: macos-14
-            torch-version: 2.5.*
-            python-version: "3.12"
+          - os: macos-15
+            torch-version: "2.10"
+            python-version: "3.13"
             cargo-test-flags: --release
 
           - os: windows-2022
-            torch-version: 2.2.*
-            python-version: "3.12"
+            torch-version: "2.10"
+            python-version: "3.13"
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: |
           apt update
           apt install -y software-properties-common
-          apt install -y cmake make gcc g++ git curl
+          add-apt-repository ppa:deadsnakes/ppa
+          apt install -y cmake make gcc g++ git curl python3.10 python3.10-venv
 
-      - uses: actions/checkout@v4
+          update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
+
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Configure git safe directory
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: git config --global --add safe.directory /__w/metatensor/metatensor
 
       - name: setup rust
@@ -62,24 +65,34 @@ jobs:
         with:
           toolchain: stable
 
-      # we get torch from pip to run the C++ test
-      - name: setup Python
-        uses: actions/setup-python@v5
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
-          python-version: ${{ matrix.python-version }}
+          sweep-cache: true
+
+      # we get torch from pip to run the C++ test
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          activate-environment: true
 
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
+          sudo snap install valgrind --classic
           sudo apt-get update
-          sudo apt-get install -y valgrind
+          sudo apt-get install -y libc6-dbg --fix-missing
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.8.1"
+          version: "v0.10.0"
 
       - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -91,5 +104,6 @@ jobs:
         env:
           # Use the CPU only version of torch when building/running the code
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           CXXFLAGS: ${{ matrix.cxx-flags }}

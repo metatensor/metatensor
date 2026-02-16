@@ -5,3 +5,11 @@
    ...
    fun:exit
 }
+{
+   <pytorch_to_uninitialized>
+   Memcheck:Cond
+   fun:_ZN2at6native13to_will_aliasERKNS_6TensorESt8optionalIN3c1010ScalarTypeEES4_INS5_6LayoutEES4_INS5_6DeviceEEbS4_INS5_12MemoryFormatEE
+   fun:_ZN2at6native2toERKNS_6TensorESt8optionalIN3c1010ScalarTypeEES4_INS5_6LayoutEES4_INS5_6DeviceEES4_IbEbbS4_INS5_12MemoryFormatEE
+   fun:_ZN3c104impl28wrap_kernel_functor_unboxed_*
+   fun:_ZN2at4_ops15to_dtype_layout4callERKNS_6TensorESt8optionalIN3c1010ScalarTypeEES5_INS6_6LayoutEES5_INS6_6DeviceEES5_IbEbbS5_INS6_12MemoryFormatEE
+}

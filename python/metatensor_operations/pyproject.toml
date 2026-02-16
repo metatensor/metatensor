@@ -1,17 +1,16 @@
 [project]
 name = "metatensor-operations"
 dynamic = ["version", "authors", "dependencies"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 readme = "README.rst"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 description = "Operations to manipulate metatensor data types"
 
 keywords = ["machine learning", "molecular modeling"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -34,7 +33,7 @@ changelog = "https://docs.metatensor.org/latest/operations/CHANGELOG.html"
 ### ======================================================================== ###
 [build-system]
 requires = [
-    "setuptools >=68",
+    "setuptools >=77",
     "packaging >=23",
 ]
 build-backend = "setuptools.build_meta"
@@ -50,3 +49,7 @@ namespaces = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore:`torch\\.jit.*` is deprecated.*:DeprecationWarning",
+]

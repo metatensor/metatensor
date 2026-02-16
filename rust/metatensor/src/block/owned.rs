@@ -192,6 +192,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn block() {
+        let block = TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0),
+            &Labels::new(["samples"], &[[0], [1]]),
+            &[Labels::new(["component"], &[[0]])],
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
+        ).unwrap();
+
+        assert_eq!(block.values().as_array(), ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
+        assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
+        assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
+    }
+
+    #[test]
     fn check_repr() {
         // we are casting `*mut TensorBlock` to `*mut mts_block_t` in TensorMap::new,
         // this is only legal because TensorBlock == *mut mts_block_t

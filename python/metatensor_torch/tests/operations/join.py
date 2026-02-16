@@ -1,14 +1,14 @@
 import io
 import os
 
+import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 
 
 def test_join():
-    tensor = metatensor.torch.load(
+    tensor = mts.load(
         os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -20,18 +20,20 @@ def test_join():
             "qm7-power-spectrum.mts",
         )
     )
-    joined_tensor = metatensor.torch.join([tensor, tensor], axis="properties")
+
+    joined_tensor = mts.join(
+        [tensor, tensor], axis="properties", add_dimension="tensor"
+    )
 
     assert isinstance(joined_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert joined_tensor._type().name() == "TensorMap"
+    assert joined_tensor._type().name() == "TensorMap"
 
     # test keys
     assert joined_tensor.keys == tensor.keys
 
     # test property names
     names = tensor.block(0).properties.names
-    assert joined_tensor.block(0).properties.names == ["tensor"] + names
+    assert joined_tensor.block(0).properties.names == names + ["tensor"]
 
     # test samples
     assert joined_tensor.block(0).samples == tensor.block(0).samples
@@ -42,8 +44,9 @@ def test_join():
     )
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.join, buffer)
+        torch.jit.save(mts.join, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

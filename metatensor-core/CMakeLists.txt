@@ -3,7 +3,7 @@
 # This API is implemented in Rust, in the metatensor-core crate, but Rust users
 # of the API should use the metatensor crate instead, wrapping metatensor-core in
 # an easier to use, idiomatic Rust API.
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 # Is metatensor the main project configured by the user? Or is this being used
 # as a submodule/subdirectory?
@@ -60,8 +60,8 @@ set(PROJECT_VERSION ${METATENSOR_FULL_VERSION})
 option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
 option(METATENSOR_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
 
-set(RUST_BUILD_TARGET "" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
-set(EXTRA_RUST_FLAGS "" CACHE STRING "Flags used to build rust code")
+set(RUST_BUILD_TARGET "${RUST_BUILD_TARGET}" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
+set(EXTRA_RUST_FLAGS "${EXTRA_RUST_FLAGS}" CACHE STRING "Flags used to build rust code")
 
 include(GNUInstallDirs)
 
@@ -100,7 +100,7 @@ if(CARGO_STATUS AND NOT CARGO_STATUS EQUAL 0)
     )
 endif()
 
-set(REQUIRED_RUST_VERSION "1.53.0")
+set(REQUIRED_RUST_VERSION "1.74.0")
 if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+\\.[0-9]+\\.[0-9]+).*")
     set(CARGO_VERSION "${CMAKE_MATCH_1}")
 else()
@@ -313,20 +313,7 @@ if (NOT "${EXTRA_RUST_FLAGS}" STREQUAL "")
     set(CARGO_RUSTC_ARGS "${CARGO_RUSTC_ARGS};${EXTRA_RUST_FLAGS}")
 endif()
 
-if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
-    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
-    set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
-else()
-    if (BUILD_SHARED_LIBS)
-        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
-        set(FILES_CREATED_BY_CARGO "${METATENSOR_SHARED_LIB_NAME}")
-    else()
-        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
-        set(FILES_CREATED_BY_CARGO "${METATENSOR_STATIC_LIB_NAME}")
-    endif()
-endif()
-
-# Set environement variables for cargo build
+# Set environment variables for cargo build
 set(CARGO_ENV "METATENSOR_FULL_VERSION=${METATENSOR_FULL_VERSION}")
 if (NOT "${CMAKE_OSX_DEPLOYMENT_TARGET}" STREQUAL "")
     list(APPEND CARGO_ENV "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
@@ -335,42 +322,68 @@ if (NOT "$ENV{RUSTC_WRAPPER}" STREQUAL "")
     list(APPEND CARGO_ENV "RUSTC_WRAPPER=$ENV{RUSTC_WRAPPER}")
 endif()
 
-add_custom_target(cargo-build-metatensor ALL
+if (METATENSOR_INSTALL_BOTH_STATIC_SHARED)
+    set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib;--crate-type=staticlib")
+    set(CARGO_OUTPUTS ${METATENSOR_SHARED_LOCATION} ${METATENSOR_STATIC_LOCATION})
+    if (WIN32)
+        list(APPEND CARGO_OUTPUTS ${METATENSOR_IMPLIB_LOCATION})
+        set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME}, ${METATENSOR_STATIC_LIB_NAME}, and ${METATENSOR_IMPLIB_NAME}")
+    else()
+        set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_STATIC_LIB_NAME}")
+    endif()
+else()
+    if (BUILD_SHARED_LIBS)
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=cdylib")
+        set(CARGO_OUTPUTS ${METATENSOR_SHARED_LOCATION})
+        if (WIN32)
+            list(APPEND CARGO_OUTPUTS ${METATENSOR_IMPLIB_LOCATION})
+            set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME} and ${METATENSOR_IMPLIB_NAME}")
+        else()
+            set(FILE_CREATED_MESSAGE "${METATENSOR_SHARED_LIB_NAME}")
+        endif()
+    else()
+        set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--crate-type=staticlib")
+        set(CARGO_OUTPUTS ${METATENSOR_STATIC_LOCATION})
+        set(FILE_CREATED_MESSAGE "${METATENSOR_STATIC_LIB_NAME}")
+    endif()
+endif()
+
+add_custom_command(
+    OUTPUT ${CARGO_OUTPUTS}
     COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
         cargo rustc ${CARGO_BUILD_ARG} -- ${CARGO_RUSTC_ARGS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     DEPENDS ${ALL_RUST_SOURCES}
-    COMMENT "Building ${FILES_CREATED_BY_CARGO} with cargo"
-    BYPRODUCTS ${METATENSOR_STATIC_LOCATION} ${METATENSOR_SHARED_LOCATION} ${METATENSOR_IMPLIB_LOCATION}
+    COMMENT "Building ${FILE_CREATED_MESSAGE} with cargo"
+    VERBATIM
 )
+add_custom_target(cargo-build-metatensor ALL DEPENDS ${CARGO_OUTPUTS})
 
-# Add `#define METATENSOR_VERSION_XXX` to the header
-add_custom_command(TARGET cargo-build-metatensor POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-        -DMTS_SOURCE_DIR=${PROJECT_SOURCE_DIR}
-        -DMTS_BINARY_DIR=${PROJECT_BINARY_DIR}
-        -DMTS_VERSION=${METATENSOR_FULL_VERSION}
-        -DMTS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-        -DMTS_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-        -DMTS_VERSION_PATCH=${PROJECT_VERSION_PATCH}
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version-defines.cmake
-)
+# Auto-generate a header containing the version number as #define
+set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
+file(WRITE ${_path_} "#pragma once\n\n")
+file(APPEND ${_path_} "/** Full version of metatensor as a string */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION \"${METATENSOR_FULL_VERSION}\"\n\n")
+file(APPEND ${_path_} "/** Major version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
+file(APPEND ${_path_} "/** Minor version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_MINOR ${PROJECT_VERSION_MINOR}\n\n")
+file(APPEND ${_path_} "/** Patch version number of metatensor as an integer */\n")
+file(APPEND ${_path_} "#define METATENSOR_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
+
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/include/metatensor)
+set(_destination_ "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/version.h")
+file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
 
 add_dependencies(metatensor::shared cargo-build-metatensor)
 add_dependencies(metatensor::static cargo-build-metatensor)
-set(METATENSOR_HEADERS
-    "${PROJECT_BINARY_DIR}/include/metatensor.h"
-    "${PROJECT_BINARY_DIR}/include/metatensor.hpp"
-)
-set(METATENSOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/)
-file(MAKE_DIRECTORY ${METATENSOR_INCLUDE_DIR})
 
 set_target_properties(metatensor::shared PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}/include"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
-target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
 if (WIN32)
     set_target_properties(metatensor::shared PROPERTIES
@@ -380,11 +393,11 @@ endif()
 
 set_target_properties(metatensor::static PROPERTIES
     IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
-    INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE_DIR}
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}/include"
     INTERFACE_LINK_LIBRARIES "${CARGO_DEFAULT_LIBRARIES}"
     BUILD_VERSION "${METATENSOR_FULL_VERSION}"
 )
-target_compile_features(metatensor::static INTERFACE cxx_std_11)
+target_compile_features(metatensor::static INTERFACE cxx_std_17)
 
 
 if (BUILD_SHARED_LIBS)
@@ -408,7 +421,10 @@ write_basic_package_version_file(
     COMPATIBILITY SameMinorVersion
 )
 
-install(FILES ${METATENSOR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "include/metatensor.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "include/metatensor.hpp" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY "include/metatensor" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/version.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/metatensor)
 
 if (METATENSOR_INSTALL_BOTH_STATIC_SHARED OR BUILD_SHARED_LIBS)
     if (WIN32)

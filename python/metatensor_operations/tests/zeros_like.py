@@ -3,21 +3,21 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_zeros_like():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    zeros_tensor = metatensor.zeros_like(tensor)
-    zeros_tensor_positions = metatensor.zeros_like(tensor, gradients="positions")
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    zeros_tensor = mts.zeros_like(tensor)
+    zeros_tensor_positions = mts.zeros_like(tensor, gradients="positions")
 
-    assert metatensor.equal_metadata(zeros_tensor, tensor)
+    assert mts.equal_metadata(zeros_tensor, tensor)
 
-    tensor_no_strain = metatensor.remove_gradients(tensor, "strain")
-    assert metatensor.equal_metadata(zeros_tensor_positions, tensor_no_strain)
+    tensor_no_strain = mts.remove_gradients(tensor, "strain")
+    assert mts.equal_metadata(zeros_tensor_positions, tensor_no_strain)
 
     # check the values
     for key, block in tensor.items():
@@ -31,8 +31,8 @@ def test_zeros_like():
 
 
 def test_zeros_like_error():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     message = "requested gradient 'err' in 'zeros_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):
-        tensor = metatensor.zeros_like(tensor, gradients=["positions", "err"])
+        tensor = mts.zeros_like(tensor, gradients=["positions", "err"])

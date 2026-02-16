@@ -7,10 +7,9 @@
 <h4 align="center">
 
 [![tests status](https://img.shields.io/github/checks-status/metatensor/metatensor/main)](https://github.com/metatensor/metatensor/actions?query=branch%3Amain)
-[![documentation](https://img.shields.io/badge/documentation-latest-sucess)](https://docs.metatensor.org/latest/)
+[![documentation](https://img.shields.io/badge/📚_documentation-latest-sucess)](https://docs.metatensor.org/latest/)
 [![coverage](https://codecov.io/gh/metatensor/metatensor/branch/main/graph/badge.svg)](https://codecov.io/gh/metatensor/metatensor)
 </h4>
-
 
 Metatensor is a self-describing sparse tensor data format for atomistic machine
 learning and beyond; storing values and gradients of these values together.
@@ -22,6 +21,9 @@ The main class of metatensor is the `TensorMap` data structure, defining a
 custom block-sparse data format. If you are using metatensor from Python, we
 additionally provide a collection of mathematical, logical and other utility
 operations to make working with TensorMaps more convenient.
+
+If you use metatensor for your work, please read and cite our preprint available on
+[arXiv](http://arxiv.org/abs/2508.15704).
 
 ## Documentation
 

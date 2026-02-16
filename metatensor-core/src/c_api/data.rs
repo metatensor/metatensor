@@ -17,7 +17,7 @@ use super::utils::copy_str_to_c;
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_register_data_origin(
+pub unsafe extern "C" fn mts_register_data_origin(
     name: *const c_char,
     origin: *mut mts_data_origin_t,
 ) -> mts_status_t {
@@ -43,7 +43,7 @@ pub unsafe extern fn mts_register_data_origin(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern fn mts_get_data_origin(
+pub unsafe extern "C" fn mts_get_data_origin(
     origin: mts_data_origin_t,
     buffer: *mut c_char,
     buffer_size: usize,

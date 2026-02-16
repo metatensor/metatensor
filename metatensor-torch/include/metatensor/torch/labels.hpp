@@ -15,15 +15,9 @@ class LabelsHolder;
 /// TorchScript will always manipulate `LabelsHolder` through a `torch::intrusive_ptr`
 using Labels = torch::intrusive_ptr<LabelsHolder>;
 
-// for backward compatibility, to remove later
-using TorchLabels = Labels;
-
 class LabelsEntryHolder;
 /// TorchScript will always manipulate `LabelsEntryHolder` through a `torch::intrusive_ptr`
 using LabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
-
-// for backward compatibility, to remove later
-using TorchLabelsEntry = LabelsEntry;
 
 namespace details {
     /// Transform a torch::IValue containing either a single string, a list of
@@ -50,6 +44,17 @@ public:
     /// The names should be either a single string or a list/tuple of strings;
     /// and the values should be a 2D tensor of integers.
     LabelsHolder(torch::IValue names, torch::Tensor values);
+
+    /// Construct `LabelsHolder` from a set of names and the corresponding
+    /// values
+    ///
+    /// The names should be either a single string or a list/tuple of strings;
+    /// and the values should be a 2D tensor of integers.
+    ///
+    /// This constructor does not check that the labels entries are unique,
+    /// this must be validated by the caller. Calling this constructor with
+    /// non-unique  entries is invalid and can lead to crashes or infinite loops.
+    LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique);
 
     /// Convenience constructor for building `LabelsHolder` in C++, similar to
     /// `metatensor::Labels`.
@@ -108,10 +113,10 @@ public:
     }
 
     /// Move the values for these Labels to the given `device`
-    Labels to(torch::IValue device) const;
+    Labels to(torch::IValue device, bool non_blocking = false) const;
 
     /// Move the values for these Labels to the given `device`
-    Labels to(torch::Device device) const;
+    Labels to(torch::Device device, bool non_blocking = false) const;
 
     /// Get the values associated with a single dimension (i.e. a single column
     /// of `values()`) in these labels.
@@ -184,6 +189,14 @@ public:
     /// positions of entries in the input to the position of entries in the
     /// output.
     std::tuple<Labels, torch::Tensor, torch::Tensor> intersection_and_mapping(const Labels& other) const;
+
+    /// Get the set difference of `this` and `other`
+    Labels set_difference(const Labels& other) const;
+
+    /// Get the set difference of `this` and `other`, as well as the mapping
+    /// from positions of entries in the `this` to the position of entries in
+    /// the output.
+    std::tuple<Labels, torch::Tensor> difference_and_mapping(const Labels& other) const;
 
     /// Select entries in these `Labels` that match the `selection`.
     ///

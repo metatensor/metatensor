@@ -6,7 +6,7 @@
 # separate libmetatensor package), the second one is used everywhere else (for
 # local development builds and for the PyPI distribution).
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 project(metatensor-python NONE)
 
 option(METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB "Force the usage of an external version of metatensor-core" OFF)
@@ -14,7 +14,7 @@ set(METATENSOR_CORE_SOURCE_DIR "" CACHE PATH "Path to the sources of metatensor-
 
 file(REMOVE ${CMAKE_INSTALL_PREFIX}/_external.py)
 
-set(REQUIRED_METATENSOR_VERSION "0.1.11")
+set(REQUIRED_METATENSOR_VERSION "0.1.19")
 if(${METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB})
     # when building a source checkout, update version to include git information
     # this will not apply when building a sdist

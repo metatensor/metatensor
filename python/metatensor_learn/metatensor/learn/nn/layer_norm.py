@@ -7,11 +7,10 @@ respectively.
 from typing import List, Optional
 
 import torch
-from torch.nn import Module, init
-from torch.nn.parameter import Parameter
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from ._utils import _check_module_map_parameter
 from .module_map import ModuleMap
 
@@ -32,7 +31,7 @@ class LayerNorm(Module):
     The extra parameter :param mean: controls whether or not the mean over these
     dimensions is subtracted from the input tensor in the transformation.
 
-    Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
     Each parameter is passed as a single value of its expected type, which is used
@@ -43,7 +42,7 @@ class LayerNorm(Module):
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
     :mean bool: whether or not to subtract the mean over all dimensions except the
@@ -126,7 +125,7 @@ class InvariantLayerNorm(Module):
     The extra parameter :param mean: controls whether or not the mean over these
     dimensions is subtracted from the input tensor in the transformation.
 
-    Refer to the :py:class`torch.nn.LayerNorm` documentation for a more detailed
+    Refer to the :py:class:`torch.nn.LayerNorm` documentation for a more detailed
     description of the other parameters.
 
     Each parameter is passed as a single value of its expected type, which is used
@@ -137,7 +136,7 @@ class InvariantLayerNorm(Module):
     :param in_features: list of int, the number of features in the input tensor for each
         block indexed by the keys in :param in_keys:. If passed as a single value, the
         same number of features is assumed for all blocks.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default (if none) the output properties are relabeled using
         Labels.range.
     :param invariant_keys: a :py:class:`Labels` object that is used to select the
@@ -277,11 +276,11 @@ class _LayerNorm(Module):
         self.elementwise_affine = elementwise_affine
         self.mean = mean
         if self.elementwise_affine:
-            self.weight = Parameter(
+            self.weight = torch.nn.Parameter(
                 torch.empty(in_features, device=device, dtype=dtype)
             )
             if bias:
-                self.bias = Parameter(
+                self.bias = torch.nn.Parameter(
                     torch.empty(in_features, device=device, dtype=dtype)
                 )
             else:
@@ -294,9 +293,9 @@ class _LayerNorm(Module):
 
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
-            init.ones_(self.weight)
+            torch.nn.init.ones_(self.weight)
             if self.bias is not None:
-                init.zeros_(self.bias)
+                torch.nn.init.zeros_(self.bias)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return _layer_norm(

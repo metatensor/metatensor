@@ -70,6 +70,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DCMAKE_BUILD_TYPE={METATENSOR_BUILD_TYPE}",
             f"-DCMAKE_INSTALL_PREFIX={cmake_install_prefix}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
@@ -321,9 +322,9 @@ if __name__ == "__main__":
         torch_version = f"== {torch_v_major}.{torch_v_minor}.*"
     except ImportError:
         # otherwise we are building a sdist
-        torch_version = ">= 1.12"
+        torch_version = ">= 2.1"
 
-    install_requires = [f"torch {torch_version}", "vesin"]
+    install_requires = [f"torch {torch_version}"]
 
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
@@ -333,7 +334,7 @@ if __name__ == "__main__":
         install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE_SRC}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core >=0.1.10,<0.2.0")
+        install_requires.append("metatensor-core >=0.1.18,<0.2")
 
     setup(
         version=create_version_number(METATENSOR_TORCH_VERSION),

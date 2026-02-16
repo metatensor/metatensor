@@ -1,8 +1,8 @@
-Contribution via pull requests are always welcome. Source code is available from
-`Github`_. Before submitting a pull request, please open an issue to discuss
+Contributions via pull requests are always welcome. Source code is available from
+`GitHub`_. Before submitting a pull request, please open an issue to discuss
 your changes. Use only the `main` branch as the target branch when submitting a pull request (PR).
 
-.. _`Github` : https://github.com/metatensor/metatensor
+.. _`GitHub` : https://github.com/metatensor/metatensor
 
 Interactions with the metatensor projects must follow our `code of conduct`_.
 
@@ -21,16 +21,16 @@ on metatensor:
   use a version provided by your operating system. We need at least Rust version
   1.74 to build metatensor.
 - **Python**: you can install ``Python`` and ``pip`` from your operating system.
-  We require a Python version of at least 3.9.
-- **tox**: a Python test runner, cf https://tox.readthedocs.io/en/latest/. You
+  We require a Python version of at least 3.10.
+- **tox**: a Python test runner, see https://tox.readthedocs.io/en/latest/. You
   can install tox with ``pip install tox``.
 
 Additionally, you will need to install the following software, but you should
 not have to interact with them directly:
 
-- **cmake**: we need a cmake version of at least 3.10.
-- **a C++ compiler** we need a compiler supporting C++11. GCC >= 5, clang >= 3.7
-  and MSVC >= 15 should all work, although MSVC is not yet tested continuously.
+- **CMake**: we need a CMake version of at least 3.22.
+- **a C++ compiler** we need a compiler supporting C++17. GCC >= 7, clang >= 5
+  and MSVC >= 19 should all work.
 
 .. _rustup: https://rustup.rs
 .. _tox: https://tox.readthedocs.io/en/latest
@@ -92,6 +92,8 @@ changes:
 
 .. _create a fork: https://docs.github.com/en/github/getting-started-with-github/fork-a-repo
 
+ .. _running-tests:
+
 Running tests
 -------------
 
@@ -103,7 +105,7 @@ with:
     cd <path/to/metatensor/repo>
     cargo test  # or cargo test --release to run tests in release mode
 
-These are exactly the same tests that will be performed online in our Github CI
+These are exactly the same tests that will be performed online in our GitHub CI
 workflows. You can also run only a subset of tests with one of these commands:
 
 - ``cargo test`` runs everything
@@ -137,7 +139,7 @@ should run:
 - ``--release`` to run tests in release mode (default is to run tests in debug mode)
 - ``-- <filter>`` to only run tests whose name contains filter, for example ``cargo test -- keys_to_properties``
 
-Also, you can run individual python tests using `tox`_ if you wish to run a
+Also, you can run individual Python tests using `tox`_ if you wish to run a
 subset of Python tests, for example:
 
 .. code-block:: bash
@@ -160,18 +162,29 @@ You can run only a subset of the tests with ``tox -e tests -- <test/file.py>``,
 replacing ``<test/file.py>`` with the path to the files you want to test, e.g.
 ``tox -e tests -- python/tests/operations/abs.py``.
 
+To get the release build for ``tox`` runs, set the environment variable.
+
+.. code-block:: bash
+
+    METATENSOR_BUILD_TYPE="release" tox -e core-tests
+
+This corresponds to running ``cargo test --package-metatensor-python --release``
+but on the subset of interest.
+
 Controlling tests behavior with environment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are a handful of environment variables that you can set to control the
 behavior of tests:
 
-- ``METATENSOR_DISABLE_VALGRIND=1``` will disable the use of `valgrind`_ for the
+- ``METATENSOR_BUILD_TYPE=release`` will use the ``release`` target for the
+  rust libraries, and is useful for ``tox``;
+- ``METATENSOR_DISABLE_VALGRIND=1`` will disable the use of `valgrind`_ for the
   C++ tests. Valgrind is a tool that check for memory errors in native code, but
   it makes the tests run quite a bit slower;
 - ``METATENSOR_TESTS_TORCH_VERSION`` allow you to run the tests against a
   specific PyTorch version instead of the latest one. For example, setting it to
-  ``METATENSOR_TESTS_TORCH_VERSION=1.13.*`` will run the tests against PyTorch
+  ``METATENSOR_TESTS_TORCH_VERSION=1.13`` will run the tests against PyTorch
   1.13;
 - ``PIP_EXTRA_INDEX_URL`` can be used to pull PyTorch (or other dependencies)
   from a different index. This can be useful on Linux if you have issues with
@@ -184,12 +197,20 @@ behavior of tests:
 .. _`cargo` : https://doc.rust-lang.org/cargo/
 .. _valgrind: https://valgrind.org/
 
-Inspecting Python code coverage
--------------------------------
 
-The code coverage is reported at `codecov`_. You can also inspect the coverage
-locally. To get the full coverage first combine all reports and open produced
-html file in a browser
+Code coverage
+~~~~~~~~~~~~~
+
+The code coverage is reported at `codecov`_. Locally, coverage reports can be
+generated for each programming language.
+
+.. _codecov: https://codecov.io/gh/metatensor/metatensor
+
+Python coverage
+^^^^^^^^^^^^^^^
+
+Python coverage is written out as several individual files. It is easier to
+combine all reports and open the generated ``html`` file in a browser
 
 .. code-block:: bash
 
@@ -198,7 +219,38 @@ html file in a browser
     coverage html
     firefox htmlcov/index.html
 
-.. _codecov: https://codecov.io/gh/metatensor/metatensor
+
+Rust coverage
+^^^^^^^^^^^^^
+
+Rust coverage is instrumeted through the `cargo-llvm-cov`_ plugin
+
+.. code-block:: bash
+
+    rustup component add llvm-tools
+    cargo +stable install cargo-llvm-cov --locked
+
+It is desirable to generate coverage taking into account the coverage for the bindings to C/C++ and Python so:
+
+.. code-block:: bash
+
+    CC=$(which clang) CXX=$(which clang++) \
+    LLVM_COV=$(which llvm-cov) LLVM_PROFDATA=$(which llvm-profdata) \
+    LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" \
+    CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' \
+    CFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    CXXFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    cargo llvm-cov --include-ffi --all-features \
+    --workspace --html
+
+Finally a local ``http`` server can be used to view the generated ``html``
+
+
+.. code-block:: bash
+
+    python -m http.server -d target/llvm-cov/html
+
+.. _cargo-llvm-cov: https://github.com/taiki-e/cargo-llvm-cov
 
 Contributing to the documentation
 ---------------------------------
@@ -315,6 +367,15 @@ Guidelines for writing Python doc strings
 .. _`sphinx format` : https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 .. _`raw string` : https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
 .. _`doctest` : https://docs.python.org/3/library/doctest.html
+
+Guidelines for writing Rust additions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Although the library itself forms best-practice guides for new additions, some
+other unstructured notes might be of use:
+
+- Do not use ``rustfmt`` for any file other than the auto-generated
+  ``c_api.rs``.
 
 Useful developer scripts
 ------------------------

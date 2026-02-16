@@ -100,8 +100,8 @@ def test_gradient_errors(block):
     )
 
     message = (
-        "invalid parameter: invalid value for the 'sample' in gradient samples: "
-        "we got -3, but the values contain 3 samples"
+        "invalid parameter: invalid value for the 'sample' dimension "
+        "in gradient samples: all values should be positive, but we got -3"
     )
     with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
@@ -115,8 +115,8 @@ def test_gradient_errors(block):
     )
 
     message = (
-        "invalid parameter: invalid value for the 'sample' in gradient samples: "
-        "we got 42, but the values contain 3 samples"
+        "invalid parameter: invalid value for the 'sample' dimension "
+        "in gradient samples: we got 42, but the values contain 3 samples"
     )
     with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
@@ -417,13 +417,15 @@ def test_to():
     assert block.dtype == np.float64
     assert block.gradient("g").dtype == np.float64
 
-    converted = block.to(dtype=np.float32)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = block.to(dtype=np.float32, non_blocking=True)
     assert converted.dtype == np.float32
     assert converted.gradient("g").dtype == np.float32
 
     # check that the code handles both positional and keyword arguments
     device = "cpu"
-    moved = block.to(device, dtype=np.float32)
+    moved = block.to(device, dtype=np.float32, non_blocking=True)
     moved = block.to(np.float32, device)
     moved = block.to(np.float32, device=device)
     moved = block.to(device, np.float32)
@@ -464,7 +466,7 @@ def test_to():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                moved = block.to(device=device)
+                moved = block.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type
             assert moved.gradient("g").device.type == torch.device(device).type

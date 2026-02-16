@@ -1,6 +1,6 @@
 [package]
 name = "metatensor"
-version = "0.2.0"
+version = "0.2.3"
 edition = "2021"
 rust-version = "1.74"
 
@@ -14,15 +14,30 @@ license = "BSD-3-Clause"
 bench = false
 
 [dependencies]
-metatensor-sys = {version = "0.1.10", path="../metatensor-sys"}
+metatensor-sys = {version = "0.1.18", path="../metatensor-sys"}
 
 once_cell = "1"
 smallvec = {version = "1", features = ["union"]}
 ndarray = {version = "0.16"}
 rayon = {version = "1", optional = true}
+# We need to pin this for compatibility with rustc 1.74
+rayon-core = {version = "=1.12", optional = true}
+
+criterion = {version = "0.7.0", default-features = false, optional = true}
 
 
 [features]
 default = []
 # use the static build of metatensor-core instead of the shared one
 static = ["metatensor-sys/static"]
+# feature for the benchmarks
+bench = ["dep:criterion"]
+
+[dev-dependencies]
+# pin for compatibility with rustc 1.74
+tempfile = "=3.24.0"
+
+
+[[bench]]
+name = "labels"
+harness = false

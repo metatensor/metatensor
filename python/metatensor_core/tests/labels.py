@@ -126,6 +126,9 @@ def test_dimensions_manipulation():
     with pytest.raises(ValueError, match="`values` must be a 1D array"):
         label.insert(0, name="bar", values=np.array([[10]]))
 
+    with pytest.raises(IndexError, match="index 42 is out of bounds"):
+        label.insert(42, name="bar", values=np.array([42]))
+
     # Labels.append
     new_label = label.append(name="bar", values=np.array([10]))
     assert new_label.names == ["foo", "bar"]
@@ -404,6 +407,20 @@ def test_intersection():
     assert np.all(second_mapping == np.array([-1, 0, -1]))
 
 
+def test_difference():
+    first = Labels(["aa", "bb"], np.array([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], np.array([[2, 3], [1, 2], [4, 5]]))
+
+    intersection = first.difference(second)
+    assert intersection.names == ["aa", "bb"]
+    assert np.all(intersection.values == np.array([[0, 1]]))
+
+    intersection_2, mapping = first.difference_and_mapping(second)
+
+    assert intersection == intersection_2
+    assert np.all(mapping == np.array([0, -1]))
+
+
 def test_values_reference():
     # see https://github.com/metatensor/metatensor/issues/293
     data = [0, 1, 2, 3, 4, 5]
@@ -437,3 +454,12 @@ def test_select():
     labels = Labels(["aa", "bb"], np.empty((0, 2), dtype=np.int32))
     selection = Labels(["aa"], np.array([[1], [2], [5]]))
     assert len(labels.select(selection)) == 0
+
+
+def test_constructor_assume_unique():
+    values = np.array([[1, 2], [3, 4], [3, 2]])
+
+    safe_labels = Labels(names=["a", "b"], values=values)
+    labels = Labels(names=["a", "b"], values=values, assume_unique=True)
+    assert labels == safe_labels
+    np.testing.assert_equal(labels.values, values)

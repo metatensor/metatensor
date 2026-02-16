@@ -15,6 +15,27 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.3) - 2025-12-05
+
+### Added
+
+- It is now possible to store and retrieve global metatadata about a TensorMap,
+  in the form of string key/value pairs. You can use `TensorMap::set_info`,
+  `TensorMap::get_info` and `TensorMap::info` to manipulate this information.
+
+## [Version 0.2.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.2) - 2025-07-29
+
+### Added
+
+- `LabelsBuilder::finish_assume_unique` which allows bypassing a check when the
+  user can ensure beforehand that all entries will be unique.
+
+## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.1) - 2025-04-10
+
+### Added
+
+- `Labels::difference` for finding the set difference between two `Labels`
+
 ## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.0) - 2024-09-24
 
 ### Changed

@@ -3,14 +3,13 @@ name = "metatensor"
 dynamic = ["version", "authors", "dependencies", "optional-dependencies"]
 
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"
 
 keywords = ["machine learning", "molecular modeling"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -34,7 +33,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 
 [build-system]
 requires = [
-    "setuptools >=68",
+    "setuptools >=77",
     "packaging >=23",
 ]
 build-backend = "setuptools.build_meta"
@@ -48,10 +47,10 @@ packages = []
 [tool.coverage.paths]
 # path remapping for coverage. `coverage` will map path matching the second
 # string to the first string.
-core = ["python/metatensor_core/", ".tox/*/lib/python*/site-packages/"]
-torch = ["python/metatensor_torch/", ".tox/*/lib/python*/site-packages/"]
-operations = ["python/metatensor_operations/", ".tox/*/lib/python*/site-packages/"]
-learn = ["python/metatensor_learn/", ".tox/*/lib/python*/site-packages/"]
+core = ["python/metatensor_core/", ".tox/*/*/lib/python*/site-packages/"]
+torch = ["python/metatensor_torch/", ".tox/*/.venv/lib/python*/site-packages/"]
+operations = ["python/metatensor_operations/", ".tox/*/.venv/lib/python*/site-packages/"]
+learn = ["python/metatensor_learn/", ".tox/*/.venv/lib/python*/site-packages/"]
 
 [tool.coverage.report]
 show_missing = true
@@ -60,12 +59,13 @@ omit = ["documentation.py"]
 ### ======================================================================== ###
 
 [tool.pytest.ini_options]
-# ignore" a bunch of internal warnings with Python 3.12 and PyTorch
 filterwarnings = [
     "error",
-    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    # metatensor.torch.atomistic deprecation
+    "ignore:`metatensor.torch.atomistic` now lives in `metatomic.torch`, please update your code",
+    "ignore:`metatensor.torch.atomistic.io` now lives in `metatomic.torch.io`, please update your code",
+    "ignore:`metatensor.torch.atomistic.ase_calculator` now lives in `metatomic.torch.ase_calculator`, please update your code",
+    "ignore:`torch\\.jit.*` is deprecated.*:DeprecationWarning",
 ]
 
 ### ======================================================================== ###

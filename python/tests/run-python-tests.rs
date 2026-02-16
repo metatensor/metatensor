@@ -11,8 +11,8 @@ fn run_python_tests() {
     let mut tox = Command::new(tox);
     tox.arg("--");
     if cfg!(debug_assertions) {
-        // assume that debug assertion means that we are building the code in
-        // debug mode, even if optimizations could be enabled
+        // assume that debug assertions means that we are building the code
+        // in debug mode, even if optimizations could be enabled
         tox.env("METATENSOR_BUILD_TYPE", "debug");
     } else {
         tox.env("METATENSOR_BUILD_TYPE", "release");

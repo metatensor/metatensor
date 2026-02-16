@@ -27,14 +27,14 @@ elif not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
     METATENSOR_CORE_DEP = f"metatensor-core @ file://{METATENSOR_CORE}"
 else:
     # we are building from a sdist
-    METATENSOR_CORE_DEP = "metatensor-core >=0.1.0,<0.2.0"
+    METATENSOR_CORE_DEP = "metatensor-core >=0.1.18,<0.2.0"
 
 
 FORCED_TORCH_VERSION = os.environ.get("METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION")
 if FORCED_TORCH_VERSION is not None:
     TORCH_DEP = f"torch =={FORCED_TORCH_VERSION}"
 else:
-    TORCH_DEP = "torch >=1.12"
+    TORCH_DEP = "torch >=2.1"
 
 # ==================================================================================== #
 #                   Build backend functions definition                                 #
@@ -51,3 +51,7 @@ build_sdist = build_meta.build_sdist
 def get_requires_for_build_wheel(config_settings=None):
     defaults = build_meta.get_requires_for_build_wheel(config_settings)
     return defaults + [TORCH_DEP, METATENSOR_CORE_DEP]
+
+
+def build_editable(wheel_directory, config_settings=None, metadata_directory=None):
+    raise RuntimeError("metatensor-torch does not support editable installation yet")

@@ -5,12 +5,13 @@ Module for testing the custom collate functions in :py:module:`collate`.
 import numpy as np
 import pytest
 
+import metatensor as mts
+from metatensor import Labels, TensorBlock, TensorMap
+
 
 torch = pytest.importorskip("torch")
 
-import metatensor  # noqa: E402
 import metatensor.torch  # noqa: E402
-from metatensor import Labels, TensorBlock, TensorMap  # noqa: E402
 from metatensor.learn.data import (  # noqa: E402
     DataLoader,
     Dataset,
@@ -121,13 +122,13 @@ def test_group_and_join_tensormaps():
         blocks=[
             TensorBlock(
                 values=np.ones((2, 1)),
-                samples=Labels(["sample_index", "tensor"], np.array([[0, 0], [2, 1]])),
+                samples=Labels(["sample_index"], np.array([[0], [2]])),
                 components=[],
                 properties=Labels(["p"], np.array([[0]])),
             )
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_torch_tensormaps():
@@ -193,15 +194,13 @@ def test_group_and_join_torch_tensormaps():
         blocks=[
             TensorBlock(
                 values=torch.ones((2, 1)),
-                samples=Labels(
-                    ["sample_index", "tensor"], torch.tensor([[0, 0], [2, 1]])
-                ),
+                samples=Labels(["sample_index"], torch.tensor([[0], [2]])),
                 components=[],
                 properties=Labels(["p"], torch.tensor([[0]])),
             )
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_tensormaps_different_keys_error():
@@ -249,7 +248,7 @@ def test_group_and_join_tensormaps_different_keys_error():
     )
     batch_idxs = [0, 2]  # i.e. batch size 2
     message = "inputs to 'join' should have the same keys"
-    with pytest.raises(metatensor.NotEqualError, match=message):
+    with pytest.raises(mts.NotEqualError, match=message):
         group_and_join([dset[i] for i in batch_idxs])
 
 
@@ -299,7 +298,7 @@ def test_group_and_join_tensormaps_different_keys_union():
     batch_idxs = [0, 2]  # i.e. batch size 2
     batch = group_and_join(
         [dset[i] for i in batch_idxs],
-        join_kwargs={"different_keys": "union", "remove_tensor_name": True},
+        join_kwargs={"different_keys": "union"},
     )
     assert batch.sample_indices == (0, 2)
 
@@ -321,7 +320,7 @@ def test_group_and_join_tensormaps_different_keys_union():
             ),
         ],
     )
-    assert metatensor.equal(batch.y, target_tensor)
+    assert mts.equal(batch.y, target_tensor)
 
 
 def test_group_and_join_script_object():

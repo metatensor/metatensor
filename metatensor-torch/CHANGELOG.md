@@ -8,14 +8,145 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 <!-- Possible sections for each package:
 
-#### Added
+### Added
 
-#### Fixed
+### Fixed
 
-#### Changed
+### Changed
 
-#### Removed
+### Removed
 -->
+
+
+<!-- Possible sections for each package:
+
+### Added
+
+### Fixed
+
+### Changed
+
+### Removed
+-->
+
+## [Version 0.8.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.4) - 2026-01-26
+### Added
+- Added support for PyTorch v2.10
+
+## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.3) - 2025-12-05
+
+### Added
+
+- It is now possible to store and retrieve global metatadata about a TensorMap,
+  in the form of string key/value pairs. You can use `TensorMap::set_info`,
+  `TensorMap::get_info` and `TensorMap::info` to manipulate this information.
+
+## [Version 0.8.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.2) - 2025-11-05
+
+### Changed
+
+- We now requires at least cmake v3.22 to compile metatensor-torch
+- We now require Python >= 3.10
+
+### Added
+
+- Added support for PyTorch v2.9
+
+## [Version 0.8.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.1) - 2025-09-24
+
+### Fixed
+
+- The custom `metatensor_torch::Module` now properly handles nested containers
+  (list, dict, tuples) with empty containers inside (#978)
+
+## [Version 0.8.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.0) - 2025-08-22
+
+### Removed
+
+- The `metatensor.torch.atomistic` python module now lives in the
+  `metatomic-torch` package (https://github.com/metatensor/metatomic); as well
+  as the corresponding C++ code (`#include <metatensor/torch/atomistic.hpp>`).
+
+### Added
+
+- Added support for PyTorch v2.8
+- A custom C++ class `metatensor_torch::Module` that should be used instead of
+  `torch::jit::Module` when the modules contains metatensor data (Labels,
+  TensorBlock, TensorMap) as attributes. This class will properly handle moving
+  this data to the correct dtype and device when calling `module.to()`. The
+  corresponding Python class is defined in `metatensor-learn`.
+- There is now an `assume_unique` flag in the `Labels` constructor. This allows
+  bypassing a check when the user can ensure beforehand that all entries will be
+  unique.
+
+### Changed
+
+- `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
+  argument, with the same meaning as in `torch.Tensor.to`.
+- `metatensor.torch.save`, `metatensor.torch.load`,
+  `metatensor.torch.load_block` and `metatensor.torch.load_labels` can now take
+  `pathlib.Path` objects as inputs, as well as pre-opened files. When using these
+  functions from TorchScript, only `str` arguments are supported.
+
+## [Version 0.7.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.6) - 2025-04-25
+
+### Added
+
+- Added support for PyTorch v2.7
+
+### Changed
+
+- The lowest supported version of PyTorch was increased from v1.12 to v2.1
+
+## [Version 0.7.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.5) - 2025-04-10
+
+### Added
+
+- `Labels.difference` and `Labels.difference_and_mapping` for finding the set
+  difference between two `Labels`
+
+- `energy_uncertainty`, `non_conservative_forces` and `non_conservative_stress` are now
+  possible outputs for atomistic models
+
+- The ASE calculator can now use `non_conservative_forces` and `non_conservative_stress`
+  outputs, which are selected with the `non_conservative` flag
+
+## [Version 0.7.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.4) - 2025-03-28
+
+### Added
+
+- Added `MetatensorCalculator.compute_energy()` to provide batched calculation of
+  energies, forces and stresses (#880).
+
+### Changed
+
+- `MetatensorCalculator.run_model()` now supports batching across multiple
+  `ase.Atoms` objects (#879).
+
+## [Version 0.7.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.3) - 2025-02-19
+
+### Changed
+
+- The `MetatensorCalculator` for ASE now only computes the stress if the system is
+  periodic in all directions
+
+
+## [Version 0.7.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.2) - 2025-02-18
+
+### Fixed
+
+- Fixed a bug with the custom TorchScript extensions when using `featomic-torch`
+
+## [Version 0.7.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.1) - 2025-02-17
+
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
+
+### Added
+
+- Support for Python 3.13 and PyTorch 2.6
+
 
 ## [Version 0.7.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.7.0) - 2025-01-22
 
@@ -275,9 +406,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   - `MetatensorAtomisticModel` as a way to wrap user-defined `torch.nn.Module`
     and export them in a unified way, handling unit conversions and metadata
     checks.
-- [ASE](https://wiki.fysik.dtu.dk/ase/) calculator based on
-  `MetatensorAtomisticModel` in `metatensor.torch.atomistic.ase_calculator`.
-  This allow using arbitrary user-defined models to run simulations with ASE.
+- ASE calculator based on `MetatensorAtomisticModel` in
+  `metatensor.torch.atomistic.ase_calculator`. This allow using arbitrary
+  user-defined models to run simulations with ASE.
 
 - `TensorBlock.to`, `TensorMap.to` and `System.to` to change the device or dtype
   of torch Tensor stored by metatensor

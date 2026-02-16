@@ -16,9 +16,6 @@ class TensorBlockHolder;
 /// TorchScript will always manipulate `TensorBlockHolder` through a `torch::intrusive_ptr`
 using TensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
 
-// for backward compatibility, to remove later
-using TorchTensorBlock = TensorBlock;
-
 /// Wrapper around `metatensor::TensorBlock` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
@@ -140,7 +137,8 @@ public:
     /// Move all arrays in this block to the given `dtype` and `device`.
     TensorBlock to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
-        torch::optional<torch::Device> device = torch::nullopt
+        torch::optional<torch::Device> device = torch::nullopt,
+        bool non_blocking = false
     ) const;
 
     /// Wrapper of the `to` function to enable using it with positional
@@ -156,7 +154,8 @@ public:
         torch::IValue positional_2,
         torch::optional<torch::Dtype> dtype,
         torch::optional<torch::Device> device,
-        torch::optional<std::string> arrays
+        torch::optional<std::string> arrays,
+        bool non_blocking = false
     ) const;
 
     /// Implementation of __repr__/__str__ for Python
@@ -180,9 +179,6 @@ public:
     /// Serialize and save a TensorBlock to an in-memory buffer (represented as
     /// a `torch::Tensor` of bytes)
     torch::Tensor save_buffer() const;
-
-    // Setter that throw and error
-    void set_values(const torch::Tensor& new_values);
 
 private:
     /// Create a TensorBlockHolder containing gradients with respect to

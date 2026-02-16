@@ -26,7 +26,7 @@ mod utils;
 /// `mts_last_error`. To print the error message and Rust backtrace anyway,
 /// users can set the `RUST_BACKTRACE` environment variable to 1.
 #[no_mangle]
-pub extern fn mts_disable_panic_printing() {
+pub extern "C" fn mts_disable_panic_printing() {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         match std::env::var("RUST_BACKTRACE") {
@@ -50,6 +50,6 @@ static VERSION: Lazy<CString> = Lazy::new(|| {
 ///
 /// This version follows the `<major>.<minor>.<patch>[-<dev>]` format.
 #[no_mangle]
-pub extern fn mts_version() -> *const c_char {
+pub extern "C" fn mts_version() -> *const c_char {
     return VERSION.as_ptr();
 }

@@ -7,7 +7,7 @@
 #include "metatensor/torch/block.hpp"
 #include "metatensor/torch/misc.hpp"
 
-#include "internal/utils.hpp"
+#include "./utils.hpp"
 
 using namespace metatensor_torch;
 
@@ -78,14 +78,15 @@ TensorBlock TensorBlockHolder::copy() const {
 
 TensorBlock TensorBlockHolder::to(
     torch::optional<torch::Dtype> dtype,
-    torch::optional<torch::Device> device
+    torch::optional<torch::Device> device,
+    bool non_blocking
 ) const {
     auto values = this->values().to(
         dtype,
         /*layout*/ torch::nullopt,
         device,
         /*pin_memory*/ torch::nullopt,
-        /*non_blocking*/ false,
+        /*non_blocking*/ non_blocking,
         /*copy*/ false,
         /*memory_format*/ torch::MemoryFormat::Preserve
     );
@@ -114,7 +115,8 @@ TensorBlock TensorBlockHolder::to_positional(
     torch::IValue positional_2,
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device,
-    torch::optional<std::string> arrays
+    torch::optional<std::string> arrays,
+    bool non_blocking
 ) const {
     if (arrays.value_or("torch") != "torch") {
         C10_THROW_ERROR(ValueError,
@@ -130,7 +132,7 @@ TensorBlock TensorBlockHolder::to_positional(
         "`TensorBlock.to`"
     );
 
-    return this->to(parsed_dtype, parsed_device);
+    return this->to(parsed_dtype, parsed_device, non_blocking);
 }
 
 torch::Tensor TensorBlockHolder::values() const {
@@ -156,13 +158,6 @@ torch::Tensor TensorBlockHolder::values() const {
     }
 
     return wrapper->tensor();
-}
-
-void TensorBlockHolder::set_values(const torch::Tensor& new_values) {
-    throw std::runtime_error(
-        "Direct assignment to `values` is not possible. "
-        "Please use block.values[:] = new_values instead."
-    );
 }
 
 Labels TensorBlockHolder::labels(uintptr_t axis) const {

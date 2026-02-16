@@ -17,6 +17,53 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.4.0) - 2025-10-29
+
+### Added
+
+- `join_blocks`, to join multiple blocks along samples or properties, with
+  similar semantics to `join`
+- `drop_empty_blocks` to remove all empty blocks from a TensorMap
+
+### Changed
+
+- We now require Python >= 3.10
+- `join` was rewritten and made faster. As part of this, we had to change the
+  API: `sort_samples` is not an option anymore, and `remove_tensor_name: bool`
+  was replaced by `add_dimension: Optional[str]=None`. You can set
+  `add_dimension="tensor"` to get the old behavior of
+  `remove_tensor_name=False`. The new default behavior is to not add extra
+  dimensions, and fail if the resulting samples or properties are not unique.
+
+
+## [Version 0.3.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.4) - 2025-07-28
+
+### Fixed
+
+- `insert_dimension` no longer fails when called on empty TensorMap (#924)
+
+### Added
+
+- `equal_metadata` now takes a `check_gradients=True/False` flag to enable or
+  disable metadata checks on the gradients (#948)
+
+## [Version 0.3.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.3) - 2025-04-25
+
+### Fixed
+
+- Changed the implementation of `std_over_samples` and `var_over_samples` to
+  reduce numerical noise issues when working with float32 (#908)
+- Make sure the filtered `TensorMap` has keys in the same order as the filter in
+  `filter_blocks` (#885)
+- Make the code compatible with metatensor-torch v0.7.6
+
+## [Version 0.3.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.2) - 2025-02-18
+
+### Fixed
+
+- `mean_over_samples` was not computing the correct mean
+
+
 ## [Version 0.3.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.3.1) - 2025-02-04
 
 ### Added

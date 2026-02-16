@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 if (POLICY CMP0135)
     # Use download time as timestamp when extracting files from archives
@@ -47,6 +47,10 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 endif()
 
 function(check_compatible_versions _actual_ _requested_)
+    if(${_actual_} VERSION_LESS ${_requested_})
+        message(FATAL_ERROR "Incompatible versions: we need ${_requested_}, but we got ${_actual_}")
+    endif()
+
     if(${_actual_} MATCHES "^([0-9]+)\\.([0-9]+)")
         set(_actual_major_ "${CMAKE_MATCH_1}")
         set(_actual_minor_ "${CMAKE_MATCH_2}")
@@ -72,7 +76,7 @@ function(check_compatible_versions _actual_ _requested_)
 endfunction()
 
 
-set(REQUIRED_METATENSOR_VERSION "0.1.11")
+set(REQUIRED_METATENSOR_VERSION "0.1.19")
 if (NOT "$ENV{METATENSOR_NO_LOCAL_DEPS}" STREQUAL "1")
     # If building a dev version, we also need to update the
     # REQUIRED_METATENSOR_VERSION in the same way we update the metatensor-torch
@@ -81,7 +85,7 @@ if (NOT "$ENV{METATENSOR_NO_LOCAL_DEPS}" STREQUAL "1")
 else()
     set(METATENSOR_CORE_FULL_VERSION ${REQUIRED_METATENSOR_VERSION})
 endif()
-string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
+string(REGEX REPLACE "([0-9]*)\\.([0-9]*)\\.([0-9]*).*" "\\1.\\2.\\3" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
 
 # Either metatensor is built as part of the same CMake project, or we try to
 # find the corresponding CMake package
@@ -96,33 +100,30 @@ endif()
 # fixed version in `cmake/FindCUDNN.cmake`
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
-find_package(Torch 1.12 REQUIRED)
+find_package(Torch 2.1 REQUIRED)
 
 set(METATENSOR_TORCH_HEADERS
     "include/metatensor/torch/array.hpp"
     "include/metatensor/torch/labels.hpp"
     "include/metatensor/torch/block.hpp"
     "include/metatensor/torch/tensor.hpp"
-    "include/metatensor/torch/atomistic/system.hpp"
-    "include/metatensor/torch/atomistic/model.hpp"
+    "include/metatensor/torch/module.hpp"
     "include/metatensor/torch.hpp"
 )
 
-set(METATENSOR_TORCH_SOURCE
+set(METATENSOR_TORCH_SOURCES
     "src/array.cpp"
     "src/labels.cpp"
     "src/block.cpp"
     "src/tensor.cpp"
     "src/misc.cpp"
-    "src/atomistic/system.cpp"
-    "src/atomistic/model.cpp"
-    "src/internal/shared_libraries.cpp"
+    "src/module.cpp"
     "src/register.cpp"
 )
 
 add_library(metatensor_torch SHARED
     ${METATENSOR_TORCH_HEADERS}
-    ${METATENSOR_TORCH_SOURCE}
+    ${METATENSOR_TORCH_SOURCES}
 )
 
 set_target_properties(metatensor_torch PROPERTIES
@@ -154,7 +155,8 @@ target_compile_definitions(metatensor_torch PRIVATE metatensor_torch_EXPORTS)
 
 
 set(_path_ "${CMAKE_CURRENT_BINARY_DIR}/generated-version.h")
-file(WRITE ${_path_} "/** Full version of metatensor-torch as a string */\n")
+file(WRITE ${_path_} "#pragma once\n\n")
+file(APPEND ${_path_} "/** Full version of metatensor-torch as a string */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION \"${METATENSOR_TORCH_FULL_VERSION}\"\n\n")
 file(APPEND ${_path_} "/** Major version number of metatensor-torch as an integer */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}\n\n")
@@ -163,61 +165,8 @@ file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_MINOR ${PROJECT_VERSION_
 file(APPEND ${_path_} "/** Patch version number of metatensor-torch as an integer */\n")
 file(APPEND ${_path_} "#define METATENSOR_TORCH_VERSION_PATCH ${PROJECT_VERSION_PATCH}\n")
 
-function(copy_if_different _src_ _dst_)
-    # file(COPY_FILE ...) was added in cmake 3.21, this emulates the same
-    # behavior on older versions
-    get_filename_component(_dst_dir_ ${_dst_} DIRECTORY)
-    get_filename_component(_src_name_ ${_src_} NAME)
-
-    if (EXISTS ${_dst_})
-        file(SHA1 ${_src_} new_hash)
-        file(SHA1 ${_dst_} old_hash)
-
-        if ("${new_hash}" STREQUAL "${old_hash}")
-            set(_do_copy_ FALSE)
-        else()
-            set(_do_copy_ TRUE)
-        endif()
-    else()
-        # The destination does not exist
-        set(_do_copy_ TRUE)
-    endif()
-
-    if (${_do_copy_})
-        file(COPY ${_src_} DESTINATION ${_dst_dir_})
-        file(RENAME ${_dst_dir_}/${_src_name_} ${_dst_})
-    endif()
-endfunction()
-
 set(_destination_ "${CMAKE_CURRENT_BINARY_DIR}/include/metatensor/torch/version.h")
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
-    file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
-else()
-    copy_if_different(${_path_} ${_destination_})
-endif()
-
-#------------------------------------------------------------------------------#
-# External dependencies
-#------------------------------------------------------------------------------#
-include(FetchContent)
-
-# JSON library from https://github.com/nlohmann/json
-FetchContent_Declare(nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
-)
-if (CMAKE_VERSION VERSION_GREATER 3.18)
-    FetchContent_MakeAvailable(nlohmann_json)
-else()
-    if (NOT nlohmann_json_POPULATED)
-        FetchContent_Populate(nlohmann_json)
-    endif()
-
-    add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR})
-endif()
-
-target_link_libraries(metatensor_torch PRIVATE nlohmann_json::nlohmann_json)
-
+file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
 
 if (METATENSOR_TORCH_TESTS)
     enable_testing()

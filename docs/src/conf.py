@@ -130,6 +130,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_sitemap",
     # third party extensions
     "sphinxcontrib.details.directive",
     "sphinx_gallery.gen_gallery",
@@ -174,11 +175,15 @@ breathe_domain_by_extension = {
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
-    "featomic": ("https://metatensor.github.io/featomic/latest/", None),
-    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
+    "featomic": ("https://docs.metatensor.org/featomic/latest/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
+
+# sitemap/SEO settings
+html_baseurl = "https://docs.metatensor.org/latest/" # prefix for the sitemap
+sitemap_url_scheme = "{link}"    # avoids language settings
+html_extra_path = ["robots.txt"] # extra files to move
 
 # -- Options for HTML output -------------------------------------------------
 

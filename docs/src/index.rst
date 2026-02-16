@@ -32,22 +32,30 @@ store gradients, keeping them together with the associated values.
         +++
         |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
 
-    .. grid-item-card:: 💡 Our goals
+    .. grid-item-card:: 📜 Our goals
         :link: goals
         :link-type: ref
         :columns: 12 12 6 6
         :margin: 0 3 0 0
 
-        Learn about the core goals of metatensor, and what the library is about:
+        - be an exchange format for structured atomistic data;
+        - provide efficient storage and manipulation of sparse arrays;
+        - offer tools to build custom machine learning models.
 
-        - an exchange format for ML data;
-        - a tool to develop new ML models;
-        - an interface for atomistic simulations.
+    .. grid-item-card:: 💡 Tutorials
+        :link: core-tutorials
+        :link-type: ref
+        :columns: 12 12 6 6
+        :margin: 0 3 0 0
+
+        Follow step-by-step tutorials to learn how to use metatensor core
+        classes to store your own data, including complex sparsity patterns and
+        gradients handling.
 
     .. grid-item-card:: 🛠️ Core classes
         :link: core-classes-overview
         :link-type: ref
-        :columns: 12 12 4 4
+        :columns: 12 12 6 6
         :margin: 0 3 0 0
 
         .. py:currentmodule:: metatensor
@@ -66,7 +74,7 @@ store gradients, keeping them together with the associated values.
         :columns: 12 12 4 4
         :margin: 0 3 0 0
 
-        Use `operations` to manipulate the core types of metatensor and write
+        Use ``operations`` to manipulate the core types of metatensor and write
         new algorithms operating on metatensor's sparse data.
 
         +++
@@ -89,27 +97,14 @@ store gradients, keeping them together with the associated values.
     .. grid-item-card:: 🧑‍💻 Learning utilities
         :link: metatensor-learn
         :link-type: ref
-        :columns: 12 12 6 6
+        :columns: 12 12 4 4
         :margin: 0 3 0 0
 
         Use the utility class with the same API as torch or scikit-learn to
-        train models using metatensor!
+        train models based on metatensor!
 
         +++
         |Python-32x32|
-
-
-    .. grid-item-card:: ⚛️ Running atomistic simulations
-        :link: atomistic-models
-        :link-type: ref
-        :columns: 12 12 6 6
-        :margin: 0 3 0 0
-
-        Learn about the facilities provided to define atomistic models, and use
-        them to run molecular dynamics simulations and more!
-
-        +++
-        |Python-32x32| |Cxx-32x32|
 
 
 
@@ -124,4 +119,5 @@ store gradients, keeping them together with the associated values.
    torch/index
    learn/index
    atomistic/index
+   cite
    devdoc/index

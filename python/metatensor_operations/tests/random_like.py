@@ -3,23 +3,21 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_random_uniform_like():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    random_tensor = metatensor.random_uniform_like(tensor)
-    random_tensor_positions = metatensor.random_uniform_like(
-        tensor, gradients="positions"
-    )
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    random_tensor = mts.random_uniform_like(tensor)
+    random_tensor_positions = mts.random_uniform_like(tensor, gradients="positions")
 
-    assert metatensor.equal_metadata(random_tensor, tensor)
+    assert mts.equal_metadata(random_tensor, tensor)
 
-    tensor_no_strain = metatensor.remove_gradients(tensor, "strain")
-    assert metatensor.equal_metadata(random_tensor_positions, tensor_no_strain)
+    tensor_no_strain = mts.remove_gradients(tensor, "strain")
+    assert mts.equal_metadata(random_tensor_positions, tensor_no_strain)
 
     # check the values
     for random_block in random_tensor:
@@ -32,11 +30,11 @@ def test_random_uniform_like():
 
 
 def test_random_uniform_like_error():
-    tensor = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     message = (
         "requested gradient 'err' in 'random_uniform_like' is not defined "
         "in this tensor"
     )
     with pytest.raises(ValueError, match=message):
-        tensor = metatensor.random_uniform_like(tensor, gradients=["positions", "err"])
+        tensor = mts.random_uniform_like(tensor, gradients=["positions", "err"])

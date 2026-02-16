@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, NotEqualError, TensorBlock, TensorMap
 
 
@@ -38,16 +38,16 @@ def test_allclose_nograd():
     )
     keys = Labels(names=["key_1", "key_2"], values=np.array([[0, 0], [1, 0]]))
     X = TensorMap(keys, [block_1, block_2])
-    assert metatensor.allclose(X, X)
+    assert mts.allclose(X, X)
     Y = TensorMap(keys, [block_3, block_4])
-    assert not metatensor.allclose(X, Y)
+    assert not mts.allclose(X, Y)
 
     message = (
         r"blocks for key \(key_1=0, key_2=0\) are different: values shapes are "
         r"different"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_raise(X, Y)
+        mts.allclose_raise(X, Y)
 
     block_1_c = TensorBlock(
         values=np.array(
@@ -110,16 +110,16 @@ def test_allclose_nograd():
     )
     X_c = TensorMap(keys, [block_1_c, block_2_c])
     X_c_copy = TensorMap(keys, [block_1_c_copy, block_2_c_copy])
-    assert not metatensor.allclose(X, X_c)
+    assert not mts.allclose(X, X_c)
 
-    assert metatensor.allclose(X_c, X_c)
-    assert not metatensor.allclose(X_c, X_c_copy)
-    assert metatensor.allclose(X_c, X_c_copy, rtol=1e-5)
-    assert metatensor.allclose(X_c, X_c_copy, atol=1e-1)
+    assert mts.allclose(X_c, X_c)
+    assert not mts.allclose(X_c, X_c_copy)
+    assert mts.allclose(X_c, X_c_copy, rtol=1e-5)
+    assert mts.allclose(X_c, X_c_copy, atol=1e-1)
 
 
 def test_self_allclose_grad():
-    tensor1 = metatensor.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
+    tensor1 = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
 
     blocks = []
     blocks_e6 = []
@@ -131,20 +131,20 @@ def test_self_allclose_grad():
 
     tensor1_copy = TensorMap(tensor1.keys, blocks)
     tensor1_e6 = TensorMap(tensor1.keys, blocks_e6)
-    assert metatensor.allclose(tensor1, tensor1_copy)
-    assert not metatensor.allclose(tensor1, tensor1_e6)
-    assert metatensor.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5)
+    assert mts.allclose(tensor1, tensor1_copy)
+    assert not mts.allclose(tensor1, tensor1_e6)
+    assert mts.allclose(tensor1, tensor1_e6, rtol=1e-5, atol=1e-5)
 
     message = (
         r"blocks for key \(o3_lambda=0, o3_sigma=1, center_type=1, "
         r"neighbor_type=1\) are different: values are not allclose"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_raise(tensor1, tensor1_e6)
+        mts.allclose_raise(tensor1, tensor1_e6)
 
     message = "values are not allclose"
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(tensor1.block(0), tensor1_e6.block(0))
+        mts.allclose_block_raise(tensor1.block(0), tensor1_e6.block(0))
 
 
 def test_self_allclose_exceptions():
@@ -193,39 +193,39 @@ def test_self_allclose_exceptions():
         properties=Labels(["p"], np.array([[0]])),
     )
 
-    assert not metatensor.allclose_block(block_1, block_2)
+    assert not mts.allclose_block(block_1, block_2)
 
     message = (
         "inputs to 'allclose' should have the same samples, "
         "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_1, block_2)
+        mts.allclose_block_raise(block_1, block_2)
 
     message = (
         "inputs to 'allclose' should have the same samples, "
         "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_1, block_3)
+        mts.allclose_block_raise(block_1, block_3)
 
     message = "values shapes are different"
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_1, block_4)
+        mts.allclose_block_raise(block_1, block_4)
 
     message = (
         "inputs to 'allclose' should have the same components, "
         "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_5, block_4)
+        mts.allclose_block_raise(block_5, block_4)
 
     message = (
         "inputs to 'allclose' should have the same samples, "
         "but they are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_6, block_4)
+        mts.allclose_block_raise(block_6, block_4)
 
 
 def test_self_allclose_exceptions_gradient():
@@ -268,7 +268,7 @@ def test_self_allclose_exceptions_gradient():
         "gradient 'g' samples are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_1, block_2)
+        mts.allclose_block_raise(block_1, block_2)
 
     block_3 = TensorBlock(
         values=np.array([[1.0], [2.0]]),
@@ -289,7 +289,7 @@ def test_self_allclose_exceptions_gradient():
 
     message = "gradient 'g' values are not allclose"
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_1, block_3)
+        mts.allclose_block_raise(block_1, block_3)
 
     block_4 = TensorBlock(
         values=np.array([[1.0], [2.0]]),
@@ -330,4 +330,4 @@ def test_self_allclose_exceptions_gradient():
         "gradient 'g' components are not the same or not in the same order"
     )
     with pytest.raises(NotEqualError, match=message):
-        metatensor.allclose_block_raise(block_5, block_4)
+        mts.allclose_block_raise(block_5, block_4)

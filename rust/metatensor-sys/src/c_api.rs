@@ -4,9 +4,18 @@
 //! This module is exported for advanced users of the metatensor crate, but
 //! should not be needed by most.
 
-#[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
-#[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
-#[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
+#[cfg_attr(
+    feature = "static",
+    link(name = "metatensor", kind = "static", modifiers = "-whole-archive")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), not(target_os = "windows")),
+    link(name = "metatensor", kind = "dylib")
+)]
+#[cfg_attr(
+    all(not(feature = "static"), target_os = "windows"),
+    link(name = "metatensor.dll", kind = "dylib")
+)]
 extern "C" {}
 
 pub const MTS_SUCCESS: i32 = 0;
@@ -42,62 +51,37 @@ fn bindgen_test_layout_mts_labels_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_labels_t>(),
         40usize,
-        concat!("Size of: ", stringify!(mts_labels_t))
+        "Size of mts_labels_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_labels_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_labels_t))
+        "Alignment of mts_labels_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).internal_ptr_) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(internal_ptr_)
-        )
+        "Offset of field: mts_labels_t::internal_ptr_"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).names) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(names)
-        )
+        "Offset of field: mts_labels_t::names"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).values) as usize - ptr as usize },
         16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(values)
-        )
+        "Offset of field: mts_labels_t::values"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).size) as usize - ptr as usize },
         24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(size)
-        )
+        "Offset of field: mts_labels_t::size"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).count) as usize - ptr as usize },
         32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_labels_t),
-            "::",
-            stringify!(count)
-        )
+        "Offset of field: mts_labels_t::count"
     );
 }
 pub type mts_data_origin_t = u64;
@@ -114,32 +98,22 @@ fn bindgen_test_layout_mts_sample_mapping_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_sample_mapping_t>(),
         16usize,
-        concat!("Size of: ", stringify!(mts_sample_mapping_t))
+        "Size of mts_sample_mapping_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_sample_mapping_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_sample_mapping_t))
+        "Alignment of mts_sample_mapping_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).input) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_sample_mapping_t),
-            "::",
-            stringify!(input)
-        )
+        "Offset of field: mts_sample_mapping_t::input"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).output) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_sample_mapping_t),
-            "::",
-            stringify!(output)
-        )
+        "Offset of field: mts_sample_mapping_t::output"
     );
 }
 #[repr(C)]
@@ -212,112 +186,62 @@ fn bindgen_test_layout_mts_array_t() {
     assert_eq!(
         ::std::mem::size_of::<mts_array_t>(),
         80usize,
-        concat!("Size of: ", stringify!(mts_array_t))
+        "Size of mts_array_t"
     );
     assert_eq!(
         ::std::mem::align_of::<mts_array_t>(),
         8usize,
-        concat!("Alignment of ", stringify!(mts_array_t))
+        "Alignment of mts_array_t"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).ptr) as usize - ptr as usize },
         0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(ptr)
-        )
+        "Offset of field: mts_array_t::ptr"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
         8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(origin)
-        )
+        "Offset of field: mts_array_t::origin"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).data) as usize - ptr as usize },
         16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(data)
-        )
+        "Offset of field: mts_array_t::data"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
         24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(shape)
-        )
+        "Offset of field: mts_array_t::shape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
         32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(reshape)
-        )
+        "Offset of field: mts_array_t::reshape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
         40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(swap_axes)
-        )
+        "Offset of field: mts_array_t::swap_axes"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
         48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(create)
-        )
+        "Offset of field: mts_array_t::create"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
         56usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(copy)
-        )
+        "Offset of field: mts_array_t::copy"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
         64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(destroy)
-        )
+        "Offset of field: mts_array_t::destroy"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).move_samples_from) as usize - ptr as usize },
         72usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(mts_array_t),
-            "::",
-            stringify!(move_samples_from)
-        )
+        "Offset of field: mts_array_t::move_samples_from"
     );
 }
 pub type mts_realloc_buffer_t = ::std::option::Option<
@@ -347,6 +271,8 @@ extern "C" {
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_create(labels: *mut mts_labels_t) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_create_assume_unique(labels: *mut mts_labels_t) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_set_user_data(
         labels: mts_labels_t,
@@ -381,6 +307,14 @@ extern "C" {
         first_mapping_count: usize,
         second_mapping: *mut i64,
         second_mapping_count: usize,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_difference(
+        first: mts_labels_t,
+        second: mts_labels_t,
+        result: *mut mts_labels_t,
+        first_mapping: *mut i64,
+        first_mapping_count: usize,
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_select(
@@ -479,6 +413,24 @@ extern "C" {
         keys_to_move: mts_labels_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
+    #[must_use]
+    pub fn mts_tensormap_set_info(
+        tensor: *mut mts_tensormap_t,
+        key: *const ::std::os::raw::c_char,
+        value: *const ::std::os::raw::c_char,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_get_info(
+        tensor: *const mts_tensormap_t,
+        key: *const ::std::os::raw::c_char,
+        value: *mut *const ::std::os::raw::c_char,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_info_keys(
+        tensor: *const mts_tensormap_t,
+        keys: *mut *const *const ::std::os::raw::c_char,
+        keys_count: *mut usize,
+    ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_load(
         path: *const ::std::os::raw::c_char,

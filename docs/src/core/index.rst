@@ -1,9 +1,9 @@
 Core classes
 ============
 
-These pages explains the main classes and core concepts you need to understand
-to use metatensor, without tying it to how a specific library is using
-metatensor to store it's own data.
+These pages explain the main classes and core concepts you need to understand
+how to use metatensor, without tying it to how a specific library uses
+metatensor to store data.
 
 .. grid::
 

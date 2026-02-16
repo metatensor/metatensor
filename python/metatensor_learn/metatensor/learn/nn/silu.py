@@ -1,10 +1,10 @@
 from typing import List, Optional
 
 import torch
-from torch.nn import Module
 
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
+from ._module import Module
 from .module_map import ModuleMap
 
 
@@ -16,12 +16,12 @@ class SiLU(Module):
     Applies a sigmoid linear unit transformation transformation to each block of a
     :py:class:`TensorMap` passed to its forward method, indexed by :param in_keys:.
 
-    Refer to the :py:class`torch.nn.SiLU` documentation for a more detailed description
+    Refer to the :py:class:`torch.nn.SiLU` documentation for a more detailed description
     of the parameters.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range.
     """
@@ -55,7 +55,7 @@ class SiLU(Module):
         return self.module_map(tensor)
 
 
-class InvariantSiLU(torch.nn.Module):
+class InvariantSiLU(Module):
     """
     Module similar to :py:class:`torch.nn.SiLU` that works with
     :py:class:`metatensor.torch.TensorMap` objects, applying the transformation only to
@@ -66,12 +66,12 @@ class InvariantSiLU(torch.nn.Module):
     the keys in :param in_keys: that correspond to the selection passed in :param
     invariant_keys:.
 
-    Refer to the :py:class`torch.nn.SiLU` documentation for a more detailed description
+    Refer to the :py:class:`torch.nn.SiLU` documentation for a more detailed description
     of the parameters.
 
     :param in_keys: :py:class:`Labels`, the keys that are assumed to be in the input
         tensor map in the :py:meth:`forward` method.
-    :param out_properties: list of :py:class`Labels` (optional), the properties labels
+    :param out_properties: list of :py:class:`Labels` (optional), the properties labels
         of the output. By default the output properties are relabeled using
         Labels.range.
     :param invariant_keys: a :py:class:`Labels` object that is used to select the

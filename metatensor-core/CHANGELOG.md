@@ -17,15 +17,107 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Fixed
+- Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
+  `components_to_properties`, and `key_to_properties` are called
+
+## [Version 0.1.19](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.19) - 2025-12-11
+
+### Fixed
+
+- Reset the size of the buffer produced by `mts_tensormap_save_buffer`,
+  `mts_block_save_buffer`, and `mts_labels_save_buffer` to the same size as
+  v0.1.17
+
+## [Version 0.1.18](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.18) - 2025-12-04
+
+### Added
+
+- It is now possible to store and retrieve global metatadata about a TensorMap,
+  in the form of string key/value pairs. The following API are available to
+  manipulate this information:
+
+  - in C, you can use `mts_tensormap_set_info`, `mts_tensormap_get_info` and
+    `mts_tensormap_info_keys`
+  - in C++, you can use `TensorMap::set_info`, `TensorMap::get_info` and
+    `TensorMap::info`
+  - in Python, you can use `TensorMap.set_info`, `TensorMap.get_info` and
+    `TensorMap.info`
+
 ### Changed
 
-- The default extension for file serialization is now `.mts` instead of `.npz`
+- We now requires at least cmake v3.22 to compile metatensor
+- We now require Python >= 3.10
 
-### metatensor-core Julia
+### Fixed
+
+- `TensorMap::components_to_properties` now properly handles multiple components
+  at once.
+
+## [Version 0.1.17](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.17) - 2025-09-02
+
+### Fixed
+
+- The pre-built wheels on PyPI are now compiled in release mode again
+
+### Changed
+
+- We removed some overhead when creating `Labels` by lazily initializing more internal data (#971)
+
+## [Version 0.1.16](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.16) - 2025-08-22
+
+### Fixed
+
+- Fix the use of pre-compiled metatensor from CMake (#954)
+- Fix the compilation with rustc >=1.89 and rustc <1.80 (#959)
+
+## [Version 0.1.15](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.15) - 2025-07-29
+
+### Changed
+
+- `TensorMap.to`, `TensorBlock.to`, and `Labels.to` now accept a `non_blocking`
+  argument, with the same meaning as in `torch.Tensor.to`.
+
+### Added
+
+- `mts_labels_create_assume_unique` to create `mts_labels` without checking that
+  the entries are unique; as well as the corresponding flag in the C++ and
+  Python constructors. This allows bypassing a check when the user can ensure
+  beforehand that all entries will be unique.
+
+## [Version 0.1.14](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.14) - 2025-04-11
+
+### Fixed
+
+- The `metatensor::shared` and `metatensor::static` targets in CMake are no longer
+  global, allowing multiple calls to `find_package(metatensor)`
+
+## [Version 0.1.13](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.13) - 2025-04-10
+
+### metatensor-core C
 
 #### Added
 
-- the Julia bindings to metatensor-core in the Metatensor.jl package
+- `mts_labels_difference` for finding the set difference between two `mts_labels_t`
+
+### metatensor-core C++
+
+#### Added
+
+- `Labels::set_difference` for finding the set difference between two `Labels`
+
+### metatensor-core Python
+
+#### Added
+
+- `Labels.difference` and `Labels.difference_and_mapping` for finding the set
+  difference between two `Labels`
+
+## [Version 0.1.12](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.12) - 2025-02-17
+
+### Changed
+
+- The default extension for file serialization is now `.mts` instead of `.npz`
 
 ## [Version 0.1.11](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.11) - 2024-10-23
 

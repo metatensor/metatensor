@@ -25,8 +25,8 @@
     :alt: C++
 
 .. |Rust-32x32| image:: /../static/images/logo-rust.*
-    :width: 32px
-    :height: 32px
+    :width: 40px
+    :height: 40px
     :alt: Rust
 
 .. |Rust-16x16| image:: /../static/images/logo-rust.*
@@ -35,33 +35,11 @@
     :alt: Rust
 
 .. |Python-32x32| image:: /../static/images/logo-python.*
-    :width: 32px
-    :height: 32px
+    :width: 30px
+    :height: 30px
     :alt: Python
 
 .. |Python-16x16| image:: /../static/images/logo-python.*
     :width: 16px
     :height: 16px
     :alt: Python
-
-.. simulation engines logos
-
-.. |ase-logo| image:: /../static/images/logo-ase.*
-    :height: 54px
-    :alt: ASE
-
-.. |ipi-logo| image:: /../static/images/logo-ipi.*
-    :height: 48px
-    :alt: i-PI
-
-.. |lammps-logo| image:: /../static/images/logo-lammps-large.*
-    :height: 44px
-    :alt: LAMMPS
-
-.. |plumed-logo| image:: /../static/images/logo-plumed.*
-    :height: 75px
-    :alt: PLUMED
-
-.. |chemiscope-logo| image:: /../static/images/logo-chemiscope.*
-    :height: 75px
-    :alt: Chemiscope

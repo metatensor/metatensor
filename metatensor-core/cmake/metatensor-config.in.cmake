@@ -1,6 +1,8 @@
 @PACKAGE_INIT@
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
+
+include(FindPackageHandleStandardArgs)
 
 if(metatensor_FOUND)
     return()
@@ -31,14 +33,14 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR @BUILD_SHARED_LIBS@)
         message(FATAL_ERROR "could not find metatensor library at '${METATENSOR_SHARED_LOCATION}', please re-install metatensor")
     endif()
 
-    add_library(metatensor::shared SHARED IMPORTED GLOBAL)
+    add_library(metatensor::shared SHARED IMPORTED)
     set_target_properties(metatensor::shared PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_SHARED_LOCATION}
         INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::shared INTERFACE cxx_std_11)
+    target_compile_features(metatensor::shared INTERFACE cxx_std_17)
 
     if (WIN32)
         if (NOT EXISTS ${METATENSOR_IMPLIB_LOCATION})
@@ -58,7 +60,7 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
         message(FATAL_ERROR "could not find metatensor library at '${METATENSOR_STATIC_LOCATION}', please re-install metatensor")
     endif()
 
-    add_library(metatensor::static STATIC IMPORTED GLOBAL)
+    add_library(metatensor::static STATIC IMPORTED)
     set_target_properties(metatensor::static PROPERTIES
         IMPORTED_LOCATION ${METATENSOR_STATIC_LOCATION}
         INTERFACE_INCLUDE_DIRECTORIES ${METATENSOR_INCLUDE}
@@ -66,13 +68,19 @@ if (@METATENSOR_INSTALL_BOTH_STATIC_SHARED@ OR NOT @BUILD_SHARED_LIBS@)
         BUILD_VERSION "@METATENSOR_FULL_VERSION@"
     )
 
-    target_compile_features(metatensor::static INTERFACE cxx_std_11)
+    target_compile_features(metatensor::static INTERFACE cxx_std_17)
 endif()
-
 
 # Export either the shared or static library as the metatensor target
 if (@BUILD_SHARED_LIBS@)
     add_library(metatensor ALIAS metatensor::shared)
 else()
     add_library(metatensor ALIAS metatensor::static)
+endif()
+
+
+if (@BUILD_SHARED_LIBS@)
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_SHARED_LOCATION METATENSOR_INCLUDE)
+else()
+    find_package_handle_standard_args(metatensor DEFAULT_MSG METATENSOR_STATIC_LOCATION METATENSOR_INCLUDE)
 endif()

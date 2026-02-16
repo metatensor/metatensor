@@ -5,7 +5,7 @@ use std::iter::FusedIterator;
 
 use smallvec::SmallVec;
 
-use crate::c_api::mts_labels_t;
+use crate::c_api::{mts_labels_t, mts_status_t};
 use crate::errors::{Error, check_status};
 
 /// A single value inside a label.
@@ -388,11 +388,50 @@ impl Labels {
         }
     }
 
+    /// Take the set difference of `self` with `other`.
+    ///
+    /// If requested, this function can also give the positions in the
+    /// difference where each entry of `self` ended up.
+    ///
+    /// If `mapping` is `Some`, it should contain a slice of length
+    /// `self.count()` that will be filled by with the position of the entries
+    /// in `self` in the difference. If an entry is not used in the difference,
+    ///  the mapping for this entry will be set to `-1`.
+    #[inline]
+    pub fn difference(
+        &self,
+        other: &Labels,
+        mapping: Option<&mut [i64]>,
+    ) -> Result<Labels, Error> {
+        let mut output = mts_labels_t::null();
+        let (mapping, mapping_count) = if let Some(m) = mapping {
+            (m.as_mut_ptr(), m.len())
+        } else {
+            (std::ptr::null_mut(), 0)
+        };
+
+        unsafe {
+            check_status(crate::c_api::mts_labels_difference(
+                self.raw,
+                other.raw,
+                &mut output,
+                mapping,
+                mapping_count,
+            ))?;
+
+            return Ok(Labels::from_raw(output));
+        }
+    }
+
     /// Iterate over the entries in this set of labels
     #[inline]
     pub fn iter(&self) -> LabelsIter<'_> {
         return LabelsIter {
-            chunks: self.values().chunks_exact(self.raw.size)
+            ptr: self.values().as_ptr(),
+            cur: 0,
+            len: self.count(),
+            chunk_len: self.size(),
+            phantom: std::marker::PhantomData,
         };
     }
 
@@ -408,7 +447,7 @@ impl Labels {
 
     /// Iterate over the entries in this set of labels as fixed-size arrays
     #[inline]
-    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<N> {
+    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<'_, N> {
         assert!(N == self.size(),
             "wrong label size in `iter_fixed_size`: the entries contains {} element \
             but this function was called with size of {}",
@@ -498,10 +537,17 @@ impl std::ops::Index<usize> for Labels {
     }
 }
 
-/// Iterator over [`Labels`] entries
-#[derive(Debug, Clone)]
+/// iterator over [`Labels`] entries
 pub struct LabelsIter<'a> {
-    chunks: std::slice::ChunksExact<'a, LabelValue>,
+    /// start of the labels values
+    ptr: *const LabelValue,
+    /// Current entry index
+    cur: usize,
+    /// number of entries
+    len: usize,
+    /// size of an entry/the labels
+    chunk_len: usize,
+    phantom: std::marker::PhantomData<&'a LabelValue>,
 }
 
 impl<'a> Iterator for LabelsIter<'a> {
@@ -509,18 +555,30 @@ impl<'a> Iterator for LabelsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.chunks.next()
+        if self.cur < self.len {
+            unsafe {
+                // SAFETY: this should be in-bounds
+                let data = self.ptr.add(self.cur * self.chunk_len);
+                self.cur += 1;
+                // SAFETY: the pointer should be valid for 'a
+                Some(std::slice::from_raw_parts(data, self.chunk_len))
+            }
+        } else {
+            None
+        }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.chunks.size_hint()
+        let remaining = self.len - self.cur;
+        return (remaining, Some(remaining));
     }
 }
 
 impl ExactSizeIterator for LabelsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.chunks.len()
+        self.len
     }
 }
 
@@ -656,9 +714,11 @@ impl LabelsBuilder {
         self.values.extend(&entry);
     }
 
-    /// Finish building the `Labels`
-    #[inline]
-    pub fn finish(self) -> Labels {
+    /// Common implementation for `finish` and `finish_unchecked`.
+    fn finish_with(
+        self,
+        creator: unsafe extern "C" fn(*mut mts_labels_t) -> mts_status_t
+    ) -> Labels {
         let mut raw_names = Vec::new();
         let mut raw_names_ptr = Vec::new();
 
@@ -682,12 +742,32 @@ impl LabelsBuilder {
         };
 
         unsafe {
-            check_status(
-                crate::c_api::mts_labels_create(&mut raw_labels)
-            ).expect("invalid labels?");
+            check_status(creator(&mut raw_labels)).expect("invalid labels?");
         }
 
         return unsafe { Labels::from_raw(raw_labels) };
+    }
+
+    /// Finish building the `Labels`.
+    ///
+    /// This function checks that all entries in the labels are unique.
+    #[inline]
+    pub fn finish(self) -> Labels {
+        self.finish_with(crate::c_api::mts_labels_create)
+    }
+
+    /// Finish building the `Labels`, assuming that all entries are unique.
+    ///
+    /// This is faster than `finish` as it does not perform a uniqueness check
+    /// on the labels entries. It is the caller's responsibility to ensure that
+    /// entries are unique.
+    ///
+    /// # Panics
+    ///
+    /// If the set of names is not valid (contains duplicates or invalid names).
+    #[inline]
+    pub fn finish_assume_unique(self) -> Labels {
+        self.finish_with(crate::c_api::mts_labels_create_assume_unique)
     }
 }
 
@@ -703,19 +783,28 @@ mod tests {
         builder.add(&[1, 243]);
         builder.add(&[-4, -2413]);
 
-        let idx = builder.finish();
-        assert_eq!(idx.names(), &["foo", "bar"]);
-        assert_eq!(idx.size(), 2);
-        assert_eq!(idx.count(), 3);
+        let labels = builder.finish();
+        assert_eq!(labels.names(), &["foo", "bar"]);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels.count(), 3);
+        assert!(!labels.is_empty());
 
-        assert_eq!(idx[0], [2, 3]);
-        assert_eq!(idx[1], [1, 243]);
-        assert_eq!(idx[2], [-4, -2413]);
+        assert_eq!(labels[0], [2, 3]);
+        assert_eq!(labels[1], [1, 243]);
+        assert_eq!(labels[2], [-4, -2413]);
 
         let builder = LabelsBuilder::new(vec![]);
         let labels = builder.finish();
         assert_eq!(labels.size(), 0);
         assert_eq!(labels.count(), 0);
+
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 243]);
+        let labels = builder.finish_assume_unique();
+        assert_eq!(labels.names(), &["foo", "bar"]);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels.count(), 2);
     }
 
     #[test]
@@ -739,20 +828,62 @@ mod tests {
     }
 
     #[test]
-    fn labels_iter() {
+    fn iter() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
         builder.add(&[2, 3]);
         builder.add(&[1, 2]);
         builder.add(&[4, 3]);
 
-        let idx = builder.finish();
-        let mut iter = idx.iter();
+        let labels = builder.finish();
+        let mut iter = labels.iter();
         assert_eq!(iter.len(), 3);
 
         assert_eq!(iter.next().unwrap(), &[2, 3]);
         assert_eq!(iter.next().unwrap(), &[1, 2]);
         assert_eq!(iter.next().unwrap(), &[4, 3]);
         assert_eq!(iter.next(), None);
+    }
+
+    #[cfg( feature = "rayon")]
+    #[test]
+    fn par_iter() {
+        use rayon::iter::IndexedParallelIterator;
+
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[2, 3]);
+        builder.add(&[1, 2]);
+        builder.add(&[4, 3]);
+
+        let labels = builder.finish();
+        let iter = labels.par_iter();
+        assert_eq!(iter.len(), 3);
+
+        let mut values = Vec::new();
+        iter.collect_into_vec(&mut values);
+
+        assert_eq!(values, [&[2, 3], &[1, 2], &[4, 3]]);
+    }
+
+    #[test]
+    fn iter_fixed_size() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[1, 2]);
+        builder.add(&[2, 3]);
+
+        let labels = builder.finish();
+
+        for (i, [a, b]) in labels.iter_fixed_size().enumerate() {
+            assert_eq!(a.usize(), 1 + i);
+            assert_eq!(b.usize(), 2 + i);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "wrong label size in `iter_fixed_size`: the entries contains 2 element but this function was called with size of 3")]
+    fn iter_fixed_size_wrong_size() {
+        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+
+        for [_, _, _] in labels.iter_fixed_size() {}
     }
 
     #[test]
@@ -768,7 +899,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "can not have the same label entry multiple time: [0, 1] is already present")]
+    #[should_panic(expected = "can not have the same label entry multiple times: [0, 1] is already present")]
     fn duplicated_label_entry() {
         let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
         builder.add(&[0, 1]);
@@ -785,6 +916,32 @@ mod tests {
     }
 
     #[test]
+    fn empty_label() {
+        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+
+        assert!(labels.is_empty());
+        assert_eq!(labels.count(), 0);
+        assert_eq!(labels.size(), 2);
+    }
+
+    #[test]
+    fn position() {
+        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
+        builder.add(&[1, 2]);
+        builder.add(&[2, 3]);
+        let labels = builder.finish();
+
+        assert!(labels.contains(&[LabelValue::new(1), LabelValue::new(2)]));
+        assert_eq!(labels.position(&[LabelValue::new(1), LabelValue::new(2)]), Some(0));
+
+        assert!(labels.contains(&[LabelValue::new(2), LabelValue::new(3)]));
+        assert_eq!(labels.position(&[LabelValue::new(2), LabelValue::new(3)]), Some(1));
+
+        assert!(!labels.contains(&[LabelValue::new(3), LabelValue::new(3)]));
+        assert_eq!(labels.position(&[LabelValue::new(3), LabelValue::new(3)]), None);
+    }
+
+    #[test]
     fn indexing() {
         let labels = Labels::new(
             ["foo", "bar"],
@@ -797,25 +954,6 @@ mod tests {
 
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
-    }
-
-    #[test]
-    fn iter() {
-        let labels = Labels::new(
-            ["foo", "bar"],
-            &[
-                [2, 3],
-                [1, 243],
-                [-4, -2413],
-            ]
-        );
-
-        let mut iter = labels.iter();
-
-        assert_eq!(iter.next().unwrap(), &[2, 3]);
-        assert_eq!(iter.next().unwrap(), &[1, 243]);
-        assert_eq!(iter.next().unwrap(), &[-4, -2413]);
-        assert_eq!(iter.next(), None);
     }
 
     #[test]
@@ -866,6 +1004,20 @@ mod tests {
 
         assert_eq!(first_mapping, [-1, 0]);
         assert_eq!(second_mapping, [-1, 0, -1]);
+    }
+
+    #[test]
+    fn difference() {
+        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+
+        let mut mapping = vec![0_i64; first.count()];
+        let union = first.difference(&second, Some(&mut mapping)).unwrap();
+
+        assert_eq!(union.names(), ["aa", "bb"]);
+        assert_eq!(union.values(), [0, 1]);
+
+        assert_eq!(mapping, [0, -1]);
     }
 
     #[test]

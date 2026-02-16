@@ -41,6 +41,18 @@ TEST_CASE("Labels") {
         CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
     }
 
+    SECTION("unchecked constructor") {
+        auto names = std::vector<std::string>{"a", "b"};
+
+        auto values = torch::tensor({{1, 2}, {1, 3}}, torch::kInt32);
+        auto labels = LabelsHolder(names, values, metatensor::assume_unique{});
+        CHECK(labels.count() == 2);
+        CHECK(labels.values()[0][0].item<int64_t>() == 1);
+        CHECK(labels.values()[1][0].item<int64_t>() == 1);
+        CHECK(labels.values()[0][1].item<int64_t>() == 2);
+        CHECK(labels.values()[1][1].item<int64_t>() == 3);
+    }
+
     SECTION("position") {
         auto labels = LabelsHolder::create({"a", "bb"}, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 

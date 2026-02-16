@@ -13,7 +13,7 @@ from setuptools.command.sdist import sdist
 
 ROOT = os.path.realpath(os.path.dirname(__file__))
 
-METATENSOR_BUILD_TYPE = os.environ.get("METATENSOR_BUILD_TYPE", "debug")
+METATENSOR_BUILD_TYPE = os.environ.get("METATENSOR_BUILD_TYPE", "release")
 if METATENSOR_BUILD_TYPE not in ["debug", "release"]:
     raise Exception(
         f"invalid build type passed: '{METATENSOR_BUILD_TYPE}', "
@@ -41,6 +41,13 @@ class cmake_ext(build_ext):
     Build the native library using cmake
     """
 
+    def finalize_options(self):
+        if self.editable_mode:
+            raise RuntimeError(
+                "metatensor-core does not support editable installation yet"
+            )
+        return super().finalize_options()
+
     def run(self):
         source_dir = ROOT
         build_dir = os.path.join(ROOT, "build", "cmake-build")
@@ -53,6 +60,7 @@ class cmake_ext(build_ext):
         )
 
         cmake_options = [
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DMETATENSOR_CORE_SOURCE_DIR={METATENSOR_CORE_SRC}",
             "-DCMAKE_INSTALL_LIBDIR=lib",
@@ -310,6 +318,7 @@ if __name__ == "__main__":
             "metatensor-core": [
                 "metatensor/core/lib/*",
                 "metatensor/core/include/*",
+                "metatensor/core/include/metatensor/*",
             ]
         },
     )

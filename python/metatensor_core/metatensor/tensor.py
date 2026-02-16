@@ -3,7 +3,7 @@ import ctypes
 import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import BinaryIO, Dict, List, Sequence, Union
+from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
@@ -784,17 +784,19 @@ class TensorMap:
         Move the keys and all the blocks in this :py:class:`TensorMap` to the given
         ``dtype``, ``device`` and ``arrays`` backend.
 
-        The arguments to this function can be given as positional or keyword arguments.
-
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This can be either
-            ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend); and must
-            be given as a keyword argument (``arrays="numpy"``).
+        :param Optional[str] arrays: new backend to use for the arrays. This can be
+            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
+            and must be given as a keyword argument (``arrays="numpy"``).
+        :param bool non_blocking: If this is ``True`` and the :py:class:`TensorMap`
+            contains ``"torch"`` arrays, the function tries to move the data
+            asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
         arrays = kwargs.pop("arrays", None)
+        non_blocking = kwargs.pop("non_blocking", False)
         dtype, device = _to_arguments_parse("`TensorMap.to`", *args, **kwargs)
 
         blocks = []
@@ -805,9 +807,60 @@ class TensorMap:
             warnings.simplefilter("ignore", DeviceWarning)
 
             for block in self.blocks():
-                blocks.append(block.to(dtype=dtype, device=device, arrays=arrays))
+                blocks.append(
+                    block.to(
+                        dtype=dtype,
+                        device=device,
+                        arrays=arrays,
+                        non_blocking=non_blocking,
+                    )
+                )
 
-        return TensorMap(self.keys, blocks)
+        tensor = TensorMap(self.keys, blocks)
+        for key, value in self.info().items():
+            tensor.set_info(key, value)
+        return tensor
+
+    def set_info(self, key: str, value: str):
+        """
+        Set or update the info (i.e. global metadata) ``value`` associated with ``key``
+        for this :py:class:`TensorMap`.
+
+        :param key: key of the info
+        :param value: value of the info
+        """
+        self._lib.mts_tensormap_set_info(
+            self._ptr, key.encode("utf8"), value.encode("utf8")
+        )
+
+    def get_info(self, key: str) -> Optional[str]:
+        """
+        Get the info (i.e. global metadata) with the given ``key`` for this
+        :py:class:`TensorMap`.
+
+        :param key: key of the info to retrieve
+        :return: value of the info, or :py:obj:`None` if the info does not exist
+        """
+        value = ctypes.c_char_p()
+        self._lib.mts_tensormap_get_info(self._ptr, key.encode("utf8"), value)
+
+        if value.value:
+            return value.value.decode("utf8")
+        else:
+            return None
+
+    def info(self) -> Dict[str, str]:
+        """
+        Get all the key/value info pairs stored in this :py:class:`TensorMap`.
+        """
+        keys = ctypes.POINTER(ctypes.c_char_p)()
+        count = c_uintptr_t()
+        self._lib.mts_tensormap_info_keys(self._ptr, keys, count)
+        result = {}
+        for i in range(count.value):
+            key = keys[i].decode("utf8")
+            result[key] = self.get_info(key)
+        return result
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

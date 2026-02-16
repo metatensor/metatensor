@@ -31,7 +31,7 @@ def group(batch: List[NamedTuple]) -> NamedTuple:
     :return: a named tuple, with the named fields the same as in the original
         samples in the batch, but with the samples grouped by data field.
     """
-    return namedtuple("Batch", batch[0]._fields)(*list(zip(*batch)))
+    return namedtuple("Batch", batch[0]._fields)(*list(zip(*batch, strict=True)))
 
 
 def group_and_join(
@@ -87,20 +87,22 @@ def group_and_join(
         fields_to_join = names
     if join_kwargs is None:
         join_kwargs = {}
-    for name, field in zip(names, list(zip(*batch))):
+    for name, field in zip(names, list(zip(*batch, strict=True)), strict=True):
         if name == "sample_id":  # special case, keep as is
             data.append(field)
             continue
 
         if name in fields_to_join:  # Join tensors if requested
             if isinstance(field[0], TensorMap):
-                # metatensor.TensorMap type
+                # metatensor.TensorMap
                 data.append(metatensor.join(field, axis="samples", **join_kwargs))
-            elif isinstance(field[0], torch.ScriptObject) and field[0]._has_method(
-                "keys_to_properties"
-            ):  # inferred metatensor.torch.TensorMap type
+            elif (
+                isinstance(field[0], torch.ScriptObject)
+                and field[0]._type().name() == "TensorMap"
+            ):
+                # metatensor.torch.TensorMap
                 data.append(metatensor.torch.join(field, axis="samples", **join_kwargs))
-            elif isinstance(field[0], torch.Tensor):  # torch.Tensor type
+            elif isinstance(field[0], torch.Tensor):
                 data.append(torch.vstack(field))
             else:
                 data.append(field)

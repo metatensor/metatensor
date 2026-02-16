@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 message(STATUS "Running with CMake version ${CMAKE_VERSION}")
 
@@ -24,11 +24,21 @@ else()
     # If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
     # in the same way we update the metatensor-torch version
     include(../../cmake/dev-versions.cmake)
-    set(REQUIRED_METATENSOR_VERSION "0.1.11")
+    set(REQUIRED_METATENSOR_VERSION "0.1.19")
     create_development_version("${REQUIRED_METATENSOR_VERSION}" METATENSOR_CORE_FULL_VERSION "metatensor-core-v")
     string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_VERSION ${METATENSOR_CORE_FULL_VERSION})
 
     find_package(metatensor ${REQUIRED_METATENSOR_VERSION} REQUIRED)
+
+    get_target_property(mts_build_version metatensor::shared BUILD_VERSION)
+    if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
+        message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::shared, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+    endif()
+
+    get_target_property(mts_build_version metatensor::static BUILD_VERSION)
+    if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
+        message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::static, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+    endif()
 endif()
 
 add_executable(c-main src/main.c)

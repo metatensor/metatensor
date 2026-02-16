@@ -68,27 +68,29 @@ def _version_at_least(version, expected):
     return version >= expected
 
 
-def is_metatensor_class(value, typ):
-    assert typ in (Labels, TensorBlock, TensorMap)
+# Warning: this function (as all functions in this module) is part of the public API of
+# metatensor-operations, updating it means that new versions of metatensor-torch will
+# not be able to work with old versions of metatensor-operations, so any update should
+# be treated as a breaking change.
+def isinstance_metatensor(value, typename):
+    assert typename in ("Labels", "TensorBlock", "TensorMap")
 
-    if isinstance(value, typ):
-        return True
+    if _HAS_TORCH and isinstance(value, torch.ScriptObject):
+        is_metatensor_torch_class = "metatensor" in str(value._type())
+        if is_metatensor_torch_class:
+            warnings.warn(
+                "Trying to use operations from metatensor with objects from "
+                "metatensor-torch, you should use the operation from "
+                "`metatensor.torch` as well, e.g. `metatensor.torch.add(...)` "
+                "instead of `metatensor.add(...)`",
+                stacklevel=2,
+            )
+
+    if typename == "Labels":
+        return isinstance(value, Labels)
+    elif typename == "TensorBlock":
+        return isinstance(value, TensorBlock)
+    elif typename == "TensorMap":
+        return isinstance(value, TensorMap)
     else:
-        if _HAS_TORCH and isinstance(value, torch.ScriptObject):
-            if _version_at_least(torch.__version__, "2.1.0"):
-                # _type() is only working for torch >= 2.1
-                is_metatensor_torch_class = "metatensor" in str(value._type())
-            else:
-                # we don't know, it's fine
-                is_metatensor_torch_class = False
-
-            if is_metatensor_torch_class:
-                warnings.warn(
-                    "Trying to use operations from metatensor with objects from "
-                    "metatensor-torch, you should use the operation from "
-                    "`metatensor.torch` as well, e.g. `metatensor.torch.add(...)` "
-                    "instead of `metatensor.add(...)`",
-                    stacklevel=2,
-                )
-
         return False

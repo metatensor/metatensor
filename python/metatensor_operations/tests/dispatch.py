@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 
 
 try:
@@ -23,7 +23,5 @@ all_false_array = [True, True, False]
 
 @pytest.mark.parametrize("create_array_function", create_array_functions)
 def test_all(create_array_function):
-    assert metatensor.operations._dispatch.all(create_array_function(all_true_array))
-    assert not metatensor.operations._dispatch.all(
-        create_array_function(all_false_array)
-    )
+    assert mts.operations._dispatch.all(create_array_function(all_true_array))
+    assert not mts.operations._dispatch.all(create_array_function(all_false_array))

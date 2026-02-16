@@ -83,7 +83,7 @@ def namedtuple(typename, field_names):
 
     def _asdict(self):
         "Return a new dict which maps field names to their values."
-        return _dict(_zip(self._fields, self))
+        return _dict(_zip(self._fields, self, strict=True))
 
     def __getnewargs__(self):
         "Return self as a plain tuple.  Used by copy and pickle."

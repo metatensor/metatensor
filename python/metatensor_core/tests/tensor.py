@@ -377,6 +377,33 @@ def test_components_to_properties(tensor):
     assert tuple(block.properties[1]) == (1, 0)
     assert tuple(block.properties[2]) == (2, 0)
 
+    # tensor with more than one component
+    block = TensorBlock(
+        values=np.full((3, 1, 4, 2, 1), 1.0),
+        samples=Labels(["s"], np.array([[0], [2], [4]])),
+        components=[
+            Labels(["c1"], np.array([[42]])),
+            Labels(["c2"], np.array([[0], [1], [2], [3]])),
+            Labels(["c3"], np.array([[-2], [-1]])),
+        ],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+
+    tensor = TensorMap(Labels.single(), [block])
+
+    one_c = tensor.components_to_properties("c2")
+    assert one_c.block().properties == Labels(
+        ["c2", "p"], np.array([(0, 0), (1, 0), (2, 0), (3, 0)])
+    )
+
+    two_c = one_c.components_to_properties("c1")
+    assert two_c.block().properties == Labels(
+        ["c1", "c2", "p"], np.array([(42, 0, 0), (42, 1, 0), (42, 2, 0), (42, 3, 0)])
+    )
+
+    two_c_direct = tensor.components_to_properties(["c2", "c1"])
+    assert two_c.block().properties == two_c_direct.block().properties
+
 
 def test_empty_tensor():
     empty_tensor = TensorMap(keys=Labels.empty(["key"]), blocks=[])
@@ -493,7 +520,9 @@ def test_to():
     assert tensor.device == "cpu"
     assert tensor.dtype == np.float64
 
-    converted = tensor.to(dtype=np.float32)
+    # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+    # making sure the parameter is accepted by this function
+    converted = tensor.to(dtype=np.float32, non_blocking=True)
     assert converted.dtype == np.float32
 
     # check that the code handles both positional and keyword arguments
@@ -538,6 +567,39 @@ def test_to():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                moved = tensor.to(device=device)
+                moved = tensor.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type
+
+
+def test_info(tensor):
+    assert tensor.info() == {}
+
+    tensor.set_info("creator", "unit test")
+    tensor.set_info("description", "a test tensor map")
+
+    assert tensor.get_info("creator") == "unit test"
+    assert tensor.get_info("description") == "a test tensor map"
+
+    expected_info = {"creator": "unit test", "description": "a test tensor map"}
+    assert tensor.info() == expected_info
+
+    tensor.set_info("description", "an updated description")
+    assert tensor.get_info("description") == "an updated description"
+
+    expected_info = {"creator": "unit test", "description": "an updated description"}
+    assert tensor.info() == expected_info
+
+    moved_tensor = tensor.to("cpu")
+    assert moved_tensor.info() == expected_info
+
+    k2p_tensor = tensor.keys_to_properties("key_1")
+    assert k2p_tensor.info() == expected_info
+
+    k2s_tensor = tensor.keys_to_samples("key_2", sort_samples=True)
+    assert k2s_tensor.info() == expected_info
+
+    c2p_tensor = tensor.components_to_properties("c")
+    assert c2p_tensor.info() == expected_info
+
+    assert tensor.get_info("missing") is None

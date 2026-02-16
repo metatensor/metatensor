@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 message(STATUS "Running with CMake version ${CMAKE_VERSION}")
 
@@ -20,12 +20,17 @@ else()
     # If building a dev version, we also need to update the REQUIRED_METATENSOR_VERSION
     # in the same way we update the metatensor-torch version
     include(../../cmake/dev-versions.cmake)
-    set(REQUIRED_METATENSOR_TORCH_VERSION "0.7.0")
+    set(REQUIRED_METATENSOR_TORCH_VERSION "0.8.4")
     create_development_version("${REQUIRED_METATENSOR_TORCH_VERSION}" METATENSOR_TORCH_FULL_VERSION "metatensor-torch-v")
     string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "\\1.\\2" REQUIRED_METATENSOR_TORCH_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 
     # find metatensor_torch with find_package
     find_package(metatensor_torch ${REQUIRED_METATENSOR_TORCH_VERSION} CONFIG REQUIRED)
+
+    get_target_property(mts_torch_build_version metatensor_torch BUILD_VERSION)
+    if (NOT ${mts_torch_build_version} STREQUAL ${METATENSOR_TORCH_FULL_VERSION})
+        message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor_torch, expected ${METATENSOR_TORCH_FULL_VERSION} but got ${mts_torch_build_version}")
+    endif()
 endif()
 
 add_executable(torch-main src/main.cpp)

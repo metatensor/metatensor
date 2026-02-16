@@ -1,9 +1,10 @@
 import io
+import os
 
+import pytest
 import torch
-from packaging import version
 
-import metatensor.torch
+import metatensor.torch as mts
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
@@ -30,12 +31,11 @@ def test_lstsq():
             )
         ],
     )
-    solution_tensor = metatensor.torch.lstsq(X_tensor, Y_tensor, rcond=1e-14)
+    solution_tensor = mts.lstsq(X_tensor, Y_tensor, rcond=1e-14)
 
     # check output type
     assert isinstance(solution_tensor, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert solution_tensor._type().name() == "TensorMap"
+    assert solution_tensor._type().name() == "TensorMap"
 
     # check content
     expected_solution = TensorMap(
@@ -49,11 +49,12 @@ def test_lstsq():
             )
         ],
     )
-    assert metatensor.torch.equal(solution_tensor, expected_solution)
+    assert mts.equal(solution_tensor, expected_solution)
 
 
+@pytest.mark.skipif(os.environ.get("PYTORCH_JIT") == "0", reason="requires TorchScript")
 def test_save_load():
     with io.BytesIO() as buffer:
-        torch.jit.save(metatensor.torch.lstsq, buffer)
+        torch.jit.save(mts.lstsq, buffer)
         buffer.seek(0)
         torch.jit.load(buffer)

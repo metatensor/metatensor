@@ -1,6 +1,8 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <map>
+#include <set>
 
 #include <catch.hpp>
 
@@ -38,6 +40,81 @@ TEST_CASE("TensorMap") {
         CHECK(matching.size() == 2);
         CHECK(matching[0] == 0);
         CHECK(matching[1] == 1);
+    }
+
+    SECTION("info") {
+        auto tensor = test_tensor_map();
+
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("description", "a test tensor map");
+
+        CHECK(tensor.get_info("creator") == "unit test");
+        CHECK(tensor.get_info("description") == "a test tensor map");
+        CHECK(tensor.get_info("missing") == std::nullopt);
+
+        auto info_iter = tensor.info();
+        CHECK(info_iter.begin() != info_iter.end());
+        std::map<std::string, std::string> info_map;
+        for (auto pair: info_iter) {
+            info_map.emplace(pair.first, pair.second);
+        }
+        CHECK(info_map["creator"] == "unit test");
+        CHECK(info_map["description"] == "a test tensor map");
+
+        std::set<std::string> expected_keys = {"creator", "description"};
+        std::set<std::string> actual_keys;
+        auto k2p_tensor = tensor.keys_to_properties("key_1", /*sort_samples*/ true);
+        auto k2p_new_info = k2p_tensor.info();
+        for (auto [key, value]: k2p_new_info) {
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
+            {
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
+            }
+        }
+        REQUIRE(actual_keys == expected_keys);
+        actual_keys.clear();
+
+        auto k2s_tensor = tensor.keys_to_samples("key_2", /* sort_samples */ true);
+        auto k2s_new_info = k2s_tensor.info();
+        for (auto [key, value]: k2s_new_info) {
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
+            {
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
+            }
+        }
+        REQUIRE(actual_keys == expected_keys);
+        actual_keys.clear();
+
+        auto c2p_tensor = tensor.components_to_properties("component");
+        auto c2p_new_info = c2p_tensor.info();
+        for (auto [key, value]: c2p_new_info) {
+            std::string key_str(key);
+            std::string value_str(value);
+            actual_keys.insert(key_str);
+            if (key_str == "creator") {
+                CHECK(value_str == "unit test");
+            } else if (key_str == "description")
+            {
+                CHECK(value_str == "a test tensor map");
+            } else {
+                FAIL("unexpected info key: " << key_str);
+            }
+        }
+        REQUIRE(actual_keys == expected_keys);
     }
 
     SECTION("keys_to_samples") {
@@ -159,12 +236,21 @@ TEST_CASE("TensorMap") {
 
     SECTION("component_to_properties") {
         auto tensor = test_tensor_map().components_to_properties("component");
-
         auto block = tensor.block_by_id(0);
 
         CHECK(block.samples() == Labels({"samples"}, {{0}, {2}, {4}}));
 
         auto components = block.components();
+        CHECK(components.empty());
+
+        CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
+
+        tensor = test_tensor_map().components_to_properties(std::vector<std::string>{"component"});
+        block = tensor.block_by_id(0);
+
+        CHECK(block.samples() == Labels({"samples"}, {{0}, {2}, {4}}));
+
+        components = block.components();
         CHECK(components.empty());
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
@@ -225,6 +311,24 @@ TEST_CASE("TensorMap serialization") {
 
         tensor = metatensor::io::load(TEST_DATA_MTS_PATH);
         check_loaded_tensor(tensor);
+
+        CHECK_THROWS_WITH(
+            TensorMap::load(TEST_KEYS_MTS_PATH),
+            Catch::Matchers::Contains("use `load_labels` to load Labels")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load(TEST_KEYS_MTS_PATH),
+            Catch::Matchers::Contains("use `load_labels` to load Labels")
+        );
+
+        CHECK_THROWS_WITH(
+            TensorMap::load(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
+        CHECK_THROWS_WITH(
+            metatensor::io::load(TEST_BLOCK_MTS_PATH),
+            Catch::Matchers::Contains("use `load_block` to load TensorBlock")
+        );
     }
 
     SECTION("loading file with custom array creation") {
@@ -248,6 +352,9 @@ TEST_CASE("TensorMap serialization") {
         auto tensor = TensorMap::load_buffer(buffer);
         tensor = metatensor::io::load_buffer(buffer);
         check_loaded_tensor(tensor);
+
+        // info.json is only created when the info is defined for this file
+        CHECK(buffer.find("info.json") == std::string::npos);
 
         auto saved = tensor.save_buffer<std::string>();
         REQUIRE(saved.size() == buffer.size());
@@ -274,6 +381,21 @@ TEST_CASE("TensorMap serialization") {
         CHECK(saved == std::string(raw_buffer, raw_buffer + buflen));
 
         std::free(raw_buffer);
+    }
+
+    SECTION("loading and saving the extra info") {
+        auto tensor = TensorMap::load(TEST_DATA_MTS_PATH);
+
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("description", "a test tensor map");
+
+        auto buffer = tensor.save_buffer<std::string>();
+        auto loaded = TensorMap::load_buffer(buffer);
+
+        CHECK(buffer.find("info.json") != std::string::npos);
+
+        CHECK(loaded.get_info("creator") == "unit test");
+        CHECK(loaded.get_info("description") == "a test tensor map");
     }
 }
 

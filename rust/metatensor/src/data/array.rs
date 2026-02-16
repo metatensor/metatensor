@@ -106,7 +106,7 @@ pub(super) static RUST_DATA_ORIGIN: Lazy<mts_data_origin_t> = Lazy::new(|| {
 });
 
 /// Implementation of `mts_array_t.origin` using `Box<dyn Array>`
-unsafe extern fn rust_array_origin(
+unsafe extern "C" fn rust_array_origin(
     array: *const c_void,
     origin: *mut mts_data_origin_t
 ) -> mts_status_t {
@@ -117,7 +117,7 @@ unsafe extern fn rust_array_origin(
 }
 
 /// Implementation of `mts_array_t.shape` using `Box<dyn Array>`
-unsafe extern fn rust_array_shape(
+unsafe extern "C" fn rust_array_shape(
     array: *const c_void,
     shape: *mut *const usize,
     shape_count: *mut usize,
@@ -134,7 +134,7 @@ unsafe extern fn rust_array_shape(
 
 /// Implementation of `mts_array_t.reshape` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_reshape(
+unsafe extern "C" fn rust_array_reshape(
     array: *mut c_void,
     shape: *const usize,
     shape_count: usize,
@@ -151,7 +151,7 @@ unsafe extern fn rust_array_reshape(
 
 /// Implementation of `mts_array_t.swap_axes` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_swap_axes(
+unsafe extern "C" fn rust_array_swap_axes(
     array: *mut c_void,
     axis_1: usize,
     axis_2: usize,
@@ -165,7 +165,7 @@ unsafe extern fn rust_array_swap_axes(
 
 /// Implementation of `mts_array_t.create` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_create(
+unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
@@ -185,7 +185,7 @@ unsafe extern fn rust_array_create(
 }
 
 /// Implementation of `mts_array_t.data` for `Box<dyn Array>`
-unsafe extern fn rust_array_data(
+unsafe extern "C" fn rust_array_data(
     array: *mut c_void,
     data: *mut *mut f64,
 ) -> mts_status_t {
@@ -198,7 +198,7 @@ unsafe extern fn rust_array_data(
 
 
 /// Implementation of `mts_array_t.copy` using `Box<dyn Array>`
-unsafe extern fn rust_array_copy(
+unsafe extern "C" fn rust_array_copy(
     array: *const c_void,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
@@ -210,7 +210,7 @@ unsafe extern fn rust_array_copy(
 }
 
 /// Implementation of `mts_array_t.destroy` for `Box<dyn Array>`
-unsafe extern fn rust_array_destroy(
+unsafe extern "C" fn rust_array_destroy(
     array: *mut c_void,
 ) {
     if !array.is_null() {
@@ -222,7 +222,7 @@ unsafe extern fn rust_array_destroy(
 
 /// Implementation of `mts_array_t.move_sample` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern fn rust_array_move_samples_from(
+unsafe extern "C" fn rust_array_move_samples_from(
     output: *mut c_void,
     input: *const c_void,
     samples: *const mts_sample_mapping_t,
@@ -360,5 +360,48 @@ impl Array for EmptyArray {
 
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use metatensor_sys::*;
+
+    use super::*;
+
+    #[test]
+    fn ndarray_as_mts_array() {
+        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
+
+        let address = data.as_ptr() as usize;
+        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+
+        let mut rust_origin = 0;
+        let status = unsafe {
+            mts_register_data_origin(b"rust.Box<dyn Array>\0".as_ptr().cast(), &mut rust_origin)
+        };
+        assert_eq!(status, MTS_SUCCESS);
+
+        assert_eq!(mts_array.origin().unwrap(), rust_origin);
+
+        assert_eq!(mts_array.shape().unwrap(), [4, 5, 6]);
+
+        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
+
+        mts_array.reshape(&[20, 6, 1]).unwrap();
+        assert_eq!(mts_array.shape().unwrap(), [20, 6, 1]);
+
+        mts_array.swap_axes(1, 2).unwrap();
+        assert_eq!(mts_array.shape().unwrap(), [20, 1, 6]);
+
+        let copy = mts_array.copy().unwrap();
+        assert_eq!(copy.origin().unwrap(), rust_origin);
+        assert_eq!(copy.shape().unwrap(), [20, 1, 6]);
+        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
+
+        let created = mts_array.create(&[2, 3, 4]).unwrap();
+        assert_eq!(created.origin().unwrap(), rust_origin);
+        assert_eq!(created.shape().unwrap(), [2, 3, 4]);
+        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
     }
 }

@@ -2,7 +2,6 @@ from typing import Any, List, Optional, Tuple, Union
 
 import pytest
 import torch
-from packaging import version
 from torch import Tensor
 
 from metatensor.torch import Labels, LabelsEntry
@@ -20,7 +19,7 @@ def test_constructor():
     assert torch.all(labels.values == torch.Tensor([[0, 0], [0, 1]]))
 
     # positional arguments + names is a list
-    labels = Labels(["c"], torch.LongTensor([[0], [2], [-1]]))
+    labels = Labels(["c"], torch.tensor([[0], [2], [-1]]))
     assert labels.names == ["c"]
     assert torch.all(labels.values == torch.Tensor([[0], [2], [-1]]))
 
@@ -137,10 +136,7 @@ def test_repr():
 
     expected = "Labels(\n    aaa  bbb\n     1    2\n     3    4\n)"
     assert str(labels) == expected
-
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        # custom __repr__ definitions are only available since torch 2.1
-        assert repr(labels) == expected
+    assert repr(labels) == expected
 
     expected = "LabelsEntry(aaa=1, bbb=2)"
     assert str(labels[0]) == expected
@@ -309,7 +305,9 @@ def test_to():
         assert labels.values.device.type == "cpu"
         assert labels.device.type == "cpu"
 
-        labels = labels.to(device)
+        # we use non_blocking=True for some of the calls to `.to` below as a smoke test,
+        # making sure the parameter is accepted by this function
+        labels = labels.to(device, non_blocking=True)
         assert labels.values.device.type == torch.device(device).type
         assert labels.device.type == torch.device(device).type
 
@@ -365,8 +363,8 @@ def test_union():
     union_2, first_mapping, second_mapping = first.union_and_mapping(second)
 
     assert union == union_2
-    assert torch.all(first_mapping == torch.LongTensor([0, 1]))
-    assert torch.all(second_mapping == torch.LongTensor([2, 1, 3]))
+    assert torch.all(first_mapping == torch.tensor([0, 1]))
+    assert torch.all(second_mapping == torch.tensor([2, 1, 3]))
 
     # check that union preserves devices
     first = first.to("meta")
@@ -402,8 +400,8 @@ def test_intersection():
     )
 
     assert intersection == intersection_2
-    assert torch.all(first_mapping == torch.LongTensor([-1, 0]))
-    assert torch.all(second_mapping == torch.LongTensor([-1, 0, -1]))
+    assert torch.all(first_mapping == torch.tensor([-1, 0]))
+    assert torch.all(second_mapping == torch.tensor([-1, 0, -1]))
 
     # check that intersection preserves devices
     first = first.to("meta")
@@ -428,6 +426,39 @@ def test_intersection():
     assert second_mapping.device == torch.device("meta")
 
 
+def test_difference():
+    first = Labels(["aa", "bb"], torch.tensor([[0, 1], [1, 2]]))
+    second = Labels(["aa", "bb"], torch.tensor([[2, 3], [1, 2], [4, 5]]))
+
+    difference = first.difference(second)
+    assert difference.names == ["aa", "bb"]
+    assert torch.all(difference.values == torch.tensor([[0, 1]]))
+
+    difference_2, mapping = first.difference_and_mapping(second)
+
+    assert difference == difference_2
+    assert torch.all(mapping == torch.tensor([0, -1]))
+
+    # check that difference preserves devices
+    first = first.to("meta")
+
+    message = "device mismatch in `Labels.difference`: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.difference(second)
+
+    message = "device mismatch in `Labels.difference_and_mapping`: got 'meta' and 'cpu'"
+    with pytest.raises(ValueError, match=message):
+        first.difference_and_mapping(second)
+
+    second = second.to("meta")
+    difference = first.difference(second)
+    assert difference.values.device == torch.device("meta")
+
+    difference, mapping = first.difference_and_mapping(second)
+    assert difference.values.device == torch.device("meta")
+    assert mapping.device == torch.device("meta")
+
+
 def test_dimensions_manipulation():
     label = Labels("foo", torch.tensor([[42]]))
 
@@ -438,6 +469,9 @@ def test_dimensions_manipulation():
 
     with pytest.raises(ValueError, match="`values` must be a 1D tensor"):
         label.insert(0, name="bar", values=torch.tensor([[10]]))
+
+    with pytest.raises(IndexError, match="index 42 is out of bounds"):
+        label.insert(42, name="bar", values=torch.tensor([42]))
 
     # Labels.append
     new_label = label.append(name="bar", values=torch.tensor([10]))
@@ -609,6 +643,17 @@ class LabelsWrap:
 
     def rename(self, old: str, new: str) -> Labels:
         return self._c.rename(old=old, new=new)
+
+    @staticmethod
+    def load(file: str) -> Labels:
+        return Labels.load(file=file)
+
+    @staticmethod
+    def load_buffer(buffer: torch.Tensor) -> Labels:
+        return Labels.load_buffer(buffer=buffer)
+
+    def save(self, file: str):
+        return self._c.save(file=file)
 
 
 class LabelsEntryWrap:

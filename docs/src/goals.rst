@@ -6,16 +6,13 @@ Metatensor's goals
 At its core, ``metatensor`` provides tools to efficiently store and manipulate
 sparse arrays and their associated metadata. You can learn more about this in
 the :ref:`core classes overview <core-classes-overview>`. With the creation of
-metatensor, we have three main use cases in mind:
+metatensor, we have two main use cases in mind:
 
 1. provide an exchange format for the atomistic machine learning ecosystem,
    making different players in this ecosystem more interoperable with one
    another and enhancing collaboration: see :ref:`metatensor-goal-exchange`;
 2. make it easier and faster to develop new machine learning representations,
    models and algorithms: see :ref:`metatensor-goal-models`;
-3. run large scale simulations using machine learning interatomic potentials,
-   with fully customizable potentials, directly defined by the researchers
-   running the simulations: see :ref:`metatensor-goal-simulation`;
 
 .. _metatensor-goal-exchange:
 
@@ -65,7 +62,7 @@ the metatensor ecosystem!
     - `featomic <https://github.com/metatensor/featomic/>`_: a library computing
       physics-inspired representations of atomic systems, the computed
       representations are given in metatensor format;
-    - `torch_spex <https://github.com/lab-cosmo/torch_spex/>`_: pure PyTorch
+    - `torch-spex <https://github.com/lab-cosmo/torch-spex/>`_: pure PyTorch
       implementation of spherical expansion representation, with GPU and
       learnable representations support, which outputs to metatensor format;
     - `metatrain <https://github.com/lab-cosmo/metatrain/>`_: an
@@ -82,14 +79,14 @@ Defining custom models
 The second objective of metatensor is to provide functionalities to be a tool
 for developing new models. While it is possible to use metatensor to only
 exchange data between libraries (and immediately convert everything to
-library-specific formats); we also provide tools to operate directly on
+library-specific formats), we also provide tools to operate directly on
 metatensor data. This enable models to handle sparse data and have low memory
 consumption; as well as keeping rich metadata around for easier debugging and
 understanding of the model behavior.
 
 One part of these tools is the set of low-level :ref:`operations
 <metatensor-operations>` we provide as part of the Python interface to
-metatensor. By using combining multiple operations, you can build custom machine
+metatensor. By combining multiple operations, you can build custom machine
 learning models, using data and representations coming from arbitrary
 metatensor-compatible libraires in the ecosystem. Using these operations allow
 you to keep your data in metatensor format across the whole ML pipeline;
@@ -123,29 +120,3 @@ models with a few lines of code and a familiar API.
 
 
 .. _scikit-learn: https://scikit-learn.org/
-
-.. _metatensor-goal-simulation:
-
-Running atomistic simulations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-One particularly interesting class of machine learning model for atomistic
-modelling is machine learning interatomic potentials (MLIPs). Using the
-capacities provided by the first two goals of metatensor, researchers should be
-able to created and train such MLIPs and customize various parts of the model.
-
-The final objective of metatensor is to allow using these custom models inside
-large scale molecular simulation engines. To do this, we integrate metatensor
-with `TorchScript <https://pytorch.org/docs/stable/jit.html>`_, and use the
-facilities of TorchScript to export the model from Python and then load and
-execute it inside the simulation engine. Have a look at the
-:ref:`atomistic-models` section for more information!
-
-.. figure:: /../static/images/goal-simulations.*
-    :width: 500px
-    :align: center
-
-    Different steps in the workflow of running simulations with metatensor.
-    Defining a model, training a model and running simulations with it can be
-    done by different users; and the same metatensor-based model can be used
-    with multiple simulation engines.

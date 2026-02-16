@@ -1,4 +1,5 @@
 import os
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -7,20 +8,16 @@ from ._c_lib import _load_library
 from .version import __version__  # noqa: F401
 
 
-if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
+if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
     from .documentation import (
         Labels,
         LabelsEntry,
         TensorBlock,
         TensorMap,
         dtype_name,
-        load,
-        load_block,
         load_block_buffer,
         load_buffer,
-        load_labels,
         load_labels_buffer,
-        save,
         save_buffer,
         version,
     )
@@ -33,15 +30,18 @@ else:
 
     version = torch.ops.metatensor.version
     dtype_name = torch.ops.metatensor.dtype_name
-
-    load = torch.ops.metatensor.load
     load_buffer = torch.ops.metatensor.load_buffer
-    load_block = torch.ops.metatensor.load_block
     load_block_buffer = torch.ops.metatensor.load_block_buffer
-    load_labels = torch.ops.metatensor.load_labels
     load_labels_buffer = torch.ops.metatensor.load_labels_buffer
-    save = torch.ops.metatensor.save
     save_buffer = torch.ops.metatensor.save_buffer
+
+from .serialization import (  # noqa: F401
+    load,
+    load_block,
+    load_labels,
+    save,
+)
+
 
 try:
     import metatensor.operations  # noqa: F401
@@ -71,8 +71,12 @@ try:
 except ImportError:
     pass
 
-from . import atomistic  # noqa: F401
 
+from . import atomistic  # noqa: F401
+from ._module import _patch_torch_jit_module
+
+
+_patch_torch_jit_module()
 
 __all__ = [
     "Labels",

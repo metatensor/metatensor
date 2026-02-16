@@ -26,7 +26,7 @@ jobs:
       matrix:
         include:
           # test without any feature (i.e shared build)
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
             extra-name: ", no features"
@@ -34,33 +34,33 @@ jobs:
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          # test with all features (i.e static build + ndarray)
-          - os: ubuntu-20.04
+          # test with all features (i.e static build + rayon + bench)
+          - os: ubuntu-24.04
             rust-version: stable
             rust-target: x86_64-unknown-linux-gnu
-            cargo-test-flags: --release --all-features
+            cargo-build-flags: --release --all-features
             do-valgrind: true
             extra-name: ", all features, release"
             cxx: g++
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          # check the build on a stock Ubuntu 20.04, which uses cmake 3.16, and
+          # check the build on a stock Ubuntu 22.04, which uses cmake 3.22, and
           # with our minimal supported rust version
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             rust-version: 1.74
-            container: ubuntu:20.04
+            container: ubuntu:22.04
             rust-target: x86_64-unknown-linux-gnu
             cargo-build-flags: --features=rayon
-            extra-name: ", cmake 3.16"
+            extra-name: ", cmake 3.22"
             cxx: g++
             cc: gcc
             cmake-generator: Unix Makefiles
 
-          - os: macos-14
+          - os: macos-15
             rust-version: stable
             rust-target: aarch64-apple-darwin
-            cargo-test-flags: --features=rayon
+            cargo-build-flags: --features=rayon
             extra-name: ""
             cxx: clang++
             cc: clang
@@ -85,18 +85,18 @@ jobs:
             cmake-generator: MinGW Makefiles
     steps:
       - name: install dependencies in container
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: |
           apt update
           apt install -y software-properties-common
           apt install -y cmake make gcc g++ git curl
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Configure git safe directory
-        if: matrix.container == 'ubuntu:20.04'
+        if: matrix.container == 'ubuntu:22.04'
         run: git config --global --add safe.directory /__w/metatensor/metatensor
 
       - name: setup rust
@@ -105,18 +105,26 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
           target: ${{ matrix.rust-target }}
 
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
+
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
+          sudo snap install valgrind --classic
           sudo apt-get update
-          sudo apt-get install -y valgrind
+          sudo apt-get install -y libc6-dbg --fix-missing
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.8.1"
+          version: "v0.10.0"
 
       - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -136,30 +144,44 @@ jobs:
 
   # check that the C API declarations are correctly used by Rust and Python
   prevent-bitrot:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     name: check C API declarations
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+          enable-cache: true
+          activate-environment: true
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: x86_64-unknown-linux-gnu
+          components: rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
 
       - name: install python dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pycparser
+          uv pip install pycparser
 
-      - name: install bindgen
+      - name: install bindgen conditionally
         run: |
-          cargo install bindgen-cli --version ^0.69
+          if ! cargo install --list | grep "bindgen-cli v0.72.1"; then
+            echo "Installing bindgen-cli v0.72.1 from git to use Cargo.lock"
+            git clone --depth 1 --branch v0.72.1 https://github.com/rust-lang/rust-bindgen
+            # Install from the local git clone using its Cargo.lock file
+            # This pins an older 'toml' version compatible with Rust 1.74.1
+            cargo install --path rust-bindgen/bindgen-cli --locked --force
+            rm -rf rust-bindgen
+          fi
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
@@ -172,11 +194,11 @@ jobs:
 
   # make sure no debug print stays in the code
   check-debug-prints:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     name: check leftover debug print
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: install ripgrep
         run: |

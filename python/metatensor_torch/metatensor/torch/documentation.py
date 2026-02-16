@@ -326,12 +326,12 @@ class Labels:
         """
 
     @staticmethod
-    def load(path: str) -> "Labels":
+    def load(file: str) -> "Labels":
         """
-        Load a serialized :py:class:`Labels` from the file at ``path``, this is
+        Load a serialized :py:class:`Labels` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_labels`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorMap`
+        :param file: Path of the file containing a saved :py:class:`TensorMap`
 
         .. warning::
 
@@ -371,12 +371,12 @@ class Labels:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save these :py:class:`Labels` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
@@ -489,7 +489,7 @@ class Labels:
         ...     label.remove(name="bar")
         ... except RuntimeError as e:
         ...     print(e)
-        invalid parameter: can not have the same label entry multiple time: [42] is already present
+        invalid parameter: can not have the same label entry multiple times: [42] is already present
         """  # noqa E501
 
     def rename(self, old: str, new: str) -> "Labels":
@@ -514,8 +514,12 @@ class Labels:
         )
         """
 
-    def to(self, device: Union[str, torch.device]) -> "Labels":
-        """move the values for these Labels to the given ``device``"""
+    def to(self, device: Union[str, torch.device], non_blocking=False) -> "Labels":
+        """
+        Move the values for these Labels to the given ``device``. If ``non_blocking`` is
+        ``True``, this tries to move the data asynchronously. See
+        :py:meth:`torch.Tensor.to` for more information.
+        """
 
     @property
     def device(self) -> torch.device:
@@ -575,6 +579,27 @@ class Labels:
             and a :py:class:`torch.Tensor` containing the position in the intersection
             of the entries from ``other``. If entries in ``self`` or ``other`` are not
             used in the output, the mapping for them is set to ``-1``.
+        """
+
+    def difference(self, other: "Labels") -> "Labels":
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        If you want to know where entries in ``self`` ends up in the difference, you can
+        use :py:meth:`Labels.difference_and_mapping`.
+        """
+
+    def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", torch.Tensor]:
+        """
+        Take the set difference of these :py:class:`Labels` with ``other``.
+
+        This function also returns the position in the difference where each entry of
+        the input :py:class::`Labels` ended up.
+
+        :return: Tuple containing the intersection, and a :py:class:`torch.Tensor`
+            containing the position in the intersection of the entries from ``self``. If
+            entries in ``self`` are not used in the output, the mapping for these is set
+            to ``-1``.
         """
 
     def select(self, selection: "Labels") -> torch.Tensor:
@@ -924,6 +949,7 @@ class TensorBlock:
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
         arrays: Optional[str] = None,
+        non_blocking: bool = False,
     ) -> "TensorBlock":
         """
         Move all the arrays in this block (values, gradients and labels) to the given
@@ -933,18 +959,20 @@ class TensorBlock:
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This parameter is here for
-            compatibility with the pure Python API, can only be set  to ``"torch"`` or
-            ``None`` and does nothing.
+        :param Optional[str] arrays: new backend to use for the arrays. This parameter
+            is here for compatibility with the pure Python API, can only be set to
+            ``"torch"`` or ``None``, and does nothing.
+        :param bool non_blocking: If this is ``True``, the function tries to move the
+            data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
 
     @staticmethod
-    def load(path: str) -> "TensorBlock":
+    def load(file: str) -> "TensorBlock":
         """
-        Load a serialized :py:class:`TensorBlock` from the file at ``path``, this is
+        Load a serialized :py:class:`TensorBlock` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_block`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorBlock`
+        :param file: Path of the file containing a saved :py:class:`TensorBlock`
 
         .. warning::
 
@@ -984,12 +1012,12 @@ class TensorBlock:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save this :py:class:`TensorBlock` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
@@ -1046,12 +1074,12 @@ class TensorMap:
         """
 
     @staticmethod
-    def load(path: str) -> "TensorMap":
+    def load(file: str) -> "TensorMap":
         """
-        Load a serialized :py:class:`TensorMap` from the file at ``path``, this is
+        Load a serialized :py:class:`TensorMap` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load`.
 
-        :param path: Path of the file containing a saved :py:class:`TensorMap`
+        :param file: Path of the file containing a saved :py:class:`TensorMap`
 
         .. warning::
 
@@ -1091,12 +1119,12 @@ class TensorMap:
             .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
 
-    def save(self, path: str):
+    def save(self, file: str):
         """
         Save this :py:class:`TensorMap` to a file, this is equivalent to
         :py:func:`metatensor.torch.save`.
 
-        :param path: Path of the file. If the file already exists, it will be
+        :param file: Path of the file. If the file already exists, it will be
             overwritten
         """
 
@@ -1196,8 +1224,7 @@ class TensorMap:
         Move the given ``dimensions`` from the component labels to the property
         labels for each block.
 
-        :param dimensions: name of the component dimensions to move to the
-            properties
+        :param dimensions: name of the component dimensions to move to the properties
         """
 
     def blocks_matching(self, selection: Labels) -> List[int]:
@@ -1324,6 +1351,7 @@ class TensorMap:
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
         arrays: Optional[str] = None,
+        non_blocking: bool = False,
     ) -> "TensorMap":
         """
         Move all the data (keys and blocks) in this :py:class:`TensorMap` to the given
@@ -1333,9 +1361,34 @@ class TensorMap:
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param arrays: new backend to use for the arrays. This parameter is here for
-            compatibility with the pure Python API, can only be set  to ``"torch"`` or
-            ``None`` and does nothing.
+        :param Optional[str] arrays: new backend to use for the arrays. This parameter
+            is here for compatibility with the pure Python API, can only be set  to
+            ``"torch"`` or ``None``, and does nothing.
+        :param bool non_blocking: If this is ``True``, the function tries to move the
+            data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
+        """
+
+    def set_info(self, key: str, value: str):
+        """
+        Set or update the info (i.e. global metadata) ``value`` associated with ``key``
+        for this :py:class:`TensorMap`.
+
+        :param key: key of the info
+        :param value: value of the info
+        """
+
+    def get_info(self, key: str) -> Optional[str]:
+        """
+        Get the info (i.e. global metadata) with the given ``key`` for this
+        :py:class:`TensorMap`.
+
+        :param key: key of the info to retrieve
+        :return: value of the info, or :py:obj:`None` if the info does not exist
+        """
+
+    def info(self) -> Dict[str, str]:
+        """
+        Get all the key/value info pairs stored in this :py:class:`TensorMap`.
         """
 
 
@@ -1349,48 +1402,6 @@ def dtype_name(dtype: torch.dtype) -> str:
 
     This is intended to be used in error message in TorchScript mode, where all dtypes
     are converted to integers.
-    """
-
-
-def load(path: str) -> TensorMap:
-    """
-    Load a previously saved :py:class:`TensorMap` from the given path.
-
-    :py:class:`TensorMap` are serialized using the ``.mts`` format, i.e. a
-    ZIP file without compression (storage method is ``STORED``), where each file
-    is stored as a ``.npy`` array. See the C API documentation for more
-    information on the format.
-
-    :param path: path of the file to load
-    """
-
-
-def load_block(path: str) -> TensorBlock:
-    """
-    Load previously saved :py:class:`TensorBlock` from the given file.
-
-    :param path: path of the file to load
-    """
-
-
-def load_labels(path: str) -> Labels:
-    """
-    Load previously saved :py:class:`Labels` from the given file.
-
-    :param path: path of the file to load
-    """
-
-
-def save(path: str, data: Union[TensorMap, TensorBlock, Labels]):
-    """
-    Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`, or
-    :py:class:`Labels`) to the given file at the given ``path``.
-
-    If the file already exists, it is overwritten. The recomended file extension when
-    saving data is ``.mts``, to prevent confusion with generic ``.npz`` files.
-
-    :param path: path of the file where to save the data
-    :param data: data to serialize and save
     """
 
 

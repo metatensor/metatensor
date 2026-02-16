@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
@@ -432,7 +432,7 @@ impl TensorMap {
     /// Get a parallel iterator over the keys and associated blocks
     #[cfg(feature = "rayon")]
     #[inline]
-    pub fn par_iter(&self) -> TensorMapParIter {
+    pub fn par_iter(&self) -> TensorMapParIter<'_> {
         use rayon::prelude::*;
         TensorMapParIter {
             inner: self.keys().par_iter().zip_eq(self.blocks().into_par_iter())
@@ -443,7 +443,7 @@ impl TensorMap {
     /// read-write access to the blocks
     #[cfg(feature = "rayon")]
     #[inline]
-    pub fn par_iter_mut(&mut self) -> TensorMapParIterMut {
+    pub fn par_iter_mut(&mut self) -> TensorMapParIterMut<'_> {
         use rayon::prelude::*;
 
         // we can not use `self.blocks_mut()` here, since it would
@@ -455,6 +455,75 @@ impl TensorMap {
 
         TensorMapParIterMut {
             inner: self.keys().par_iter().zip_eq(blocks)
+        }
+    }
+
+    /// Set or update the info (i.e. global metadata) `value` associated with
+    /// `key` for this `TensorMap`.
+    pub fn set_info(&mut self, key: &str, value: &str) {
+        let mut key = key.to_owned().into_bytes();
+        key.push(b'\0');
+
+        let mut value = value.to_owned().into_bytes();
+        value.push(b'\0');
+
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_set_info(
+                self.ptr, key.as_ptr().cast(), value.as_ptr().cast()
+            )).expect("failed to set info");
+        }
+    }
+
+    /// Get the info (i.e. global metadata) with the given `key` for this
+    /// `TensorMap`.
+    pub fn get_info(&self, key: &str) -> Option<&str> {
+        let mut key = key.to_owned().into_bytes();
+        key.push(b'\0');
+
+        let mut value = std::ptr::null();
+
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_get_info(
+                self.ptr, key.as_ptr().cast(), &mut value
+            )).expect("failed to set info");
+        }
+
+        if value.is_null() {
+            return None;
+        }
+
+        let c_str = unsafe { CStr::from_ptr(value) };
+        return Some(c_str.to_str().expect("invalid UTF-8 string"));
+    }
+
+    /// Get an iterator over all the key/value info pairs stored in this
+    /// `TensorMap`.
+    pub fn info(&self) -> TensorMapInfoIter<'_> {
+        let mut keys = std::ptr::null();
+        let mut count = 0;
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_info_keys(
+                self.ptr,
+                &mut keys,
+                &mut count,
+            )).expect("failed to get info keys");
+        };
+
+        let keys = unsafe {
+            std::slice::from_raw_parts(keys, count)
+        };
+        let keys = keys.iter()
+            .map(|&k| {
+                let c_str = unsafe { CStr::from_ptr(k) };
+                c_str.to_str().expect("invalid UTF-8 string")
+            })
+            .collect::<Vec<_>>();
+
+        TensorMapInfoIter {
+            keys: keys,
+            tensor: self,
+            index: 0,
+            count,
         }
     }
 }
@@ -618,13 +687,51 @@ impl rayon::iter::IndexedParallelIterator for TensorMapParIterMut<'_> {
 
 /******************************************************************************/
 
+/// Iterator over info key/value pairs in a `TensorMap`
+pub struct TensorMapInfoIter<'a> {
+    keys: Vec<&'a str>,
+    tensor: &'a TensorMap,
+    index: usize,
+    count: usize,
+}
+
+impl<'a> Iterator for TensorMapInfoIter<'a> {
+    type Item = (&'a str, &'a str);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.count {
+            return None;
+        }
+        let key = self.keys[self.index];
+        let value = self.tensor.get_info(key).expect("missing info");
+        self.index += 1;
+        return Some((key, value));
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.count, Some(self.count))
+    }
+}
+
+impl ExactSizeIterator for TensorMapInfoIter<'_> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.count
+    }
+}
+
+impl FusedIterator for TensorMapInfoIter<'_> {}
+
+
+/******************************************************************************/
+
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use crate::{Labels, TensorBlock, TensorMap};
 
-    #[test]
-    #[allow(clippy::cast_lossless, clippy::float_cmp)]
-    fn iter() {
+    fn test_tensor() -> TensorMap {
         let block_1 = TensorBlock::new(
             ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
             &Labels::new(["samples"], &[[0], [1]]),
@@ -646,21 +753,98 @@ mod tests {
             &Labels::new(["properties"], &[[-2], [1]]),
         ).unwrap();
 
-        let mut tensor = TensorMap::new(
-            Labels::new(["key"], &[[1], [3], [-4]]),
+        return TensorMap::new(
+            Labels::new(["key", "other"], &[[1, 0], [3, 1], [-4, 0]]),
             vec![block_1, block_2, block_3],
         ).unwrap();
+    }
+
+    #[test]
+    fn block_access() {
+        let mut tensor = test_tensor();
+
+        let block = tensor.block_by_id(1);
+        assert_eq!(block.values().as_array().shape(), [1, 1]);
+
+        let block = tensor.block_mut_by_id(2);
+        assert_eq!(block.values().as_array().shape(), [3, 2]);
+
+        let selection = Labels::new(["key"], &[[1]]);
+        assert_eq!(tensor.block_matching(&selection).unwrap(), 0);
+        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0]);
+
+        let block = tensor.block(&selection).unwrap();
+        assert_eq!(block.values().as_array().shape(), [2, 3]);
+
+        let selection = Labels::new(["other"], &[[0]]);
+        assert!(tensor.block_matching(&selection).is_err());
+        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0, 2]);
+
+        let blocks = tensor.blocks();
+        assert_eq!(blocks[0].values().as_array().shape(), [2, 3]);
+        assert_eq!(blocks[1].values().as_array().shape(), [1, 1]);
+        assert_eq!(blocks[2].values().as_array().shape(), [3, 2]);
+
+        let blocks = tensor.blocks_mut();
+        assert_eq!(blocks[0].values().as_array().shape(), [2, 3]);
+        assert_eq!(blocks[1].values().as_array().shape(), [1, 1]);
+        assert_eq!(blocks[2].values().as_array().shape(), [3, 2]);
+    }
+
+    #[test]
+    fn iter() {
+        let mut tensor = test_tensor();
 
         // iterate over keys & blocks
         for (key, block) in &tensor {
-            assert_eq!(block.values().to_array()[[0, 0]], key[0].i32() as f64);
+            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in &mut tensor {
             let array = block.values_mut().to_array_mut();
             *array *= 2.0;
-            assert_eq!(array[[0, 0]], 2.0 * (key[0].i32() as f64));
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         }
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn par_iter() {
+        use rayon::iter::ParallelIterator;
+
+        let mut tensor = test_tensor();
+
+        // iterate over keys & blocks
+        tensor.par_iter().for_each(|(key, block)| {
+            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
+        });
+
+        // iterate over keys & blocks mutably
+        tensor.par_iter_mut().for_each(|(key, mut block)| {
+            let array = block.values_mut().to_array_mut();
+            *array *= 2.0;
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
+        });
+    }
+
+    #[test]
+    fn info() {
+        let mut tensor = test_tensor();
+        tensor.set_info("creator", "unit test");
+        tensor.set_info("version", "1.0");
+
+        assert_eq!(tensor.get_info("creator").unwrap(), "unit test");
+        assert_eq!(tensor.get_info("version").unwrap(), "1.0");
+        assert!(tensor.get_info("missing").is_none());
+
+        let mut info_iter = tensor.info();
+        let (key, value) = info_iter.next().unwrap();
+        assert_eq!(key, "creator");
+        assert_eq!(value, "unit test");
+        let (key, value) = info_iter.next().unwrap();
+        assert_eq!(key, "version");
+        assert_eq!(value, "1.0");
+        assert!(info_iter.next().is_none());
     }
 }

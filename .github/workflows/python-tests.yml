@@ -17,46 +17,55 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            python-version: "3.9"
-            torch-version: "1.12.*"
+          - os: ubuntu-24.04
+            python-version: "3.10"
+            torch-version: "2.1"
             numpy-version-pin: "<2.0"
-          - os: ubuntu-20.04
-            python-version: "3.9"
-            torch-version: "2.5.*"
-          - os: ubuntu-20.04
-            python-version: "3.12"
-            torch-version: "2.5.*"
-          - os: macos-14
-            python-version: "3.12"
-            torch-version: "2.5.*"
+          - os: ubuntu-24.04
+            python-version: "3.10"
+            torch-version: "2.10"
+          - os: ubuntu-24.04
+            python-version: "3.13"
+            torch-version: "2.10"
+          - os: macos-15
+            python-version: "3.13"
+            torch-version: "2.10"
           - os: windows-2022
-            python-version: "3.12"
-            torch-version: "2.5.*"
+            python-version: "3.13"
+            torch-version: "2.10"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: setup Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          activate-environment: true
 
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
-          version: "v0.8.1"
+          sweep-cache: true
+
+      - name: Setup sccache
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.10.0"
 
       - name: setup MSVC command prompt
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -65,8 +74,7 @@ jobs:
 
       - name: install tests dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox
+          uv tool install tox --with tox-uv
 
       - name: run tests
         run: tox

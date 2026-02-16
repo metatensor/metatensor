@@ -231,5 +231,64 @@ impl FusedIterator for GradientsMutIter<'_> {}
 
 #[cfg(test)]
 mod tests {
-    // TODO
+    use crate::{Labels, TensorBlock};
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn gradients() {
+        let properties = Labels::new(["p"], &[[-2], [0], [1]]);
+        let mut block = TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], 1.0),
+            &Labels::new(["s"], &[[0], [1]]), &[], &properties,
+        ).unwrap();
+
+        block.add_gradient("g", TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], -1.0),
+            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+        ).unwrap()).unwrap();
+
+        block.add_gradient("f", TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 3], -2.0),
+            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+        ).unwrap()).unwrap();
+
+
+        let mut block = block.as_ref_mut();
+        let gradient = block.gradient_mut("g").unwrap();
+        assert_eq!(gradient.values().as_array()[[0, 0]], -1.0);
+
+        let gradient = block.gradient_mut("f").unwrap();
+        assert_eq!(gradient.values().as_array()[[0, 0]], -2.0);
+
+        assert!(block.gradient_mut("h").is_none());
+
+        let mut iter = block.gradients_mut();
+        assert_eq!(iter.len(), 2);
+
+        assert_eq!(iter.next().unwrap().0, "g");
+        assert_eq!(iter.next().unwrap().0, "f");
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn block_data() {
+        let mut block = TensorBlock::new(
+            ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0),
+            &Labels::new(["samples"], &[[0], [1]]),
+            &[Labels::new(["component"], &[[0]])],
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
+        ).unwrap();
+        let mut block = block.as_ref_mut();
+
+        assert_eq!(block.values().as_array(), ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
+        assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
+        assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
+
+        let block = block.data_mut();
+        assert_eq!(block.values.as_array(), ndarray::ArrayD::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
+        assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
+        assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
+    }
 }

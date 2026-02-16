@@ -11,27 +11,27 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  rust-tests:
+  julia-tests:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / Julia ${{ matrix.julia-version }}
     container: ${{ matrix.container }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             julia-version: "1.6"
 
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             julia-version: "1.9"
 
-          - os: macos-14
+          - os: macos-15
             julia-version: "1.9"
 
           # TODO
           # - os: windows-2022
           #   julia-version: "1.9"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -45,12 +45,19 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:
-          version: "v0.8.1"
+          sweep-cache: true
+
+      - name: Setup sccache
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.10.0"
 
       - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
           echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV

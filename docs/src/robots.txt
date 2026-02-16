@@ -1,0 +1,7 @@
+User-agent: *
+
+Disallow: /_sources/
+Disallow: /_datasets/
+
+Sitemap: https://docs.metatensor.org/latest/sitemap.xml
+

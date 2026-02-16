@@ -28,6 +28,27 @@ mod tensor {
     }
 
     #[test]
+    fn save() {
+        let mut file = std::fs::File::open(DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let tensor = metatensor::io::load_buffer(&buffer).unwrap();
+
+        let temdir = tempfile::tempdir().unwrap();
+        let mut tempath = temdir.path().to_path_buf();
+        tempath.push("tensor.mts");
+        tensor.save(&tempath).unwrap();
+
+        let mut file = std::fs::File::open(tempath).unwrap();
+        let mut saved = Vec::new();
+        file.read_to_end(&mut saved).unwrap();
+
+        assert_eq!(buffer.len(), saved.len());
+        assert_eq!(buffer, saved);
+    }
+
+    #[test]
     fn save_buffer() {
         let mut file = std::fs::File::open(DATA_PATH).unwrap();
         let mut buffer = Vec::new();
@@ -37,10 +58,12 @@ mod tensor {
 
         let mut saved = Vec::new();
         metatensor::io::save_buffer(&tensor, &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         tensor.save_buffer(&mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -96,6 +119,27 @@ mod block {
     }
 
     #[test]
+    fn save() {
+        let mut file = std::fs::File::open(DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let block = metatensor::io::load_block_buffer(&buffer).unwrap();
+
+        let temdir = tempfile::tempdir().unwrap();
+        let mut tempath = temdir.path().to_path_buf();
+        tempath.push("block.mts");
+        block.save(&tempath).unwrap();
+
+        let mut file = std::fs::File::open(tempath).unwrap();
+        let mut saved = Vec::new();
+        file.read_to_end(&mut saved).unwrap();
+
+        assert_eq!(buffer.len(), saved.len());
+        assert_eq!(buffer, saved);
+    }
+
+    #[test]
     fn save_buffer() {
         let mut file = std::fs::File::open(DATA_PATH).unwrap();
         let mut buffer = Vec::new();
@@ -105,10 +149,13 @@ mod block {
 
         let mut saved = Vec::new();
         metatensor::io::save_block_buffer(block.as_ref(), &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         block.save_buffer(&mut saved).unwrap();
+
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 
@@ -160,6 +207,27 @@ mod labels {
     }
 
     #[test]
+    fn save() {
+        let mut file = std::fs::File::open(DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let labels = metatensor::io::load_labels_buffer(&buffer).unwrap();
+
+        let temdir = tempfile::tempdir().unwrap();
+        let mut tempath = temdir.path().to_path_buf();
+        tempath.push("labels.mts");
+        labels.save(&tempath).unwrap();
+
+        let mut file = std::fs::File::open(tempath).unwrap();
+        let mut saved = Vec::new();
+        file.read_to_end(&mut saved).unwrap();
+
+        assert_eq!(buffer.len(), saved.len());
+        assert_eq!(buffer, saved);
+    }
+
+    #[test]
     fn save_buffer() {
         let mut file = std::fs::File::open(DATA_PATH).unwrap();
         let mut buffer = Vec::new();
@@ -169,10 +237,12 @@ mod labels {
 
         let mut saved = Vec::new();
         metatensor::io::save_labels_buffer(&labels, &mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
 
         saved.clear();
         labels.save_buffer(&mut saved).unwrap();
+        assert_eq!(buffer.len(), saved.len());
         assert_eq!(buffer, saved);
     }
 

@@ -9,6 +9,7 @@ the standard output.
 This output can the be used in the merged wheel containing the build against all torch
 versions.
 """
+
 import re
 import sys
 

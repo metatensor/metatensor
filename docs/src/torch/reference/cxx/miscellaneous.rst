@@ -1,7 +1,6 @@
 Miscellaneous
 =============
 
-
 Version number
 ^^^^^^^^^^^^^^
 
@@ -25,6 +24,13 @@ Version number
 
     Macro containing the compile-time **patch** version number of
     metatensor-torch, as an integer
+
+
+Modules containing metatensor data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. doxygenclass:: metatensor_torch::Module
+    :members:
 
 
 ``TensorMap`` Serialization

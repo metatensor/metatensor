@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+from typing import Union
 
 import torch
 
@@ -30,12 +31,12 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 #    about
 #
 # To achieve this, we import the modules in a special mode with `importlib`, first
-# creating the `metatensor.torch.operations._classes` module, containing all metatensor
+# creating the `metatensor.torch.operations._backend` module, containing all metatensor
 # classes plus a `TORCH_SCRIPT_MODE` constant to change the code between Python and
 # TorchScript modes.
 #
 # We then import the code from `metatensor-operations` into a custom module
-# `metatensor.torch.operations`. When code in this module tries to `from ._classes
+# `metatensor.torch.operations`. When code in this module tries to `from ._backend
 # import ...`, the import is resolved to the values defined in the step above. This
 # allows to have the right type annotation on the functions.
 #
@@ -43,14 +44,14 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 # used in `metatensor`, and one in `metatensor.torch`.
 
 
-# Step 1: create the `_classes` module as an empty module
+# Step 1: create the `_backend` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.operations._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
-# be made to the `metatensor/operations/_classes.py` file, which is used in non
+# be made to the `metatensor/operations/_backend.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
 module.__dict__["TensorBlock"] = TensorBlock
@@ -71,23 +72,29 @@ else:
 module.__dict__["torch_jit_annotate"] = torch.jit.annotate
 
 
-def is_metatensor_class(value, typ):
+def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename: str):
+    assert typename in ("Labels", "TensorBlock", "TensorMap")
+
     if torch.jit.is_scripting():
-        return True
+        if typename == "Labels":
+            return isinstance(value, Labels)
+        elif typename == "TensorBlock":
+            return isinstance(value, TensorBlock)
+        elif typename == "TensorMap":
+            return isinstance(value, TensorMap)
 
-    assert typ in (Labels, TensorBlock, TensorMap)
+    # For custom classes (TensorMap, …), the `values` is an instance of
+    # `torch.ScriptObject` and not the class itself, so we use `_type`
+    # to get the type name
     if isinstance(value, torch.ScriptObject):
-        # For custom classes (TensorMap, …), the `typ` is an instance of
-        # `torch.ScriptClass` and not a class itself, and there is no way to check
-        # if obj is an "instance" of this class; so we always return True and hope
-        # for the best. Most errors should be caught by the TorchScript compiler
-        # anyway.
-        return True
-    else:
-        return False
+        qualified_name = value._type().qualified_name()
+        if qualified_name.startswith("__torch__.torch.classes.metatensor"):
+            return value._type().name() == typename
+
+    return False
 
 
-module.__dict__["is_metatensor_class"] = is_metatensor_class
+module.__dict__["isinstance_metatensor"] = isinstance_metatensor
 
 # register the module in sys.modules, so future import find it directly
 sys.modules[spec.name] = module

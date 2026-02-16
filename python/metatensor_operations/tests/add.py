@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import metatensor
+import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 from . import _gradcheck
@@ -221,31 +221,31 @@ def tensor_res_2(keys):
 
 
 def test_self_add_tensors_no_gradient(tensor_A, tensor_B, tensor_res_1):
-    tensor_A = metatensor.remove_gradients(tensor_A)
-    tensor_B = metatensor.remove_gradients(tensor_B)
-    tensor_res_1 = metatensor.remove_gradients(tensor_res_1)
+    tensor_A = mts.remove_gradients(tensor_A)
+    tensor_B = mts.remove_gradients(tensor_B)
+    tensor_res_1 = mts.remove_gradients(tensor_res_1)
 
     tensor_A_copy = tensor_A.copy()
     tensor_B_copy = tensor_B.copy()
 
-    metatensor.allclose_raise(metatensor.add(tensor_A, tensor_B), tensor_res_1)
+    mts.allclose_raise(mts.add(tensor_A, tensor_B), tensor_res_1)
 
     # Check the tensors haven't be modified in place
-    metatensor.equal_raise(tensor_A, tensor_A_copy)
-    metatensor.equal_raise(tensor_B, tensor_B_copy)
+    mts.equal_raise(tensor_A, tensor_A_copy)
+    mts.equal_raise(tensor_B, tensor_B_copy)
 
 
 def test_self_add_tensors_gradient(tensor_A, tensor_B, tensor_res_1):
-    metatensor.allclose_raise(metatensor.add(tensor_A, tensor_B), tensor_res_1)
+    mts.allclose_raise(mts.add(tensor_A, tensor_B), tensor_res_1)
 
 
 def test_self_add_scalar_gradient(tensor_A, tensor_res_2):
     tensor_A_copy = tensor_A.copy()
 
-    metatensor.allclose_raise(metatensor.add(tensor_A, 5.1), tensor_res_2)
+    mts.allclose_raise(mts.add(tensor_A, 5.1), tensor_res_2)
 
     # Check the tensors haven't be modified in place
-    metatensor.equal_raise(tensor_A, tensor_A_copy)
+    mts.equal_raise(tensor_A, tensor_A_copy)
 
 
 def test_self_add_error():
@@ -260,35 +260,28 @@ def test_self_add_error():
 
     message = "`A` must be a metatensor TensorMap, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        metatensor.add(np.ones((3, 4)), tensor)
+        mts.add(np.ones((3, 4)), tensor)
 
     message = (
         "`B` must be a metatensor TensorMap or a scalar value, "
         "not <class 'numpy.ndarray'>"
     )
     with pytest.raises(TypeError, match=message):
-        metatensor.add(tensor, np.ones((3, 4)))
+        mts.add(tensor, np.ones((3, 4)))
 
 
-def test_add_finite_difference():
+def test_finite_difference():
     def function(array):
-        tensor_1 = _gradcheck.cartesian_linear(array)
-        tensor_2 = _gradcheck.cartesian_cubic(array)
-        return metatensor.add(tensor_1, tensor_2)
+        tensor_1 = _gradcheck.tensor_with_grad_a(array, parameter="g")
+        tensor_2 = _gradcheck.tensor_with_grad_b(array, parameter="g")
+        return mts.add(tensor_1, tensor_2)
 
     rng = np.random.default_rng(seed=123456)
-    array = rng.random((5, 3))
+    array = rng.random((50, 3))
     _gradcheck.check_finite_differences(function, array, parameter="g")
 
-
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
-def test_torch_add_finite_difference():
-    def function(array):
-        tensor_1 = _gradcheck.cartesian_linear(array)
-        tensor_2 = _gradcheck.cartesian_cubic(array)
-        return metatensor.add(tensor_1, tensor_2)
-
-    rng = torch.Generator()
-    rng.manual_seed(123456)
-    array = torch.rand(5, 3, dtype=torch.float64, generator=rng)
-    _gradcheck.check_finite_differences(function, array, parameter="g")
+    if HAS_TORCH:
+        rng = torch.Generator()
+        rng.manual_seed(123456)
+        array = torch.rand(50, 3, dtype=torch.float64, generator=rng)
+        _gradcheck.check_finite_differences(function, array, parameter="g")

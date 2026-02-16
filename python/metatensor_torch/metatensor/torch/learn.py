@@ -1,5 +1,6 @@
 import importlib
 import sys
+from typing import Union
 
 import torch
 
@@ -12,14 +13,14 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 # ==================================================================================== #
 
 
-# Step 1: create the `_classes` module as an empty module
+# Step 1: create the `_backend` module as an empty module
 spec = importlib.util.spec_from_loader(
     "metatensor.torch.learn._backend",
     loader=None,
 )
 module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
-# be made to the `metatensor/learn/_classes.py` file, which is used in non
+# be made to the `metatensor/learn/_backend.py` file, which is used in non
 # TorchScript mode.
 module.__dict__["Labels"] = Labels
 module.__dict__["LabelsEntry"] = LabelsEntry
@@ -28,23 +29,29 @@ module.__dict__["TensorMap"] = TensorMap
 module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
 
 
-def is_metatensor_class(value, typ):
+def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename: str):
+    assert typename in ("Labels", "TensorBlock", "TensorMap")
+
     if torch.jit.is_scripting():
-        return True
+        if typename == "Labels":
+            return isinstance(value, Labels)
+        elif typename == "TensorBlock":
+            return isinstance(value, TensorBlock)
+        elif typename == "TensorMap":
+            return isinstance(value, TensorMap)
 
-    assert typ in (Labels, LabelsEntry, TensorBlock, TensorMap)
+    # For custom classes (TensorMap, …), the `values` is an instance of
+    # `torch.ScriptObject` and not the class itself, so we use `_type`
+    # to get the type name
     if isinstance(value, torch.ScriptObject):
-        # For custom classes (TensorMap, …), the `typ` is an instance of
-        # `torch.ScriptClass` and not a class itself, and there is no way to check
-        # if obj is an "instance" of this class; so we always return True and hope
-        # for the best. Most errors should be caught by the TorchScript compiler
-        # anyway.
-        return True
-    else:
-        return False
+        qualified_name = value._type().qualified_name()
+        if qualified_name.startswith("__torch__.torch.classes.metatensor"):
+            return value._type().name() == typename
+
+    return False
 
 
-module.__dict__["is_metatensor_class"] = is_metatensor_class
+module.__dict__["isinstance_metatensor"] = isinstance_metatensor
 
 # register the module in sys.modules, so future import find it directly
 sys.modules[spec.name] = module

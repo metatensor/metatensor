@@ -12,6 +12,17 @@ API reference
     :tag-prefix: metatensor-torch-v
     :url-suffix: torch/reference/index.html
 
+    .. version:: 0.8.4
+    .. version:: 0.8.3
+    .. version:: 0.8.2
+    .. version:: 0.8.1
+    .. version:: 0.8.0
+    .. version:: 0.7.6
+    .. version:: 0.7.5
+    .. version:: 0.7.4
+    .. version:: 0.7.3
+    .. version:: 0.7.2
+    .. version:: 0.7.1
     .. version:: 0.7.0
     .. version:: 0.6.3
     .. version:: 0.6.1
@@ -40,14 +51,14 @@ changing from
 
 .. code-block:: python
 
-    import metatensor
+    import metatensor as mts
     from metatensor import TensorMap, TensorBlock, Labels
 
 to
 
 .. code-block:: python
 
-    import metatensor.torch as metatensor
+    import metatensor.torch as mts
     from metatensor.torch import TensorMap, TensorBlock, Labels
 
 should be 80% of the work required to make a model developed in Python with

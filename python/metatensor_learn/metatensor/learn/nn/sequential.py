@@ -1,9 +1,9 @@
 from typing import List
 
 import torch
-from torch.nn import Module
 
-from .._backend import Labels, TensorMap, is_metatensor_class
+from .._backend import Labels, TensorMap, isinstance_metatensor
+from ._module import Module
 from .module_map import ModuleMap
 
 
@@ -21,12 +21,14 @@ class Sequential(Module):
 
     def __init__(self, in_keys: Labels, *args: List[ModuleMap]):
         super().__init__()
-        if not is_metatensor_class(in_keys, Labels):
+        if not isinstance_metatensor(in_keys, "Labels"):
             raise TypeError("`in_keys` must be a `Labels` object.")
 
         modules: List[Module] = []
         for i in range(len(in_keys)):
-            modules.append(torch.nn.Sequential(*[arg.module_map[i] for arg in args]))
+            modules.append(
+                torch.nn.Sequential(*[arg.module_map.module_list[i] for arg in args])
+            )
         self.module_map = ModuleMap(
             in_keys, modules, out_properties=args[-1].module_map.out_properties
         )
