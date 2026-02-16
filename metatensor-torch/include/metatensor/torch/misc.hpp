@@ -37,6 +37,10 @@ METATENSOR_TORCH_EXPORT void save(const std::string& path, TensorMap tensor);
 /// `torch::Tensor` of bytes)
 METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TensorMap tensor);
 
+/// Load a previously saved `TensorMap` from the given path using
+/// memory-mapped I/O.
+METATENSOR_TORCH_EXPORT TensorMap load_mmap(const std::string& path);
+
 /******************************************************************************/
 
 /// Load a previously saved `TensorBlock` from the given path.
@@ -45,6 +49,10 @@ METATENSOR_TORCH_EXPORT TensorBlock load_block(const std::string& path);
 /// Load a previously saved `TensorBlock` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)
 METATENSOR_TORCH_EXPORT TensorBlock load_block_buffer(torch::Tensor buffer);
+
+/// Load a previously saved `TensorBlock` from the given path using
+/// memory-mapped I/O.
+METATENSOR_TORCH_EXPORT TensorBlock load_block_mmap(const std::string& path);
 
 /// Save the given `TensorBlock` to a file at `path`
 METATENSOR_TORCH_EXPORT void save(const std::string& path, TensorBlock block);
