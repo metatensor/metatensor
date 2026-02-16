@@ -516,3 +516,12 @@ extern "C" {
         tensor: *const mts_tensormap_t,
     ) -> mts_status_t;
 }
+
+extern "C" {
+    pub fn mts_tensormap_load_mmap(
+        path: *const ::std::os::raw::c_char,
+    ) -> *mut mts_tensormap_t;
+    pub fn mts_block_load_mmap(
+        path: *const ::std::os::raw::c_char,
+    ) -> *mut mts_block_t;
+}
