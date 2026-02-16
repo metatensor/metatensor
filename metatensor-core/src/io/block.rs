@@ -7,16 +7,10 @@ use zip::{ZipArchive, ZipWriter};
 use dlpk::sys::{DLDataTypeCode, DLDevice, DLPackVersion};
 
 use super::npy_header::{Header, DataType};
-use super::{check_for_extra_bytes, PathOrBuffer};
+use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
 use super::labels::{load_labels, save_labels};
 
 use crate::{TensorBlock, Labels, Error, mts_array_t};
-
-enum Endianness {
-    Little,
-    Big,
-    Native,
-}
 
 /// Check if the file/buffer in `data` looks like it could contain serialized
 /// `TensorBlock`.
@@ -431,7 +425,7 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
 }
 
 fn dlpack_to_npy_descr(code: DLDataTypeCode, bits: u8) -> Result<String, Error> {
-    let endian = if cfg!(target_endian = "little") { "<" } else { ">" };
+    let endian = native_endian_prefix();
 
     let (type_char, type_size) = match (code, bits) {
         (DLDataTypeCode::kDLInt, 8) => ("i", 1),

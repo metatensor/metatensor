@@ -26,6 +26,19 @@ pub enum PathOrBuffer<'a> {
     Buffer(&'a mut dyn ReadAndSeek),
 }
 
+/// Byte order for multi-byte values in NPY files.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Endianness {
+    Little,
+    Big,
+    Native,
+}
+
+/// Return the NPY endianness prefix character for the native byte order.
+pub(crate) fn native_endian_prefix() -> &'static str {
+    if cfg!(target_endian = "little") { "<" } else { ">" }
+}
+
 // returns an error if the given reader contains any more data
 fn check_for_extra_bytes<R: std::io::Read>(reader: &mut R) -> Result<(), Error> {
     let extra = reader.read_to_end(&mut Vec::new())?;
