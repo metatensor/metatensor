@@ -144,6 +144,28 @@ def load_buffer_custom_array(
     return TensorMap._from_ptr(ptr)
 
 
+def load_mmap(path: Union[str, pathlib.Path]) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given path using
+    memory-mapped I/O. Arrays are created internally as read-only mmap-backed arrays.
+
+    :param path: path of the file to load
+    """
+    from ..data.extract import _ensure_mmap_origin_registered
+
+    lib = _get_library()
+    _ensure_mmap_origin_registered()
+
+    if isinstance(path, pathlib.Path):
+        path = str(path)
+
+    path = path.encode("utf8")
+
+    ptr = lib.mts_tensormap_load_mmap(path)
+
+    return TensorMap._from_ptr(ptr)
+
+
 def _save_tensor(
     file: Union[str, pathlib.Path, BinaryIO],
     tensor: TensorMap,
