@@ -1,5 +1,9 @@
 mod npy_header;
 
+mod mmap_array;
+mod mmap;
+pub use self::mmap::{load_mmap, load_block_mmap};
+
 mod labels;
 pub use self::labels::load_labels;
 pub use self::labels::save_labels;

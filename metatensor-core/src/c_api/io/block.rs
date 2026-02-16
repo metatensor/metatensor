@@ -150,6 +150,48 @@ pub unsafe extern "C" fn mts_block_load_buffer(
     return result;
 }
 
+/// Load a tensor block from the file at the given path using memory mapping.
+///
+/// This provides zero-copy loading: data arrays point directly into the
+/// memory-mapped file, avoiding copies. Labels are still loaded normally.
+///
+/// No `create_array` callback is needed — arrays are created internally
+/// as read-only memory-mapped arrays.
+///
+/// The memory allocated by this function should be released using
+/// `mts_block_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_load_mmap(
+    path: *const c_char,
+) -> *mut mts_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let block = crate::io::load_block_mmap(path)?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_block_t::into_boxed_raw(block);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
 fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<mts_array_t, Error> + '_ {
     |shape: Vec<usize>| {
         let mut array = mts_array_t::null();
