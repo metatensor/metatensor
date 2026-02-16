@@ -368,25 +368,59 @@ def test_load_block_mmap_type_error():
         mts.load_block_mmap(42)  # type: ignore
 
 
-def test_mmap_operations_compatibility(tensor_path):
-    """Test that mmap-loaded data works with operations like save."""
+def test_mmap_partial_file_reading(tensor_path):
+    """Test that only accessed blocks' data is paged in (the main benefit of mmap)."""
     tensor = mts.load_mmap(tensor_path)
 
-    # Block access should work (exercises partial file reading —
-    # only the accessed block's data needs to be paged in)
+    # Accessing blocks one at a time exercises lazy page-in:
+    # the OS only faults in pages for the block we touch.
     for i in range(len(tensor.keys)):
         block = tensor.block_by_id(i)
+        # accessing .values triggers the DLPack → torch conversion,
+        # which pages in only this block's data from the mmap
         assert block.values.shape[0] > 0
+
+    # Also verify gradient access pages in gradient data independently
+    block = tensor.block_by_id(0)
+    for param in block.gradients_list():
+        grad = block.gradient(param)
+        assert grad.values.shape[0] > 0
+
+
+def test_mmap_value_data_matches_regular(tensor_path):
+    """Test that actual numeric values from mmap match regular load."""
+    regular = mts.load(tensor_path)
+    mmap = mts.load_mmap(tensor_path)
+
+    for i in range(len(regular.keys)):
+        rb = regular.block_by_id(i)
+        mb = mmap.block_by_id(i)
+        assert torch.equal(rb.values, mb.values)
+
+        for param in rb.gradients_list():
+            rg = rb.gradient(param)
+            mg = mb.gradient(param)
+            assert torch.equal(rg.values, mg.values)
+
+
+def test_mmap_operations_compatibility(tensor_path):
+    """Test clone and save roundtrip on mmap-loaded data."""
+    regular = mts.load(tensor_path)
+    tensor = mts.load_mmap(tensor_path)
 
     # Clone
     clone = tensor.copy()
     assert clone.keys == tensor.keys
+    for i in range(len(tensor.keys)):
+        assert tensor.block_by_id(i).values.shape == clone.block_by_id(i).values.shape
 
-    # Save roundtrip
-    buffer = mts.save_buffer(tensor)
-    assert buffer.shape[0] > 0
+    # Save roundtrip: mmap and regular produce identical bytes
+    regular_buf = mts.save_buffer(regular)
+    mmap_buf = mts.save_buffer(tensor)
+    assert torch.equal(regular_buf, mmap_buf)
 
-    reloaded = mts.load_buffer(buffer)
+    # Reload from mmap buffer
+    reloaded = mts.load_buffer(mmap_buf)
     check_tensor(reloaded)
 
 
