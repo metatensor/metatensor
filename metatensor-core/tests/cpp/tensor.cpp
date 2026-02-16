@@ -400,6 +400,74 @@ TEST_CASE("TensorMap serialization") {
 }
 
 
+TEST_CASE("TensorMap mmap loading") {
+    SECTION("load_mmap matches regular load") {
+        auto tensor = TensorMap::load(TEST_DATA_MTS_PATH);
+        auto tensor_mmap = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+
+        // check keys match
+        CHECK(tensor.keys() == tensor_mmap.keys());
+
+        // check block structure matches
+        auto block = tensor_mmap.block_by_id(21);
+        auto samples = block.samples();
+        CHECK(samples.names().size() == 2);
+        CHECK(samples.names()[0] == std::string("system"));
+        CHECK(samples.names()[1] == std::string("atom"));
+        CHECK(block.values_shape() == std::vector<uintptr_t>{9, 5, 3});
+
+        auto gradient = block.gradient("positions");
+        CHECK(gradient.values_shape() == std::vector<uintptr_t>{59, 3, 5, 3});
+    }
+
+    SECTION("load_mmap via namespace function") {
+        auto tensor = metatensor::io::load_mmap(TEST_DATA_MTS_PATH);
+        CHECK(tensor.keys().count() == 27);
+    }
+
+    SECTION("load_mmap works with keys_to_properties") {
+        auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+        // components_to_properties first since blocks have different component sizes
+        auto unified = tensor.components_to_properties("o3_mu");
+        auto merged = unified.keys_to_properties("o3_lambda");
+        CHECK(merged.keys().count() < tensor.keys().count());
+    }
+
+    SECTION("load_mmap works with clone") {
+        auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+        auto clone = tensor.clone();
+        CHECK(clone.keys() == tensor.keys());
+    }
+
+    SECTION("load_mmap works with save") {
+        auto tensor = TensorMap::load_mmap(TEST_DATA_MTS_PATH);
+        auto buffer = tensor.save_buffer();
+        CHECK(buffer.size() > 0);
+    }
+}
+
+TEST_CASE("TensorBlock mmap loading") {
+    SECTION("load_block_mmap matches regular load") {
+        auto block = TensorBlock::load(TEST_BLOCK_MTS_PATH);
+        auto block_mmap = TensorBlock::load_mmap(TEST_BLOCK_MTS_PATH);
+
+        CHECK(block.samples() == block_mmap.samples());
+        CHECK(block.properties() == block_mmap.properties());
+        CHECK(block.values_shape() == block_mmap.values_shape());
+    }
+
+    SECTION("load_block_mmap via namespace function") {
+        auto block = metatensor::io::load_block_mmap(TEST_BLOCK_MTS_PATH);
+        CHECK(block.values_shape() == std::vector<uintptr_t>{9, 5, 3});
+    }
+
+    SECTION("load_block_mmap gradient access") {
+        auto block = TensorBlock::load_mmap(TEST_BLOCK_MTS_PATH);
+        auto gradient = block.gradient("positions");
+        CHECK(gradient.values_shape() == std::vector<uintptr_t>{59, 3, 5, 3});
+    }
+}
+
 TensorMap test_tensor_map() {
     auto blocks = std::vector<TensorBlock>();
 

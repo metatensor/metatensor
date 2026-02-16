@@ -416,6 +416,22 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
+     * Load a previously saved ``TensorMap`` from the given path using
+     * memory-mapped I/O. Arrays are created internally as read-only
+     * mmap-backed arrays.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_mmap`, and provided
+     * as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_mmap(const std::string& path) {
+        return metatensor::io::load_mmap(path);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
      * Save this ``TensorMap`` to the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::save`, and provided as a
