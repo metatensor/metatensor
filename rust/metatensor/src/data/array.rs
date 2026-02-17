@@ -1,6 +1,5 @@
 use std::ops::Range;
 use std::os::raw::c_void;
-use std::any::TypeId;
 
 use once_cell::sync::Lazy;
 
@@ -34,13 +33,6 @@ pub trait Array: std::any::Any + Send + Sync {
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
     fn copy(&self) -> Box<dyn Array>;
-
-    /// Get the underlying data storage as a contiguous slice
-    ///
-    /// This function is allowed to panic if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    fn data(&mut self) -> &mut [f64];
 
     /// Get the shape of the array
     fn shape(&self) -> &[usize];
@@ -90,7 +82,6 @@ impl From<Box<dyn Array>> for mts_array_t {
         return mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
-            data: Some(rust_array_data),
             as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
@@ -201,19 +192,6 @@ unsafe extern "C" fn rust_array_create(
     })
 }
 
-/// Implementation of `mts_array_t.data` for `Box<dyn Array>`
-unsafe extern "C" fn rust_array_data(
-    array: *mut c_void,
-    data: *mut *mut f64,
-) -> mts_status_t {
-    crate::errors::catch_unwind(|| {
-        check_pointers!(array, data);
-        let array = array.cast::<Box<dyn Array>>();
-        *data = (*array).data().as_mut_ptr();
-    })
-}
-
-
 /// Implementation of `mts_array_t.copy` using `Box<dyn Array>`
 unsafe extern "C" fn rust_array_copy(
     array: *const c_void,
@@ -300,29 +278,6 @@ where
 
     fn copy(&self) -> Box<dyn Array> {
         return Box::new(self.clone());
-    }
-
-    fn data(&mut self) -> &mut [f64] {
-        if TypeId::of::<T>() != TypeId::of::<f64>() {
-            panic!("Array::data() is only supported for f64 arrays");
-        }
-
-        // COPY-ON-WRITE LOGIC:
-        // as_slice_mut() returns None if the array is shared (ref_count > 1).
-        // If so, deep copy to get unique ownership, then get the slice.
-        if self.as_slice_mut().is_none() {
-             *self = self.clone();
-        }
-
-        let slice = self.as_slice_mut().expect("array is not contiguous");
-
-        // Safety: We checked that T is f64 above using TypeId.
-        // It is safe to cast the pointer and reinterpret the slice.
-        unsafe {
-            let ptr = slice.as_mut_ptr() as *mut f64;
-            let len = slice.len();
-            std::slice::from_raw_parts_mut(ptr, len)
-        }
     }
 
     fn shape(&self) -> &[usize] {
@@ -434,10 +389,6 @@ impl Array for EmptyArray {
         self
     }
 
-    fn data(&mut self) -> &mut [f64] {
-        panic!("can not call Array::data() for EmptyArray");
-    }
-
     fn create(&self, shape: &[usize]) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
@@ -482,16 +433,12 @@ mod tests {
     #[test]
     fn ndarray_as_mts_array() {
         let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3, 4]);
-        let address = data.as_ptr() as usize;
-        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
-        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
 
-        let mut created = mts_array.create(&[2, 3, 4]).unwrap();
+        let created = mts_array.create(&[2, 3, 4]).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
-        assert_ne!(created.data().unwrap().as_ptr() as usize, address);
-        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
     }
 
     #[test]
@@ -534,15 +481,11 @@ mod tests {
     #[test]
     fn ndarray_generic_support() {
         let data = ndarray::ArcArray::<i32, _>::from_elem(vec![2, 2], 42);
-        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 2]);
 
-        // Calling data() should fail gracefully (return Error, not crash test)
-        // The panic in `data()` is caught by catch_unwind in the C-API wrapper
-        assert!(mts_array.data().is_err());
-
-        // Should still be able to export as DLPack
+        // Should be able to export as DLPack
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
             let status = (mts_array.as_dlpack.unwrap())(

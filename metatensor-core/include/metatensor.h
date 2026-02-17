@@ -161,14 +161,6 @@ typedef struct mts_array_t {
    */
   mts_status_t (*origin)(const void *array, mts_data_origin_t *origin);
   /**
-   * Get a pointer to the underlying data storage.
-   *
-   * This function is allowed to fail if the data is not accessible in RAM,
-   * not stored as 64-bit floating point values, or not stored as a
-   * C-contiguous array.
-   */
-  mts_status_t (*data)(void *array, double **data);
-  /**
    * Get a DLPack representation of the underlying data.
    *
    * This function exports the array as a `DLManagedTensorVersioned` struct
