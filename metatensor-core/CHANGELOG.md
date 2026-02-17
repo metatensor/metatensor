@@ -17,6 +17,24 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- Added `ExternalCudaArray` in Python, the CUDA counterpart to `ExternalCpuArray`.
+  It wraps non-Python CUDA data as a `torch.Tensor` via DLPack, for use with
+  external array backends (e.g. Rust/Burn) that store data on CUDA devices.
+- C++ `TensorBlock::values()` is now a template `values<T>()` (defaulting to
+  `double`) and returns a `DLPackArray<T>` that owns the DLPack resource,
+  preventing dangling-pointer issues. The data is requested on CPU; if the
+  underlying array lives on another device, a copy may occur. For direct GPU
+  access without a copy, use the C-level ``as_dlpack`` interface instead.
+
+### Removed
+
+- Removed `mts_array_t.data` function pointer and all corresponding
+  implementations (`DataArrayBase::data()` in C++, `Array::data()` in Rust,
+  `_mts_array_data` in Python). Use `mts_array_t.as_dlpack` instead, which
+  supports all numeric types via the DLPack standard rather than only float64.
+
 ### Fixed
 - Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
   `components_to_properties`, and `key_to_properties` are called
