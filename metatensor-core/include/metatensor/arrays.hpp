@@ -113,7 +113,176 @@ namespace details {
         }
     }
 
+    /// Check whether a DLDataType matches the C++ type T.
+    ///
+    /// Returns true when code, bits **and** lanes all match.
+    template<typename T>
+    bool dlpack_dtype_matches(DLDataType dtype) {
+        if (dtype.lanes != 1) {
+            return false;
+        }
+        if constexpr (std::is_floating_point_v<T>) {
+            return dtype.code == kDLFloat
+                && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+        } else if constexpr (std::is_integral_v<T>) {
+            if constexpr (std::is_signed_v<T>) {
+                return dtype.code == kDLInt
+                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+            } else {
+                return dtype.code == kDLUInt
+                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+            }
+        }
+        return false;
+    }
+
 } // namespace details
+
+
+/// Read-only N-dimensional array that owns a DLPack managed tensor.
+///
+/// `DLPackArray<T>` takes ownership of a `DLManagedTensorVersioned*` and calls
+/// its deleter on destruction. It exposes a read-only view of the underlying
+/// data (`.data()`, `.shape()`, `operator()`).
+///
+/// Move-only: copy construction and copy assignment are deleted.
+template<typename T>
+class DLPackArray {
+public:
+    /// Create an empty `DLPackArray`, with shape `[0, 0]`.
+    DLPackArray(): managed_(nullptr), data_(nullptr), shape_({0, 0}) {}
+
+    /// Create a `DLPackArray` that takes ownership of `managed`.
+    ///
+    /// Validates that the DLPack dtype matches `T` (code, bits, and
+    /// `lanes == 1`). Throws `metatensor::Error` on mismatch and cleans up
+    /// the managed tensor before throwing.
+    explicit DLPackArray(DLManagedTensorVersioned* managed):
+        managed_(managed),
+        data_(nullptr),
+        shape_()
+    {
+        if (managed_ == nullptr) {
+            shape_ = {0, 0};
+            return;
+        }
+
+        auto& tensor = managed_->dl_tensor;
+
+        if (!details::dlpack_dtype_matches<T>(tensor.dtype)) {
+            // Copy dtype before calling deleter, which frees managed_
+            auto dtype = tensor.dtype;
+            if (managed_->deleter) {
+                managed_->deleter(managed_);
+            }
+            managed_ = nullptr;
+            throw Error(
+                "DLPackArray dtype mismatch: DLPack tensor has dtype "
+                "(code=" + std::to_string(dtype.code)
+                + ", bits=" + std::to_string(dtype.bits)
+                + ", lanes=" + std::to_string(dtype.lanes)
+                + ") which does not match the requested C++ type (sizeof="
+                + std::to_string(sizeof(T)) + ")"
+            );
+        }
+
+        data_ = reinterpret_cast<T*>(
+            static_cast<char*>(tensor.data) + tensor.byte_offset
+        );
+        for (int32_t i = 0; i < tensor.ndim; ++i) {
+            shape_.push_back(static_cast<size_t>(tensor.shape[i]));
+        }
+    }
+
+    ~DLPackArray() {
+        if (managed_ != nullptr && managed_->deleter) {
+            managed_->deleter(managed_);
+        }
+    }
+
+    /// DLPackArray is not copy-constructible
+    DLPackArray(const DLPackArray&) = delete;
+    /// DLPackArray can not be copy-assigned
+    DLPackArray& operator=(const DLPackArray&) = delete;
+
+    /// DLPackArray is move-constructible
+    DLPackArray(DLPackArray&& other) noexcept: DLPackArray() {
+        *this = std::move(other);
+    }
+
+    /// DLPackArray can be move-assigned
+    DLPackArray& operator=(DLPackArray&& other) noexcept {
+        if (managed_ != nullptr && managed_->deleter) {
+            managed_->deleter(managed_);
+        }
+
+        managed_ = other.managed_;
+        data_ = other.data_;
+        shape_ = std::move(other.shape_);
+
+        other.managed_ = nullptr;
+        other.data_ = nullptr;
+        other.shape_ = {0, 0};
+
+        return *this;
+    }
+
+    /// Get the value inside this `DLPackArray` at the given index
+    ///
+    /// ```
+    /// auto array = DLPackArray<double>(...);
+    ///
+    /// double value = array(2, 3, 1);
+    /// ```
+    template<typename ...Args>
+    T operator()(Args... args) const & {
+        auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
+        if (index.size() != shape_.size()) {
+            throw Error(
+                "expected " + std::to_string(shape_.size()) +
+                " indexes in DLPackArray::operator(), got " + std::to_string(index.size())
+            );
+        }
+        return data_[details::linear_index(shape_, index)];
+    }
+
+    template<typename ...Args>
+    T operator()(Args... args) && = delete;
+
+    /// Get the data pointer for this array, i.e. the pointer to the first
+    /// element.
+    const T* data() const & {
+        return data_;
+    }
+
+    const T* data() && = delete;
+
+    /// Get the shape of this array
+    const std::vector<size_t>& shape() const & {
+        return shape_;
+    }
+
+    const std::vector<size_t>& shape() && = delete;
+
+    /// Check if this array is empty, i.e. if at least one of the shape element
+    /// is 0.
+    bool is_empty() const {
+        for (auto s: shape_) {
+            if (s == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    /// Owned DLPack managed tensor (may be nullptr)
+    DLManagedTensorVersioned* managed_;
+    /// Pointer to the data inside the managed tensor
+    T* data_;
+    /// Shape extracted from the DLTensor
+    std::vector<size_t> shape_;
+};
 
 
 /// Simple N-dimensional array interface
@@ -470,13 +639,6 @@ public:
             }, array, shape, shape_count, new_array);
         };
 
-        array.data = [](void* array, double** data) {
-            return details::catch_exceptions([](void* array, double** data){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                *data = cxx_array->data();
-            }, array, data);
-        };
-
         array.as_dlpack = [](
             void *array,
             DLManagedTensorVersioned **dl_managed_tensor,
@@ -580,15 +742,6 @@ public:
     /// The new array should be filled with zeros.
     virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
 
-    /// Get a pointer to the underlying data storage.
-    ///
-    /// This function is allowed to fail if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    virtual double* data() & = 0;
-
-    double* data() && = delete;
-
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
 
@@ -660,14 +813,6 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::SimpleDataArray", &origin);
         return origin;
-    }
-
-    double* data() & override {
-        if constexpr(std::is_same_v<T, double>){
-            return reinterpret_cast<double*>(data_->data());
-        } else {
-            throw Error("data() needs double, use as_dlpack instead");
-        }
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -957,10 +1102,6 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::EmptyDataArray", &origin);
         return origin;
-    }
-
-    double* data() & override {
-        throw metatensor::Error("can not call `data` for an EmptyDataArray");
     }
 
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {
