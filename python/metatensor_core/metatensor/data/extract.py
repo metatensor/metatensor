@@ -251,8 +251,12 @@ class ExternalCudaArray:
     via DLPack, keeping a reference to a parent Python object to prevent
     use-after-free.
 
-    This is the GPU counterpart to :py:class:`ExternalCpuArray`, intended for
-    data that lives in GPU memory. Requires PyTorch.
+    This is the CUDA counterpart to :py:class:`ExternalCpuArray`, intended for
+    data that lives in CUDA memory. Requires PyTorch.
+
+    For CUDA data (``device_type=2``), we go through CuPy when available for
+    true zero-copy import, then convert to a ``torch.Tensor``. If CuPy is not
+    installed we fall back to ``torch.from_dlpack`` directly.
     """
 
     def __new__(
@@ -297,14 +301,29 @@ class ExternalCudaArray:
         )
 
         capsule = make_dlpack_versioned_capsule(dl_managed_ptr)
-        try:
-            tensor = torch.from_dlpack(capsule)
-        except RuntimeError:
-            # Older PyTorch (< 2.4) doesn't understand versioned
-            # DLPack capsules.  Fall back to an unversioned capsule.
-            unversioned = wrap_versioned_as_unversioned(dl_managed_ptr)
-            capsule = make_dlpack_unversioned_capsule(unversioned)
-            tensor = torch.from_dlpack(capsule)
+
+        # For CUDA data, prefer CuPy for true zero-copy import of external
+        # GPU memory, then convert to a torch.Tensor (also zero-copy via
+        # __cuda_array_interface__).
+        tensor = None
+        if device_type == 2:  # kDLCUDA
+            try:
+                import cupy
+
+                cupy_array = cupy.from_dlpack(capsule)
+                tensor = torch.as_tensor(cupy_array)
+            except ImportError:
+                pass
+
+        if tensor is None:
+            try:
+                tensor = torch.from_dlpack(capsule)
+            except RuntimeError:
+                # Older PyTorch (< 2.4) doesn't understand versioned
+                # DLPack capsules.  Fall back to an unversioned capsule.
+                unversioned = wrap_versioned_as_unversioned(dl_managed_ptr)
+                capsule = make_dlpack_unversioned_capsule(unversioned)
+                tensor = torch.from_dlpack(capsule)
 
         # keep a reference to the parent object to prevent it from being
         # garbage-collected while the tensor is alive
