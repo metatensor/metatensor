@@ -27,6 +27,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   preventing dangling-pointer issues. The data is requested on CPU; if the
   underlying array lives on another device, a copy may occur. For direct GPU
   access without a copy, use the C-level ``as_dlpack`` interface instead.
+- Added `mts_tensormap_load_mmap` and `mts_block_load_mmap` C API functions for
+  memory-mapped loading of `.mts` files. Data arrays point directly into the
+  memory-mapped file for zero-copy loading; labels are still loaded normally.
+  Corresponding C++ wrappers are available as `metatensor::io::load_mmap`,
+  `metatensor::io::load_block_mmap`, `TensorMap::load_mmap`, and
+  `TensorBlock::load_mmap`. In Python, use `metatensor.load_mmap` and
+  `metatensor.load_block_mmap`.
 
 ### Removed
 

@@ -16,3 +16,7 @@ Serialization
 .. autofunction:: metatensor.torch.load_block_buffer
 
 .. autofunction:: metatensor.torch.load_labels_buffer
+
+.. autofunction:: metatensor.torch.load_mmap
+
+.. autofunction:: metatensor.torch.load_block_mmap

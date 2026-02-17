@@ -17,6 +17,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+
+- Added `metatensor.torch.load_mmap` and `metatensor.torch.load_block_mmap` for
+  memory-mapped loading of `.mts` files. Data arrays are lazily paged in from
+  the memory-mapped file via DLPack, giving near-instant load times for large
+  files. Also available as TorchScript ops (`torch.ops.metatensor.load_mmap`,
+  `torch.ops.metatensor.load_block_mmap`).
+
 ### Removed
 
 - Removed `TorchDataArray::data()` override. Use `as_dlpack` instead, which
