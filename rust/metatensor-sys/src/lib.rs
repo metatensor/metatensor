@@ -79,7 +79,6 @@ impl mts_array_t {
         mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
-            data: None,
             as_dlpack: None,
             shape: None,
             reshape: None,
@@ -127,34 +126,6 @@ impl mts_array_t {
         };
 
         return Ok(shape);
-    }
-
-    /// call `mts_array_t.data` with a more convenient API
-    pub fn data(&mut self) -> Result<&mut [f64], Error> {
-        let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
-
-        let function = self.data.expect("mts_array_t.data function is NULL");
-
-        let mut data_ptr = std::ptr::null_mut();
-        let data = unsafe {
-            check_status_external(
-                function(self.ptr, &mut data_ptr),
-                "mts_array_t.data"
-            )?;
-
-            if len == 0 {
-                &mut []
-            } else {
-                assert!(!data_ptr.is_null());
-                std::slice::from_raw_parts_mut(data_ptr, len)
-            }
-        };
-
-        return Ok(data);
     }
 
     /// call `mts_array_t.reshape` with a more convenient API
