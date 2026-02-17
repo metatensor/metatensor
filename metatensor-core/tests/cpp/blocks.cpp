@@ -178,6 +178,81 @@ TEST_CASE("Blocks") {
     }
 }
 
+TEST_CASE("values<T>() with non-double types") {
+    SECTION("int32 block") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray<int32_t>>(
+                new SimpleDataArray<int32_t>({2, 3}, {10, 20, 30, 40, 50, 60})
+            ),
+            Labels({"samples"}, {{0}, {1}}),
+            {},
+            Labels({"properties"}, {{0}, {1}, {2}})
+        );
+
+        auto values = block.values<int32_t>();
+        CHECK(values.shape() == std::vector<size_t>{2, 3});
+        CHECK(values(0, 0) == 10);
+        CHECK(values(0, 1) == 20);
+        CHECK(values(1, 2) == 60);
+    }
+
+    SECTION("float block") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray<float>>(
+                new SimpleDataArray<float>({2, 2}, {1.5f, 2.5f, 3.5f, 4.5f})
+            ),
+            Labels({"samples"}, {{0}, {1}}),
+            {},
+            Labels({"properties"}, {{0}, {1}})
+        );
+
+        auto values = block.values<float>();
+        CHECK(values.shape() == std::vector<size_t>{2, 2});
+        CHECK(values(0, 0) == Approx(1.5f));
+        CHECK(values(1, 1) == Approx(4.5f));
+    }
+
+    SECTION("default T=double") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray<double>>(
+                new SimpleDataArray<double>({2, 2}, {1.0, 2.0, 3.0, 4.0})
+            ),
+            Labels({"samples"}, {{0}, {1}}),
+            {},
+            Labels({"properties"}, {{0}, {1}})
+        );
+
+        // values() without template argument should default to double
+        auto values = block.values();
+        CHECK(values.shape() == std::vector<size_t>{2, 2});
+        CHECK(values(0, 0) == 1.0);
+        CHECK(values(1, 1) == 4.0);
+    }
+
+    SECTION("dtype mismatch throws") {
+        auto block = TensorBlock(
+            std::unique_ptr<SimpleDataArray<double>>(
+                new SimpleDataArray<double>({2, 2})
+            ),
+            Labels({"samples"}, {{0}, {1}}),
+            {},
+            Labels({"properties"}, {{0}, {1}})
+        );
+
+        // Requesting int32 from a double block should throw
+        CHECK_THROWS_WITH(
+            block.values<int32_t>(),
+            Catch::Matchers::Contains("dtype mismatch")
+        );
+
+        // Requesting float from a double block should also throw
+        CHECK_THROWS_WITH(
+            block.values<float>(),
+            Catch::Matchers::Contains("dtype mismatch")
+        );
+    }
+}
+
 TEST_CASE("Serialization") {
     SECTION("loading file") {
         // TEST_BLOCK_MTS_PATH is defined by cmake and expand to the path of

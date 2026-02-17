@@ -57,25 +57,6 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(std::vector<ui
     ));
 }
 
-double* TorchDataArray::data() & {
-    if (!this->tensor_.device().is_cpu()) {
-        C10_THROW_ERROR(ValueError, "can not access the data of a torch::Tensor not on CPU");
-    }
-
-    if (this->tensor_.dtype() != torch::kF64) {
-        C10_THROW_ERROR(ValueError,
-            "can not access the data of this torch::Tensor: expected a dtype "
-            "of float64, got " + std::string(this->tensor_.dtype().name())
-        );
-    }
-
-    if (!this->tensor_.is_contiguous()) {
-        C10_THROW_ERROR(ValueError, "can not access the data of a non contiguous torch::Tensor");
-    }
-
-    return static_cast<double*>(this->tensor_.data_ptr());
-}
-
 // Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
 // TODO(rg): shouldn't be required later, we we shift to at::toDLPackVersioned()
 static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
