@@ -14,6 +14,7 @@ from .._c_api import (
 )
 from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
+from ._dlpack import make_dlpack_versioned_capsule
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
@@ -32,7 +33,7 @@ class DLPackDtypeCode(enum.IntEnum):
     kDLBool = 6
 
 
-# DLPack dtype -> numpy dtype mapping, used by ExternalCpuArray
+# DLPack dtype -> numpy dtype mapping, used by ExternalCpuArray and MmapCpuArray
 _DLPACK_TO_NUMPY = {
     (DLPackDtypeCode.kDLFloat, 16): np.float16,
     (DLPackDtypeCode.kDLFloat, 32): np.float32,
@@ -176,6 +177,7 @@ class ExternalCpuArray(np.ndarray):
         :param parent: owner of the raw array, we will keep a reference to this
             python object
         """
+
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
         status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
@@ -330,3 +332,123 @@ class ExternalCudaArray:
         tensor._parent = parent
 
         return tensor
+
+
+class MmapCpuArray(np.ndarray):
+    """
+    Wrapper for arrays that expose data via DLPack (e.g. mmap-backed arrays from
+    :py:func:`metatensor.load_mmap`).
+
+    Uses the DLPack protocol (``as_dlpack`` callback) to create a numpy view of the
+    underlying data, keeping a reference to the parent object to prevent premature
+    garbage collection.
+    """
+
+    def __new__(cls, mts_array: mts_array_t, parent: Any):
+        """
+        :param mts_array: raw array to wrap in a Python-compatible class
+        :param parent: owner of the raw array, we will keep a reference to this
+            python object
+        """
+        dl_managed = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(1, 0)  # kDLCPU, device_id=0
+        stream = ctypes.c_int64(0)
+        max_version = DLPackVersion(1, 0)
+
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed),
+            device,
+            ctypes.byref(stream),
+            max_version,
+        )
+        _check_status(status)
+
+        capsule = make_dlpack_versioned_capsule(dl_managed)
+
+        # np.from_dlpack expects an object with __dlpack__/__dlpack_device__
+        # rather than a raw PyCapsule (PyCapsule support is numpy >= 2.0 only).
+        class _DLPackHolder:
+            def __init__(self, cap):
+                self._capsule = cap
+
+            def __dlpack__(self, *, stream=None):
+                return self._capsule
+
+            def __dlpack_device__(self):
+                return (1, 0)  # kDLCPU
+
+        try:
+            array = np.from_dlpack(_DLPackHolder(capsule))
+        except ValueError:
+            # NumPy < 2.0 doesn't understand "dltensor_versioned" capsules.
+            # Fall back to creating the array directly from the DLTensor data,
+            # using the same approach as ExternalCpuArray.
+            array = _array_from_dl_tensor(dl_managed.contents.dl_tensor)
+
+        obj = array.view(cls)
+
+        # keep a reference to the parent object (if any) to prevent it from
+        # being garbage-collected too early.
+        obj._parent = parent
+        # prevent the DLPack tensor from being freed while we hold a view
+        obj._dl_managed_ptr = dl_managed
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        # keep the parent around when creating sub-views of this array
+        self._parent = getattr(obj, "_parent", None)
+        self._dl_managed_ptr = getattr(obj, "_dl_managed_ptr", None)
+
+    def __array_wrap__(self, new, context=None, return_scalar=False):
+        self_ptr = self.ctypes.data
+        self_size = self.nbytes
+
+        new_ptr = new.ctypes.data
+
+        if self_ptr <= new_ptr <= self_ptr + self_size:
+            return super().__array_wrap__(new)
+        else:
+            return np.asarray(new)
+
+
+def _array_from_dl_tensor(dl_tensor):
+    """Create a numpy array from a DLTensor, without using ``np.from_dlpack``.
+
+    This is used as a fallback for NumPy < 2.0 which does not understand
+    versioned DLPack capsules (``"dltensor_versioned"``).
+    """
+    dtype_code = dl_tensor.dtype.code
+    dtype_bits = dl_tensor.dtype.bits
+    np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+    if np_dtype is None:
+        raise ValueError(
+            f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+        )
+
+    ndim = dl_tensor.ndim
+    shape = [dl_tensor.shape[i] for i in range(ndim)]
+    data_ptr = dl_tensor.data
+
+    c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+    return _ptr_to_ndarray(
+        ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+        shape,
+        np_dtype,
+    )
+
+
+_mmap_origin_registered = False
+
+
+def _ensure_mmap_origin_registered():
+    """Register the MmapCpuArray wrapper for the ``metatensor.MmapArray`` data origin.
+
+    This is called lazily from ``load_mmap`` / ``load_block_mmap`` — the C library
+    must already be loaded at that point.
+    """
+    global _mmap_origin_registered
+    if not _mmap_origin_registered:
+        register_external_data_wrapper("metatensor.MmapArray", MmapCpuArray)
+        _mmap_origin_registered = True

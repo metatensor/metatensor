@@ -21,7 +21,14 @@ import warnings
 from . import utils  # noqa: F401
 from .block import TensorBlock  # noqa: F401
 from .data import DeviceWarning  # noqa: F401
-from .io import load, load_block, load_labels, save  # noqa: F401
+from .io import (  # noqa: F401
+    load,
+    load_block,
+    load_block_mmap,
+    load_labels,
+    load_mmap,
+    save,
+)
 from .labels import Labels, LabelsEntry  # noqa: F401
 from .status import MetatensorError  # noqa: F401
 from .tensor import TensorMap  # noqa: F401

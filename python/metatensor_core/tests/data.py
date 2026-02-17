@@ -328,6 +328,283 @@ def test_external_cuda_array_cpu_path():
     free_mts_array(mts_array)
 
 
+def test_dlpack_to_numpy_mapping():
+    """Verify _DLPACK_TO_NUMPY covers common dtypes and matches numpy equivalents."""
+    from metatensor.data.extract import _DLPACK_TO_NUMPY, DLPackDtypeCode
+
+    # float types
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLFloat, 32)] is np.float32
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLFloat, 64)] is np.float64
+
+    # integer types
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLInt, 32)] is np.int32
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLInt, 64)] is np.int64
+
+    # unsigned int
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLUInt, 8)] is np.uint8
+
+    # bool
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLBool, 8)] is np.bool_
+
+    # complex
+    assert _DLPACK_TO_NUMPY[(DLPackDtypeCode.kDLComplex, 128)] is np.complex128
+
+    # unsupported dtype returns None
+    assert _DLPACK_TO_NUMPY.get((99, 99)) is None
+
+
+def test_make_dlpack_versioned_capsule():
+    """Test PyCapsule creation from DLManagedTensorVersioned pointer."""
+    from metatensor.data._dlpack import (
+        DLPACK_VERSIONED_NAME,
+        PYTHON_API,
+        make_dlpack_versioned_capsule,
+    )
+
+    # Create a numpy array and get a DLPack tensor from it
+    arr = np.zeros((2, 3), dtype=np.float64)
+    mts_array = metatensor.data.create_mts_array(arr)
+
+    dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    device = DLDevice(1, 0)  # kDLCPU
+    version = DLPackVersion(1, 0)
+    status = mts_array.as_dlpack(
+        mts_array.ptr,
+        ctypes.byref(dl_managed_ptr),
+        device,
+        None,
+        version,
+    )
+    assert status == MTS_SUCCESS
+
+    capsule = make_dlpack_versioned_capsule(dl_managed_ptr)
+    assert capsule is not None
+
+    # Verify capsule name
+    name = PYTHON_API.PyCapsule_GetName(capsule)
+    assert name == DLPACK_VERSIONED_NAME
+
+
+def test_make_dlpack_versioned_capsule_null():
+    """make_dlpack_versioned_capsule should raise on null pointer."""
+    from metatensor.data._dlpack import make_dlpack_versioned_capsule
+
+    null_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    with pytest.raises(ValueError, match="null"):
+        make_dlpack_versioned_capsule(null_ptr)
+
+
+def test_mmap_cpu_array_type():
+    """MmapCpuArray values from load_mmap should be the right type."""
+    from metatensor.data.extract import MmapCpuArray
+
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+    tensor = metatensor.load_mmap(path)
+    values = tensor.block(0).values
+
+    assert isinstance(values, MmapCpuArray)
+    assert isinstance(values, np.ndarray)
+    assert values._parent is not None
+    assert values._dl_managed_ptr is not None
+
+
+def test_mmap_cpu_array_subview():
+    """Subviews of MmapCpuArray should keep parent alive."""
+    from metatensor.data.extract import MmapCpuArray
+
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+    tensor = metatensor.load_mmap(path)
+    values = tensor.block(0).values
+
+    # Slice should still be MmapCpuArray with parent
+    subview = values[::2]
+    assert isinstance(subview, MmapCpuArray)
+    assert subview._parent is not None
+
+    # Operations that produce new memory should return plain ndarray
+    transformed = np.sum(values, axis=0)
+    assert not isinstance(transformed, MmapCpuArray)
+    assert isinstance(transformed, np.ndarray)
+
+
+def test_mmap_cpu_array_keepalive():
+    """MmapCpuArray must keep its parent alive to prevent use-after-free."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+    block = metatensor.load_block_mmap(path)
+    values = block.values
+
+    block_ref = weakref.ref(block)
+    del block
+    gc.collect()
+
+    # values should keep the block alive
+    assert block_ref() is not None
+    assert values.shape == (9, 5, 3)
+
+    # subview should still keep things alive
+    sub = values[0:2]
+    del values
+    gc.collect()
+    assert block_ref() is not None
+    assert sub.shape[0] == 2
+
+
+def test_ensure_mmap_origin_registered_idempotent():
+    """Calling _ensure_mmap_origin_registered twice should not fail."""
+    from metatensor.data.extract import _ensure_mmap_origin_registered
+
+    # First call registers
+    _ensure_mmap_origin_registered()
+    # Second call is a no-op
+    _ensure_mmap_origin_registered()
+
+
+def test_array_from_dl_tensor_unsupported_dtype():
+    """_array_from_dl_tensor should raise on unsupported dtype."""
+    from metatensor._c_api import DLDataType, DLTensor
+    from metatensor.data.extract import _array_from_dl_tensor
+
+    # Create a fake DLTensor with an unsupported dtype
+    fake_tensor = DLTensor()
+    fake_tensor.dtype = DLDataType(code=99, bits=99, lanes=1)
+    fake_tensor.ndim = 0
+
+    with pytest.raises(ValueError, match="unsupported DLPack dtype"):
+        _array_from_dl_tensor(fake_tensor)
+
+
+def test_array_from_dl_tensor_happy_path():
+    """_array_from_dl_tensor should correctly create a numpy array from a DLTensor."""
+    from metatensor.data.extract import _array_from_dl_tensor
+
+    # Create a real array and get a DLTensor via as_dlpack
+    arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
+    mts_array = metatensor.data.create_mts_array(arr)
+
+    dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    device = DLDevice(1, 0)
+    version = DLPackVersion(1, 0)
+    status = mts_array.as_dlpack(
+        mts_array.ptr,
+        ctypes.byref(dl_managed_ptr),
+        device,
+        None,
+        version,
+    )
+    assert status == MTS_SUCCESS
+
+    result = _array_from_dl_tensor(dl_managed_ptr.contents.dl_tensor)
+    assert result.shape == (2, 3)
+    assert result.dtype == np.float64
+    np.testing.assert_array_equal(result, arr)
+
+    # Clean up
+    managed = dl_managed_ptr.contents
+    managed.deleter(dl_managed_ptr)
+    free_mts_array(mts_array)
+
+
+def test_wrap_unversioned_as_versioned():
+    """wrap_unversioned_as_versioned should produce a valid versioned DLPack struct."""
+    from metatensor._c_api import DLDataType
+    from metatensor.data._dlpack import (
+        DLManagedTensor,
+        _DLManagedTensorDeleter,
+        wrap_unversioned_as_versioned,
+    )
+
+    # Build a minimal DLManagedTensor with a real data pointer
+    arr = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+    data_ptr = arr.ctypes.data
+
+    unversioned = DLManagedTensor()
+    unversioned.dl_tensor.data = data_ptr
+    unversioned.dl_tensor.ndim = 2
+    shape = (ctypes.c_int64 * 2)(2, 2)
+    unversioned.dl_tensor.shape = ctypes.cast(shape, ctypes.POINTER(ctypes.c_int64))
+    unversioned.dl_tensor.strides = None
+    unversioned.dl_tensor.byte_offset = 0
+    unversioned.dl_tensor.dtype = DLDataType(code=2, bits=64, lanes=1)  # kDLFloat
+    unversioned.dl_tensor.device.device_type = 1  # kDLCPU
+    unversioned.dl_tensor.device.device_id = 0
+
+    # Set a no-op deleter
+    @_DLManagedTensorDeleter
+    def noop_deleter(ptr):
+        pass
+
+    unversioned.deleter = noop_deleter
+    unversioned.manager_ctx = None
+
+    unversioned_ptr = ctypes.pointer(unversioned)
+    versioned_ptr = wrap_unversioned_as_versioned(unversioned_ptr)
+
+    versioned = versioned_ptr.contents
+    assert versioned.version.major == 1
+    assert versioned.version.minor == 0
+    assert versioned.dl_tensor.ndim == 2
+    assert versioned.dl_tensor.data == data_ptr
+    assert versioned.dl_tensor.dtype.code == 2
+    assert versioned.dl_tensor.dtype.bits == 64
+
+    # Clean up: call the versioned deleter
+    versioned.deleter(versioned_ptr)
+
+
+def test_mmap_cpu_array_numpy_lt2_fallback(monkeypatch):
+    """Test the NumPy < 2.0 fallback path in MmapCpuArray."""
+    from metatensor.data.extract import MmapCpuArray
+
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    # Make np.from_dlpack raise ValueError to simulate NumPy < 2.0
+    def mock_from_dlpack(obj):
+        raise ValueError("simulated NumPy < 2.0 failure")
+
+    monkeypatch.setattr(np, "from_dlpack", mock_from_dlpack)
+
+    tensor = metatensor.load_mmap(path)
+    values = tensor.block(0).values
+
+    assert isinstance(values, MmapCpuArray)
+    assert isinstance(values, np.ndarray)
+    assert values.shape[0] > 0
+    assert values.dtype == np.float64
+
+
 TEST_ORIGIN = metatensor.data.array._register_origin("python.test-origin")
 metatensor.data.register_external_data_wrapper(
     "python.test-origin",

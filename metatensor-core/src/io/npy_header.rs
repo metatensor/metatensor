@@ -524,6 +524,12 @@ impl Header {
         return parser.parse();
     }
 
+    pub fn from_slice(bytes: &[u8]) -> Result<(Self, usize), ReadHeaderError> {
+        let mut cursor = std::io::Cursor::new(bytes);
+        let header = Self::from_reader(&mut cursor)?;
+        Ok((header, cursor.position() as usize))
+    }
+
     pub fn from_reader<R: std::io::Read>(reader: &mut R) -> Result<Self, ReadHeaderError> {
         // Check for magic string.
         let mut buf = vec![0; MAGIC_STRING.len()];

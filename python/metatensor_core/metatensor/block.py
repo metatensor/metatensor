@@ -612,6 +612,18 @@ class TensorBlock:
 
         return load_block_buffer(buffer=buffer)
 
+    @staticmethod
+    def load_mmap(path: Union[str, pathlib.Path]) -> "TensorBlock":
+        """
+        Load a serialized :py:class:`TensorBlock` from a file using memory-mapped I/O,
+        calling :py:func:`metatensor.io.load_block_mmap`.
+
+        :param path: file path to load from
+        """
+        from .io import load_block_mmap
+
+        return load_block_mmap(path=path)
+
     def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
         """
         Save this :py:class:`TensorBlock` to a file or a buffer, calling

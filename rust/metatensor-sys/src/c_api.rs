@@ -469,6 +469,7 @@ extern "C" {
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_block_t;
+    pub fn mts_block_load_mmap(path: *const ::std::os::raw::c_char) -> *mut mts_block_t;
     #[must_use]
     pub fn mts_block_save(
         path: *const ::std::os::raw::c_char,
@@ -491,6 +492,7 @@ extern "C" {
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_tensormap_t;
+    pub fn mts_tensormap_load_mmap(path: *const ::std::os::raw::c_char) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_save(
         path: *const ::std::os::raw::c_char,

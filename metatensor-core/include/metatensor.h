@@ -1132,6 +1132,26 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
                                           mts_create_array_callback_t create_array);
 
 /**
+ * Load a tensor block from the file at the given path using memory mapping.
+ *
+ * This provides zero-copy loading: data arrays point directly into the
+ * memory-mapped file, avoiding copies. Labels are still loaded normally.
+ *
+ * No `create_array` callback is needed — arrays are created internally
+ * as read-only memory-mapped arrays.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_block_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_block_t *mts_block_load_mmap(const char *path);
+
+/**
  * Save a tensor block to the file at the given path.
  *
  * If the file already exists, it is overwritten. The recomended file extension
@@ -1256,6 +1276,26 @@ struct mts_tensormap_t *mts_tensormap_load(const char *path,
 struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
                                                   uintptr_t buffer_count,
                                                   mts_create_array_callback_t create_array);
+
+/**
+ * Load a tensor map from the file at the given path using memory mapping.
+ *
+ * This provides zero-copy loading: data arrays point directly into the
+ * memory-mapped file, avoiding copies. Labels are still loaded normally.
+ *
+ * No `create_array` callback is needed — arrays are created internally
+ * as read-only memory-mapped arrays.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path);
 
 /**
  * Save a tensor map to the file at the given path.

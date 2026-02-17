@@ -408,6 +408,14 @@ function mts_block_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, create
     )
 end
 
+function mts_block_load_mmap(path::Ptr{Cchar})
+    ccall((:mts_block_load_mmap, libmetatensor), 
+        Ptr{mts_block_t},
+        (Ptr{Cchar},),
+        path
+    )
+end
+
 function mts_block_save(path::Ptr{Cchar}, block::Ptr{mts_block_t})
     ccall((:mts_block_save, libmetatensor), 
         mts_status_t,
@@ -437,6 +445,14 @@ function mts_tensormap_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, cr
         Ptr{mts_tensormap_t},
         (Ptr{UInt8}, UIntptr, mts_create_array_callback_t,),
         buffer, buffer_count, create_array
+    )
+end
+
+function mts_tensormap_load_mmap(path::Ptr{Cchar})
+    ccall((:mts_tensormap_load_mmap, libmetatensor), 
+        Ptr{mts_tensormap_t},
+        (Ptr{Cchar},),
+        path
     )
 end
 

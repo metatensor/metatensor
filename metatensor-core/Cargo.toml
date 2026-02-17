@@ -33,6 +33,7 @@ jzon = "0.12"
 dlpk = {version = "0.1.3", features = ["ndarray", "half"]}
 ndarray = {version = "0.16"}
 half = { version = "<2.5"}
+memmap2 = { version = "0.9" }
 
 [build-dependencies]
 cbindgen = { version = "0.29", default-features = false }

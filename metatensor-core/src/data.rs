@@ -82,7 +82,7 @@ pub struct mts_array_t {
     /// `origin`. Users of `mts_array_t` should register a single data
     /// origin with `mts_register_data_origin`, and use it for all compatible
     /// arrays.
-    origin: Option<unsafe extern "C" fn(
+    pub(crate) origin: Option<unsafe extern "C" fn(
         array: *const c_void,
         origin: *mut mts_data_origin_t
     ) -> mts_status_t>,
@@ -123,7 +123,7 @@ pub struct mts_array_t {
     /// responsible for calling its `deleter` function when the tensor is no
     /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
     /// exceed the lifetime of the `mts_array_t` it was created from.
-    as_dlpack: Option<unsafe extern "C" fn(
+    pub(crate) as_dlpack: Option<unsafe extern "C" fn(
         array: *mut c_void,
         dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
         device: DLDevice,
@@ -134,7 +134,7 @@ pub struct mts_array_t {
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`.
-    shape: Option<unsafe extern "C" fn(
+    pub(crate) shape: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *mut *const usize,
         shape_count: *mut usize,
@@ -143,14 +143,14 @@ pub struct mts_array_t {
     /// Change the shape of the array managed by this `mts_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
     /// `shape` array
-    reshape: Option<unsafe extern "C" fn(
+    pub(crate) reshape: Option<unsafe extern "C" fn(
         array: *mut c_void,
         shape: *const usize,
         shape_count: usize,
     ) -> mts_status_t>,
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
-    swap_axes: Option<unsafe extern "C" fn(
+    pub(crate) swap_axes: Option<unsafe extern "C" fn(
         array: *mut c_void,
         axis_1: usize,
         axis_2: usize,
@@ -162,7 +162,7 @@ pub struct mts_array_t {
     /// in `shape_count`.
     ///
     /// The new array should be filled with zeros.
-    create: Option<unsafe extern "C" fn(
+    pub(crate) create: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *const usize,
         shape_count: usize,
@@ -173,14 +173,14 @@ pub struct mts_array_t {
     ///
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
-    copy: Option<unsafe extern "C" fn(
+    pub(crate) copy: Option<unsafe extern "C" fn(
         array: *const c_void,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
 
     /// Remove this array and free the associated memory. This function can be
     /// set to `NULL` is there is no memory management to do.
-    destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
+    pub(crate) destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
 
     /// Set entries in the `output` array (the current array) taking data from
     /// the `input` array. The `output` array is guaranteed to be created by
@@ -193,7 +193,7 @@ pub struct mts_array_t {
     /// This function should copy data from `input[samples[i].input, ..., :]` to
     /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
     /// to `samples_count`. All indexes are 0-based.
-    move_samples_from: Option<unsafe extern "C" fn(
+    pub(crate) move_samples_from: Option<unsafe extern "C" fn(
         output: *mut c_void,
         input: *const c_void,
         samples: *const mts_sample_mapping_t,

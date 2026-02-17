@@ -37,6 +37,23 @@ pub fn load_block_buffer(buffer: &[u8]) -> Result<TensorBlock, Error> {
     return Ok(unsafe { TensorBlock::from_raw(ptr) });
 }
 
+/// Load a tensor block from the file at the given path using memory mapping.
+///
+/// This provides zero-copy loading: data arrays point directly into the
+/// memory-mapped file, avoiding copies. Labels are still loaded normally.
+pub fn load_block_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorBlock, Error> {
+    let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
+    let path = CString::new(path).expect("this path contains a NULL byte");
+
+    let ptr = unsafe {
+        crate::c_api::mts_block_load_mmap(path.as_ptr())
+    };
+
+    check_ptr(ptr)?;
+
+    return Ok(unsafe { TensorBlock::from_raw(ptr) });
+}
+
 /// Save the given `block` to a file.
 ///
 /// If the file already exists, it is overwritten. The recomended file extension
