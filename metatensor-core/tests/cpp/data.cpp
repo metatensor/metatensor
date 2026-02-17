@@ -20,17 +20,6 @@ TEST_CASE("Data Array") {
         CHECK(std::string(buffer) == "metatensor::SimpleDataArray");
     }
 
-    SECTION("data") {
-        auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
-        view(1, 1, 0) = 3;
-
-        double* data_ptr = nullptr;
-        auto status = array.data(array.ptr, &data_ptr);
-        CHECK(status == MTS_SUCCESS);
-        CHECK(data_ptr[0] == 0);
-        CHECK(data_ptr[16] == 3);
-    }
-
     SECTION("shape") {
         const uintptr_t* shape = nullptr;
         uintptr_t shape_count = 0;
@@ -106,21 +95,14 @@ TEST_CASE("Data Array") {
     array.destroy(array.ptr);
 }
 
-TEST_CASE("SimpleDataArray<double) - data() and as_dlpack()") {
+TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
 
-    // mutate via view and check C API data() works for double
+    // mutate via view
     {
         auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
         view(1, 1, 0) = 1.2345;
-
-        double* data_ptr = nullptr;
-        auto status = array.data(array.ptr, &data_ptr);
-        CHECK(status == MTS_SUCCESS);
-        REQUIRE(data_ptr != nullptr);
-        // flattened index (1,1,0) = 1*(3*4) + 1*4 + 0 = 16
-        CHECK(data_ptr[16] == Approx(1.2345));
     }
 
     // as_dlpack -> check dtype and data
@@ -159,19 +141,12 @@ TEST_CASE("SimpleDataArray<double) - data() and as_dlpack()") {
     array.destroy(array.ptr);
 }
 
-TEST_CASE("SimpleDataArray<float) - as_dlpack() and C API data() refusal") {
+TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
     // Create float-backed array via C++ class, expose through mts_array_t
     auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
 
-    // C API data() expects double* and should fail for float-backed arrays
-    {
-        double* data_ptr = nullptr;
-        auto status = array.data(array.ptr, &data_ptr);
-        CHECK(status != MTS_SUCCESS); // should not succeed
-    }
-
-    // But as_dlpack should provide a valid float-typed DLPack view
+    // as_dlpack should provide a valid float-typed DLPack view
     {
         auto s = static_cast<SimpleDataArray<float>*>(array.ptr);
         auto view = s->view();
@@ -197,16 +172,9 @@ TEST_CASE("SimpleDataArray<float) - as_dlpack() and C API data() refusal") {
     array.destroy(array.ptr);
 }
 
-TEST_CASE("SimpleDataArray<int32_t) - as_dlpack() and C API data() refusal") {
+TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
     auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
-
-    // C API should refuse to return double* for int32 array
-    {
-        double* data_ptr = nullptr;
-        auto status = array.data(array.ptr, &data_ptr);
-        CHECK(status != MTS_SUCCESS);
-    }
 
     // DLPack view should be int32
     {
@@ -232,6 +200,122 @@ TEST_CASE("SimpleDataArray<int32_t) - as_dlpack() and C API data() refusal") {
     }
 
     array.destroy(array.ptr);
+}
+
+TEST_CASE("DLPackArray<T> - construction and access") {
+    // Create a SimpleDataArray<double>, get a DLPack tensor, wrap in DLPackArray
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+    auto view = data->view();
+    view(0, 0) = 1.0;
+    view(0, 1) = 2.0;
+    view(0, 2) = 3.0;
+    view(1, 0) = 4.0;
+    view(1, 1) = 5.0;
+    view(1, 2) = 6.0;
+
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    REQUIRE(managed != nullptr);
+
+    SECTION("basic construction and element access") {
+        auto arr = DLPackArray<double>(managed);
+        CHECK(arr.shape().size() == 2);
+        CHECK(arr.shape()[0] == 2);
+        CHECK(arr.shape()[1] == 3);
+        CHECK(arr.is_empty() == false);
+
+        CHECK(arr(0, 0) == 1.0);
+        CHECK(arr(0, 1) == 2.0);
+        CHECK(arr(0, 2) == 3.0);
+        CHECK(arr(1, 0) == 4.0);
+        CHECK(arr(1, 1) == 5.0);
+        CHECK(arr(1, 2) == 6.0);
+
+        CHECK(arr.data() != nullptr);
+        CHECK(arr.data()[0] == 1.0);
+        // DLPackArray destructor will call the deleter
+    }
+
+    SECTION("move construction") {
+        auto arr1 = DLPackArray<double>(managed);
+        auto arr2 = DLPackArray<double>(std::move(arr1));
+
+        CHECK(arr2.shape().size() == 2);
+        CHECK(arr2(1, 2) == 6.0);
+
+        // arr1 should be empty after move
+        CHECK(arr1.shape() == std::vector<size_t>{0, 0});
+        CHECK(arr1.data() == nullptr);
+        CHECK(arr1.is_empty() == true);
+    }
+
+    SECTION("move assignment") {
+        auto arr1 = DLPackArray<double>(managed);
+        auto arr2 = DLPackArray<double>();
+
+        arr2 = std::move(arr1);
+        CHECK(arr2(0, 0) == 1.0);
+        CHECK(arr1.is_empty() == true);
+    }
+}
+
+TEST_CASE("DLPackArray<T> - dtype mismatch") {
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    REQUIRE(managed != nullptr);
+
+    // double tensor should NOT match int32_t
+    CHECK_THROWS_WITH(
+        DLPackArray<int32_t>(managed),
+        Catch::Matchers::Contains("dtype mismatch")
+    );
+
+    // After dtype mismatch, the managed tensor should have been cleaned up.
+    // Get a new one for float mismatch test
+    managed = data->as_dlpack(cpu_device, nullptr, ver);
+    REQUIRE(managed != nullptr);
+
+    CHECK_THROWS_WITH(
+        DLPackArray<float>(managed),
+        Catch::Matchers::Contains("dtype mismatch")
+    );
+}
+
+TEST_CASE("DLPackArray<T> - with int32 data") {
+    auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 2}));
+    auto view = data->view();
+    view(0, 0) = 10;
+    view(0, 1) = 20;
+    view(1, 0) = 30;
+    view(1, 1) = 40;
+
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    REQUIRE(managed != nullptr);
+
+    auto arr = DLPackArray<int32_t>(managed);
+    CHECK(arr(0, 0) == 10);
+    CHECK(arr(0, 1) == 20);
+    CHECK(arr(1, 0) == 30);
+    CHECK(arr(1, 1) == 40);
+}
+
+TEST_CASE("DLPackArray<T> - empty array") {
+    auto arr = DLPackArray<double>();
+    CHECK(arr.is_empty() == true);
+    CHECK(arr.data() == nullptr);
+    CHECK(arr.shape() == std::vector<size_t>{0, 0});
+}
+
+TEST_CASE("DLPackArray<T> - nullptr construction") {
+    auto arr = DLPackArray<double>(nullptr);
+    CHECK(arr.is_empty() == true);
+    CHECK(arr.data() == nullptr);
 }
 
 TEST_CASE("SimpleDataArray - DLPack version mismatch") {

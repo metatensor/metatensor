@@ -117,3 +117,94 @@ def wrap_unversioned_as_versioned(unversioned_ptr):
     )
 
     return versioned_ptr
+
+
+@ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
+def _unversioned_wrapper_deleter(unversioned_ptr):
+    """
+    Deleter for an unversioned ``DLManagedTensor`` that wraps a
+    ``DLManagedTensorVersioned``.
+
+    Calls the versioned tensor's deleter (stored in ``manager_ctx``), then
+    frees the unversioned wrapper.
+    """
+    if not unversioned_ptr:
+        return
+
+    versioned_ptr = ctypes.cast(
+        unversioned_ptr.contents.manager_ctx,
+        ctypes.POINTER(DLManagedTensorVersioned),
+    )
+    if versioned_ptr and versioned_ptr.contents.deleter:
+        versioned_ptr.contents.deleter(versioned_ptr)
+
+    PYTHON_API.PyMem_RawFree(ctypes.cast(unversioned_ptr, ctypes.c_void_p))
+
+
+def wrap_versioned_as_unversioned(versioned_ptr):
+    """
+    Wrap a ``DLManagedTensorVersioned`` pointer inside a ``DLManagedTensor``.
+
+    This is used for consumers (e.g. older PyTorch) that only understand
+    the legacy ``"dltensor"`` capsule format.
+    """
+    unversioned_size = ctypes.sizeof(DLManagedTensor)
+    unversioned_mem = PYTHON_API.PyMem_RawMalloc(unversioned_size)
+    if not unversioned_mem:
+        raise MemoryError("Failed to allocate DLManagedTensor")
+
+    unversioned_ptr_out = ctypes.cast(unversioned_mem, ctypes.POINTER(DLManagedTensor))
+
+    # Copy DLTensor from the versioned struct
+    ctypes.memmove(
+        ctypes.addressof(unversioned_ptr_out.contents.dl_tensor),
+        ctypes.addressof(versioned_ptr.contents.dl_tensor),
+        ctypes.sizeof(DLTensor),
+    )
+
+    # Store the original versioned pointer so the deleter can free it
+    unversioned_ptr_out.contents.manager_ctx = ctypes.cast(
+        versioned_ptr, ctypes.c_void_p
+    )
+    unversioned_ptr_out.contents.deleter = _unversioned_wrapper_deleter
+
+    return unversioned_ptr_out
+
+
+# ============================================================================ #
+# PyCapsule creation for DLPack export
+# ============================================================================ #
+
+PYTHON_API.PyCapsule_New.restype = ctypes.py_object
+PYTHON_API.PyCapsule_New.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_char_p,
+    ctypes.c_void_p,
+]
+
+
+def make_dlpack_versioned_capsule(dl_managed_versioned_ptr):
+    """
+    Create a PyCapsule wrapping a ``DLManagedTensorVersioned`` pointer.
+
+    The returned capsule can be passed to ``np.from_dlpack()`` or
+    ``torch.from_dlpack()``.  The consumer is expected to take ownership
+    (renaming the capsule to ``"used_dltensor_versioned"``).
+    """
+    ptr_value = ctypes.cast(dl_managed_versioned_ptr, ctypes.c_void_p).value
+    if not ptr_value:
+        raise ValueError("DLManagedTensorVersioned pointer is null")
+    return PYTHON_API.PyCapsule_New(ptr_value, DLPACK_VERSIONED_NAME, None)
+
+
+def make_dlpack_unversioned_capsule(dl_managed_ptr):
+    """
+    Create a PyCapsule wrapping a ``DLManagedTensor`` pointer.
+
+    The returned capsule uses the legacy ``"dltensor"`` name for
+    compatibility with consumers that do not support DLPack >= 1.0.
+    """
+    ptr_value = ctypes.cast(dl_managed_ptr, ctypes.c_void_p).value
+    if not ptr_value:
+        raise ValueError("DLManagedTensor pointer is null")
+    return PYTHON_API.PyCapsule_New(ptr_value, DLPACK_NAME, None)

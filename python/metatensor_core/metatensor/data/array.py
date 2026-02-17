@@ -221,38 +221,6 @@ def create_mts_array(array):
 
 
 @catch_exceptions
-def _mts_array_data(this, data):
-    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
-
-    if _is_numpy_array(wrapper.array):
-        array = wrapper.array
-
-    elif _is_torch_array(wrapper.array):
-        array = wrapper.array
-
-        if array.device.type != "cpu":
-            raise ValueError("can only get data pointer for tensors on CPU")
-
-        # `.numpy()` will fail if the data is on GPU or requires gradient
-        # tracking, and the resulting array is sharing data storage with the
-        # tensor, meaning we can take a pointer to it without the array being
-        # freed immediately.
-        array = array.numpy()
-
-    if not array.data.c_contiguous:
-        raise ValueError("can not get data pointer for non contiguous array")
-
-    if not array.dtype == np.float64:
-        raise ValueError(
-            f"can not get data pointer for array type {array.dtype}, "
-            "only float64 is supported. If you are trying to save a TensorMap "
-            "to a file, you can set `use_numpy=True`."
-        )
-
-    data[0] = array.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-
-
-@catch_exceptions
 def _mts_array_shape(this, shape_ptr, shape_count):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
@@ -460,7 +428,6 @@ def _cast_to_ctype_functype(function, field_name):
     raise ValueError(f"no field named {field_name} in mts_array_t")
 
 
-_MTS_ARRAY_DATA = _cast_to_ctype_functype(_mts_array_data, "data")
 _MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
 _MTS_ARRAY_SHAPE = _cast_to_ctype_functype(_mts_array_shape, "shape")
 _MTS_ARRAY_RESHAPE = _cast_to_ctype_functype(_mts_array_reshape, "reshape")
@@ -493,7 +460,6 @@ _MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "o
 _DEFAULT_MTS_ARRAY = mts_array_t(
     ptr=0,
     origin=_cast_to_ctype_functype(lambda u: u, "origin"),
-    data=_MTS_ARRAY_DATA,
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,

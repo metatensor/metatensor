@@ -123,16 +123,30 @@ public:
         return block;
     }
 
-    /// Get a view in the values in this block
-    NDArray<double> values() & {
+    /// Get the values in this block as a DLPackArray on CPU.
+    ///
+    /// The data is requested on CPU via DLPack; if the underlying array
+    /// lives on another device, a copy to CPU may occur. The returned
+    /// DLPackArray owns the DLPack resource and keeps the data alive.
+    ///
+    /// @tparam T the expected element type (default: double). Throws if
+    ///           the actual dtype does not match.
+    template<typename T = double>
+    DLPackArray<T> values() & {
         auto array = this->mts_array();
-        double* data = nullptr;
-        details::check_status(array.data(array.ptr, &data));
 
-        return NDArray<double>(data, this->values_shape());
+        DLManagedTensorVersioned* managed = nullptr;
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        details::check_status(array.as_dlpack(
+            array.ptr, &managed, cpu_device, nullptr, ver
+        ));
+
+        return DLPackArray<T>(managed);
     }
 
-    NDArray<double> values() && = delete;
+    template<typename T = double>
+    DLPackArray<T> values() && = delete;
 
     /// Access the sample `Labels` for this block.
     ///

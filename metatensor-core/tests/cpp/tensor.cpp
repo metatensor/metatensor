@@ -297,7 +297,7 @@ TEST_CASE("TensorMap") {
         CHECK(clone.keys() == tensor.keys());
 
         auto block = clone.block_by_id(0);
-        CHECK_THROWS_WITH(block.values(), "error in C++ callback: can not call `data` for an EmptyDataArray");
+        CHECK_THROWS_WITH(block.values(), "error in C++ callback: can not call `as_dlpack` for an EmtpyDataArray");
     }
 }
 
