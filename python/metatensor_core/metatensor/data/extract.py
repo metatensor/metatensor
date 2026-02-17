@@ -1,4 +1,5 @@
 import ctypes
+import enum
 from typing import Any, NewType, Union
 
 import numpy as np
@@ -12,14 +13,42 @@ from .._c_api import (
     mts_data_origin_t,
 )
 from ..status import _check_status
-from ..utils import _call_with_growing_buffer
-from ._dlpack import DLPackArray, wrap_versioned_as_unversioned
+from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
     _origin_pytorch,
     _register_origin,
 )
+
+
+class DLPackDtypeCode(enum.IntEnum):
+    """DLPack data-type codes (from ``dlpack.h``)."""
+
+    kDLInt = 0
+    kDLUInt = 1
+    kDLFloat = 2
+    kDLComplex = 5
+    kDLBool = 6
+
+
+# DLPack dtype -> numpy dtype mapping, used by ExternalCpuArray
+_DLPACK_TO_NUMPY = {
+    (DLPackDtypeCode.kDLFloat, 16): np.float16,
+    (DLPackDtypeCode.kDLFloat, 32): np.float32,
+    (DLPackDtypeCode.kDLFloat, 64): np.float64,
+    (DLPackDtypeCode.kDLInt, 8): np.int8,
+    (DLPackDtypeCode.kDLInt, 16): np.int16,
+    (DLPackDtypeCode.kDLInt, 32): np.int32,
+    (DLPackDtypeCode.kDLInt, 64): np.int64,
+    (DLPackDtypeCode.kDLUInt, 8): np.uint8,
+    (DLPackDtypeCode.kDLUInt, 16): np.uint16,
+    (DLPackDtypeCode.kDLUInt, 32): np.uint32,
+    (DLPackDtypeCode.kDLUInt, 64): np.uint64,
+    (DLPackDtypeCode.kDLBool, 8): np.bool_,
+    (DLPackDtypeCode.kDLComplex, 64): np.complex64,
+    (DLPackDtypeCode.kDLComplex, 128): np.complex128,
+}
 
 
 try:
@@ -169,7 +198,23 @@ class ExternalCpuArray(np.ndarray):
         )
         _check_status(status)
 
-        array = np.from_dlpack(DLPackArray(dl_managed_ptr))
+        dl_tensor = dl_managed_ptr.contents.dl_tensor
+        data_ptr = dl_tensor.data
+        dtype_code = dl_tensor.dtype.code
+        dtype_bits = dl_tensor.dtype.bits
+
+        np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+        if np_dtype is None:
+            raise ValueError(
+                f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+            )
+
+        c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+        array = _ptr_to_ndarray(
+            ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+            shape,
+            np_dtype,
+        )
         obj = array.view(cls)
 
         # keep a reference to the parent object (if any) to prevent it from
@@ -202,15 +247,16 @@ class ExternalCpuArray(np.ndarray):
 
 class ExternalCudaArray:
     """
-    Factory that wraps non-Python data on a CUDA device as a ``torch.Tensor`` via
-    DLPack, keeping a reference to a parent Python object to prevent use-after-free.
+    Factory that wraps non-Python data on a CUDA device as a ``torch.Tensor``
+    via DLPack, keeping a reference to a parent Python object to prevent
+    use-after-free.
 
-    This is the CUDA counterpart to :py:class:`ExternalCpuArray`, intended for data that
-    lives in CUDA memory. Requires PyTorch.
+    This is the CUDA counterpart to :py:class:`ExternalCpuArray`, intended for
+    data that lives in CUDA memory. Requires PyTorch.
 
-    For CUDA data (``device_type=2``), we go through CuPy when available for true
-    zero-copy import, then convert to a ``torch.Tensor``. If CuPy is not installed we
-    fall back to ``torch.from_dlpack`` directly.
+    For CUDA data (``device_type=2``), we go through CuPy when available for
+    true zero-copy import, then convert to a ``torch.Tensor``. If CuPy is not
+    installed we fall back to ``torch.from_dlpack`` directly.
     """
 
     def __new__(
@@ -248,7 +294,13 @@ class ExternalCudaArray:
         )
         _check_status(status)
 
-        dlpack_array = DLPackArray(dl_managed_ptr)
+        from ._dlpack import (
+            make_dlpack_unversioned_capsule,
+            make_dlpack_versioned_capsule,
+            wrap_versioned_as_unversioned,
+        )
+
+        capsule = make_dlpack_versioned_capsule(dl_managed_ptr)
 
         # For CUDA data, prefer CuPy for true zero-copy import of external
         # GPU memory, then convert to a torch.Tensor (also zero-copy via
@@ -258,19 +310,20 @@ class ExternalCudaArray:
             try:
                 import cupy
 
-                cupy_array = cupy.from_dlpack(dlpack_array)
+                cupy_array = cupy.from_dlpack(capsule)
                 tensor = torch.as_tensor(cupy_array)
             except ImportError:
                 pass
 
         if tensor is None:
             try:
-                tensor = torch.from_dlpack(dlpack_array)
+                tensor = torch.from_dlpack(capsule)
             except RuntimeError:
                 # Older PyTorch (< 2.4) doesn't understand versioned
-                # DLPack capsules. Fall back to an unversioned capsule.
+                # DLPack capsules.  Fall back to an unversioned capsule.
                 unversioned = wrap_versioned_as_unversioned(dl_managed_ptr)
-                tensor = torch.from_dlpack(DLPackArray(unversioned))
+                capsule = make_dlpack_unversioned_capsule(unversioned)
+                tensor = torch.from_dlpack(capsule)
 
         # keep a reference to the parent object to prevent it from being
         # garbage-collected while the tensor is alive
