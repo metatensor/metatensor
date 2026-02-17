@@ -266,6 +266,68 @@ def _get_shape(mts_array, test):
     return shape
 
 
+def test_dlpack_dtype_code_enum():
+    """Verify that the DLPackDtypeCode enum has the correct values from dlpack.h."""
+    from metatensor.data.extract import DLPackDtypeCode
+
+    assert DLPackDtypeCode.kDLInt == 0
+    assert DLPackDtypeCode.kDLUInt == 1
+    assert DLPackDtypeCode.kDLFloat == 2
+    assert DLPackDtypeCode.kDLComplex == 5
+    assert DLPackDtypeCode.kDLBool == 6
+
+    # Verify they work as dict keys (used in _DLPACK_TO_NUMPY)
+    d = {(DLPackDtypeCode.kDLFloat, 64): "f64"}
+    assert d[(2, 64)] == "f64"
+
+
+def test_external_cuda_array_importable():
+    """ExternalCudaArray should be importable from the public API."""
+    from metatensor.data import ExternalCudaArray
+
+    assert ExternalCudaArray is not None
+
+
+def test_external_cuda_array_requires_torch(monkeypatch):
+    """ExternalCudaArray.__new__ should raise ImportError when torch is missing."""
+    import builtins
+
+    from metatensor.data import extract
+
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "torch":
+            raise ImportError("No module named 'torch'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+
+    dummy_mts_array = mts_array_t()  # won't be used — error raised first
+    with pytest.raises(ImportError, match="ExternalCudaArray requires PyTorch"):
+        extract.ExternalCudaArray(dummy_mts_array, parent=None)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires PyTorch")
+def test_external_cuda_array_cpu_path():
+    """ExternalCudaArray should work with device_type=1 (CPU) for testing."""
+    from metatensor.data.extract import ExternalCudaArray
+
+    # Create a numpy array and wrap it as mts_array
+    arr = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+    mts_array = metatensor.data.create_mts_array(arr)
+
+    # Use device_type=1 (kDLCPU) to test the full code path without a GPU
+    result = ExternalCudaArray(mts_array, parent=None, device_type=1, device_id=0)
+
+    assert isinstance(result, torch.Tensor)
+    assert result.shape == (2, 2)
+    assert result.device.type == "cpu"
+    np.testing.assert_array_equal(result.numpy(), arr)
+
+    free_mts_array(mts_array)
+
+
 TEST_ORIGIN = metatensor.data.array._register_origin("python.test-origin")
 metatensor.data.register_external_data_wrapper(
     "python.test-origin",

@@ -13,6 +13,7 @@ from .array import (  # noqa: F401
 from .extract import (  # noqa: F401
     Array,
     ExternalCpuArray,
+    ExternalCudaArray,
     data_origin,
     data_origin_name,
     mts_array_to_python_array,

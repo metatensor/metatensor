@@ -117,6 +117,29 @@ namespace details {
         }
     }
 
+    /// Check whether a DLDataType matches the C++ type T.
+    ///
+    /// Returns true when code, bits **and** lanes all match.
+    template<typename T>
+    bool dlpack_dtype_matches(DLDataType dtype) {
+        if (dtype.lanes != 1) {
+            return false;
+        }
+        if constexpr (std::is_floating_point_v<T>) {
+            return dtype.code == kDLFloat
+                && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+        } else if constexpr (std::is_integral_v<T>) {
+            if constexpr (std::is_signed_v<T>) {
+                return dtype.code == kDLInt
+                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+            } else {
+                return dtype.code == kDLUInt
+                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
+            }
+        }
+        return false;
+    }
+
 } // namespace details
 
 
@@ -263,6 +286,8 @@ private:
     /// Shape extracted from the DLTensor
     std::vector<size_t> shape_;
 };
+
+
 /// Simple N-dimensional array interface
 ///
 /// This class can either be a non-owning view inside some existing memory (for
@@ -617,13 +642,6 @@ public:
             }, array, shape, shape_count, new_array);
         };
 
-        array.data = [](void* array, double** data) {
-            return details::catch_exceptions([](void* array, double** data){
-                auto* cxx_array = static_cast<DataArrayBase*>(array);
-                *data = cxx_array->data();
-            }, array, data);
-        };
-
         array.as_dlpack = [](
             void *array,
             DLManagedTensorVersioned **dl_managed_tensor,
@@ -727,15 +745,6 @@ public:
     /// The new array should be filled with zeros.
     virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
 
-    /// Get a pointer to the underlying data storage.
-    ///
-    /// This function is allowed to fail if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    virtual double* data() & = 0;
-
-    double* data() && = delete;
-
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
 
@@ -807,14 +816,6 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::SimpleDataArray", &origin);
         return origin;
-    }
-
-    double* data() & override {
-        if constexpr(std::is_same_v<T, double>){
-            return reinterpret_cast<double*>(data_->data());
-        } else {
-            throw Error("data() needs double, use as_dlpack instead");
-        }
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -1104,10 +1105,6 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::EmptyDataArray", &origin);
         return origin;
-    }
-
-    double* data() & override {
-        throw metatensor::Error("can not call `data` for an EmptyDataArray");
     }
 
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {
