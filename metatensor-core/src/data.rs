@@ -87,16 +87,6 @@ pub struct mts_array_t {
         origin: *mut mts_data_origin_t
     ) -> mts_status_t>,
 
-    /// Get a pointer to the underlying data storage.
-    ///
-    /// This function is allowed to fail if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    data: Option<unsafe extern "C" fn(
-        array: *mut c_void,
-        data: *mut *mut f64,
-    ) -> mts_status_t>,
-
     /// Get a DLPack representation of the underlying data.
     ///
     /// This function exports the array as a `DLManagedTensorVersioned` struct
@@ -257,7 +247,6 @@ impl mts_array_t {
         mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
-            data: self.data,
             as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
@@ -275,7 +264,6 @@ impl mts_array_t {
         mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
-            data: None,
             as_dlpack: None,
             shape: None,
             reshape: None,
@@ -303,84 +291,6 @@ impl mts_array_t {
         }
 
         return Ok(origin);
-    }
-
-    /// Get the underlying data for this array.
-    #[allow(dead_code)]
-    pub fn data(&self) -> Result<&[f64], Error> {
-        let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
-
-        let function = self.data.expect("mts_array_t.data function is NULL");
-
-        let mut data_ptr = std::ptr::null_mut();
-
-        let status = unsafe {
-            function(
-                self.ptr,
-                &mut data_ptr,
-            )
-        };
-
-        if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.data failed".into()
-            });
-        }
-
-        if len == 0 {
-            let data: &[f64] = &[];
-            return Ok(data);
-        }
-
-        assert!(!data_ptr.is_null());
-        let data = unsafe {
-            std::slice::from_raw_parts(data_ptr, len)
-        };
-
-        return Ok(data);
-    }
-
-    /// Get the underlying data for this array.
-    #[allow(dead_code)]
-    pub fn data_mut(&mut self) -> Result<&mut [f64], Error> {
-        let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
-
-        let function = self.data.expect("mts_array_t.data function is NULL");
-
-        let mut data_ptr = std::ptr::null_mut();
-
-        let status = unsafe {
-            function(
-                self.ptr,
-                &mut data_ptr,
-            )
-        };
-
-        if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.data failed".into()
-            });
-        }
-
-        if len == 0 {
-            let data: &mut [f64] = &mut [];
-            return Ok(data);
-        }
-
-        assert!(!data_ptr.is_null());
-        let data = unsafe {
-            std::slice::from_raw_parts_mut(data_ptr, len)
-        };
-
-        return Ok(data);
     }
 
     /// Get a dlpack representation of the data
@@ -591,7 +501,6 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
-                data: None,
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
@@ -609,7 +518,6 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
-                data: None,
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
