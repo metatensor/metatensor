@@ -119,18 +119,30 @@ typedef struct mts_labels_t {
 typedef uint64_t mts_data_origin_t;
 
 /**
- * Representation of a single sample moved from an array to another one
+ * Information about a block of data to be moved from an array to another.
  */
-typedef struct mts_sample_mapping_t {
+typedef struct mts_data_movement_t {
   /**
-   * index of the moved sample in the input array
+   * index of the sample in the input array
    */
-  uintptr_t input;
+  uintptr_t sample_in;
   /**
-   * index of the moved sample in the output array
+   * index of the sample in the output array
    */
-  uintptr_t output;
-} mts_sample_mapping_t;
+  uintptr_t sample_out;
+  /**
+   * index of the start of the property in the input array
+   */
+  uintptr_t properties_start_in;
+  /**
+   * index of the start of the property in the output array
+   */
+  uintptr_t properties_start_out;
+  /**
+   * number of properties to move
+   */
+  uintptr_t properties_length;
+} mts_data_movement_t;
 
 /**
  * `mts_array_t` manages n-dimensional arrays used as data in a block or tensor
@@ -262,19 +274,19 @@ typedef struct mts_array_t {
    * calling `mts_array_t::create` with one of the arrays in the same block
    * or tensor map as the `input`.
    *
-   * The `samples` array of size `samples_count` indicate where the data
+   * The `movements` array of size `movements_count` indicate where the data
    * should be moved from `input` to `output`.
    *
-   * This function should copy data from `input[samples[i].input, ..., :]` to
-   * `array[samples[i].output, ..., property_start:property_end]` for `i` up
-   * to `samples_count`. All indexes are 0-based.
+   * This function should copy data from `input[movements[i].sample_in, ...,
+   * movements[i].properties_start_in + x]` to
+   * `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+   * x]` for `i` up to `movements_count` and `x` up to
+   * `movements[i].properties_length`. All indexes are 0-based.
    */
-  mts_status_t (*move_samples_from)(void *output,
-                                    const void *input,
-                                    const struct mts_sample_mapping_t *samples,
-                                    uintptr_t samples_count,
-                                    uintptr_t property_start,
-                                    uintptr_t property_end);
+  mts_status_t (*move_data)(void *output,
+                            const void *input,
+                            const struct mts_data_movement_t *movements,
+                            uintptr_t movements_count);
 } mts_array_t;
 
 /**

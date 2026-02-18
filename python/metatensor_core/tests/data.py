@@ -23,7 +23,7 @@ from metatensor._c_api import (
     DLPackVersion,
     c_uintptr_t,
     mts_array_t,
-    mts_sample_mapping_t,
+    mts_data_movement_t,
 )
 
 
@@ -139,7 +139,7 @@ class MtsArrayMixin:
         free_mts_array(mts_array)
         free_mts_array(copy)
 
-    def test_move_samples_from(self):
+    def test_move_data(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
         mts_array = metatensor.data.create_mts_array(array)
@@ -148,16 +148,20 @@ class MtsArrayMixin:
         other[:] = 2.0
         mts_array_other = metatensor.data.create_mts_array(other)
 
-        move = mts_sample_mapping_t(input=0, output=1)
-        move_array = ctypes.ARRAY(mts_sample_mapping_t, 1)(move)
+        move = mts_data_movement_t(
+            sample_in=0,
+            sample_out=1,
+            properties_start_in=0,
+            properties_start_out=3,
+            properties_length=4,
+        )
+        move_array = ctypes.ARRAY(mts_data_movement_t, 1)(move)
 
-        mts_array.move_samples_from(
+        mts_array.move_data(
             mts_array.ptr,
             mts_array_other.ptr,
             move_array,
             len(move_array),
-            3,
-            7,
         )
         expected = np.array(
             [
