@@ -161,6 +161,14 @@ typedef struct mts_array_t {
    */
   mts_status_t (*origin)(const void *array, mts_data_origin_t *origin);
   /**
+   * Query the device where this array's data resides without exporting
+   * via DLPack.
+   *
+   * The implementation must store the device information in `*device`.
+   * For CPU arrays this should be `DLDevice { device_type: kDLCPU, device_id: 0 }`.
+   */
+  mts_status_t (*device)(const void *array, DLDevice *device);
+  /**
    * Get a DLPack representation of the underlying data.
    *
    * This function exports the array as a `DLManagedTensorVersioned` struct
