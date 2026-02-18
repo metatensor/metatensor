@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 
 from .._c_api import (
+    DLDevice,
     DLManagedTensorVersioned,
     c_uintptr_t,
     mts_array_t,
@@ -202,8 +203,10 @@ def create_mts_array(array):
 
     if _is_numpy_array(array):
         mts_array_origin = _MTS_ARRAY_ORIGIN_NUMPY
+        mts_array_device = _MTS_ARRAY_DEVICE_NUMPY
     elif _is_torch_array(array):
         mts_array_origin = _MTS_ARRAY_ORIGIN_PYTORCH
+        mts_array_device = _MTS_ARRAY_DEVICE_PYTORCH
     else:
         raise ValueError(f"unknown array type: {type(array)}")
 
@@ -216,6 +219,7 @@ def create_mts_array(array):
     # with `_KNOWN_ARRAY_WRAPPERS` to recover the corresponding Python object.
     mts_array.ptr = id(wrapper)
     mts_array.origin = mts_array_origin
+    mts_array.device = mts_array_device
 
     return mts_array
 
@@ -454,12 +458,54 @@ _MTS_ARRAY_ORIGIN_NUMPY = _cast_to_ctype_functype(mts_array_origin_numpy, "origi
 _MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "origin")
 
 
+# DLPack kDLCPU device type constant
+_KDLCPU = 1
+# DLPack kDLCUDA device type constant
+_KDLCUDA = 2
+
+
+@catch_exceptions
+def _mts_array_device_numpy(this, device_ptr):
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    array = wrapper.array
+    try:
+        device_type, device_id = array.__dlpack_device__()
+        device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
+    except Exception:
+        device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+
+
+@catch_exceptions
+def _mts_array_device_pytorch(this, device_ptr):
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    tensor = wrapper.array
+    try:
+        device_type, device_id = tensor.__dlpack_device__()
+        device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
+    except Exception:
+        # Fallback: manual mapping from torch device string
+        torch_dev = tensor.device
+        if torch_dev.type == "cpu":
+            device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+        elif torch_dev.type == "cuda":
+            device_ptr[0] = DLDevice(
+                device_type=_KDLCUDA, device_id=torch_dev.index or 0
+            )
+        else:
+            device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+
+
+_MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")
+_MTS_ARRAY_DEVICE_PYTORCH = _cast_to_ctype_functype(_mts_array_device_pytorch, "device")
+
+
 # The default value for all Python-provided `mts_array_t`. Only the first two members
 # will change, having a pre-allocated instance will make it faster to create new ones
 # with `mts_array_t.from_buffer_copy`.
 _DEFAULT_MTS_ARRAY = mts_array_t(
     ptr=0,
     origin=_cast_to_ctype_functype(lambda u: u, "origin"),
+    device=_cast_to_ctype_functype(lambda u, d: None, "device"),
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,
