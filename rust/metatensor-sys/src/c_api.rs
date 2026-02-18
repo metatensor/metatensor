@@ -89,33 +89,51 @@ fn bindgen_test_layout_mts_labels_t() {
 pub type mts_data_origin_t = u64;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct mts_sample_mapping_t {
-    pub input: usize,
-    pub output: usize,
+pub struct mts_data_movement_t {
+    pub sample_in: usize,
+    pub sample_out: usize,
+    pub properties_start_in: usize,
+    pub properties_start_out: usize,
+    pub properties_length: usize,
 }
 #[test]
-fn bindgen_test_layout_mts_sample_mapping_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mts_sample_mapping_t> = ::std::mem::MaybeUninit::uninit();
+fn bindgen_test_layout_mts_data_movement_t() {
+    const UNINIT: ::std::mem::MaybeUninit<mts_data_movement_t> = ::std::mem::MaybeUninit::uninit();
     let ptr = UNINIT.as_ptr();
     assert_eq!(
-        ::std::mem::size_of::<mts_sample_mapping_t>(),
-        16usize,
-        "Size of mts_sample_mapping_t"
+        ::std::mem::size_of::<mts_data_movement_t>(),
+        40usize,
+        "Size of mts_data_movement_t"
     );
     assert_eq!(
-        ::std::mem::align_of::<mts_sample_mapping_t>(),
+        ::std::mem::align_of::<mts_data_movement_t>(),
         8usize,
-        "Alignment of mts_sample_mapping_t"
+        "Alignment of mts_data_movement_t"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).input) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).sample_in) as usize - ptr as usize },
         0usize,
-        "Offset of field: mts_sample_mapping_t::input"
+        "Offset of field: mts_data_movement_t::sample_in"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).output) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).sample_out) as usize - ptr as usize },
         8usize,
-        "Offset of field: mts_sample_mapping_t::output"
+        "Offset of field: mts_data_movement_t::sample_out"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_in) as usize - ptr as usize },
+        16usize,
+        "Offset of field: mts_data_movement_t::properties_start_in"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_out) as usize - ptr as usize },
+        24usize,
+        "Offset of field: mts_data_movement_t::properties_start_out"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_length) as usize - ptr as usize },
+        32usize,
+        "Offset of field: mts_data_movement_t::properties_length"
     );
 }
 #[repr(C)]
@@ -185,14 +203,12 @@ pub struct mts_array_t {
         ) -> mts_status_t,
     >,
     pub destroy: ::std::option::Option<unsafe extern "C" fn(array: *mut ::std::os::raw::c_void)>,
-    pub move_samples_from: ::std::option::Option<
+    pub move_data: ::std::option::Option<
         unsafe extern "C" fn(
             output: *mut ::std::os::raw::c_void,
             input: *const ::std::os::raw::c_void,
-            samples: *const mts_sample_mapping_t,
-            samples_count: usize,
-            property_start: usize,
-            property_end: usize,
+            movements: *const mts_data_movement_t,
+            movements_count: usize,
         ) -> mts_status_t,
     >,
 }
@@ -266,9 +282,9 @@ fn bindgen_test_layout_mts_array_t() {
         "Offset of field: mts_array_t::destroy"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).move_samples_from) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).move_data) as usize - ptr as usize },
         88usize,
-        "Offset of field: mts_array_t::move_samples_from"
+        "Offset of field: mts_array_t::move_data"
     );
 }
 pub type mts_realloc_buffer_t = ::std::option::Option<
