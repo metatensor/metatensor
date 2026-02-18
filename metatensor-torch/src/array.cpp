@@ -336,26 +336,15 @@ void TorchDataArray::swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
     this->update_shape();
 }
 
-void TorchDataArray::move_samples_from(
+void TorchDataArray::move_data(
     const metatensor::DataArrayBase& raw_input,
-    std::vector<mts_sample_mapping_t> samples,
-    uintptr_t property_start,
-    uintptr_t property_end
+    std::vector<mts_data_movement_t> moves
 ) {
-    const auto& input = dynamic_cast<const TorchDataArray&>(raw_input);
-    auto input_tensor = input.tensor();
-
-    auto options = torch::TensorOptions().device(input_tensor.device()).dtype(torch::kInt64);
-    auto input_samples = torch::zeros({static_cast<int64_t>(samples.size())}, options);
-    auto output_samples = torch::zeros({static_cast<int64_t>(samples.size())}, options);
-
-    for (int64_t i=0; i<samples.size(); i++) {
-        input_samples[i] = static_cast<int64_t>(samples[i].input);
-        output_samples[i] = static_cast<int64_t>(samples[i].output);
-    }
-
     using torch::indexing::Slice;
     using torch::indexing::Ellipsis;
+
+    const auto& input = dynamic_cast<const TorchDataArray&>(raw_input);
+    auto input_tensor = input.tensor();
     auto output_tensor = this->tensor();
 
     assert(input_tensor.dtype() == output_tensor.dtype());
@@ -367,11 +356,132 @@ void TorchDataArray::move_samples_from(
         return;
     }
 
-    // output[output_samples, ..., properties] = input[input_samples, ..., :]
-    output_tensor.index_put_(
-        {output_samples, Ellipsis, Slice(property_start, property_end)},
-        input_tensor.index({input_samples, Ellipsis, Slice()})
-    );
+    if (moves.empty()) {
+        return;
+    }
+
+    // Check if we can use the optimized path (all moves have same property structure)
+    bool constant_properties = true;
+    auto first_prop_start_in = moves[0].properties_start_in;
+    auto first_prop_start_out = moves[0].properties_start_out;
+    auto first_prop_len = moves[0].properties_length;
+
+    for (const auto& move : moves) {
+        if (move.properties_start_in != first_prop_start_in ||
+            move.properties_start_out != first_prop_start_out ||
+            move.properties_length != first_prop_len) {
+            constant_properties = false;
+            break;
+        }
+    }
+
+    if (constant_properties) {
+        auto sample_in_indices = std::vector<int64_t>();
+        auto sample_out_indices = std::vector<int64_t>();
+        sample_in_indices.reserve(moves.size());
+        sample_out_indices.reserve(moves.size());
+
+        bool contiguous_in = true;
+        bool contiguous_out = true;
+
+        if (moves.size() > 1) {
+            for (size_t i = 1; i < moves.size(); ++i) {
+                if (moves[i].sample_in != moves[i - 1].sample_in + 1) {
+                    contiguous_in = false;
+                }
+                if (moves[i].sample_out != moves[i - 1].sample_out + 1) {
+                    contiguous_out = false;
+                }
+            }
+        }
+
+        for (const auto& move : moves) {
+            sample_in_indices.push_back(static_cast<int64_t>(move.sample_in));
+            sample_out_indices.push_back(static_cast<int64_t>(move.sample_out));
+        }
+
+        torch::Tensor samples_in;
+        torch::Tensor samples_out;
+
+        auto property_start_in = static_cast<int64_t>(first_prop_start_in);
+        auto property_start_out = static_cast<int64_t>(first_prop_start_out);
+        auto property_len = static_cast<int64_t>(first_prop_len);
+
+        torch::Tensor input_slice;
+        if (contiguous_in) {
+            auto start = static_cast<int64_t>(moves[0].sample_in);
+            auto end = start + static_cast<int64_t>(moves.size());
+            input_slice = input_tensor.index({
+                Slice(start, end),
+                Ellipsis,
+                Slice(property_start_in, property_start_in + property_len)
+            });
+        } else {
+            samples_in = torch::from_blob(
+                sample_in_indices.data(),
+                {static_cast<int64_t>(sample_in_indices.size())},
+                torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
+            ).to(input_tensor.device(), /*non_blocking=*/true, /*copy=*/true);
+
+            input_slice = input_tensor.index({
+                samples_in,
+                Ellipsis,
+                Slice(property_start_in, property_start_in + property_len)
+            });
+        }
+
+        if (contiguous_out) {
+            auto samples_start = static_cast<int64_t>(moves[0].sample_out);
+            auto samples_end = samples_start + static_cast<int64_t>(moves.size());
+            output_tensor.index_put_(
+                {
+                    Slice(samples_start, samples_end),
+                    Ellipsis,
+                    Slice(property_start_out, property_start_out + property_len)
+                },
+                input_slice
+            );
+        } else {
+            samples_out = torch::from_blob(
+                sample_out_indices.data(),
+                {static_cast<int64_t>(sample_out_indices.size())},
+                torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
+            ).to(input_tensor.device(), /*non_blocking=*/true, /*copy=*/true);
+
+            output_tensor.index_put_(
+                {
+                    samples_out,
+                    Ellipsis,
+                    Slice(property_start_out, property_start_out + property_len)
+                },
+                input_slice
+            );
+        }
+    } else {
+        for (const auto& move : moves) {
+            auto sample_in = static_cast<int64_t>(move.sample_in);
+            auto sample_out = static_cast<int64_t>(move.sample_out);
+
+            auto property_start_in = static_cast<int64_t>(move.properties_start_in);
+            auto property_start_out = static_cast<int64_t>(move.properties_start_out);
+            auto property_len = static_cast<int64_t>(move.properties_length);
+
+            auto input_slice = input_tensor.index({
+                sample_in,
+                Ellipsis,
+                Slice(property_start_in, property_start_in + property_len)
+            });
+
+            output_tensor.index_put_(
+                {
+                    sample_out,
+                    Ellipsis,
+                    Slice(property_start_out, property_start_out + property_len)
+                },
+                input_slice
+            );
+        }
+    }
 }
 
 void TorchDataArray::update_shape() {
