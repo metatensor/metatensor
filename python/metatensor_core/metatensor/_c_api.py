@@ -99,12 +99,15 @@ mts_labels_t._fields_ = [
 ]
 
 
-class mts_sample_mapping_t(ctypes.Structure):
+class mts_data_movement_t(ctypes.Structure):
     pass
 
-mts_sample_mapping_t._fields_ = [
-    ("input", c_uintptr_t),
-    ("output", c_uintptr_t),
+mts_data_movement_t._fields_ = [
+    ("sample_in", c_uintptr_t),
+    ("sample_out", c_uintptr_t),
+    ("properties_start_in", c_uintptr_t),
+    ("properties_start_out", c_uintptr_t),
+    ("properties_length", c_uintptr_t),
 ]
 
 
@@ -123,7 +126,7 @@ mts_array_t._fields_ = [
     ("create", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, POINTER(mts_array_t))),
     ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
     ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
-    ("move_samples_from", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_sample_mapping_t), c_uintptr_t, c_uintptr_t, c_uintptr_t)),
+    ("move_data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_data_movement_t), c_uintptr_t)),
 ]
 
 

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use indexmap::IndexSet;
 
 use crate::labels::{Labels, LabelValue};
-use crate::{Error, TensorBlock, mts_sample_mapping_t};
+use crate::{Error, TensorBlock};
 
 /// single block and part of the associated key, this is used for the various
 /// `keys_to_xxx` functions
@@ -85,7 +85,7 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
 pub fn merge_gradient_samples(
     blocks: &[KeyAndBlock],
     gradient_name: &str,
-    samples_mappings: &[Vec<mts_sample_mapping_t>],
+    samples_mappings: &[Vec<usize>],
 ) -> Arc<Labels> {
     let mut new_sample_values = BTreeSet::new();
     let mut new_sample_names = None;
@@ -101,9 +101,8 @@ pub fn merge_gradient_samples(
             let mut grad_sample = grad_sample.to_vec();
             let old_sample_i = grad_sample[0].usize();
 
-            let mapping = &samples_mapping[old_sample_i];
-            debug_assert_eq!(mapping.input, old_sample_i);
-            grad_sample[0] = mapping.output.into();
+            let new_sample_i = samples_mapping[old_sample_i];
+            grad_sample[0] = new_sample_i.into();
 
             new_sample_values.insert(grad_sample);
         }
@@ -124,7 +123,7 @@ pub fn merge_samples(
     blocks: &[KeyAndBlock],
     new_sample_names: &[&str],
     sort: bool
-) -> (Arc<Labels>, Vec<Vec<mts_sample_mapping_t>>) {
+) -> (Arc<Labels>, Vec<Vec<usize>>) {
     let add_key_to_samples = blocks[0].block.samples.size() < new_sample_names.len();
 
     // Collect samples in an IndexSet to keep them in the same order as they
@@ -157,23 +156,21 @@ pub fn merge_samples(
 
     let mut samples_mappings = Vec::new();
     for KeyAndBlock{key, block} in blocks {
-        let mut mapping_for_block = Vec::new();
-        for (sample_i, sample) in block.samples.iter().enumerate() {
+        let mut mapping_for_block = Vec::with_capacity(block.samples.count());
+
+        for sample in &*block.samples {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
             }
 
             let new_sample_i = merged_samples.position(&sample).expect("missing entry in merged samples");
-            mapping_for_block.push(mts_sample_mapping_t {
-                input: sample_i,
-                output: new_sample_i,
-            });
+            mapping_for_block.push(new_sample_i);
         }
         samples_mappings.push(mapping_for_block);
     }
 
-    return (merged_samples, samples_mappings)
+    return (merged_samples, samples_mappings);
 }
 
 /******************************************************************************/
