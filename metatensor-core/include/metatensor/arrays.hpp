@@ -733,28 +733,24 @@ public:
             }, array, axis_1, axis_2);
         };
 
-        array.move_samples_from = [](
+        array.move_data = [](
             void* array,
             const void* input,
-            const mts_sample_mapping_t* samples,
-            uintptr_t samples_count,
-            uintptr_t property_start,
-            uintptr_t property_end
+            const mts_data_movement_t* moves,
+            uintptr_t moves_count
         ) {
             return details::catch_exceptions([](
                 void* array,
                 const void* input,
-                const mts_sample_mapping_t* samples,
-                uintptr_t samples_count,
-                uintptr_t property_start,
-                uintptr_t property_end
+                const mts_data_movement_t* moves,
+                uintptr_t moves_count
             ) {
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 const auto* cxx_input = static_cast<const DataArrayBase*>(input);
-                auto cxx_samples = std::vector<mts_sample_mapping_t>(samples, samples + samples_count);
+                auto cxx_moves = std::vector<mts_data_movement_t>(moves, moves + moves_count);
 
-                cxx_array->move_samples_from(*cxx_input, cxx_samples, property_start, property_end);
-            }, array, input, samples, samples_count, property_start, property_end);
+                cxx_array->move_data(*cxx_input, std::move(cxx_moves));
+            }, array, input, moves, moves_count);
         };
 
         return array;
@@ -818,17 +814,16 @@ public:
     /// This array is guaranteed to be created by calling `mts_array_t::create`
     /// with one of the arrays in the same block or tensor map as the `input`.
     ///
-    /// The `samples` indicate where the data should be moved from `input` to
-    /// the current DataArrayBase.
+    /// The `moves` indicate where the data should be moved from `input` to the
+    /// current DataArrayBase.
     ///
-    /// This function should copy data from `input[samples[i].input, ..., :]` to
-    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
-    /// to `samples_count`. All indexes are 0-based.
-    virtual void move_samples_from(
+    /// This function should copy data from `input[move.sample_in, ...,
+    /// move.properties_start_in + i]` to `array[move.sample_out, ...,
+    /// move.properties_start_out + i]` for each `move` in `moves` and `i` up to
+    /// `move.properties_length`. All indexes are 0-based.
+    virtual void move_data(
         const DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        std::vector<mts_data_movement_t> moves
     ) = 0;
 };
 
@@ -918,66 +913,57 @@ public:
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
     }
 
-    void move_samples_from(
+    void move_data(
         const DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        std::vector<mts_data_movement_t> moves
     ) override {
         const auto& input_array = dynamic_cast<const SimpleDataArray<T>&>(input);
         assert(input_array.shape_.size() == this->shape_.size());
 
-        size_t property_count = property_end - property_start;
+        if (moves.empty()) {
+            return;
+        }
+
         size_t property_dim = shape_.size() - 1;
-        assert(input_array.shape_[property_dim] == property_count);
 
-        auto input_index = std::vector<size_t>(shape_.size(), 0);
-        auto output_index = std::vector<size_t>(shape_.size(), 0);
+        // Calculate the total number of components (product of dimensions 1 to property_dim - 1)
+        size_t num_components = 1;
+        for (size_t i = 1; i < property_dim; i++) {
+            num_components *= shape_[i];
+        }
 
-        for (const auto& sample: samples) {
-            input_index[0] = sample.input;
-            output_index[0] = sample.output;
+        // The distance between two consecutive component blocks in memory
+        // This is equal to the size of the property dimension
+        size_t input_component_stride = input_array.shape_[property_dim];
+        size_t output_component_stride = shape_[property_dim];
 
-            if (property_dim == 1) {
-                // no components
-                for (size_t property_i=0; property_i<property_count; property_i++) {
-                    input_index[property_dim] = property_i;
-                    output_index[property_dim] = property_i + property_start;
+        // Calculate the stride for the samples (dimension 0)
+        // This is the number of elements in one sample, including all components and properties
+        size_t input_sample_stride = input_component_stride * num_components;
+        size_t output_sample_stride = output_component_stride * num_components;
 
-                    auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
-                    (*this->data_)[details::linear_index(shape_, output_index)] = value;
-                }
+        for (const auto& move: moves) {
+            size_t input_sample_offset = move.sample_in * input_sample_stride;
+            size_t output_sample_offset = move.sample_out * output_sample_stride;
+
+            if (move.properties_length == input_component_stride && move.properties_length == output_component_stride) {
+                // Optimization: if we are moving the full set of properties, we can
+                // move all components at once since they are contiguous in memory.
+                std::copy_n(
+                    input_array.data_->begin() + static_cast<std::ptrdiff_t>(input_sample_offset + move.properties_start_in),
+                    input_sample_stride,
+                    this->data_->begin() + static_cast<std::ptrdiff_t>(output_sample_offset + move.properties_start_out)
+                );
             } else {
-                auto last_component_dim = shape_.size() - 2;
-                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                    input_index[component_i] = 0;
-                }
+                for (size_t i = 0; i < num_components; i++) {
+                    size_t input_offset = input_sample_offset + (i * input_component_stride) + move.properties_start_in;
+                    size_t output_offset = output_sample_offset + (i * output_component_stride) + move.properties_start_out;
 
-                bool done = false;
-                while (!done) {
-                    for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                        output_index[component_i] = input_index[component_i];
-                    }
-
-                    for (size_t property_i=0; property_i<property_count; property_i++) {
-                        input_index[property_dim] = property_i;
-                        output_index[property_dim] = property_i + property_start;
-
-                        auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
-                        (*this->data_)[details::linear_index(shape_, output_index)] = value;
-                    }
-
-                    input_index[last_component_dim] += 1;
-                    for (size_t component_i=last_component_dim; component_i>2; component_i--) {
-                        if (input_index[component_i] >= shape_[component_i]) {
-                            input_index[component_i] = 0;
-                            input_index[component_i - 1] += 1;
-                        }
-                    }
-
-                    if (input_index[1] >= shape_[1]) {
-                        done = true;
-                    }
+                    std::copy_n(
+                        input_array.data_->begin() + static_cast<std::ptrdiff_t>(input_offset),
+                        move.properties_length,
+                        this->data_->begin() + static_cast<std::ptrdiff_t>(output_offset)
+                    );
                 }
             }
         }
@@ -1208,8 +1194,8 @@ public:
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
 
-    void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
-        throw metatensor::Error("can not call `move_samples_from` for an EmptyDataArray");
+    void move_data(const DataArrayBase&, std::vector<mts_data_movement_t>) override {
+        throw metatensor::Error("can not call `move_data` for an EmptyDataArray");
     }
 
 private:

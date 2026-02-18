@@ -38,6 +38,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   underlying array lives on another device, a copy may occur. For direct GPU
   access without a copy, use the C-level ``as_dlpack`` interface instead.
 
+### Changed
+
+- `mts_array_t.move_samples_from` is now `mts_array_t.move_data`, and allows for
+  more granular data movement. `mts_sample_mapping_t` has been renamed to
+  `mts_data_movement_t`.
+
 ### Removed
 
 - Removed `mts_array_t.data` function pointer and all corresponding

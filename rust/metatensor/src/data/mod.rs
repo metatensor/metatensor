@@ -11,8 +11,7 @@ pub use self::array::EmptyArray;
 #[cfg(test)]
 mod tests {
     use ndarray::ArcArray;
-
-    use crate::c_api::mts_sample_mapping_t;
+    use crate::c_api::mts_data_movement_t;
 
     use super::*;
     use super::origin::get_data_origin;
@@ -46,18 +45,22 @@ mod tests {
     }
 
     #[test]
-    fn move_samples_from() {
-        let array = Box::new(ArcArray::from_elem(vec![3, 2, 2, 4], 1.0)) as Box<dyn Array>;
-        let array = unsafe { ArrayRef::from_raw(array.into()) };
+    fn move_data() {
+        let array = ArcArray::from_elem(vec![3, 2, 2, 4], 1.0);
+        let array = unsafe { ArrayRefMut::new((Box::new(array) as Box<dyn Array>).into()) };
 
         let mut other = unsafe { ArrayRefMut::new(array.as_raw().create(&[1, 2, 2, 8]).unwrap()) };
-        assert_eq!(other.as_array(), ArcArray::from_elem(vec![1, 2, 2, 8], 0.0));
+        let expected = ArcArray::from_elem(vec![1, 2, 2, 8], 0.0);
+        assert_eq!(other.as_array(), expected);
 
-        let mapping = mts_sample_mapping_t {
-            output: 0,
-            input: 1,
+        let mapping = mts_data_movement_t {
+            sample_in: 1,
+            sample_out: 0,
+            properties_start_in: 0,
+            properties_start_out: 2,
+            properties_length: 4,
         };
-        other.as_raw_mut().move_samples_from(array.as_raw(), &[mapping], 2..6).unwrap();
+        other.as_raw_mut().move_data(array.as_raw(), &[mapping]).unwrap();
         let expected = ArcArray::from_shape_vec(vec![1, 2, 2, 8], vec![
                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,

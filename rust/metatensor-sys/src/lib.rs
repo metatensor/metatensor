@@ -88,7 +88,7 @@ impl mts_array_t {
             create: None,
             copy: None,
             destroy: None,
-            move_samples_from: None,
+            move_data: None,
         }
     }
 
@@ -188,28 +188,20 @@ impl mts_array_t {
         return Ok(new_array);
     }
 
-    /// call `mts_array_t.move_samples_from` with a more convenient API
-    pub fn move_samples_from(
+    /// call `mts_array_t.move_data` with a more convenient API
+    pub fn move_data(
         &mut self,
         input: &mts_array_t,
-        samples: &[mts_sample_mapping_t],
-        properties: std::ops::Range<usize>,
+        moves: &[mts_data_movement_t],
     ) -> Result<(), Error> {
-        let function = self.move_samples_from.expect("mts_array_t.move_samples_from function is NULL");
+        let function = self.move_data.expect("mts_array_t.move_data function is NULL");
 
         unsafe {
             check_status_external(
-                function(
-                    self.ptr,
-                    input.ptr,
-                    samples.as_ptr(),
-                    samples.len(),
-                    properties.start,
-                    properties.end,
-                ),
-                "mts_array_t.move_samples_from",
-            )?;
-        }
+                function(self.ptr, input.ptr, moves.as_ptr(), moves.len()),
+                "mts_array_t.move_data",
+            )?
+        };
 
         return Ok(());
     }

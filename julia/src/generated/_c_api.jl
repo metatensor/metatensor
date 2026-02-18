@@ -70,9 +70,12 @@ struct mts_labels_t
     count :: UIntptr
 end
 
-struct mts_sample_mapping_t
-    input :: UIntptr
-    output :: UIntptr
+struct mts_data_movement_t
+    sample_in :: UIntptr
+    sample_out :: UIntptr
+    properties_start_in :: UIntptr
+    properties_start_out :: UIntptr
+    properties_length :: UIntptr
 end
 
 struct mts_array_t
@@ -87,7 +90,7 @@ struct mts_array_t
     create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, Ptr{mts_array_t}) -> mts_status_t =#
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
     destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
-    move_samples_from :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_sample_mapping_t}, UIntptr, UIntptr, UIntptr) -> mts_status_t =#
+    move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
 
 
