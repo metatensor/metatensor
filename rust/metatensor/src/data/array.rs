@@ -1,14 +1,12 @@
-use std::ops::Range;
 use std::os::raw::c_void;
 
 use once_cell::sync::Lazy;
 
-use dlpk::sys::{DLDataType, DLDevice, DLManagedTensorVersioned, DLPackVersion};
-use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
+use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion, DLDataType};
 use dlpk::{DLPackTensor, GetDLPackDataType};
 
-
 use crate::errors::Error;
+use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
 
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
@@ -49,17 +47,18 @@ pub trait Array: std::any::Any + Send + Sync {
     /// `mts_array_t::create` with one of the arrays in the same block or tensor
     /// map as the `input`.
     ///
-    /// The `samples` indicate where the data should be moved from `input` to
+    /// The `movements` indicate where the data should be moved from `input` to
     /// `output`.
     ///
-    /// This function should copy data from `input[sample.input, ..., :]` to
-    /// `array[sample.output, ..., properties]` for each sample in `samples`.
-    /// All indexes are 0-based.
-    fn move_samples_from(
+    /// This function should copy data from `input[movements[i].sample_in, ...,
+    /// movements[i].properties_start_in + x]` to
+    /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+    /// x]` for `i` up to `movements_count` and `x` up to
+    /// `movements[i].properties_length`. All indexes are 0-based.
+    fn move_data(
         &mut self,
         input: &dyn Array,
-        samples: &[mts_sample_mapping_t],
-        properties: Range<usize>,
+        movements: &[mts_data_movement_t],
     );
 
     /// Get the device where this array's data resides.
@@ -103,7 +102,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             create: Some(rust_array_create),
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
-            move_samples_from: Some(rust_array_move_samples_from),
+            move_data: Some(rust_array_move_data),
         }
     }
 }
@@ -255,27 +254,25 @@ unsafe extern "C" fn rust_array_destroy(
 
 /// Implementation of `mts_array_t.move_sample` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern "C" fn rust_array_move_samples_from(
+unsafe extern "C" fn rust_array_move_data(
     output: *mut c_void,
     input: *const c_void,
-    samples: *const mts_sample_mapping_t,
-    samples_count: usize,
-    property_start: usize,
-    property_end: usize,
+    movements: *const mts_data_movement_t,
+    movements_count: usize,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(output, input);
         let output = output.cast::<Box<dyn Array>>();
         let input = input.cast::<Box<dyn Array>>();
 
-        let samples = if samples_count == 0 {
+        let movements = if movements_count == 0 {
             &[]
         } else {
-            check_pointers!(samples);
-            std::slice::from_raw_parts(samples, samples_count)
+            check_pointers!(movements);
+            std::slice::from_raw_parts(movements, movements_count)
         };
 
-        (*output).move_samples_from(&**input, samples, property_start..property_end);
+        (*output).move_data(&**input, movements);
     })
 }
 
@@ -330,27 +327,113 @@ where
         self.swap_axes(axis_1, axis_2);
     }
 
-    fn move_samples_from(
+    fn move_data(
         &mut self,
         input: &dyn Array,
-        samples: &[mts_sample_mapping_t],
-        property: Range<usize>,
+        movements: &[mts_data_movement_t],
     ) {
         use ndarray::{Axis, Slice};
 
-        // -2 since we also remove one axis with `index_axis_mut` below
-        let property_axis = self.shape().len() - 2;
-
         let input = input.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>().expect("input must be a ndarray of the same type");
-        for sample in samples {
-            let value = input.index_axis(Axis(0), sample.input);
 
-            let mut output_location = self.index_axis_mut(Axis(0), sample.output);
-            let mut output_location = output_location.slice_axis_mut(
-                Axis(property_axis), Slice::from(property.clone())
-            );
+        if movements.is_empty() {
+            return;
+        }
 
-            output_location.assign(&value);
+        // Check if we can use the optimized path (all moves have same property structure)
+        let first_prop_start_in = movements[0].properties_start_in;
+        let first_prop_start_out = movements[0].properties_start_out;
+        let first_prop_len = movements[0].properties_length;
+
+        let mut constant_properties = true;
+        let mut contiguous_input_samples = true;
+        let mut contiguous_output_samples = true;
+
+        for w in movements.windows(2) {
+            if w[0].properties_start_in != first_prop_start_in ||
+               w[0].properties_start_out != first_prop_start_out ||
+               w[0].properties_length != first_prop_len {
+                constant_properties = false;
+                break;
+            }
+
+            if w[1].sample_in != w[0].sample_in + 1 {
+                contiguous_input_samples = false;
+            }
+
+            if w[1].sample_out != w[0].sample_out + 1 {
+                contiguous_output_samples = false;
+            }
+        }
+
+        if constant_properties {
+            let last = movements.last().unwrap();
+            if last.properties_start_in != first_prop_start_in ||
+               last.properties_start_out != first_prop_start_out ||
+               last.properties_length != first_prop_len {
+                constant_properties = false;
+            }
+        }
+
+        let property_axis = self.shape().len() - 1;
+
+        if constant_properties {
+            let input_slice_info = Slice::from(first_prop_start_in..(first_prop_start_in + first_prop_len));
+            let output_slice_info = Slice::from(first_prop_start_out..(first_prop_start_out + first_prop_len));
+
+            if contiguous_input_samples && contiguous_output_samples {
+                let sample_start_in = movements[0].sample_in;
+                let sample_start_out = movements[0].sample_out;
+                let sample_count = movements.len();
+
+                let input_samples = input.slice_axis(
+                    Axis(0),
+                    Slice::from(sample_start_in..(sample_start_in + sample_count))
+                );
+                let mut output_samples = self.slice_axis_mut(
+                    Axis(0),
+                    Slice::from(sample_start_out..(sample_start_out + sample_count))
+                );
+
+                let value = input_samples.slice_axis(Axis(property_axis), input_slice_info);
+                let mut output_location = output_samples.slice_axis_mut(Axis(property_axis), output_slice_info);
+
+                output_location.assign(&value);
+            } else {
+                for move_item in movements {
+                    let input_sample = input.index_axis(Axis(0), move_item.sample_in);
+                    let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
+
+                    let value = input_sample.slice_axis(
+                        // property_axis - 1 because we are slicing the sample
+                        // axis out, so the property axis is now one less
+                        Axis(property_axis - 1),
+                        input_slice_info
+                    );
+                    let mut output_location = output_sample.slice_axis_mut(
+                        Axis(property_axis - 1),
+                        output_slice_info
+                    );
+                    output_location.assign(&value);
+                }
+            }
+        } else {
+            // fallback to the general case
+            for move_item in movements {
+                let input_sample = input.index_axis(Axis(0), move_item.sample_in);
+                let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
+
+                let value = input_sample.slice_axis(
+                    // see above for property_axis - 1 explanation
+                    Axis(property_axis - 1),
+                    Slice::from(move_item.properties_start_in..(move_item.properties_start_in + move_item.properties_length))
+                );
+                let mut output_location = output_sample.slice_axis_mut(
+                    Axis(property_axis - 1),
+                    Slice::from(move_item.properties_start_out..(move_item.properties_start_out + move_item.properties_length))
+                );
+                output_location.assign(&value);
+            }
         }
     }
 
@@ -455,8 +538,8 @@ impl Array for EmptyArray {
         self.shape.swap(axis_1, axis_2);
     }
 
-    fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
-        panic!("can not call Array::move_samples_from() for EmptyArray");
+    fn move_data(&mut self, _: &dyn Array, _: &[mts_data_movement_t]) {
+        panic!("can not call Array::move_data() for EmptyArray");
     }
 
     fn device(&self) -> DLDevice {

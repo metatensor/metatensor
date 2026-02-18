@@ -1,4 +1,3 @@
-use std::ops::Range;
 use std::os::raw::c_void;
 use std::sync::Mutex;
 use std::ptr::NonNull;
@@ -204,31 +203,37 @@ pub struct mts_array_t {
     /// calling `mts_array_t::create` with one of the arrays in the same block
     /// or tensor map as the `input`.
     ///
-    /// The `samples` array of size `samples_count` indicate where the data
+    /// The `movements` array of size `movements_count` indicate where the data
     /// should be moved from `input` to `output`.
     ///
-    /// This function should copy data from `input[samples[i].input, ..., :]` to
-    /// `array[samples[i].output, ..., property_start:property_end]` for `i` up
-    /// to `samples_count`. All indexes are 0-based.
-    move_samples_from: Option<unsafe extern "C" fn(
+    /// This function should copy data from `input[movements[i].sample_in, ...,
+    /// movements[i].properties_start_in + x]` to
+    /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+    /// x]` for `i` up to `movements_count` and `x` up to
+    /// `movements[i].properties_length`. All indexes are 0-based.
+    move_data: Option<unsafe extern "C" fn(
         output: *mut c_void,
         input: *const c_void,
-        samples: *const mts_sample_mapping_t,
-        samples_count: usize,
-        property_start: usize,
-        property_end: usize,
+        movements: *const mts_data_movement_t,
+        movements_count: usize,
     ) -> mts_status_t>,
 }
 
-/// Representation of a single sample moved from an array to another one
+/// Information about a block of data to be moved from an array to another.
 #[derive(Debug, Clone)]
 #[repr(C)]
 #[allow(non_camel_case_types)]
-pub struct mts_sample_mapping_t {
-    /// index of the moved sample in the input array
-    pub input: usize,
-    /// index of the moved sample in the output array
-    pub output: usize,
+pub struct mts_data_movement_t {
+    /// index of the sample in the input array
+    pub sample_in: usize,
+    /// index of the sample in the output array
+    pub sample_out: usize,
+    /// index of the start of the property in the input array
+    pub properties_start_in: usize,
+    /// index of the start of the property in the output array
+    pub properties_start_out: usize,
+    /// number of properties to move
+    pub properties_length: usize,
 }
 
 impl std::fmt::Debug for mts_array_t {
@@ -274,7 +279,7 @@ impl mts_array_t {
             copy: self.copy,
             // do not copy destroy, the user should never call it
             destroy: None,
-            move_samples_from: self.move_samples_from,
+            move_data: self.move_data,
         }
     }
 
@@ -292,7 +297,7 @@ impl mts_array_t {
             create: None,
             copy: None,
             destroy: None,
-            move_samples_from: None,
+            move_data: None,
         }
     }
 
@@ -495,37 +500,36 @@ impl mts_array_t {
 
     /// Set entries in `self` (the current array) taking data from the `input`
     /// array. The `self` array is guaranteed to be created by calling
-    /// `Array::create` with one of the arrays in the same block or tensor
-    /// map as the `input`.
+    /// `Array::create` with one of the arrays in the same block or tensor map
+    /// as the `input`.
     ///
-    /// The `samples` array indicate where the data should be moved from `input`
-    /// to `output`.
+    /// The `movements` array of size `movements_count` indicate where the data
+    /// should be moved from `input` to `output`.
     ///
-    /// This function should copy data from `input[sample.input, ..., :]` to
-    /// `array[sample.output, ..., properties]` for all `sample` in `samples`.
-    /// All indexes are 0-based.
-    pub fn move_samples_from(
+    /// This function should copy data from `input[movements[i].sample_in, ...,
+    /// movements[i].properties_start_in + x]` to
+    /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+    /// x]` for `i` up to `movements_count` and `x` up to
+    /// `movements[i].properties_length`. All indexes are 0-based.
+    pub fn move_data(
         &mut self,
         input: &mts_array_t,
-        samples: &[mts_sample_mapping_t],
-        properties: Range<usize>,
+        movements: &[mts_data_movement_t],
     ) -> Result<(), Error> {
-        let function = self.move_samples_from.expect("mts_array_t.move_samples_from function is NULL");
+        let function = self.move_data.expect("mts_array_t.move_data function is NULL");
 
         let status = unsafe {
             function(
                 self.ptr,
                 input.ptr,
-                samples.as_ptr(),
-                samples.len(),
-                properties.start,
-                properties.end,
+                movements.as_ptr(),
+                movements.len(),
             )
         };
 
         if !status.is_success() {
             return Err(Error::External {
-                status, context: "calling mts_array_t.move_samples_from failed".into()
+                status, context: "calling mts_array_t.move_data failed".into()
             });
         }
 
@@ -563,7 +567,7 @@ mod tests {
                 create: None,
                 copy: None,
                 destroy: Some(TestArray::destroy),
-                move_samples_from: None,
+                move_data: None,
             }
         }
 
@@ -582,11 +586,11 @@ mod tests {
                 create: None,
                 copy: None,
                 destroy: Some(TestArray::destroy),
-                move_samples_from: None,
+                move_data: None,
             }
         }
 
-        /// Create a test array reporting a non-CPU device (device_type=2, id=0)
+        /// Create a test array reporting a non-CPU device `(device_type=2, id=0)`
         pub fn new_other_device(shape: Vec<usize>) -> mts_array_t {
             let array = Box::new(TestArray {shape});
 
@@ -602,7 +606,7 @@ mod tests {
                 create: None,
                 copy: None,
                 destroy: Some(TestArray::destroy),
-                move_samples_from: None,
+                move_data: None,
             }
         }
 
@@ -622,7 +626,7 @@ mod tests {
                 create: None,
                 copy: None,
                 destroy: Some(TestArray::destroy),
-                move_samples_from: None,
+                move_data: None,
             }
         }
 

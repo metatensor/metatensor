@@ -64,11 +64,9 @@ public:
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override;
 
-    void move_samples_from(
+    void move_data(
         const metatensor::DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        std::vector<mts_data_movement_t> moves
     ) override;
 
 private:

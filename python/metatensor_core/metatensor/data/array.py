@@ -9,6 +9,7 @@ from .._c_api import (
     DLManagedTensorVersioned,
     c_uintptr_t,
     mts_array_t,
+    mts_data_movement_t,
     mts_data_origin_t,
 )
 from ..utils import catch_exceptions
@@ -294,25 +295,76 @@ def _mts_array_destroy(this):
 
 
 @catch_exceptions
-def _mts_array_move_samples_from(
+def _mts_array_move_data(
     this,
     input,
-    samples_ptr,
-    samples_count,
-    property_start,
-    property_end,
+    movements_ptr,
+    movements_count,
 ):
     output = _KNOWN_ARRAY_WRAPPERS[this].array
     input = _KNOWN_ARRAY_WRAPPERS[input].array
 
-    input_samples = []
-    output_samples = []
-    for i in range(samples_count):
-        input_samples.append(samples_ptr[i].input)
-        output_samples.append(samples_ptr[i].output)
+    if movements_count == 0:
+        return
 
-    properties = slice(property_start, property_end)
-    output[output_samples, ..., properties] = input[input_samples, ..., :]
+    # mts_data_movement_t has 5 c_uintptr_t fields.
+    assert len(mts_data_movement_t._fields_) == 5
+    movements = np.ctypeslib.as_array(
+        ctypes.cast(movements_ptr, ctypes.POINTER(c_uintptr_t)),
+        shape=(movements_count, 5),
+    )
+
+    # Check if we can use the optimized path (all moves have same property structure)
+    #
+    # We want to check if all rows have the same values for columns 2, 3, 4 (i.e.
+    # `properties_start_in`, `properties_start_out`, and `properties_length`)
+    #
+    # We can do this by checking if the min and max of each column are equal.
+    # This is faster than `np.all(movements[:, 2:] == movements[0, 2:])` because
+    # it avoids creating the large intermediate boolean array.
+    props = movements[:, 2:]
+    min_props = props.min(axis=0)
+    max_props = props.max(axis=0)
+
+    if np.all(min_props == max_props):
+        sample_in = movements[:, 0]
+        sample_out = movements[:, 1]
+        property_start_in = int(min_props[0])
+        property_start_out = int(min_props[1])
+        property_len = int(min_props[2])
+
+        # If sample_in/sample_out are just arange, we can use slice
+        # Check if sample_in is contiguous
+        s_in_min = int(sample_in.min())
+        s_in_max = int(sample_in.max())
+        if (s_in_max - s_in_min + 1) == len(sample_in):
+            if np.all(sample_in == np.arange(s_in_min, s_in_max + 1)):
+                sample_in = slice(s_in_min, s_in_max + 1)
+
+        # Check if sample_out is contiguous
+        s_out_min = int(sample_out.min())
+        s_out_max = int(sample_out.max())
+        if (s_out_max - s_out_min + 1) == len(sample_out):
+            if np.all(sample_out == np.arange(s_out_min, s_out_max + 1)):
+                sample_out = slice(s_out_min, s_out_max + 1)
+
+        output[
+            sample_out, ..., property_start_out : property_start_out + property_len
+        ] = input[sample_in, ..., property_start_in : property_start_in + property_len]
+
+    else:
+        for i in range(movements_count):
+            sample_in = int(movements[i, 0])
+            sample_out = int(movements[i, 1])
+            property_start_in = int(movements[i, 2])
+            property_start_out = int(movements[i, 3])
+            property_len = int(movements[i, 4])
+
+            output[
+                sample_out, ..., property_start_out : property_start_out + property_len
+            ] = input[
+                sample_in, ..., property_start_in : property_start_in + property_len
+            ]
 
 
 @catch_exceptions
@@ -444,9 +496,7 @@ _MTS_ARRAY_SWAP_AXES = _cast_to_ctype_functype(_mts_array_swap_axes, "swap_axes"
 _MTS_ARRAY_CREATE = _cast_to_ctype_functype(_mts_array_create, "create")
 _MTS_ARRAY_COPY = _cast_to_ctype_functype(_mts_array_copy, "copy")
 _MTS_ARRAY_DESTROY = _cast_to_ctype_functype(_mts_array_destroy, "destroy")
-_MTS_ARRAY_MOVE_SAMPLES_FROM = _cast_to_ctype_functype(
-    _mts_array_move_samples_from, "move_samples_from"
-)
+_MTS_ARRAY_MOVE_DATA = _cast_to_ctype_functype(_mts_array_move_data, "move_data")
 
 
 @catch_exceptions
@@ -582,5 +632,5 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     create=_MTS_ARRAY_CREATE,
     copy=_MTS_ARRAY_COPY,
     destroy=_MTS_ARRAY_DESTROY,
-    move_samples_from=_MTS_ARRAY_MOVE_SAMPLES_FROM,
+    move_data=_MTS_ARRAY_MOVE_DATA,
 )
