@@ -87,6 +87,15 @@ pub struct mts_array_t {
         origin: *mut mts_data_origin_t
     ) -> mts_status_t>,
 
+    /// Query the device where this array's data resides without exporting
+    /// via DLPack.
+    ///
+    /// The implementation must store the device information in `*device`.
+    pub(crate) device: Option<unsafe extern "C" fn(
+        array: *const c_void,
+        device: *mut DLDevice,
+    ) -> mts_status_t>,
+
     /// Get a DLPack representation of the underlying data.
     ///
     /// This function exports the array as a `DLManagedTensorVersioned` struct
@@ -247,6 +256,7 @@ impl mts_array_t {
         mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
+            device: self.device,
             as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
@@ -264,6 +274,7 @@ impl mts_array_t {
         mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
+            device: None,
             as_dlpack: None,
             shape: None,
             reshape: None,
@@ -291,6 +302,25 @@ impl mts_array_t {
         }
 
         return Ok(origin);
+    }
+
+    /// Get the device where this array's data resides
+    #[allow(dead_code)]
+    pub fn device(&self) -> Result<DLDevice, Error> {
+        let function = self.device.expect("mts_array_t.device function is NULL");
+
+        let mut device = DLDevice::cpu();
+        let status = unsafe {
+            function(self.ptr, &mut device)
+        };
+
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.device failed".into()
+            });
+        }
+
+        return Ok(device);
     }
 
     /// Get a dlpack representation of the data
@@ -501,6 +531,7 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
+                device: None,
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
@@ -518,6 +549,7 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
+                device: None,
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),

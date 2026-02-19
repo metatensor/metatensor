@@ -1,3 +1,4 @@
+#include <cstring>
 #include <memory>
 
 #include <catch.hpp>
@@ -316,6 +317,87 @@ TEST_CASE("DLPackArray<T> - nullptr construction") {
     auto arr = DLPackArray<double>(nullptr);
     CHECK(arr.is_empty() == true);
     CHECK(arr.data() == nullptr);
+}
+
+TEST_CASE("SimpleDataArray - device()") {
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+
+    SECTION("direct call") {
+        auto dev = data->device();
+        CHECK(dev.device_type == kDLCPU);
+        CHECK(dev.device_id == 0);
+    }
+
+    SECTION("via mts_array_t callback") {
+        auto array = DataArrayBase::to_mts_array_t(std::move(data));
+        REQUIRE(array.device != nullptr);
+
+        DLDevice dev;
+        std::memset(&dev, 0xFF, sizeof(dev));
+        auto status = array.device(array.ptr, &dev);
+        CHECK(status == MTS_SUCCESS);
+        CHECK(dev.device_type == kDLCPU);
+        CHECK(dev.device_id == 0);
+
+        array.destroy(array.ptr);
+    }
+}
+
+TEST_CASE("EmptyDataArray - device()") {
+    auto data = std::unique_ptr<EmptyDataArray>(new EmptyDataArray({2, 3}));
+    auto dev = data->device();
+    CHECK(dev.device_type == kDLCPU);
+    CHECK(dev.device_id == 0);
+}
+
+TEST_CASE("DLPackArray<T> - device()") {
+    SECTION("empty array returns CPU") {
+        auto arr = DLPackArray<double>();
+        auto dev = arr.device();
+        CHECK(dev.device_type == kDLCPU);
+        CHECK(dev.device_id == 0);
+    }
+
+    SECTION("CPU array returns CPU") {
+        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+        REQUIRE(managed != nullptr);
+
+        auto arr = DLPackArray<double>(managed);
+        auto dev = arr.device();
+        CHECK(dev.device_type == kDLCPU);
+        CHECK(dev.device_id == 0);
+    }
+}
+
+TEST_CASE("TensorBlock::values() with device parameter") {
+    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}, 1.0));
+    auto samples = Labels({"s"}, {{0}, {1}});
+    auto properties = Labels({"p"}, {{0}, {1}, {2}});
+
+    auto block = TensorBlock(
+        std::move(data),
+        samples,
+        {},
+        properties
+    );
+
+    SECTION("default (CPU)") {
+        auto values = block.values();
+        CHECK(values.shape().size() == 2);
+        CHECK(values.shape()[0] == 2);
+        CHECK(values.shape()[1] == 3);
+        CHECK(values(0, 0) == 1.0);
+    }
+
+    SECTION("explicit CPU device") {
+        DLDevice cpu = {kDLCPU, 0};
+        auto values = block.values(cpu);
+        CHECK(values.shape()[0] == 2);
+        CHECK(values(0, 0) == 1.0);
+    }
 }
 
 TEST_CASE("SimpleDataArray - DLPack version mismatch") {
