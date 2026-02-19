@@ -123,30 +123,35 @@ public:
         return block;
     }
 
-    /// Get the values in this block as a DLPackArray on CPU.
+    /// Get the values in this block as a DLPackArray.
     ///
-    /// The data is requested on CPU via DLPack; if the underlying array
-    /// lives on another device, a copy to CPU may occur. The returned
-    /// DLPackArray owns the DLPack resource and keeps the data alive.
+    /// By default, the data is requested on CPU via DLPack. You can
+    /// specify a different `device` and/or `stream` to request data on
+    /// another device (e.g. CUDA). If the underlying array lives on a
+    /// different device than requested, a copy may occur.
+    ///
+    /// The returned DLPackArray owns the DLPack resource and keeps the
+    /// data alive.
     ///
     /// @tparam T the expected element type (default: double). Throws if
     ///           the actual dtype does not match.
+    /// @param device the DLPack device to request data on (default: CPU)
+    /// @param stream pointer to a device stream, or nullptr for default
     template<typename T = double>
-    DLPackArray<T> values() & {
+    DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) & {
         auto array = this->mts_array();
 
         DLManagedTensorVersioned* managed = nullptr;
-        DLDevice cpu_device = {kDLCPU, 0};
         DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         details::check_status(array.as_dlpack(
-            array.ptr, &managed, cpu_device, nullptr, ver
+            array.ptr, &managed, device, stream, ver
         ));
 
         return DLPackArray<T>(managed);
     }
 
     template<typename T = double>
-    DLPackArray<T> values() && = delete;
+    DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) && = delete;
 
     /// Access the sample `Labels` for this block.
     ///

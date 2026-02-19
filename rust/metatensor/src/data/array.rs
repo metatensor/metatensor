@@ -62,6 +62,11 @@ pub trait Array: std::any::Any + Send + Sync {
         properties: Range<usize>,
     );
 
+    /// Get the device where this array's data resides.
+    ///
+    /// For CPU arrays this should return `DLDevice::cpu()`.
+    fn device(&self) -> DLDevice;
+
     /// Convert the array to a `DLPack` tensor.
     /// The returned pointer is owned by the caller (and cleaned up via its deleter).
     fn as_dlpack(
@@ -82,6 +87,7 @@ impl From<Box<dyn Array>> for mts_array_t {
         return mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
+            device: Some(rust_array_device),
             as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
@@ -121,6 +127,18 @@ unsafe extern "C" fn rust_array_origin(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, origin);
         *origin = *RUST_DATA_ORIGIN;
+    })
+}
+
+/// Implementation of `mts_array_t.device` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_device(
+    array: *const c_void,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, device);
+        let array = array.cast::<Box<dyn Array>>();
+        *device = (*array).device();
     })
 }
 
@@ -316,6 +334,10 @@ where
         }
     }
 
+    fn device(&self) -> DLDevice {
+        DLDevice::cpu()
+    }
+
     fn as_dlpack(
         &self,
         device: DLDevice,
@@ -411,6 +433,10 @@ impl Array for EmptyArray {
 
     fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
         panic!("can not call Array::move_samples_from() for EmptyArray");
+    }
+
+    fn device(&self) -> DLDevice {
+        DLDevice::cpu()
     }
 
     fn as_dlpack(
@@ -525,5 +551,31 @@ mod tests {
                 deleter(dl_managed);
             }
         }
+    }
+
+    #[test]
+    fn ndarray_device() {
+        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
+        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
+
+        // Test via the device function pointer
+        unsafe {
+            let device_fn = mts_array.device.expect("device function should be set");
+            let mut device = DLDevice::cpu();
+            device.device_id = 99; // sentinel to confirm it's overwritten
+            let status = device_fn(mts_array.ptr, &mut device);
+            assert_eq!(status, MTS_SUCCESS);
+            assert_eq!(device.device_type, DLDevice::cpu().device_type);
+            assert_eq!(device.device_id, 0);
+        }
+    }
+
+    #[test]
+    fn empty_array_device() {
+        use crate::data::EmptyArray;
+        let arr = EmptyArray::new(vec![2, 3]);
+        let dev = arr.device();
+        assert_eq!(dev.device_type, DLDevice::cpu().device_type);
+        assert_eq!(dev.device_id, 0);
     }
 }

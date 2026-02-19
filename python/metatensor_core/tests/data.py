@@ -54,6 +54,18 @@ class MtsArrayMixin:
 
         free_mts_array(mts_array)
 
+    def test_device(self):
+        array = self.create_array((2, 3))
+        mts_array = metatensor.data.create_mts_array(array)
+
+        device = DLDevice()
+        status = mts_array.device(mts_array.ptr, device)
+        assert status == MTS_SUCCESS
+        assert device.device_type == 1  # kDLCPU
+        assert device.device_id == 0
+
+        free_mts_array(mts_array)
+
     def test_shape(self):
         array = self.create_array((2, 3, 4))
         mts_array = metatensor.data.create_mts_array(array)
