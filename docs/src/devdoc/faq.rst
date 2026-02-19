@@ -163,6 +163,56 @@ We prefer a clean history with logical commits. If your branch has many small
       git add -p  # selectively add changes
       git commit -m "logical commit message"
 
+How do I run code coverage locally?
+-----------------------------------
+
+**Python coverage** is collected automatically by ``tox`` via ``pytest-cov``.
+Each environment writes a ``.coverage`` file under ``.tox/<env>/``. To produce
+a combined report:
+
+.. code-block:: bash
+
+    # run all (or specific) tox environments
+    uvx tox
+    # combine per-environment coverage files
+    coverage combine .tox/*/.coverage
+    # terminal report with missed lines
+    coverage report --show-missing
+    # or generate an HTML report
+    coverage html
+    firefox htmlcov/index.html
+
+Path remapping is configured in the root ``pyproject.toml`` under
+``[tool.coverage.paths]``.
+
+**Rust coverage** uses ``cargo-llvm-cov`` with LLVM instrumentation. Install
+the prerequisites first:
+
+.. code-block:: bash
+
+    rustup component add llvm-tools
+    cargo +stable install cargo-llvm-cov --locked
+
+Then generate an HTML report (including C/C++ code compiled via FFI):
+
+.. code-block:: bash
+
+    CC=$(which clang) CXX=$(which clang++) \
+    LLVM_COV=$(which llvm-cov) LLVM_PROFDATA=$(which llvm-profdata) \
+    LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" \
+    CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' \
+    CFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    CXXFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    cargo llvm-cov --include-ffi --all-features --workspace --html
+
+    # serve locally
+    python -m http.server -d target/llvm-cov/html
+
+The CI workflow in ``.github/workflows/coverage.yml`` uploads both
+``coverage.xml`` (Python) and ``rust_codecov.json`` (Rust) to
+`Codecov <https://app.codecov.io/gh/metatensor/metatensor>`_.
+The project coverage target is **82%** (configured in ``.codecov.yml``).
+
 How do I pin stuff for the Rust MSRV?
 -------------------------------------
 
