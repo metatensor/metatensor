@@ -48,6 +48,8 @@ public:
 
     mts_data_origin_t origin() const override;
 
+    DLDevice device() const override;
+
     std::unique_ptr<metatensor::DataArrayBase> copy() const override;
 
     std::unique_ptr<metatensor::DataArrayBase> create(std::vector<uintptr_t> shape) const override;
