@@ -472,6 +472,7 @@ def _mts_array_device_numpy(this, device_ptr):
         device_type, device_id = array.__dlpack_device__()
         device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
     except Exception:
+        # Fallback for older numpy versions that don't have __dlpack_device__
         device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
 
 
@@ -483,7 +484,7 @@ def _mts_array_device_pytorch(this, device_ptr):
         device_type, device_id = tensor.__dlpack_device__()
         device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
     except Exception:
-        # Fallback: manual mapping from torch device string
+        # Fallback for older torch version that don't have __dlpack_device__
         torch_dev = tensor.device
         if torch_dev.type == "cpu":
             device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
