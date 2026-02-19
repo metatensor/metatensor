@@ -230,6 +230,16 @@ public:
         return *this;
     }
 
+    /// Get the DLDevice for this array.
+    ///
+    /// Returns `{kDLCPU, 0}` if the array is empty (null managed tensor).
+    DLDevice device() const {
+        if (managed_ == nullptr) {
+            return {kDLCPU, 0};
+        }
+        return managed_->dl_tensor.device;
+    }
+
     /// Get the value inside this `DLPackArray` at the given index
     ///
     /// ```
@@ -239,6 +249,11 @@ public:
     /// ```
     template<typename ...Args>
     T operator()(Args... args) const & {
+        if (managed_ != nullptr && managed_->dl_tensor.device.device_type != kDLCPU) {
+            throw Error(
+                "can not index into a DLPackArray on a non-CPU device"
+            );
+        }
         auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
         if (index.size() != shape_.size()) {
             throw Error(
@@ -617,6 +632,13 @@ public:
             }, array, origin);
         };
 
+        array.device = [](const void* array, DLDevice* device) {
+            return details::catch_exceptions([](const void* array, DLDevice* device){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                *device = cxx_array->device();
+            }, array, device);
+        };
+
         array.copy = [](const void* array, mts_array_t* new_array) {
             return details::catch_exceptions([](const void* array, mts_array_t* new_array){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -721,6 +743,9 @@ public:
     /// arrays.
     virtual mts_data_origin_t origin() const = 0;
 
+    /// Get the device where this array's data resides.
+    virtual DLDevice device() const = 0;
+
     /// Get a DLPack representation of this array
     ///
     /// The returned pointer is owned by the caller and should be freed
@@ -816,6 +841,10 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::SimpleDataArray", &origin);
         return origin;
+    }
+
+    DLDevice device() const override {
+        return {kDLCPU, 0};
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -1105,6 +1134,10 @@ public:
         mts_data_origin_t origin = 0;
         mts_register_data_origin("metatensor::EmptyDataArray", &origin);
         return origin;
+    }
+
+    DLDevice device() const override {
+        return {kDLCPU, 0};
     }
 
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {

@@ -19,6 +19,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
+- Added `mts_array_t.device` function pointer to query the device of an array
+  without exporting via DLPack. Implemented for all array backends (Rust
+  `ArcArray`, `MmapArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,
+  `TorchDataArray`, and Python numpy/torch arrays).
+- C++ `TensorBlock::values()` now accepts optional `device` and `stream`
+  parameters, allowing data to be requested on a specific device rather than
+  always defaulting to CPU.
+- C++ `DLPackArray<T>::device()` accessor returns the DLDevice of the managed
+  tensor. `DLPackArray<T>::operator()` now throws for non-CPU data to prevent
+  invalid memory access.
 - Added `ExternalCudaArray` in Python, the CUDA counterpart to `ExternalCpuArray`.
   It wraps non-Python CUDA data as a `torch.Tensor` via DLPack, for use with
   external array backends (e.g. Rust/Burn) that store data on CUDA devices.

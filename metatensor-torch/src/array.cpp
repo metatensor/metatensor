@@ -72,6 +72,41 @@ static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
     }
 }
 
+DLDevice TorchDataArray::device() const {
+    auto torch_dev = tensor_.device();
+
+    DLDeviceType dl_type;
+    switch (torch_dev.type()) {
+    case torch::DeviceType::CPU:
+        dl_type = kDLCPU;
+        break;
+    case torch::DeviceType::CUDA:
+        dl_type = kDLCUDA;
+        break;
+    case torch::DeviceType::HIP:
+        dl_type = kDLROCM;
+        break;
+    case torch::DeviceType::MPS:
+        dl_type = kDLMetal;
+        break;
+    case torch::DeviceType::XPU:
+        dl_type = kDLOneAPI;
+        break;
+    case torch::DeviceType::XLA:
+        dl_type = kDLTrn;
+        break;
+    case torch::DeviceType::Vulkan:
+        dl_type = kDLVulkan;
+        break;
+    default:
+        throw metatensor::Error(
+            "TorchDataArray::device(): unsupported torch device type: "
+            + std::string(c10::DeviceTypeName(torch_dev.type())));
+    }
+
+    return DLDevice{dl_type, static_cast<int32_t>(torch_dev.index() < 0 ? 0 : torch_dev.index())};
+}
+
 namespace {
 
 torch::Device dlpack_device_to_torch(DLDevice device) {
