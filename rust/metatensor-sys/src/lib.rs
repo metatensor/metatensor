@@ -79,6 +79,7 @@ impl mts_array_t {
         mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
+            device: None,
             as_dlpack: None,
             shape: None,
             reshape: None,

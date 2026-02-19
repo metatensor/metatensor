@@ -37,6 +37,8 @@ bench = ["dep:criterion"]
 [dev-dependencies]
 # pin for compatibility with rustc 1.74
 tempfile = "=3.24.0"
+half = "<2.5"
+dlpk = {version = "0.1.3", features = ["ndarray", "half"]}
 
 
 [[bench]]
