@@ -19,7 +19,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             python-version: "3.10"
-            torch-version: "2.1"
+            torch-version: "2.3"
             numpy-version-pin: "<2.0"
           - os: ubuntu-24.04
             python-version: "3.10"
