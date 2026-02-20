@@ -9,9 +9,9 @@ with the ecosystem.
 How do I use environment variables to control tests?
 ----------------------------------------------------
 
-You can customize test execution by setting specific environment variables in your 
+You can customize test execution by setting specific environment variables in your
 shell. This provides a lighter alternative to the :ref:`devdoc-local-ci` setup.
-Please refer to :ref:`running-tests` for a full list of supported variables 
+Please refer to :ref:`running-tests` for a full list of supported variables
 and their descriptions.
 
 .. important::
@@ -59,12 +59,12 @@ specifying the matrix keys. To run the legacy NumPy tests:
     gh act -j python-tests \
       --matrix os:ubuntu-24.04 \
       --matrix python-version:3.10 \
-      --matrix torch-version:2.1 \
+      --matrix torch-version:2.3 \
       --matrix numpy-version-pin:"<2.0"
 
 .. tip::
 
-   If you don't need the full Docker isolation of ``act``, you can also 
+   If you don't need the full Docker isolation of ``act``, you can also
    replicate this legacy environment using :ref:`the environment variables method <devdoc-faq-env-vars>`.
 
 .. _devdoc-faq-env-vars:
@@ -224,7 +224,7 @@ consider:
 
 .. code-block:: bash
 
-    cargo tree # to find where the offending 
+    cargo tree # to find where the offending
 
 For handling these issues it may be worthwhile to have a local copy of our MSRV, for 1.74, for instance:
 
