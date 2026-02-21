@@ -18,11 +18,41 @@ mod tensor;
 /// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
 /// the data pointer and write to it.
 #[allow(non_camel_case_types)]
-type mts_create_array_callback_t = unsafe extern "C" fn(
+pub type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,
     shape_count: usize,
     array: *mut mts_array_t,
 ) -> mts_status_t;
+
+/// Function pointer to create a new `mts_array_t` when memory-mapping tensor
+/// maps.
+///
+/// This function gets the `shape` of the array (containing `shape_count`
+/// elements), the DLPack `dtype`, and a pointer to the raw `data` of length
+/// `data_len` bytes. The `data` pointer is valid only as long as the memory
+/// mapping (passed via `user_data`) is alive.
+///
+/// The callback should fill `array` with a new valid `mts_array_t` or return
+/// non-zero `mts_status_t`.
+#[allow(non_camel_case_types)]
+pub type mts_create_mmap_array_callback_t = Option<unsafe extern "C" fn(
+    shape: *const usize,
+    shape_count: usize,
+    dtype: dlpk::sys::DLDataType,
+    data: *const c_void,
+    data_len: usize,
+    mmap_ptr: *mut c_void,
+    array: *mut mts_array_t,
+) -> mts_status_t>;
+
+/// Release a memory mapping pointer previously passed to
+/// `mts_create_mmap_array_callback_t`.
+#[no_mangle]
+pub unsafe extern "C" fn mts_mmap_free(mmap_ptr: *mut c_void) {
+    if !mmap_ptr.is_null() {
+        std::sync::Arc::from_raw(mmap_ptr.cast::<memmap2::Mmap>());
+    }
+}
 
 /// Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
 /// and `mts_labels_save_buffer`.

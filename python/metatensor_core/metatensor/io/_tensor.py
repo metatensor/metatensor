@@ -8,7 +8,10 @@ from typing import BinaryIO, Union
 
 import numpy as np
 
-from .._c_api import mts_create_array_callback_t
+from .._c_api import (
+    mts_create_array_callback_t,
+    mts_create_mmap_array_callback_t,
+)
 from .._c_lib import _get_library
 from ..tensor import TensorMap
 from ._block import (
@@ -18,6 +21,7 @@ from ._block import (
     create_numpy_array,
 )
 from ._labels import _labels_from_mts, _labels_to_mts
+from ._mmap import _create_mmap_array
 from ._utils import _save_buffer_raw
 
 
@@ -139,6 +143,28 @@ def load_buffer_custom_array(
         buffer,
         len(buffer),
         mts_create_array_callback_t(create_array),
+    )
+
+    return TensorMap._from_ptr(ptr)
+
+
+def load_mmap(path: Union[str, pathlib.Path]) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given path using
+    memory-mapped I/O. Data arrays are lazily mapped from the file for zero-copy
+    loading.
+
+    :param path: path of the file to load
+    """
+    lib = _get_library()
+
+    if isinstance(path, pathlib.Path):
+        path = str(path)
+
+    path = path.encode("utf8")
+
+    ptr = lib.mts_tensormap_load_mmap(
+        path, mts_create_mmap_array_callback_t(_create_mmap_array)
     )
 
     return TensorMap._from_ptr(ptr)

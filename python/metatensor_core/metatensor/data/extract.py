@@ -14,6 +14,7 @@ from .._c_api import (
 )
 from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
+from ._dlpack import make_dlpack_versioned_capsule
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
@@ -32,7 +33,7 @@ class DLPackDtypeCode(enum.IntEnum):
     kDLBool = 6
 
 
-# DLPack dtype -> numpy dtype mapping, used by ExternalCpuArray
+# DLPack dtype -> numpy dtype mapping, used by ExternalCpuArray and MmapCpuArray
 _DLPACK_TO_NUMPY = {
     (DLPackDtypeCode.kDLFloat, 16): np.float16,
     (DLPackDtypeCode.kDLFloat, 32): np.float32,
@@ -176,6 +177,7 @@ class ExternalCpuArray(np.ndarray):
         :param parent: owner of the raw array, we will keep a reference to this
             python object
         """
+
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
         status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
@@ -296,7 +298,6 @@ class ExternalCudaArray:
 
         from ._dlpack import (
             make_dlpack_unversioned_capsule,
-            make_dlpack_versioned_capsule,
             wrap_versioned_as_unversioned,
         )
 
@@ -330,3 +331,107 @@ class ExternalCudaArray:
         tensor._parent = parent
 
         return tensor
+
+
+class MmapCpuArray(np.ndarray):
+    """
+    Small wrapper class around ``np.ndarray`` for memory-mapped data,
+    adding references to a parent Python object and a DLPack tensor pointer
+    to keep the underlying memory mapping alive.
+
+    This is the mmap counterpart to :py:class:`ExternalCpuArray`.
+    """
+
+    def __new__(cls, mts_array: mts_array_t, parent: Any):
+        shape_ptr = ctypes.POINTER(c_uintptr_t)()
+        shape_count = c_uintptr_t()
+        status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
+        _check_status(status)
+
+        shape = []
+        for i in range(shape_count.value):
+            shape.append(shape_ptr[i])
+
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=1, device_id=0)
+        version = DLPackVersion(major=1, minor=0)
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            device,
+            None,
+            version,
+        )
+        _check_status(status)
+
+        dl_tensor = dl_managed_ptr.contents.dl_tensor
+        data_ptr = dl_tensor.data
+        dtype_code = dl_tensor.dtype.code
+        dtype_bits = dl_tensor.dtype.bits
+
+        np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+        if np_dtype is None:
+            raise ValueError(
+                f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+            )
+
+        c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+        array = _ptr_to_ndarray(
+            ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+            shape,
+            np_dtype,
+        )
+        obj = array.view(cls)
+        obj._parent = parent
+        obj._dl_managed_ptr = dl_managed_ptr
+        return obj
+
+    def __array_finalize__(self, obj):
+        self._parent = getattr(obj, "_parent", None)
+        self._dl_managed_ptr = getattr(obj, "_dl_managed_ptr", None)
+
+    def __array_wrap__(self, new, context=None, return_scalar=False):
+        self_ptr = self.ctypes.data
+        self_size = self.nbytes
+        new_ptr = new.ctypes.data
+
+        if self_ptr <= new_ptr <= self_ptr + self_size:
+            return super().__array_wrap__(new)
+        else:
+            return np.asarray(new)
+
+
+def _array_from_dl_tensor(dl_tensor):
+    """Convert a DLTensor to a numpy array."""
+    data_ptr = dl_tensor.data
+    dtype_code = dl_tensor.dtype.code
+    dtype_bits = dl_tensor.dtype.bits
+
+    np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+    if np_dtype is None:
+        raise ValueError(
+            f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+        )
+
+    shape = []
+    for i in range(dl_tensor.ndim):
+        shape.append(dl_tensor.shape[i])
+
+    c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+    return _ptr_to_ndarray(
+        ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+        shape,
+        np_dtype,
+    )
+
+
+_MMAP_ORIGIN_REGISTERED = False
+
+
+def _ensure_mmap_origin_registered():
+    """Register the mmap data origin and wrapper. Idempotent."""
+    global _MMAP_ORIGIN_REGISTERED
+    if _MMAP_ORIGIN_REGISTERED:
+        return
+    register_external_data_wrapper("metatensor.mmap", MmapCpuArray)
+    _MMAP_ORIGIN_REGISTERED = True
