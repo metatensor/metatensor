@@ -54,12 +54,16 @@ Tensors
 
 - :c:func:`mts_tensormap_save`: serialize and save a ``mts_tensormap_t`` to a file
 - :c:func:`mts_tensormap_load`: load a serialized ``mts_tensormap_t`` from a file
+- :c:func:`mts_tensormap_load_mmap`: load a ``mts_tensormap_t`` using memory mapping
+  (use :c:func:`mts_mmap_free` to release the underlying memory mapping)
 - :c:func:`mts_tensormap_save_buffer`: serialize and save a ``mts_tensormap_t``
   to a in-memory buffer
 - :c:func:`mts_tensormap_load_buffer`: load a serialized ``mts_tensormap_t`` from
   an in-memory buffer
 
 .. doxygenfunction:: mts_tensormap_load
+
+.. doxygenfunction:: mts_tensormap_load_mmap
 
 .. doxygenfunction:: mts_tensormap_save
 
@@ -72,18 +76,23 @@ Tensors
 
 .. doxygentypedef:: mts_realloc_buffer_t
 
+.. doxygenfunction:: mts_mmap_free
+
 
 Blocks
 ------
 
 - :c:func:`mts_block_save`: serialize and save a ``mts_block_t`` to a file
 - :c:func:`mts_block_load`: load a serialized ``mts_block_t`` from a file
+- :c:func:`mts_block_load_mmap`: load a ``mts_block_t`` using memory mapping
 - :c:func:`mts_block_save_buffer`: serialize and save a ``mts_block_t``
   to a in-memory buffer
 - :c:func:`mts_block_load_buffer`: load a serialized ``mts_block_t`` from
   a in-memory buffer
 
 .. doxygenfunction:: mts_block_load
+
+.. doxygenfunction:: mts_block_load_mmap
 
 .. doxygenfunction:: mts_block_save
 

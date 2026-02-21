@@ -329,12 +329,21 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
+        "load_mmap(str file) -> __torch__.torch.classes.metatensor.TensorMap",
+        metatensor_torch::load_mmap
+    );
+
+    m.def(
         "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block
     );
     m.def(
         "load_block_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block_buffer
+    );
+    m.def(
+        "load_block_mmap(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block_mmap
     );
 
     m.def(

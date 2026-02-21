@@ -88,6 +88,25 @@ pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(),
 }
 
 
+/// Load a tensor map from the file at the given path using memory mapping.
+///
+/// This provides zero-copy loading: data arrays point directly into the
+/// memory-mapped file, avoiding copies. Labels are still loaded normally.
+///
+/// Data is lazily loaded from the file as needed.
+pub fn load_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
+    let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
+    let path = CString::new(path).expect("this path contains a NULL byte");
+
+    let ptr = unsafe {
+        crate::c_api::mts_tensormap_load_mmap(path.as_ptr(), Some(super::create_mmap_ndarray))
+    };
+
+    check_ptr(ptr)?;
+
+    return Ok(unsafe { TensorMap::from_raw(ptr) });
+}
+
 /// Save the given `tensor` to an in-memory `buffer`.
 ///
 /// This function will grow the buffer as required to fit the whole tensor.
