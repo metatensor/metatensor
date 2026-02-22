@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::Read;
 use std::sync::Arc;
 
 use dlpk::sys::{DLDevice, DLPackVersion};
+use memmap2::Mmap;
 
 use super::labels::load_labels;
 use super::Endianness;
@@ -16,9 +17,9 @@ use crate::{TensorMap, TensorBlock, Labels, LabelValue, Error, mts_array_t};
 /// Load a `TensorMap` from the file at the given path, selecting only a subset
 /// of the data based on keys, samples, and properties.
 ///
-/// This function uses file seeking for efficient random access: only the
-/// selected rows and columns are read from disk, avoiding full-file reads.
-/// The file must use the STORED (uncompressed) ZIP format.
+/// This function memory-maps the file for efficient random access: only the
+/// selected rows and columns are copied into the output arrays, avoiding
+/// full-file reads. The file must use the STORED (uncompressed) ZIP format.
 ///
 /// - `keys`: if `Some`, only blocks whose key matches the selection are loaded.
 /// - `samples`: if `Some`, only rows matching the selection are kept.
@@ -39,13 +40,11 @@ pub fn load_partial<F>(
 where
     F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
 {
-    // Open the file: one handle for ZIP structure, one for data seeking
     let file = std::fs::File::open(path)?;
-    let reader = std::io::BufReader::new(file);
-    let mut archive = zip::ZipArchive::new(reader)
-        .map_err(|e| ("<root>".into(), e))?;
+    let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
 
-    let mut data_reader = std::fs::File::open(path)?;
+    let cursor = std::io::Cursor::new(mmap.as_ref());
+    let mut archive = zip::ZipArchive::new(cursor).map_err(|e| ("<root>".into(), e))?;
 
     // Load all keys
     let path_str = String::from("keys.npy");
@@ -66,7 +65,7 @@ where
     for &block_i in &block_indices {
         let prefix = format!("blocks/{}/", block_i);
         let block = read_partial_block(
-            &mut archive, &mut data_reader, &prefix,
+            &mut archive, &mmap, &prefix,
             samples, properties, None, &create_array,
         )?;
         blocks.push(block);
@@ -116,15 +115,16 @@ fn labels_subset(labels: &Labels, indices: &[usize]) -> Result<Labels, Error> {
     unsafe { Labels::new_unchecked_uniqueness(&names, values) }
 }
 
-/// Parse the NPY header from a ZIP entry, returning the shape, element size in
-/// bytes, and the absolute byte offset of the raw data within the file.
+/// Parse the NPY header from a ZIP entry within a memory-mapped file,
+/// returning the shape, element size in bytes, and the byte offset of the
+/// raw data within the mmap.
 ///
 /// Requires STORED compression and native endianness.
-fn parse_npy_entry_metadata<R: Read + Seek>(
-    archive: &mut zip::ZipArchive<R>,
-    data_reader: &mut std::fs::File,
+fn parse_npy_entry_metadata(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+    mmap: &[u8],
     path: &str,
-) -> Result<(Vec<usize>, usize, u64), Error> {
+) -> Result<(Vec<usize>, usize, usize), Error> {
     let entry = archive.by_name(path).map_err(|e| (path.to_string(), e))?;
 
     if entry.compression() != zip::CompressionMethod::Stored {
@@ -135,16 +135,17 @@ fn parse_npy_entry_metadata<R: Read + Seek>(
     }
 
     let entry_size = entry.size() as usize;
-    let data_start = entry.data_start();
+    let data_start = entry.data_start() as usize;
     drop(entry);
 
-    // Read the entry bytes for header parsing
-    let header_read_size = std::cmp::min(entry_size, 4096);
-    let mut header_buf = vec![0u8; header_read_size];
-    data_reader.seek(SeekFrom::Start(data_start))?;
-    data_reader.read_exact(&mut header_buf)?;
+    if data_start + entry_size > mmap.len() {
+        return Err(Error::Serialization(format!(
+            "entry '{}' extends beyond the end of the file", path
+        )));
+    }
 
-    let (header, npy_header_len) = Header::from_slice(&header_buf)?;
+    let npy_bytes = &mmap[data_start..data_start + entry_size];
+    let (header, npy_header_len) = Header::from_slice(npy_bytes)?;
 
     if header.fortran_order {
         return Err(Error::Serialization(
@@ -162,39 +163,38 @@ fn parse_npy_entry_metadata<R: Read + Seek>(
 
     let (_code, bits, endian) = npy_descr_to_dtype(descr)?;
 
-    // Require native endianness for byte-level copying
     match endian {
         Endianness::Native => {}
         Endianness::Little => {
             if cfg!(target_endian = "big") {
                 return Err(Error::Serialization(
-                    "partial loading requires native endianness; file has little-endian data on a big-endian system".into(),
+                    "partial loading requires native endianness".into(),
                 ));
             }
         }
         Endianness::Big => {
             if cfg!(target_endian = "little") {
                 return Err(Error::Serialization(
-                    "partial loading requires native endianness; file has big-endian data on a little-endian system".into(),
+                    "partial loading requires native endianness".into(),
                 ));
             }
         }
     }
 
     let elem_size = (bits as usize) / 8;
-    let raw_data_offset = data_start + npy_header_len as u64;
+    let raw_data_offset = data_start + npy_header_len;
 
     Ok((header.shape, elem_size, raw_data_offset))
 }
 
-/// Copy selected rows/columns from file into a new array via DLPack.
+/// Copy selected rows/columns from mmap bytes into a new array via DLPack.
 ///
 /// `src_shape` is the full shape `[n_samples, comp..., n_properties]`.
 /// `sample_indices` maps new_row → old_row.
 /// `prop_indices` maps new_col → old_col (or `None` to select all properties).
-fn gather_selected_data_into<F>(
-    data_reader: &mut std::fs::File,
-    raw_data_offset: u64,
+fn gather_selected_data<F>(
+    mmap: &[u8],
+    raw_data_offset: usize,
     elem_size: usize,
     src_shape: &[usize],
     sample_indices: &[usize],
@@ -215,7 +215,6 @@ where
     let new_n_samples = sample_indices.len();
     let new_n_props = prop_indices.map_or(src_n_props, |p| p.len());
 
-    // Build output shape: [new_n_samples, comp..., new_n_props]
     let mut output_shape = Vec::with_capacity(src_shape.len());
     output_shape.push(new_n_samples);
     if src_shape.len() > 2 {
@@ -229,13 +228,11 @@ where
         return Ok(output);
     }
 
-    // Get DLPack mutable access to write data
     let device = DLDevice::cpu();
     let version = DLPackVersion::current();
     let mut dl_tensor = output.as_dlpack(device, None, version)?;
     let tensor_ref = dl_tensor.as_mut();
 
-    // Convert to f64 mutable ndarray view
     let mut view: ndarray::ArrayViewMutD<f64> = tensor_ref.try_into()
         .map_err(|e| Error::Serialization(format!(
             "load_partial requires f64 arrays from create_array callback: {}", e
@@ -245,7 +242,6 @@ where
         Error::Serialization("output array from create_array is not C-contiguous".into())
     })?;
 
-    // Get byte-level access to the output buffer
     let dst_bytes: &mut [u8] = unsafe {
         std::slice::from_raw_parts_mut(
             view_slice.as_mut_ptr().cast::<u8>(),
@@ -254,14 +250,11 @@ where
     };
 
     if let Some(prop_idx) = prop_indices {
-        // Property selection: read full rows, copy selected columns
-        let mut row_buf = vec![0u8; src_row_bytes];
         let dst_row_bytes = n_components * new_n_props * elem_size;
 
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
-            let src_offset = raw_data_offset + (old_row as u64) * (src_row_bytes as u64);
-            data_reader.seek(SeekFrom::Start(src_offset))?;
-            data_reader.read_exact(&mut row_buf)?;
+            let src_offset = raw_data_offset + old_row * src_row_bytes;
+            let row_buf = &mmap[src_offset..src_offset + src_row_bytes];
 
             let dst_row_off = new_row * dst_row_bytes;
             for comp in 0..n_components {
@@ -276,12 +269,12 @@ where
             }
         }
     } else {
-        // All properties: read full rows directly into output
+        // All properties: memcpy full rows from mmap
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
-            let src_offset = raw_data_offset + (old_row as u64) * (src_row_bytes as u64);
-            data_reader.seek(SeekFrom::Start(src_offset))?;
+            let src_offset = raw_data_offset + old_row * src_row_bytes;
             let dst_offset = new_row * src_row_bytes;
-            data_reader.read_exact(&mut dst_bytes[dst_offset..dst_offset + src_row_bytes])?;
+            dst_bytes[dst_offset..dst_offset + src_row_bytes]
+                .copy_from_slice(&mmap[src_offset..src_offset + src_row_bytes]);
         }
     }
 
@@ -289,9 +282,9 @@ where
 }
 
 /// Read a single block with partial sample/property selection.
-fn read_partial_block<R, F>(
-    archive: &mut zip::ZipArchive<R>,
-    data_reader: &mut std::fs::File,
+fn read_partial_block<F>(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+    mmap: &[u8],
     prefix: &str,
     samples_sel: Option<&Labels>,
     properties_sel: Option<&Labels>,
@@ -299,20 +292,16 @@ fn read_partial_block<R, F>(
     create_array: &F,
 ) -> Result<TensorBlock, Error>
 where
-    R: Read + Seek,
     F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
 {
-    // Load labels
     let samples_path = format!("{}samples.npy", prefix);
     let samples_file = archive.by_name(&samples_path).map_err(|e| (samples_path, e))?;
     let all_samples = load_labels(samples_file)?;
 
-    // Parse data header
     let values_path = format!("{}values.npy", prefix);
     let (src_shape, elem_size, raw_data_offset) =
-        parse_npy_entry_metadata(archive, data_reader, &values_path)?;
+        parse_npy_entry_metadata(archive, mmap, &values_path)?;
 
-    // Determine sample selection
     let sample_indices = if let Some(sel) = samples_sel {
         let mut selected = vec![0i64; all_samples.count()];
         let n = all_samples.select(sel, &mut selected)?;
@@ -321,10 +310,8 @@ where
         (0..all_samples.count()).collect()
     };
 
-    // Determine property selection
     let (new_properties, prop_indices): (Arc<Labels>, Option<Vec<usize>>) =
         if let Some((ref parent_props, ref parent_prop_idx)) = parent_properties {
-            // Gradient: inherit property selection from parent
             (parent_props.clone(), parent_prop_idx.map(|p| p.to_vec()))
         } else {
             let props_path = format!("{}properties.npy", prefix);
@@ -342,7 +329,6 @@ where
             }
         };
 
-    // Load components
     let mut components = Vec::new();
     for i in 0..(src_shape.len() - 2) {
         let comp_path = format!("{}components/{}.npy", prefix, i);
@@ -350,9 +336,8 @@ where
         components.push(Arc::new(load_labels(comp_file)?));
     }
 
-    // Gather selected data from file
-    let data = gather_selected_data_into(
-        data_reader,
+    let data = gather_selected_data(
+        mmap,
         raw_data_offset,
         elem_size,
         &src_shape,
@@ -362,10 +347,8 @@ where
     )?;
 
     let new_samples = Arc::new(labels_subset(&all_samples, &sample_indices)?);
-
     let mut block = TensorBlock::new(data, new_samples, components, new_properties.clone())?;
 
-    // Handle gradients (only for values blocks, not gradient blocks themselves)
     if parent_properties.is_none() {
         let mut parameters = HashSet::new();
         let gradient_prefix = format!("{}gradients/", prefix);
@@ -382,7 +365,7 @@ where
             let grad_prefix = format!("{}gradients/{}/", prefix, parameter);
             let gradient = read_partial_gradient(
                 archive,
-                data_reader,
+                mmap,
                 &grad_prefix,
                 &sample_indices,
                 &new_properties,
@@ -402,9 +385,9 @@ where
 /// samples. We build a map from old parent sample index → new sequential
 /// index, filter gradient samples where `entry[0]` is in the map, and
 /// replace `entry[0]` with the new index.
-fn read_partial_gradient<R, F>(
-    archive: &mut zip::ZipArchive<R>,
-    data_reader: &mut std::fs::File,
+fn read_partial_gradient<F>(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+    mmap: &[u8],
     prefix: &str,
     parent_sample_indices: &[usize],
     new_properties: &Arc<Labels>,
@@ -412,26 +395,21 @@ fn read_partial_gradient<R, F>(
     create_array: &F,
 ) -> Result<TensorBlock, Error>
 where
-    R: Read + Seek,
     F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
 {
-    // Build old→new parent sample index map
     let mut parent_map: HashMap<i32, i32> = HashMap::new();
     for (new_idx, &old_idx) in parent_sample_indices.iter().enumerate() {
         parent_map.insert(old_idx as i32, new_idx as i32);
     }
 
-    // Load gradient samples
     let samples_path = format!("{}samples.npy", prefix);
     let samples_file = archive.by_name(&samples_path).map_err(|e| (samples_path, e))?;
     let grad_samples = load_labels(samples_file)?;
 
-    // Parse gradient data header
     let values_path = format!("{}values.npy", prefix);
     let (src_shape, elem_size, raw_data_offset) =
-        parse_npy_entry_metadata(archive, data_reader, &values_path)?;
+        parse_npy_entry_metadata(archive, mmap, &values_path)?;
 
-    // Load components
     let mut components = Vec::new();
     for i in 0..(src_shape.len() - 2) {
         let comp_path = format!("{}components/{}.npy", prefix, i);
@@ -439,15 +417,13 @@ where
         components.push(Arc::new(load_labels(comp_file)?));
     }
 
-    // Filter gradient samples: keep only those whose sample[0] (parent sample)
-    // is in our selection, and reindex sample[0] to the new sequential index
     let grad_names = grad_samples.names();
     let grad_names_ref: Vec<&str> = grad_names.iter().map(|s| &**s).collect();
     let mut kept_grad_indices = Vec::new();
     let mut new_grad_values = Vec::new();
 
     for (i, entry) in grad_samples.iter().enumerate() {
-        let parent_sample_idx = entry[0].i32();
+        let parent_sample_idx = entry[0];
         if let Some(&new_parent_idx) = parent_map.get(&parent_sample_idx) {
             kept_grad_indices.push(i);
             new_grad_values.push(LabelValue::from(new_parent_idx));
@@ -461,9 +437,8 @@ where
         unsafe { Labels::new_unchecked_uniqueness(&grad_names_ref, new_grad_values)? }
     );
 
-    // Gather selected gradient data
-    let data = gather_selected_data_into(
-        data_reader,
+    let data = gather_selected_data(
+        mmap,
         raw_data_offset,
         elem_size,
         &src_shape,

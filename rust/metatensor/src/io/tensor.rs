@@ -110,8 +110,8 @@ pub fn load_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> 
 /// Load a tensor map from the file at the given path, selecting only a subset
 /// of the data based on keys, samples, and properties.
 ///
-/// This function uses file seeking for efficient random access: only the
-/// selected rows and columns are read from disk.
+/// This function memory-maps the file for efficient random access: only the
+/// selected rows and columns are copied into the output arrays.
 ///
 /// - `keys`: if `Some`, only blocks whose key matches the selection are loaded.
 /// - `samples`: if `Some`, only rows matching the selection are kept.
