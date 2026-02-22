@@ -183,8 +183,8 @@ def load_partial(
     Load a previously saved :py:class:`TensorMap` from the given path, selecting
     only a subset of the data based on keys, samples, and properties.
 
-    This function uses file seeking for efficient random access: only the
-    selected rows and columns are read from disk.
+    This function memory-maps the file for efficient random access: only the
+    selected rows and columns are copied into the output arrays.
 
     :param path: path of the file to load
     :param keys: if not ``None``, only blocks whose key matches the selection

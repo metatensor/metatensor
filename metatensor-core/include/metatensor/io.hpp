@@ -229,8 +229,8 @@ namespace io {
     /// Load a previously saved ``TensorMap`` from the given path, selecting
     /// only a subset of the data based on keys, samples, and properties.
     ///
-    /// This function uses file seeking for efficient random access: only the
-    /// selected rows and columns are read from disk.
+    /// This function memory-maps the file for efficient random access: only the
+    /// selected rows and columns are copied into the output arrays.
     ///
     /// For each of ``keys``, ``samples``, and ``properties``: an empty
     /// ``Labels`` (default) means "select all" on that axis. A non-empty

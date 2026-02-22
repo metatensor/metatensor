@@ -1396,8 +1396,8 @@ struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
  * Load a tensor map from the file at the given path, selecting only a subset
  * of the data based on keys, samples, and properties.
  *
- * This function uses file seeking for efficient random access: only the
- * selected rows and columns are read from disk.
+ * This function memory-maps the file for efficient random access: only the
+ * selected rows and columns are copied into the output arrays.
  *
  * For each of `keys`, `samples`, and `properties`: if the label has a NULL
  * `internal_ptr_` and `count == 0`, it is treated as "select all" (no
